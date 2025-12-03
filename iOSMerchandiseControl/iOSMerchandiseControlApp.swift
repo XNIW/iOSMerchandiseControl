@@ -1,31 +1,30 @@
-//
-//  iOSMerchandiseControlApp.swift
-//  iOSMerchandiseControl
-//
-//  Created by Min Xiang on 03/12/25.
-//
-
 import SwiftUI
 import SwiftData
 
 @main
 struct iOSMerchandiseControlApp: App {
+
+    // Come il tuo AppDatabase Room: contiene lo schema SwiftData
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Product.self,
+            Supplier.self,
+            Category.self
+            // Più avanti aggiungeremo HistoryEntry, ProductPrice, ecc.
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        let configuration = ModelConfiguration(schema: schema)
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            fatalError("Impossibile creare ModelContainer: \(error)")
         }
     }()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView()   // tra poco la riempiamo
         }
         .modelContainer(sharedModelContainer)
     }
