@@ -4,13 +4,11 @@ import SwiftData
 @main
 struct iOSMerchandiseControlApp: App {
 
-    // Come il tuo AppDatabase Room: contiene lo schema SwiftData
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Product.self,
             Supplier.self,
-            Category.self
-            // Più avanti aggiungeremo HistoryEntry, ProductPrice, ecc.
+            ProductCategory.self   // ← nuovo nome
         ])
 
         let configuration = ModelConfiguration(schema: schema)
@@ -24,7 +22,7 @@ struct iOSMerchandiseControlApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()   // tra poco la riempiamo
+            ContentView()
         }
         .modelContainer(sharedModelContainer)
     }

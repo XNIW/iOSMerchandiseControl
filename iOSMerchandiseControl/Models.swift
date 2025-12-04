@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 
 @Model
@@ -10,7 +11,7 @@ class Supplier {
 }
 
 @Model
-class Category {
+class ProductCategory {
     @Attribute(.unique) var name: String
 
     init(name: String) {
@@ -20,7 +21,6 @@ class Category {
 
 @Model
 class Product {
-    // Room: id Long autogenerato → qui usiamo l’id implicito di SwiftData
     @Attribute(.unique) var barcode: String
 
     var itemNumber: String?
@@ -31,9 +31,8 @@ class Product {
     var retailPrice: Double?
     var stockQuantity: Double?
 
-    // Relazioni come in Room (supplierId, categoryId)
     var supplier: Supplier?
-    var category: Category?
+    var category: ProductCategory?
 
     init(
         barcode: String,
@@ -44,7 +43,7 @@ class Product {
         retailPrice: Double? = nil,
         stockQuantity: Double? = nil,
         supplier: Supplier? = nil,
-        category: Category? = nil
+        category: ProductCategory? = nil
     ) {
         self.barcode = barcode
         self.itemNumber = itemNumber

@@ -10,11 +10,9 @@ struct ContentView: View {
 }
 
 #Preview {
-    // Preview con SwiftData in-memory
     ContentView()
-        .modelContainer(for: [
-            Product.self,
-            Supplier.self,
-            Category.self
-        ], inMemory: true)
+        .modelContainer(
+            for: [Product.self, Supplier.self, ProductCategory.self],
+            inMemory: true
+        )
 }
