@@ -4,67 +4,86 @@ import SwiftData
 struct DatabaseView: View {
     @Environment(\.modelContext) private var context
 
-    // Tutti i prodotti dal database, ordinati per nome
-    @Query(sort: \Product.productName, order: .forward)
+    // Tutti i prodotti dal database, ordinati per barcode
+    @Query(sort: \Product.barcode, order: .forward)
     private var products: [Product]
 
     @State private var barcodeFilter: String = ""
     @State private var showAddSheet = false
     @State private var productToEdit: Product?
 
-    var body: some View {
-        // filtro in memoria sui prodotti
-        let filteredProducts = products.filter { product in
-            barcodeFilter.isEmpty ||
-            product.barcode.localizedStandardContains(barcodeFilter)
+    // filtro in memoria sui prodotti, come facevi in Compose
+    private var filteredProducts: [Product] {
+        let trimmed = barcodeFilter.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return products
+        } else {
+            return products.filter { product in
+                product.barcode.localizedStandardContains(trimmed)
+            }
         }
+    }
 
+    var body: some View {
         VStack {
-            // ----------- FILTRO BARCODE -----------
+            // campo filtro barcode
             HStack {
                 TextField("Filtra per barcode", text: $barcodeFilter)
                     .textFieldStyle(.roundedBorder)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-
-                if !barcodeFilter.isEmpty {
-                    Button {
-                        barcodeFilter = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
+                    .keyboardType(.numberPad)
             }
-            .padding([.horizontal, .top])
+            .padding(.horizontal)
+            .padding(.top)
 
-            // ----------- LISTA PRODOTTI -----------
+            // lista prodotti
             List {
-                ForEach(filteredProducts) { product in
-                    VStack(alignment: .leading) {
+                ForEach(filteredProducts) { (product: Product) in
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(product.productName ?? "Senza nome")
                             .font(.headline)
+
                         Text("Barcode: \(product.barcode)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+
+                        if let qty = product.stockQuantity {
+                            Text("Stock: \(qty)")
+                                .font(.footnote)
+                        }
+
+                        if let supplierName = product.supplier?.name,
+                           !supplierName.isEmpty {
+                            Text("Fornitore: \(supplierName)")
+                                .font(.footnote)
+                        }
+
+                        if let categoryName = product.category?.name,
+                           !categoryName.isEmpty {
+                            Text("Categoria: \(categoryName)")
+                                .font(.footnote)
+                        }
                     }
-                    .contentShape(Rectangle())          // rende tappabile tutta la riga
+                    .contentShape(Rectangle()) // tutta la riga tappabile
                     .onTapGesture {
                         productToEdit = product
                     }
                 }
-                .onDelete { offsets in
-                    for index in offsets {
-                        let product = filteredProducts[index]
-                        context.delete(product)
-                    }
-                    try? context.save()
-                }
+                .onDelete(perform: deleteProducts)
             }
+            .listStyle(.plain)
         }
         .navigationTitle("Database")
         .toolbar {
+            // bottone per aprire Cronologia
+            ToolbarItem(placement: .navigationBarLeading) {
+                NavigationLink {
+                    HistoryView()
+                } label: {
+                    Image(systemName: "clock.arrow.circlepath")
+                }
+            }
+
+            // bottone per aggiungere nuovo prodotto
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showAddSheet = true
@@ -80,10 +99,23 @@ struct DatabaseView: View {
             }
         }
         // Sheet per MODIFICA prodotto esistente
-        .sheet(item: $productToEdit) { product in
+        .sheet(item: $productToEdit) { (product: Product) in
             NavigationStack {
                 EditProductView(product: product)
             }
+        }
+    }
+
+    // cancellazione con swipe-to-delete
+    private func deleteProducts(at offsets: IndexSet) {
+        for index in offsets {
+            let product = filteredProducts[index]
+            context.delete(product)
+        }
+        do {
+            try context.save()
+        } catch {
+            print("Errore durante l'eliminazione: \(error)")
         }
     }
 }

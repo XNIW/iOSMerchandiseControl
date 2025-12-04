@@ -1,8 +1,25 @@
 import Foundation
 import SwiftData
 
+// MARK: - Enum condivisi
+
+/// Stato di sincronizzazione (come su Android)
+enum HistorySyncStatus: Int, Codable, CaseIterable {
+    case notAttempted = 0
+    case syncedSuccessfully = 1
+    case attemptedWithErrors = 2
+}
+
+/// Tipo di prezzo: acquisto / vendita
+enum PriceType: String, Codable, CaseIterable {
+    case purchase
+    case retail
+}
+
+// MARK: - Supplier
+
 @Model
-class Supplier {
+final class Supplier {
     @Attribute(.unique) var name: String
 
     init(name: String) {
@@ -10,8 +27,10 @@ class Supplier {
     }
 }
 
+// MARK: - Category
+
 @Model
-class ProductCategory {
+final class ProductCategory {
     @Attribute(.unique) var name: String
 
     init(name: String) {
@@ -19,8 +38,10 @@ class ProductCategory {
     }
 }
 
+// MARK: - Product
+
 @Model
-class Product {
+final class Product {
     @Attribute(.unique) var barcode: String
 
     var itemNumber: String?
@@ -33,6 +54,9 @@ class Product {
 
     var supplier: Supplier?
     var category: ProductCategory?
+
+    /// Storico prezzi associato
+    @Relationship var priceHistory: [ProductPrice] = []
 
     init(
         barcode: String,
@@ -54,5 +78,38 @@ class Product {
         self.stockQuantity = stockQuantity
         self.supplier = supplier
         self.category = category
+    }
+}
+
+// MARK: - ProductPrice (storico prezzi)
+
+@Model
+final class ProductPrice {
+    var type: PriceType
+    var price: Double
+    var effectiveAt: Date
+    var source: String?
+    var note: String?
+    var createdAt: Date
+
+    /// Relazione verso il prodotto (per ora senza inverse, per evitare problemi di key path)
+    @Relationship var product: Product?
+
+    init(
+        type: PriceType,
+        price: Double,
+        effectiveAt: Date = Date(),
+        source: String? = nil,
+        note: String? = nil,
+        createdAt: Date = Date(),
+        product: Product? = nil
+    ) {
+        self.type = type
+        self.price = price
+        self.effectiveAt = effectiveAt
+        self.source = source
+        self.note = note
+        self.createdAt = createdAt
+        self.product = product
     }
 }

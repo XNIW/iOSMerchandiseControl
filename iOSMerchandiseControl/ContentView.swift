@@ -12,7 +12,13 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .modelContainer(
-            for: [Product.self, Supplier.self, ProductCategory.self],
+            for: [
+                Product.self,
+                Supplier.self,
+                ProductCategory.self,
+                HistoryEntry.self,
+                ProductPrice.self
+            ],
             inMemory: true
         )
 }
