@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		415227EC2EE4CDE3008233E0 /* CoreXLSX in Frameworks */ = {isa = PBXBuildFile; productRef = 415227EB2EE4CDE3008233E0 /* CoreXLSX */; };
+		415227EF2EE4CE13008233E0 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 415227EE2EE4CE13008233E0 /* SwiftSoup */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		415227B32EE0B07D008233E0 /* iOSMerchandiseControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iOSMerchandiseControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +28,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				415227EC2EE4CDE3008233E0 /* CoreXLSX in Frameworks */,
+				415227EF2EE4CE13008233E0 /* SwiftSoup in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +72,8 @@
 			);
 			name = iOSMerchandiseControl;
 			packageProductDependencies = (
+				415227EB2EE4CDE3008233E0 /* CoreXLSX */,
+				415227EE2EE4CE13008233E0 /* SwiftSoup */,
 			);
 			productName = iOSMerchandiseControl;
 			productReference = 415227B32EE0B07D008233E0 /* iOSMerchandiseControl.app */;
@@ -94,6 +103,10 @@
 			);
 			mainGroup = 415227AA2EE0B07D008233E0;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				415227EA2EE4CDE3008233E0 /* XCRemoteSwiftPackageReference "CoreXLSX" */,
+				415227ED2EE4CE13008233E0 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 415227B42EE0B07D008233E0 /* Products */;
 			projectDirPath = "";
@@ -351,6 +364,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		415227EA2EE4CDE3008233E0 /* XCRemoteSwiftPackageReference "CoreXLSX" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CoreOffice/CoreXLSX";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.14.2;
+			};
+		};
+		415227ED2EE4CE13008233E0 /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.11.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		415227EB2EE4CDE3008233E0 /* CoreXLSX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 415227EA2EE4CDE3008233E0 /* XCRemoteSwiftPackageReference "CoreXLSX" */;
+			productName = CoreXLSX;
+		};
+		415227EE2EE4CE13008233E0 /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 415227ED2EE4CE13008233E0 /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 415227AB2EE0B07D008233E0 /* Project object */;
 }
