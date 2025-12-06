@@ -28,8 +28,14 @@ struct HistoryView: View {
             } else {
                 List {
                     ForEach(entries) { entry in
-                        HistoryRow(entry: entry)
+                        NavigationLink(
+                            destination: GeneratedView(entry: entry)
+                        ) {
+                            HistoryRow(entry: entry)
+                        }
                     }
+                    // se avevi già .onDelete(perform: deleteEntries), lascialo qui:
+                    // .onDelete(perform: deleteEntries)
                 }
                 .listStyle(.plain)
             }

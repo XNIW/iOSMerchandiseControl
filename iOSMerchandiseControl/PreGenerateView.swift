@@ -21,6 +21,8 @@ struct PreGenerateView: View {
     @State private var generationError: String?
     @State private var lastGeneratedEntryID: String?
     
+    @State private var navigateToGenerated = false
+    
     var body: some View {
         Form {
             // ANTEPRIMA FILE
@@ -183,6 +185,22 @@ struct PreGenerateView: View {
         } message: {
             Text(generationError ?? "Errore sconosciuto.")
         }
+        // 👇 Navigation "nascosta" verso GeneratedView
+        .background(
+            NavigationLink(
+                destination: Group {
+                    if let entry = excelSession.currentHistoryEntry {
+                        GeneratedView(entry: entry)
+                    } else {
+                        Text("Nessun inventario disponibile.")
+                            .foregroundStyle(.secondary)
+                    }
+                },
+                isActive: $navigateToGenerated,
+                label: { EmptyView() }
+            )
+            .hidden()
+        )
     }
     
     /// Righe di anteprima (esclude la riga 0 = header)
@@ -202,14 +220,20 @@ struct PreGenerateView: View {
 
     private func generateInventory() {
         guard canGenerate else { return }
-
         isGenerating = true
+
         Task {
             do {
                 let entry = try excelSession.generateHistoryEntry(in: context)
+
                 await MainActor.run {
+                    // (generateHistoryEntry mette già currentHistoryEntry,
+                    // ma lo riallineiamo esplicitamente)
+                    excelSession.currentHistoryEntry = entry
                     lastGeneratedEntryID = entry.id
                     isGenerating = false
+                    // → Vai alla schermata GeneratedView
+                    navigateToGenerated = true
                 }
             } catch {
                 await MainActor.run {
