@@ -2,6 +2,8 @@ import SwiftUI
 import SwiftData
 
 struct HistoryView: View {
+    @Environment(\.modelContext) private var context
+    
     // Legge tutte le HistoryEntry ordinate per timestamp decrescente
     @Query(
         sort: \HistoryEntry.timestamp,
@@ -55,6 +57,24 @@ struct HistoryView: View {
         return result
     }
     
+    // MARK: - Azioni
+
+    private func deleteEntries(at offsets: IndexSet) {
+        // offsets si riferisce agli indici in filteredEntries, non in entries
+        for index in offsets {
+            guard filteredEntries.indices.contains(index) else { continue }
+            let entry = filteredEntries[index]
+            context.delete(entry)
+        }
+
+        do {
+            try context.save()
+        } catch {
+            // per ora solo log, se vuoi puoi aggiungere un alert in futuro
+            print("Errore durante l'eliminazione della HistoryEntry: \(error)")
+        }
+    }
+
     var body: some View {
         Group {
             if entries.isEmpty {
@@ -114,6 +134,8 @@ struct HistoryView: View {
                                 HistoryRow(entry: entry)
                             }
                         }
+                        // 🔹 swipe-to-delete
+                        .onDelete(perform: deleteEntries)
                     }
                 }
             }

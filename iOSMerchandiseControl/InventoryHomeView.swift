@@ -10,8 +10,8 @@ struct InventoryHomeView: View {
     @State private var showPreGenerate = false
     @State private var loadError: String?
     @State private var navigateToManualGenerated = false
-    @State private var showQuickScanner = false
-    @State private var lastScannedCode: String?
+    /// Serve per dire a GeneratedView se deve aprire subito lo scanner
+    @State private var autoOpenScannerInGenerated = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -39,6 +39,7 @@ struct InventoryHomeView: View {
                 Task {
                     do {
                         _ = try excelSession.createManualHistoryEntry(in: context)
+                        autoOpenScannerInGenerated = false   // qui NON apriamo lo scanner in automatico
                         navigateToManualGenerated = true
                     } catch {
                         loadError = error.localizedDescription
@@ -47,18 +48,35 @@ struct InventoryHomeView: View {
             } label: {
                 Label("Nuovo inventario manuale", systemImage: "square.and.pencil")
             }
+            .buttonStyle(.bordered)
             
             Button {
-                showQuickScanner = true
-            } label: {
-                Label("Scanner inventario veloce", systemImage: "camera.viewfinder")
-            }
+                Task {
+                    do {
+                        // 1. Prova a riusare una HistoryEntry manuale già attiva
+                        let entry: HistoryEntry
+                        if let current = excelSession.currentHistoryEntry,
+                           current.isManualEntry {
+                            entry = current
+                        } else {
+                            // 2. Altrimenti creane una nuova
+                            entry = try excelSession.createManualHistoryEntry(in: context)
+                        }
 
-            if let code = lastScannedCode {
-                Text("Ultimo barcode: \(code)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                        // 3. Assicurati che sia l’entry corrente
+                        excelSession.currentHistoryEntry = entry
+
+                        // 4. Vai alla GeneratedView in modalità manuale + scanner auto-aperto
+                        autoOpenScannerInGenerated = true
+                        navigateToManualGenerated = true
+                    } catch {
+                        loadError = error.localizedDescription
+                    }
+                }
+            } label: {
+                Label("Scanner inventario veloce", systemImage: "barcode.viewfinder")
             }
+            .buttonStyle(.bordered)
 
             if excelSession.isLoading {
                 ProgressView(value: excelSession.progress ?? 0) {
@@ -87,20 +105,11 @@ struct InventoryHomeView: View {
         .navigationDestination(isPresented: $navigateToManualGenerated) {
             Group {
                 if let entry = excelSession.currentHistoryEntry {
-                    GeneratedView(entry: entry)
+                    GeneratedView(entry: entry, autoOpenScanner: autoOpenScannerInGenerated)
                 } else {
                     Text("Nessun inventario disponibile.")
                         .foregroundStyle(.secondary)
                 }
-            }
-        }
-        .sheet(isPresented: $showQuickScanner) {
-            ScannerView(title: "Inventario veloce") { code in
-                // Per ora memorizziamo solo l’ultimo barcode.
-                // In futuro qui possiamo:
-                // - creare/aprire una HistoryEntry manuale
-                // - aprire direttamente GeneratedView con il codice già usato, ecc.
-                lastScannedCode = code
             }
         }
         // File picker: .spreadsheet + .html

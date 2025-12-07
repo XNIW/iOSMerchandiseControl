@@ -25,6 +25,14 @@ struct GeneratedView: View {
 
     /// Entry da modificare (passata dal chiamante, es. PreGenerateView o HistoryView)
     let entry: HistoryEntry
+    let autoOpenScanner: Bool
+
+    // Init custom con default, così gli altri punti del codice possono continuare a chiamare
+    // GeneratedView(entry: entry) senza rompersi.
+    init(entry: HistoryEntry, autoOpenScanner: Bool = false) {
+        self.entry = entry
+        self.autoOpenScanner = autoOpenScanner
+    }
 
     /// Copie locali dei dati, per lavorare in modo SwiftUI-friendly
     @State private var data: [[String]] = []
@@ -265,7 +273,16 @@ struct GeneratedView: View {
         .navigationTitle(entry.id)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
+            // inizializza i dati dalla HistoryEntry (come facevi già)
             initializeFromEntryIfNeeded()
+
+            // se è un inventario manuale e siamo arrivati dal
+            // bottone "Scanner inventario veloce", apri lo scanner subito
+            if entry.isManualEntry && autoOpenScanner {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    showScanner = true
+                }
+            }
         }
         .alert(
             // Titolo dinamico a seconda che sia errore o riepilogo
