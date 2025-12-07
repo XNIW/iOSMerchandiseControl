@@ -1,12 +1,25 @@
 import SwiftUI
 import SwiftData
 
+// Struttura per il pannello dettagli riga
+private struct RowDetailData {
+    let barcode: String
+    let productName: String?
+    let supplierQuantity: String
+    let countedQuantity: String
+    let oldPurchasePrice: String?
+    let oldRetailPrice: String?
+    let newRetailPrice: String
+    let syncError: String?
+}
+
 /// Schermata di editing inventario (equivalente base di GeneratedScreen su Android).
 /// - Mostra la griglia salvata in HistoryEntry.data
 /// - Permette di:
 ///   - togglare complete[row]
 ///   - modificare editable[row][0] (quantità) e editable[row][1] (prezzo)
 ///   - salvare su SwiftData aggiornando la HistoryEntry
+///   - fare entry manuali e usare uno pseudo-scanner barcode
 struct GeneratedView: View {
     @Environment(\.modelContext) private var context
 
@@ -26,13 +39,50 @@ struct GeneratedView: View {
 
     /// riepilogo di una sincronizzazione andata a buon fine
     @State private var syncSummaryMessage: String?
-    
+
+    /// filtro righe solo con errori
     @State private var showOnlyErrorRows: Bool = false
+
+    /// Dettagli riga (sheet stile dialog Android)
+    @State private var rowDetail: RowDetailData?
+
+    /// Hook per scanner / input barcode
+    @State private var scanInput: String = ""
+    @State private var scanError: String?
 
     // MARK: - Body
 
     var body: some View {
         Form {
+            // Sezione scanner / input barcode
+            Section("Scanner") {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        TextField("Scansiona o inserisci barcode", text: $scanInput)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+
+                        Button {
+                            handleScanInput()
+                        } label: {
+                            Image(systemName: "barcode.viewfinder")
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(scanInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+
+                    Text("Digitando qui un barcode (o in futuro con la camera) aggiorni o aggiungi la riga corrispondente.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    if let scanError {
+                        Text(scanError)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+
             // Sezione principale: griglia inventario
             Section("Inventario") {
                 if data.isEmpty {
@@ -40,25 +90,29 @@ struct GeneratedView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     let headerRow = data[0]
-                    let rowCount = max(data.count - 1, 0)
                     let errorCount = countSyncErrors()
+                    let allRowIndices = Array(1..<data.count)
+                    let visibleRowIndices: [Int] = showOnlyErrorRows
+                        ? allRowIndices.filter { rowHasError(rowIndex: $0, headerRow: headerRow) }
+                        : allRowIndices
 
-                    // Barra con filtro errori + conteggio
-                    HStack {
-                        Toggle("Mostra solo errori", isOn: $showOnlyErrorRows)
-                            .font(.footnote)
-
-                        Spacer()
-
-                        if errorCount > 0 {
-                            Text("\(errorCount) righe in errore")
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                        } else {
-                            Text("Nessun errore")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                    // Piccolo riepilogo righe + errori
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Righe dati: \(max(0, data.count - 1))")
+                            Spacer()
+                            if errorCount > 0 {
+                                Text("\(errorCount) righe con errore")
+                                    .foregroundStyle(.red)
+                            } else {
+                                Text("Nessun errore")
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .font(.footnote)
+
+                        Toggle("Mostra solo righe con errore", isOn: $showOnlyErrorRows)
+                            .font(.footnote)
                     }
 
                     ScrollView(.horizontal) {
@@ -74,49 +128,56 @@ struct GeneratedView: View {
                                     Text(key)
                                         .font(.caption)
                                         .fontWeight(.semibold)
-                                        .frame(minWidth: key == "SyncError" ? 140 : 90,
-                                               alignment: .leading)
+                                        .frame(
+                                            minWidth: key == "SyncError" ? 140 : 90,
+                                            alignment: .leading
+                                        )
                                 }
                             }
 
                             Divider()
 
-                            // Indici di riga visibili: tutti o solo quelli con SyncError
-                            let allRowIndices = Array(1..<data.count)
-                            let visibleRowIndices: [Int] = showOnlyErrorRows
-                                ? allRowIndices.filter { rowHasError(rowIndex: $0, headerRow: headerRow) }
-                                : allRowIndices
-
                             // RIGHE DATI
                             ForEach(visibleRowIndices, id: \.self) { rowIndex in
-                                HStack(alignment: .center, spacing: 8) {
-                                    // Toggle "completa"
-                                    Toggle("", isOn: bindingForComplete(rowIndex))
-                                        .labelsHidden()
-                                        .frame(width: 28)
-
-                                    ForEach(headerRow.indices, id: \.self) { colIndex in
-                                        cellView(
-                                            rowIndex: rowIndex,
-                                            columnIndex: colIndex,
-                                            headerRow: headerRow
-                                        )
+                                HStack(alignment: .top, spacing: 8) {
+                                    Toggle(isOn: bindingForComplete(rowIndex)) {
+                                        EmptyView()
                                     }
+                                    .labelsHidden()
+                                    .frame(width: 40, alignment: .leading)
+
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(alignment: .top, spacing: 8) {
+                                            ForEach(Array(headerRow.enumerated()), id: \.offset) { columnIndex, _ in
+                                                cellView(
+                                                    rowIndex: rowIndex,
+                                                    columnIndex: columnIndex,
+                                                    headerRow: headerRow
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Button {
+                                        showRowDetail(for: rowIndex, headerRow: headerRow)
+                                    } label: {
+                                        Image(systemName: "info.circle")
+                                            .imageScale(.small)
+                                    }
+                                    .buttonStyle(.borderless)
                                 }
-                                // Evidenzia riga con errore
-                                .background(
-                                    rowHasError(rowIndex: rowIndex, headerRow: headerRow)
-                                        ? Color.red.opacity(0.08)
-                                        : Color.clear
-                                )
+                                .padding(.vertical, 4)
                             }
                         }
-                        .padding(.vertical, 4)
                     }
 
-                    Text("Righe dati: \(rowCount)")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    if entry.isManualEntry {
+                        Button {
+                            addManualRow()
+                        } label: {
+                            Label("Aggiungi riga", systemImage: "plus")
+                        }
+                    }
                 }
             }
 
@@ -141,9 +202,8 @@ struct GeneratedView: View {
                 }
             }
 
-            // Bottone Salva
+            // Bottone Salva / Sincronizza
             Section {
-                // Bottone Salva modifiche
                 Button {
                     saveChanges()
                 } label: {
@@ -204,34 +264,116 @@ struct GeneratedView: View {
         } message: {
             Text(saveError ?? syncSummaryMessage ?? "")
         }
+        .sheet(
+            isPresented: Binding(
+                get: { rowDetail != nil },
+                set: { if !$0 { rowDetail = nil } }
+            )
+        ) {
+            if let detail = rowDetail {
+                NavigationStack {
+                    Form {
+                        Section("Prodotto") {
+                            LabeledContent("Barcode") {
+                                Text(detail.barcode.isEmpty ? "—" : detail.barcode)
+                            }
+                            LabeledContent("Nome") {
+                                Text(detail.productName ?? "Non presente in database")
+                            }
+                        }
+
+                        Section("Quantità") {
+                            LabeledContent("Fornitore") {
+                                Text(detail.supplierQuantity.isEmpty ? "—" : detail.supplierQuantity)
+                            }
+                            LabeledContent("Contata") {
+                                Text(detail.countedQuantity.isEmpty ? "—" : detail.countedQuantity)
+                            }
+                        }
+
+                        Section("Prezzi") {
+                            if let oldPurchase = detail.oldPurchasePrice {
+                                LabeledContent("Acquisto (vecchio)") { Text(oldPurchase) }
+                            }
+                            if let oldRetail = detail.oldRetailPrice {
+                                LabeledContent("Vendita (vecchio)") { Text(oldRetail) }
+                            }
+                            LabeledContent("Vendita (nuovo)") {
+                                Text(detail.newRetailPrice.isEmpty ? "—" : detail.newRetailPrice)
+                            }
+                        }
+
+                        if let syncError = detail.syncError, !syncError.isEmpty {
+                            Section("Errore di sincronizzazione") {
+                                Text(syncError)
+                                    .font(.footnote)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                    }
+                    .navigationTitle("Dettagli riga")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Chiudi") { rowDetail = nil }
+                        }
+                    }
+                }
+            } else {
+                Text("Nessuna riga selezionata")
+            }
+        }
     }
 
     // MARK: - Inizializzazione dati
 
     /// Copia i dati dalla HistoryEntry solo la prima volta.
     private func initializeFromEntryIfNeeded() {
-        // data = griglia completa (header + righe)
+        // DATA
         if data.isEmpty {
-            data = entry.data
-        }
-
-        // editable: coppie [qty, price] con stessa lunghezza di data
-        if editable.isEmpty {
-            editable = entry.editable
-
-            // sicurezza: riallinea la lunghezza se serve
-            if editable.count != data.count {
-                var corrected = Array(repeating: ["", ""], count: data.count)
-                for i in 0..<min(editable.count, corrected.count) {
-                    corrected[i] = editable[i]
-                }
-                editable = corrected
+            if entry.isManualEntry && entry.data.isEmpty {
+                // Header minimale per entry manuali
+                data = [
+                    ["barcode", "productName", "realQuantity", "RetailPrice"]
+                ]
+            } else {
+                data = entry.data
             }
         }
 
-        // complete: una flag per ogni riga (inclusa riga header, normalmente false)
+        // EDITABLE
+        if editable.isEmpty {
+            if entry.isManualEntry && entry.editable.isEmpty {
+                // Per ogni riga (header compreso) due “slot”: quantità reale e prezzo vendita
+                editable = Array(repeating: ["", ""], count: data.count)
+            } else {
+                editable = entry.editable
+
+                // Allinea lunghezza a data
+                if editable.count != data.count {
+                    var corrected: [[String]] = []
+                    for index in data.indices {
+                        if index < editable.count {
+                            var row = editable[index]
+                            while row.count < 2 {
+                                row.append("")
+                            }
+                            corrected.append(Array(row.prefix(2)))
+                        } else {
+                            corrected.append(["", ""])
+                        }
+                    }
+                    editable = corrected
+                }
+            }
+        }
+
+        // COMPLETE
         if complete.isEmpty {
-            complete = entry.complete
+            if entry.isManualEntry && entry.complete.isEmpty {
+                complete = Array(repeating: false, count: data.count)
+            } else {
+                complete = entry.complete
+            }
 
             if complete.count != data.count {
                 complete = Array(repeating: false, count: data.count)
@@ -297,7 +439,7 @@ struct GeneratedView: View {
         }
         return data[rowIndex][columnIndex]
     }
-    
+
     /// Ritorna true se la riga ha un messaggio di errore nella colonna "SyncError".
     private func rowHasError(rowIndex: Int, headerRow: [String]) -> Bool {
         guard
@@ -315,7 +457,7 @@ struct GeneratedView: View {
 
         return !value.isEmpty
     }
-    
+
     /// Conta quante righe hanno un messaggio nella colonna "SyncError".
     private func countSyncErrors() -> Int {
         guard !data.isEmpty else { return 0 }
@@ -378,7 +520,296 @@ struct GeneratedView: View {
         )
     }
 
-    // MARK: - Salvataggio
+    // MARK: - Scanner & righe manuali
+
+    private func handleScanInput() {
+        let code = scanInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else { return }
+
+        scanError = nil
+        handleScannedBarcode(code)
+        scanInput = ""
+    }
+
+    /// Logica principale di "scan": aggiorna o aggiunge una riga partendo dal barcode.
+    private func handleScannedBarcode(_ code: String) {
+        let cleaned = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return }
+
+        // Se non c'è ancora header ma siamo in entry manuale, crealo ora
+        if data.isEmpty && entry.isManualEntry {
+            data = [
+                ["barcode", "productName", "realQuantity", "RetailPrice"]
+            ]
+            editable = Array(repeating: ["", ""], count: data.count)
+            complete = Array(repeating: false, count: data.count)
+        }
+
+        guard !data.isEmpty else {
+            scanError = "Nessuna griglia caricata."
+            return
+        }
+
+        let headerRow = data[0]
+
+        guard let barcodeIndex = headerRow.firstIndex(of: "barcode") else {
+            scanError = "La griglia non ha una colonna \"barcode\"."
+            return
+        }
+
+        // 1) Cerco una riga esistente con lo stesso barcode
+        if let existingIndex = data.indices.dropFirst().first(where: { index in
+            let row = data[index]
+            guard row.indices.contains(barcodeIndex) else { return false }
+            return row[barcodeIndex].trimmingCharacters(in: .whitespacesAndNewlines) == cleaned
+        }) {
+            // Se esiste: incremento realQuantity
+            guard let realQuantityIndex = headerRow.firstIndex(of: "realQuantity") else {
+                scanError = "La griglia non ha una colonna \"realQuantity\"."
+                return
+            }
+
+            let baseFromEditable: String? = {
+                guard editable.indices.contains(existingIndex),
+                      editable[existingIndex].indices.contains(0)
+                else { return nil }
+                let value = editable[existingIndex][0].trimmingCharacters(in: .whitespacesAndNewlines)
+                return value.isEmpty ? nil : value
+            }()
+
+            let baseFromData: String = {
+                guard data[existingIndex].indices.contains(realQuantityIndex) else { return "" }
+                return data[existingIndex][realQuantityIndex]
+            }()
+
+            let normalized = (baseFromEditable ?? baseFromData)
+                .replacingOccurrences(of: ",", with: ".")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            let current = Double(normalized) ?? 0
+            let newValue = current + 1
+
+            ensureEditableCapacity(for: existingIndex)
+
+            if newValue.rounded() == newValue {
+                editable[existingIndex][0] = String(Int(newValue))
+            } else {
+                editable[existingIndex][0] = String(format: "%.2f", newValue)
+            }
+
+            ensureCompleteCapacity()
+            if complete.indices.contains(existingIndex) {
+                complete[existingIndex] = true
+            }
+
+            scanError = nil
+            return
+        }
+
+        // 2) Nessuna riga esistente: per entry manuali creo una nuova riga
+        guard entry.isManualEntry else {
+            scanError = "Nessuna riga trovata per il barcode \(cleaned)."
+            return
+        }
+
+        // Assicuriamoci che l'header minimale ci sia
+        if data.isEmpty {
+            data = [
+                ["barcode", "productName", "realQuantity", "RetailPrice"]
+            ]
+        }
+
+        let header = data[0]
+        var newRow = Array(repeating: "", count: header.count)
+
+        if let idx = header.firstIndex(of: "barcode") {
+            newRow[idx] = cleaned
+        }
+
+        // Cerco il Product nel DB per riempire nome e prezzo
+        var product: Product?
+        do {
+            let descriptor = FetchDescriptor<Product>(
+                predicate: #Predicate { $0.barcode == cleaned }
+            )
+            product = try context.fetch(descriptor).first
+        } catch {
+            product = nil
+        }
+
+        if let nameIndex = header.firstIndex(of: "productName"),
+           let product
+        {
+            let primaryName = product.productName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let secondaryName = product.secondProductName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let displayName = (primaryName?.isEmpty == false ? primaryName : secondaryName) ?? ""
+            newRow[nameIndex] = displayName
+        }
+
+        if let qtyIndex = header.firstIndex(of: "realQuantity") {
+            newRow[qtyIndex] = "1"
+        }
+
+        if let priceIndex = header.firstIndex(of: "RetailPrice"),
+           let product,
+           let retail = product.retailPrice,
+           retail > 0
+        {
+            newRow[priceIndex] = formatDoubleAsPrice(retail)
+        }
+
+        data.append(newRow)
+
+        let newIndex = data.count - 1
+        ensureEditableCapacity(for: newIndex)
+
+        // Slot 0 = quantità reale, slot 1 = prezzo vendita
+        editable[newIndex][0] = "1"
+        if let priceIndex = header.firstIndex(of: "RetailPrice") {
+            editable[newIndex][1] = newRow[priceIndex]
+        }
+
+        ensureCompleteCapacity()
+
+        scanError = product == nil
+            ? "Prodotto non trovato in database, riga aggiunta solo con barcode."
+            : nil
+    }
+
+    /// Aggiunge una nuova riga vuota per entry manuali.
+    private func addManualRow() {
+        // Se per qualche motivo non c'è ancora header (entry manuale nuova), crealo
+        if data.isEmpty {
+            data = [
+                ["barcode", "productName", "realQuantity", "RetailPrice"]
+            ]
+        }
+
+        let header = data[0]
+        let emptyRow = Array(repeating: "", count: header.count)
+        data.append(emptyRow)
+
+        let newIndex = data.count - 1
+        ensureEditableCapacity(for: newIndex)
+        ensureCompleteCapacity()
+    }
+
+    /// Garantisce che editable abbia abbastanza righe e almeno 2 colonne per la riga indicata.
+    private func ensureEditableCapacity(for rowIndex: Int) {
+        if editable.count <= rowIndex {
+            let needed = rowIndex + 1 - editable.count
+            editable.append(contentsOf: Array(repeating: ["", ""], count: max(needed, 0)))
+        }
+
+        var row = editable[rowIndex]
+        while row.count < 2 {
+            row.append("")
+        }
+        editable[rowIndex] = Array(row.prefix(2))
+    }
+
+    /// Garantisce che complete abbia stessa lunghezza di data.
+    private func ensureCompleteCapacity() {
+        if complete.count != data.count {
+            if complete.isEmpty {
+                complete = Array(repeating: false, count: data.count)
+            } else if complete.count < data.count {
+                complete.append(contentsOf: Array(repeating: false, count: data.count - complete.count))
+            } else {
+                complete = Array(complete.prefix(data.count))
+            }
+        }
+    }
+
+    // MARK: - Pannello dettagli riga
+
+    private func showRowDetail(for rowIndex: Int, headerRow: [String]) {
+        guard data.indices.contains(rowIndex) else { return }
+        let row = data[rowIndex]
+
+        func value(for column: String) -> String {
+            guard let index = headerRow.firstIndex(of: column),
+                  row.indices.contains(index)
+            else { return "" }
+            return row[index]
+        }
+
+        let barcode = value(for: "barcode").trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Nome prodotto dalla riga (productName / secondProductName)
+        var rowName = value(for: "productName")
+        if rowName.isEmpty {
+            rowName = value(for: "secondProductName")
+        }
+
+        // Quantità fornitore (colonna "quantity" se presente)
+        let supplierQty = value(for: "quantity")
+
+        // Quantità contata: preferisco l'editable (slot 0) se presente
+        let countedQty: String = {
+            if editable.indices.contains(rowIndex),
+               editable[rowIndex].indices.contains(0) {
+                let v = editable[rowIndex][0].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !v.isEmpty { return v }
+            }
+            return value(for: "realQuantity")
+        }()
+
+        let oldPurchase = value(for: "oldPurchasePrice")
+        let oldRetail = value(for: "oldRetailPrice")
+
+        // Prezzo nuovo: preferisco l'editable (slot 1)
+        let newRetail: String = {
+            if editable.indices.contains(rowIndex),
+               editable[rowIndex].indices.contains(1) {
+                let v = editable[rowIndex][1].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !v.isEmpty { return v }
+            }
+            return value(for: "RetailPrice")
+        }()
+
+        let syncError: String? = {
+            guard let errorIndex = headerRow.firstIndex(of: "SyncError"),
+                  row.indices.contains(errorIndex)
+            else { return nil }
+            let v = row[errorIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+            return v.isEmpty ? nil : v
+        }()
+
+        // Se non ho nome sulla riga, provo a leggerlo dal DB
+        var finalName: String? = rowName.isEmpty ? nil : rowName
+
+        if finalName == nil, !barcode.isEmpty {
+            do {
+                let descriptor = FetchDescriptor<Product>(
+                    predicate: #Predicate { $0.barcode == barcode }
+                )
+                if let product = try context.fetch(descriptor).first {
+                    let primaryName = product.productName?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let secondaryName = product.secondProductName?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let name = (primaryName?.isEmpty == false ? primaryName : secondaryName) ?? ""
+                    if !name.isEmpty {
+                        finalName = name
+                    }
+                }
+            } catch {
+                // ignoro errori DB nel pannello informativo
+            }
+        }
+
+        rowDetail = RowDetailData(
+            barcode: barcode,
+            productName: finalName,
+            supplierQuantity: supplierQty,
+            countedQuantity: countedQty,
+            oldPurchasePrice: oldPurchase.isEmpty ? nil : oldPurchase,
+            oldRetailPrice: oldRetail.isEmpty ? nil : oldRetail,
+            newRetailPrice: newRetail,
+            syncError: syncError
+        )
+    }
+
+    // MARK: - Salvataggio & sync
 
     private func saveChanges() {
         guard !data.isEmpty else { return }
@@ -444,7 +875,7 @@ struct GeneratedView: View {
         // aggiorna anche il buffer locale, così rimane in sync
         data = newData
     }
-    
+
     /// Applica i dati dell'inventario al database prodotti e aggiorna la griglia con gli errori.
     private func syncWithDatabase() {
         guard !isSyncing else { return }
@@ -495,6 +926,14 @@ struct GeneratedView: View {
         formatter.numberStyle = .currency
         formatter.locale = .current
         return formatter.string(from: value as NSNumber) ?? String(value)
+    }
+
+    private func formatDoubleAsPrice(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(Int(value))
+        } else {
+            return String(format: "%.2f", value)
+        }
     }
 }
 

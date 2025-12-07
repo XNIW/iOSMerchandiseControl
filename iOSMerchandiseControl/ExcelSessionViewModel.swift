@@ -118,9 +118,7 @@ final class ExcelSessionViewModel: ObservableObject {
         progress = 0
 
         do {
-            let (newHeader, allRows) = try await Task.detached(priority: .userInitiated) { () throws -> ([String], [[String]]) in
-                try ExcelAnalyzer.loadFromMultipleURLs(urls)
-            }.value
+            let (newHeader, allRows) = try ExcelAnalyzer.loadFromMultipleURLs(urls)
 
             // Torniamo sul MainActor
             header = newHeader
