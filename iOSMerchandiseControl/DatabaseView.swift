@@ -15,7 +15,7 @@ struct DatabaseView: View {
     @State private var productToEdit: Product?
     @State private var productForHistory: Product?
     
-    @State private var showScanner = false                 // 👈 nuovo
+    @State private var showScanner = false
     @State private var pendingBarcodeForNewProduct: String? = nil
 
     // Export / import
@@ -28,10 +28,10 @@ struct DatabaseView: View {
     @State private var showingExcelImportPicker = false
 
     @State private var importError: String?
-
+    
     // Risultato analisi import da Excel
     @State private var importAnalysisResult: ProductImportAnalysisResult?
-
+    
     // filtro in memoria sui prodotti, come facevi in Compose
     private var filteredProducts: [Product] {
         let trimmed = barcodeFilter.trimmingCharacters(in: .whitespacesAndNewlines)

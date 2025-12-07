@@ -39,6 +39,10 @@ struct GeneratedView: View {
 
     /// riepilogo di una sincronizzazione andata a buon fine
     @State private var syncSummaryMessage: String?
+    
+    /// Motore per l'import prodotti (Excel → DB)
+    @State private var productImportVM: ProductImportViewModel?
+    @State private var importAnalysis: ProductImportAnalysisResult?
 
     /// filtro righe solo con errori
     @State private var showOnlyErrorRows: Bool = false
@@ -214,7 +218,7 @@ struct GeneratedView: View {
                 }
             }
 
-            // Bottone Salva / Sincronizza
+            /// Bottone Salva / Sincronizza
             Section {
                 Button {
                     saveChanges()
@@ -230,8 +234,17 @@ struct GeneratedView: View {
                 }
                 .disabled(isSaving || isSyncing)
 
-                // Bottone Sincronizza con database (solo per entry non manuali)
+                // Azioni collegate al database: solo per entry non manuali
                 if !entry.isManualEntry {
+                    // 🔹 NUOVO: flusso ImportAnalysis (crea/aggiorna Product)
+                    Button {
+                        startProductImportAnalysis()
+                    } label: {
+                        Text("Importa/aggiorna prodotti nel DB")
+                    }
+                    .disabled(isSaving || isSyncing)
+
+                    // 🔹 ESISTENTE: sync inventario (InventorySyncService)
                     Button {
                         syncWithDatabase()
                     } label: {
@@ -241,7 +254,7 @@ struct GeneratedView: View {
                                 Text("Sincronizzazione in corso…")
                             }
                         } else {
-                            Text("Sincronizza con database")
+                            Text("Sincronizza inventario")
                         }
                     }
                     .disabled(isSaving || isSyncing)
@@ -367,6 +380,27 @@ struct GeneratedView: View {
                 scanError = nil
                 handleScannedBarcode(code)
                 scanInput = ""
+            }
+        }
+        // 🔹 NUOVO: sheet per l’analisi di import prodotti
+        .sheet(item: $importAnalysis) { analysis in
+            NavigationStack {
+                ImportAnalysisView(
+                    analysis: analysis,
+                    onApply: {
+                        if let vm = productImportVM {
+                            // teniamo il view model in sync con l'analisi mostrata
+                            vm.analysis = analysis
+                            vm.applyImport()
+                            if let error = vm.lastError {
+                                // riuso l'alert esistente di GeneratedView
+                                saveError = error
+                            }
+                        }
+                        // chiude il foglio anche lato stato
+                        importAnalysis = nil
+                    }
+                )
             }
         }
     }
@@ -957,6 +991,58 @@ struct GeneratedView: View {
         }
 
         isSyncing = false
+    }
+    
+    // MARK: - Import prodotti (via ProductImportViewModel)
+
+    /// Crea l'analisi di import partendo dalla griglia corrente.
+    private func startProductImportAnalysis() {
+        guard !data.isEmpty else {
+            saveError = "Nessun dato di inventario da analizzare."
+            return
+        }
+
+        // Prima riga = header, le altre = dati
+        let headerRow = data[0]
+        let rows = Array(data.dropFirst())
+
+        // Mappiamo ogni riga in [colonna: valore]
+        var mapped: [[String: String]] = []
+
+        for row in rows {
+            var dict: [String: String] = [:]
+
+            for (index, key) in headerRow.enumerated() {
+                guard index < row.count else { continue }
+                let value = row[index].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty {
+                    dict[key] = value
+                }
+            }
+
+            // Consideriamo solo righe con barcode non vuoto
+            let barcode = (dict["barcode"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !barcode.isEmpty {
+                mapped.append(dict)
+            }
+        }
+
+        guard !mapped.isEmpty else {
+            saveError = "Nessuna riga valida (con barcode) trovata per l'import."
+            return
+        }
+
+        // Usa il motore di import (stesso che potresti usare da DatabaseView)
+        let vm = ProductImportViewModel(context: context)
+        vm.analyzeMappedRows(mapped)
+
+        if let analysis = vm.analysis {
+            // Salviamo sia il risultato che il view model da usare su "Applica"
+            self.productImportVM = vm
+            self.importAnalysis = analysis
+        } else if let error = vm.lastError {
+            self.saveError = error
+        }
     }
 
     /// Allunga la riga se necessario per avere almeno `index + 1` elementi
