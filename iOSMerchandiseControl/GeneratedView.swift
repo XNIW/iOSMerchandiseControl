@@ -18,8 +18,16 @@ struct GeneratedView: View {
     @State private var editable: [[String]] = []
     @State private var complete: [Bool] = []
 
-    @State private var isSaving = false
+    @State private var isSaving: Bool = false
+    @State private var isSyncing: Bool = false
+
+    /// errori (salvataggio o sync)
     @State private var saveError: String?
+
+    /// riepilogo di una sincronizzazione andata a buon fine
+    @State private var syncSummaryMessage: String?
+    
+    @State private var showOnlyErrorRows: Bool = false
 
     // MARK: - Body
 
@@ -33,6 +41,25 @@ struct GeneratedView: View {
                 } else {
                     let headerRow = data[0]
                     let rowCount = max(data.count - 1, 0)
+                    let errorCount = countSyncErrors()
+
+                    // Barra con filtro errori + conteggio
+                    HStack {
+                        Toggle("Mostra solo errori", isOn: $showOnlyErrorRows)
+                            .font(.footnote)
+
+                        Spacer()
+
+                        if errorCount > 0 {
+                            Text("\(errorCount) righe in errore")
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                        } else {
+                            Text("Nessun errore")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
 
                     ScrollView(.horizontal) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -47,14 +74,21 @@ struct GeneratedView: View {
                                     Text(key)
                                         .font(.caption)
                                         .fontWeight(.semibold)
-                                        .frame(minWidth: 90, alignment: .leading)
+                                        .frame(minWidth: key == "SyncError" ? 140 : 90,
+                                               alignment: .leading)
                                 }
                             }
 
                             Divider()
 
-                            // RIGHE DATI (saltiamo la riga 0 che è header)
-                            ForEach(1..<data.count, id: \.self) { rowIndex in
+                            // Indici di riga visibili: tutti o solo quelli con SyncError
+                            let allRowIndices = Array(1..<data.count)
+                            let visibleRowIndices: [Int] = showOnlyErrorRows
+                                ? allRowIndices.filter { rowHasError(rowIndex: $0, headerRow: headerRow) }
+                                : allRowIndices
+
+                            // RIGHE DATI
+                            ForEach(visibleRowIndices, id: \.self) { rowIndex in
                                 HStack(alignment: .center, spacing: 8) {
                                     // Toggle "completa"
                                     Toggle("", isOn: bindingForComplete(rowIndex))
@@ -69,6 +103,12 @@ struct GeneratedView: View {
                                         )
                                     }
                                 }
+                                // Evidenzia riga con errore
+                                .background(
+                                    rowHasError(rowIndex: rowIndex, headerRow: headerRow)
+                                        ? Color.red.opacity(0.08)
+                                        : Color.clear
+                                )
                             }
                         }
                         .padding(.vertical, 4)
@@ -84,12 +124,17 @@ struct GeneratedView: View {
             Section("Riassunto") {
                 let checked = complete.dropFirst().filter { $0 }.count
                 let missing = max(0, entry.totalItems - checked)
+                let errorCount = countSyncErrors()
 
                 LabeledContent("Articoli totali") {
                     Text("\(entry.totalItems)")
                 }
                 LabeledContent("Articoli da completare") {
                     Text("\(missing)")
+                }
+                LabeledContent("Righe in errore") {
+                    Text("\(errorCount)")
+                        .foregroundStyle(errorCount > 0 ? .red : .secondary)
                 }
                 LabeledContent("Totale ordine (iniziale)") {
                     Text(formatMoney(entry.orderTotal))
@@ -98,6 +143,7 @@ struct GeneratedView: View {
 
             // Bottone Salva
             Section {
+                // Bottone Salva modifiche
                 Button {
                     saveChanges()
                 } label: {
@@ -108,10 +154,26 @@ struct GeneratedView: View {
                         }
                     } else {
                         Text("Salva modifiche")
-                            .fontWeight(.semibold)
                     }
                 }
-                .disabled(data.isEmpty || isSaving)
+                .disabled(isSaving || isSyncing)
+
+                // Bottone Sincronizza con database (solo per entry non manuali)
+                if !entry.isManualEntry {
+                    Button {
+                        syncWithDatabase()
+                    } label: {
+                        if isSyncing {
+                            HStack {
+                                ProgressView()
+                                Text("Sincronizzazione in corso…")
+                            }
+                        } else {
+                            Text("Sincronizza con database")
+                        }
+                    }
+                    .disabled(isSaving || isSyncing)
+                }
             }
         }
         .id(entry.id)
@@ -121,17 +183,26 @@ struct GeneratedView: View {
             initializeFromEntryIfNeeded()
         }
         .alert(
-            "Errore durante il salvataggio",
+            // Titolo dinamico a seconda che sia errore o riepilogo
+            syncSummaryMessage == nil
+                ? "Errore durante il salvataggio"
+                : "Sincronizzazione completata",
             isPresented: Binding(
-                get: { saveError != nil },
-                set: { if !$0 { saveError = nil } }
+                get: { saveError != nil || syncSummaryMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        saveError = nil
+                        syncSummaryMessage = nil
+                    }
+                }
             )
         ) {
             Button("OK", role: .cancel) {
                 saveError = nil
+                syncSummaryMessage = nil
             }
         } message: {
-            Text(saveError ?? "Errore sconosciuto.")
+            Text(saveError ?? syncSummaryMessage ?? "")
         }
     }
 
@@ -200,6 +271,14 @@ struct GeneratedView: View {
             .textFieldStyle(.roundedBorder)
             .font(.caption2)
             .frame(minWidth: 90)
+        } else if key == "SyncError" {
+            // La colonna degli errori: testo rosso, un po' più larga
+            let value = valueForCell(rowIndex: rowIndex, columnIndex: columnIndex)
+            Text(value)
+                .font(.caption2)
+                .foregroundStyle(.red)
+                .lineLimit(1)
+                .frame(minWidth: 140, alignment: .leading)
         } else {
             // Tutto il resto è solo testo
             let value = valueForCell(rowIndex: rowIndex, columnIndex: columnIndex)
@@ -217,6 +296,41 @@ struct GeneratedView: View {
             return ""
         }
         return data[rowIndex][columnIndex]
+    }
+    
+    /// Ritorna true se la riga ha un messaggio di errore nella colonna "SyncError".
+    private func rowHasError(rowIndex: Int, headerRow: [String]) -> Bool {
+        guard
+            !data.isEmpty,
+            headerRow.contains("SyncError"),
+            let errorIndex = headerRow.firstIndex(of: "SyncError"),
+            data.indices.contains(rowIndex),
+            data[rowIndex].indices.contains(errorIndex)
+        else {
+            return false
+        }
+
+        let value = data[rowIndex][errorIndex]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return !value.isEmpty
+    }
+    
+    /// Conta quante righe hanno un messaggio nella colonna "SyncError".
+    private func countSyncErrors() -> Int {
+        guard !data.isEmpty else { return 0 }
+        let header = data[0]
+
+        guard let errorIndex = header.firstIndex(of: "SyncError") else {
+            return 0
+        }
+
+        return data.dropFirst().reduce(0) { partial, row in
+            guard row.indices.contains(errorIndex) else { return partial }
+            let value = row[errorIndex]
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return partial + (value.isEmpty ? 0 : 1)
+        }
     }
 
     /// Binding per complete[row]
@@ -329,6 +443,42 @@ struct GeneratedView: View {
         isSaving = false
         // aggiorna anche il buffer locale, così rimane in sync
         data = newData
+    }
+    
+    /// Applica i dati dell'inventario al database prodotti e aggiorna la griglia con gli errori.
+    private func syncWithDatabase() {
+        guard !isSyncing else { return }
+
+        isSyncing = true
+        // Puliamo eventuali messaggi precedenti
+        saveError = nil
+        syncSummaryMessage = nil
+
+        // 1) Prima cosa: salvare la griglia in HistoryEntry
+        saveChanges()
+
+        // Se il salvataggio ha fallito (saveError impostato), non partiamo con la sync
+        if saveError != nil {
+            isSyncing = false
+            return
+        }
+
+        // 2) Esegui la sincronizzazione vera e propria
+        do {
+            let service = InventorySyncService(context: context)
+            let result = try service.sync(entry: entry)
+
+            // Ricarichiamo la griglia dall'entry,
+            // così la nuova colonna "SyncError" e i messaggi vengono mostrati
+            data = entry.data
+
+            // Prepariamo il riepilogo da mostrare all'utente
+            syncSummaryMessage = result.summaryMessage
+        } catch {
+            saveError = error.localizedDescription
+        }
+
+        isSyncing = false
     }
 
     /// Allunga la riga se necessario per avere almeno `index + 1` elementi
