@@ -1,5 +1,5 @@
 {
-  "originHash" : "f1e6e617513812b90d19fdaeb43fccf50f906123dd5a2787fde5ad0d3a5ca7ca",
+  "originHash" : "eebcb9c5cd65c45823a16ba9fffc0568a7680048eef8d8a2108c1c18bf19983e",
   "pins" : [
     {
       "identity" : "corexlsx",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "1391f3832ea2eeee5186ea8abb81ea49ed0609cc",
         "version" : "0.14.2"
+      }
+    },
+    {
+      "identity" : "libxlsxwriter",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jmcnamara/libxlsxwriter",
+      "state" : {
+        "branch" : "main",
+        "revision" : "f0647157ba70d3b9372e5eef05ed489c73107b62"
       }
     },
     {
@@ -35,6 +44,15 @@
       "state" : {
         "revision" : "c1f3348d1845302b8e99b1c0787d9417ffa11053",
         "version" : "2.11.2"
+      }
+    },
+    {
+      "identity" : "xlsxwriter.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/damuellen/xlsxwriter.swift",
+      "state" : {
+        "branch" : "SPM",
+        "revision" : "f4c0e101ce5ec0e5dbd762121b666945e1a2b68a"
       }
     },
     {

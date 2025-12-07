@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import xlsxwriter
 
 struct DatabaseView: View {
     @Environment(\.modelContext) private var context
@@ -255,16 +256,98 @@ struct DatabaseView: View {
         }
     }
 
-    // MARK: - Export CSV
+    // MARK: - Export prodotti (XLSX di default)
 
     private func exportProducts() {
         do {
-            let url = try makeProductsCSV()
+            // Ora esportiamo direttamente in XLSX
+            let url = try makeProductsXLSX()
             exportURL = url
             showingExportSheet = true
         } catch {
             importError = "Errore durante l'export: \(error.localizedDescription)"
         }
+    }
+    
+    // MARK: - Export XLSX (writer reale tramite xlsxwriter.swift)
+
+    /// Genera un file XLSX con la stessa struttura del CSV attuale
+    private func makeProductsXLSX() throws -> URL {
+        // Stesse colonne del CSV esistente
+        let headers = [
+            "barcode",
+            "itemNumber",
+            "productName",
+            "secondProductName",
+            "purchasePrice",
+            "retailPrice",
+            "stockQuantity",
+            "supplierName",
+            "categoryName"
+        ]
+
+        // Path nel temporaryDirectory (così ShareLink funziona tranquillo)
+        let tmpDir = FileManager.default.temporaryDirectory
+        let filename = "products_\(Int(Date().timeIntervalSince1970)).xlsx"
+        let url = tmpDir.appendingPathComponent(filename)
+
+        // Crea il workbook puntando al path completo
+        // Nota: usiamo il nome completo del file, esattamente come negli esempi di xlsxwriter.swift
+        // e libxlsxwriter: Workbook(name: filePath) :contentReference[oaicite:5]{index=5}
+        let workbook = xlsxwriter.Workbook(name: url.path)
+
+        // Chiudiamo sempre il file alla fine, anche se ci sono errori dopo
+        defer {
+            workbook.close()
+        }
+
+        // Un solo worksheet per ora
+        let worksheet = workbook.addWorksheet(name: "Products")
+
+        // Riga 0: header
+        for (columnIndex, header) in headers.enumerated() {
+            worksheet.write(.string(header), [0, columnIndex])
+        }
+
+        // Righe dati: dalla riga 1 in avanti
+        for (rowIndex, product) in products.enumerated() {
+            let row = rowIndex + 1   // 0 = header, 1..n = dati
+
+            // 0: barcode (obbligatorio)
+            worksheet.write(.string(product.barcode), [row, 0])
+
+            // 1: itemNumber
+            worksheet.write(.string(product.itemNumber ?? ""), [row, 1])
+
+            // 2: nome prodotto principale
+            worksheet.write(.string(product.productName ?? ""), [row, 2])
+
+            // 3: secondo nome
+            worksheet.write(.string(product.secondProductName ?? ""), [row, 3])
+
+            // 4: purchasePrice (numero, non stringa)
+            if let purchase = product.purchasePrice {
+                worksheet.write(.number(purchase), [row, 4])
+            }
+
+            // 5: retailPrice (numero)
+            if let retail = product.retailPrice {
+                worksheet.write(.number(retail), [row, 5])
+            }
+
+            // 6: stockQuantity (numero)
+            if let stock = product.stockQuantity {
+                worksheet.write(.number(stock), [row, 6])
+            }
+
+            // 7: supplierName
+            worksheet.write(.string(product.supplier?.name ?? ""), [row, 7])
+
+            // 8: categoryName
+            worksheet.write(.string(product.category?.name ?? ""), [row, 8])
+        }
+
+        return url
     }
 
     private func makeProductsCSV() throws -> URL {

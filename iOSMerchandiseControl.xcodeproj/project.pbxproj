@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		415227EC2EE4CDE3008233E0 /* CoreXLSX in Frameworks */ = {isa = PBXBuildFile; productRef = 415227EB2EE4CDE3008233E0 /* CoreXLSX */; };
 		415227EF2EE4CE13008233E0 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 415227EE2EE4CE13008233E0 /* SwiftSoup */; };
+		415227F82EE5059D008233E0 /* xlsxwriter in Frameworks */ = {isa = PBXBuildFile; productRef = 415227F72EE5059D008233E0 /* xlsxwriter */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				415227F82EE5059D008233E0 /* xlsxwriter in Frameworks */,
 				415227EC2EE4CDE3008233E0 /* CoreXLSX in Frameworks */,
 				415227EF2EE4CE13008233E0 /* SwiftSoup in Frameworks */,
 			);
@@ -74,6 +76,7 @@
 			packageProductDependencies = (
 				415227EB2EE4CDE3008233E0 /* CoreXLSX */,
 				415227EE2EE4CE13008233E0 /* SwiftSoup */,
+				415227F72EE5059D008233E0 /* xlsxwriter */,
 			);
 			productName = iOSMerchandiseControl;
 			productReference = 415227B32EE0B07D008233E0 /* iOSMerchandiseControl.app */;
@@ -106,6 +109,7 @@
 			packageReferences = (
 				415227EA2EE4CDE3008233E0 /* XCRemoteSwiftPackageReference "CoreXLSX" */,
 				415227ED2EE4CE13008233E0 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+				415227F62EE5059D008233E0 /* XCRemoteSwiftPackageReference "xlsxwriter" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 415227B42EE0B07D008233E0 /* Products */;
@@ -382,6 +386,14 @@
 				minimumVersion = 2.11.2;
 			};
 		};
+		415227F62EE5059D008233E0 /* XCRemoteSwiftPackageReference "xlsxwriter" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/damuellen/xlsxwriter.swift";
+			requirement = {
+				branch = SPM;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -394,6 +406,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 415227ED2EE4CE13008233E0 /* XCRemoteSwiftPackageReference "SwiftSoup" */;
 			productName = SwiftSoup;
+		};
+		415227F72EE5059D008233E0 /* xlsxwriter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 415227F62EE5059D008233E0 /* XCRemoteSwiftPackageReference "xlsxwriter" */;
+			productName = xlsxwriter;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

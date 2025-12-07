@@ -5,9 +5,20 @@ import SwiftData
 struct ProductPriceHistoryView: View {
     let product: Product
 
-    /// Prendiamo lo storico direttamente dalla relazione del modello
+    /// Tipo di prezzo attualmente selezionato (come i tab Android)
+    @State private var selectedType: PriceType = .purchase
+
+    /// Storico completo, ordinato dal più recente
     private var prices: [ProductPrice] {
         product.priceHistory.sorted { $0.effectiveAt > $1.effectiveAt }
+    }
+
+    private var purchasePrices: [ProductPrice] {
+        prices.filter { $0.type == .purchase }
+    }
+
+    private var retailPrices: [ProductPrice] {
+        prices.filter { $0.type == .retail }
     }
 
     var body: some View {
@@ -18,24 +29,45 @@ struct ProductPriceHistoryView: View {
                         .foregroundStyle(.secondary)
                 }
             } else {
+                // Picker in stile tab “Acquisto / Vendita”
                 Section {
-                    ForEach(prices) { price in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(label(for: price.type))
-                                    .font(.subheadline)
+                    Picker("Tipo prezzo", selection: $selectedType) {
+                        Text("Acquisto").tag(PriceType.purchase)
+                        Text("Vendita").tag(PriceType.retail)
+                    }
+                    .pickerStyle(.segmented)
+                }
 
-                                Text(formatDate(price.effectiveAt))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                let currentList = selectedType == .purchase ? purchasePrices : retailPrices
+
+                if currentList.isEmpty {
+                    Section {
+                        Text("Nessuno storico \(label(for: selectedType).lowercased()) disponibile.")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Section(header: Text(label(for: selectedType))) {
+                        ForEach(currentList) { price in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(formatDate(price.effectiveAt))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+
+                                    if let source = price.source, !source.isEmpty {
+                                        Text(source)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                Text(formatMoney(price.price))
+                                    .font(.headline)
                             }
-
-                            Spacer()
-
-                            Text(formatMoney(price.price))
-                                .font(.headline)
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
                     }
                 }
             }
