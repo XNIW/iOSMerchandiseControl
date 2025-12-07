@@ -10,6 +10,8 @@ struct InventoryHomeView: View {
     @State private var showPreGenerate = false
     @State private var loadError: String?
     @State private var navigateToManualGenerated = false
+    @State private var showQuickScanner = false
+    @State private var lastScannedCode: String?
 
     var body: some View {
         VStack(spacing: 16) {
@@ -45,6 +47,18 @@ struct InventoryHomeView: View {
             } label: {
                 Label("Nuovo inventario manuale", systemImage: "square.and.pencil")
             }
+            
+            Button {
+                showQuickScanner = true
+            } label: {
+                Label("Scanner inventario veloce", systemImage: "camera.viewfinder")
+            }
+
+            if let code = lastScannedCode {
+                Text("Ultimo barcode: \(code)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
 
             if excelSession.isLoading {
                 ProgressView(value: excelSession.progress ?? 0) {
@@ -78,6 +92,15 @@ struct InventoryHomeView: View {
                     Text("Nessun inventario disponibile.")
                         .foregroundStyle(.secondary)
                 }
+            }
+        }
+        .sheet(isPresented: $showQuickScanner) {
+            ScannerView(title: "Inventario veloce") { code in
+                // Per ora memorizziamo solo l’ultimo barcode.
+                // In futuro qui possiamo:
+                // - creare/aprire una HistoryEntry manuale
+                // - aprire direttamente GeneratedView con il codice già usato, ecc.
+                lastScannedCode = code
             }
         }
         // File picker: .spreadsheet + .html

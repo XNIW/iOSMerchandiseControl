@@ -14,6 +14,9 @@ struct DatabaseView: View {
     @State private var showAddSheet = false
     @State private var productToEdit: Product?
     @State private var productForHistory: Product?
+    
+    @State private var showScanner = false                 // 👈 nuovo
+    @State private var pendingBarcodeForNewProduct: String? = nil
 
     // Export / import
     @State private var exportURL: URL?
@@ -47,7 +50,7 @@ struct DatabaseView: View {
     var body: some View {
         VStack {
             // campo filtro barcode / nome / codice
-            HStack {
+            HStack(spacing: 8) {
                 TextField("Cerca per barcode, nome o codice", text: $barcodeFilter)
                     .textFieldStyle(.roundedBorder)
                     .textInputAutocapitalization(.never)
@@ -60,6 +63,12 @@ struct DatabaseView: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
                     }
+                }
+
+                Button {
+                    showScanner = true
+                } label: {
+                    Image(systemName: "camera.viewfinder")
                 }
             }
             .padding(.horizontal)
@@ -184,6 +193,7 @@ struct DatabaseView: View {
                     }
 
                     Button {
+                        pendingBarcodeForNewProduct = nil
                         showAddSheet = true
                     } label: {
                         Image(systemName: "plus")
@@ -195,7 +205,7 @@ struct DatabaseView: View {
         // Sheet per NUOVO prodotto
         .sheet(isPresented: $showAddSheet) {
             NavigationStack {
-                EditProductView()
+                EditProductView(initialBarcode: pendingBarcodeForNewProduct)
             }
         }
         // Sheet per MODIFICA prodotto esistente
@@ -236,6 +246,12 @@ struct DatabaseView: View {
                         importAnalysisResult = nil
                     }
                 )
+            }
+        }
+        // Sheet per scanner barcode
+        .sheet(isPresented: $showScanner) {
+            ScannerView(title: "Scanner prodotti") { code in
+                handleDatabaseScan(code)
             }
         }
 
@@ -307,6 +323,23 @@ struct DatabaseView: View {
 
     // MARK: - Azioni base
 
+    private func handleDatabaseScan(_ code: String) {
+        let cleaned = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return }
+
+        // Aggiorna filtro come feedback visivo
+        barcodeFilter = cleaned
+
+        if let existing = products.first(where: { $0.barcode == cleaned }) {
+            // Prodotto già presente → apri edit
+            productToEdit = existing
+        } else {
+            // Nessun prodotto → crea nuovo con barcode precompilato
+            pendingBarcodeForNewProduct = cleaned
+            showAddSheet = true
+        }
+    }
+    
     private func deleteProducts(at offsets: IndexSet) {
         for index in offsets {
             let product = filteredProducts[index]

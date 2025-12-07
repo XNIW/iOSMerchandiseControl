@@ -51,6 +51,7 @@ struct GeneratedView: View {
     @State private var scanError: String?
     @State private var productToEdit: Product?
     @State private var productForHistory: Product?
+    @State private var showScanner: Bool = false
 
     // MARK: - Body
 
@@ -59,21 +60,30 @@ struct GeneratedView: View {
             // Sezione scanner / input barcode
             Section("Scanner") {
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
+                    HStack(spacing: 8) {
                         TextField("Scansiona o inserisci barcode", text: $scanInput)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
 
+                        // pulsante per usare l'input testuale
                         Button {
                             handleScanInput()
                         } label: {
-                            Image(systemName: "barcode.viewfinder")
+                            Image(systemName: "arrow.right.circle.fill")
                         }
                         .buttonStyle(.borderless)
                         .disabled(scanInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                        // pulsante per aprire lo scanner camera
+                        Button {
+                            showScanner = true
+                        } label: {
+                            Image(systemName: "camera.viewfinder")
+                        }
+                        .buttonStyle(.borderless)
                     }
 
-                    Text("Digitando qui un barcode (o in futuro con la camera) aggiorni o aggiungi la riga corrispondente.")
+                    Text("Scansiona con la camera oppure digita un barcode per aggiornare/aggiungere la riga corrispondente.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
@@ -344,11 +354,19 @@ struct GeneratedView: View {
                 EditProductView(product: product)
             }
         }
-
         // Sheet per storico prezzi (da pannello dettagli)
         .sheet(item: $productForHistory) { product in
             NavigationStack {
                 ProductPriceHistoryView(product: product)
+            }
+        }
+        // Sheet scanner barcode (camera)
+        .sheet(isPresented: $showScanner) {
+            ScannerView(title: "Scanner inventario") { code in
+                // usa la stessa logica di input manuale
+                scanError = nil
+                handleScannedBarcode(code)
+                scanInput = ""
             }
         }
     }

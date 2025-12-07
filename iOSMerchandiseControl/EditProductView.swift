@@ -23,10 +23,12 @@ struct EditProductView: View {
     @State private var supplierName: String
     @State private var categoryName: String
 
-    init(product: Product? = nil) {
+    init(product: Product? = nil, initialBarcode: String? = nil) {
         self.existingProduct = product
 
-        _barcode = State(initialValue: product?.barcode ?? "")
+        let initialCode = product?.barcode ?? initialBarcode ?? ""
+
+        _barcode = State(initialValue: initialCode)
         _name = State(initialValue: product?.productName ?? "")
         _secondName = State(initialValue: product?.secondProductName ?? "")
         _itemNumber = State(initialValue: product?.itemNumber ?? "")
