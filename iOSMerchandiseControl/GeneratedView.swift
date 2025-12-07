@@ -49,6 +49,8 @@ struct GeneratedView: View {
     /// Hook per scanner / input barcode
     @State private var scanInput: String = ""
     @State private var scanError: String?
+    @State private var productToEdit: Product?
+    @State private var productForHistory: Product?
 
     // MARK: - Body
 
@@ -302,6 +304,20 @@ struct GeneratedView: View {
                                 Text(detail.newRetailPrice.isEmpty ? "—" : detail.newRetailPrice)
                             }
                         }
+                        
+                        Section("Azioni") {
+                            Button {
+                                openProductEditor(for: detail.barcode)
+                            } label: {
+                                Label("Modifica prodotto", systemImage: "pencil")
+                            }
+
+                            Button {
+                                openPriceHistory(for: detail.barcode)
+                            } label: {
+                                Label("Storico prezzi", systemImage: "clock.arrow.circlepath")
+                            }
+                        }
 
                         if let syncError = detail.syncError, !syncError.isEmpty {
                             Section("Errore di sincronizzazione") {
@@ -320,6 +336,19 @@ struct GeneratedView: View {
                 }
             } else {
                 Text("Nessuna riga selezionata")
+            }
+        }
+        // Sheet per edit prodotto (da pannello dettagli)
+        .sheet(item: $productToEdit) { product in
+            NavigationStack {
+                EditProductView(product: product)
+            }
+        }
+
+        // Sheet per storico prezzi (da pannello dettagli)
+        .sheet(item: $productForHistory) { product in
+            NavigationStack {
+                ProductPriceHistoryView(product: product)
             }
         }
     }
@@ -933,6 +962,34 @@ struct GeneratedView: View {
             return String(Int(value))
         } else {
             return String(format: "%.2f", value)
+        }
+    }
+
+    // MARK: - Azioni pannello dettagli
+
+    private func openProductEditor(for barcode: String) {
+        let trimmed = barcode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let descriptor = FetchDescriptor<Product>(
+            predicate: #Predicate { $0.barcode == trimmed }
+        )
+
+        if let product = try? context.fetch(descriptor).first {
+            productToEdit = product
+        }
+    }
+
+    private func openPriceHistory(for barcode: String) {
+        let trimmed = barcode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let descriptor = FetchDescriptor<Product>(
+            predicate: #Predicate { $0.barcode == trimmed }
+        )
+
+        if let product = try? context.fetch(descriptor).first {
+            productForHistory = product
         }
     }
 }

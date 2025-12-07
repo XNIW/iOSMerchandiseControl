@@ -9,6 +9,7 @@ struct InventoryHomeView: View {
     @State private var showFileImporter = false
     @State private var showPreGenerate = false
     @State private var loadError: String?
+    @State private var navigateToManualGenerated = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -31,6 +32,19 @@ struct InventoryHomeView: View {
                 Label("Seleziona file Excel / HTML", systemImage: "doc.badge.plus")
             }
             .buttonStyle(.borderedProminent)
+            
+            Button {
+                Task {
+                    do {
+                        _ = try excelSession.createManualHistoryEntry(in: context)
+                        navigateToManualGenerated = true
+                    } catch {
+                        loadError = error.localizedDescription
+                    }
+                }
+            } label: {
+                Label("Nuovo inventario manuale", systemImage: "square.and.pencil")
+            }
 
             if excelSession.isLoading {
                 ProgressView(value: excelSession.progress ?? 0) {
@@ -51,15 +65,33 @@ struct InventoryHomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle("Inventario")
-        // Navigation "nascosta" verso PreGenerateView
+        // Navigation "nascosta" verso PreGenerateView e GeneratedView (manuale)
         .background(
-            NavigationLink(
-                destination: PreGenerateView()
-                    .environmentObject(excelSession),
-                isActive: $showPreGenerate,
-                label: { EmptyView() }
-            )
-            .hidden()
+            ZStack {
+                // Flow standard: Excel → PreGenerateView
+                NavigationLink(
+                    destination: PreGenerateView()
+                        .environmentObject(excelSession),
+                    isActive: $showPreGenerate,
+                    label: { EmptyView() }
+                )
+                .hidden()
+
+                // NEW: flow manuale → GeneratedView
+                NavigationLink(
+                    destination: Group {
+                        if let entry = excelSession.currentHistoryEntry {
+                            GeneratedView(entry: entry)
+                        } else {
+                            Text("Nessun inventario disponibile.")
+                                .foregroundStyle(.secondary)
+                        }
+                    },
+                    isActive: $navigateToManualGenerated,
+                    label: { EmptyView() }
+                )
+                .hidden()
+            }
         )
         // File picker: .spreadsheet + .html
         .fileImporter(

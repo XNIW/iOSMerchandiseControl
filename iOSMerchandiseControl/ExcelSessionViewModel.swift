@@ -151,6 +151,31 @@ extension ExcelSessionViewModel {
         case emptySession
     }
 
+    enum ManualHistoryError: Error {
+        case unableToCreate
+    }
+
+    /// Crea una HistoryEntry “vuota” per un inventario manuale
+    func createManualHistoryEntry(in context: ModelContext) throws -> HistoryEntry {
+        let now = Date()
+        let id = "manual_\(Int(now.timeIntervalSince1970))"
+
+        let entry = HistoryEntry(
+            id: id,
+            timestamp: now,
+            isManualEntry: true,
+            supplier: "Inventario manuale",
+            category: "",
+            syncStatus: .notAttempted
+        )
+
+        context.insert(entry)
+        try context.save()
+
+        currentHistoryEntry = entry
+        return entry
+    }
+
     /// Genera una HistoryEntry a partire dallo stato corrente (header/rows + supplier/category).
     /// È l'equivalente di generateFilteredWithOldPrices su Android.
     func generateHistoryEntry(in context: ModelContext) throws -> HistoryEntry {
