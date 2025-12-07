@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct DatabaseView: View {
     @Environment(\.modelContext) private var context
@@ -11,26 +12,46 @@ struct DatabaseView: View {
     @State private var barcodeFilter: String = ""
     @State private var showAddSheet = false
     @State private var productToEdit: Product?
+    @State private var productForHistory: Product?
+
+    // Export / import
+    @State private var exportURL: URL?
+    @State private var showingExportSheet = false
+    @State private var showingImportPicker = false
+    @State private var importError: String?
 
     // filtro in memoria sui prodotti, come facevi in Compose
     private var filteredProducts: [Product] {
         let trimmed = barcodeFilter.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            return products
-        } else {
-            return products.filter { product in
-                product.barcode.localizedStandardContains(trimmed)
-            }
+        guard !trimmed.isEmpty else { return products }
+
+        let lower = trimmed.lowercased()
+        return products.filter { product in
+            if product.barcode.lowercased().contains(lower) { return true }
+            if let item = product.itemNumber?.lowercased(), item.contains(lower) { return true }
+            if let name = product.productName?.lowercased(), name.contains(lower) { return true }
+            if let second = product.secondProductName?.lowercased(), second.contains(lower) { return true }
+            return false
         }
     }
 
     var body: some View {
         VStack {
-            // campo filtro barcode
+            // campo filtro barcode / nome / codice
             HStack {
-                TextField("Filtra per barcode", text: $barcodeFilter)
+                TextField("Cerca per barcode, nome o codice", text: $barcodeFilter)
                     .textFieldStyle(.roundedBorder)
-                    .keyboardType(.numberPad)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
+                if !barcodeFilter.isEmpty {
+                    Button {
+                        barcodeFilter = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             .padding(.horizontal)
             .padding(.top)
@@ -38,30 +59,84 @@ struct DatabaseView: View {
             // lista prodotti
             List {
                 ForEach(filteredProducts) { (product: Product) in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(product.productName ?? "Senza nome")
-                            .font(.headline)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(product.productName ?? "Senza nome")
+                                    .font(.headline)
 
-                        Text("Barcode: \(product.barcode)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                                if let second = product.secondProductName,
+                                   !second.isEmpty {
+                                    Text(second)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
 
-                        if let qty = product.stockQuantity {
-                            Text("Stock: \(qty)")
-                                .font(.footnote)
+                                Text("Barcode: \(product.barcode)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+
+                                if let item = product.itemNumber,
+                                   !item.isEmpty {
+                                    Text("Codice: \(item)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 2) {
+                                if let purchase = product.purchasePrice {
+                                    Text("Acq: \(formatMoney(purchase))")
+                                        .font(.caption)
+                                }
+                                if let retail = product.retailPrice {
+                                    Text("Vend: \(formatMoney(retail))")
+                                        .font(.caption)
+                                }
+                                if let qty = product.stockQuantity {
+                                    Text("Stock: \(formatQuantity(qty))")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
 
-                        if let supplierName = product.supplier?.name,
-                           !supplierName.isEmpty {
-                            Text("Fornitore: \(supplierName)")
-                                .font(.footnote)
+                        HStack {
+                            if let supplierName = product.supplier?.name,
+                               !supplierName.isEmpty {
+                                Text("Fornitore: \(supplierName)")
+                            }
+                            if let categoryName = product.category?.name,
+                               !categoryName.isEmpty {
+                                if product.supplier != nil {
+                                    Text("·")
+                                }
+                                Text("Categoria: \(categoryName)")
+                            }
                         }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
 
-                        if let categoryName = product.category?.name,
-                           !categoryName.isEmpty {
-                            Text("Categoria: \(categoryName)")
-                                .font(.footnote)
+                        HStack {
+                            Button {
+                                productToEdit = product
+                            } label: {
+                                Label("Modifica", systemImage: "pencil")
+                            }
+
+                            Spacer()
+
+                            Button {
+                                productForHistory = product
+                            } label: {
+                                Label("Storico prezzi", systemImage: "clock.arrow.circlepath")
+                            }
+                            .buttonStyle(.borderless)
                         }
+                        .font(.footnote)
+                        .padding(.top, 2)
                     }
                     .contentShape(Rectangle()) // tutta la riga tappabile
                     .onTapGesture {
@@ -83,12 +158,26 @@ struct DatabaseView: View {
                 }
             }
 
-            // bottone per aggiungere nuovo prodotto
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showAddSheet = true
-                } label: {
-                    Image(systemName: "plus")
+            // import / export + nuovo prodotto
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack {
+                    Button {
+                        showingImportPicker = true
+                    } label: {
+                        Image(systemName: "tray.and.arrow.down")
+                    }
+
+                    Button {
+                        exportProducts()
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+
+                    Button {
+                        showAddSheet = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
                 }
             }
         }
@@ -104,9 +193,56 @@ struct DatabaseView: View {
                 EditProductView(product: product)
             }
         }
+        // Sheet per storico prezzi
+        .sheet(item: $productForHistory) { (product: Product) in
+            NavigationStack {
+                ProductPriceHistoryView(product: product)
+            }
+        }
+        // Sheet per condividere il CSV export
+        .sheet(isPresented: $showingExportSheet) {
+            if let exportURL {
+                ShareLink(item: exportURL) {
+                    Label("Condividi export prodotti", systemImage: "square.and.arrow.up")
+                }
+                .padding()
+            } else {
+                Text("Nessun file da condividere.")
+                    .padding()
+            }
+        }
+        // Import CSV
+        .fileImporter(
+            isPresented: $showingImportPicker,
+            allowedContentTypes: [UTType.commaSeparatedText, UTType.plainText],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let url = urls.first {
+                    importProducts(from: url)
+                }
+            case .failure(let error):
+                importError = error.localizedDescription
+            }
+        }
+        .alert(
+            "Errore import",
+            isPresented: Binding(
+                get: { importError != nil },
+                set: { if !$0 { importError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                importError = nil
+            }
+        } message: {
+            Text(importError ?? "")
+        }
     }
 
-    // cancellazione con swipe-to-delete
+    // MARK: - Azioni base
+
     private func deleteProducts(at offsets: IndexSet) {
         for index in offsets {
             let product = filteredProducts[index]
@@ -117,5 +253,249 @@ struct DatabaseView: View {
         } catch {
             print("Errore durante l'eliminazione: \(error)")
         }
+    }
+
+    // MARK: - Export CSV
+
+    private func exportProducts() {
+        do {
+            let url = try makeProductsCSV()
+            exportURL = url
+            showingExportSheet = true
+        } catch {
+            importError = "Errore durante l'export: \(error.localizedDescription)"
+        }
+    }
+
+    private func makeProductsCSV() throws -> URL {
+        let headers = [
+            "barcode",
+            "itemNumber",
+            "productName",
+            "secondProductName",
+            "purchasePrice",
+            "retailPrice",
+            "stockQuantity",
+            "supplierName",
+            "categoryName"
+        ]
+
+        var lines: [String] = []
+        lines.append(headers.joined(separator: ";"))
+
+        let numberFormatter = NumberFormatter()
+        numberFormatter.locale = Locale(identifier: "en_US_POSIX")
+        numberFormatter.minimumFractionDigits = 0
+        numberFormatter.maximumFractionDigits = 4
+
+        for product in products {
+            let row: [String] = [
+                product.barcode,
+                product.itemNumber ?? "",
+                product.productName ?? "",
+                product.secondProductName ?? "",
+                product.purchasePrice.flatMap { numberFormatter.string(from: $0 as NSNumber) } ?? "",
+                product.retailPrice.flatMap { numberFormatter.string(from: $0 as NSNumber) } ?? "",
+                product.stockQuantity.flatMap { numberFormatter.string(from: $0 as NSNumber) } ?? "",
+                product.supplier?.name ?? "",
+                product.category?.name ?? ""
+            ]
+            lines.append(row.map(escapeCSVField).joined(separator: ";"))
+        }
+
+        let csvString = lines.joined(separator: "\n")
+        let data = Data(csvString.utf8)
+
+        let tmpDir = FileManager.default.temporaryDirectory
+        let filename = "products_\(Int(Date().timeIntervalSince1970)).csv"
+        let url = tmpDir.appendingPathComponent(filename)
+
+        try data.write(to: url, options: .atomic)
+        return url
+    }
+
+    private func escapeCSVField(_ field: String) -> String {
+        if field.contains(";") || field.contains("\"") || field.contains("\n") {
+            var escaped = field.replacingOccurrences(of: "\"", with: "\"\"")
+            escaped = "\"\(escaped)\""
+            return escaped
+        } else {
+            return field
+        }
+    }
+
+    // MARK: - Import CSV
+
+    private func importProducts(from url: URL) {
+        do {
+            guard url.startAccessingSecurityScopedResource() else {
+                throw NSError(domain: "Import", code: 1, userInfo: [NSLocalizedDescriptionKey: "Permessi file negati"])
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+
+            let data = try Data(contentsOf: url)
+            guard let content = String(data: data, encoding: .utf8) else {
+                throw NSError(domain: "Import", code: 2, userInfo: [NSLocalizedDescriptionKey: "File non in UTF-8"])
+            }
+
+            try parseProductsCSV(content)
+            try context.save()
+        } catch {
+            importError = "Errore durante l'import: \(error.localizedDescription)"
+        }
+    }
+
+    private func parseProductsCSV(_ content: String) throws {
+        let lines = content.split(whereSeparator: \.isNewline)
+        guard !lines.isEmpty else { return }
+
+        // salta l'header
+        let dataLines = lines.dropFirst()
+
+        for rawLine in dataLines {
+            let line = String(rawLine)
+            if line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { continue }
+
+            let cols = splitCSVRow(line)
+            if cols.isEmpty { continue }
+
+            func col(_ index: Int) -> String {
+                guard index < cols.count else { return "" }
+                return cols[index]
+            }
+
+            let barcode = col(0).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !barcode.isEmpty else { continue }
+
+            let itemNumber = col(1).trimmingCharacters(in: .whitespacesAndNewlines)
+            let productName = col(2).trimmingCharacters(in: .whitespacesAndNewlines)
+            let secondName = col(3).trimmingCharacters(in: .whitespacesAndNewlines)
+            let purchase = Self.parseDouble(from: col(4))
+            let retail = Self.parseDouble(from: col(5))
+            let stock = Self.parseDouble(from: col(6))
+            let supplierName = col(7).trimmingCharacters(in: .whitespacesAndNewlines)
+            let categoryName = col(8).trimmingCharacters(in: .whitespacesAndNewlines)
+
+            let supplier = supplierName.isEmpty ? nil : findOrCreateSupplier(named: supplierName)
+            let category = categoryName.isEmpty ? nil : findOrCreateCategory(named: categoryName)
+
+            // Cerca prodotto esistente per barcode
+            let descriptor = FetchDescriptor<Product>(predicate: #Predicate { $0.barcode == barcode })
+            let existing = try context.fetch(descriptor).first
+
+            let product: Product
+            if let existing {
+                product = existing
+            } else {
+                product = Product(
+                    barcode: barcode,
+                    itemNumber: itemNumber.isEmpty ? nil : itemNumber,
+                    productName: productName.isEmpty ? nil : productName,
+                    secondProductName: secondName.isEmpty ? nil : secondName,
+                    purchasePrice: purchase,
+                    retailPrice: retail,
+                    stockQuantity: stock,
+                    supplier: supplier,
+                    category: category
+                )
+                context.insert(product)
+            }
+
+            product.itemNumber = itemNumber.isEmpty ? nil : itemNumber
+            product.productName = productName.isEmpty ? nil : productName
+            product.secondProductName = secondName.isEmpty ? nil : secondName
+            product.purchasePrice = purchase
+            product.retailPrice = retail
+            product.stockQuantity = stock
+            product.supplier = supplier
+            product.category = category
+        }
+    }
+
+    private func splitCSVRow(_ line: String) -> [String] {
+        // parsing molto semplice: separatore ';', gestisce i campi tra doppi apici
+        var result: [String] = []
+        var current = ""
+        var insideQuotes = false
+
+        for char in line {
+            if char == "\"" {
+                insideQuotes.toggle()
+                current.append(char)
+            } else if char == ";" && !insideQuotes {
+                result.append(current.trimmingCharacters(in: .whitespaces))
+                current = ""
+            } else {
+                current.append(char)
+            }
+        }
+        if !current.isEmpty {
+            result.append(current.trimmingCharacters(in: .whitespaces))
+        }
+
+        // rimuovi doppi apici esterni e rimpiazza "" con "
+        return result.map { field in
+            var f = field
+            if f.hasPrefix("\""), f.hasSuffix("\""), f.count >= 2 {
+                f.removeFirst()
+                f.removeLast()
+            }
+            f = f.replacingOccurrences(of: "\"\"", with: "\"")
+            return f
+        }
+    }
+
+    private func findOrCreateSupplier(named name: String) -> Supplier {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return Supplier(name: "") }
+
+        let descriptor = FetchDescriptor<Supplier>(predicate: #Predicate { $0.name == trimmed })
+        if let existing = try? context.fetch(descriptor).first {
+            return existing
+        } else {
+            let supplier = Supplier(name: trimmed)
+            context.insert(supplier)
+            return supplier
+        }
+    }
+
+    private func findOrCreateCategory(named name: String) -> ProductCategory {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return ProductCategory(name: "") }
+
+        let descriptor = FetchDescriptor<ProductCategory>(predicate: #Predicate { $0.name == trimmed })
+        if let existing = try? context.fetch(descriptor).first {
+            return existing
+        } else {
+            let category = ProductCategory(name: trimmed)
+            context.insert(category)
+            return category
+        }
+    }
+
+    // MARK: - Formattazione / parsing numeri
+
+    private func formatMoney(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = .current
+        return formatter.string(from: value as NSNumber) ?? String(value)
+    }
+
+    private func formatQuantity(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(Int(value))
+        } else {
+            return String(value)
+        }
+    }
+
+    private static func parseDouble(from text: String) -> Double? {
+        let normalized = text
+            .replacingOccurrences(of: ",", with: ".")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !normalized.isEmpty else { return nil }
+        return Double(normalized)
     }
 }

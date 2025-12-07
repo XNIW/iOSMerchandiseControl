@@ -15,6 +15,8 @@ struct EditProductView: View {
 
     @State private var barcode: String
     @State private var name: String
+    @State private var secondName: String
+    @State private var itemNumber: String
     @State private var purchasePrice: String
     @State private var retailPrice: String
     @State private var stockQuantity: String
@@ -26,6 +28,8 @@ struct EditProductView: View {
 
         _barcode = State(initialValue: product?.barcode ?? "")
         _name = State(initialValue: product?.productName ?? "")
+        _secondName = State(initialValue: product?.secondProductName ?? "")
+        _itemNumber = State(initialValue: product?.itemNumber ?? "")
         _purchasePrice = State(initialValue: product?.purchasePrice.map { Self.format(number: $0) } ?? "")
         _retailPrice = State(initialValue: product?.retailPrice.map { Self.format(number: $0) } ?? "")
         _stockQuantity = State(initialValue: product?.stockQuantity.map { Self.format(number: $0) } ?? "")
@@ -49,7 +53,13 @@ struct EditProductView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
 
+                TextField("Codice articolo (itemNumber)", text: $itemNumber)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
                 TextField("Nome prodotto", text: $name)
+
+                TextField("Secondo nome", text: $secondName)
             }
 
             Section("Magazzino") {
@@ -111,6 +121,10 @@ struct EditProductView: View {
         let retail = Self.parseDouble(from: retailPrice)
         let stock = Self.parseDouble(from: stockQuantity)
 
+        // prezzi precedenti per storico
+        let oldPurchase = existingProduct?.purchasePrice
+        let oldRetail = existingProduct?.retailPrice
+
         let target: Product
         if let existingProduct {
             target = existingProduct
@@ -120,7 +134,9 @@ struct EditProductView: View {
         }
 
         target.barcode = barcode
-        target.productName = name.isEmpty ? nil : name
+        target.itemNumber = itemNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : itemNumber
+        target.productName = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : name
+        target.secondProductName = secondName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : secondName
         target.purchasePrice = purchase
         target.retailPrice = retail
         target.stockQuantity = stock
@@ -151,8 +167,49 @@ struct EditProductView: View {
             target.category = newCategory
         }
 
+        // storico prezzi automatico
+        createPriceHistoryIfNeeded(
+            for: target,
+            oldPurchase: oldPurchase,
+            newPurchase: purchase,
+            oldRetail: oldRetail,
+            newRetail: retail
+        )
+
         try? context.save()
         dismiss()
+    }
+
+    private func createPriceHistoryIfNeeded(
+        for product: Product,
+        oldPurchase: Double?,
+        newPurchase: Double?,
+        oldRetail: Double?,
+        newRetail: Double?
+    ) {
+        let now = Date()
+
+        if let newPurchase, newPurchase != oldPurchase {
+            let history = ProductPrice(
+                type: .purchase,
+                price: newPurchase,
+                effectiveAt: now,
+                source: "EDIT_PRODUCT",
+                product: product
+            )
+            context.insert(history)
+        }
+
+        if let newRetail, newRetail != oldRetail {
+            let history = ProductPrice(
+                type: .retail,
+                price: newRetail,
+                effectiveAt: now,
+                source: "EDIT_PRODUCT",
+                product: product
+            )
+            context.insert(history)
+        }
     }
 
     private static func parseDouble(from text: String) -> Double? {
