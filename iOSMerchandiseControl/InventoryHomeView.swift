@@ -66,33 +66,20 @@ struct InventoryHomeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle("Inventario")
         // Navigation "nascosta" verso PreGenerateView e GeneratedView (manuale)
-        .background(
-            ZStack {
-                // Flow standard: Excel → PreGenerateView
-                NavigationLink(
-                    destination: PreGenerateView()
-                        .environmentObject(excelSession),
-                    isActive: $showPreGenerate,
-                    label: { EmptyView() }
-                )
-                .hidden()
-
-                // NEW: flow manuale → GeneratedView
-                NavigationLink(
-                    destination: Group {
-                        if let entry = excelSession.currentHistoryEntry {
-                            GeneratedView(entry: entry)
-                        } else {
-                            Text("Nessun inventario disponibile.")
-                                .foregroundStyle(.secondary)
-                        }
-                    },
-                    isActive: $navigateToManualGenerated,
-                    label: { EmptyView() }
-                )
-                .hidden()
+        .navigationDestination(isPresented: $showPreGenerate) {
+            PreGenerateView()
+                .environmentObject(excelSession)
+        }
+        .navigationDestination(isPresented: $navigateToManualGenerated) {
+            Group {
+                if let entry = excelSession.currentHistoryEntry {
+                    GeneratedView(entry: entry)
+                } else {
+                    Text("Nessun inventario disponibile.")
+                        .foregroundStyle(.secondary)
+                }
             }
-        )
+        }
         // File picker: .spreadsheet + .html
         .fileImporter(
             isPresented: $showFileImporter,

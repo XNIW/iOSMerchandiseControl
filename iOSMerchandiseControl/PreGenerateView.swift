@@ -186,21 +186,16 @@ struct PreGenerateView: View {
             Text(generationError ?? "Errore sconosciuto.")
         }
         // 👇 Navigation "nascosta" verso GeneratedView
-        .background(
-            NavigationLink(
-                destination: Group {
-                    if let entry = excelSession.currentHistoryEntry {
-                        GeneratedView(entry: entry)
-                    } else {
-                        Text("Nessun inventario disponibile.")
-                            .foregroundStyle(.secondary)
-                    }
-                },
-                isActive: $navigateToGenerated,
-                label: { EmptyView() }
-            )
-            .hidden()
-        )
+        .navigationDestination(isPresented: $navigateToGenerated) {
+            Group {
+                if let entry = excelSession.currentHistoryEntry {
+                    GeneratedView(entry: entry)
+                } else {
+                    Text("Nessun inventario disponibile.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
     
     /// Righe di anteprima (esclude la riga 0 = header)

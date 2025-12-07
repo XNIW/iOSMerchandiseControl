@@ -18,8 +18,16 @@ struct DatabaseView: View {
     // Export / import
     @State private var exportURL: URL?
     @State private var showingExportSheet = false
-    @State private var showingImportPicker = false
+
+    // Import prodotti (CSV semplice + Excel con analisi)
+    @State private var showingImportOptions = false
+    @State private var showingCSVImportPicker = false
+    @State private var showingExcelImportPicker = false
+
     @State private var importError: String?
+
+    // Risultato analisi import da Excel
+    @State private var importAnalysisResult: ProductImportAnalysisResult?
 
     // filtro in memoria sui prodotti, come facevi in Compose
     private var filteredProducts: [Product] {
@@ -163,7 +171,8 @@ struct DatabaseView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack {
                     Button {
-                        showingImportPicker = true
+                        // Mostra dialog per scegliere Excel vs CSV
+                        showingImportOptions = true
                     } label: {
                         Image(systemName: "tray.and.arrow.down")
                     }
@@ -181,6 +190,7 @@ struct DatabaseView: View {
                     }
                 }
             }
+
         }
         // Sheet per NUOVO prodotto
         .sheet(isPresented: $showAddSheet) {
@@ -200,21 +210,53 @@ struct DatabaseView: View {
                 ProductPriceHistoryView(product: product)
             }
         }
-        // Sheet per condividere il CSV export
+        // Sheet per condividere il CSV/XLSX export
         .sheet(isPresented: $showingExportSheet) {
-            if let exportURL {
-                ShareLink(item: exportURL) {
-                    Label("Condividi export prodotti", systemImage: "square.and.arrow.up")
-                }
-                .padding()
-            } else {
-                Text("Nessun file da condividere.")
+            NavigationStack {
+                if let exportURL {
+                    ShareLink(item: exportURL) {
+                        Label("Condividi export prodotti", systemImage: "square.and.arrow.up")
+                    }
                     .padding()
+                } else {
+                    Text("Nessun file da condividere.")
+                        .padding()
+                }
             }
         }
-        // Import CSV
+
+        // Sheet per l’analisi di import da Excel
+        .sheet(item: $importAnalysisResult) { analysis in
+            NavigationStack {
+                ImportAnalysisView(
+                    analysis: analysis,
+                    onApply: {
+                        applyImportAnalysis(analysis)
+                        // chiudiamo il sheet azzerando il binding
+                        importAnalysisResult = nil
+                    }
+                )
+            }
+        }
+
+        // Dialog per scegliere il tipo di import
+        .confirmationDialog(
+            "Importa prodotti",
+            isPresented: $showingImportOptions,
+            titleVisibility: .visible
+        ) {
+            Button("Importa da Excel (analisi)") {
+                showingExcelImportPicker = true
+            }
+            Button("Importa da CSV (semplice)") {
+                showingCSVImportPicker = true
+            }
+            Button("Annulla", role: .cancel) { }
+        }
+
+        // Import CSV (flow semplice esistente)
         .fileImporter(
-            isPresented: $showingImportPicker,
+            isPresented: $showingCSVImportPicker,
             allowedContentTypes: [UTType.commaSeparatedText, UTType.plainText],
             allowsMultipleSelection: false
         ) { result in
@@ -227,11 +269,30 @@ struct DatabaseView: View {
                 importError = error.localizedDescription
             }
         }
+
+        // Import Excel con analisi
+        .fileImporter(
+            isPresented: $showingExcelImportPicker,
+            allowedContentTypes: [.spreadsheet, .html],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let url = urls.first {
+                    importProductsFromExcel(url: url)
+                }
+            case .failure(let error):
+                importError = error.localizedDescription
+            }
+        }
+
         .alert(
             "Errore import",
             isPresented: Binding(
                 get: { importError != nil },
-                set: { if !$0 { importError = nil } }
+                set: { newValue in
+                    if !newValue { importError = nil }
+                }
             )
         ) {
             Button("OK", role: .cancel) {
@@ -241,6 +302,8 @@ struct DatabaseView: View {
             Text(importError ?? "")
         }
     }
+
+
 
     // MARK: - Azioni base
 
@@ -404,6 +467,361 @@ struct DatabaseView: View {
             return escaped
         } else {
             return field
+        }
+    }
+
+    // MARK: - Import Excel con analisi (stile Android)
+
+    private func importProductsFromExcel(url: URL) {
+        do {
+            guard url.startAccessingSecurityScopedResource() else {
+                throw NSError(
+                    domain: "ImportExcel",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "Permessi file negati"]
+                )
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+
+            // Usa lo stesso motore dell’inventario per leggere Excel/HTML
+            let (header, dataRows) = try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
+
+            // Carichiamo i prodotti esistenti una sola volta
+            let descriptor = FetchDescriptor<Product>()
+            let existingProducts = try context.fetch(descriptor)
+
+            let analysis = try analyzeImport(
+                header: header,
+                dataRows: dataRows,
+                existingProducts: existingProducts
+            )
+
+            importAnalysisResult = analysis
+        } catch {
+            if let error = error as? LocalizedError, let description = error.errorDescription {
+                importError = description
+            } else {
+                importError = "Errore durante l'import Excel: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func analyzeImport(
+        header: [String],
+        dataRows: [[String]],
+        existingProducts: [Product]
+    ) throws -> ProductImportAnalysisResult {
+        guard header.contains("barcode") else {
+            throw ExcelLoadError.invalidFormat("Impossibile trovare la colonna 'barcode' nel file.")
+        }
+
+        // Mappa prodotti esistenti per barcode
+        let existingByBarcode: [String: Product] = Dictionary(
+            uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
+        )
+
+        struct PendingRow {
+            var lastRow: [String: String]
+            var rowNumbers: [Int]
+            var quantitySum: Double
+        }
+
+        var errors: [ProductImportRowError] = []
+        var pendingByBarcode: [String: PendingRow] = [:]
+
+        // 1) Normalizza righe e raggruppa per barcode
+        for (index, row) in dataRows.enumerated() {
+            let rowNumber = index + 1 // 1-based
+
+            var map: [String: String] = [:]
+            for (colIndex, key) in header.enumerated() {
+                let raw = colIndex < row.count ? row[colIndex] : ""
+                map[key] = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+
+            let barcode = (map["barcode"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if barcode.isEmpty {
+                errors.append(
+                    ProductImportRowError(
+                        rowNumber: rowNumber,
+                        reason: "Manca il barcode.",
+                        rowContent: map
+                    )
+                )
+                continue
+            }
+
+            // quantity / stockQuantity (supporta entrambi i nomi)
+            let quantity = Self.parseDouble(from: map["stockQuantity"] ?? "")
+                ?? Self.parseDouble(from: map["quantity"] ?? "")
+                ?? 0
+
+            if var pending = pendingByBarcode[barcode] {
+                pending.lastRow = map
+                pending.rowNumbers.append(rowNumber)
+                pending.quantitySum += quantity
+                pendingByBarcode[barcode] = pending
+            } else {
+                pendingByBarcode[barcode] = PendingRow(
+                    lastRow: map,
+                    rowNumbers: [rowNumber],
+                    quantitySum: quantity
+                )
+            }
+        }
+
+        // 2) Converte PendingRow → ProductDraft / ProductUpdateDraft
+        var newProducts: [ProductDraft] = []
+        var updates: [ProductUpdateDraft] = []
+        var warnings: [ProductDuplicateWarning] = []
+
+        func trimmedOrNil(_ text: String?) -> String? {
+            guard let value = text?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !value.isEmpty else { return nil }
+            return value
+        }
+
+        func doublesEqual(_ lhs: Double?, _ rhs: Double?, epsilon: Double = 0.0001) -> Bool {
+            switch (lhs, rhs) {
+            case (nil, nil):
+                return true
+            case let (l?, r?):
+                return abs(l - r) < epsilon
+            default:
+                return false
+            }
+        }
+
+        for (barcode, pending) in pendingByBarcode.sorted(by: { $0.key < $1.key }) {
+            var row = pending.lastRow
+            if pending.quantitySum > 0 {
+                row["stockQuantity"] = String(pending.quantitySum)
+            }
+
+            let draft = ProductDraft(
+                barcode: barcode,
+                itemNumber: trimmedOrNil(row["itemNumber"]),
+                productName: trimmedOrNil(row["productName"]),
+                secondProductName: trimmedOrNil(row["secondProductName"]),
+                purchasePrice: Self.parseDouble(from: row["purchasePrice"] ?? ""),
+                retailPrice: Self.parseDouble(from: row["retailPrice"] ?? ""),
+                stockQuantity: {
+                    if let text = row["stockQuantity"] ?? row["quantity"],
+                       let value = Self.parseDouble(from: text) {
+                        return value
+                    } else {
+                        return nil
+                    }
+                }(),
+                supplierName: trimmedOrNil(row["supplier"]),
+                categoryName: trimmedOrNil(row["category"])
+            )
+
+            if let existing = existingByBarcode[barcode] {
+                let oldDraft = ProductDraft(
+                    barcode: existing.barcode,
+                    itemNumber: existing.itemNumber,
+                    productName: existing.productName,
+                    secondProductName: existing.secondProductName,
+                    purchasePrice: existing.purchasePrice,
+                    retailPrice: existing.retailPrice,
+                    stockQuantity: existing.stockQuantity,
+                    supplierName: existing.supplier?.name,
+                    categoryName: existing.category?.name
+                )
+
+                let changedFields = ProductUpdateDraft.ChangedField.allCases.filter { field in
+                    switch field {
+                    case .itemNumber:
+                        return (oldDraft.itemNumber ?? "") != (draft.itemNumber ?? "")
+                    case .productName:
+                        return (oldDraft.productName ?? "") != (draft.productName ?? "")
+                    case .secondProductName:
+                        return (oldDraft.secondProductName ?? "") != (draft.secondProductName ?? "")
+                    case .purchasePrice:
+                        return !doublesEqual(oldDraft.purchasePrice, draft.purchasePrice)
+                    case .retailPrice:
+                        return !doublesEqual(oldDraft.retailPrice, draft.retailPrice)
+                    case .stockQuantity:
+                        return !doublesEqual(oldDraft.stockQuantity, draft.stockQuantity)
+                    case .supplierName:
+                        return (oldDraft.supplierName ?? "") != (draft.supplierName ?? "")
+                    case .categoryName:
+                        return (oldDraft.categoryName ?? "") != (draft.categoryName ?? "")
+                    }
+                }
+
+                if !changedFields.isEmpty {
+                    updates.append(
+                        ProductUpdateDraft(
+                            barcode: barcode,
+                            old: oldDraft,
+                            new: draft,
+                            changedFields: changedFields
+                        )
+                    )
+                }
+            } else {
+                newProducts.append(draft)
+            }
+
+            if pending.rowNumbers.count > 1 {
+                warnings.append(
+                    ProductDuplicateWarning(
+                        barcode: barcode,
+                        rowNumbers: pending.rowNumbers
+                    )
+                )
+            }
+        }
+
+        return ProductImportAnalysisResult(
+            newProducts: newProducts,
+            updatedProducts: updates,
+            errors: errors,
+            warnings: warnings
+        )
+    }
+
+    private func applyImportAnalysis(_ analysis: ProductImportAnalysisResult) {
+        do {
+            // Nuovi prodotti
+            for draft in analysis.newProducts {
+                let supplier: Supplier? = draft.supplierName.flatMap { name in
+                    let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return trimmed.isEmpty ? nil : findOrCreateSupplier(named: trimmed)
+                }
+
+           
+
+                let category: ProductCategory? = draft.categoryName.flatMap { name in
+                    let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return trimmed.isEmpty ? nil : findOrCreateCategory(named: trimmed)
+                }
+
+                let product = Product(
+                    barcode: draft.barcode,
+                    itemNumber: draft.itemNumber,
+                    productName: draft.productName,
+                    secondProductName: draft.secondProductName,
+                    purchasePrice: draft.purchasePrice,
+                    retailPrice: draft.retailPrice,
+                    stockQuantity: draft.stockQuantity,
+                    supplier: supplier,
+                    category: category
+                )
+                context.insert(product)
+
+                createPriceHistoryForImport(
+                    product: product,
+                    oldPurchase: nil,
+                    newPurchase: draft.purchasePrice,
+                    oldRetail: nil,
+                    newRetail: draft.retailPrice
+                )
+            }
+
+            // Aggiornamenti
+            for update in analysis.updatedProducts {
+                let targetBarcode = update.barcode
+
+                let descriptor = FetchDescriptor<Product>(
+                    predicate: #Predicate<Product> { product in
+                        product.barcode == targetBarcode
+                    }
+                )
+
+                guard let product = try context.fetch(descriptor).first else {
+                    continue
+                }
+
+                let newDraft = update.new
+                let oldPurchase = product.purchasePrice
+                let oldRetail = product.retailPrice
+
+                if update.changedFields.contains(.itemNumber) {
+                    product.itemNumber = newDraft.itemNumber
+                }
+                if update.changedFields.contains(.productName) {
+                    product.productName = newDraft.productName
+                }
+                if update.changedFields.contains(.secondProductName) {
+                    product.secondProductName = newDraft.secondProductName
+                }
+                if update.changedFields.contains(.purchasePrice) {
+                    product.purchasePrice = newDraft.purchasePrice
+                }
+                if update.changedFields.contains(.retailPrice) {
+                    product.retailPrice = newDraft.retailPrice
+                }
+                if update.changedFields.contains(.stockQuantity) {
+                    product.stockQuantity = newDraft.stockQuantity
+                }
+                if update.changedFields.contains(.supplierName) {
+                    if let name = newDraft.supplierName,
+                       !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        product.supplier = findOrCreateSupplier(named: name)
+                    } else {
+                        product.supplier = nil
+                    }
+                }
+                if update.changedFields.contains(.categoryName) {
+                    if let name = newDraft.categoryName,
+                       !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        product.category = findOrCreateCategory(named: name)
+                    } else {
+                        product.category = nil
+                    }
+                }
+
+                createPriceHistoryForImport(
+                    product: product,
+                    oldPurchase: oldPurchase,
+                    newPurchase: newDraft.purchasePrice,
+                    oldRetail: oldRetail,
+                    newRetail: newDraft.retailPrice
+                )
+            }
+
+            try context.save()
+        } catch {
+            importError = "Errore durante l'applicazione dell'import: \(error.localizedDescription)"
+        }
+    }
+
+    private func createPriceHistoryForImport(
+        product: Product,
+        oldPurchase: Double?,
+        newPurchase: Double?,
+        oldRetail: Double?,
+        newRetail: Double?
+    ) {
+        let now = Date()
+
+        if let newPurchase, newPurchase != oldPurchase {
+            let history = ProductPrice(
+                type: .purchase,
+                price: newPurchase,
+                effectiveAt: now,
+                source: "IMPORT_EXCEL",
+                note: nil,
+                createdAt: now,
+                product: product
+            )
+            context.insert(history)
+        }
+
+        if let newRetail, newRetail != oldRetail {
+            let history = ProductPrice(
+                type: .retail,
+                price: newRetail,
+                effectiveAt: now,
+                source: "IMPORT_EXCEL",
+                note: nil,
+                createdAt: now,
+                product: product
+            )
+            context.insert(history)
         }
     }
 
