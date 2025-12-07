@@ -1,6 +1,10 @@
 import SwiftUI
 import SwiftData
 
+#if canImport(UIKit)
+import UIKit
+#endif
+
 struct HistoryView: View {
     @Environment(\.modelContext) private var context
     
@@ -13,6 +17,13 @@ struct HistoryView: View {
 
     @State private var showOnlyErrorEntries: Bool = false
     @State private var selectedDateFilter: DateFilter = .all
+    
+    // 🔹 nuovo stato per la cancellazione con conferma
+    @State private var showDeleteConfirmation = false
+    @State private var entryPendingDeletion: HistoryEntry?
+    
+    @State private var shareURL: URL?
+    @State private var isShareSheetPresented = false
 
     /// Filtro per periodo temporale (es. tutti, ultimi 7 giorni, ultimo mese)
     private enum DateFilter: String, CaseIterable, Identifiable {
@@ -59,6 +70,15 @@ struct HistoryView: View {
     
     // MARK: - Azioni
 
+    private func deleteEntry(_ entry: HistoryEntry) {
+        context.delete(entry)
+        do {
+            try context.save()
+        } catch {
+            print("Errore durante l'eliminazione della HistoryEntry: \(error)")
+        }
+    }
+    
     private func deleteEntries(at offsets: IndexSet) {
         // offsets si riferisce agli indici in filteredEntries, non in entries
         for index in offsets {
@@ -72,6 +92,47 @@ struct HistoryView: View {
         } catch {
             // per ora solo log, se vuoi puoi aggiungere un alert in futuro
             print("Errore durante l'eliminazione della HistoryEntry: \(error)")
+        }
+    }
+    
+    private func exportHistoryEntry(_ entry: HistoryEntry) {
+        let grid = entry.data
+        guard !grid.isEmpty else { return }
+
+        // Costruisce il CSV: escape dei valori con virgolette, virgole o newline
+        let csvLines: [String] = grid.map { row in
+            row.map { cell -> String in
+                var escaped = cell.replacingOccurrences(of: "\"", with: "\"\"")
+                if escaped.contains(where: { ",\n\"".contains($0) }) {
+                    escaped = "\"\(escaped)\""
+                }
+                return escaped
+            }
+            .joined(separator: ",")
+        }
+
+        let csvString = csvLines.joined(separator: "\n")
+        guard let data = csvString.data(using: .utf8) else {
+            return
+        }
+
+        // Nome file: usa l'id ma forza estensione .csv
+        let baseName = entry.id.isEmpty ? "inventario" : entry.id
+        let fileName = (baseName as NSString).deletingPathExtension + ".csv"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+
+        do {
+            try data.write(to: tempURL, options: .atomic)
+
+            // Aggiorna stato UI per share sheet
+            shareURL = tempURL
+            isShareSheetPresented = true
+
+            // Marca la voce come esportata
+            entry.wasExported = true
+            try context.save()
+        } catch {
+            print("Errore durante l'esportazione CSV: \(error)")
         }
     }
 
@@ -133,14 +194,56 @@ struct HistoryView: View {
                             ) {
                                 HistoryRow(entry: entry)
                             }
+                            // 🔹 swipe a destra → "Elimina" + "Esporta"
+                            .swipeActions {
+                                Button(role: .destructive) {
+                                    entryPendingDeletion = entry
+                                    showDeleteConfirmation = true
+                                } label: {
+                                    Label("Elimina", systemImage: "trash")
+                                }
+
+                                Button {
+                                    exportHistoryEntry(entry)
+                                } label: {
+                                    Label("Esporta", systemImage: "square.and.arrow.up")
+                                }
+                            }
                         }
-                        // 🔹 swipe-to-delete
-                        .onDelete(perform: deleteEntries)
+                        // Se vuoi, puoi tenere anche .onDelete per la modalità "Modifica"
+                            // ma a questo punto puoi anche rimuoverla per evitare doppioni:
+                            // .onDelete(perform: deleteEntries)
                     }
                 }
             }
         }
         .navigationTitle("Cronologia")
+        .alert(
+            "Eliminare questo inventario?",
+            isPresented: $showDeleteConfirmation,
+            presenting: entryPendingDeletion
+        ) { entry in
+            Button("Annulla", role: .cancel) {
+                // non facciamo nulla, l'alert si chiude
+            }
+            Button("Elimina", role: .destructive) {
+                deleteEntry(entry)
+            }
+        } message: { entry in
+            Text("""
+            Questa operazione rimuoverà definitivamente l'inventario:
+            \(entry.id)
+            """)
+        }
+        // 🔹 nuova sheet per condividere il CSV
+        .sheet(isPresented: $isShareSheetPresented) {
+            if let shareURL {
+                ActivityView(activityItems: [shareURL])
+            } else {
+                Text("Nessun file da condividere")
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }
 
@@ -262,3 +365,23 @@ private struct HistorySummaryChip: View {
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }
+
+#if canImport(UIKit)
+private struct ActivityView: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: nil
+        )
+    }
+
+    func updateUIViewController(
+        _ uiViewController: UIActivityViewController,
+        context: Context
+    ) {
+        // niente da aggiornare
+    }
+}
+#endif
