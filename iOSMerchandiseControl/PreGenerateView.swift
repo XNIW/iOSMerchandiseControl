@@ -22,6 +22,7 @@ struct PreGenerateView: View {
     @State private var lastGeneratedEntryID: String?
     
     @State private var navigateToGenerated = false
+    @State private var ignoreWarnings = false
     
     var body: some View {
         Form {
@@ -34,14 +35,16 @@ struct PreGenerateView: View {
                     ScrollView(.horizontal) {
                         VStack(alignment: .leading, spacing: 4) {
                             // Header
-                            HStack(alignment: .bottom, spacing: 8) {
+                            HStack(alignment: .bottom, spacing: 4) {
                                 ForEach(Array(excelSession.header.enumerated()), id: \.offset) { index, key in
                                     if excelSession.selectedColumns.indices.contains(index),
                                        excelSession.selectedColumns[index] {
+                                        let width = columnWidth(for: key)
                                         Text(key)
-                                            .font(.caption)
+                                            .font(.caption2)
                                             .fontWeight(.semibold)
-                                            .frame(minWidth: 80, alignment: .leading)
+                                            .lineLimit(1)
+                                            .frame(width: width, alignment: .leading)
                                     }
                                 }
                             }
@@ -50,15 +53,23 @@ struct PreGenerateView: View {
 
                             // Prime righe dati
                             ForEach(Array(previewRows.enumerated()), id: \.offset) { _, row in
-                                HStack(alignment: .top, spacing: 8) {
+                                HStack(alignment: .top, spacing: 4) {
                                     ForEach(excelSession.header.indices, id: \.self) { colIdx in
                                         if excelSession.selectedColumns.indices.contains(colIdx),
                                            excelSession.selectedColumns[colIdx] {
-                                            let value = row.indices.contains(colIdx) ? row[colIdx] : ""
+                                            let key = excelSession.header[colIdx]
+                                            let width = columnWidth(for: key)
+                                            let value = colIdx < row.count ? row[colIdx] : ""
+                                            
                                             Text(value)
-                                                .font(.caption2)
+                                                .font(
+                                                    isNumericColumn(key)
+                                                    ? .system(.caption2, design: .monospaced)
+                                                    : .caption2
+                                                )
                                                 .lineLimit(1)
-                                                .frame(minWidth: 80, alignment: .leading)
+                                                .truncationMode(.tail)
+                                                .frame(width: width, alignment: .leading)
                                         }
                                     }
                                 }
@@ -70,6 +81,66 @@ struct PreGenerateView: View {
                     Text("Mostrate \(previewRows.count) righe su \(max(excelSession.rows.count - 1, 0)).")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                    
+                    // 🔎 Badge affidabilità analisi
+                    if let confidence = excelSession.analysisConfidence {
+                        HStack {
+                            Label("Affidabilità analisi", systemImage: "chart.bar.fill")
+                            Spacer()
+                            Text(String(format: "%.0f%%", confidence * 100))
+                                .font(.caption)
+                                .foregroundStyle(
+                                    confidence > 0.7 ? .green :
+                                    confidence > 0.4 ? .orange : .red
+                                )
+
+                            if confidence < 0.5 {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(.secondarySystemBackground))
+                        )
+                    }
+
+                    // 💡 Suggerimenti per bassa confidenza
+                    if let confidence = excelSession.analysisConfidence,
+                       confidence < 0.5 {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Suggerimenti per migliorare l'analisi:")
+                                .font(.caption)
+                                .fontWeight(.medium)
+
+                            if let metrics = excelSession.analysisMetrics {
+                                if metrics.essentialColumnsFound < metrics.essentialColumnsTotal {
+                                    Text("• Verifica le colonne obbligatorie (barcode, nome prodotto, prezzo acquisto).")
+                                        .font(.caption2)
+                                }
+
+                                if metrics.totalRows > 0 &&
+                                   Double(metrics.rowsWithValidBarcode) / Double(metrics.totalRows) < 0.3 {
+                                    Text("• Controlla la colonna barcode: molti valori potrebbero essere mancanti.")
+                                        .font(.caption2)
+                                }
+
+                                if !metrics.issues.isEmpty {
+                                    Text("• Risolvi, se possibile, i problemi elencati qui sopra.")
+                                        .font(.caption2)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.orange.opacity(0.1))
+                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                        )
+                    }
                 }
             }
 
@@ -79,21 +150,32 @@ struct PreGenerateView: View {
                     Text("Nessuna colonna disponibile.")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(Array(excelSession.header.enumerated()), id: \.offset) { index, key in
+                    ForEach(Array(excelSession.header.indices), id: \.self) { index in
+                        let key = excelSession.header[index]
                         let isEssential = excelSession.isColumnEssential(at: index)
+                        let isAutoGenerated = key.hasPrefix("col") // es. col1, col2...
+
                         Toggle(
                             isOn: excelSession.bindingForColumnSelection(at: index)
                         ) {
                             HStack {
                                 Text(key)
+                                    .foregroundColor(isAutoGenerated ? .orange : .primary)
+
                                 if isEssential {
                                     Text("obbligatoria")
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
                                 }
+
+                                if isAutoGenerated {
+                                    Text("(non riconosciuta)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.orange)
+                                }
                             }
                         }
-                        .disabled(isEssential)
+                        .disabled(isEssential) // le obbligatorie non si spengono
                     }
 
                     HStack {
@@ -145,6 +227,14 @@ struct PreGenerateView: View {
             
             // GENERAZIONE INVENTARIO (HistoryEntry)
             Section {
+                // Mostra il toggle solo se la confidenza è molto bassa
+                if let confidence = excelSession.analysisConfidence,
+                   confidence < 0.4 {
+                    Toggle("Ignora avvisi e procedi comunque", isOn: $ignoreWarnings)
+                        .font(.caption)
+                        .padding(.vertical, 4)
+                }
+
                 Button {
                     generateInventory()
                 } label: {
@@ -158,7 +248,14 @@ struct PreGenerateView: View {
                             .fontWeight(.semibold)
                     }
                 }
-                .disabled(!canGenerate || isGenerating)
+                .disabled(
+                    !canGenerate ||
+                    isGenerating ||
+                    (
+                        (excelSession.analysisConfidence ?? 1.0) < 0.4 &&
+                        !ignoreWarnings
+                    )
+                )
 
                 if let lastID = lastGeneratedEntryID {
                     Text("Ultimo inventario generato: \(lastID)")
@@ -213,6 +310,35 @@ struct PreGenerateView: View {
         !excelSession.categoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    // Larghezza consigliata per ogni colonna
+    private func columnWidth(for key: String) -> CGFloat {
+        switch key {
+        case "barcode":
+            return 130
+        case "productName", "secondProductName":
+            return 220
+        case "purchasePrice", "retailPrice", "discountedPrice", "totalPrice", "quantity":
+            return 80
+        case "supplier", "category":
+            return 140
+        default:
+            return 100
+        }
+    }
+
+    // Facoltativo: colonne numeriche (per eventuale font monospaced)
+    private func isNumericColumn(_ key: String) -> Bool {
+        [
+            "barcode",
+            "quantity",
+            "purchasePrice",
+            "totalPrice",
+            "retailPrice",
+            "discountedPrice",
+            "rowNumber"
+        ].contains(key)
+    }
+    
     private func generateInventory() {
         guard canGenerate else { return }
         isGenerating = true
