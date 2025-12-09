@@ -517,14 +517,14 @@ struct DatabaseView: View {
             defer { url.stopAccessingSecurityScopedResource() }
 
             // Usa lo stesso motore dell’inventario per leggere Excel/HTML
-            let (header, dataRows) = try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
+            let (_, normalizedHeader, dataRows) = try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
 
             // Carichiamo i prodotti esistenti una sola volta
             let descriptor = FetchDescriptor<Product>()
             let existingProducts = try context.fetch(descriptor)
 
             let analysis = try analyzeImport(
-                header: header,
+                header: normalizedHeader,   // <-- usiamo l'header normalizzato
                 dataRows: dataRows,
                 existingProducts: existingProducts
             )

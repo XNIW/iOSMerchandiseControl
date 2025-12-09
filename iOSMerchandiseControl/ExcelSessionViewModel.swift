@@ -2,27 +2,34 @@ import Foundation
 import SwiftUI
 import SwiftData
 import Combine
-
-#if canImport(CoreXLSX)
-import CoreXLSX
-#endif
+import ZIPFoundation
 
 #if canImport(SwiftSoup)
 import SwiftSoup
 #endif
 
+enum ColumnStatus {
+    case exactMatch      // header = "barcode" → normalized = "barcode"
+    case aliasMatch      // header = "codice a barre" → normalized = "barcode"
+    case normalized      // header = "Product name" → normalized = "productname"
+    case generated       // normalized = "col1", "col2"...
+    case emptyOriginal   // header originale vuoto
+}
+
 /// ViewModel globale per il flusso Excel
 /// (equivalente concettuale di ExcelViewModel su Android)
 @MainActor
 final class ExcelSessionViewModel: ObservableObject {
+    // 🔹 Header originale (dopo rimozione colonne completamente vuote)
+    @Published var originalHeader: [String] = []
 
-    // Header normalizzato (es. ["barcode", "productName", "purchasePrice", ...])
-    @Published var header: [String] = []
+    // 🔹 Header normalizzato (es. ["barcode", "productName", "purchasePrice", ...])
+    @Published var normalizedHeader: [String] = []
 
     // Tutte le righe dell'Excel (riga 0 = header normalizzato)
     @Published var rows: [[String]] = []
 
-    // Selezione colonne (stessa lunghezza di `header`)
+    // Selezione colonne (stessa lunghezza di `normalizedHeader`)
     @Published var selectedColumns: [Bool] = []
 
     // Parametri "globali" per il file corrente
@@ -31,31 +38,62 @@ final class ExcelSessionViewModel: ObservableObject {
 
     // HistoryEntry generata a partire da questo Excel
     @Published var currentHistoryEntry: HistoryEntry?
-    
+
     // Stato di caricamento (per mostrare eventuale progress)
     @Published var isLoading: Bool = false
-    @Published var progress: Double? = nil    // 0.0 ... 1.0
+    @Published var progress: Double? = nil   // 0.0 ... 1.0
     @Published var lastError: String? = nil
-    
-    // Metriche di analisi del file corrente
-        @Published var analysisConfidence: Double?
-        @Published var analysisMetrics: AnalysisMetrics?
 
-    var hasData: Bool {
-        !rows.isEmpty
-    }
+    // Metriche di analisi del file corrente
+    @Published var analysisConfidence: Double?
+    @Published var analysisMetrics: AnalysisMetrics?
+
+    var hasData: Bool { !rows.isEmpty }
 
     // Colonne essenziali (come su Android: barcode, productName, purchasePrice)
     private static let essentialColumnKeys: Set<String> = [
+        "barcode", "productName", "purchasePrice"
+    ]
+
+    /// Ordine “logico” delle colonne (obbligatorie prima, poi le altre conosciute)
+    private static let columnPriority: [String] = [
+        "rowNumber",
+        "itemNumber",
         "barcode",
         "productName",
-        "purchasePrice"
+        "secondProductName",
+        "quantity",
+        "purchasePrice",
+        "totalPrice",
+        "retailPrice",
+        "discountedPrice",
+        "discount",
+        "supplier",
+        "category"
     ]
+
+    /// Indici di colonna ordinati per priorità logica
+    var sortedColumnIndices: [Int] {
+        return normalizedHeader.indices.sorted { a, b in
+            let nameA = normalizedHeader[a]
+            let nameB = normalizedHeader[b]
+
+            let priorityA = Self.columnPriority.firstIndex(of: nameA) ?? Int.max
+            let priorityB = Self.columnPriority.firstIndex(of: nameB) ?? Int.max
+
+            if priorityA != priorityB {
+                return priorityA < priorityB
+            }
+            // in caso di pari priorità, manteniamo l'ordine originale
+            return a < b
+        }
+    }
 
     // MARK: - Gestione stato
 
     func resetState() {
-        header = []
+        originalHeader = []
+        normalizedHeader = []
         rows = []
         selectedColumns = []
         supplierName = ""
@@ -63,8 +101,8 @@ final class ExcelSessionViewModel: ObservableObject {
         isLoading = false
         progress = nil
         lastError = nil
-        
-        // 👇 resetta anche le metriche
+
+        // resetta anche le metriche
         analysisConfidence = nil
         analysisMetrics = nil
     }
@@ -72,12 +110,13 @@ final class ExcelSessionViewModel: ObservableObject {
     // MARK: - Selezione colonne (equivalente di isColumnEssential / toggleColumnSelection)
 
     func isColumnEssential(at index: Int) -> Bool {
-        guard header.indices.contains(index) else { return false }
-        return Self.essentialColumnKeys.contains(header[index])
+        guard normalizedHeader.indices.contains(index) else { return false }
+        return Self.essentialColumnKeys.contains(normalizedHeader[index])
     }
 
     func updateColumnSelection(index: Int, isSelected: Bool) {
         guard selectedColumns.indices.contains(index) else { return }
+
         if isColumnEssential(at: index) {
             // Le colonne essenziali non si possono spegnere
             selectedColumns[index] = true
@@ -113,6 +152,43 @@ final class ExcelSessionViewModel: ObservableObject {
             }
         )
     }
+    
+/// Stato “qualitativo” di una colonna per la UI
+    func columnStatus(at index: Int) -> ColumnStatus {
+        // Se l'indice non esiste sull'header normalizzato: fallback neutro
+        guard normalizedHeader.indices.contains(index) else {
+            return .normalized
+        }
+
+        let normalized = normalizedHeader[index]
+
+        // Colonne inserite artificialmente da ensureMandatoryColumns:
+        // non esistono in originalHeader → le trattiamo come "generate"
+        if !originalHeader.indices.contains(index) {
+            return normalized.hasPrefix("col") ? .generated : .normalized
+        }
+
+        let original = originalHeader[index]
+
+        if original.isEmpty {
+            return .emptyOriginal
+        }
+
+        if normalized.hasPrefix("col") {
+            return .generated
+        }
+
+        if original == normalized {
+            return .exactMatch
+        }
+
+        if ExcelAnalyzer.isAliasMatch(original: original, normalized: normalized) {
+            return .aliasMatch
+        }
+
+        return .normalized
+    }
+
 
     // MARK: - Caricamento file Excel/HTML (Step 1)
 
@@ -126,16 +202,19 @@ final class ExcelSessionViewModel: ObservableObject {
         progress = 0
 
         do {
-            let (newHeader, allRows) = try ExcelAnalyzer.loadFromMultipleURLs(urls)
+            // 🔹 NUOVO: ricevi anche l'header originale
+            let (originalHeader, normalizedHeader, allRows) =
+                try ExcelAnalyzer.loadFromMultipleURLs(urls)
 
             // Torniamo sul MainActor
-            header = newHeader
-            rows = allRows
-            selectedColumns = Array(repeating: true, count: newHeader.count)
-            
-            // 🔹 NUOVO: calcolo metriche di analisi
+            self.originalHeader = originalHeader
+            self.normalizedHeader = normalizedHeader
+            self.rows = allRows
+            self.selectedColumns = Array(repeating: true, count: normalizedHeader.count)
+
+            // 🔹 calcolo metriche di analisi (usa l'header normalizzato)
             if let metrics = ExcelAnalyzer.computeAnalysisMetrics(
-                header: newHeader,
+                header: normalizedHeader,
                 rows: allRows
             ) {
                 self.analysisMetrics = metrics
@@ -144,7 +223,7 @@ final class ExcelSessionViewModel: ObservableObject {
                 self.analysisMetrics = nil
                 self.analysisConfidence = nil
             }
-            
+
             progress = 1
         } catch {
             let message: String
@@ -201,22 +280,22 @@ extension ExcelSessionViewModel {
     /// È l'equivalente di generateFilteredWithOldPrices su Android.
     func generateHistoryEntry(in context: ModelContext) throws -> HistoryEntry {
         // 1. Validazioni base
-        guard !header.isEmpty, !rows.isEmpty else {
+        guard !normalizedHeader.isEmpty, !rows.isEmpty else {
             throw GenerateHistoryError.emptySession
         }
 
         // Selezione colonne coerente (fallback: tutte selezionate)
-        if selectedColumns.count != header.count {
-            selectedColumns = Array(repeating: true, count: header.count)
+        if selectedColumns.count != normalizedHeader.count {
+            selectedColumns = Array(repeating: true, count: normalizedHeader.count)
         }
 
-        let selectedIndices: [Int] = header.indices.filter { idx in
+        let selectedIndices: [Int] = normalizedHeader.indices.filter { idx in
             guard selectedColumns.indices.contains(idx) else { return true }
             return selectedColumns[idx]
         }
 
-        // Indice colonna barcode nell'header normalizzato ("barcode", come da normalizeHeaderCell)
-        let barcodeIndex = header.firstIndex(of: "barcode")
+        // Indice colonna barcode nell'header normalizzato
+        let barcodeIndex = normalizedHeader.firstIndex(of: "barcode")
 
         // 2. Mappa barcode → (oldPurchase, oldRetail) dal DB (Product)
         let priceMap = try fetchOldPricesByBarcode(
@@ -228,7 +307,7 @@ extension ExcelSessionViewModel {
         var filteredData: [[String]] = []
 
         // Header filtrato + colonne extra
-        var filteredHeader = selectedIndices.map { header[$0] }
+        var filteredHeader = selectedIndices.map { normalizedHeader[$0] }
         filteredHeader.append(contentsOf: [
             "oldPurchasePrice",
             "oldRetailPrice",
@@ -438,6 +517,146 @@ struct AnalysisMetrics {
 
 struct ExcelAnalyzer {
 
+    // MARK: - XML Parser Delegates
+
+    /// Parser per sharedStrings.xml
+    private final class SharedStringsDelegate: NSObject, XMLParserDelegate {
+        var currentText = ""
+        var inT = false
+        var values: [String] = []
+
+        func parser(_ parser: XMLParser, didStartElement name: String,
+                    namespaceURI: String?, qualifiedName qName: String?,
+                    attributes attributeDict: [String : String] = [:]) {
+            if name == "t" {
+                inT = true
+                currentText = ""
+            }
+        }
+
+        func parser(_ parser: XMLParser, foundCharacters string: String) {
+            if inT {
+                currentText.append(string)
+            }
+        }
+
+        func parser(_ parser: XMLParser, didEndElement name: String,
+                    namespaceURI: String?, qualifiedName qName: String?) {
+            if name == "t" && inT {
+                let trimmed = currentText
+                    .replacingOccurrences(of: "\u{00A0}", with: " ")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                values.append(trimmed)
+                inT = false
+                currentText = ""
+            }
+        }
+    }
+
+    /// Parser per sheetX.xml (righe + celle)
+    private final class SheetDelegate: NSObject, XMLParserDelegate {
+        let sharedStrings: [String]
+
+        // output
+        var rows: [[String]] = []
+
+        // stato corrente
+        var currentRow: [String] = []
+        var currentColIndex: Int = 0
+        var currentCellType: String? = nil   // "s" per shared string
+        var currentCellRef: String? = nil
+        var collectingValue = false
+        var currentValue: String = ""
+
+        init(sharedStrings: [String]) {
+            self.sharedStrings = sharedStrings
+        }
+
+        func parser(_ parser: XMLParser, didStartElement name: String,
+                    namespaceURI: String?, qualifiedName qName: String?,
+                    attributes attributeDict: [String : String] = [:]) {
+
+            switch name {
+            case "row":
+                currentRow = []
+                currentColIndex = 0
+
+            case "c": // cell
+                currentCellType = attributeDict["t"]
+                currentCellRef = attributeDict["r"]
+                currentValue = ""
+                collectingValue = false
+
+                if let ref = currentCellRef {
+                    currentColIndex = ExcelAnalyzer.columnIndex(from: ref)
+                }
+
+            case "v", "t":
+                // <v> oppure <is><t> per inline string
+                collectingValue = true
+                currentValue = ""
+
+            default:
+                break
+            }
+        }
+
+        func parser(_ parser: XMLParser, foundCharacters string: String) {
+            if collectingValue {
+                currentValue.append(string)
+            }
+        }
+
+        func parser(_ parser: XMLParser, didEndElement name: String,
+                    namespaceURI: String?, qualifiedName qName: String?) {
+
+            switch name {
+            case "v", "t":
+                collectingValue = false
+
+                // Interpreta il valore in base al tipo cella
+                var text = currentValue
+                text = text
+                    .replacingOccurrences(of: "\u{00A0}", with: " ")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                if currentCellType == "s" { // shared string
+                    if let idx = Int(text), idx >= 0, idx < sharedStrings.count {
+                        text = sharedStrings[idx]
+                    }
+                }
+
+                // Assicuriamo capacità della riga
+                if currentColIndex >= 0 {
+                    while currentRow.count <= currentColIndex {
+                        currentRow.append("")
+                    }
+                    currentRow[currentColIndex] = text
+                }
+
+            case "c":
+                break
+
+            case "row":
+                // togliamo celle vuote in coda
+                var trimmedRow = currentRow
+                while let last = trimmedRow.last, last.isEmpty {
+                    trimmedRow.removeLast()
+                }
+
+                if !trimmedRow.isEmpty {
+                    rows.append(trimmedRow)
+                }
+
+                currentRow = []
+                currentColIndex = 0
+
+            default:
+                break
+            }
+        }
+    }
+    
     // MARK: - Alias colonne / tipi conosciuti (versione estesa stile Android)
 
     /// key = nome canonico colonna, patterns = varianti possibili (IT / CN / ES / EN, ecc.)
@@ -552,6 +771,26 @@ struct ExcelAnalyzer {
             "old retail price"
         ])
     ]
+    
+    /// Ritorna true se `original` è un alias conosciuto per la key `normalized`
+    static func isAliasMatch(original: String, normalized: String) -> Bool {
+        // se il testo è già identico, non è un "alias", è un match diretto
+        if original == normalized { return false }
+
+        let collapsed = normalizeToken(original)
+
+        // Cerchiamo solo tra gli alias della key corrispondente
+        for (key, patterns) in standardAliases where key == normalized {
+            for pattern in patterns {
+                let normPattern = normalizeToken(pattern)
+                if !normPattern.isEmpty && normPattern == collapsed {
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
 
     /// Token che identificano righe di riepilogo ("totale", "subtotal", ecc.)
     private static let summaryTokens = [
@@ -564,17 +803,20 @@ struct ExcelAnalyzer {
     // MARK: - API principale
 
     /// Porta la logica di loadFromMultipleUris(context, uris)
-    static func loadFromMultipleURLs(_ urls: [URL]) throws -> ([String], [[String]]) {
+    static func loadFromMultipleURLs(_ urls: [URL])
+        throws -> (originalHeader: [String], normalizedHeader: [String], rows: [[String]]) {
         guard let firstURL = urls.first else {
             throw ExcelLoadError.invalidFormat("Nessun file selezionato.")
         }
 
-        let (goldenHeader, firstDataRows) = try readAndAnalyzeExcel(from: firstURL)
+        // 🔹 Manteniamo l'header originale solo del primo file
+        let (originalHeader, goldenHeader, firstDataRows) = try readAndAnalyzeExcel(from: firstURL)
         var allValidRows = firstDataRows
 
         if urls.count > 1 {
             for url in urls.dropFirst() {
-                let (header, dataRows) = try readAndAnalyzeExcel(from: url)
+                let (_, header, dataRows) = try readAndAnalyzeExcel(from: url)
+
                 // Richiediamo che gli header normalizzati siano identici
                 if header != goldenHeader {
                     throw ExcelLoadError.incompatibleHeader
@@ -583,12 +825,14 @@ struct ExcelAnalyzer {
             }
         }
 
+        // rows: prima riga = header normalizzato
         let rowsWithHeader = [goldenHeader] + allValidRows
-        return (goldenHeader, rowsWithHeader)
+        return (originalHeader, goldenHeader, rowsWithHeader)
     }
 
     /// Porta la logica di readAndAnalyzeExcel(context, uri) con analisi avanzata stile Android
-    static func readAndAnalyzeExcel(from url: URL) throws -> ([String], [[String]]) {
+    static func readAndAnalyzeExcel(from url: URL)
+        throws -> (originalHeader: [String], normalizedHeader: [String], dataRows: [[String]]) {
         let data = try Data(contentsOf: url)
         let ext = url.pathExtension.lowercased()
 
@@ -597,11 +841,20 @@ struct ExcelAnalyzer {
         if ext == "html" || ext == "htm" || looksLikeHtml(data: data) {
             rows = try rowsFromHTML(data: data)
         } else if ext == "xlsx" || ext == "xls" || ext.isEmpty {
-            #if canImport(CoreXLSX)
-            rows = try rowsFromXLSX(at: url)
-            #else
-            throw ExcelLoadError.xlsxNotSupported
-            #endif
+
+            do {
+                rows = try rowsFromXLSX(at: url)
+            } catch {
+                if ext == "xls" {
+                    // Caso tipico: vero .xls 97-2003, non supportato
+                    throw ExcelLoadError.invalidFormat(
+                        "Questo file Excel è nel vecchio formato .xls (Excel 97-2003), non supportato.\n" +
+                        "Apri il file con Excel o WPS e salvalo come .xlsx oppure esportalo in HTML, poi riprova."
+                    )
+                } else {
+                    throw error
+                }
+            }
         } else {
             throw ExcelLoadError.unsupportedExtension(ext)
         }
@@ -610,20 +863,32 @@ struct ExcelAnalyzer {
     }
 
     private static func looksLikeHtml(data: Data) -> Bool {
-        guard let snippet = String(data: data.prefix(512), encoding: .utf8)?.lowercased() else {
-            return false
-        }
-        return snippet.contains("<html") ||
-               snippet.contains("<table") ||
-               snippet.contains("<!doctype html")
+        let headLength = min(4096, data.count)
+        let headData = data.prefix(headLength)
+
+        // Prima provo ISO-8859-1 (come Android), poi UTF-8 / ASCII
+        let headString =
+            String(data: headData, encoding: .isoLatin1) ??
+            String(data: headData, encoding: .utf8) ??
+            String(data: headData, encoding: .ascii) ??
+            ""
+
+        let lower = headString.lowercased()
+
+        return lower.contains("<html") ||
+               lower.contains("mso-application") ||
+               lower.contains("office:excel") ||
+               lower.contains("<table")
     }
 
     // MARK: HTML → righe
 
     #if canImport(SwiftSoup)
     private static func rowsFromHTML(data: Data) throws -> [[String]] {
-        guard let html = String(data: data, encoding: .utf8) ??
-                         String(data: data, encoding: .unicode) else {
+        guard let html =
+                String(data: data, encoding: .utf8) ??
+                String(data: data, encoding: .isoLatin1) ??
+                String(data: data, encoding: .unicode) else {
             throw ExcelLoadError.invalidFormat("Impossibile leggere il file HTML.")
         }
 
@@ -665,66 +930,89 @@ struct ExcelAnalyzer {
         throw ExcelLoadError.htmlNotSupported
     }
     #endif
+    
+    // MARK: XLSX → righe (parser ZIP/XML senza CoreXLSX)
 
-    // MARK: XLSX → righe
-
-    #if canImport(CoreXLSX)
     private static func rowsFromXLSX(at url: URL) throws -> [[String]] {
-        guard let file = XLSXFile(filepath: url.path) else {
-            throw ExcelLoadError.invalidFormat("Impossibile aprire il file Excel.")
+        let archive: Archive
+        do {
+            // nuovo init throwing consigliato da ZIPFoundation
+            archive = try Archive(url: url, accessMode: .read)
+        } catch {
+            // convertiamo l'errore ZIP in un messaggio user-friendly
+            throw ExcelLoadError.invalidFormat("Impossibile aprire il file Excel (zip non valido).")
         }
 
-        let sharedStrings = try? file.parseSharedStrings()
-        var result: [[String]] = []
-
-        for workbook in try file.parseWorkbooks() {
-            for (_, path) in try file.parseWorksheetPathsAndNames(workbook: workbook) {
-                let worksheet = try file.parseWorksheet(at: path)
-                let sheetRows = worksheet.data?.rows ?? []
-
-                for row in sheetRows {
-                    var cells: [String] = []
-
-                    for cell in row.cells {
-                        var raw: String?
-
-                        if let sharedStrings = sharedStrings,
-                           let v = cell.stringValue(sharedStrings) {
-                            raw = v
-                        } else if let inline = cell.inlineString?.text {
-                            raw = inline
-                        } else {
-                            raw = cell.value
-                        }
-
-                        let value = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                        cells.append(value)
-                    }
-
-                    // togliamo trailing vuoti
-                    while let last = cells.last, last.isEmpty {
-                        cells.removeLast()
-                    }
-
-                    if cells.contains(where: { !$0.isEmpty }) {
-                        result.append(cells)
-                    }
-                }
-
-                // Usiamo solo il primo sheet non vuoto
-                if !result.isEmpty {
-                    return result
-                }
-            }
+        // 1) sharedStrings.xml (può anche non esserci)
+        let sharedStrings: [String]
+        if let ssData = try? dataFromArchive(archive, path: "xl/sharedStrings.xml") {
+            sharedStrings = parseSharedStringsXML(ssData)
+        } else {
+            sharedStrings = []
         }
 
+
+        // 2) Trova il primo sheet
+        //   - prima proviamo "xl/worksheets/sheet1.xml"
+        //   - se non esiste, prendiamo il primo "xl/worksheets/sheet*.xml"
+        let sheetPath: String
+        if archive["xl/worksheets/sheet1.xml"] != nil {
+            sheetPath = "xl/worksheets/sheet1.xml"
+        } else if let entry = archive.first(where: { $0.path.hasPrefix("xl/worksheets/sheet") && $0.path.hasSuffix(".xml") }) {
+            sheetPath = entry.path
+        } else {
+            throw ExcelLoadError.invalidFormat("Nessun foglio di lavoro trovato nel file Excel.")
+        }
+
+        let sheetData = try dataFromArchive(archive, path: sheetPath)
+        return parseSheetXML(sheetData, sharedStrings: sharedStrings)
+    }
+    
+    // MARK: - Parser sharedStrings.xml
+
+    private static func parseSharedStringsXML(_ data: Data) -> [String] {
+        let delegate = SharedStringsDelegate()
+        let parser = XMLParser(data: data)
+        parser.delegate = delegate
+        parser.parse()
+        return delegate.values
+    }
+    
+    // MARK: - Parser sheet.xml → righe
+
+    private static func parseSheetXML(_ data: Data, sharedStrings: [String]) -> [[String]] {
+        let delegate = SheetDelegate(sharedStrings: sharedStrings)
+        let parser = XMLParser(data: data)
+        parser.delegate = delegate
+        parser.parse()
+        return delegate.rows
+    }
+
+    /// Converte un riferimento tipo "C5" in indice di colonna 0-based (C=2)
+    private static func columnIndex(from cellRef: String) -> Int {
+        // prendi solo le lettere iniziali (A, B, AA, AB, ...)
+        let letters = cellRef.prefix { ($0 >= "A" && $0 <= "Z") || ($0 >= "a" && $0 <= "z") }
+        var result = 0
+        for ch in letters {
+            let scalar = ch.uppercased().unicodeScalars.first!.value
+            let value = Int(scalar) - 65 + 1 // 'A' = 65 → 1
+            result = result * 26 + value
+        }
+        return max(result - 1, 0)
+    }
+
+    /// Estrae i dati di un entry ZIP in memoria
+    private static func dataFromArchive(_ archive: Archive, path: String) throws -> Data {
+        guard let entry = archive[path] else {
+            throw ExcelLoadError.invalidFormat("Componente mancante nel file Excel: \(path)")
+        }
+
+        var result = Data()
+        _ = try archive.extract(entry) { chunk in
+            result.append(chunk)
+        }
         return result
     }
-    #else
-    private static func rowsFromXLSX(at url: URL) throws -> [[String]] {
-        throw ExcelLoadError.xlsxNotSupported
-    }
-    #endif
 
     // MARK: - Analisi avanzata (replica di ExcelUtils.kt)
 
@@ -734,13 +1022,14 @@ struct ExcelAnalyzer {
     /// - rimuove colonne vuote
     /// - applica euristiche per identificare barcode/qty/prezzi
     /// - elimina righe di riepilogo (totali)
-    private static func analyzeRows(_ rows: [[String]]) -> ([String], [[String]]) {
-        guard !rows.isEmpty else { return ([], []) }
+    private static func analyzeRows(_ rows: [[String]])
+        -> (originalHeader: [String], normalizedHeader: [String], dataRows: [[String]]) {
+            guard !rows.isEmpty else { return ([], [], []) }
 
-        // 1. Trova la riga di intestazione dati
+        // 1. Trova la riga di intestazione dati (come già fatto)
         let (headerRow, dataStartIndex, hasHeader) = findDataHeaderRow(in: rows)
-
-        // 2. Costruisci righe dati (senza header)
+        
+        // 2. Costruisci righe dati
         let dataRows = buildDataRows(from: rows, startingAt: dataStartIndex)
 
         // 3. Rimuovi colonne completamente vuote
@@ -779,7 +1068,7 @@ struct ExcelAnalyzer {
         let ensuredDataRows = ensured.newDataRows
         headerMap = ensured.newHeaderMap
 
-        // 8. Filtra righe di riepilogo (totali ecc.)
+        // 8. Filtra righe di riepilogo ...
         let finalDataRows = filterSummaryRows(
             dataRows: ensuredDataRows,
             headerMap: headerMap,
@@ -815,8 +1104,8 @@ struct ExcelAnalyzer {
         debugLog("HEADER NORM: \(normalizedHeader)", level: .info)
         #endif
         
-        // Ritorniamo header normalizzato + sole righe dati (senza header)
-        return (normalizedHeader, finalDataRows)
+        // 🔹 Ritorniamo sia header originale (filtrato) che normalizzato
+        return (filteredHeader, normalizedHeader, finalDataRows)
     }
 
     // MARK: - Normalizzazione Header (Compatibile con Android)
@@ -1582,6 +1871,35 @@ extension String {
     
     func matches(_ pattern: String) -> Bool {
         return range(of: pattern, options: .regularExpression) != nil
+    }
+    
+    var columnDescription: String {
+        switch self {
+        case "barcode":
+            return "Codice a barre (EAN/ISBN)."
+        case "productName":
+            return "Nome principale del prodotto."
+        case "secondProductName":
+            return "Secondo nome / traduzione del prodotto."
+        case "itemNumber":
+            return "Codice articolo interno / del fornitore."
+        case "quantity":
+            return "Quantità indicata dal fornitore."
+        case "purchasePrice":
+            return "Prezzo di acquisto unitario dal fornitore."
+        case "retailPrice":
+            return "Prezzo di vendita al cliente."
+        case "discountedPrice":
+            return "Prezzo di vendita scontato."
+        case "totalPrice":
+            return "Totale riga (quantità × prezzo unitario)."
+        case "supplier":
+            return "Nome del fornitore del prodotto."
+        case "category":
+            return "Categoria / reparto del prodotto."
+        default:
+            return "Colonna standard."
+        }
     }
 }
 

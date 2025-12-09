@@ -84,7 +84,7 @@ struct InventoryHomeView: View {
                 }
                 .padding(.top)
             } else if excelSession.hasData {
-                Text("File caricato: \(excelSession.rows.count - 1) righe dati, \(excelSession.header.count) colonne.")
+                Text("File caricato: \(excelSession.rows.count - 1) righe dati, \(excelSession.normalizedHeader.count) colonne.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {

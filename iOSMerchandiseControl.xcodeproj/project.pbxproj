@@ -7,13 +7,138 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		415227EC2EE4CDE3008233E0 /* CoreXLSX in Frameworks */ = {isa = PBXBuildFile; productRef = 415227EB2EE4CDE3008233E0 /* CoreXLSX */; };
 		415227EF2EE4CE13008233E0 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 415227EE2EE4CE13008233E0 /* SwiftSoup */; };
 		415227F82EE5059D008233E0 /* xlsxwriter in Frameworks */ = {isa = PBXBuildFile; productRef = 415227F72EE5059D008233E0 /* xlsxwriter */; };
+		41B18CAB2EE7614A00FE61E2 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 41B18CAA2EE7614A00FE61E2 /* ZIPFoundation */; };
+		41B18D012EE7A90100FE61E2 /* xlsformula.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CB62EE7A90100FE61E2 /* xlsformula.c */; };
+		41B18D022EE7A90100FE61E2 /* endian.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CE82EE7A90100FE61E2 /* endian.c */; };
+		41B18D052EE7A90100FE61E2 /* xls.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CEB2EE7A90100FE61E2 /* xls.c */; };
+		41B18D062EE7A90100FE61E2 /* locale.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CE92EE7A90100FE61E2 /* locale.c */; };
+		41B18D092EE7A90100FE61E2 /* ole.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CEA2EE7A90100FE61E2 /* ole.c */; };
+		41B18D0A2EE7A90100FE61E2 /* XlsReader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CB32EE7A90100FE61E2 /* XlsReader.cpp */; };
+		41B18D0C2EE7A90100FE61E2 /* texty-dates-xls.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CCE2EE7A90100FE61E2 /* texty-dates-xls.xls */; };
+		41B18D0D2EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_772.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CD52EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_772.xls */; };
+		41B18D0E2EE7A90100FE61E2 /* numbers-as-na-and-shared-strings-xls.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CCB2EE7A90100FE61E2 /* numbers-as-na-and-shared-strings-xls.xls */; };
+		41B18D0F2EE7A90100FE61E2 /* configure.ac in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF82EE7A90100FE61E2 /* configure.ac */; };
+		41B18D102EE7A90100FE61E2 /* biff5-label-records.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CB92EE7A90100FE61E2 /* biff5-label-records.xls */; };
+		41B18D112EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_body_687.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CD72EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_body_687.xls */; };
+		41B18D122EE7A90100FE61E2 /* iris-excel-xls.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CC32EE7A90100FE61E2 /* iris-excel-xls.xls */; };
+		41B18D132EE7A90100FE61E2 /* unnamed-duplicated-columns.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CD02EE7A90100FE61E2 /* unnamed-duplicated-columns.xls */; };
+		41B18D142EE7A90100FE61E2 /* libxls.pc.in in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFA2EE7A90100FE61E2 /* libxls.pc.in */; };
+		41B18D152EE7A90100FE61E2 /* style-only-cells.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CCD2EE7A90100FE61E2 /* style-only-cells.xls */; };
+		41B18D162EE7A90100FE61E2 /* big-texty-numbers-xls.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CBA2EE7A90100FE61E2 /* big-texty-numbers-xls.xls */; };
+		41B18D172EE7A90100FE61E2 /* Makefile.am in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFC2EE7A90100FE61E2 /* Makefile.am */; };
+		41B18D182EE7A90100FE61E2 /* empty-sheets.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CC12EE7A90100FE61E2 /* empty-sheets.xls */; };
+		41B18D192EE7A90100FE61E2 /* INSTALL in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF92EE7A90100FE61E2 /* INSTALL */; };
+		41B18D1A2EE7A90100FE61E2 /* dates-1900.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CBC2EE7A90100FE61E2 /* dates-1900.xls */; };
+		41B18D1B2EE7A90100FE61E2 /* autogen.sh in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF62EE7A90100FE61E2 /* autogen.sh */; };
+		41B18D1C2EE7A90100FE61E2 /* types.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CCF2EE7A90100FE61E2 /* types.xls */; };
+		41B18D1D2EE7A90100FE61E2 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFB2EE7A90100FE61E2 /* LICENSE */; };
+		41B18D1E2EE7A90100FE61E2 /* missing-values-xls.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CC62EE7A90100FE61E2 /* missing-values-xls.xls */; };
+		41B18D1F2EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_body_637.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CD62EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_body_637.xls */; };
+		41B18D202EE7A90100FE61E2 /* fuzz.yml in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CAD2EE7A90100FE61E2 /* fuzz.yml */; };
+		41B18D212EE7A90100FE61E2 /* datetime-rounding.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CBF2EE7A90100FE61E2 /* datetime-rounding.xls */; };
+		41B18D222EE7A90100FE61E2 /* utf8-sheet-names.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CD12EE7A90100FE61E2 /* utf8-sheet-names.xls */; };
+		41B18D232EE7A90100FE61E2 /* 65536-rows-xls.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CB82EE7A90100FE61E2 /* 65536-rows-xls.xls */; };
+		41B18D242EE7A90100FE61E2 /* dates-1904.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CBD2EE7A90100FE61E2 /* dates-1904.xls */; };
+		41B18D252EE7A90100FE61E2 /* test2.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CEF2EE7A90100FE61E2 /* test2.xls */; };
+		41B18D262EE7A90100FE61E2 /* config.rpath in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF72EE7A90100FE61E2 /* config.rpath */; };
+		41B18D272EE7A90100FE61E2 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFD2EE7A90100FE61E2 /* README.md */; };
+		41B18D282EE7A90100FE61E2 /* more-than-256-unique-strings-xls.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CC72EE7A90100FE61E2 /* more-than-256-unique-strings-xls.xls */; };
+		41B18D292EE7A90100FE61E2 /* xls2csv.man in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CE62EE7A90100FE61E2 /* xls2csv.man */; };
+		41B18D2A2EE7A90100FE61E2 /* missing-first-column.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CC52EE7A90100FE61E2 /* missing-first-column.xls */; };
+		41B18D2B2EE7A90100FE61E2 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF42EE7A90100FE61E2 /* .gitignore */; };
+		41B18D2C2EE7A90100FE61E2 /* build.yml in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CAC2EE7A90100FE61E2 /* build.yml */; };
+		41B18D2D2EE7A90100FE61E2 /* main in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CB02EE7A90100FE61E2 /* main */; };
+		41B18D2E2EE7A90100FE61E2 /* blanks.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CBB2EE7A90100FE61E2 /* blanks.xls */; };
+		41B18D2F2EE7A90100FE61E2 /* no-yes-col-names.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CCA2EE7A90100FE61E2 /* no-yes-col-names.xls */; };
+		41B18D302EE7A90100FE61E2 /* mtcars.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CC82EE7A90100FE61E2 /* mtcars.xls */; };
+		41B18D312EE7A90100FE61E2 /* geometry.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CC22EE7A90100FE61E2 /* geometry.xls */; };
+		41B18D322EE7A90100FE61E2 /* names-need-repair-xls.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CC92EE7A90100FE61E2 /* names-need-repair-xls.xls */; };
+		41B18D332EE7A90100FE61E2 /* skipping.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CCC2EE7A90100FE61E2 /* skipping.xls */; };
+		41B18D342EE7A90100FE61E2 /* dates-leap-year-1900-xls.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CBE2EE7A90100FE61E2 /* dates-leap-year-1900-xls.xls */; };
+		41B18D352EE7A90100FE61E2 /* empty-named-column.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CC02EE7A90100FE61E2 /* empty-named-column.xls */; };
+		41B18D362EE7A90100FE61E2 /* vietnamese-utf8.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CD22EE7A90100FE61E2 /* vietnamese-utf8.xls */; };
+		41B18D372EE7A90100FE61E2 /* AUTHORS in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF52EE7A90100FE61E2 /* AUTHORS */; };
+		41B18D382EE7A90100FE61E2 /* xls2csv_ole_ole2_fread_327.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CD42EE7A90100FE61E2 /* xls2csv_ole_ole2_fread_327.xls */; };
+		41B18D392EE7A90100FE61E2 /* whitespace-xls.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CD32EE7A90100FE61E2 /* whitespace-xls.xls */; };
+		41B18D3A2EE7A90100FE61E2 /* list_type.xls in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CC42EE7A90100FE61E2 /* list_type.xls */; };
+		41B18D3D2EE7B39400FE61E2 /* xlstool.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CED2EE7A90100FE61E2 /* xlstool.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		415227B32EE0B07D008233E0 /* iOSMerchandiseControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iOSMerchandiseControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		41B18CAC2EE7A90100FE61E2 /* build.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = build.yml; sourceTree = "<group>"; };
+		41B18CAD2EE7A90100FE61E2 /* fuzz.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = fuzz.yml; sourceTree = "<group>"; };
+		41B18CB02EE7A90100FE61E2 /* main */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = main; sourceTree = "<group>"; };
+		41B18CB12EE7A90100FE61E2 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		41B18CB22EE7A90100FE61E2 /* XlsReader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XlsReader.h; sourceTree = "<group>"; };
+		41B18CB32EE7A90100FE61E2 /* XlsReader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XlsReader.cpp; sourceTree = "<group>"; };
+		41B18CB52EE7A90100FE61E2 /* xlsformula.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xlsformula.h; sourceTree = "<group>"; };
+		41B18CB62EE7A90100FE61E2 /* xlsformula.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xlsformula.c; sourceTree = "<group>"; };
+		41B18CB82EE7A90100FE61E2 /* 65536-rows-xls.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "65536-rows-xls.xls"; sourceTree = "<group>"; };
+		41B18CB92EE7A90100FE61E2 /* biff5-label-records.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "biff5-label-records.xls"; sourceTree = "<group>"; };
+		41B18CBA2EE7A90100FE61E2 /* big-texty-numbers-xls.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "big-texty-numbers-xls.xls"; sourceTree = "<group>"; };
+		41B18CBB2EE7A90100FE61E2 /* blanks.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = blanks.xls; sourceTree = "<group>"; };
+		41B18CBC2EE7A90100FE61E2 /* dates-1900.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "dates-1900.xls"; sourceTree = "<group>"; };
+		41B18CBD2EE7A90100FE61E2 /* dates-1904.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "dates-1904.xls"; sourceTree = "<group>"; };
+		41B18CBE2EE7A90100FE61E2 /* dates-leap-year-1900-xls.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "dates-leap-year-1900-xls.xls"; sourceTree = "<group>"; };
+		41B18CBF2EE7A90100FE61E2 /* datetime-rounding.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "datetime-rounding.xls"; sourceTree = "<group>"; };
+		41B18CC02EE7A90100FE61E2 /* empty-named-column.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "empty-named-column.xls"; sourceTree = "<group>"; };
+		41B18CC12EE7A90100FE61E2 /* empty-sheets.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "empty-sheets.xls"; sourceTree = "<group>"; };
+		41B18CC22EE7A90100FE61E2 /* geometry.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = geometry.xls; sourceTree = "<group>"; };
+		41B18CC32EE7A90100FE61E2 /* iris-excel-xls.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iris-excel-xls.xls"; sourceTree = "<group>"; };
+		41B18CC42EE7A90100FE61E2 /* list_type.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = list_type.xls; sourceTree = "<group>"; };
+		41B18CC52EE7A90100FE61E2 /* missing-first-column.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "missing-first-column.xls"; sourceTree = "<group>"; };
+		41B18CC62EE7A90100FE61E2 /* missing-values-xls.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "missing-values-xls.xls"; sourceTree = "<group>"; };
+		41B18CC72EE7A90100FE61E2 /* more-than-256-unique-strings-xls.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "more-than-256-unique-strings-xls.xls"; sourceTree = "<group>"; };
+		41B18CC82EE7A90100FE61E2 /* mtcars.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = mtcars.xls; sourceTree = "<group>"; };
+		41B18CC92EE7A90100FE61E2 /* names-need-repair-xls.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "names-need-repair-xls.xls"; sourceTree = "<group>"; };
+		41B18CCA2EE7A90100FE61E2 /* no-yes-col-names.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "no-yes-col-names.xls"; sourceTree = "<group>"; };
+		41B18CCB2EE7A90100FE61E2 /* numbers-as-na-and-shared-strings-xls.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "numbers-as-na-and-shared-strings-xls.xls"; sourceTree = "<group>"; };
+		41B18CCC2EE7A90100FE61E2 /* skipping.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = skipping.xls; sourceTree = "<group>"; };
+		41B18CCD2EE7A90100FE61E2 /* style-only-cells.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "style-only-cells.xls"; sourceTree = "<group>"; };
+		41B18CCE2EE7A90100FE61E2 /* texty-dates-xls.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "texty-dates-xls.xls"; sourceTree = "<group>"; };
+		41B18CCF2EE7A90100FE61E2 /* types.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = types.xls; sourceTree = "<group>"; };
+		41B18CD02EE7A90100FE61E2 /* unnamed-duplicated-columns.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "unnamed-duplicated-columns.xls"; sourceTree = "<group>"; };
+		41B18CD12EE7A90100FE61E2 /* utf8-sheet-names.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "utf8-sheet-names.xls"; sourceTree = "<group>"; };
+		41B18CD22EE7A90100FE61E2 /* vietnamese-utf8.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "vietnamese-utf8.xls"; sourceTree = "<group>"; };
+		41B18CD32EE7A90100FE61E2 /* whitespace-xls.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = "whitespace-xls.xls"; sourceTree = "<group>"; };
+		41B18CD42EE7A90100FE61E2 /* xls2csv_ole_ole2_fread_327.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = xls2csv_ole_ole2_fread_327.xls; sourceTree = "<group>"; };
+		41B18CD52EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_772.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = xls2csv_ole_read_MSAT_772.xls; sourceTree = "<group>"; };
+		41B18CD62EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_body_637.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = xls2csv_ole_read_MSAT_body_637.xls; sourceTree = "<group>"; };
+		41B18CD72EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_body_687.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = xls2csv_ole_read_MSAT_body_687.xls; sourceTree = "<group>"; };
+		41B18CD92EE7A90100FE61E2 /* fuzz_xls.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = fuzz_xls.c; sourceTree = "<group>"; };
+		41B18CDB2EE7A90100FE61E2 /* brdb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = brdb.h; sourceTree = "<group>"; };
+		41B18CDC2EE7A90100FE61E2 /* brdb.c.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = brdb.c.h; sourceTree = "<group>"; };
+		41B18CDD2EE7A90100FE61E2 /* endian.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = endian.h; sourceTree = "<group>"; };
+		41B18CDE2EE7A90100FE61E2 /* locale.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = locale.h; sourceTree = "<group>"; };
+		41B18CDF2EE7A90100FE61E2 /* ole.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ole.h; sourceTree = "<group>"; };
+		41B18CE02EE7A90100FE61E2 /* xlsstruct.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xlsstruct.h; sourceTree = "<group>"; };
+		41B18CE12EE7A90100FE61E2 /* xlstool.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xlstool.h; sourceTree = "<group>"; };
+		41B18CE22EE7A90100FE61E2 /* xlstypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xlstypes.h; sourceTree = "<group>"; };
+		41B18CE42EE7A90100FE61E2 /* xls.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xls.h; sourceTree = "<group>"; };
+		41B18CE62EE7A90100FE61E2 /* xls2csv.man */ = {isa = PBXFileReference; lastKnownFileType = text; path = xls2csv.man; sourceTree = "<group>"; };
+		41B18CE82EE7A90100FE61E2 /* endian.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = endian.c; sourceTree = "<group>"; };
+		41B18CE92EE7A90100FE61E2 /* locale.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = locale.c; sourceTree = "<group>"; };
+		41B18CEA2EE7A90100FE61E2 /* ole.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ole.c; sourceTree = "<group>"; };
+		41B18CEB2EE7A90100FE61E2 /* xls.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xls.c; sourceTree = "<group>"; };
+		41B18CEC2EE7A90100FE61E2 /* xls2csv.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xls2csv.c; sourceTree = "<group>"; };
+		41B18CED2EE7A90100FE61E2 /* xlstool.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xlstool.c; sourceTree = "<group>"; };
+		41B18CEF2EE7A90100FE61E2 /* test2.xls */ = {isa = PBXFileReference; lastKnownFileType = file; path = test2.xls; sourceTree = "<group>"; };
+		41B18CF12EE7A90100FE61E2 /* test.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = test.c; sourceTree = "<group>"; };
+		41B18CF22EE7A90100FE61E2 /* test2.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = test2.c; sourceTree = "<group>"; };
+		41B18CF42EE7A90100FE61E2 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		41B18CF52EE7A90100FE61E2 /* AUTHORS */ = {isa = PBXFileReference; lastKnownFileType = text; path = AUTHORS; sourceTree = "<group>"; };
+		41B18CF62EE7A90100FE61E2 /* autogen.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = autogen.sh; sourceTree = "<group>"; };
+		41B18CF72EE7A90100FE61E2 /* config.rpath */ = {isa = PBXFileReference; lastKnownFileType = text; path = config.rpath; sourceTree = "<group>"; };
+		41B18CF82EE7A90100FE61E2 /* configure.ac */ = {isa = PBXFileReference; lastKnownFileType = text; path = configure.ac; sourceTree = "<group>"; };
+		41B18CF92EE7A90100FE61E2 /* INSTALL */ = {isa = PBXFileReference; lastKnownFileType = text; path = INSTALL; sourceTree = "<group>"; };
+		41B18CFA2EE7A90100FE61E2 /* libxls.pc.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = libxls.pc.in; sourceTree = "<group>"; };
+		41B18CFB2EE7A90100FE61E2 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		41B18CFC2EE7A90100FE61E2 /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+		41B18CFD2EE7A90100FE61E2 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		41B18D3B2EE7B0B400FE61E2 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -30,8 +155,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				415227F82EE5059D008233E0 /* xlsxwriter in Frameworks */,
-				415227EC2EE4CDE3008233E0 /* CoreXLSX in Frameworks */,
 				415227EF2EE4CE13008233E0 /* SwiftSoup in Frameworks */,
+				41B18CAB2EE7614A00FE61E2 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -41,6 +166,7 @@
 		415227AA2EE0B07D008233E0 = {
 			isa = PBXGroup;
 			children = (
+				41B18CFF2EE7A90100FE61E2 /* Vendor 2 */,
 				415227B52EE0B07D008233E0 /* iOSMerchandiseControl */,
 				415227B42EE0B07D008233E0 /* Products */,
 			);
@@ -52,6 +178,188 @@
 				415227B32EE0B07D008233E0 /* iOSMerchandiseControl.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		41B18CAE2EE7A90100FE61E2 /* workflows */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CAC2EE7A90100FE61E2 /* build.yml */,
+				41B18CAD2EE7A90100FE61E2 /* fuzz.yml */,
+			);
+			path = workflows;
+			sourceTree = "<group>";
+		};
+		41B18CAF2EE7A90100FE61E2 /* .github */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CAE2EE7A90100FE61E2 /* workflows */,
+			);
+			path = .github;
+			sourceTree = "<group>";
+		};
+		41B18CB42EE7A90100FE61E2 /* cplusplus */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CB02EE7A90100FE61E2 /* main */,
+				41B18CB12EE7A90100FE61E2 /* main.cpp */,
+				41B18CB22EE7A90100FE61E2 /* XlsReader.h */,
+				41B18CB32EE7A90100FE61E2 /* XlsReader.cpp */,
+			);
+			path = cplusplus;
+			sourceTree = "<group>";
+		};
+		41B18CB72EE7A90100FE61E2 /* formulas */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CB52EE7A90100FE61E2 /* xlsformula.h */,
+				41B18CB62EE7A90100FE61E2 /* xlsformula.c */,
+			);
+			path = formulas;
+			sourceTree = "<group>";
+		};
+		41B18CD82EE7A90100FE61E2 /* corpus */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CB82EE7A90100FE61E2 /* 65536-rows-xls.xls */,
+				41B18CB92EE7A90100FE61E2 /* biff5-label-records.xls */,
+				41B18CBA2EE7A90100FE61E2 /* big-texty-numbers-xls.xls */,
+				41B18CBB2EE7A90100FE61E2 /* blanks.xls */,
+				41B18CBC2EE7A90100FE61E2 /* dates-1900.xls */,
+				41B18CBD2EE7A90100FE61E2 /* dates-1904.xls */,
+				41B18CBE2EE7A90100FE61E2 /* dates-leap-year-1900-xls.xls */,
+				41B18CBF2EE7A90100FE61E2 /* datetime-rounding.xls */,
+				41B18CC02EE7A90100FE61E2 /* empty-named-column.xls */,
+				41B18CC12EE7A90100FE61E2 /* empty-sheets.xls */,
+				41B18CC22EE7A90100FE61E2 /* geometry.xls */,
+				41B18CC32EE7A90100FE61E2 /* iris-excel-xls.xls */,
+				41B18CC42EE7A90100FE61E2 /* list_type.xls */,
+				41B18CC52EE7A90100FE61E2 /* missing-first-column.xls */,
+				41B18CC62EE7A90100FE61E2 /* missing-values-xls.xls */,
+				41B18CC72EE7A90100FE61E2 /* more-than-256-unique-strings-xls.xls */,
+				41B18CC82EE7A90100FE61E2 /* mtcars.xls */,
+				41B18CC92EE7A90100FE61E2 /* names-need-repair-xls.xls */,
+				41B18CCA2EE7A90100FE61E2 /* no-yes-col-names.xls */,
+				41B18CCB2EE7A90100FE61E2 /* numbers-as-na-and-shared-strings-xls.xls */,
+				41B18CCC2EE7A90100FE61E2 /* skipping.xls */,
+				41B18CCD2EE7A90100FE61E2 /* style-only-cells.xls */,
+				41B18CCE2EE7A90100FE61E2 /* texty-dates-xls.xls */,
+				41B18CCF2EE7A90100FE61E2 /* types.xls */,
+				41B18CD02EE7A90100FE61E2 /* unnamed-duplicated-columns.xls */,
+				41B18CD12EE7A90100FE61E2 /* utf8-sheet-names.xls */,
+				41B18CD22EE7A90100FE61E2 /* vietnamese-utf8.xls */,
+				41B18CD32EE7A90100FE61E2 /* whitespace-xls.xls */,
+				41B18CD42EE7A90100FE61E2 /* xls2csv_ole_ole2_fread_327.xls */,
+				41B18CD52EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_772.xls */,
+				41B18CD62EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_body_637.xls */,
+				41B18CD72EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_body_687.xls */,
+			);
+			path = corpus;
+			sourceTree = "<group>";
+		};
+		41B18CDA2EE7A90100FE61E2 /* fuzz */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CD82EE7A90100FE61E2 /* corpus */,
+				41B18CD92EE7A90100FE61E2 /* fuzz_xls.c */,
+			);
+			path = fuzz;
+			sourceTree = "<group>";
+		};
+		41B18CE32EE7A90100FE61E2 /* libxls */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CDB2EE7A90100FE61E2 /* brdb.h */,
+				41B18CDC2EE7A90100FE61E2 /* brdb.c.h */,
+				41B18CDD2EE7A90100FE61E2 /* endian.h */,
+				41B18CDE2EE7A90100FE61E2 /* locale.h */,
+				41B18CDF2EE7A90100FE61E2 /* ole.h */,
+				41B18CE02EE7A90100FE61E2 /* xlsstruct.h */,
+				41B18CE12EE7A90100FE61E2 /* xlstool.h */,
+				41B18CE22EE7A90100FE61E2 /* xlstypes.h */,
+			);
+			path = libxls;
+			sourceTree = "<group>";
+		};
+		41B18CE52EE7A90100FE61E2 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CE32EE7A90100FE61E2 /* libxls */,
+				41B18CE42EE7A90100FE61E2 /* xls.h */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		41B18CE72EE7A90100FE61E2 /* man */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CE62EE7A90100FE61E2 /* xls2csv.man */,
+			);
+			path = man;
+			sourceTree = "<group>";
+		};
+		41B18CEE2EE7A90100FE61E2 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				41B18D3B2EE7B0B400FE61E2 /* config.h */,
+				41B18CE82EE7A90100FE61E2 /* endian.c */,
+				41B18CE92EE7A90100FE61E2 /* locale.c */,
+				41B18CEA2EE7A90100FE61E2 /* ole.c */,
+				41B18CEB2EE7A90100FE61E2 /* xls.c */,
+				41B18CEC2EE7A90100FE61E2 /* xls2csv.c */,
+				41B18CED2EE7A90100FE61E2 /* xlstool.c */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		41B18CF02EE7A90100FE61E2 /* files */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CEF2EE7A90100FE61E2 /* test2.xls */,
+			);
+			path = files;
+			sourceTree = "<group>";
+		};
+		41B18CF32EE7A90100FE61E2 /* test */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CF02EE7A90100FE61E2 /* files */,
+				41B18CF12EE7A90100FE61E2 /* test.c */,
+				41B18CF22EE7A90100FE61E2 /* test2.c */,
+			);
+			path = test;
+			sourceTree = "<group>";
+		};
+		41B18CFE2EE7A90100FE61E2 /* libxls */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CAF2EE7A90100FE61E2 /* .github */,
+				41B18CB42EE7A90100FE61E2 /* cplusplus */,
+				41B18CB72EE7A90100FE61E2 /* formulas */,
+				41B18CDA2EE7A90100FE61E2 /* fuzz */,
+				41B18CE52EE7A90100FE61E2 /* include */,
+				41B18CE72EE7A90100FE61E2 /* man */,
+				41B18CEE2EE7A90100FE61E2 /* src */,
+				41B18CF32EE7A90100FE61E2 /* test */,
+				41B18CF42EE7A90100FE61E2 /* .gitignore */,
+				41B18CF52EE7A90100FE61E2 /* AUTHORS */,
+				41B18CF62EE7A90100FE61E2 /* autogen.sh */,
+				41B18CF72EE7A90100FE61E2 /* config.rpath */,
+				41B18CF82EE7A90100FE61E2 /* configure.ac */,
+				41B18CF92EE7A90100FE61E2 /* INSTALL */,
+				41B18CFA2EE7A90100FE61E2 /* libxls.pc.in */,
+				41B18CFB2EE7A90100FE61E2 /* LICENSE */,
+				41B18CFC2EE7A90100FE61E2 /* Makefile.am */,
+				41B18CFD2EE7A90100FE61E2 /* README.md */,
+			);
+			path = libxls;
+			sourceTree = "<group>";
+		};
+		41B18CFF2EE7A90100FE61E2 /* Vendor 2 */ = {
+			isa = PBXGroup;
+			children = (
+				41B18CFE2EE7A90100FE61E2 /* libxls */,
+			);
+			path = "Vendor 2";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -74,9 +382,9 @@
 			);
 			name = iOSMerchandiseControl;
 			packageProductDependencies = (
-				415227EB2EE4CDE3008233E0 /* CoreXLSX */,
 				415227EE2EE4CE13008233E0 /* SwiftSoup */,
 				415227F72EE5059D008233E0 /* xlsxwriter */,
+				41B18CAA2EE7614A00FE61E2 /* ZIPFoundation */,
 			);
 			productName = iOSMerchandiseControl;
 			productReference = 415227B32EE0B07D008233E0 /* iOSMerchandiseControl.app */;
@@ -107,9 +415,9 @@
 			mainGroup = 415227AA2EE0B07D008233E0;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				415227EA2EE4CDE3008233E0 /* XCRemoteSwiftPackageReference "CoreXLSX" */,
 				415227ED2EE4CE13008233E0 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 				415227F62EE5059D008233E0 /* XCRemoteSwiftPackageReference "xlsxwriter" */,
+				41B18CA92EE7614A00FE61E2 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 415227B42EE0B07D008233E0 /* Products */;
@@ -126,6 +434,53 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				41B18D0C2EE7A90100FE61E2 /* texty-dates-xls.xls in Resources */,
+				41B18D0D2EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_772.xls in Resources */,
+				41B18D0E2EE7A90100FE61E2 /* numbers-as-na-and-shared-strings-xls.xls in Resources */,
+				41B18D0F2EE7A90100FE61E2 /* configure.ac in Resources */,
+				41B18D102EE7A90100FE61E2 /* biff5-label-records.xls in Resources */,
+				41B18D112EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_body_687.xls in Resources */,
+				41B18D122EE7A90100FE61E2 /* iris-excel-xls.xls in Resources */,
+				41B18D132EE7A90100FE61E2 /* unnamed-duplicated-columns.xls in Resources */,
+				41B18D142EE7A90100FE61E2 /* libxls.pc.in in Resources */,
+				41B18D152EE7A90100FE61E2 /* style-only-cells.xls in Resources */,
+				41B18D162EE7A90100FE61E2 /* big-texty-numbers-xls.xls in Resources */,
+				41B18D172EE7A90100FE61E2 /* Makefile.am in Resources */,
+				41B18D182EE7A90100FE61E2 /* empty-sheets.xls in Resources */,
+				41B18D192EE7A90100FE61E2 /* INSTALL in Resources */,
+				41B18D1A2EE7A90100FE61E2 /* dates-1900.xls in Resources */,
+				41B18D1B2EE7A90100FE61E2 /* autogen.sh in Resources */,
+				41B18D1C2EE7A90100FE61E2 /* types.xls in Resources */,
+				41B18D1D2EE7A90100FE61E2 /* LICENSE in Resources */,
+				41B18D1E2EE7A90100FE61E2 /* missing-values-xls.xls in Resources */,
+				41B18D1F2EE7A90100FE61E2 /* xls2csv_ole_read_MSAT_body_637.xls in Resources */,
+				41B18D202EE7A90100FE61E2 /* fuzz.yml in Resources */,
+				41B18D212EE7A90100FE61E2 /* datetime-rounding.xls in Resources */,
+				41B18D222EE7A90100FE61E2 /* utf8-sheet-names.xls in Resources */,
+				41B18D232EE7A90100FE61E2 /* 65536-rows-xls.xls in Resources */,
+				41B18D242EE7A90100FE61E2 /* dates-1904.xls in Resources */,
+				41B18D252EE7A90100FE61E2 /* test2.xls in Resources */,
+				41B18D262EE7A90100FE61E2 /* config.rpath in Resources */,
+				41B18D272EE7A90100FE61E2 /* README.md in Resources */,
+				41B18D282EE7A90100FE61E2 /* more-than-256-unique-strings-xls.xls in Resources */,
+				41B18D292EE7A90100FE61E2 /* xls2csv.man in Resources */,
+				41B18D2A2EE7A90100FE61E2 /* missing-first-column.xls in Resources */,
+				41B18D2B2EE7A90100FE61E2 /* .gitignore in Resources */,
+				41B18D2C2EE7A90100FE61E2 /* build.yml in Resources */,
+				41B18D2D2EE7A90100FE61E2 /* main in Resources */,
+				41B18D2E2EE7A90100FE61E2 /* blanks.xls in Resources */,
+				41B18D2F2EE7A90100FE61E2 /* no-yes-col-names.xls in Resources */,
+				41B18D302EE7A90100FE61E2 /* mtcars.xls in Resources */,
+				41B18D312EE7A90100FE61E2 /* geometry.xls in Resources */,
+				41B18D322EE7A90100FE61E2 /* names-need-repair-xls.xls in Resources */,
+				41B18D332EE7A90100FE61E2 /* skipping.xls in Resources */,
+				41B18D342EE7A90100FE61E2 /* dates-leap-year-1900-xls.xls in Resources */,
+				41B18D352EE7A90100FE61E2 /* empty-named-column.xls in Resources */,
+				41B18D362EE7A90100FE61E2 /* vietnamese-utf8.xls in Resources */,
+				41B18D372EE7A90100FE61E2 /* AUTHORS in Resources */,
+				41B18D382EE7A90100FE61E2 /* xls2csv_ole_ole2_fread_327.xls in Resources */,
+				41B18D392EE7A90100FE61E2 /* whitespace-xls.xls in Resources */,
+				41B18D3A2EE7A90100FE61E2 /* list_type.xls in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,6 +491,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				41B18D3D2EE7B39400FE61E2 /* xlstool.c in Sources */,
+				41B18D012EE7A90100FE61E2 /* xlsformula.c in Sources */,
+				41B18D022EE7A90100FE61E2 /* endian.c in Sources */,
+				41B18D052EE7A90100FE61E2 /* xls.c in Sources */,
+				41B18D062EE7A90100FE61E2 /* locale.c in Sources */,
+				41B18D092EE7A90100FE61E2 /* ole.c in Sources */,
+				41B18D0A2EE7A90100FE61E2 /* XlsReader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -271,6 +633,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/libxls/include";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Uso la camera per scansionare i codici a barre dei prodotti.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -316,6 +679,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/libxls/include";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Uso la camera per scansionare i codici a barre dei prodotti.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -372,14 +736,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		415227EA2EE4CDE3008233E0 /* XCRemoteSwiftPackageReference "CoreXLSX" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/CoreOffice/CoreXLSX";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.14.2;
-			};
-		};
 		415227ED2EE4CE13008233E0 /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/scinfu/SwiftSoup";
@@ -396,14 +752,17 @@
 				kind = branch;
 			};
 		};
+		41B18CA92EE7614A00FE61E2 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.20;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		415227EB2EE4CDE3008233E0 /* CoreXLSX */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 415227EA2EE4CDE3008233E0 /* XCRemoteSwiftPackageReference "CoreXLSX" */;
-			productName = CoreXLSX;
-		};
 		415227EE2EE4CE13008233E0 /* SwiftSoup */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 415227ED2EE4CE13008233E0 /* XCRemoteSwiftPackageReference "SwiftSoup" */;
@@ -413,6 +772,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 415227F62EE5059D008233E0 /* XCRemoteSwiftPackageReference "xlsxwriter" */;
 			productName = xlsxwriter;
+		};
+		41B18CAA2EE7614A00FE61E2 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 41B18CA92EE7614A00FE61E2 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
