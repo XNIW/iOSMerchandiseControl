@@ -498,6 +498,62 @@ extension ExcelSessionViewModel {
 
         return "\(ts)_\(safeSupplier).xlsx"
     }
+    
+    static let overridableRoles: [String] = [
+        "barcode",
+        "productName",
+        "secondProductName",
+        "itemNumber",
+        "rowNumber",
+        "quantity",
+        "purchasePrice",
+        "totalPrice",
+        "retailPrice",
+        "discountedPrice",
+        "supplier",
+        "category"
+    ]
+
+    // TUTTI i ruoli sono unici
+    private static let uniqueRoles = Set(overridableRoles)
+    
+    func setColumnRole(at index: Int, to newRole: String) {
+        guard normalizedHeader.indices.contains(index) else { return }
+
+        // 1. Se il ruolo è unico, sgancia eventuale colonna che lo aveva prima
+        if Self.uniqueRoles.contains(newRole),
+           let oldIndex = normalizedHeader.firstIndex(of: newRole),
+           oldIndex != index {
+
+            // calcolo di un nome "neutro" per la colonna sganciata
+            let fallback: String
+            if originalHeader.indices.contains(oldIndex) {
+                let orig = originalHeader[oldIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+                fallback = orig.isEmpty ? "col\(oldIndex + 1)" : orig
+            } else {
+                fallback = "col\(oldIndex + 1)"
+            }
+
+            normalizedHeader[oldIndex] = fallback
+
+            // opzionale: visto che non ha più un ruolo noto, possiamo anche deselezionarla
+            if selectedColumns.indices.contains(oldIndex) {
+                selectedColumns[oldIndex] = false
+            }
+        }
+
+        // 2. Assegna il nuovo ruolo alla colonna scelta
+        normalizedHeader[index] = newRole
+
+        // 3. Aggiorna eventuali metriche / warning
+        if let metrics = ExcelAnalyzer.computeAnalysisMetrics(
+            header: normalizedHeader,
+            rows: rows
+        ) {
+            analysisMetrics = metrics
+            analysisConfidence = metrics.confidenceScore
+        }
+    }
 }
 
 // MARK: - Metriche di analisi
@@ -833,33 +889,47 @@ struct ExcelAnalyzer {
     /// Porta la logica di readAndAnalyzeExcel(context, uri) con analisi avanzata stile Android
     static func readAndAnalyzeExcel(from url: URL)
         throws -> (originalHeader: [String], normalizedHeader: [String], dataRows: [[String]]) {
+
         let data = try Data(contentsOf: url)
         let ext = url.pathExtension.lowercased()
 
-        let rows: [[String]]
+        debugLog("Caricamento \(url.lastPathComponent) (ext=\(ext))", level: .info)
 
-        if ext == "html" || ext == "htm" || looksLikeHtml(data: data) {
-            rows = try rowsFromHTML(data: data)
-        } else if ext == "xlsx" || ext == "xls" || ext.isEmpty {
+        // 1) HTML first (anche DreamDIY.xls)
+        if looksLikeHtml(data: data) {
+            debugLog("Rilevato HTML (anche con estensione .\(ext))", level: .info)
+            let rows = try rowsFromHTML(data: data)
+            return analyzeRows(rows)
+        }
 
+        // 2) Prova come XLSX (ZIP), basato sul contenuto
+        if isZipXlsx(data: data) {
             do {
-                rows = try rowsFromXLSX(at: url)
+                debugLog("Firma ZIP rilevata, provo come XLSX", level: .info)
+                let rows = try rowsFromXLSX(at: url)
+                return analyzeRows(rows)
             } catch {
+                debugLog("Errore lettura XLSX: \(error.localizedDescription)", level: .warning)
+
+                // Se l'estensione è .xls, potrebbe essere un vero .xls binario
                 if ext == "xls" {
-                    // Caso tipico: vero .xls 97-2003, non supportato
-                    throw ExcelLoadError.invalidFormat(
-                        "Questo file Excel è nel vecchio formato .xls (Excel 97-2003), non supportato.\n" +
-                        "Apri il file con Excel o WPS e salvalo come .xlsx oppure esportalo in HTML, poi riprova."
-                    )
+                    debugLog("Ext .xls: fallback su parser legacy .xls (libxls)", level: .info)
+                    // continua al punto 3
                 } else {
                     throw error
                 }
             }
-        } else {
-            throw ExcelLoadError.unsupportedExtension(ext)
         }
 
-        return analyzeRows(rows)
+        // 3) Legacy .xls (BIFF) → libxls
+        if ext == "xls" || ext == "xlsx" {
+            debugLog("Provo parser legacy .xls per \(url.lastPathComponent)", level: .info)
+            let rows = try rowsFromLegacyXLS(data: data)
+            return analyzeRows(rows)
+        }
+
+        // 4) Estensione non supportata
+        throw ExcelLoadError.unsupportedExtension(ext)
     }
 
     private static func looksLikeHtml(data: Data) -> Bool {
@@ -879,6 +949,14 @@ struct ExcelAnalyzer {
                lower.contains("mso-application") ||
                lower.contains("office:excel") ||
                lower.contains("<table")
+    }
+    
+    /// Rileva rapidamente se il file è un archivio ZIP (tipico degli .xlsx)
+    private static func isZipXlsx(data: Data) -> Bool {
+        // Firma ZIP: 50 4B 03 04
+        let magic: [UInt8] = [0x50, 0x4B, 0x03, 0x04]
+        guard data.count >= magic.count else { return false }
+        return data.prefix(magic.count).elementsEqual(magic)
     }
 
     // MARK: HTML → righe
@@ -933,6 +1011,21 @@ struct ExcelAnalyzer {
     
     // MARK: XLSX → righe (parser ZIP/XML senza CoreXLSX)
 
+    /// Parser legacy .xls basato su libxls tramite wrapper Objective-C
+    private static func rowsFromLegacyXLS(data: Data) throws -> [[String]] {
+        do {
+            // ✅ Nuovo nome Swift + niente guard/optional
+            let rows = try ExcelLegacyReader.rows(fromXLSData: data)
+            return rows
+        } catch {
+            // Qui arrivano gli NSError generati in Objective-C
+            let nsError = error as NSError
+            throw ExcelLoadError.invalidFormat(
+                "Impossibile leggere il file .xls. Dettagli: \(nsError.localizedDescription)"
+            )
+        }
+    }
+    
     private static func rowsFromXLSX(at url: URL) throws -> [[String]] {
         let archive: Archive
         do {
@@ -1024,13 +1117,22 @@ struct ExcelAnalyzer {
     /// - elimina righe di riepilogo (totali)
     private static func analyzeRows(_ rows: [[String]])
         -> (originalHeader: [String], normalizedHeader: [String], dataRows: [[String]]) {
-            guard !rows.isEmpty else { return ([], [], []) }
+        guard !rows.isEmpty else { return ([], [], []) }
 
-        // 1. Trova la riga di intestazione dati (come già fatto)
+        // 1. Trova la riga di intestazione dati
         let (headerRow, dataStartIndex, hasHeader) = findDataHeaderRow(in: rows)
-        
-        // 2. Costruisci righe dati
-        let dataRows = buildDataRows(from: rows, startingAt: dataStartIndex)
+
+        // 2. Costruisci righe dati grezze (tutte quelle dopo dataStartIndex)
+        let rawDataRows = buildDataRows(from: rows, startingAt: dataStartIndex)
+
+        // 2b. Come su Android: se abbiamo riconosciuto un header,
+        //      filtriamo le righe per eliminare totali / righe inutili.
+        let dataRows: [[String]]
+        if hasHeader {
+            dataRows = filterDataRows(rawDataRows)
+        } else {
+            dataRows = rawDataRows
+        }
 
         // 3. Rimuovi colonne completamente vuote
         let (filteredHeader, filteredDataRows, _) = removeEmptyColumns(
@@ -1212,6 +1314,30 @@ struct ExcelAnalyzer {
             let colCount = rows.first?.count ?? 0
             let generatedHeader = (0..<colCount).map { "col\($0 + 1)" }
             return (generatedHeader, 0, false)
+        }
+    }
+    
+    /// Filtra le righe "valide", come in Android:
+    /// almeno 3 valori numerici e almeno 1 testo non vuoto.
+    private static func filterDataRows(_ rows: [[String]]) -> [[String]] {
+        return rows.filter { row in
+            var numericCount = 0
+            var textCount = 0
+
+            for cell in row {
+                let trimmed = cell.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty { continue }
+
+                if trimmed
+                    .replacingOccurrences(of: ",", with: ".")
+                    .toDouble() != nil {
+                    numericCount += 1
+                } else {
+                    textCount += 1
+                }
+            }
+
+            return numericCount >= 3 && textCount >= 1
         }
     }
 

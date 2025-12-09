@@ -10,12 +10,10 @@
 		415227EF2EE4CE13008233E0 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 415227EE2EE4CE13008233E0 /* SwiftSoup */; };
 		415227F82EE5059D008233E0 /* xlsxwriter in Frameworks */ = {isa = PBXBuildFile; productRef = 415227F72EE5059D008233E0 /* xlsxwriter */; };
 		41B18CAB2EE7614A00FE61E2 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 41B18CAA2EE7614A00FE61E2 /* ZIPFoundation */; };
-		41B18D012EE7A90100FE61E2 /* xlsformula.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CB62EE7A90100FE61E2 /* xlsformula.c */; };
 		41B18D022EE7A90100FE61E2 /* endian.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CE82EE7A90100FE61E2 /* endian.c */; };
 		41B18D052EE7A90100FE61E2 /* xls.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CEB2EE7A90100FE61E2 /* xls.c */; };
 		41B18D062EE7A90100FE61E2 /* locale.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CE92EE7A90100FE61E2 /* locale.c */; };
-		41B18D092EE7A90100FE61E2 /* ole.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CEA2EE7A90100FE61E2 /* ole.c */; };
-		41B18D0A2EE7A90100FE61E2 /* XlsReader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CB32EE7A90100FE61E2 /* XlsReader.cpp */; };
+		41B18D092EE7A90100FE61E2 /* ole.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CEA2EE7A90100FE61E2 /* ole.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		41B18D0F2EE7A90100FE61E2 /* configure.ac in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF82EE7A90100FE61E2 /* configure.ac */; };
 		41B18D142EE7A90100FE61E2 /* libxls.pc.in in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFA2EE7A90100FE61E2 /* libxls.pc.in */; };
 		41B18D172EE7A90100FE61E2 /* Makefile.am in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFC2EE7A90100FE61E2 /* Makefile.am */; };
@@ -25,22 +23,16 @@
 		41B18D202EE7A90100FE61E2 /* fuzz.yml in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CAD2EE7A90100FE61E2 /* fuzz.yml */; };
 		41B18D262EE7A90100FE61E2 /* config.rpath in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF72EE7A90100FE61E2 /* config.rpath */; };
 		41B18D272EE7A90100FE61E2 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFD2EE7A90100FE61E2 /* README.md */; };
-		41B18D292EE7A90100FE61E2 /* xls2csv.man in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CE62EE7A90100FE61E2 /* xls2csv.man */; };
 		41B18D2B2EE7A90100FE61E2 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF42EE7A90100FE61E2 /* .gitignore */; };
 		41B18D2C2EE7A90100FE61E2 /* build.yml in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CAC2EE7A90100FE61E2 /* build.yml */; };
-		41B18D2D2EE7A90100FE61E2 /* main in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CB02EE7A90100FE61E2 /* main */; };
 		41B18D372EE7A90100FE61E2 /* AUTHORS in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF52EE7A90100FE61E2 /* AUTHORS */; };
-		41B18D3D2EE7B39400FE61E2 /* xlstool.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CED2EE7A90100FE61E2 /* xlstool.c */; };
+		41B18D3D2EE7B39400FE61E2 /* xlstool.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CED2EE7A90100FE61E2 /* xlstool.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		415227B32EE0B07D008233E0 /* iOSMerchandiseControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iOSMerchandiseControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		41B18CAC2EE7A90100FE61E2 /* build.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = build.yml; sourceTree = "<group>"; };
 		41B18CAD2EE7A90100FE61E2 /* fuzz.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = fuzz.yml; sourceTree = "<group>"; };
-		41B18CB02EE7A90100FE61E2 /* main */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = main; sourceTree = "<group>"; };
-		41B18CB12EE7A90100FE61E2 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		41B18CB22EE7A90100FE61E2 /* XlsReader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XlsReader.h; sourceTree = "<group>"; };
-		41B18CB32EE7A90100FE61E2 /* XlsReader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XlsReader.cpp; sourceTree = "<group>"; };
 		41B18CB52EE7A90100FE61E2 /* xlsformula.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xlsformula.h; sourceTree = "<group>"; };
 		41B18CB62EE7A90100FE61E2 /* xlsformula.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xlsformula.c; sourceTree = "<group>"; };
 		41B18CDB2EE7A90100FE61E2 /* brdb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = brdb.h; sourceTree = "<group>"; };
@@ -52,7 +44,6 @@
 		41B18CE12EE7A90100FE61E2 /* xlstool.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xlstool.h; sourceTree = "<group>"; };
 		41B18CE22EE7A90100FE61E2 /* xlstypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xlstypes.h; sourceTree = "<group>"; };
 		41B18CE42EE7A90100FE61E2 /* xls.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xls.h; sourceTree = "<group>"; };
-		41B18CE62EE7A90100FE61E2 /* xls2csv.man */ = {isa = PBXFileReference; lastKnownFileType = text; path = xls2csv.man; sourceTree = "<group>"; };
 		41B18CE82EE7A90100FE61E2 /* endian.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = endian.c; sourceTree = "<group>"; };
 		41B18CE92EE7A90100FE61E2 /* locale.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = locale.c; sourceTree = "<group>"; };
 		41B18CEA2EE7A90100FE61E2 /* ole.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ole.c; sourceTree = "<group>"; };
@@ -128,17 +119,6 @@
 			path = .github;
 			sourceTree = "<group>";
 		};
-		41B18CB42EE7A90100FE61E2 /* cplusplus */ = {
-			isa = PBXGroup;
-			children = (
-				41B18CB02EE7A90100FE61E2 /* main */,
-				41B18CB12EE7A90100FE61E2 /* main.cpp */,
-				41B18CB22EE7A90100FE61E2 /* XlsReader.h */,
-				41B18CB32EE7A90100FE61E2 /* XlsReader.cpp */,
-			);
-			path = cplusplus;
-			sourceTree = "<group>";
-		};
 		41B18CB72EE7A90100FE61E2 /* formulas */ = {
 			isa = PBXGroup;
 			children = (
@@ -172,14 +152,6 @@
 			path = include;
 			sourceTree = "<group>";
 		};
-		41B18CE72EE7A90100FE61E2 /* man */ = {
-			isa = PBXGroup;
-			children = (
-				41B18CE62EE7A90100FE61E2 /* xls2csv.man */,
-			);
-			path = man;
-			sourceTree = "<group>";
-		};
 		41B18CEE2EE7A90100FE61E2 /* src */ = {
 			isa = PBXGroup;
 			children = (
@@ -198,10 +170,8 @@
 			isa = PBXGroup;
 			children = (
 				41B18CAF2EE7A90100FE61E2 /* .github */,
-				41B18CB42EE7A90100FE61E2 /* cplusplus */,
 				41B18CB72EE7A90100FE61E2 /* formulas */,
 				41B18CE52EE7A90100FE61E2 /* include */,
-				41B18CE72EE7A90100FE61E2 /* man */,
 				41B18CEE2EE7A90100FE61E2 /* src */,
 				41B18CF42EE7A90100FE61E2 /* .gitignore */,
 				41B18CF52EE7A90100FE61E2 /* AUTHORS */,
@@ -306,10 +276,8 @@
 				41B18D202EE7A90100FE61E2 /* fuzz.yml in Resources */,
 				41B18D262EE7A90100FE61E2 /* config.rpath in Resources */,
 				41B18D272EE7A90100FE61E2 /* README.md in Resources */,
-				41B18D292EE7A90100FE61E2 /* xls2csv.man in Resources */,
 				41B18D2B2EE7A90100FE61E2 /* .gitignore in Resources */,
 				41B18D2C2EE7A90100FE61E2 /* build.yml in Resources */,
-				41B18D2D2EE7A90100FE61E2 /* main in Resources */,
 				41B18D372EE7A90100FE61E2 /* AUTHORS in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -322,12 +290,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				41B18D3D2EE7B39400FE61E2 /* xlstool.c in Sources */,
-				41B18D012EE7A90100FE61E2 /* xlsformula.c in Sources */,
 				41B18D022EE7A90100FE61E2 /* endian.c in Sources */,
 				41B18D052EE7A90100FE61E2 /* xls.c in Sources */,
 				41B18D062EE7A90100FE61E2 /* locale.c in Sources */,
 				41B18D092EE7A90100FE61E2 /* ole.c in Sources */,
-				41B18D0A2EE7A90100FE61E2 /* XlsReader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
