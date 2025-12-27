@@ -352,6 +352,9 @@ extension ExcelSessionViewModel {
         let now = Date()
         let fileId = makeHistoryEntryId(supplier: supplierName, date: now)
 
+        // ✅ salva (se necessario) fornitore/categoria nel DB per autocomplete futuro
+        persistSupplierAndCategoryIfNeeded(in: context)
+        
         let entry = HistoryEntry(
             id: fileId,
             timestamp: now,
@@ -374,6 +377,40 @@ extension ExcelSessionViewModel {
 
         self.currentHistoryEntry = entry
         return entry
+    }
+    
+    private func persistSupplierAndCategoryIfNeeded(in context: ModelContext) {
+        let s = supplierName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if s != supplierName { supplierName = s }
+        if !s.isEmpty {
+            _ = findOrCreateSupplier(named: s, in: context)
+        }
+
+        let c = categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if c != categoryName { categoryName = c }
+        if !c.isEmpty {
+            _ = findOrCreateCategory(named: c, in: context)
+        }
+    }
+
+    private func findOrCreateSupplier(named name: String, in context: ModelContext) -> Supplier {
+        let descriptor = FetchDescriptor<Supplier>(predicate: #Predicate { $0.name == name })
+        if let existing = try? context.fetch(descriptor).first {
+            return existing
+        }
+        let supplier = Supplier(name: name)
+        context.insert(supplier)
+        return supplier
+    }
+
+    private func findOrCreateCategory(named name: String, in context: ModelContext) -> ProductCategory {
+        let descriptor = FetchDescriptor<ProductCategory>(predicate: #Predicate { $0.name == name })
+        if let existing = try? context.fetch(descriptor).first {
+            return existing
+        }
+        let category = ProductCategory(name: name)
+        context.insert(category)
+        return category
     }
 
     /// barcode → (purchasePrice, retailPrice) dal database.

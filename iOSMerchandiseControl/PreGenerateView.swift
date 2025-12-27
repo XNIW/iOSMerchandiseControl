@@ -24,242 +24,317 @@ struct PreGenerateView: View {
     @State private var navigateToGenerated = false
     @State private var ignoreWarnings = false
     
+    private enum FocusField { case supplier, category }
+    @FocusState private var focusedField: FocusField?
+
+    @State private var showAllSuppliersSheet = false
+    @State private var showAllCategoriesSheet = false
+    
+    @State private var debouncedSupplierQuery = ""
+    @State private var debouncedCategoryQuery = ""
+    
+    @State private var showLowConfidenceConfirm = false
+
+    private let suggestionDebounceMs: UInt64 = 220
+    
     var body: some View {
-        Form {
-            // ANTEPRIMA FILE
-            Section("Anteprima") {
-                if excelSession.rows.isEmpty {
-                    Text("Nessun file caricato.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ScrollView(.horizontal) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            // Header
-                            HStack(alignment: .bottom, spacing: 4) {
-                                ForEach(Array(excelSession.normalizedHeader.enumerated()), id: \.offset) { index, key in
-                                    if excelSession.selectedColumns.indices.contains(index),
-                                       excelSession.selectedColumns[index] {
-                                        let width = columnWidth(for: key)
-                                        Text(key)
-                                            .font(.caption2)
-                                            .fontWeight(.semibold)
-                                            .lineLimit(1)
-                                            .frame(width: width, alignment: .leading)
-                                    }
-                                }
-                            }
-
-                            Divider()
-
-                            // Prime righe dati
-                            ForEach(Array(previewRows.enumerated()), id: \.offset) { _, row in
-                                HStack(alignment: .top, spacing: 4) {
-                                    ForEach(excelSession.normalizedHeader.indices, id: \.self) { colIdx in
-                                        if excelSession.selectedColumns.indices.contains(colIdx),
-                                           excelSession.selectedColumns[colIdx] {
-                                            let key = excelSession.normalizedHeader[colIdx]
+        ZStack {
+            // ✅ tap “dietro” al Form: non ruba i tap ai Button
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    focusedField = nil
+                }
+            
+            Form {
+                // ANTEPRIMA FILE
+                Section("Anteprima") {
+                    if excelSession.rows.isEmpty {
+                        Text("Nessun file caricato.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ScrollView(.horizontal) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                // Header
+                                HStack(alignment: .bottom, spacing: 4) {
+                                    ForEach(Array(excelSession.normalizedHeader.enumerated()), id: \.offset) { index, key in
+                                        if excelSession.selectedColumns.indices.contains(index),
+                                           excelSession.selectedColumns[index] {
                                             let width = columnWidth(for: key)
-                                            let value = colIdx < row.count ? row[colIdx] : ""
-
-                                            Text(value)
-                                                .font(
-                                                    isNumericColumn(key)
-                                                    ? .system(.caption2, design: .monospaced)
-                                                    : .caption2
-                                                )
+                                            Text(key)
+                                                .font(.caption2)
+                                                .fontWeight(.semibold)
                                                 .lineLimit(1)
-                                                .truncationMode(.tail)
                                                 .frame(width: width, alignment: .leading)
                                         }
                                     }
                                 }
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-
-                    Text("Mostrate \(previewRows.count) righe su \(max(excelSession.rows.count - 1, 0)).")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    
-                    // 🔎 Badge affidabilità analisi
-                    if let confidence = excelSession.analysisConfidence {
-                        HStack {
-                            Label("Affidabilità analisi", systemImage: "chart.bar.fill")
-                            Spacer()
-                            Text(String(format: "%.0f%%", confidence * 100))
-                                .font(.caption)
-                                .foregroundStyle(
-                                    confidence > 0.7 ? .green :
-                                    confidence > 0.4 ? .orange : .red
-                                )
-
-                            if confidence < 0.5 {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 4)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color(.secondarySystemBackground))
-                        )
-                    }
-
-                    // 💡 Suggerimenti per bassa confidenza
-                    if let confidence = excelSession.analysisConfidence,
-                       confidence < 0.5 {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Suggerimenti per migliorare l'analisi:")
-                                .font(.caption)
-                                .fontWeight(.medium)
-
-                            if let metrics = excelSession.analysisMetrics {
-                                if metrics.essentialColumnsFound < metrics.essentialColumnsTotal {
-                                    Text("• Verifica le colonne obbligatorie (barcode, nome prodotto, prezzo acquisto).")
-                                        .font(.caption2)
-                                }
-
-                                if metrics.totalRows > 0 &&
-                                   Double(metrics.rowsWithValidBarcode) / Double(metrics.totalRows) < 0.3 {
-                                    Text("• Controlla la colonna barcode: molti valori potrebbero essere mancanti.")
-                                        .font(.caption2)
-                                }
-
-                                if !metrics.issues.isEmpty {
-                                    Text("• Risolvi, se possibile, i problemi elencati qui sopra.")
-                                        .font(.caption2)
+                                
+                                Divider()
+                                
+                                // Prime righe dati
+                                ForEach(Array(previewRows.enumerated()), id: \.offset) { _, row in
+                                    HStack(alignment: .top, spacing: 4) {
+                                        ForEach(excelSession.normalizedHeader.indices, id: \.self) { colIdx in
+                                            if excelSession.selectedColumns.indices.contains(colIdx),
+                                               excelSession.selectedColumns[colIdx] {
+                                                let key = excelSession.normalizedHeader[colIdx]
+                                                let width = columnWidth(for: key)
+                                                let value = colIdx < row.count ? row[colIdx] : ""
+                                                
+                                                Text(value)
+                                                    .font(
+                                                        isNumericColumn(key)
+                                                        ? .system(.caption2, design: .monospaced)
+                                                        : .caption2
+                                                    )
+                                                    .lineLimit(1)
+                                                    .truncationMode(.tail)
+                                                    .frame(width: width, alignment: .leading)
+                                            }
+                                        }
+                                    }
                                 }
                             }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.orange.opacity(0.1))
-                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                        )
-                    }
-                }
-            }
-
-            // SELEZIONE COLONNE
-            Section("Colonne da usare") {
-                if excelSession.normalizedHeader.isEmpty {
-                    Text("Nessuna colonna disponibile.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(excelSession.sortedColumnIndices, id: \.self) { index in
-                        ColumnSelectionRow(index: index)
-                    }
-
-
-                    HStack {
-                        Button("Seleziona tutte") {
-                            excelSession.setAllColumns(selected: true, keepEssential: false)
-                        }
-                        Button("Deseleziona tutte (tranne obbligatorie)") {
-                            excelSession.setAllColumns(selected: false, keepEssential: true)
-                        }
-                    }
-                    .buttonStyle(.borderless)
-
-                    Text("Le colonne obbligatorie non possono essere disattivate.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            // FORNITORE & CATEGORIA (come in EditProductView)
-            Section("Fornitore") {
-                TextField("Nome fornitore", text: $excelSession.supplierName)
-
-                if !suppliers.isEmpty {
-                    Menu("Seleziona esistente") {
-                        ForEach(suppliers) { supplier in
-                            Button(supplier.name) {
-                                excelSession.supplierName = supplier.name
+                        
+                        Text("Mostrate \(previewRows.count) righe su \(max(excelSession.rows.count - 1, 0)).")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        
+                        // 🔎 Badge affidabilità analisi
+                        if let confidence = excelSession.analysisConfidence {
+                            HStack {
+                                Label("Affidabilità analisi", systemImage: "chart.bar.fill")
+                                Spacer()
+                                Text(String(format: "%.0f%%", confidence * 100))
+                                    .font(.caption)
+                                    .foregroundStyle(
+                                        confidence > 0.7 ? .green :
+                                            confidence > 0.4 ? .orange : .red
+                                    )
+                                
+                                if confidence < 0.5 {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                }
                             }
+                            .padding(.horizontal)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color(.secondarySystemBackground))
+                            )
                         }
-                    }
-                }
-            }
-
-            Section("Categoria") {
-                TextField("Nome categoria", text: $excelSession.categoryName)
-
-                if !categories.isEmpty {
-                    Menu("Seleziona esistente") {
-                        ForEach(categories) { category in
-                            Button(category.name) {
-                                excelSession.categoryName = category.name
+                        
+                        // 💡 Suggerimenti per bassa confidenza
+                        if let confidence = excelSession.analysisConfidence,
+                           confidence < 0.5 {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Suggerimenti per migliorare l'analisi:")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                
+                                if let metrics = excelSession.analysisMetrics {
+                                    if metrics.essentialColumnsFound < metrics.essentialColumnsTotal {
+                                        Text("• Verifica le colonne obbligatorie (barcode, nome prodotto, prezzo acquisto).")
+                                            .font(.caption2)
+                                    }
+                                    
+                                    if metrics.totalRows > 0 &&
+                                        Double(metrics.rowsWithValidBarcode) / Double(metrics.totalRows) < 0.3 {
+                                        Text("• Controlla la colonna barcode: molti valori potrebbero essere mancanti.")
+                                            .font(.caption2)
+                                    }
+                                    
+                                    if !metrics.issues.isEmpty {
+                                        Text("• Risolvi, se possibile, i problemi elencati qui sopra.")
+                                            .font(.caption2)
+                                    }
+                                }
                             }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.orange.opacity(0.1))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                            )
                         }
                     }
                 }
-            }
-
-            // Step successivi: qui comparirà il pulsante "Genera inventario"
-            
-            // GENERAZIONE INVENTARIO (HistoryEntry)
-            Section {
-                // Mostra il toggle solo se la confidenza è molto bassa
-                if let confidence = excelSession.analysisConfidence,
-                   confidence < 0.4 {
-                    Toggle("Ignora avvisi e procedi comunque", isOn: $ignoreWarnings)
-                        .font(.caption)
-                        .padding(.vertical, 4)
-                }
-
-                Button {
-                    generateInventory()
-                } label: {
-                    if isGenerating {
-                        HStack {
-                            ProgressView()
-                            Text("Generazione in corso…")
-                        }
+                
+                // SELEZIONE COLONNE
+                Section("Colonne da usare") {
+                    if excelSession.normalizedHeader.isEmpty {
+                        Text("Nessuna colonna disponibile.")
+                            .foregroundStyle(.secondary)
                     } else {
-                        Text("Genera inventario")
-                            .fontWeight(.semibold)
+                        ForEach(excelSession.sortedColumnIndices, id: \.self) { index in
+                            ColumnSelectionRow(index: index)
+                        }
+                        
+                        
+                        HStack {
+                            Button("Seleziona tutte") {
+                                excelSession.setAllColumns(selected: true, keepEssential: false)
+                            }
+                            Button("Deseleziona tutte (tranne obbligatorie)") {
+                                excelSession.setAllColumns(selected: false, keepEssential: true)
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        
+                        Text("Le colonne obbligatorie non possono essere disattivate.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
-                .disabled(
-                    !canGenerate ||
-                    isGenerating ||
-                    (
-                        (excelSession.analysisConfidence ?? 1.0) < 0.4 &&
-                        !ignoreWarnings
-                    )
-                )
+                
+                // FORNITORE & CATEGORIA (come in EditProductView)
+                Section("Fornitore") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        TextField("Nome fornitore", text: $excelSession.supplierName)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .focused($focusedField, equals: .supplier)
+                            .submitLabel(.done)
+                            .onSubmit { focusedField = nil }
+                        
+                        let live = excelSession.supplierName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let q = debouncedSupplierQuery
+                        
+                        if focusedField == .supplier, !q.isEmpty, q == live {
+                            InlineSuggestionsBox(
+                                query: q,
+                                suggestions: rankedSuggestions(all: suppliers.map(\.name), query: q),
+                                onPick: { picked in
+                                    excelSession.supplierName = picked
+                                    focusedField = nil
+                                }
+                            )
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.15), value: debouncedSupplierQuery)
+                    
+                    Button {
+                        focusedField = nil
+                        showAllSuppliersSheet = true
+                    } label: {
+                        Label("Mostra tutti…", systemImage: "magnifyingglass")
+                    }
+                }
+                
+                Section("Categoria") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        TextField("Nome categoria", text: $excelSession.categoryName)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .focused($focusedField, equals: .category)
+                            .submitLabel(.done)
+                            .onSubmit { focusedField = nil }
+                        
+                        let live = excelSession.categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let q = debouncedCategoryQuery
+                        
+                        if focusedField == .category, !q.isEmpty, q == live {
+                            InlineSuggestionsBox(
+                                query: q,
+                                suggestions: rankedSuggestions(all: categories.map(\.name), query: q),
+                                onPick: { picked in
+                                    excelSession.categoryName = picked
+                                    focusedField = nil
+                                }
+                            )
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.15), value: debouncedCategoryQuery)
+                    
+                    Button {
+                        focusedField = nil
+                        showAllCategoriesSheet = true
+                    } label: {
+                        Label("Mostra tutti…", systemImage: "magnifyingglass")
+                    }
+                }
+                
+                // Step successivi: qui comparirà il pulsante "Genera inventario"
+                
+                // GENERAZIONE INVENTARIO (HistoryEntry)
+                Section {
+                    // Mostra il toggle solo se la confidenza è molto bassa
+                    if let confidence = excelSession.analysisConfidence,
+                       confidence < 0.4 {
+                        Toggle("Ignora avvisi e procedi comunque", isOn: $ignoreWarnings)
+                            .font(.caption)
+                            .padding(.vertical, 4)
+                    }
+                    
+                    Button {
+                        focusedField = nil
 
-                if let lastID = lastGeneratedEntryID {
-                    Text("Ultimo inventario generato: \(lastID)")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("L’inventario generato comparirà nella scheda \"Cronologia\".")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        let confidence = excelSession.analysisConfidence ?? 1.0
+                        if confidence < 0.4 && !ignoreWarnings {
+                            showLowConfidenceConfirm = true
+                        } else {
+                            generateInventory()
+                        }
+                    } label: {
+                        if isGenerating {
+                            HStack {
+                                ProgressView()
+                                Text("Generazione in corso…")
+                            }
+                        } else {
+                            Text("Genera inventario")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .disabled(!canGenerate || isGenerating)
+                    
+                    if let lastID = lastGeneratedEntryID {
+                        Text("Ultimo inventario generato: \(lastID)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("L’inventario generato comparirà nella scheda \"Cronologia\".")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
         .navigationTitle("Pre-elaborazione")
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog(
+            "Analisi poco affidabile",
+            isPresented: $showLowConfidenceConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Procedi comunque", role: .destructive) {
+                // se vuoi: ricordati la scelta per questa sessione
+                ignoreWarnings = true
+                generateInventory()
+            }
+            Button("Annulla", role: .cancel) { }
+        } message: {
+            Text("L’analisi del file sembra poco affidabile. Vuoi generare l’inventario lo stesso?")
+        }
+        // lascia qui TUTTI i tuoi modifier: alert, navigationDestination, sheet, toolbar, task, ecc.
         .alert("Errore durante la generazione", isPresented: Binding(
             get: { generationError != nil },
-            set: { newValue in
-                if !newValue { generationError = nil }
-            }
+            set: { newValue in if !newValue { generationError = nil } }
         )) {
-            Button("OK", role: .cancel) {
-                generationError = nil
-            }
+            Button("OK", role: .cancel) { generationError = nil }
         } message: {
             Text(generationError ?? "Errore sconosciuto.")
         }
-        // 👇 Navigation "nascosta" verso GeneratedView
         .navigationDestination(isPresented: $navigateToGenerated) {
             Group {
                 if let entry = excelSession.currentHistoryEntry {
@@ -269,6 +344,56 @@ struct PreGenerateView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+        .sheet(isPresented: $showAllSuppliersSheet) {
+            NamePickerSheet(
+                title: "Fornitori",
+                allItems: suppliers.map(\.name),
+                selection: $excelSession.supplierName
+            )
+        }
+        .sheet(isPresented: $showAllCategoriesSheet) {
+            NamePickerSheet(
+                title: "Categorie",
+                allItems: categories.map(\.name),
+                selection: $excelSession.categoryName
+            )
+        }
+        .scrollDismissesKeyboard(.interactively)   // scroll = chiude tastiera (super iOS)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                // pulsante “cancella” contestuale (optional ma molto iOS)
+                if focusedField == .supplier, !excelSession.supplierName.isEmpty {
+                    Button("Cancella") {
+                        excelSession.supplierName = ""
+                        debouncedSupplierQuery = ""
+                    }
+                } else if focusedField == .category, !excelSession.categoryName.isEmpty {
+                    Button("Cancella") {
+                        excelSession.categoryName = ""
+                        debouncedCategoryQuery = ""
+                    }
+                }
+
+                Spacer()
+
+                Button("Fine") { focusedField = nil }
+                    .fontWeight(.semibold)
+            }
+        }
+        .task(id: excelSession.supplierName) {
+            guard focusedField == .supplier else { debouncedSupplierQuery = ""; return }
+            let q = excelSession.supplierName.trimmingCharacters(in: .whitespacesAndNewlines)
+            try? await Task.sleep(nanoseconds: suggestionDebounceMs * 1_000_000)
+            guard !Task.isCancelled else { return }
+            debouncedSupplierQuery = q
+        }
+        .task(id: excelSession.categoryName) {
+            guard focusedField == .category else { debouncedCategoryQuery = ""; return }
+            let q = excelSession.categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+            try? await Task.sleep(nanoseconds: suggestionDebounceMs * 1_000_000)
+            guard !Task.isCancelled else { return }
+            debouncedCategoryQuery = q
         }
     }
     
@@ -322,6 +447,16 @@ struct PreGenerateView: View {
 
         Task {
             do {
+                let s = excelSession.supplierName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let existing = suppliers.first(where: { $0.name.compare(s, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame }) {
+                    excelSession.supplierName = existing.name
+                }
+
+                let c = excelSession.categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let existing = categories.first(where: { $0.name.compare(c, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame }) {
+                    excelSession.categoryName = existing.name
+                }
+                
                 let entry = try excelSession.generateHistoryEntry(in: context)
 
                 await MainActor.run {
@@ -495,5 +630,146 @@ struct ColumnSelectionRow: View {
     NavigationStack {
         PreGenerateView()
             .environmentObject(ExcelSessionViewModel())
+    }
+}
+
+private func rankedSuggestions(all: [String], query: String, limit: Int = 6) -> [String] {
+    let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !q.isEmpty else { return [] }
+
+    let nq = q.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+
+    var prefix: [String] = []
+    var contains: [String] = []
+    prefix.reserveCapacity(limit)
+    contains.reserveCapacity(limit)
+
+    for name in all {
+        let nn = name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        if nn == nq { continue } // evita duplicato identico
+
+        if nn.hasPrefix(nq) {
+            prefix.append(name)
+            if prefix.count == limit { return prefix }
+            continue
+        }
+
+        if nn.contains(nq) {
+            contains.append(name)
+            if prefix.count + contains.count == limit { break }
+        }
+    }
+
+    return prefix + contains
+}
+
+private func highlighted(_ text: String, query: String) -> AttributedString {
+    var a = AttributedString(text)
+    let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !q.isEmpty else { return a }
+
+    if let r = a.range(of: q, options: [.caseInsensitive, .diacriticInsensitive]) {
+        a[r].font = .body.bold()
+    }
+    return a
+}
+
+private struct InlineSuggestionsBox: View {
+    let query: String
+    let suggestions: [String]
+    let onPick: (String) -> Void
+
+    var body: some View {
+        if !suggestions.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(suggestions, id: \.self) { s in
+                    Button {
+                        onPick(s)
+                    } label: {
+                        HStack {
+                            Text(highlighted(s, query: query))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                    }
+                    .buttonStyle(.plain)
+
+                    if s != suggestions.last {
+                        Divider().padding(.leading, 12)
+                    }
+                }
+            }
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(.quaternary, lineWidth: 1)
+            )
+        }
+    }
+}
+
+private struct NamePickerSheet: View {
+    let title: String
+    let allItems: [String]
+    @Binding var selection: String
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
+
+    @State private var debouncedSearchText = ""
+    private let sheetDebounceMs: UInt64 = 180
+
+    private var filtered: [String] {
+        let q = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if q.isEmpty { return allItems }
+        return rankedSuggestions(all: allItems, query: q, limit: 200)
+    }
+
+    private var canCreateNew: Bool {
+        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return false }
+        return !allItems.contains(where: { $0.compare(q, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame })
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if canCreateNew {
+                    Button {
+                        selection = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        dismiss()
+                    } label: {
+                        Label("Usa “\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))”", systemImage: "plus")
+                    }
+                }
+
+                ForEach(filtered, id: \.self) { item in
+                    Button {
+                        selection = item
+                        dismiss()
+                    } label: {
+                        Text(highlighted(item, query: searchText))
+                            .foregroundStyle(.primary)
+                    }
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Cerca")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Chiudi") { dismiss() }
+                }
+            }
+            .task(id: searchText) {
+                let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+                try? await Task.sleep(nanoseconds: sheetDebounceMs * 1_000_000)
+                guard !Task.isCancelled else { return }
+                debouncedSearchText = q
+            }
+        }
     }
 }
