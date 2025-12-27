@@ -51,7 +51,7 @@ final class ExcelSessionViewModel: ObservableObject {
     var hasData: Bool { !rows.isEmpty }
 
     // Colonne essenziali (come su Android: barcode, productName, purchasePrice)
-    private static let essentialColumnKeys: Set<String> = [
+    static let essentialColumnKeys: Set<String> = [
         "barcode", "productName", "purchasePrice"
     ]
 
@@ -107,7 +107,7 @@ final class ExcelSessionViewModel: ObservableObject {
         analysisMetrics = nil
     }
 
-    // MARK: - Selezione colonne (equivalente di isColumnEssential / toggleColumnSelection)
+    // MARK: - Selezione colonne (equivalente di isColumnEssential)
 
     func isColumnEssential(at index: Int) -> Bool {
         guard normalizedHeader.indices.contains(index) else { return false }
@@ -123,11 +123,6 @@ final class ExcelSessionViewModel: ObservableObject {
         } else {
             selectedColumns[index] = isSelected
         }
-    }
-
-    func toggleColumnSelection(index: Int) {
-        guard selectedColumns.indices.contains(index) else { return }
-        updateColumnSelection(index: index, isSelected: !selectedColumns[index])
     }
 
     func setAllColumns(selected: Bool, keepEssential: Bool = true) {
@@ -499,61 +494,139 @@ extension ExcelSessionViewModel {
         return "\(ts)_\(safeSupplier).xlsx"
     }
     
-    static let overridableRoles: [String] = [
-        "barcode",
-        "productName",
-        "secondProductName",
-        "itemNumber",
-        "rowNumber",
-        "quantity",
-        "purchasePrice",
-        "totalPrice",
-        "retailPrice",
-        "discountedPrice",
-        "supplier",
-        "category"
-    ]
+    /// Tutti i "ruoli" che possono essere assegnati manualmente alle colonne
+        static let overridableRoles: [String] = [
+            "barcode",
+            "productName",
+            "secondProductName",
+            "itemNumber",
+            "rowNumber",
+            "quantity",
+            "purchasePrice",
+            "totalPrice",
+            "retailPrice",
+            "discountedPrice",
+            "supplier",
+            "category"
+        ]
 
-    // TUTTI i ruoli sono unici
-    private static let uniqueRoles = Set(overridableRoles)
-    
-    func setColumnRole(at index: Int, to newRole: String) {
-        guard normalizedHeader.indices.contains(index) else { return }
+        /// Tutti i ruoli sono unici: una sola colonna per ruolo
+        private static let uniqueRoles = Set(overridableRoles)
 
-        // 1. Se il ruolo è unico, sgancia eventuale colonna che lo aveva prima
-        if Self.uniqueRoles.contains(newRole),
-           let oldIndex = normalizedHeader.firstIndex(of: newRole),
-           oldIndex != index {
+        /// Nome umano da mostrare nella UI per ciascun ruolo
+        static func titleForRole(_ role: String) -> String {
+            switch role {
+            case "barcode": return "Barcode"
+            case "productName": return "Nome prodotto"
+            case "secondProductName": return "Secondo nome"
+            case "itemNumber": return "Numero articolo"
+            case "rowNumber": return "Numero riga"
+            case "quantity": return "Quantità"
+            case "purchasePrice": return "Prezzo d’acquisto"
+            case "totalPrice": return "Totale riga"
+            case "retailPrice": return "Prezzo di vendita"
+            case "discountedPrice": return "Prezzo scontato"
+            case "supplier": return "Fornitore"
+            case "category": return "Categoria"
+            default: return role
+            }
+        }
 
-            // calcolo di un nome "neutro" per la colonna sganciata
-            let fallback: String
-            if originalHeader.indices.contains(oldIndex) {
-                let orig = originalHeader[oldIndex].trimmingCharacters(in: .whitespacesAndNewlines)
-                fallback = orig.isEmpty ? "col\(oldIndex + 1)" : orig
+    private func fallbackHeader(for idx: Int) -> String {
+            if originalHeader.indices.contains(idx) {
+                let orig = originalHeader[idx].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !orig.isEmpty { return orig }
+            }
+            return "col\(idx + 1)"
+        }
+
+        /// “Nessun tipo”: torna al nome originale (o colN). Non consentire su essenziali.
+        func clearColumnRole(at index: Int) {
+            guard normalizedHeader.indices.contains(index) else { return }
+            if isColumnEssential(at: index) { return } // evita di “perdere” un essenziale con un tap
+            normalizedHeader[index] = fallbackHeader(for: index)
+
+            // refresh metriche
+            if let metrics = ExcelAnalyzer.computeAnalysisMetrics(header: normalizedHeader, rows: rows) {
+                analysisMetrics = metrics
+                analysisConfidence = metrics.confidenceScore
+            }
+        }
+
+        /// ✅ Ruoli unici + sposta o scambia (swap)
+        func setColumnRole(at index: Int, to newRole: String) {
+            guard normalizedHeader.indices.contains(index) else { return }
+
+            let currentAtTarget = normalizedHeader[index]
+            let targetHadRole = Self.uniqueRoles.contains(currentAtTarget) ? currentAtTarget : nil
+
+            // dov’era già assegnato newRole?
+            let oldIndexForNewRole: Int? = {
+                guard Self.uniqueRoles.contains(newRole) else { return nil }
+                let idx = normalizedHeader.firstIndex(of: newRole)
+                return (idx == index) ? nil : idx
+            }()
+
+            if let oldIndex = oldIndexForNewRole {
+                // Caso A: target aveva già un altro ruolo → SWAP
+                if let oldRoleOnTarget = targetHadRole, oldRoleOnTarget != newRole {
+                    normalizedHeader[oldIndex] = oldRoleOnTarget
+
+                    // se quello che “finisce” su oldIndex è essenziale, deve stare selezionato
+                    if Self.essentialColumnKeys.contains(oldRoleOnTarget),
+                       selectedColumns.indices.contains(oldIndex) {
+                        selectedColumns[oldIndex] = true
+                    }
+                } else {
+                    // Caso B: target non aveva ruolo → “sposto”: la vecchia colonna torna fallback
+                    normalizedHeader[oldIndex] = fallbackHeader(for: oldIndex)
+                    // ⚠️ NON forzo selectedColumns[oldIndex] a false: lasciamo decidere all’utente
+                }
             } else {
-                fallback = "col\(oldIndex + 1)"
+                // newRole non era assegnato altrove: attenzione se sto sovrascrivendo un essenziale
+                // (qui lasciamo fare, ma la UI/metriche avviseranno; lo swap copre il caso più comune)
             }
 
-            normalizedHeader[oldIndex] = fallback
+            // assegna il ruolo al target
+            normalizedHeader[index] = newRole
 
-            // opzionale: visto che non ha più un ruolo noto, possiamo anche deselezionarla
-            if selectedColumns.indices.contains(oldIndex) {
-                selectedColumns[oldIndex] = false
+            // essenziali sempre selezionate
+            if Self.essentialColumnKeys.contains(newRole),
+               selectedColumns.indices.contains(index) {
+                selectedColumns[index] = true
+            }
+
+            // refresh metriche
+            if let metrics = ExcelAnalyzer.computeAnalysisMetrics(header: normalizedHeader, rows: rows) {
+                analysisMetrics = metrics
+                analysisConfidence = metrics.confidenceScore
             }
         }
 
-        // 2. Assegna il nuovo ruolo alla colonna scelta
-        normalizedHeader[index] = newRole
-
-        // 3. Aggiorna eventuali metriche / warning
-        if let metrics = ExcelAnalyzer.computeAnalysisMetrics(
-            header: normalizedHeader,
-            rows: rows
-        ) {
-            analysisMetrics = metrics
-            analysisConfidence = metrics.confidenceScore
+        /// Helper UI: se la colonna ha un ruolo noto ritorna la key, altrimenti nil
+        func roleKeyForColumn(_ index: Int) -> String? {
+            guard normalizedHeader.indices.contains(index) else { return nil }
+            let key = normalizedHeader[index]
+            return Self.uniqueRoles.contains(key) ? key : nil
         }
-    }
+
+        /// Restituisce alcuni valori di esempio per una colonna (escluse le intestazioni)
+        func sampleValuesForColumn(_ index: Int, maxSamples: Int = 3) -> String {
+            guard rows.count > 1 else { return "" }
+
+            var samples: [String] = []
+
+            for row in rows.dropFirst() { // salta header
+                guard index < row.count else { continue }
+                let value = row[index].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty {
+                    samples.append(value)
+                }
+                if samples.count >= maxSamples { break }
+            }
+
+            return samples.joined(separator: ", ")
+        }
 }
 
 // MARK: - Metriche di analisi
