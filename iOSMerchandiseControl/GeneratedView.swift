@@ -11,6 +11,7 @@ private struct RowDetailData {
     let oldRetailPrice: String?
     let newRetailPrice: String
     let syncError: String?
+    let isComplete: Bool
 }
 
 /// Schermata di editing inventario (equivalente base di GeneratedScreen su Android).
@@ -147,7 +148,7 @@ struct GeneratedView: View {
                     ScrollView(.horizontal) {
                         LazyVStack(alignment: .leading, spacing: 0) {
 
-                            // HEADER (pinned “visivamente” perché sta sopra alle righe)
+                            // HEADER
                             HStack(alignment: .center, spacing: 6) {
                                 ForEach(columns, id: \.self) { col in
                                     let key = headerRow[col]
@@ -160,7 +161,7 @@ struct GeneratedView: View {
                                 }
                             }
                             .padding(.vertical, 6)
-                            .background(.thinMaterial)   // look “iOS”
+                            .background(.thinMaterial)
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
                             Divider().padding(.vertical, 4)
@@ -168,13 +169,15 @@ struct GeneratedView: View {
                             // RIGHE
                             ForEach(visibleRowIndices, id: \.self) { rowIndex in
                                 let hasError = rowHasError(rowIndex: rowIndex, headerRow: headerRow)
+                                let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
 
                                 HStack(alignment: .center, spacing: 6) {
                                     ForEach(columns, id: \.self) { col in
                                         cellView(
                                             rowIndex: rowIndex,
                                             columnIndex: col,
-                                            headerRow: headerRow
+                                            headerRow: headerRow,
+                                            isDone: isDone
                                         )
                                         .frame(
                                             width: columnWidth(for: headerRow[col]),
@@ -184,15 +187,11 @@ struct GeneratedView: View {
                                 }
                                 .padding(.vertical, 6)
                                 .contentShape(Rectangle())
-                                .onTapGesture {
-                                    flashAndOpenRow(rowIndex, headerRow: headerRow)
-                                }
-                                .background(rowBackground(hasError: hasError, rowIndex: rowIndex))
+                                .onTapGesture { flashAndOpenRow(rowIndex, headerRow: headerRow) }
+                                .background(rowBackground(hasError: hasError, isDone: isDone, rowIndex: rowIndex))
                                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-                                Divider().opacity(0.6)
                             }
-                        }
+                        } // ✅ QUESTA era la parentesi mancante (chiude LazyVStack)
                         .padding(.vertical, 4)
                     }
                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
@@ -317,6 +316,13 @@ struct GeneratedView: View {
             if let detail = rowDetail {
                 NavigationStack {
                     Form {
+                        Section {
+                            HStack {
+                                Spacer()
+                                completionBadge(isComplete: detail.isComplete)
+                                Spacer()
+                            }
+                        }
                         Section("Prodotto") {
                             LabeledContent("Barcode") {
                                 Text(detail.barcode.isEmpty ? "—" : detail.barcode)
@@ -488,7 +494,8 @@ struct GeneratedView: View {
     private func cellView(
         rowIndex: Int,
         columnIndex: Int,
-        headerRow: [String]
+        headerRow: [String],
+        isDone: Bool
     ) -> some View {
         let key = headerRow[columnIndex]
 
@@ -533,7 +540,8 @@ struct GeneratedView: View {
                 Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 18, weight: .semibold))
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(isDone ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(isDone ? Color(uiColor: .systemGreen) : Color.secondary)
+                    .symbolEffect(.bounce, value: isDone)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .contentShape(Rectangle())      // tap area più grande
                     .padding(.vertical, 2)
@@ -544,11 +552,14 @@ struct GeneratedView: View {
         } else {
             let raw = valueForCell(rowIndex: rowIndex, columnIndex: columnIndex)
             let shown = displayValue(for: key, raw: raw)
-
+            
             Text(shown)
                 .font(.caption2)
                 .monospacedDigit()
                 .lineLimit(1)
+            // ✅ dim SOLO dei testi read-only quando completato
+                .foregroundStyle(isDone ? .secondary : .primary)
+                .opacity(isDone ? 0.65 : 1)
         }
     }
 
@@ -918,6 +929,8 @@ struct GeneratedView: View {
             }
         }
 
+        let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
+
         rowDetail = RowDetailData(
             barcode: barcode,
             productName: finalName,
@@ -926,7 +939,8 @@ struct GeneratedView: View {
             oldPurchasePrice: oldPurchase.isEmpty ? nil : oldPurchase,
             oldRetailPrice: oldRetail.isEmpty ? nil : oldRetail,
             newRetailPrice: newRetail,
-            syncError: syncError
+            syncError: syncError,
+            isComplete: isDone              // ✅ NEW
         )
     }
 
@@ -1254,15 +1268,34 @@ struct GeneratedView: View {
     }
 
     @ViewBuilder
-    private func rowBackground(hasError: Bool, rowIndex: Int) -> some View {
+    private func rowBackground(hasError: Bool, isDone: Bool, rowIndex: Int) -> some View {
         if hasError {
             Color.red.opacity(0.06)
         } else if flashRowIndex == rowIndex {
-            // effetto “quaternary” Apple-like (funziona bene anche in dark mode)
             Color(uiColor: .quaternarySystemFill)
+        } else if isDone {
+            Color(uiColor: .systemGreen).opacity(0.10)
         } else {
             Color.clear
         }
+    }
+        
+    @ViewBuilder
+    private func completionBadge(isComplete: Bool) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
+            Text(isComplete ? "Completato" : "Da completare")
+        }
+        .font(.caption2.weight(.semibold))
+        .symbolRenderingMode(.hierarchical)
+        .foregroundStyle(isComplete ? Color(uiColor: .systemGreen) : .secondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            (isComplete ? Color(uiColor: .systemGreen) : Color.secondary)
+                .opacity(0.15)
+        )
+        .clipShape(Capsule())
     }
 }
 
