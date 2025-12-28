@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 // Struttura per il pannello dettagli riga
 private struct RowDetailData {
@@ -67,6 +68,8 @@ struct GeneratedView: View {
     @State private var showScanner: Bool = false
     
     @State private var flashRowIndex: Int? = nil
+    
+    @FocusState private var scannerFocused: Bool
 
     // MARK: - Body
 
@@ -79,6 +82,10 @@ struct GeneratedView: View {
                         TextField("Scansiona o inserisci barcode", text: $scanInput)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
+                            .keyboardType(.numberPad) // o .asciiCapable se hai barcode alfanumerici
+                            .submitLabel(.go)
+                            .focused($scannerFocused)
+                            .onSubmit { handleScanInput() }
 
                         // pulsante per usare l'input testuale
                         Button {
@@ -141,6 +148,15 @@ struct GeneratedView: View {
                         Toggle("Mostra solo righe con errore", isOn: $showOnlyErrorRows)
                             .font(.footnote)
                     }
+                    
+                    let checked = complete.dropFirst().filter { $0 }.count
+                    let total = max(0, data.count - 1)
+
+                    ProgressView(value: Double(checked), total: Double(max(total, 1))) {
+                        Text("Completati \(checked)/\(total)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
 
                     // ✅ UN SOLO scroll orizzontale per header + righe (niente scroll per-riga)
                     let columns = Array(headerRow.indices)
@@ -190,6 +206,35 @@ struct GeneratedView: View {
                                 .onTapGesture { flashAndOpenRow(rowIndex, headerRow: headerRow) }
                                 .background(rowBackground(hasError: hasError, isDone: isDone, rowIndex: rowIndex))
                                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .contextMenu {
+                                    Button {
+                                        let newValue = !isDone
+                                        bindingForComplete(rowIndex).wrappedValue = newValue
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    } label: {
+                                        Label(isDone ? "Segna non completato" : "Segna completato",
+                                              systemImage: isDone ? "circle" : "checkmark.circle.fill")
+                                    }
+
+                                    Button {
+                                        showRowDetail(for: rowIndex, headerRow: headerRow)
+                                    } label: {
+                                        Label("Dettagli riga", systemImage: "info.circle")
+                                    }
+
+                                    if let bIndex = headerRow.firstIndex(of: "barcode"),
+                                       data[rowIndex].indices.contains(bIndex) {
+                                        let barcode = data[rowIndex][bIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+                                        if !barcode.isEmpty {
+                                            Button {
+                                                UIPasteboard.general.string = barcode
+                                                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                            } label: {
+                                                Label("Copia barcode", systemImage: "doc.on.doc")
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         } // ✅ QUESTA era la parentesi mancante (chiude LazyVStack)
                         .padding(.vertical, 4)
@@ -271,8 +316,16 @@ struct GeneratedView: View {
             }
         }
         .id(entry.id)
-        .navigationTitle(entry.id)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(entry.id)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+        }
         .onAppear {
             // inizializza i dati dalla HistoryEntry (come facevi già)
             initializeFromEntryIfNeeded()
@@ -562,6 +615,27 @@ struct GeneratedView: View {
                 .opacity(isDone ? 0.65 : 1)
         }
     }
+    
+    private static let moneyFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.locale = .current
+        return f
+    }()
+
+    private static let numericFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.locale = .current
+        f.usesGroupingSeparator = false
+        f.minimumFractionDigits = 0
+        f.maximumFractionDigits = 2
+        return f
+    }()
+    
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                        to: nil, from: nil, for: nil)
+    }
 
     /// Valore testuale di una cella (solo lettura).
     private func valueForCell(rowIndex: Int, columnIndex: Int) -> String {
@@ -661,6 +735,8 @@ struct GeneratedView: View {
         scanError = nil
         handleScannedBarcode(code)
         scanInput = ""
+        scannerFocused = true
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     /// Logica principale di "scan": aggiorna o aggiunge una riga partendo dal barcode.
@@ -1117,10 +1193,7 @@ struct GeneratedView: View {
     // MARK: - Helpers
 
     private func formatMoney(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = .current
-        return formatter.string(from: value as NSNumber) ?? String(value)
+        Self.moneyFormatter.string(from: value as NSNumber) ?? String(value)
     }
 
     private func formatDoubleAsPrice(_ value: Double) -> String {

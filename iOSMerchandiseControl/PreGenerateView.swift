@@ -82,7 +82,9 @@ struct PreGenerateView: View {
                                                 let width = columnWidth(for: key)
                                                 let value = colIdx < row.count ? row[colIdx] : ""
                                                 
-                                                Text(value)
+                                                let shown = previewDisplayValue(for: key, raw: value)
+
+                                                Text(shown)
                                                     .font(
                                                         isNumericColumn(key)
                                                         ? .system(.caption2, design: .monospaced)
@@ -91,6 +93,7 @@ struct PreGenerateView: View {
                                                     .lineLimit(1)
                                                     .truncationMode(.tail)
                                                     .frame(width: width, alignment: .leading)
+                                                    .monospacedDigit()
                                             }
                                         }
                                     }
@@ -475,6 +478,34 @@ struct PreGenerateView: View {
                 }
             }
         }
+    }
+    
+    private static let previewNumberFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.locale = .current
+        f.usesGroupingSeparator = false
+        f.minimumFractionDigits = 0
+        f.maximumFractionDigits = 2
+        return f
+    }()
+
+    private func previewDisplayValue(for key: String, raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return "" }
+
+        // ⚠️ NON includere "barcode" qui, per non perdere zeri iniziali
+        let numericKeys: Set<String> = [
+            "quantity", "purchasePrice", "totalPrice",
+            "retailPrice", "discountedPrice",
+            "realQuantity", "oldPurchasePrice", "oldRetailPrice",
+            "RetailPrice"
+        ]
+        guard numericKeys.contains(key) else { return t }
+
+        let normalized = t.replacingOccurrences(of: ",", with: ".")
+        guard let d = Double(normalized) else { return t }
+
+        return Self.previewNumberFormatter.string(from: NSNumber(value: d)) ?? t
     }
 }
 
