@@ -64,6 +64,8 @@ struct GeneratedView: View {
     @State private var productToEdit: Product?
     @State private var productForHistory: Product?
     @State private var showScanner: Bool = false
+    
+    @State private var flashRowIndex: Int? = nil
 
     // MARK: - Body
 
@@ -139,61 +141,61 @@ struct GeneratedView: View {
                             .font(.footnote)
                     }
 
-                    ScrollView(.horizontal) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            // HEADER
-                            HStack(alignment: .bottom, spacing: 8) {
-                                // Colonna per il toggle "completato"
-                                Text("✓")
-                                    .font(.caption2)
-                                    .frame(width: 28, alignment: .center)
+                    // ✅ UN SOLO scroll orizzontale per header + righe (niente scroll per-riga)
+                    let columns = Array(headerRow.indices)
 
-                                ForEach(Array(headerRow.enumerated()), id: \.offset) { index, key in
-                                    Text(key)
+                    ScrollView(.horizontal) {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+
+                            // HEADER (pinned “visivamente” perché sta sopra alle righe)
+                            HStack(alignment: .center, spacing: 6) {
+                                ForEach(columns, id: \.self) { col in
+                                    let key = headerRow[col]
+                                    Text(columnTitle(for: key))
                                         .font(.caption)
                                         .fontWeight(.semibold)
-                                        .frame(
-                                            minWidth: key == "SyncError" ? 140 : 90,
-                                            alignment: .leading
-                                        )
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                        .frame(width: columnWidth(for: key), alignment: columnAlignment(for: key))
                                 }
                             }
+                            .padding(.vertical, 6)
+                            .background(.thinMaterial)   // look “iOS”
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                            Divider()
+                            Divider().padding(.vertical, 4)
 
-                            // RIGHE DATI
+                            // RIGHE
                             ForEach(visibleRowIndices, id: \.self) { rowIndex in
-                                HStack(alignment: .top, spacing: 8) {
-                                    Toggle(isOn: bindingForComplete(rowIndex)) {
-                                        EmptyView()
-                                    }
-                                    .labelsHidden()
-                                    .frame(width: 40, alignment: .leading)
+                                let hasError = rowHasError(rowIndex: rowIndex, headerRow: headerRow)
 
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(alignment: .top, spacing: 8) {
-                                            ForEach(Array(headerRow.enumerated()), id: \.offset) { columnIndex, _ in
-                                                cellView(
-                                                    rowIndex: rowIndex,
-                                                    columnIndex: columnIndex,
-                                                    headerRow: headerRow
-                                                )
-                                            }
-                                        }
+                                HStack(alignment: .center, spacing: 6) {
+                                    ForEach(columns, id: \.self) { col in
+                                        cellView(
+                                            rowIndex: rowIndex,
+                                            columnIndex: col,
+                                            headerRow: headerRow
+                                        )
+                                        .frame(
+                                            width: columnWidth(for: headerRow[col]),
+                                            alignment: columnAlignment(for: headerRow[col])
+                                        )
                                     }
-
-                                    Button {
-                                        showRowDetail(for: rowIndex, headerRow: headerRow)
-                                    } label: {
-                                        Image(systemName: "info.circle")
-                                            .imageScale(.small)
-                                    }
-                                    .buttonStyle(.borderless)
                                 }
-                                .padding(.vertical, 4)
+                                .padding(.vertical, 6)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    flashAndOpenRow(rowIndex, headerRow: headerRow)
+                                }
+                                .background(rowBackground(hasError: hasError, rowIndex: rowIndex))
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                                Divider().opacity(0.6)
                             }
                         }
+                        .padding(.vertical, 4)
                     }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
 
                     if entry.isManualEntry {
                         Button {
@@ -494,38 +496,59 @@ struct GeneratedView: View {
         // - "realQuantity" → editable[row][0]
         // - "RetailPrice"  → editable[row][1]
         if key == "realQuantity" {
-            TextField(
-                "",
-                text: bindingForEditable(row: rowIndex, slot: 0)
-            )
-            .keyboardType(.decimalPad)
-            .textFieldStyle(.roundedBorder)
-            .font(.caption2)
-            .frame(minWidth: 90)
+            TextField("", text: bindingForEditable(row: rowIndex, slot: 0))
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)   // ✅ QUI
+                .textFieldStyle(.roundedBorder)
+                .font(.caption2)
+
         } else if key == "RetailPrice" {
-            TextField(
-                "",
-                text: bindingForEditable(row: rowIndex, slot: 1)
-            )
-            .keyboardType(.decimalPad)
-            .textFieldStyle(.roundedBorder)
-            .font(.caption2)
-            .frame(minWidth: 90)
+            TextField("", text: bindingForEditable(row: rowIndex, slot: 1))
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)   // ✅ QUI
+                .textFieldStyle(.roundedBorder)
+                .font(.caption2)
         } else if key == "SyncError" {
-            // La colonna degli errori: testo rosso, un po' più larga
             let value = valueForCell(rowIndex: rowIndex, columnIndex: columnIndex)
             Text(value)
                 .font(.caption2)
                 .foregroundStyle(.red)
                 .lineLimit(1)
-                .frame(minWidth: 140, alignment: .leading)
+        } else if key == "complete" {
+            let binding = bindingForComplete(rowIndex)
+            let isDone = binding.wrappedValue
+
+            Button {
+                let newValue = !isDone
+                binding.wrappedValue = newValue
+
+                // (opzionale ma utile) tieni subito coerente anche data[row][complete]
+                if data.indices.contains(rowIndex) {
+                    var row = data[rowIndex]
+                    ensureRow(&row, hasIndex: columnIndex)
+                    row[columnIndex] = newValue ? "1" : ""
+                    data[rowIndex] = row
+                }
+            } label: {
+                Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 18, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(isDone ? Color.accentColor : Color.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .contentShape(Rectangle())      // tap area più grande
+                    .padding(.vertical, 2)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Completato")
+            .accessibilityValue(isDone ? "Sì" : "No")
         } else {
-            // Tutto il resto è solo testo
-            let value = valueForCell(rowIndex: rowIndex, columnIndex: columnIndex)
-            Text(value)
+            let raw = valueForCell(rowIndex: rowIndex, columnIndex: columnIndex)
+            let shown = displayValue(for: key, raw: raw)
+
+            Text(shown)
                 .font(.caption2)
+                .monospacedDigit()
                 .lineLimit(1)
-                .frame(minWidth: 90, alignment: .leading)
         }
     }
 
@@ -952,6 +975,14 @@ struct GeneratedView: View {
                 newData[rowIndex][pIdx] = priceText
             }
         }
+        
+        if let cIdx = headerRow.firstIndex(of: "complete") {
+            for rowIndex in 1..<newData.count {
+                ensureRow(&newData[rowIndex], hasIndex: cIdx)
+                let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
+                newData[rowIndex][cIdx] = isDone ? "1" : ""
+            }
+        }
 
         // Aggiorna missingItems in base al numero di righe completate
         let checked = complete.dropFirst().filter { $0 }.count
@@ -1111,6 +1142,126 @@ struct GeneratedView: View {
 
         if let product = try? context.fetch(descriptor).first {
             productForHistory = product
+        }
+    }
+    
+    private let completeColumnWidth: CGFloat = 56
+
+    private func columnWidth(for key: String) -> CGFloat {
+        switch key {
+        case "productName", "secondProductName":
+            return 220
+        case "barcode":
+            return 140
+        case "itemNumber":
+            return 90
+        case "SyncError":
+            return 240
+
+        // ✅ numeriche più compatte
+        case "quantity", "realQuantity":
+            return 70
+        case "complete":
+                return 44
+        case "purchasePrice", "totalPrice",
+             "RetailPrice", "oldPurchasePrice", "oldRetailPrice",
+             "retailPrice", "discountedPrice":
+            return 90
+
+        default:
+            return 100
+        }
+    }
+
+    private func columnAlignment(for key: String) -> Alignment {
+        // numeri a destra, testo a sinistra (stile “table” iOS)
+        switch key {
+        case "quantity", "realQuantity",
+             "purchasePrice", "totalPrice",
+             "RetailPrice", "oldPurchasePrice", "oldRetailPrice",
+             "retailPrice", "discountedPrice":
+            return .trailing
+        case "complete":
+                return .center
+        default:
+            return .leading
+        }
+    }
+
+    private func columnTitle(for key: String) -> String {
+        // etichette più umane (Apple-like)
+        switch key {
+        case "barcode": return "Barcode"
+        case "productName": return "Nome"
+        case "secondProductName": return "Nome 2"
+        case "itemNumber": return "Codice"
+        case "quantity": return "Qtà"
+        case "realQuantity": return "Qtà reale"
+        case "purchasePrice": return "Acquisto"
+        case "totalPrice": return "Totale"
+        case "oldPurchasePrice": return "Acq. vecchio"
+        case "oldRetailPrice": return "Vend. vecchio"
+        case "RetailPrice": return "Vendita"
+        case "SyncError": return "Errore"
+        case "complete": return "✓"
+        default: return key
+        }
+    }
+
+    private func displayValue(for key: String, raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return "" }
+
+        // formatta SOLO colonne numeriche (così eviti di “rompere” barcode/codici)
+        let numericKeys: Set<String> = [
+            "quantity","realQuantity",
+            "purchasePrice","totalPrice",
+            "RetailPrice","oldPurchasePrice","oldRetailPrice",
+            "retailPrice","discountedPrice"
+        ]
+        guard numericKeys.contains(key) else { return t }
+
+        let normalized = t.replacingOccurrences(of: ",", with: ".")
+        guard let d = Double(normalized) else { return t }
+
+        let nf = NumberFormatter()
+        nf.locale = Locale.current
+        nf.usesGroupingSeparator = false
+        nf.minimumFractionDigits = 0
+        nf.maximumFractionDigits = 2
+        return nf.string(from: NSNumber(value: d)) ?? t
+    }
+    
+    private func flashAndOpenRow(_ rowIndex: Int, headerRow: [String]) {
+        // accendo highlight
+        withAnimation(.easeOut(duration: 0.10)) {
+            flashRowIndex = rowIndex
+        }
+
+        // apro dettagli subito dopo (delay piccolo ma visibile)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+            showRowDetail(for: rowIndex, headerRow: headerRow)
+        }
+
+        // spengo highlight
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
+            withAnimation(.easeOut(duration: 0.15)) {
+                if flashRowIndex == rowIndex {
+                    flashRowIndex = nil
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func rowBackground(hasError: Bool, rowIndex: Int) -> some View {
+        if hasError {
+            Color.red.opacity(0.06)
+        } else if flashRowIndex == rowIndex {
+            // effetto “quaternary” Apple-like (funziona bene anche in dark mode)
+            Color(uiColor: .quaternarySystemFill)
+        } else {
+            Color.clear
         }
     }
 }
