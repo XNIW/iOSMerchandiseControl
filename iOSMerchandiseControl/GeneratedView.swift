@@ -31,21 +31,29 @@ struct GeneratedView: View {
     /// Entry da modificare (passata dal chiamante, es. PreGenerateView o HistoryView)
     let entry: HistoryEntry
     let autoOpenScanner: Bool
+    let onDone: (() -> Void)?
+    
+    @State private var isSaving: Bool = false
+    @State private var isSyncing: Bool = false
 
     // Init custom con default, così gli altri punti del codice possono continuare a chiamare
     // GeneratedView(entry: entry) senza rompersi.
-    init(entry: HistoryEntry, autoOpenScanner: Bool = false) {
+    init(entry: HistoryEntry, autoOpenScanner: Bool = false, onDone: (() -> Void)? = nil) {
         self.entry = entry
         self.autoOpenScanner = autoOpenScanner
+        self.onDone = onDone
     }
 
     /// Copie locali dei dati, per lavorare in modo SwiftUI-friendly
     @State private var data: [[String]] = []
     @State private var editable: [[String]] = []
     @State private var complete: [Bool] = []
+    
+    @Environment(\.scenePhase) private var scenePhase
 
-    @State private var isSaving: Bool = false
-    @State private var isSyncing: Bool = false
+    @State private var hasUnsavedChanges: Bool = false
+    @State private var autosaveTask: Task<Void, Never>? = nil
+    @State private var lastSavedAt: Date? = nil
 
     /// errori (salvataggio o sync)
     @State private var saveError: String?
@@ -77,7 +85,11 @@ struct GeneratedView: View {
     @State private var scrollToRowIndex: Int? = nil
     
     @State private var visibleRowSet: Set<Int> = []
+    
+    @Environment(\.dismiss) private var dismiss
 
+    private var isBusy: Bool { isSaving || isSyncing }
+    
     // MARK: - Body
 
     var body: some View {
@@ -332,31 +344,14 @@ struct GeneratedView: View {
                 
                 /// Bottone Salva / Sincronizza
                 Section {
-                    Button {
-                        saveChanges()
-                    } label: {
-                        if isSaving {
-                            HStack {
-                                ProgressView()
-                                Text("Salvataggio…")
-                            }
-                        } else {
-                            Text("Salva modifiche")
-                        }
-                    }
-                    .disabled(isSaving || isSyncing)
-                    
-                    // Azioni collegate al database: solo per entry non manuali
                     if !entry.isManualEntry {
-                        // 🔹 NUOVO: flusso ImportAnalysis (crea/aggiorna Product)
                         Button {
                             startProductImportAnalysis()
                         } label: {
-                            Text("Importa/aggiorna prodotti nel DB")
+                            Text("Aggiorna anagrafica prodotti")
                         }
                         .disabled(isSaving || isSyncing)
-                        
-                        // 🔹 ESISTENTE: sync inventario (InventorySyncService)
+
                         Button {
                             syncWithDatabase()
                         } label: {
@@ -366,10 +361,24 @@ struct GeneratedView: View {
                                     Text("Sincronizzazione in corso…")
                                 }
                             } else {
-                                Text("Sincronizza inventario")
+                                Text("Applica inventario al DB")
                             }
                         }
                         .disabled(isSaving || isSyncing)
+                    } else {
+                        // entry manuale: nessuna azione DB, ma autosave resta attivo
+                        Text("Salvataggio automatico attivo.")
+                            .foregroundStyle(.secondary)
+                    }
+                } footer: {
+                    if isSaving {
+                        Text("Salvataggio…")
+                    } else if hasUnsavedChanges {
+                        Text("Modifiche non salvate. Salvataggio automatico tra poco…")
+                    } else if let lastSavedAt {
+                        Text("Salvato alle \(lastSavedAt.formatted(date: .omitted, time: .shortened))")
+                    } else {
+                        Text("Salvataggio automatico attivo.")
                     }
                 }
             }
@@ -395,11 +404,20 @@ struct GeneratedView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text(entry.id)
-                        .font(.headline)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Fine") {
+                        Task { @MainActor in
+                            flushAutosaveNow()
+
+                            if let onDone {
+                                onDone()      // ✅ caso PreGenerate → torna a InventoryHome
+                            } else {
+                                dismiss()     // ✅ caso HistoryView → torna indietro normalmente
+                            }
+                        }
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(isBusy)          // ✅ disabilita durante save/sync
                 }
             }
             .onAppear {
@@ -411,6 +429,18 @@ struct GeneratedView: View {
                 if entry.isManualEntry && autoOpenScanner {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         showScanner = true
+                    }
+                }
+            }
+            .onDisappear {
+                Task { @MainActor in
+                    flushAutosaveNow()
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase != .active {
+                    Task { @MainActor in
+                        flushAutosaveNow()
                     }
                 }
             }
@@ -458,6 +488,32 @@ struct GeneratedView: View {
                 }
             }
         }
+    }
+    
+    private func markDirtyAndScheduleAutosave() {
+        hasUnsavedChanges = true
+
+        autosaveTask?.cancel()
+        autosaveTask = Task {
+            // debounce leggero: evita di salvare ad ogni tasto
+            try? await Task.sleep(nanoseconds: 800_000_000) // 0.8s
+            await MainActor.run {
+                autosaveIfNeeded()
+            }
+        }
+    }
+
+    @MainActor
+    private func autosaveIfNeeded() {
+        guard hasUnsavedChanges, !isSaving, !isSyncing else { return }
+        saveChanges() // se va bene, dentro saveChanges azzeriamo hasUnsavedChanges
+    }
+
+    @MainActor
+    private func flushAutosaveNow() {
+        autosaveTask?.cancel()
+        autosaveTask = nil
+        autosaveIfNeeded()
     }
 
     // MARK: - Inizializzazione dati
@@ -515,6 +571,13 @@ struct GeneratedView: View {
                 complete = Array(repeating: false, count: data.count)
             }
         }
+    }
+    
+    private var toolbarStatusSymbol: String? {
+        if isSaving { return nil }                 // quando salva mostriamo solo ProgressView
+        if hasUnsavedChanges { return "clock" }
+        if lastSavedAt != nil { return "checkmark.circle" }
+        return nil
     }
 
     // MARK: - Celle
@@ -671,6 +734,7 @@ struct GeneratedView: View {
                     complete.append(contentsOf: Array(repeating: false, count: max(needed, 0)))
                 }
                 complete[rowIndex] = newValue
+                markDirtyAndScheduleAutosave()
             }
         )
     }
@@ -699,6 +763,7 @@ struct GeneratedView: View {
                     )
                 }
                 editable[row][slot] = newValue
+                markDirtyAndScheduleAutosave()
             }
         )
     }
@@ -1078,6 +1143,11 @@ struct GeneratedView: View {
             try context.save()
         } catch {
             saveError = error.localizedDescription
+        }
+        
+        if saveError == nil {
+            hasUnsavedChanges = false
+            lastSavedAt = Date()
         }
 
         isSaving = false

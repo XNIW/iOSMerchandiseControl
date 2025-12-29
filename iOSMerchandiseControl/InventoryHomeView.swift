@@ -99,8 +99,10 @@ struct InventoryHomeView: View {
         .navigationTitle("Inventario")
         // Navigation "nascosta" verso PreGenerateView e GeneratedView (manuale)
         .navigationDestination(isPresented: $showPreGenerate) {
-            PreGenerateView()
-                .environmentObject(excelSession)
+            PreGenerateView(onExitToHome: {
+                showPreGenerate = false
+            })
+            .environmentObject(excelSession)
         }
         .navigationDestination(isPresented: $navigateToManualGenerated) {
             Group {

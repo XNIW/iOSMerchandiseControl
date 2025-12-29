@@ -6,6 +6,9 @@ import SwiftData
 /// - permette di abilitare/disabilitare colonne
 /// - chiede fornitore e categoria con suggerimenti da SwiftData
 struct PreGenerateView: View {
+    var onExitToHome: (() -> Void)? = nil
+    @Environment(\.dismiss) private var dismiss
+    
     @EnvironmentObject var excelSession: ExcelSessionViewModel
     @Environment(\.modelContext) private var context
 
@@ -341,7 +344,15 @@ struct PreGenerateView: View {
         .navigationDestination(isPresented: $navigateToGenerated) {
             Group {
                 if let entry = excelSession.currentHistoryEntry {
-                    GeneratedView(entry: entry)
+                    GeneratedView(entry: entry, onDone: {
+                        navigateToGenerated = false
+
+                        if let onExitToHome {
+                            onExitToHome()          // <-- torna davvero a InventoryHomeView
+                        } else {
+                            dismiss()               // <-- fallback (es. se in futuro lo presenti in altro modo)
+                        }
+                    })
                 } else {
                     Text("Nessun inventario disponibile.")
                         .foregroundStyle(.secondary)
