@@ -401,7 +401,7 @@ struct GeneratedView: View {
                 }
             }
             .id(entry.id)
-            .navigationTitle("")
+            .navigationTitle(entryTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -488,6 +488,12 @@ struct GeneratedView: View {
                 }
             }
         }
+    }
+    
+    private var entryTitle: String {
+        let last = entry.id.split(separator: "/").last.map(String.init) ?? entry.id
+        if let dot = last.lastIndex(of: ".") { return String(last[..<dot]) }
+        return last
     }
     
     private func markDirtyAndScheduleAutosave() {
