@@ -345,12 +345,11 @@ struct PreGenerateView: View {
             Group {
                 if let entry = excelSession.currentHistoryEntry {
                     GeneratedView(entry: entry, onDone: {
-                        navigateToGenerated = false
-
                         if let onExitToHome {
-                            onExitToHome()          // <-- torna davvero a InventoryHomeView
+                            onExitToHome()      // chiude PreGenerate (e quindi anche Generated) direttamente
                         } else {
-                            dismiss()               // <-- fallback (es. se in futuro lo presenti in altro modo)
+                            navigateToGenerated = false
+                            dismiss()
                         }
                     })
                 } else {

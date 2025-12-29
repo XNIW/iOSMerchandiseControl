@@ -38,7 +38,8 @@ struct InventoryHomeView: View {
             Button {
                 Task {
                     do {
-                        _ = try excelSession.createManualHistoryEntry(in: context)
+                        let entry = try excelSession.createManualHistoryEntry(in: context)
+                        excelSession.currentHistoryEntry = entry
                         autoOpenScannerInGenerated = false   // qui NON apriamo lo scanner in automatico
                         navigateToManualGenerated = true
                     } catch {

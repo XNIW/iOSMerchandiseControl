@@ -145,10 +145,10 @@ struct GeneratedView: View {
                     } else {
                         let headerRow = data[0]
                         let errorCount = countSyncErrors()
-                        let allRowIndices = Array(1..<data.count)
+                        let allRowIndices = 1..<data.count
                         let visibleRowIndices: [Int] = showOnlyErrorRows
-                        ? allRowIndices.filter { rowHasError(rowIndex: $0, headerRow: headerRow) }
-                        : allRowIndices
+                            ? allRowIndices.filter { rowHasError(rowIndex: $0, headerRow: headerRow) }
+                            : Array(allRowIndices)
                         
                         // Piccolo riepilogo righe + errori
                         VStack(alignment: .leading, spacing: 4) {
@@ -793,6 +793,8 @@ struct GeneratedView: View {
             ]
             editable = Array(repeating: ["", ""], count: data.count)
             complete = Array(repeating: false, count: data.count)
+            
+            markDirtyAndScheduleAutosave()
         }
 
         guard !data.isEmpty else {
@@ -848,17 +850,15 @@ struct GeneratedView: View {
             }
 
             ensureCompleteCapacity()
-            if complete.indices.contains(existingIndex) {
-                complete[existingIndex] = true
-            }
+            if complete.indices.contains(existingIndex) { complete[existingIndex] = true } // opzionale: scan = completato
 
             scanError = nil
-            
-            // se stai filtrando solo errori e questa riga non è un errore, rendila visibile
+
             if showOnlyErrorRows && !rowHasError(rowIndex: existingIndex, headerRow: headerRow) {
                 withAnimation(.snappy) { showOnlyErrorRows = false }
             }
 
+            markDirtyAndScheduleAutosave()
             scrollToRowIndex = existingIndex
             return
         }
@@ -931,7 +931,10 @@ struct GeneratedView: View {
             editable[newIndex][1] = newRow[priceIndex]
         }
 
+        // ✅ QUI (subito dopo editable)
         ensureCompleteCapacity()
+        if complete.indices.contains(newIndex) { complete[newIndex] = true } // opzionale: scan = completato
+        markDirtyAndScheduleAutosave()
 
         scanError = product == nil
             ? "Prodotto non trovato in database, riga aggiunta solo con barcode."
@@ -954,6 +957,7 @@ struct GeneratedView: View {
         let newIndex = data.count - 1
         ensureEditableCapacity(for: newIndex)
         ensureCompleteCapacity()
+        markDirtyAndScheduleAutosave()
     }
 
     /// Garantisce che editable abbia abbastanza righe e almeno 2 colonne per la riga indicata.
