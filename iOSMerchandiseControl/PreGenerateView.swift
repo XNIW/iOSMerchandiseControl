@@ -318,6 +318,7 @@ struct PreGenerateView: View {
         }
         .navigationTitle("Pre-elaborazione")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .confirmationDialog(
             "Analisi poco affidabile",
             isPresented: $showLowConfidenceConfirm,

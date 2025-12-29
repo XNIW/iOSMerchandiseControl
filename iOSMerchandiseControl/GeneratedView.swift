@@ -403,6 +403,7 @@ struct GeneratedView: View {
             .id(entry.id)
             .navigationTitle(entryTitle)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .tabBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Fine") {
