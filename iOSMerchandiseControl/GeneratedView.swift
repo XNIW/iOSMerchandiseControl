@@ -87,6 +87,8 @@ struct GeneratedView: View {
     @State private var visibleRowSet: Set<Int> = []
     
     @Environment(\.dismiss) private var dismiss
+    
+    @State private var showSearch: Bool = false
 
     private var isBusy: Bool { isSaving || isSyncing }
     
@@ -94,293 +96,260 @@ struct GeneratedView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            Form {
-                // Sezione scanner / input barcode
-                Section("Scanner") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 8) {
-                            TextField("Scansiona o inserisci barcode", text: $scanInput)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .keyboardType(.numberPad) // o .asciiCapable se hai barcode alfanumerici
-                                .submitLabel(.go)
-                                .focused($scannerFocused)
-                                .onSubmit { handleScanInput() }
-                            
-                            // pulsante per usare l'input testuale
-                            Button {
-                                handleScanInput()
-                            } label: {
-                                Image(systemName: "arrow.right.circle.fill")
-                            }
-                            .buttonStyle(.borderless)
-                            .disabled(scanInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            
-                            // pulsante per aprire lo scanner camera
-                            Button {
-                                showScanner = true
-                            } label: {
-                                Image(systemName: "camera.viewfinder")
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                        
-                        Text("Scansiona con la camera oppure digita un barcode per aggiornare/aggiungere la riga corrispondente.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        
-                        if let scanError {
-                            Text(scanError)
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                        }
-                    }
-                }
-                
-                // Sezione principale: griglia inventario
-                Section("Inventario") {
-                    if data.isEmpty {
-                        Text("Nessun dato di inventario disponibile.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        let headerRow = data[0]
-                        let errorCount = countSyncErrors()
-                        let allRowIndices = 1..<data.count
-                        let visibleRowIndices: [Int] = showOnlyErrorRows
+            ZStack(alignment: .bottomTrailing) {
+                Form {
+                    // Sezione principale: griglia inventario
+                    Section("Inventario") {
+                        if data.isEmpty {
+                            Text("Nessun dato di inventario disponibile.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            let headerRow = data[0]
+                            let errorCount = countSyncErrors()
+                            let allRowIndices = 1..<data.count
+                            let visibleRowIndices: [Int] = showOnlyErrorRows
                             ? allRowIndices.filter { rowHasError(rowIndex: $0, headerRow: headerRow) }
                             : Array(allRowIndices)
-                        
-                        // Piccolo riepilogo righe + errori
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text("Righe dati: \(max(0, data.count - 1))")
-                                Spacer()
-                                if errorCount > 0 {
-                                    Text("\(errorCount) righe con errore")
-                                        .foregroundStyle(.red)
-                                } else {
-                                    Text("Nessun errore")
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .font(.footnote)
                             
-                            Toggle("Mostra solo righe con errore", isOn: $showOnlyErrorRows)
+                            // Piccolo riepilogo righe + errori
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text("Righe dati: \(max(0, data.count - 1))")
+                                    Spacer()
+                                    if errorCount > 0 {
+                                        Text("\(errorCount) righe con errore")
+                                            .foregroundStyle(.red)
+                                    } else {
+                                        Text("Nessun errore")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
                                 .font(.footnote)
-                        }
-                        
-                        let checked = complete.dropFirst().filter { $0 }.count
-                        let total = max(0, data.count - 1)
-                        
-                        ProgressView(value: Double(checked), total: Double(max(total, 1))) {
-                            Text("Completati \(checked)/\(total)")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                        
-                        // ✅ UN SOLO scroll orizzontale per header + righe (niente scroll per-riga)
-                        let columns = Array(headerRow.indices)
-                        
-                        if showOnlyErrorRows && visibleRowIndices.isEmpty {
-                            if #available(iOS 17.0, *) {
-                                ContentUnavailableView(
-                                    "Nessuna riga con errore",
-                                    systemImage: "checkmark.seal",
-                                    description: Text("Tutte le righe risultano sincronizzabili.")
-                                )
-                                .padding(.vertical, 8)
-                            } else {
-                                Text("Nessuna riga con errore")
+                                
+                                Toggle("Mostra solo righe con errore", isOn: $showOnlyErrorRows)
+                                    .font(.footnote)
+                            }
+                            
+                            let checked = complete.dropFirst().filter { $0 }.count
+                            let total = max(0, data.count - 1)
+                            
+                            ProgressView(value: Double(checked), total: Double(max(total, 1))) {
+                                Text("Completati \(checked)/\(total)")
+                                    .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
-                        } else {
-                            ScrollView(.horizontal) {
-                                LazyVStack(alignment: .leading, spacing: 0) {
-                                    
-                                    // HEADER
-                                    HStack(alignment: .center, spacing: 6) {
-                                        ForEach(columns, id: \.self) { col in
-                                            let key = headerRow[col]
-                                            Text(columnTitle(for: key))
-                                                .font(.caption)
-                                                .fontWeight(.semibold)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(1)
-                                                .frame(width: columnWidth(for: key), alignment: columnAlignment(for: key))
-                                        }
-                                    }
-                                    .padding(.vertical, 6)
-                                    .background(.thinMaterial)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                    
-                                    Divider().padding(.vertical, 4)
-                                    
-                                    // RIGHE
-                                    ForEach(visibleRowIndices, id: \.self) { rowIndex in
-                                        let hasError = rowHasError(rowIndex: rowIndex, headerRow: headerRow)
-                                        let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
-                                        
-                                        HStack(alignment: .center, spacing: 6) {
-                                            ForEach(columns, id: \.self) { col in
-                                                cellView(
-                                                    rowIndex: rowIndex,
-                                                    columnIndex: col,
-                                                    headerRow: headerRow,
-                                                    isDone: isDone
-                                                )
-                                                .frame(
-                                                    width: columnWidth(for: headerRow[col]),
-                                                    alignment: columnAlignment(for: headerRow[col])
-                                                )
-                                            }
-                                        }
-                                        .id("row-\(rowIndex)")
-                                        .onAppear { visibleRowSet.insert(rowIndex) }
-                                        .onDisappear { visibleRowSet.remove(rowIndex) }
-                                        .padding(.vertical, 6)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture { flashAndOpenRow(rowIndex, headerRow: headerRow) }
-                                        .background(rowBackground(hasError: hasError, isDone: isDone, rowIndex: rowIndex))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                        .contextMenu {
-                                            Button {
-                                                let newValue = !isDone
-                                                bindingForComplete(rowIndex).wrappedValue = newValue
-                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                            } label: {
-                                                Label(isDone ? "Segna non completato" : "Segna completato",
-                                                      systemImage: isDone ? "circle" : "checkmark.circle.fill")
-                                            }
-                                            
-                                            Button {
-                                                showRowDetail(for: rowIndex, headerRow: headerRow)
-                                            } label: {
-                                                Label("Dettagli riga", systemImage: "info.circle")
-                                            }
-                                            
-                                            if let bIndex = headerRow.firstIndex(of: "barcode"),
-                                               data[rowIndex].indices.contains(bIndex) {
-                                                let barcode = data[rowIndex][bIndex].trimmingCharacters(in: .whitespacesAndNewlines)
-                                                if !barcode.isEmpty {
-                                                    Button {
-                                                        UIPasteboard.general.string = barcode
-                                                        UINotificationFeedbackGenerator().notificationOccurred(.success)
-                                                    } label: {
-                                                        Label("Copia barcode", systemImage: "doc.on.doc")
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                            Button {
-                                                let newValue = !isDone
-                                                bindingForComplete(rowIndex).wrappedValue = newValue
-                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                            } label: {
-                                                Label(isDone ? "Non completato" : "Completato",
-                                                      systemImage: isDone ? "circle" : "checkmark.circle.fill")
-                                            }
-                                            .tint(isDone ? .gray : .green)
-                                        }
-                                        
-                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                            Button {
-                                                showRowDetail(for: rowIndex, headerRow: headerRow)
-                                            } label: {
-                                                Label("Dettagli", systemImage: "info.circle")
-                                            }
-                                            .tint(.blue)
-                                            
-                                            if let bIndex = headerRow.firstIndex(of: "barcode"),
-                                               data[rowIndex].indices.contains(bIndex) {
-                                                let barcode = data[rowIndex][bIndex].trimmingCharacters(in: .whitespacesAndNewlines)
-                                                if !barcode.isEmpty {
-                                                    Button {
-                                                        UIPasteboard.general.string = barcode
-                                                        UINotificationFeedbackGenerator().notificationOccurred(.success)
-                                                    } label: {
-                                                        Label("Copia", systemImage: "doc.on.doc")
-                                                    }
-                                                    .tint(.gray)
-                                                }
-                                            }
-                                        }
-                                    }
-                                } // ✅ QUESTA era la parentesi mancante (chiude LazyVStack)
-                                .padding(.vertical, 4)
-                            }
-                            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                        }
-                        if entry.isManualEntry {
-                            Button {
-                                addManualRow()
-                            } label: {
-                                Label("Aggiungi riga", systemImage: "plus")
-                            }
-                        }
-                    }
-                }
-                
-                // Sezione riassunto base (per ora non ricalcoliamo il totale ordine)
-                Section("Riassunto") {
-                    let checked = complete.dropFirst().filter { $0 }.count
-                    let missing = max(0, entry.totalItems - checked)
-                    let errorCount = countSyncErrors()
-                    
-                    LabeledContent("Articoli totali") {
-                        Text("\(entry.totalItems)")
-                    }
-                    LabeledContent("Articoli da completare") {
-                        Text("\(missing)")
-                    }
-                    LabeledContent("Righe in errore") {
-                        Text("\(errorCount)")
-                            .foregroundStyle(errorCount > 0 ? .red : .secondary)
-                    }
-                    LabeledContent("Totale ordine (iniziale)") {
-                        Text(formatMoney(entry.orderTotal))
-                    }
-                }
-                
-                /// Bottone Salva / Sincronizza
-                Section {
-                    if !entry.isManualEntry {
-                        Button {
-                            startProductImportAnalysis()
-                        } label: {
-                            Text("Aggiorna anagrafica prodotti")
-                        }
-                        .disabled(isSaving || isSyncing)
-
-                        Button {
-                            syncWithDatabase()
-                        } label: {
-                            if isSyncing {
-                                HStack {
-                                    ProgressView()
-                                    Text("Sincronizzazione in corso…")
+                            
+                            // ✅ UN SOLO scroll orizzontale per header + righe (niente scroll per-riga)
+                            let columns = Array(headerRow.indices)
+                            
+                            if showOnlyErrorRows && visibleRowIndices.isEmpty {
+                                if #available(iOS 17.0, *) {
+                                    ContentUnavailableView(
+                                        "Nessuna riga con errore",
+                                        systemImage: "checkmark.seal",
+                                        description: Text("Tutte le righe risultano sincronizzabili.")
+                                    )
+                                    .padding(.vertical, 8)
+                                } else {
+                                    Text("Nessuna riga con errore")
+                                        .foregroundStyle(.secondary)
                                 }
                             } else {
-                                Text("Applica inventario al DB")
+                                ScrollView(.horizontal) {
+                                    LazyVStack(alignment: .leading, spacing: 0) {
+                                        
+                                        // HEADER
+                                        HStack(alignment: .center, spacing: 6) {
+                                            ForEach(columns, id: \.self) { col in
+                                                let key = headerRow[col]
+                                                Text(columnTitle(for: key))
+                                                    .font(.caption)
+                                                    .fontWeight(.semibold)
+                                                    .foregroundStyle(.secondary)
+                                                    .lineLimit(1)
+                                                    .frame(width: columnWidth(for: key), alignment: columnAlignment(for: key))
+                                            }
+                                        }
+                                        .padding(.vertical, 6)
+                                        .background(.thinMaterial)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        
+                                        Divider().padding(.vertical, 4)
+                                        
+                                        // RIGHE
+                                        ForEach(visibleRowIndices, id: \.self) { rowIndex in
+                                            let hasError = rowHasError(rowIndex: rowIndex, headerRow: headerRow)
+                                            let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
+                                            
+                                            HStack(alignment: .center, spacing: 6) {
+                                                ForEach(columns, id: \.self) { col in
+                                                    cellView(
+                                                        rowIndex: rowIndex,
+                                                        columnIndex: col,
+                                                        headerRow: headerRow,
+                                                        isDone: isDone
+                                                    )
+                                                    .frame(
+                                                        width: columnWidth(for: headerRow[col]),
+                                                        alignment: columnAlignment(for: headerRow[col])
+                                                    )
+                                                }
+                                            }
+                                            .id("row-\(rowIndex)")
+                                            .onAppear { visibleRowSet.insert(rowIndex) }
+                                            .onDisappear { visibleRowSet.remove(rowIndex) }
+                                            .padding(.vertical, 6)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture { flashAndOpenRow(rowIndex, headerRow: headerRow) }
+                                            .background(rowBackground(hasError: hasError, isDone: isDone, rowIndex: rowIndex))
+                                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                            .contextMenu {
+                                                Button {
+                                                    let newValue = !isDone
+                                                    bindingForComplete(rowIndex).wrappedValue = newValue
+                                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                                } label: {
+                                                    Label(isDone ? "Segna non completato" : "Segna completato",
+                                                          systemImage: isDone ? "circle" : "checkmark.circle.fill")
+                                                }
+                                                
+                                                Button {
+                                                    showRowDetail(for: rowIndex, headerRow: headerRow)
+                                                } label: {
+                                                    Label("Dettagli riga", systemImage: "info.circle")
+                                                }
+                                                
+                                                if let bIndex = headerRow.firstIndex(of: "barcode"),
+                                                   data[rowIndex].indices.contains(bIndex) {
+                                                    let barcode = data[rowIndex][bIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+                                                    if !barcode.isEmpty {
+                                                        Button {
+                                                            UIPasteboard.general.string = barcode
+                                                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                                        } label: {
+                                                            Label("Copia barcode", systemImage: "doc.on.doc")
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                                Button {
+                                                    let newValue = !isDone
+                                                    bindingForComplete(rowIndex).wrappedValue = newValue
+                                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                                } label: {
+                                                    Label(isDone ? "Non completato" : "Completato",
+                                                          systemImage: isDone ? "circle" : "checkmark.circle.fill")
+                                                }
+                                                .tint(isDone ? .gray : .green)
+                                            }
+                                            
+                                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                                Button {
+                                                    showRowDetail(for: rowIndex, headerRow: headerRow)
+                                                } label: {
+                                                    Label("Dettagli", systemImage: "info.circle")
+                                                }
+                                                .tint(.blue)
+                                                
+                                                if let bIndex = headerRow.firstIndex(of: "barcode"),
+                                                   data[rowIndex].indices.contains(bIndex) {
+                                                    let barcode = data[rowIndex][bIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+                                                    if !barcode.isEmpty {
+                                                        Button {
+                                                            UIPasteboard.general.string = barcode
+                                                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                                        } label: {
+                                                            Label("Copia", systemImage: "doc.on.doc")
+                                                        }
+                                                        .tint(.gray)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } // ✅ QUESTA era la parentesi mancante (chiude LazyVStack)
+                                    .padding(.vertical, 4)
+                                }
+                                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                            }
+                            if entry.isManualEntry {
+                                Button {
+                                    addManualRow()
+                                } label: {
+                                    Label("Aggiungi riga", systemImage: "plus")
+                                }
                             }
                         }
-                        .disabled(isSaving || isSyncing)
-                    } else {
-                        // entry manuale: nessuna azione DB, ma autosave resta attivo
-                        Text("Salvataggio automatico attivo.")
-                            .foregroundStyle(.secondary)
                     }
-                } footer: {
-                    if isSaving {
-                        Text("Salvataggio…")
-                    } else if hasUnsavedChanges {
-                        Text("Modifiche non salvate. Salvataggio automatico tra poco…")
-                    } else if let lastSavedAt {
-                        Text("Salvato alle \(lastSavedAt.formatted(date: .omitted, time: .shortened))")
-                    } else {
-                        Text("Salvataggio automatico attivo.")
+                    
+                    // Sezione riassunto base (per ora non ricalcoliamo il totale ordine)
+                    Section("Riassunto") {
+                        let checked = complete.dropFirst().filter { $0 }.count
+                        let missing = max(0, entry.totalItems - checked)
+                        let errorCount = countSyncErrors()
+                        
+                        LabeledContent("Articoli totali") {
+                            Text("\(entry.totalItems)")
+                        }
+                        LabeledContent("Articoli da completare") {
+                            Text("\(missing)")
+                        }
+                        LabeledContent("Righe in errore") {
+                            Text("\(errorCount)")
+                                .foregroundStyle(errorCount > 0 ? .red : .secondary)
+                        }
+                        LabeledContent("Totale ordine (iniziale)") {
+                            Text(formatMoney(entry.orderTotal))
+                        }
+                    }
+                    
+                    /// Bottone Salva / Sincronizza
+                    Section {
+                        if !entry.isManualEntry {
+                            Button {
+                                startProductImportAnalysis()
+                            } label: {
+                                Text("Aggiorna anagrafica prodotti")
+                            }
+                            .disabled(isSaving || isSyncing)
+                            
+                            Button {
+                                syncWithDatabase()
+                            } label: {
+                                if isSyncing {
+                                    HStack {
+                                        ProgressView()
+                                        Text("Sincronizzazione in corso…")
+                                    }
+                                } else {
+                                    Text("Applica inventario al DB")
+                                }
+                            }
+                            .disabled(isSaving || isSyncing)
+                        } else {
+                            // entry manuale: nessuna azione DB, ma autosave resta attivo
+                            Text("Salvataggio automatico attivo.")
+                                .foregroundStyle(.secondary)
+                        }
+                    } footer: {
+                        if isSaving {
+                            Text("Salvataggio…")
+                        } else if hasUnsavedChanges {
+                            Text("Modifiche non salvate. Salvataggio automatico tra poco…")
+                        } else if let lastSavedAt {
+                            Text("Salvato alle \(lastSavedAt.formatted(date: .omitted, time: .shortened))")
+                        } else {
+                            Text("Salvataggio automatico attivo.")
+                        }
                     }
                 }
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 140)
+            }
+            
+            floatingActions
+                .padding(.trailing, 16)
+                .safeAreaPadding(.bottom, 12)
             }
             .onChange(of: scrollToRowIndex) { _, newValue in
                 guard let rowIndex = newValue else { return }
@@ -488,7 +457,66 @@ struct GeneratedView: View {
                     )
                 }
             }
+            .sheet(isPresented: $showSearch) {
+                NavigationStack {
+                    InventorySearchSheet(
+                        data: data,
+                        onJumpToRow: { rowIndex in
+                            showSearch = false
+                                if showOnlyErrorRows {
+                                    withAnimation(.snappy) { showOnlyErrorRows = false }
+                                }
+                                scrollToRowIndex = rowIndex   // usa la tua logica già esistente (scroll/pulse)
+                        },
+                        onApplyBarcode: { code in
+                            showSearch = false
+                            handleScannedBarcode(code)    // riusa la tua logica (incrementa/aggiunge)
+                        }
+                    )
+                }
+            }
         }
+    }
+    
+    private var floatingActions: some View {
+        VStack(spacing: 12) {
+
+            // Search (secondario)
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                showSearch = true
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 48, height: 48)
+                    .background(.thinMaterial, in: Circle())
+                    .overlay(Circle().strokeBorder(.separator, lineWidth: 0.5))
+                    .shadow(radius: 8, x: 0, y: 5)
+            }
+            .buttonStyle(.plain)
+            .disabled(isBusy)
+            .opacity(isBusy ? 0.35 : 1)
+            .accessibilityLabel("Cerca riga")
+
+            // Scanner (primario)
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                showScanner = true
+            } label: {
+                Image(systemName: "barcode.viewfinder")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Circle().fill(Color.accentColor))
+                    .shadow(radius: 10, x: 0, y: 6)
+            }
+            .buttonStyle(.plain)
+            .disabled(isBusy)
+            .opacity(isBusy ? 0.35 : 1)
+            .accessibilityLabel("Scansiona barcode")
+        }
+        .padding(.trailing, 16)
     }
     
     private var entryTitle: String {
@@ -1682,6 +1710,119 @@ private struct RowDetailSheetView: View {
         return String(d)
     }
 }
+
+private struct InventorySearchSheet: View {
+    let data: [[String]]
+    let onJumpToRow: (Int) -> Void
+    let onApplyBarcode: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText: String = ""
+    @State private var barcodeText: String = ""
+
+    private var header: [String] { data.first ?? [] }
+
+    private var idxBarcode: Int? { header.firstIndex(of: "barcode") }
+    private var idxCode: Int? { header.firstIndex(of: "itemNumber") }
+    private var idxName: Int? { header.firstIndex(of: "productName") ?? header.firstIndex(of: "secondProductName") }
+
+    private func cell(_ row: [String], _ idx: Int?) -> String {
+        guard let idx, row.indices.contains(idx) else { return "" }
+        return row[idx].trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func matches(row: [String], query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return false }
+
+        // match “mirato” (più efficiente che scansionare tutte le colonne)
+        return cell(row, idxBarcode).localizedCaseInsensitiveContains(q)
+            || cell(row, idxCode).localizedCaseInsensitiveContains(q)
+            || cell(row, idxName).localizedCaseInsensitiveContains(q)
+    }
+
+    private var results: [Int] {
+        guard data.count > 1 else { return [] }
+        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return [] }
+
+        return (1..<data.count).filter { i in
+            matches(row: data[i], query: q)
+        }
+        .prefix(200) // evita liste enormi (UX migliore)
+        .map { $0 }
+    }
+
+    var body: some View {
+        List {
+            Section("Barcode rapido") {
+                HStack(spacing: 12) {
+                    TextField("Inserisci barcode", text: $barcodeText)
+                        .keyboardType(.numberPad)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+
+                    Button("Applica") {
+                        let code = barcodeText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !code.isEmpty else { return }
+                        onApplyBarcode(code)
+                        dismiss()
+                    }
+                    .disabled(barcodeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                Text("Usa questo per incrementare/aggiungere una riga senza aprire la camera.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Risultati") {
+                if results.isEmpty {
+                    if #available(iOS 17.0, *) {
+                        ContentUnavailableView(
+                            "Nessun risultato",
+                            systemImage: "magnifyingglass",
+                            description: Text("Cerca per barcode, codice o nome prodotto.")
+                        )
+                    } else {
+                        Text("Nessun risultato")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    ForEach(results, id: \.self) { rowIndex in
+                        let row = data[rowIndex]
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(cell(row, idxName).isEmpty ? "—" : cell(row, idxName))
+                                .lineLimit(1)
+                            HStack {
+                                Text(cell(row, idxBarcode))
+                                    .monospacedDigit()
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text("#\(rowIndex)")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .font(.footnote)
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            onJumpToRow(rowIndex)
+                            dismiss()
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Cerca")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Chiudi") { dismiss() }
+            }
+        }
+        .searchable(text: $searchText, prompt: "Barcode, codice, nome…")
+    }
+}
+
 
 #Preview {
     // Piccola entry di esempio per il preview
