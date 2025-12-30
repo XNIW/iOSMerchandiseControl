@@ -89,8 +89,16 @@ struct GeneratedView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var showSearch: Bool = false
+    @State private var showingEntryInfo = false
+    
+    private struct ShareItem: Identifiable {
+        let id = UUID()
+        let url: URL
+    }
 
-    private var isBusy: Bool { isSaving || isSyncing }
+    @State private var shareItem: ShareItem?
+    @State private var isExportingShare: Bool = false
+    private var isBusy: Bool { isSaving || isSyncing || isExportingShare }
     
     // MARK: - Body
 
@@ -374,20 +382,33 @@ struct GeneratedView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .tabBar)
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            showingEntryInfo = true
+                        } label: {
+                            Label("Modifica dettagli", systemImage: "pencil")
+                        }
+
+                        Button {
+                            shareAsXLSX()
+                        } label: {
+                            Label("Condividi…", systemImage: "square.and.arrow.up")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .disabled(isBusy)
+                }
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Fine") {
                         Task { @MainActor in
                             flushAutosaveNow()
-
-                            if let onDone {
-                                onDone()      // ✅ caso PreGenerate → torna a InventoryHome
-                            } else {
-                                dismiss()     // ✅ caso HistoryView → torna indietro normalmente
-                            }
+                            if let onDone { onDone() } else { dismiss() }
                         }
                     }
-                    .fontWeight(.semibold)
-                    .disabled(isBusy)          // ✅ disabilita durante save/sync
+                    .disabled(isBusy)
                 }
             }
             .onAppear {
@@ -475,6 +496,12 @@ struct GeneratedView: View {
                     )
                 }
             }
+            .sheet(isPresented: $showingEntryInfo) {
+                EntryInfoEditor(entry: entry)
+            }
+            .sheet(item: $shareItem) { item in
+                ShareSheet(items: [item.url])
+            }
         }
     }
     
@@ -520,9 +547,8 @@ struct GeneratedView: View {
     }
     
     private var entryTitle: String {
-        let last = entry.id.split(separator: "/").last.map(String.init) ?? entry.id
-        if let dot = last.lastIndex(of: ".") { return String(last[..<dot]) }
-        return last
+        let t = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? entry.id : t
     }
     
     private func markDirtyAndScheduleAutosave() {
@@ -1514,6 +1540,30 @@ struct GeneratedView: View {
     private var alertMessageText: String {
         saveError ?? syncSummaryMessage ?? ""
     }
+
+    @MainActor
+    private func shareAsXLSX() {
+        flushAutosaveNow() // esporta la versione aggiornata
+
+        guard !isExportingShare else { return }
+        isExportingShare = true
+
+        let grid = data
+        let name = entryTitle
+
+        Task {
+            defer { isExportingShare = false }
+
+            do {
+                let url = try InventoryXLSXExporter.export(grid: grid, preferredName: name)
+                shareItem = ShareItem(url: url)
+                entry.wasExported = true
+                try? context.save()
+            } catch {
+                saveError = "Impossibile esportare XLSX: \(error.localizedDescription)"
+            }
+        }
+    }
 }
 
 private struct RowDetailSheetView: View {
@@ -1823,6 +1873,48 @@ private struct InventorySearchSheet: View {
     }
 }
 
+struct EntryInfoEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    @Bindable var entry: HistoryEntry
+
+    @State private var draftTitle: String = ""
+    @State private var draftSupplier: String = ""
+    @State private var draftCategory: String = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Dettagli") {
+                    TextField("Nome", text: $draftTitle)
+                    TextField("Fornitore", text: $draftSupplier)
+                    TextField("Categoria", text: $draftCategory)
+                }
+            }
+            .navigationTitle("Dettagli entry")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annulla") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Salva") {
+                        entry.title = draftTitle
+                        entry.supplier = draftSupplier
+                        entry.category = draftCategory
+                        try? modelContext.save()
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                draftTitle = entry.title.isEmpty ? entry.id : entry.title
+                draftSupplier = entry.supplier
+                draftCategory = entry.category
+            }
+        }
+    }
+}
 
 #Preview {
     // Piccola entry di esempio per il preview

@@ -22,8 +22,11 @@ struct HistoryView: View {
     @State private var showDeleteConfirmation = false
     @State private var entryPendingDeletion: HistoryEntry?
     
-    @State private var shareURL: URL?
-    @State private var isShareSheetPresented = false
+    private struct ShareItem: Identifiable {
+        let id = UUID()
+        let url: URL
+    }
+    @State private var shareItem: ShareItem?
 
     /// Filtro per periodo temporale (es. tutti, ultimi 7 giorni, ultimo mese)
     private enum DateFilter: String, CaseIterable, Identifiable {
@@ -95,44 +98,24 @@ struct HistoryView: View {
         }
     }
     
+    @MainActor
     private func exportHistoryEntry(_ entry: HistoryEntry) {
         let grid = entry.data
         guard !grid.isEmpty else { return }
 
-        // Costruisce il CSV: escape dei valori con virgolette, virgole o newline
-        let csvLines: [String] = grid.map { row in
-            row.map { cell -> String in
-                var escaped = cell.replacingOccurrences(of: "\"", with: "\"\"")
-                if escaped.contains(where: { ",\n\"".contains($0) }) {
-                    escaped = "\"\(escaped)\""
-                }
-                return escaped
+        let name = entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? entry.id
+            : entry.title
+
+        Task {
+            do {
+                let url = try InventoryXLSXExporter.export(grid: grid, preferredName: name)
+                shareItem = ShareItem(url: url)
+                entry.wasExported = true
+                try? context.save()
+            } catch {
+                print("Errore durante l'esportazione XLSX:", error)
             }
-            .joined(separator: ",")
-        }
-
-        let csvString = csvLines.joined(separator: "\n")
-        guard let data = csvString.data(using: .utf8) else {
-            return
-        }
-
-        // Nome file: usa l'id ma forza estensione .csv
-        let baseName = entry.id.isEmpty ? "inventario" : entry.id
-        let fileName = (baseName as NSString).deletingPathExtension + ".csv"
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
-
-        do {
-            try data.write(to: tempURL, options: .atomic)
-
-            // Aggiorna stato UI per share sheet
-            shareURL = tempURL
-            isShareSheetPresented = true
-
-            // Marca la voce come esportata
-            entry.wasExported = true
-            try context.save()
-        } catch {
-            print("Errore durante l'esportazione CSV: \(error)")
         }
     }
 
@@ -206,7 +189,7 @@ struct HistoryView: View {
                                 Button {
                                     exportHistoryEntry(entry)
                                 } label: {
-                                    Label("Esporta", systemImage: "square.and.arrow.up")
+                                    Label("Condividi", systemImage: "square.and.arrow.up")
                                 }
                             }
                         }
@@ -235,14 +218,8 @@ struct HistoryView: View {
             \(entry.id)
             """)
         }
-        // 🔹 nuova sheet per condividere il CSV
-        .sheet(isPresented: $isShareSheetPresented) {
-            if let shareURL {
-                ActivityView(activityItems: [shareURL])
-            } else {
-                Text("Nessun file da condividere")
-                    .foregroundStyle(.secondary)
-            }
+        .sheet(item: $shareItem) { item in
+            ShareSheet(items: [item.url])
         }
     }
 }
@@ -365,23 +342,3 @@ private struct HistorySummaryChip: View {
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }
-
-#if canImport(UIKit)
-private struct ActivityView: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(
-            activityItems: activityItems,
-            applicationActivities: nil
-        )
-    }
-
-    func updateUIViewController(
-        _ uiViewController: UIActivityViewController,
-        context: Context
-    ) {
-        // niente da aggiornare
-    }
-}
-#endif

@@ -446,53 +446,6 @@ struct DatabaseView: View {
         return url
     }
 
-    private func makeProductsCSV() throws -> URL {
-        let headers = [
-            "barcode",
-            "itemNumber",
-            "productName",
-            "secondProductName",
-            "purchasePrice",
-            "retailPrice",
-            "stockQuantity",
-            "supplierName",
-            "categoryName"
-        ]
-
-        var lines: [String] = []
-        lines.append(headers.joined(separator: ";"))
-
-        let numberFormatter = NumberFormatter()
-        numberFormatter.locale = Locale(identifier: "en_US_POSIX")
-        numberFormatter.minimumFractionDigits = 0
-        numberFormatter.maximumFractionDigits = 4
-
-        for product in products {
-            let row: [String] = [
-                product.barcode,
-                product.itemNumber ?? "",
-                product.productName ?? "",
-                product.secondProductName ?? "",
-                product.purchasePrice.flatMap { numberFormatter.string(from: $0 as NSNumber) } ?? "",
-                product.retailPrice.flatMap { numberFormatter.string(from: $0 as NSNumber) } ?? "",
-                product.stockQuantity.flatMap { numberFormatter.string(from: $0 as NSNumber) } ?? "",
-                product.supplier?.name ?? "",
-                product.category?.name ?? ""
-            ]
-            lines.append(row.map(escapeCSVField).joined(separator: ";"))
-        }
-
-        let csvString = lines.joined(separator: "\n")
-        let data = Data(csvString.utf8)
-
-        let tmpDir = FileManager.default.temporaryDirectory
-        let filename = "products_\(Int(Date().timeIntervalSince1970)).csv"
-        let url = tmpDir.appendingPathComponent(filename)
-
-        try data.write(to: url, options: .atomic)
-        return url
-    }
-
     private func escapeCSVField(_ field: String) -> String {
         if field.contains(";") || field.contains("\"") || field.contains("\n") {
             var escaped = field.replacingOccurrences(of: "\"", with: "\"\"")

@@ -21,6 +21,7 @@ final class HistoryEntry {
     /// Riga completata / non completata
     var completeJSON: Data?
     
+    var title: String = "" 
     var supplier: String
     var category: String
     var totalItems: Int
