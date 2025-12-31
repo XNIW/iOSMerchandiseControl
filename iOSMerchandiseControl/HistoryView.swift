@@ -28,6 +28,12 @@ struct HistoryView: View {
     }
     @State private var shareItem: ShareItem?
 
+    private struct EditItem: Identifiable {
+        let id = UUID()
+        let entry: HistoryEntry
+    }
+    @State private var editItem: EditItem?
+
     /// Filtro per periodo temporale (es. tutti, ultimi 7 giorni, ultimo mese)
     private enum DateFilter: String, CaseIterable, Identifiable {
         case all
@@ -177,25 +183,31 @@ struct HistoryView: View {
                             ) {
                                 HistoryRow(entry: entry)
                             }
-                            // 🔹 swipe a destra → "Elimina" + "Esporta"
-                            .swipeActions {
+                            // ✅ Leading: Modifica
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button {
+                                    editItem = EditItem(entry: entry)
+                                } label: {
+                                    Label("Modifica", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
+                            // ✅ Trailing: Condividi + Elimina
+                            .swipeActions(edge: .trailing) {
+                                Button {
+                                    exportHistoryEntry(entry)
+                                } label: {
+                                    Label("Condividi", systemImage: "square.and.arrow.up")
+                                }
+                                
                                 Button(role: .destructive) {
                                     entryPendingDeletion = entry
                                     showDeleteConfirmation = true
                                 } label: {
                                     Label("Elimina", systemImage: "trash")
                                 }
-
-                                Button {
-                                    exportHistoryEntry(entry)
-                                } label: {
-                                    Label("Condividi", systemImage: "square.and.arrow.up")
-                                }
                             }
                         }
-                        // Se vuoi, puoi tenere anche .onDelete per la modalità "Modifica"
-                            // ma a questo punto puoi anche rimuoverla per evitare doppioni:
-                            // .onDelete(perform: deleteEntries)
                     }
                 }
             }
@@ -218,8 +230,12 @@ struct HistoryView: View {
             \(entry.id)
             """)
         }
+        // 🔹 nuova sheet per condividere il CSV
         .sheet(item: $shareItem) { item in
             ShareSheet(items: [item.url])
+        }
+        .sheet(item: $editItem) { item in
+            EntryInfoEditor(entry: item.entry)
         }
     }
 }
@@ -231,6 +247,11 @@ private struct HistoryRow: View {
     
     private var dateString: String {
         entry.timestamp.formatted(date: .numeric, time: .shortened)
+    }
+    
+    private var displayName: String {
+        let t = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? entry.id : t
     }
     
     /// Conta quante righe di questo HistoryEntry hanno un messaggio nella colonna "SyncError".
@@ -254,9 +275,15 @@ private struct HistoryRow: View {
                 SyncStatusIcon(status: entry.syncStatus)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.id)
-                        .font(.headline)
-                        .lineLimit(1)
+                    Text(displayName).font(.headline).lineLimit(1)
+
+                    if !entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(entry.id)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
                     Text(dateString)
                         .font(.caption)
                         .foregroundStyle(.secondary)

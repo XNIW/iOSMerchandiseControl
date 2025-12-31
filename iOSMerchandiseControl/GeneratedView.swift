@@ -97,6 +97,7 @@ struct GeneratedView: View {
     }
 
     @State private var shareItem: ShareItem?
+    
     @State private var isExportingShare: Bool = false
     private var isBusy: Bool { isSaving || isSyncing || isExportingShare }
     
@@ -1870,49 +1871,6 @@ private struct InventorySearchSheet: View {
             }
         }
         .searchable(text: $searchText, prompt: "Barcode, codice, nome…")
-    }
-}
-
-struct EntryInfoEditor: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-
-    @Bindable var entry: HistoryEntry
-
-    @State private var draftTitle: String = ""
-    @State private var draftSupplier: String = ""
-    @State private var draftCategory: String = ""
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Dettagli") {
-                    TextField("Nome", text: $draftTitle)
-                    TextField("Fornitore", text: $draftSupplier)
-                    TextField("Categoria", text: $draftCategory)
-                }
-            }
-            .navigationTitle("Dettagli entry")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Annulla") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Salva") {
-                        entry.title = draftTitle
-                        entry.supplier = draftSupplier
-                        entry.category = draftCategory
-                        try? modelContext.save()
-                        dismiss()
-                    }
-                }
-            }
-            .onAppear {
-                draftTitle = entry.title.isEmpty ? entry.id : entry.title
-                draftSupplier = entry.supplier
-                draftCategory = entry.category
-            }
-        }
     }
 }
 
