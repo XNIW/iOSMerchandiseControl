@@ -1822,113 +1822,177 @@ private struct InventorySearchSheet: View {
         // “probabile barcode”: solo cifre e un minimo di lunghezza (tweak libero)
         return q.range(of: #"^\d{4,}$"#, options: .regularExpression) != nil
     }
+    
+    private func submitSearch() {
+        if results.isEmpty, canApplyBarcode {
+            onApplyBarcode(trimmedQuery)
+            dismiss()
+        }
+    }
+    
+    private var resultsList: some View {
+        ForEach(results, id: \.self) { rowIndex in
+            let row = data[rowIndex]
+            let name = cell(row, idxName)
+            let barcode = cell(row, idxBarcode)
 
-    var body: some View {
-        List {
-            Section("Risultati") {
-                if trimmedQuery.isEmpty {
-                    if #available(iOS 17.0, *) {
-                        ContentUnavailableView(
-                            "Cerca un prodotto",
-                            systemImage: "magnifyingglass",
-                            description: Text("Digita barcode, codice o nome.")
-                        )
-                    } else {
-                        Text("Digita barcode, codice o nome.")
-                            .foregroundStyle(.secondary)
-                    }
-                } else if results.isEmpty {
-                    if #available(iOS 17.0, *) {
-                        ContentUnavailableView(
-                            "Nessun risultato",
-                            systemImage: "magnifyingglass",
-                            description: Text("Prova con un barcode/codice/nome diverso.")
-                        )
-                    } else {
-                        Text("Nessun risultato")
-                            .foregroundStyle(.secondary)
-                    }
+            Button {
+                // 1) porta la griglia sulla riga (UX molto utile)
+                onJumpToRow(rowIndex)
 
-                    if canApplyBarcode {
-                        Button {
-                            onApplyBarcode(trimmedQuery)
-                            dismiss()
-                        } label: {
-                            Label("Applica barcode \(trimmedQuery)", systemImage: "plus.circle.fill")
+                // 2) apri dettagli (azione primaria attesa su iOS)
+                onOpenDetail(rowIndex)
+
+                // 3) chiudi sheet ricerca
+                dismiss()
+            } label: {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        highlightedName(name.isEmpty ? "—" : name, query: trimmedQuery)
+                            .lineLimit(1)
+
+                        let code = cell(row, idxCode)
+
+                        HStack(spacing: 8) {
+                            if !barcode.isEmpty { highlightedMono(barcode, query: trimmedQuery).foregroundStyle(.secondary) }
+                            if !barcode.isEmpty && !code.isEmpty { Text("•").foregroundStyle(.tertiary) }
+                            if !code.isEmpty { highlightedMono(code, query: trimmedQuery).foregroundStyle(.secondary) }
+
+                            Spacer()
+                            Text("#\(rowIndex)")
                         }
+                        .font(.footnote)
                     }
-                } else {
-                    ForEach(results, id: \.self) { rowIndex in
-                        let row = data[rowIndex]
 
-                        HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(cell(row, idxName).isEmpty ? "—" : cell(row, idxName))
-                                    .lineLimit(1)
-
-                                HStack {
-                                    Text(cell(row, idxBarcode))
-                                        .monospacedDigit()
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text("#\(rowIndex)")
-                                        .foregroundStyle(.secondary)
-                                }
-                                .font(.footnote)
-                            }
-
-                            Button {
-                                onOpenDetail(rowIndex)
-                                dismiss()
-                            } label: {
-                                Image(systemName: "info.circle")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.borderless)
-                            .accessibilityLabel("Dettagli riga")
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            onJumpToRow(rowIndex)
-                            dismiss()
-                        }
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .listRowSeparator(.visible)
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                if !barcode.isEmpty {
+                    Button {
+                        UIPasteboard.general.string = barcode
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    } label: {
+                        Label("Copia", systemImage: "doc.on.doc")
                     }
+                    .tint(.gray)
                 }
             }
         }
+    }
+    
+    @ViewBuilder
+    private var resultsHeaderRow: some View {
+        if results.count > 0 {
+            HStack {
+                Text("Risultati (\(results.count))")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 6, trailing: 16))
+            .listRowSeparator(.hidden)                 // 👈 via la linea sopra/sotto
+            .listRowBackground(Color.clear)
+            .overlay(alignment: .bottom) { Divider() } // 👈 una sola linea sotto (pulita)
+            .allowsHitTesting(false)
+        }
+    }
+    
+    private func highlightedName(_ name: String, query: String) -> Text {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return Text(name) }
+
+        var attr = AttributedString(name)
+        attr.font = .body
+
+        var searchRange = name.startIndex..<name.endIndex
+        while let r = name.range(
+            of: q,
+            options: [.caseInsensitive, .diacriticInsensitive],
+            range: searchRange
+        ) {
+            if let start = AttributedString.Index(r.lowerBound, within: attr),
+               let end = AttributedString.Index(r.upperBound, within: attr) {
+                attr[start..<end].font = .body.weight(.semibold)
+            }
+            searchRange = r.upperBound..<name.endIndex
+        }
+
+        return Text(attr)
+    }
+    
+    private func highlightedMono(_ value: String, query: String) -> Text {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        var attr = AttributedString(value)
+        attr.font = .system(.footnote, design: .monospaced)
+
+        guard !q.isEmpty else { return Text(attr) }
+
+        var searchRange = value.startIndex..<value.endIndex
+        while let r = value.range(of: q, options: [.caseInsensitive, .diacriticInsensitive], range: searchRange) {
+            if let s = AttributedString.Index(r.lowerBound, within: attr),
+               let e = AttributedString.Index(r.upperBound, within: attr) {
+                attr[s..<e].font = .system(.footnote, design: .monospaced).weight(.semibold)
+            }
+            searchRange = r.upperBound..<value.endIndex
+        }
+        return Text(attr)
+    }
+
+    var body: some View {
+        List {
+            if trimmedQuery.isEmpty {
+                emptyState
+            } else {
+                resultsHeaderRow
+
+                if results.isEmpty {
+                    noResultsState
+                } else {
+                    resultsList
+                }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color(uiColor: .systemGroupedBackground))
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Cerca")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Chiudi") { dismiss() }
             }
-
-            ToolbarItemGroup(placement: .bottomBar) {
-                Button {
-                    showScanner = true
-                } label: {
-                    Label("Scanner", systemImage: "barcode.viewfinder")
-                }
-
-                Spacer()
-
-                Button("Applica") {
-                    onApplyBarcode(trimmedQuery)
-                    dismiss()
-                }
-                .disabled(!canApplyBarcode)
-            }
         }
-        .searchable(
-            text: $searchText,
-            placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Barcode, codice, nome…"
-        )
-        .searchFocused($isSearchFocused)
+        .safeAreaInset(edge: .bottom) {
+            HStack(spacing: 12) {
+                AppleLikeSearchField(
+                    placeholder: "Barcode, codice, nome…",
+                    text: $searchText,
+                    showScanner: $showScanner,
+                    onSubmit: submitSearch,
+                    focused: $isSearchFocused
+                )
+            }
+            .padding(.horizontal)
+            .padding(.top, 10)
+            .padding(.bottom, 12)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(Color(uiColor: .separator).opacity(0.25), lineWidth: 0.5)
+            )
+            .padding(.horizontal)
+            .shadow(radius: 12, x: 0, y: 6)
+        }
         .onAppear { isSearchFocused = true }
         .sheet(isPresented: $showScanner) {
             ScannerView(title: "Scanner barcode") { code in
-                // riempi il textfield (come volevi)
                 searchText = code
                 showScanner = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -1936,6 +2000,125 @@ private struct InventorySearchSheet: View {
                 }
             }
         }
+        .modifier(TopGapFix())
+    }
+    
+    @ViewBuilder
+    private var emptyState: some View {
+        if #available(iOS 17.0, *) {
+            ContentUnavailableView(
+                "Cerca un prodotto",
+                systemImage: "magnifyingglass",
+                description: Text("Digita barcode, codice o nome.")
+            )
+            .frame(maxWidth: .infinity, minHeight: 260)
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+        } else {
+            Text("Digita barcode, codice o nome.")
+                .foregroundStyle(.secondary)
+                .listRowBackground(Color.clear)
+        }
+    }
+
+    @ViewBuilder
+    private var noResultsState: some View {
+        if #available(iOS 17.0, *) {
+            ContentUnavailableView(
+                "Nessun risultato",
+                systemImage: "magnifyingglass",
+                description: Text("Prova con un barcode/codice/nome diverso.")
+            )
+            .frame(maxWidth: .infinity, minHeight: 220)
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+        } else {
+            Text("Nessun risultato")
+                .foregroundStyle(.secondary)
+                .listRowBackground(Color.clear)
+        }
+
+        if canApplyBarcode {
+            Button {
+                onApplyBarcode(trimmedQuery)
+                dismiss()
+            } label: {
+                Label("Applica barcode \(trimmedQuery)", systemImage: "plus.circle.fill")
+            }
+        }
+    }
+}
+
+private struct TopGapFix: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 17.0, *) {
+            content.contentMargins(.top, 0, for: .scrollContent) // da -2 → 0
+        } else {
+            content
+        }
+    }
+}
+
+private struct AppleLikeSearchField: View {
+    let placeholder: String
+    @Binding var text: String
+    @Binding var showScanner: Bool
+    var onSubmit: () -> Void
+
+    @FocusState.Binding var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+
+            TextField(placeholder, text: $text)
+                .focused($focused)
+                .textInputAutocapitalization(.never)
+                .textFieldStyle(.plain)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .onSubmit {
+                        onSubmit()
+                        focused = false
+                    }
+
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Svuota ricerca")
+            }
+
+            Divider()
+                .frame(height: 20)
+
+            Button {
+                focused = false
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                showScanner = true
+            } label: {
+                Image(systemName: "barcode.viewfinder")
+                    .foregroundStyle(.primary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Scanner")
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color(uiColor: .separator).opacity(0.35), lineWidth: 0.5)
+        )
     }
 }
 
