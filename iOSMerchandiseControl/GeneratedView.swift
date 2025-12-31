@@ -484,15 +484,23 @@ struct GeneratedView: View {
                     InventorySearchSheet(
                         data: data,
                         onJumpToRow: { rowIndex in
-                            showSearch = false
-                                if showOnlyErrorRows {
-                                    withAnimation(.snappy) { showOnlyErrorRows = false }
-                                }
-                                scrollToRowIndex = rowIndex   // usa la tua logica già esistente (scroll/pulse)
+                            if showOnlyErrorRows {
+                                withAnimation(.snappy) { showOnlyErrorRows = false }
+                            }
+                            scrollToRowIndex = rowIndex
+                        },
+                        onOpenDetail: { rowIndex in
+                            if showOnlyErrorRows {
+                                withAnimation(.snappy) { showOnlyErrorRows = false }
+                            }
+                            // evita “present while dismissing”
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                let headerRow = data.first ?? []
+                                showRowDetail(for: rowIndex, headerRow: headerRow)
+                            }
                         },
                         onApplyBarcode: { code in
-                            showSearch = false
-                            handleScannedBarcode(code)    // riusa la tua logica (incrementa/aggiunge)
+                            handleScannedBarcode(code)
                         }
                     )
                 }
@@ -1765,17 +1773,23 @@ private struct RowDetailSheetView: View {
 private struct InventorySearchSheet: View {
     let data: [[String]]
     let onJumpToRow: (Int) -> Void
+    let onOpenDetail: (Int) -> Void
     let onApplyBarcode: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var searchText: String = ""
-    @State private var barcodeText: String = ""
+    @State private var showScanner: Bool = false
+    @FocusState private var isSearchFocused: Bool
 
     private var header: [String] { data.first ?? [] }
 
     private var idxBarcode: Int? { header.firstIndex(of: "barcode") }
     private var idxCode: Int? { header.firstIndex(of: "itemNumber") }
     private var idxName: Int? { header.firstIndex(of: "productName") ?? header.firstIndex(of: "secondProductName") }
+
+    private var trimmedQuery: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     private func cell(_ row: [String], _ idx: Int?) -> String {
         guard let idx, row.indices.contains(idx) else { return "" }
@@ -1786,7 +1800,6 @@ private struct InventorySearchSheet: View {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return false }
 
-        // match “mirato” (più efficiente che scansionare tutte le colonne)
         return cell(row, idxBarcode).localizedCaseInsensitiveContains(q)
             || cell(row, idxCode).localizedCaseInsensitiveContains(q)
             || cell(row, idxName).localizedCaseInsensitiveContains(q)
@@ -1794,65 +1807,85 @@ private struct InventorySearchSheet: View {
 
     private var results: [Int] {
         guard data.count > 1 else { return [] }
-        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let q = trimmedQuery
         guard !q.isEmpty else { return [] }
 
-        return (1..<data.count).filter { i in
-            matches(row: data[i], query: q)
-        }
-        .prefix(200) // evita liste enormi (UX migliore)
-        .map { $0 }
+        return (1..<data.count)
+            .filter { matches(row: data[$0], query: q) }
+            .prefix(200)
+            .map { $0 }
+    }
+
+    private var canApplyBarcode: Bool {
+        let q = trimmedQuery
+        guard !q.isEmpty else { return false }
+        // “probabile barcode”: solo cifre e un minimo di lunghezza (tweak libero)
+        return q.range(of: #"^\d{4,}$"#, options: .regularExpression) != nil
     }
 
     var body: some View {
         List {
-            Section("Barcode rapido") {
-                HStack(spacing: 12) {
-                    TextField("Inserisci barcode", text: $barcodeText)
-                        .keyboardType(.numberPad)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-
-                    Button("Applica") {
-                        let code = barcodeText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !code.isEmpty else { return }
-                        onApplyBarcode(code)
-                        dismiss()
-                    }
-                    .disabled(barcodeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-                Text("Usa questo per incrementare/aggiungere una riga senza aprire la camera.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
             Section("Risultati") {
-                if results.isEmpty {
+                if trimmedQuery.isEmpty {
+                    if #available(iOS 17.0, *) {
+                        ContentUnavailableView(
+                            "Cerca un prodotto",
+                            systemImage: "magnifyingglass",
+                            description: Text("Digita barcode, codice o nome.")
+                        )
+                    } else {
+                        Text("Digita barcode, codice o nome.")
+                            .foregroundStyle(.secondary)
+                    }
+                } else if results.isEmpty {
                     if #available(iOS 17.0, *) {
                         ContentUnavailableView(
                             "Nessun risultato",
                             systemImage: "magnifyingglass",
-                            description: Text("Cerca per barcode, codice o nome prodotto.")
+                            description: Text("Prova con un barcode/codice/nome diverso.")
                         )
                     } else {
                         Text("Nessun risultato")
                             .foregroundStyle(.secondary)
                     }
+
+                    if canApplyBarcode {
+                        Button {
+                            onApplyBarcode(trimmedQuery)
+                            dismiss()
+                        } label: {
+                            Label("Applica barcode \(trimmedQuery)", systemImage: "plus.circle.fill")
+                        }
+                    }
                 } else {
                     ForEach(results, id: \.self) { rowIndex in
                         let row = data[rowIndex]
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(cell(row, idxName).isEmpty ? "—" : cell(row, idxName))
-                                .lineLimit(1)
-                            HStack {
-                                Text(cell(row, idxBarcode))
-                                    .monospacedDigit()
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text("#\(rowIndex)")
+
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(cell(row, idxName).isEmpty ? "—" : cell(row, idxName))
+                                    .lineLimit(1)
+
+                                HStack {
+                                    Text(cell(row, idxBarcode))
+                                        .monospacedDigit()
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text("#\(rowIndex)")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .font(.footnote)
+                            }
+
+                            Button {
+                                onOpenDetail(rowIndex)
+                                dismiss()
+                            } label: {
+                                Image(systemName: "info.circle")
                                     .foregroundStyle(.secondary)
                             }
-                            .font(.footnote)
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("Dettagli riga")
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {
@@ -1866,11 +1899,43 @@ private struct InventorySearchSheet: View {
         .navigationTitle("Cerca")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
+            ToolbarItem(placement: .cancellationAction) {
                 Button("Chiudi") { dismiss() }
             }
+
+            ToolbarItemGroup(placement: .bottomBar) {
+                Button {
+                    showScanner = true
+                } label: {
+                    Label("Scanner", systemImage: "barcode.viewfinder")
+                }
+
+                Spacer()
+
+                Button("Applica") {
+                    onApplyBarcode(trimmedQuery)
+                    dismiss()
+                }
+                .disabled(!canApplyBarcode)
+            }
         }
-        .searchable(text: $searchText, prompt: "Barcode, codice, nome…")
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Barcode, codice, nome…"
+        )
+        .searchFocused($isSearchFocused)
+        .onAppear { isSearchFocused = true }
+        .sheet(isPresented: $showScanner) {
+            ScannerView(title: "Scanner barcode") { code in
+                // riempi il textfield (come volevi)
+                searchText = code
+                showScanner = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    isSearchFocused = true
+                }
+            }
+        }
     }
 }
 
