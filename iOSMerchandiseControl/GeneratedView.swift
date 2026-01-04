@@ -6,14 +6,12 @@ import UIKit
 private struct RowDetailData: Identifiable {
     let id = UUID()
 
-    let rowIndex: Int               // ✅ nuovo
+    let rowIndex: Int
     let barcode: String
     let productName: String?
     let supplierQuantity: String?
-    let countedQuantity: String?
     let oldPurchasePrice: String?
     let oldRetailPrice: String?
-    let newRetailPrice: String?
     let syncError: String?
     let isComplete: Bool
 }
@@ -58,6 +56,9 @@ struct GeneratedView: View {
     /// errori (salvataggio o sync)
     @State private var saveError: String?
 
+    /// errori da scanner / aggiunta manuale
+    @State private var scanError: String?
+
     /// riepilogo di una sincronizzazione andata a buon fine
     @State private var syncSummaryMessage: String?
     
@@ -72,15 +73,11 @@ struct GeneratedView: View {
     @State private var rowDetail: RowDetailData?
 
     /// Hook per scanner / input barcode
-    @State private var scanInput: String = ""
-    @State private var scanError: String?
     @State private var productToEdit: Product?
     @State private var productForHistory: Product?
     @State private var showScanner: Bool = false
     
     @State private var flashRowIndex: Int? = nil
-    
-    @FocusState private var scannerFocused: Bool
     
     @State private var scrollToRowIndex: Int? = nil
     
@@ -101,6 +98,24 @@ struct GeneratedView: View {
     @State private var isExportingShare: Bool = false
     private var isBusy: Bool { isSaving || isSyncing || isExportingShare }
     
+    private var shortageDialogTitle: String {
+        if let p = pendingForceComplete {
+            return "Mancano \(p.missing)"
+        }
+        return "Mancano merce"
+    }
+    
+    private struct PendingForceComplete: Identifiable {
+        let id = UUID()
+        let rowIndex: Int
+        let headerRow: [String]
+        let missing: Int            // ✅ quanti pezzi mancano (positivo)
+        let supplier: String
+        let counted: String
+    }
+
+    @State private var pendingForceComplete: PendingForceComplete?
+
     // MARK: - Body
 
     var body: some View {
@@ -189,7 +204,8 @@ struct GeneratedView: View {
                                         ForEach(visibleRowIndices, id: \.self) { rowIndex in
                                             let hasError = rowHasError(rowIndex: rowIndex, headerRow: headerRow)
                                             let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
-                                            
+                                            let hasShortage = rowHasShortage(rowIndex: rowIndex, headerRow: headerRow)
+
                                             HStack(alignment: .center, spacing: 6) {
                                                 ForEach(columns, id: \.self) { col in
                                                     cellView(
@@ -210,13 +226,11 @@ struct GeneratedView: View {
                                             .padding(.vertical, 6)
                                             .contentShape(Rectangle())
                                             .onTapGesture { flashAndOpenRow(rowIndex, headerRow: headerRow) }
-                                            .background(rowBackground(hasError: hasError, isDone: isDone, rowIndex: rowIndex))
+                                            .background(rowBackground(hasError: hasError, hasShortage: hasShortage, isDone: isDone, rowIndex: rowIndex))
                                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                             .contextMenu {
                                                 Button {
-                                                    let newValue = !isDone
-                                                    bindingForComplete(rowIndex).wrappedValue = newValue
-                                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                                    requestSetComplete(rowIndex: rowIndex, headerRow: headerRow, value: !isDone)
                                                 } label: {
                                                     Label(isDone ? "Segna non completato" : "Segna completato",
                                                           systemImage: isDone ? "circle" : "checkmark.circle.fill")
@@ -243,9 +257,7 @@ struct GeneratedView: View {
                                             }
                                             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                                 Button {
-                                                    let newValue = !isDone
-                                                    bindingForComplete(rowIndex).wrappedValue = newValue
-                                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                                    requestSetComplete(rowIndex: rowIndex, headerRow: headerRow, value: !isDone)
                                                 } label: {
                                                     Label(isDone ? "Non completato" : "Completato",
                                                           systemImage: isDone ? "circle" : "checkmark.circle.fill")
@@ -444,6 +456,27 @@ struct GeneratedView: View {
             } message: {
                 Text(alertMessageText)
             }
+            .confirmationDialog(
+                shortageDialogTitle,
+                isPresented: Binding(
+                    get: { pendingForceComplete != nil },
+                    set: { if !$0 { pendingForceComplete = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Segna completata comunque") {
+                    guard let p = pendingForceComplete else { return }
+                    setComplete(rowIndex: p.rowIndex, headerRow: p.headerRow, value: true)
+                    pendingForceComplete = nil
+                }
+                Button("Annulla", role: .cancel) {
+                    pendingForceComplete = nil
+                }
+            } message: {
+                if let p = pendingForceComplete {
+                    Text("Da file: \(p.supplier)\nContata: \(p.counted)")
+                }
+            }
             // Sheet per edit prodotto (da pannello dettagli)
             .sheet(item: $productToEdit) { product in
                 NavigationStack {
@@ -454,9 +487,6 @@ struct GeneratedView: View {
                 ScannerView(title: "Scanner barcode") { code in
                     handleScannedBarcode(code)
                     showScanner = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        scannerFocused = true
-                    }
                 }
             }
             
@@ -642,12 +672,38 @@ struct GeneratedView: View {
             }
         }
     }
-    
-    private var toolbarStatusSymbol: String? {
-        if isSaving { return nil }                 // quando salva mostriamo solo ProgressView
-        if hasUnsavedChanges { return "clock" }
-        if lastSavedAt != nil { return "checkmark.circle" }
-        return nil
+
+    @ViewBuilder
+    private func completeIndicator(isDone: Bool, delta: Int?) -> some View {
+        if isDone {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Color(uiColor: .systemGreen))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 2)
+
+        } else if let delta, delta < 0 {
+            VStack(spacing: 1) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("\(delta)") // negativo, es. -3
+                    .font(.caption2)
+                    .monospacedDigit()
+            }
+            .foregroundStyle(.orange)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 2)
+            .accessibilityLabel("Mancano \(abs(delta))")
+
+        } else {
+            Image(systemName: "circle")
+                .font(.system(size: 18, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 2)
+        }
     }
 
     // MARK: - Celle
@@ -687,31 +743,16 @@ struct GeneratedView: View {
         } else if key == "complete" {
             let binding = bindingForComplete(rowIndex)
             let isDone = binding.wrappedValue
+            let delta = rowQuantityDelta(rowIndex: rowIndex, headerRow: headerRow)
 
             Button {
-                let newValue = !isDone
-                binding.wrappedValue = newValue
-
-                // (opzionale ma utile) tieni subito coerente anche data[row][complete]
-                if data.indices.contains(rowIndex) {
-                    var row = data[rowIndex]
-                    ensureRow(&row, hasIndex: columnIndex)
-                    row[columnIndex] = newValue ? "1" : ""
-                    data[rowIndex] = row
-                }
+                requestSetComplete(rowIndex: rowIndex, headerRow: headerRow, value: !isDone)
             } label: {
-                Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 18, weight: .semibold))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(isDone ? Color(uiColor: .systemGreen) : Color.secondary)
-                    .symbolEffect(.bounce, value: isDone)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .contentShape(Rectangle())      // tap area più grande
-                    .padding(.vertical, 2)
+                completeIndicator(isDone: isDone, delta: delta)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Completato")
-            .accessibilityValue(isDone ? "Sì" : "No")
+            .accessibilityLabel("Stato riga")
+            .accessibilityValue(isDone ? "Completata" : "Non completata")
         } else {
             let raw = valueForCell(rowIndex: rowIndex, columnIndex: columnIndex)
             let shown = displayValue(for: key, raw: raw)
@@ -741,11 +782,6 @@ struct GeneratedView: View {
         f.maximumFractionDigits = 2
         return f
     }()
-    
-    private func dismissKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
-                                        to: nil, from: nil, for: nil)
-    }
 
     /// Valore testuale di una cella (solo lettura).
     private func valueForCell(rowIndex: Int, columnIndex: Int) -> String {
@@ -774,6 +810,116 @@ struct GeneratedView: View {
         return !value.isEmpty
     }
 
+    private func numberValue(_ raw: String?) -> Double? {
+        guard let raw else { return nil }
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return nil }
+        let normalized = t.replacingOccurrences(of: ",", with: ".")
+        return Double(normalized)
+    }
+
+    private func intValue(_ raw: String?) -> Int? {
+        guard let d = numberValue(raw) else { return nil }
+        return Int(d.rounded())
+    }
+
+    private func supplierQty(rowIndex: Int, headerRow: [String]) -> Int? {
+        guard let idx = headerRow.firstIndex(of: "quantity"),
+              data.indices.contains(rowIndex),
+              data[rowIndex].indices.contains(idx)
+        else { return nil }
+        return intValue(data[rowIndex][idx])
+    }
+
+    private func countedQty(rowIndex: Int, headerRow: [String]) -> Int? {
+        // preferisci editable[row][0]
+        if editable.indices.contains(rowIndex), editable[rowIndex].indices.contains(0) {
+            let v = editable[rowIndex][0].trimmingCharacters(in: .whitespacesAndNewlines)
+            if let i = intValue(v), !v.isEmpty { return i }
+        }
+        // fallback realQuantity colonna (se esiste)
+        if let idx = headerRow.firstIndex(of: "realQuantity"),
+           data.indices.contains(rowIndex),
+           data[rowIndex].indices.contains(idx) {
+            let v = data[rowIndex][idx].trimmingCharacters(in: .whitespacesAndNewlines)
+            if v.isEmpty { return nil }
+            return intValue(v)
+        }
+        return nil
+    }
+
+    /// delta = contata - da file
+    private func rowQuantityDelta(rowIndex: Int, headerRow: [String]) -> Int? {
+        guard let s = supplierQty(rowIndex: rowIndex, headerRow: headerRow),
+              let c = countedQty(rowIndex: rowIndex, headerRow: headerRow)
+        else { return nil }
+        return c - s
+    }
+
+    private func rowHasShortage(rowIndex: Int, headerRow: [String]) -> Bool {
+        guard let d = rowQuantityDelta(rowIndex: rowIndex, headerRow: headerRow) else { return false }
+        return d < 0
+    }
+
+    
+    private func countedTextForRow(rowIndex: Int, headerRow: [String]) -> String {
+        if editable.indices.contains(rowIndex), editable[rowIndex].indices.contains(0) {
+            let v = editable[rowIndex][0].trimmingCharacters(in: .whitespacesAndNewlines)
+            if !v.isEmpty { return v }
+        }
+        if let idx = headerRow.firstIndex(of: "realQuantity"),
+           data.indices.contains(rowIndex),
+           data[rowIndex].indices.contains(idx) {
+            let v = data[rowIndex][idx].trimmingCharacters(in: .whitespacesAndNewlines)
+            if !v.isEmpty { return v }
+        }
+        return "—"
+    }
+
+    private func supplierQtyForRow(rowIndex: Int, headerRow: [String]) -> String {
+        if let idx = headerRow.firstIndex(of: "quantity"),
+           data.indices.contains(rowIndex),
+           data[rowIndex].indices.contains(idx) {
+            let v = data[rowIndex][idx].trimmingCharacters(in: .whitespacesAndNewlines)
+            return v.isEmpty ? "—" : v
+        }
+        return "—"
+    }
+
+    private func setComplete(rowIndex: Int, headerRow: [String], value: Bool) {
+        bindingForComplete(rowIndex).wrappedValue = value
+
+        // opzionale: tieni coerente anche la colonna "complete" nella griglia
+        if let cIdx = headerRow.firstIndex(of: "complete"),
+           data.indices.contains(rowIndex) {
+            var row = data[rowIndex]
+            ensureRow(&row, hasIndex: cIdx)
+            row[cIdx] = value ? "1" : ""
+            data[rowIndex] = row
+        }
+
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private func requestSetComplete(rowIndex: Int, headerRow: [String], value: Bool) {
+        // dialog SOLO se sto provando a segnare ✅ e c'è shortage (delta < 0)
+        if value == true,
+           let delta = rowQuantityDelta(rowIndex: rowIndex, headerRow: headerRow),
+           delta < 0
+        {
+            pendingForceComplete = PendingForceComplete(
+                rowIndex: rowIndex,
+                headerRow: headerRow,
+                missing: abs(delta),
+                supplier: supplierQtyForRow(rowIndex: rowIndex, headerRow: headerRow),
+                counted: countedTextForRow(rowIndex: rowIndex, headerRow: headerRow)
+            )
+            return
+        }
+
+        setComplete(rowIndex: rowIndex, headerRow: headerRow, value: value)
+    }
+    
     /// Conta quante righe hanno un messaggio nella colonna "SyncError".
     private func countSyncErrors() -> Int {
         guard !data.isEmpty else { return 0 }
@@ -837,19 +983,44 @@ struct GeneratedView: View {
             }
         )
     }
+    
+    // MARK: - Binding per celle "data" (non editable[qty/price])
+
+    private func bindingForCell(rowIndex: Int, columnKey: String) -> Binding<String>? {
+        guard
+            !data.isEmpty,
+            let col = data[0].firstIndex(of: columnKey),
+            data.indices.contains(rowIndex)
+        else { return nil }
+
+        return Binding(
+            get: {
+                guard data.indices.contains(rowIndex),
+                      data[rowIndex].indices.contains(col) else { return "" }
+                return data[rowIndex][col]
+            },
+            set: { newValue in
+                guard data.indices.contains(rowIndex) else { return }
+                ensureRow(&data[rowIndex], hasIndex: col)
+                data[rowIndex][col] = newValue
+                markDirtyAndScheduleAutosave()
+            }
+        )
+    }
+
+    private func snapshotValue(rowIndex: Int, columnKey: String) -> String? {
+        guard
+            !data.isEmpty,
+            let col = data[0].firstIndex(of: columnKey),
+            data.indices.contains(rowIndex),
+            data[rowIndex].indices.contains(col)
+        else { return nil }
+
+        let v = data[rowIndex][col].trimmingCharacters(in: .whitespacesAndNewlines)
+        return v.isEmpty ? nil : v
+    }
 
     // MARK: - Scanner & righe manuali
-
-    private func handleScanInput() {
-        let code = scanInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !code.isEmpty else { return }
-
-        scanError = nil
-        handleScannedBarcode(code)
-        scanInput = ""
-        scannerFocused = true
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    }
 
     /// Logica principale di "scan": aggiorna o aggiunge una riga partendo dal barcode.
     private func handleScannedBarcode(_ code: String) {
@@ -1081,28 +1252,8 @@ struct GeneratedView: View {
         // Quantità fornitore (colonna "quantity" se presente)
         let supplierQty = value(for: "quantity")
 
-        // Quantità contata: preferisco l'editable (slot 0) se presente
-        let countedQty: String = {
-            if editable.indices.contains(rowIndex),
-               editable[rowIndex].indices.contains(0) {
-                let v = editable[rowIndex][0].trimmingCharacters(in: .whitespacesAndNewlines)
-                if !v.isEmpty { return v }
-            }
-            return value(for: "realQuantity")
-        }()
-
         let oldPurchase = value(for: "oldPurchasePrice")
         let oldRetail = value(for: "oldRetailPrice")
-
-        // Prezzo nuovo: preferisco l'editable (slot 1)
-        let newRetail: String = {
-            if editable.indices.contains(rowIndex),
-               editable[rowIndex].indices.contains(1) {
-                let v = editable[rowIndex][1].trimmingCharacters(in: .whitespacesAndNewlines)
-                if !v.isEmpty { return v }
-            }
-            return value(for: "RetailPrice")
-        }()
 
         let syncError: String? = {
             guard let errorIndex = headerRow.firstIndex(of: "SyncError"),
@@ -1140,12 +1291,10 @@ struct GeneratedView: View {
             barcode: barcode,
             productName: finalName,
             supplierQuantity: supplierQty,
-            countedQuantity: countedQty,   // ✅ qui
             oldPurchasePrice: oldPurchase,
             oldRetailPrice: oldRetail,
-            newRetailPrice: newRetail,
             syncError: syncError,
-            isComplete: isDone             // ✅ qui
+            isComplete: isDone
         )
     }
 
@@ -1479,13 +1628,15 @@ struct GeneratedView: View {
     }
 
     @ViewBuilder
-    private func rowBackground(hasError: Bool, isDone: Bool, rowIndex: Int) -> some View {
+    private func rowBackground(hasError: Bool, hasShortage: Bool, isDone: Bool, rowIndex: Int) -> some View {
         if hasError {
             Color.red.opacity(0.06)
         } else if flashRowIndex == rowIndex {
             Color(uiColor: .quaternarySystemFill)
         } else if isDone {
             Color(uiColor: .systemGreen).opacity(0.10)
+        } else if hasShortage {
+            Color(uiColor: .systemYellow).opacity(0.16)
         } else {
             Color.clear
         }
@@ -1502,15 +1653,48 @@ struct GeneratedView: View {
 
         let rowOrder = order.isEmpty ? [detail.rowIndex] : order
 
+        let editBindings = RowEditBindings(
+            barcode: bindingForCell(rowIndex: detail.rowIndex, columnKey: "barcode"),
+            itemNumber: bindingForCell(rowIndex: detail.rowIndex, columnKey: "itemNumber"),
+            productName: bindingForCell(rowIndex: detail.rowIndex, columnKey: "productName"),
+            secondProductName: bindingForCell(rowIndex: detail.rowIndex, columnKey: "secondProductName"),
+            quantity: bindingForCell(rowIndex: detail.rowIndex, columnKey: "quantity"),
+            purchasePrice: bindingForCell(rowIndex: detail.rowIndex, columnKey: "purchasePrice"),
+            totalPrice: bindingForCell(rowIndex: detail.rowIndex, columnKey: "totalPrice"),
+            retailPrice: bindingForCell(rowIndex: detail.rowIndex, columnKey: "retailPrice"),
+            discountedPrice: bindingForCell(rowIndex: detail.rowIndex, columnKey: "discountedPrice"),
+            supplier: bindingForCell(rowIndex: detail.rowIndex, columnKey: "supplier"),
+            category: bindingForCell(rowIndex: detail.rowIndex, columnKey: "category")
+        )
+
+        let editSnapshot = RowEditSnapshot(
+            barcode: snapshotValue(rowIndex: detail.rowIndex, columnKey: "barcode"),
+            itemNumber: snapshotValue(rowIndex: detail.rowIndex, columnKey: "itemNumber"),
+            productName: snapshotValue(rowIndex: detail.rowIndex, columnKey: "productName"),
+            secondProductName: snapshotValue(rowIndex: detail.rowIndex, columnKey: "secondProductName"),
+            quantity: snapshotValue(rowIndex: detail.rowIndex, columnKey: "quantity"),
+            purchasePrice: snapshotValue(rowIndex: detail.rowIndex, columnKey: "purchasePrice"),
+            totalPrice: snapshotValue(rowIndex: detail.rowIndex, columnKey: "totalPrice"),
+            retailPrice: snapshotValue(rowIndex: detail.rowIndex, columnKey: "retailPrice"),
+            discountedPrice: snapshotValue(rowIndex: detail.rowIndex, columnKey: "discountedPrice"),
+            supplier: snapshotValue(rowIndex: detail.rowIndex, columnKey: "supplier"),
+            category: snapshotValue(rowIndex: detail.rowIndex, columnKey: "category")
+        )
+
         RowDetailSheetView(
             detail: detail,
             rowOrder: rowOrder,
             onNavigateToRow: { newRow in
                 showRowDetail(for: newRow, headerRow: header)
             },
+            onRefreshRow: { row in
+                showRowDetail(for: row, headerRow: header)
+            },
             onClose: { rowDetail = nil },
             onEditProduct: { openProductEditor(for: detail.barcode) },
             onShowHistory: { openPriceHistory(for: detail.barcode) },
+            editBindings: editBindings,
+            editSnapshot: editSnapshot,
             isComplete: bindingForComplete(detail.rowIndex),
             countedText: bindingForEditable(row: detail.rowIndex, slot: 0),
             newRetailText: bindingForEditable(row: detail.rowIndex, slot: 1)
@@ -1560,11 +1744,11 @@ struct GeneratedView: View {
         let grid = data
         let name = entryTitle
 
-        Task {
+        Task { @MainActor in
             defer { isExportingShare = false }
-
             do {
                 let url = try InventoryXLSXExporter.export(grid: grid, preferredName: name)
+
                 shareItem = ShareItem(url: url)
                 entry.wasExported = true
                 try? context.save()
@@ -1579,9 +1763,13 @@ private struct RowDetailSheetView: View {
     let detail: RowDetailData
     let rowOrder: [Int]
     let onNavigateToRow: (Int) -> Void
+    let onRefreshRow: (Int) -> Void
     let onClose: () -> Void
     let onEditProduct: () -> Void
     let onShowHistory: () -> Void
+
+    let editBindings: RowEditBindings
+    let editSnapshot: RowEditSnapshot
 
     @Binding var isComplete: Bool
     @Binding var countedText: String
@@ -1590,10 +1778,60 @@ private struct RowDetailSheetView: View {
     @FocusState private var focusedField: Field?
     private enum Field { case counted, retail }
 
-    var body: some View {
+    @State private var showPriceCalculator = false
+    @State private var showGenericCalculator = false
+    @State private var showEditRow = false
 
+    private var currentIndex: Int { rowOrder.firstIndex(of: detail.rowIndex) ?? 0 }
+    private var canGoPrev: Bool { currentIndex > 0 }
+    private var canGoNext: Bool { currentIndex < (rowOrder.count - 1) }
+
+    private var supplierQtyInt: Int? { parseIntLike(detail.supplierQuantity) }
+    private var countedQtyInt: Int? {
+        let t = countedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.isEmpty { return nil }
+        return Int(t)
+    }
+
+    private var qtyDelta: Int? {
+        guard let s = supplierQtyInt, let c = countedQtyInt else { return nil }
+        return c - s
+    }
+
+    private var isShortage: Bool { (qtyDelta ?? 0) < 0 }
+    private var isSurplus: Bool { (qtyDelta ?? 0) > 0 }
+
+    @State private var showForceCompleteConfirm = false
+
+    var body: some View {
         NavigationStack {
             Form {
+                // Stato / warning
+                Section {
+                    LabeledContent("Stato") {
+                        Text(isComplete ? "Completata" : "Incompleta")
+                            .foregroundStyle(isComplete ? .green : .secondary)
+                    }
+
+                    if isShortage, let d = qtyDelta {
+                        Label("Mancano \(abs(d))", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+
+                        if isComplete {
+                            Button {
+                                withAnimation(.snappy) { isComplete = false }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            } label: {
+                                Label("Segna incompleta", systemImage: "circle")
+                            }
+                            .foregroundStyle(.orange)
+                        }
+                    } else if isSurplus, let d = qtyDelta {
+                        Label("In più: +\(d)", systemImage: "info.circle")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("Prodotto") {
                     LabeledContent("Barcode") {
                         HStack(spacing: 12) {
@@ -1623,7 +1861,6 @@ private struct RowDetailSheetView: View {
                 }
 
                 Section("Quantità") {
-                    // ✅ rinomina “Fornitore” -> “Da file” (più chiaro)
                     LabeledContent("Da file") {
                         Text(formatIntLike(detail.supplierQuantity) ?? "—")
                             .monospacedDigit()
@@ -1636,13 +1873,14 @@ private struct RowDetailSheetView: View {
                             .multilineTextAlignment(.trailing)
                             .focused($focusedField, equals: .counted)
                             .onChange(of: countedText) { _, newValue in
-                                // tieni solo cifre (quantità intera)
                                 let filtered = newValue.filter(\.isNumber)
                                 if filtered != newValue { countedText = filtered }
+
+                                // Se non torna con il file, suggeriamo "incompleta"
+                                if isShortage, isComplete { isComplete = false }
                             }
                     }
 
-                    // ✅ pulsante rapido “usa fornitore”
                     Button {
                         if let v = formatIntLike(detail.supplierQuantity) {
                             countedText = v
@@ -1662,16 +1900,27 @@ private struct RowDetailSheetView: View {
                     }
 
                     LabeledContent("Vendita (nuovo)") {
-                        TextField("—", text: $newRetailText)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .focused($focusedField, equals: .retail)
-                            .onChange(of: newRetailText) { _, newValue in
-                                // accetta cifre + separatore decimale
-                                let allowed = Set("0123456789.,")
-                                let filtered = String(newValue.filter { allowed.contains($0) })
-                                if filtered != newValue { newRetailText = filtered }
+                        HStack(spacing: 8) {
+                            TextField("—", text: $newRetailText)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .focused($focusedField, equals: .retail)
+                                .onChange(of: newRetailText) { _, newValue in
+                                    let allowed = Set("0123456789.,")
+                                    let filtered = String(newValue.filter { allowed.contains($0) })
+                                    if filtered != newValue { newRetailText = filtered }
+                                }
+
+                            Button {
+                                focusedField = nil
+                                showPriceCalculator = true
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            } label: {
+                                Image(systemName: "calculator")
                             }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("Apri calcolatrice prezzo")
+                        }
                     }
 
                     Button {
@@ -1692,8 +1941,21 @@ private struct RowDetailSheetView: View {
                     }
                 }
 
-                // ✅ tieni le tue azioni attuali (edit prodotto, storico prezzi)
                 Section("Azioni") {
+                    Button {
+                        focusedField = nil
+                        showEditRow = true
+                    } label: {
+                        Label("Modifica riga", systemImage: "square.and.pencil")
+                    }
+
+                    Button {
+                        focusedField = nil
+                        showGenericCalculator = true
+                    } label: {
+                        Label("Calcolatrice", systemImage: "calculator")
+                    }
+
                     Button(action: onEditProduct) {
                         Label("Modifica prodotto", systemImage: "pencil")
                     }
@@ -1706,6 +1968,7 @@ private struct RowDetailSheetView: View {
                 }
             }
             .navigationTitle("")
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Chiudi") { onClose() }
@@ -1719,8 +1982,12 @@ private struct RowDetailSheetView: View {
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        withAnimation(.snappy) { isComplete.toggle() }
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        if !isComplete, isShortage {
+                            showForceCompleteConfirm = true
+                        } else {
+                            withAnimation(.snappy) { isComplete.toggle() }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        }
                     } label: {
                         Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
                             .font(.system(size: 18, weight: .semibold))
@@ -1729,10 +1996,40 @@ private struct RowDetailSheetView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                // Navigazione riga (prev/next) in bottom bar
+                ToolbarItemGroup(placement: .bottomBar) {
+                    Button {
+                        guard canGoPrev else { return }
+                        focusedField = nil
+                        onNavigateToRow(rowOrder[currentIndex - 1])
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    } label: {
+                        Label("Precedente", systemImage: "chevron.up")
+                    }
+                    .disabled(!canGoPrev)
+
+                    Spacer()
+
+                    Text("\(currentIndex + 1)/\(max(rowOrder.count, 1))")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Button {
+                        guard canGoNext else { return }
+                        focusedField = nil
+                        onNavigateToRow(rowOrder[currentIndex + 1])
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    } label: {
+                        Label("Successiva", systemImage: "chevron.down")
+                    }
+                    .disabled(!canGoNext)
+                }
             }
-            .toolbarTitleDisplayMode(.inline)
-            // ✅ toolbar sopra tastiera (molto “Apple”)
             .toolbar {
+                // Toolbar sopra tastiera (Apple-like)
                 ToolbarItemGroup(placement: .keyboard) {
                     if focusedField == .counted {
                         Button("Usa da file") {
@@ -1749,10 +2046,78 @@ private struct RowDetailSheetView: View {
                     Button("Fine") { focusedField = nil }
                 }
             }
+            .confirmationDialog(
+                qtyDelta == nil ? "Mancano merce" : "Mancano \(abs(qtyDelta!))",
+                isPresented: $showForceCompleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Segna completata comunque") {
+                    withAnimation(.snappy) { isComplete = true }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
+                Button("Annulla", role: .cancel) { }
+            } message: {
+                Text("Da file: \(formatIntLike(detail.supplierQuantity) ?? "—")\nContata: \(countedText.isEmpty ? "—" : countedText)")
+            }
+            // Calcolatrici
+            .sheet(isPresented: $showPriceCalculator) {
+                CalculatorSheetView(
+                    title: "Calcolatrice prezzo",
+                    initialExpression: newRetailText,
+                    applyActions: [
+                        .init(title: "Applica a Vendita (nuovo)") { value in
+                            newRetailText = formatResult(value, maxFractionDigits: 2)
+                        }
+                    ],
+                    showsCopyButton: true
+                )
+            }
+            .sheet(isPresented: $showGenericCalculator) {
+                CalculatorSheetView(
+                    title: "Calcolatrice",
+                    initialExpression: "",
+                    applyActions: [
+                        .init(title: "Usa per Contata") { value in
+                            countedText = String(Int(value.rounded()))
+                        },
+                        .init(title: "Usa per Vendita (nuovo)") { value in
+                            newRetailText = formatResult(value, maxFractionDigits: 2)
+                        }
+                    ],
+                    showsCopyButton: true
+                )
+            }
+            // Modifica riga (griglia)
+            .sheet(isPresented: $showEditRow) {
+                NavigationStack {
+                    RowEditSheetView(
+                        bindings: editBindings,
+                        snapshot: editSnapshot,
+                        onSaved: {
+                            onRefreshRow(detail.rowIndex)
+                        }
+                    )
+                }
+            }
         }
     }
 
-    // MARK: - Formatting helpers
+    // MARK: - Helpers
+
+    private func parseIntLike(_ raw: String?) -> Int? {
+        guard let s = formatIntLike(raw), let i = Int(s) else { return nil }
+        return i
+    }
+
+    private func formatResult(_ value: Double, maxFractionDigits: Int) -> String {
+        let f = NumberFormatter()
+        f.locale = Locale.current
+        f.usesGroupingSeparator = false
+        f.minimumFractionDigits = 0
+        f.maximumFractionDigits = maxFractionDigits
+        return f.string(from: NSNumber(value: value)) ?? String(value)
+    }
+
     private func formatIntLike(_ raw: String?) -> String? {
         guard let raw, !raw.isEmpty else { return nil }
         let normalized = raw.replacingOccurrences(of: ",", with: ".")
@@ -1764,11 +2129,521 @@ private struct RowDetailSheetView: View {
         guard let raw, !raw.isEmpty else { return nil }
         let normalized = raw.replacingOccurrences(of: ",", with: ".")
         guard let d = Double(normalized) else { return nil }
-        // niente trailing inutili
         if d.rounded() == d { return String(Int(d)) }
         return String(d)
     }
 }
+
+// MARK: - Row edit (modifica valori nella griglia)
+
+private struct RowEditBindings {
+    var barcode: Binding<String>?
+    var itemNumber: Binding<String>?
+    var productName: Binding<String>?
+    var secondProductName: Binding<String>?
+    var quantity: Binding<String>?
+    var purchasePrice: Binding<String>?
+    var totalPrice: Binding<String>?
+    var retailPrice: Binding<String>?
+    var discountedPrice: Binding<String>?
+    var supplier: Binding<String>?
+    var category: Binding<String>?
+}
+
+private struct RowEditSnapshot {
+    var barcode: String?
+    var itemNumber: String?
+    var productName: String?
+    var secondProductName: String?
+    var quantity: String?
+    var purchasePrice: String?
+    var totalPrice: String?
+    var retailPrice: String?
+    var discountedPrice: String?
+    var supplier: String?
+    var category: String?
+}
+
+private struct RowEditSheetView: View {
+    let bindings: RowEditBindings
+    let snapshot: RowEditSnapshot
+    let onSaved: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var barcode: String
+    @State private var itemNumber: String
+    @State private var productName: String
+    @State private var secondProductName: String
+
+    @State private var quantity: String
+    @State private var purchasePrice: String
+    @State private var totalPrice: String
+    @State private var retailPrice: String
+    @State private var discountedPrice: String
+
+    @State private var supplier: String
+    @State private var category: String
+
+    init(bindings: RowEditBindings, snapshot: RowEditSnapshot, onSaved: @escaping () -> Void) {
+        self.bindings = bindings
+        self.snapshot = snapshot
+        self.onSaved = onSaved
+
+        _barcode = State(initialValue: snapshot.barcode ?? bindings.barcode?.wrappedValue ?? "")
+        _itemNumber = State(initialValue: snapshot.itemNumber ?? bindings.itemNumber?.wrappedValue ?? "")
+        _productName = State(initialValue: snapshot.productName ?? bindings.productName?.wrappedValue ?? "")
+        _secondProductName = State(initialValue: snapshot.secondProductName ?? bindings.secondProductName?.wrappedValue ?? "")
+
+        _quantity = State(initialValue: snapshot.quantity ?? bindings.quantity?.wrappedValue ?? "")
+        _purchasePrice = State(initialValue: snapshot.purchasePrice ?? bindings.purchasePrice?.wrappedValue ?? "")
+        _totalPrice = State(initialValue: snapshot.totalPrice ?? bindings.totalPrice?.wrappedValue ?? "")
+        _retailPrice = State(initialValue: snapshot.retailPrice ?? bindings.retailPrice?.wrappedValue ?? "")
+        _discountedPrice = State(initialValue: snapshot.discountedPrice ?? bindings.discountedPrice?.wrappedValue ?? "")
+
+        _supplier = State(initialValue: snapshot.supplier ?? bindings.supplier?.wrappedValue ?? "")
+        _category = State(initialValue: snapshot.category ?? bindings.category?.wrappedValue ?? "")
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Text("Modifica i valori *della riga nella griglia*. Non aggiorna il database prodotti.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            if anyIdentifiers {
+                Section("Identificativi") {
+                    if bindings.barcode != nil {
+                        TextField("Barcode", text: $barcode)
+                            .keyboardType(.numberPad)
+                    }
+                    if bindings.itemNumber != nil {
+                        TextField("Numero articolo", text: $itemNumber)
+                    }
+                }
+            }
+
+            if anyNames {
+                Section("Nomi") {
+                    if bindings.productName != nil {
+                        TextField("Nome prodotto", text: $productName)
+                    }
+                    if bindings.secondProductName != nil {
+                        TextField("Secondo nome", text: $secondProductName)
+                    }
+                }
+            }
+
+            if anyNumbers {
+                Section("Dati") {
+                    if bindings.quantity != nil {
+                        TextField("Quantità (da file)", text: $quantity)
+                            .keyboardType(.numberPad)
+                    }
+                    if bindings.purchasePrice != nil {
+                        TextField("Prezzo acquisto", text: $purchasePrice)
+                            .keyboardType(.decimalPad)
+                    }
+                    if bindings.totalPrice != nil {
+                        TextField("Totale riga", text: $totalPrice)
+                            .keyboardType(.decimalPad)
+                    }
+                    if bindings.retailPrice != nil {
+                        TextField("Prezzo vendita (file)", text: $retailPrice)
+                            .keyboardType(.decimalPad)
+                    }
+                    if bindings.discountedPrice != nil {
+                        TextField("Prezzo scontato", text: $discountedPrice)
+                            .keyboardType(.decimalPad)
+                    }
+                }
+            }
+
+            if anyMeta {
+                Section("Meta") {
+                    if bindings.supplier != nil {
+                        TextField("Fornitore", text: $supplier)
+                    }
+                    if bindings.category != nil {
+                        TextField("Categoria", text: $category)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Modifica riga")
+        .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Annulla") { dismiss() }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Salva") {
+                    apply()
+                    onSaved()
+                    dismiss()
+                }
+                .fontWeight(.semibold)
+            }
+        }
+    }
+
+    private var anyIdentifiers: Bool { bindings.barcode != nil || bindings.itemNumber != nil }
+    private var anyNames: Bool { bindings.productName != nil || bindings.secondProductName != nil }
+    private var anyNumbers: Bool {
+        bindings.quantity != nil || bindings.purchasePrice != nil || bindings.totalPrice != nil ||
+        bindings.retailPrice != nil || bindings.discountedPrice != nil
+    }
+    private var anyMeta: Bool { bindings.supplier != nil || bindings.category != nil }
+
+    private func apply() {
+        // Nota: qui potresti normalizzare (trim, virgole, ecc). Per ora trim leggero.
+        if let b = bindings.barcode { b.wrappedValue = barcode.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let b = bindings.itemNumber { b.wrappedValue = itemNumber.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let b = bindings.productName { b.wrappedValue = productName.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let b = bindings.secondProductName { b.wrappedValue = secondProductName.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+        if let b = bindings.quantity { b.wrappedValue = quantity.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let b = bindings.purchasePrice { b.wrappedValue = purchasePrice.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let b = bindings.totalPrice { b.wrappedValue = totalPrice.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let b = bindings.retailPrice { b.wrappedValue = retailPrice.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let b = bindings.discountedPrice { b.wrappedValue = discountedPrice.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+        if let b = bindings.supplier { b.wrappedValue = supplier.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let b = bindings.category { b.wrappedValue = category.trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+}
+
+// MARK: - Calculator (sheet)
+
+private struct CalculatorSheetView: View {
+    struct ApplyAction: Identifiable {
+        let id = UUID()
+        let title: String
+        let apply: (Double) -> Void
+    }
+
+    let title: String
+    let initialExpression: String
+    let applyActions: [ApplyAction]
+    let showsCopyButton: Bool
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var expression: String
+    @State private var result: Double? = nil
+
+    init(title: String, initialExpression: String, applyActions: [ApplyAction], showsCopyButton: Bool) {
+        self.title = title
+        self.initialExpression = initialExpression
+        self.applyActions = applyActions
+        self.showsCopyButton = showsCopyButton
+        _expression = State(initialValue: initialExpression)
+    }
+
+    private let grid = [
+        ["7","8","9","÷"],
+        ["4","5","6","×"],
+        ["1","2","3","−"],
+        ["0",".","⌫","+"],
+        ["(",")","C","="]
+    ]
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    TextField("Espressione", text: $expression)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.system(.title3, design: .monospaced))
+                        .onChange(of: expression) { _, _ in
+                            evaluatePreview()
+                        }
+
+                    HStack {
+                        Text("Risultato")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(resultText)
+                            .font(.system(.title3, design: .monospaced))
+                            .monospacedDigit()
+                    }
+                }
+                .padding(.horizontal)
+
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
+                    ForEach(grid.flatMap { $0 }, id: \.self) { key in
+                        Button {
+                            handleKey(key)
+                        } label: {
+                            Text(key)
+                                .font(.system(.title3, design: .monospaced))
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+                .padding(.horizontal)
+
+                if showsCopyButton || !applyActions.isEmpty {
+                    Divider().padding(.top, 4)
+
+                    VStack(spacing: 10) {
+                        if showsCopyButton {
+                            Button {
+                                guard let r = result else { return }
+                                UIPasteboard.general.string = format(r, maxFractionDigits: 6)
+                                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                            } label: {
+                                Label("Copia risultato", systemImage: "doc.on.doc")
+                            }
+                            .disabled(result == nil)
+                        }
+
+                        ForEach(applyActions) { action in
+                            Button(action.title) {
+                                guard let r = result else { return }
+                                action.apply(r)
+                                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                dismiss()
+                            }
+                            .disabled(result == nil)
+                            .fontWeight(.semibold)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 10)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .navigationTitle(title)
+            .toolbarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Chiudi") { dismiss() }
+                }
+            }
+            .onAppear { evaluatePreview() }
+        }
+    }
+
+    private var resultText: String {
+        guard let r = result else { return "—" }
+        return format(r, maxFractionDigits: 6)
+    }
+
+    private func handleKey(_ key: String) {
+        switch key {
+        case "C":
+            expression = ""
+            result = nil
+        case "⌫":
+            if !expression.isEmpty { expression.removeLast() }
+            evaluatePreview()
+        case "=":
+            evaluatePreview()
+            if let r = result {
+                expression = format(r, maxFractionDigits: 6)
+            }
+        case "×":
+            expression.append("*")
+        case "÷":
+            expression.append("/")
+        case "−":
+            expression.append("-")
+        default:
+            expression.append(key)
+        }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private func evaluatePreview() {
+        result = ExpressionEvaluator.evaluate(expression)
+    }
+
+    private func format(_ value: Double, maxFractionDigits: Int) -> String {
+        let f = NumberFormatter()
+        f.locale = Locale.current
+        f.usesGroupingSeparator = false
+        f.minimumFractionDigits = 0
+        f.maximumFractionDigits = maxFractionDigits
+        return f.string(from: NSNumber(value: value)) ?? String(value)
+    }
+}
+
+// MARK: - Expression evaluator ( + - * / e parentesi )
+
+private enum ExpressionEvaluator {
+    private enum Token {
+        case number(Double)
+        case op(Character)
+        case lparen
+        case rparen
+        case unaryMinus
+    }
+
+    static func evaluate(_ raw: String) -> Double? {
+        let s = raw
+            .replacingOccurrences(of: ",", with: ".")
+            .replacingOccurrences(of: " ", with: "")
+        let tokens = tokenize(s)
+        guard !tokens.isEmpty else { return nil }
+        let rpn = toRPN(tokens)
+        return evalRPN(rpn)
+    }
+
+    private static func tokenize(_ s: String) -> [Token] {
+        var out: [Token] = []
+        var i = s.startIndex
+        var prevWasValue = false
+
+        func peekPrevIsValue() -> Bool { prevWasValue }
+
+        while i < s.endIndex {
+            let ch = s[i]
+
+            if ch.isNumber || ch == "." {
+                var j = i
+                while j < s.endIndex, (s[j].isNumber || s[j] == ".") { j = s.index(after: j) }
+                let numStr = String(s[i..<j])
+                if let v = Double(numStr) {
+                    out.append(.number(v))
+                    prevWasValue = true
+                }
+                i = j
+                continue
+            }
+
+            if ch == "(" {
+                out.append(.lparen)
+                prevWasValue = false
+                i = s.index(after: i)
+                continue
+            }
+
+            if ch == ")" {
+                out.append(.rparen)
+                prevWasValue = true
+                i = s.index(after: i)
+                continue
+            }
+
+            if "+-*/".contains(ch) {
+                if ch == "-" && !peekPrevIsValue() {
+                    out.append(.unaryMinus)
+                } else {
+                    out.append(.op(ch))
+                }
+                prevWasValue = false
+                i = s.index(after: i)
+                continue
+            }
+
+            // ignora caratteri non validi
+            i = s.index(after: i)
+        }
+
+        return out
+    }
+
+    private static func precedence(_ t: Token) -> Int {
+        switch t {
+        case .unaryMinus: return 3
+        case .op(let c):
+            switch c {
+            case "*", "/": return 2
+            case "+", "-": return 1
+            default: return 0
+            }
+        default:
+            return 0
+        }
+    }
+
+    private static func isLeftAssociative(_ t: Token) -> Bool {
+        switch t {
+        case .unaryMinus: return false
+        case .op: return true
+        default: return true
+        }
+    }
+
+    private static func toRPN(_ tokens: [Token]) -> [Token] {
+        var output: [Token] = []
+        var stack: [Token] = []
+
+        for t in tokens {
+            switch t {
+            case .number:
+                output.append(t)
+
+            case .unaryMinus, .op:
+                while let top = stack.last {
+                    if case .op = top, (precedence(top) > precedence(t) || (precedence(top) == precedence(t) && isLeftAssociative(t))) {
+                        output.append(stack.removeLast())
+                    } else if case .unaryMinus = top, (precedence(top) > precedence(t) || (precedence(top) == precedence(t) && isLeftAssociative(t))) {
+                        output.append(stack.removeLast())
+                    } else {
+                        break
+                    }
+                }
+                stack.append(t)
+
+            case .lparen:
+                stack.append(t)
+
+            case .rparen:
+                while let top = stack.last {
+                    stack.removeLast()
+                    if case .lparen = top { break }
+                    output.append(top)
+                }
+            }
+        }
+
+        while let top = stack.popLast() {
+            if case .lparen = top { continue }
+            output.append(top)
+        }
+        return output
+    }
+
+    private static func evalRPN(_ tokens: [Token]) -> Double? {
+        var stack: [Double] = []
+
+        for t in tokens {
+            switch t {
+            case .number(let v):
+                stack.append(v)
+
+            case .unaryMinus:
+                guard let a = stack.popLast() else { return nil }
+                stack.append(-a)
+
+            case .op(let c):
+                guard let b = stack.popLast(), let a = stack.popLast() else { return nil }
+                switch c {
+                case "+": stack.append(a + b)
+                case "-": stack.append(a - b)
+                case "*": stack.append(a * b)
+                case "/":
+                    if b == 0 { return nil }
+                    stack.append(a / b)
+                default:
+                    return nil
+                }
+
+            default:
+                return nil
+            }
+        }
+
+        return stack.count == 1 ? stack[0] : nil
+    }
+}
+
 
 private struct InventorySearchSheet: View {
     let data: [[String]]
