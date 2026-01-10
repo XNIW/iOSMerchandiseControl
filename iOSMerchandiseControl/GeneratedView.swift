@@ -722,12 +722,20 @@ struct GeneratedView: View {
         // - "realQuantity" → editable[row][0]
         // - "RetailPrice"  → editable[row][1]
         if key == "realQuantity" {
-            TextField("", text: bindingForEditable(row: rowIndex, slot: 0))
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)   // ✅ QUI
+            let qtyBinding = bindingForEditable(row: rowIndex, slot: 0)
+
+            TextField("", text: qtyBinding)
+                .keyboardType(.numberPad)                 // ✅ era decimalPad
+                .multilineTextAlignment(.trailing)
                 .textFieldStyle(.roundedBorder)
                 .font(.caption2)
+                .onChange(of: qtyBinding.wrappedValue) { _, newValue in
+                    let filtered = newValue.filter(\.isNumber)
+                    if filtered != newValue { qtyBinding.wrappedValue = filtered }
 
+                    // vedi punto 2: auto-sync stato anche dalla griglia
+                    syncCompletionForRow(rowIndex: rowIndex, headerRow: headerRow, haptic: false)
+                }
         } else if key == "RetailPrice" {
             TextField("", text: bindingForEditable(row: rowIndex, slot: 1))
                 .keyboardType(.decimalPad)
@@ -886,10 +894,9 @@ struct GeneratedView: View {
         return "—"
     }
 
-    private func setComplete(rowIndex: Int, headerRow: [String], value: Bool) {
+    private func setComplete(rowIndex: Int, headerRow: [String], value: Bool, haptic: Bool = true) {
         bindingForComplete(rowIndex).wrappedValue = value
 
-        // opzionale: tieni coerente anche la colonna "complete" nella griglia
         if let cIdx = headerRow.firstIndex(of: "complete"),
            data.indices.contains(rowIndex) {
             var row = data[rowIndex]
@@ -898,7 +905,9 @@ struct GeneratedView: View {
             data[rowIndex] = row
         }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        if haptic {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
     }
 
     private func requestSetComplete(rowIndex: Int, headerRow: [String], value: Bool) {
@@ -1091,7 +1100,7 @@ struct GeneratedView: View {
             }
 
             ensureCompleteCapacity()
-            if complete.indices.contains(existingIndex) { complete[existingIndex] = true } // opzionale: scan = completato
+            syncCompletionForRow(rowIndex: existingIndex, headerRow: headerRow, haptic: true)
 
             scanError = nil
 
@@ -1474,6 +1483,24 @@ struct GeneratedView: View {
     }
 
     // MARK: - Helpers
+
+    private func syncCompletionForRow(rowIndex: Int, headerRow: [String], haptic: Bool) {
+        guard complete.indices.contains(rowIndex) else { return }
+        guard let s = supplierQty(rowIndex: rowIndex, headerRow: headerRow) else { return }
+
+        let c = countedQty(rowIndex: rowIndex, headerRow: headerRow) // usa editable[row][0] se presente
+        let shouldBeComplete = (c != nil && c! >= s)
+
+        if shouldBeComplete != complete[rowIndex] {
+            withAnimation(.snappy) {
+                setComplete(rowIndex: rowIndex, headerRow: headerRow, value: shouldBeComplete, haptic: haptic)
+            }
+        } else if c == nil, complete[rowIndex] {
+            withAnimation(.snappy) {
+                setComplete(rowIndex: rowIndex, headerRow: headerRow, value: false, haptic: haptic)
+            }
+        }
+    }
 
     private func formatMoney(_ value: Double) -> String {
         Self.moneyFormatter.string(from: value as NSNumber) ?? String(value)
@@ -1868,17 +1895,28 @@ private struct RowDetailSheetView: View {
                     }
 
                     LabeledContent("Contata") {
-                        TextField("—", text: $countedText)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .focused($focusedField, equals: .counted)
-                            .onChange(of: countedText) { _, newValue in
-                                let filtered = newValue.filter(\.isNumber)
-                                if filtered != newValue { countedText = filtered }
+                        VStack(alignment: .leading, spacing: 4) {
+                            TextField("—", text: $countedText)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .focused($focusedField, equals: .counted)
+                                .onChange(of: countedText) { _, _ in
+                                    syncCompletionFromCountedText(haptic: true)
+                                }
 
-                                // Se non torna con il file, suggeriamo "incompleta"
-                                if isShortage, isComplete { isComplete = false }
+                            if supplierQtyInt != nil,
+                               focusedField == .counted,
+                               countedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            {
+                                Text("✅ automatica quando Contata ≥ Da file")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .transition(.opacity)
                             }
+                        }
+                        .animation(.snappy, value: focusedField == .counted)
+                        .animation(.snappy, value: countedText)
                     }
 
                     Button {
@@ -1971,7 +2009,11 @@ private struct RowDetailSheetView: View {
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Chiudi") { onClose() }
+                    Button("Chiudi") {
+                        focusedField = nil
+                        syncCompletionFromCountedText(haptic: false) // ✅ ricalcolo finale, niente haptic
+                        onClose()
+                    }
                 }
 
                 ToolbarItem(placement: .principal) {
@@ -2104,6 +2146,32 @@ private struct RowDetailSheetView: View {
 
     // MARK: - Helpers
 
+    private func syncCompletionFromCountedText(haptic: Bool) {
+        // 1) solo numeri
+        let filtered = countedText.filter(\.isNumber)
+        if filtered != countedText { countedText = filtered }
+
+        // 2) serve “Da file”
+        guard let s = supplierQtyInt else { return }
+
+        let t = countedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let c = Int(t) else {
+            // se svuota/non valido -> incompleta
+            if isComplete {
+                withAnimation(.snappy) { isComplete = false }
+            }
+            return
+        }
+
+        let shouldBeComplete = (c >= s)
+        if shouldBeComplete != isComplete {
+            withAnimation(.snappy) { isComplete = shouldBeComplete }
+            if haptic {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+        }
+    }
+    
     private func parseIntLike(_ raw: String?) -> Int? {
         guard let s = formatIntLike(raw), let i = Int(s) else { return nil }
         return i
