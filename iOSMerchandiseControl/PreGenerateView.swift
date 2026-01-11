@@ -504,19 +504,20 @@ struct PreGenerateView: View {
         let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return "" }
 
-        // ⚠️ NON includere "barcode" qui, per non perdere zeri iniziali
+        let cleaned = t.normalizedExcelNumberString()
+
         let numericKeys: Set<String> = [
             "quantity", "purchasePrice", "totalPrice",
             "retailPrice", "discountedPrice",
             "realQuantity", "oldPurchasePrice", "oldRetailPrice",
             "RetailPrice"
         ]
-        guard numericKeys.contains(key) else { return t }
+        guard numericKeys.contains(key) else { return cleaned }
 
-        let normalized = t.replacingOccurrences(of: ",", with: ".")
-        guard let d = Double(normalized) else { return t }
+        let normalized = cleaned.replacingOccurrences(of: ",", with: ".")
+        guard let d = Double(normalized) else { return cleaned }
 
-        return Self.previewNumberFormatter.string(from: NSNumber(value: d)) ?? t
+        return Self.previewNumberFormatter.string(from: NSNumber(value: d)) ?? cleaned
     }
 }
 

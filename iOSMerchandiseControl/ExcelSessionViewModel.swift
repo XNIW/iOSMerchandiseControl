@@ -655,10 +655,11 @@ extension ExcelSessionViewModel {
 
             for row in rows.dropFirst() { // salta header
                 guard index < row.count else { continue }
-                let value = row[index].trimmingCharacters(in: .whitespacesAndNewlines)
-                if !value.isEmpty {
-                    samples.append(value)
-                }
+                let value = row[index]
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .normalizedExcelNumberString()
+
+                if !value.isEmpty { samples.append(value) }
                 if samples.count >= maxSamples { break }
             }
 
@@ -716,6 +717,12 @@ struct ExcelAnalyzer {
                 inT = false
                 currentText = ""
             }
+        }
+    }
+    
+    private static func normalizeAllCells(_ rows: [[String]]) -> [[String]] {
+        rows.map { row in
+            row.map { $0.normalizedExcelNumberString() }
         }
     }
 
@@ -1009,7 +1016,7 @@ struct ExcelAnalyzer {
         if looksLikeHtml(data: data) {
             debugLog("Rilevato HTML (anche con estensione .\(ext))", level: .info)
             let rows = try rowsFromHTML(data: data)
-            return analyzeRows(rows)
+            return analyzeRows(normalizeAllCells(rows))
         }
 
         // 2) Prova come XLSX (ZIP), basato sul contenuto
@@ -1017,7 +1024,7 @@ struct ExcelAnalyzer {
             do {
                 debugLog("Firma ZIP rilevata, provo come XLSX", level: .info)
                 let rows = try rowsFromXLSX(at: url)
-                return analyzeRows(rows)
+                return analyzeRows(normalizeAllCells(rows))
             } catch {
                 debugLog("Errore lettura XLSX: \(error.localizedDescription)", level: .warning)
 
@@ -1035,7 +1042,7 @@ struct ExcelAnalyzer {
         if ext == "xls" || ext == "xlsx" {
             debugLog("Provo parser legacy .xls per \(url.lastPathComponent)", level: .info)
             let rows = try rowsFromLegacyXLS(data: data)
-            return analyzeRows(rows)
+            return analyzeRows(normalizeAllCells(rows))
         }
 
         // 4) Estensione non supportata
@@ -2107,6 +2114,37 @@ extension String {
     
     func matches(_ pattern: String) -> Bool {
         return range(of: pattern, options: .regularExpression) != nil
+    }
+    
+    func normalizedExcelNumberString() -> String {
+        let t = self.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return "" }
+
+        // Accetta solo cifre + (eventuale) singolo separatore decimale '.' o ','
+        let allowed = CharacterSet(charactersIn: "0123456789.,")
+        guard t.unicodeScalars.allSatisfy({ allowed.contains($0) }) else { return t }
+
+        let sepCount = t.filter { $0 == "." || $0 == "," }.count
+        guard sepCount <= 1 else { return t }
+
+        guard let sepIndex = t.firstIndex(where: { $0 == "." || $0 == "," }) else {
+            return t // solo cifre
+        }
+
+        let intPart = String(t[..<sepIndex])
+        var fracPart = String(t[t.index(after: sepIndex)...])
+
+        // Se la frazione è tutta zero -> togli i decimali
+        if !fracPart.isEmpty && fracPart.allSatisfy({ $0 == "0" }) {
+            return intPart
+        }
+
+        // Altrimenti elimina solo gli zeri finali
+        while fracPart.last == "0" { fracPart.removeLast() }
+        if fracPart.isEmpty { return intPart }
+
+        let sepChar = t[sepIndex]
+        return intPart + String(sepChar) + fracPart
     }
     
     var columnDescription: String {
