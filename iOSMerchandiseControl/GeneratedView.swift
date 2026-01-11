@@ -14,6 +14,7 @@ private struct RowDetailData: Identifiable {
     let oldRetailPrice: String?
     let syncError: String?
     let isComplete: Bool
+    let autoFocusCounted: Bool
 }
 
 /// Schermata di editing inventario (equivalente base di GeneratedScreen su Android).
@@ -98,6 +99,11 @@ struct GeneratedView: View {
     @State private var isExportingShare: Bool = false
     private var isBusy: Bool { isSaving || isSyncing || isExportingShare }
     
+    @State private var reopenRowDetailAfterScan: Bool = false
+    
+    @State private var focusCountedOnNextDetail: Bool = false
+    @State private var pendingReopenRowIndexAfterScannerDismiss: Int? = nil
+
     private var shortageDialogTitle: String {
         if let p = pendingForceComplete {
             return "Mancano \(p.missing)"
@@ -390,6 +396,24 @@ struct GeneratedView: View {
                     scrollToRowIndex = nil
                 }
             }
+            .onChange(of: showScanner) { _, isShown in
+                guard !isShown else { return }
+
+                // se lo scanner si chiude senza aver scansionato (cancel),
+                // riapri il dettaglio originale
+                if reopenRowDetailAfterScan,
+                   let rowIndex = pendingReopenRowIndexAfterScannerDismiss,
+                   rowDetail == nil
+                {
+                    pendingReopenRowIndexAfterScannerDismiss = nil
+                    reopenRowDetailAfterScan = false
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
+                        let header = data.first ?? []
+                        showRowDetail(for: rowIndex, headerRow: header)
+                    }
+                }
+            }
             .id(entry.id)
             .navigationTitle(entryTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -485,8 +509,35 @@ struct GeneratedView: View {
             }
             .sheet(isPresented: $showScanner) {
                 ScannerView(title: "Scanner barcode") { code in
-                    handleScannedBarcode(code)
+                    let touchedRow = handleScannedBarcode(
+                        code,
+                        incrementExistingRow: !reopenRowDetailAfterScan
+                    )
+
+                    // ✅ Se ho scansionato davvero (touchedRow != nil) non voglio riaprire la vecchia riga
+                    if reopenRowDetailAfterScan, touchedRow != nil {
+                        pendingReopenRowIndexAfterScannerDismiss = nil
+                    }
+
+                    let shouldReopenDetail = reopenRowDetailAfterScan
+                    reopenRowDetailAfterScan = false
+
                     showScanner = false
+
+                    if shouldReopenDetail,
+                       let touchedRow,
+                       let header = data.first
+                    {
+                        // ✅ micro-polish: feedback “success” quando troviamo/agganciamo una riga
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+
+                        // ✅ garantisce focus su “Contata” quando si riapre il dettaglio
+                        focusCountedOnNextDetail = true
+
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            showRowDetail(for: touchedRow, headerRow: header)
+                        }
+                    }
                 }
             }
             
@@ -544,6 +595,22 @@ struct GeneratedView: View {
         }
     }
     
+    private func requestScanFromRowDetail() {
+        // vogliamo tornare al dettaglio dopo lo scan (o dopo cancel)
+        reopenRowDetailAfterScan = true
+        focusCountedOnNextDetail = true
+
+        // se l’utente cancella lo scanner, riapriamo la stessa riga
+        pendingReopenRowIndexAfterScannerDismiss = rowDetail?.rowIndex
+
+        // chiudi prima il dettaglio (evita present-while-dismissing)
+        rowDetail = nil
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            showScanner = true
+        }
+    }
+
     private var floatingActions: some View {
         VStack(spacing: 12) {
 
@@ -1032,9 +1099,10 @@ struct GeneratedView: View {
     // MARK: - Scanner & righe manuali
 
     /// Logica principale di "scan": aggiorna o aggiunge una riga partendo dal barcode.
-    private func handleScannedBarcode(_ code: String) {
+    @discardableResult
+    private func handleScannedBarcode(_ code: String, incrementExistingRow: Bool = true) -> Int? {
         let cleaned = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleaned.isEmpty else { return }
+        guard !cleaned.isEmpty else { return nil }
 
         // Se non c'è ancora header ma siamo in entry manuale, crealo ora
         if data.isEmpty && entry.isManualEntry {
@@ -1049,14 +1117,14 @@ struct GeneratedView: View {
 
         guard !data.isEmpty else {
             scanError = "Nessuna griglia caricata."
-            return
+            return nil
         }
 
         let headerRow = data[0]
 
         guard let barcodeIndex = headerRow.firstIndex(of: "barcode") else {
             scanError = "La griglia non ha una colonna \"barcode\"."
-            return
+            return nil
         }
 
         // 1) Cerco una riga esistente con lo stesso barcode
@@ -1065,58 +1133,64 @@ struct GeneratedView: View {
             guard row.indices.contains(barcodeIndex) else { return false }
             return row[barcodeIndex].trimmingCharacters(in: .whitespacesAndNewlines) == cleaned
         }) {
-            // Se esiste: incremento realQuantity
-            guard let realQuantityIndex = headerRow.firstIndex(of: "realQuantity") else {
-                scanError = "La griglia non ha una colonna \"realQuantity\"."
-                return
-            }
+            if incrementExistingRow {
+                
+                // Se esiste: incremento realQuantity
+                guard let realQuantityIndex = headerRow.firstIndex(of: "realQuantity") else {
+                    scanError = "La griglia non ha una colonna \"realQuantity\"."
+                    return nil
+                }
 
-            let baseFromEditable: String? = {
-                guard editable.indices.contains(existingIndex),
-                      editable[existingIndex].indices.contains(0)
-                else { return nil }
-                let value = editable[existingIndex][0].trimmingCharacters(in: .whitespacesAndNewlines)
-                return value.isEmpty ? nil : value
-            }()
+                let baseFromEditable: String? = {
+                    guard editable.indices.contains(existingIndex),
+                          editable[existingIndex].indices.contains(0)
+                    else { return nil }
+                    let value = editable[existingIndex][0].trimmingCharacters(in: .whitespacesAndNewlines)
+                    return value.isEmpty ? nil : value
+                }()
 
-            let baseFromData: String = {
-                guard data[existingIndex].indices.contains(realQuantityIndex) else { return "" }
-                return data[existingIndex][realQuantityIndex]
-            }()
+                let baseFromData: String = {
+                    guard data[existingIndex].indices.contains(realQuantityIndex) else { return "" }
+                    return data[existingIndex][realQuantityIndex]
+                }()
 
-            let normalized = (baseFromEditable ?? baseFromData)
-                .replacingOccurrences(of: ",", with: ".")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+                let normalized = (baseFromEditable ?? baseFromData)
+                    .replacingOccurrences(of: ",", with: ".")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
 
-            let current = Double(normalized) ?? 0
-            let newValue = current + 1
+                let current = Double(normalized) ?? 0
+                let newValue = current + 1
 
-            ensureEditableCapacity(for: existingIndex)
+                ensureEditableCapacity(for: existingIndex)
 
-            if newValue.rounded() == newValue {
-                editable[existingIndex][0] = String(Int(newValue))
+                if newValue.rounded() == newValue {
+                    editable[existingIndex][0] = String(Int(newValue))
+                } else {
+                    editable[existingIndex][0] = String(format: "%.2f", newValue)
+                }
+
+                ensureCompleteCapacity()
+                syncCompletionForRow(rowIndex: existingIndex, headerRow: headerRow, haptic: true)
+
+                scanError = nil
+
+                if showOnlyErrorRows && !rowHasError(rowIndex: existingIndex, headerRow: headerRow) {
+                    withAnimation(.snappy) { showOnlyErrorRows = false }
+                }
+
+                markDirtyAndScheduleAutosave()
             } else {
-                editable[existingIndex][0] = String(format: "%.2f", newValue)
+                // scan “di navigazione”: non tocca Contata
+                scanError = nil
             }
-
-            ensureCompleteCapacity()
-            syncCompletionForRow(rowIndex: existingIndex, headerRow: headerRow, haptic: true)
-
-            scanError = nil
-
-            if showOnlyErrorRows && !rowHasError(rowIndex: existingIndex, headerRow: headerRow) {
-                withAnimation(.snappy) { showOnlyErrorRows = false }
-            }
-
-            markDirtyAndScheduleAutosave()
             scrollToRowIndex = existingIndex
-            return
+            return existingIndex
         }
 
         // 2) Nessuna riga esistente: per entry manuali creo una nuova riga
         guard entry.isManualEntry else {
             scanError = "Nessuna riga trovata per il barcode \(cleaned)."
-            return
+            return nil
         }
 
         // Assicuriamoci che l'header minimale ci sia
@@ -1189,6 +1263,8 @@ struct GeneratedView: View {
         scanError = product == nil
             ? "Prodotto non trovato in database, riga aggiunta solo con barcode."
             : nil
+
+        return newIndex
     }
 
     /// Aggiunge una nuova riga vuota per entry manuali.
@@ -1295,6 +1371,9 @@ struct GeneratedView: View {
 
         let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
 
+        let shouldFocus = focusCountedOnNextDetail
+        focusCountedOnNextDetail = false
+        
         rowDetail = RowDetailData(
             rowIndex: rowIndex,
             barcode: barcode,
@@ -1303,7 +1382,8 @@ struct GeneratedView: View {
             oldPurchasePrice: oldPurchase,
             oldRetailPrice: oldRetail,
             syncError: syncError,
-            isComplete: isDone
+            isComplete: isDone,
+            autoFocusCounted: shouldFocus
         )
     }
 
@@ -1722,9 +1802,10 @@ struct GeneratedView: View {
             onShowHistory: { openPriceHistory(for: detail.barcode) },
             editBindings: editBindings,
             editSnapshot: editSnapshot,
+            onScanNext: { requestScanFromRowDetail() },
             isComplete: bindingForComplete(detail.rowIndex),
             countedText: bindingForEditable(row: detail.rowIndex, slot: 0),
-            newRetailText: bindingForEditable(row: detail.rowIndex, slot: 1)
+            newRetailText: bindingForEditable(row: detail.rowIndex, slot: 1),
         )
     }
     
@@ -1797,6 +1878,7 @@ private struct RowDetailSheetView: View {
 
     let editBindings: RowEditBindings
     let editSnapshot: RowEditSnapshot
+    let onScanNext: () -> Void
 
     @Binding var isComplete: Bool
     @Binding var countedText: String
@@ -2041,33 +2123,46 @@ private struct RowDetailSheetView: View {
 
                 // Navigazione riga (prev/next) in bottom bar
                 ToolbarItemGroup(placement: .bottomBar) {
+
                     Button {
-                        guard canGoPrev else { return }
-                        focusedField = nil
-                        onNavigateToRow(rowOrder[currentIndex - 1])
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        goPrev()
                     } label: {
-                        Label("Precedente", systemImage: "chevron.up")
+                        Image(systemName: "chevron.up.circle").font(.title3)
                     }
                     .disabled(!canGoPrev)
-
-                    Spacer()
-
-                    Text("\(currentIndex + 1)/\(max(rowOrder.count, 1))")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
+                    .accessibilityLabel("Riga precedente")
 
                     Button {
-                        guard canGoNext else { return }
-                        focusedField = nil
-                        onNavigateToRow(rowOrder[currentIndex + 1])
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        onScanNext()
                     } label: {
-                        Label("Successiva", systemImage: "chevron.down")
+                        Image(systemName: "barcode.viewfinder").font(.title3)
+                    }
+                    .accessibilityLabel("Scansiona prossimo prodotto")
+
+                    Spacer(minLength: 0)
+
+                    ViewThatFits(in: .horizontal) {
+                        Text("Riga \(displayIndex) di \(totalRows)")
+                        Text("\(displayIndex)/\(totalRows)")
+                    }
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .layoutPriority(1)
+
+                    Spacer(minLength: 0)
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        goNext()
+                    } label: {
+                        Image(systemName: "chevron.down.circle").font(.title3)
                     }
                     .disabled(!canGoNext)
+                    .accessibilityLabel("Riga successiva")
                 }
             }
             .toolbar {
@@ -2141,10 +2236,30 @@ private struct RowDetailSheetView: View {
                     )
                 }
             }
+            .onAppear {
+                if detail.autoFocusCounted {
+                    DispatchQueue.main.async {
+                        focusedField = .counted
+                    }
+                }
+            }
         }
     }
 
     // MARK: - Helpers
+
+    private var totalRows: Int { rowOrder.count }
+    private var displayIndex: Int { currentIndex + 1 } // 1-based
+
+    private func goPrev() {
+        guard canGoPrev else { return }
+        onNavigateToRow(rowOrder[currentIndex - 1])
+    }
+
+    private func goNext() {
+        guard canGoNext else { return }
+        onNavigateToRow(rowOrder[currentIndex + 1])
+    }
 
     private func syncCompletionFromCountedText(haptic: Bool) {
         // 1) solo numeri
