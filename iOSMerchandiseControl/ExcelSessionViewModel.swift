@@ -560,7 +560,7 @@ extension ExcelSessionViewModel {
             case "rowNumber": return "Numero riga"
             case "quantity": return "Quantità"
             case "purchasePrice": return "Prezzo d’acquisto"
-            case "totalPrice": return "Totale riga"
+            case "totalPrice": return "Prezzo totale"
             case "retailPrice": return "Prezzo di vendita"
             case "discountedPrice": return "Prezzo scontato"
             case "supplier": return "Fornitore"
@@ -1268,6 +1268,15 @@ struct ExcelAnalyzer {
             dataRows: filteredDataRows,
             hasHeader: hasHeader
         )
+            
+        // ✅ QUI: se barcode/totalPrice puntano a colonne vuote/non valide, li “droppi”
+        if hasHeader {
+             Self.pruneBadMappings(
+                headerMap: &headerMap,
+                 normalizedHeader: &normalizedHeader,
+                 dataRows: filteredDataRows
+            )
+         }
 
         // 6. Euristiche sui dati per colonne mancanti
         headerMap = applyHeuristics(
@@ -1939,15 +1948,21 @@ struct ExcelAnalyzer {
         guard !dataRows.isEmpty else { return nil }
         
         // Ricostruiamo la mappatura colonne usando le stesse euristiche di analyzeRows
+        var normalizedHeader = header
         var headerMap = identifyColumns(
-            normalizedHeader: header,
+            normalizedHeader: normalizedHeader,
             dataRows: dataRows,
             hasHeader: true
+        )
+        Self.pruneBadMappings(
+            headerMap: &headerMap,
+            normalizedHeader: &normalizedHeader,
+            dataRows: dataRows
         )
         headerMap = applyHeuristics(
             headerMap: headerMap,
             dataRows: dataRows,
-            normalizedHeader: header
+            normalizedHeader: normalizedHeader
         )
         
         let confidence = calculateAnalysisConfidence(
@@ -2059,6 +2074,61 @@ struct ExcelAnalyzer {
         
         return issues
     }
+    
+    // MARK: - Drop wrong header-based mappings (misaligned headers)
+    private static func pruneBadMappings(
+        headerMap: inout [String: Int],
+        normalizedHeader: inout [String],
+        dataRows: [[String]],
+        sampleLimit: Int = 200,
+        minNonBlankRatio: Double = 0.05,   // < 5% considerata “quasi vuota”
+        minNonBlankCount: Int = 3          // oppure meno di 3 celle piene
+    ) {
+        guard !headerMap.isEmpty, !dataRows.isEmpty else { return }
+
+        let sample = dataRows.prefix(sampleLimit)
+        let sampleCount = sample.count
+        guard sampleCount > 0 else { return }
+
+        // Cache: se per qualche motivo più chiavi puntano alla stessa colonna, non riscansioniamo.
+        var nonBlankCountByCol: [Int: Int] = [:]
+
+        func nonBlankCount(for col: Int) -> Int {
+            if let cached = nonBlankCountByCol[col] { return cached }
+            var count = 0
+            for row in sample {
+                guard col >= 0, col < row.count else { continue }
+                if !row[col].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    count += 1
+                }
+            }
+            nonBlankCountByCol[col] = count
+            return count
+        }
+
+        var keysToRemove: [String] = []
+        keysToRemove.reserveCapacity(headerMap.count)
+
+        for (key, col) in headerMap {
+            let nonBlank = nonBlankCount(for: col)
+            let ratio = Double(nonBlank) / Double(sampleCount)
+
+            if nonBlank < minNonBlankCount || ratio < minNonBlankRatio {
+                keysToRemove.append(key)
+            }
+        }
+
+        guard !keysToRemove.isEmpty else { return }
+
+        for key in keysToRemove {
+            guard let col = headerMap.removeValue(forKey: key) else { continue }
+
+            // “Togli quell’intestazione”: rimetti un placeholder neutro, così non sembra “riconosciuta”
+            if normalizedHeader.indices.contains(col) {
+                normalizedHeader[col] = "col\(col + 1)"
+            }
+        }
+    }
 }
 
 // MARK: - Errori Excel
@@ -2166,7 +2236,7 @@ extension String {
         case "discountedPrice":
             return "Prezzo di vendita scontato."
         case "totalPrice":
-            return "Totale riga (quantità × prezzo unitario)."
+            return "Prezzo totale (quantità × prezzo unitario)."
         case "supplier":
             return "Nome del fornitore del prodotto."
         case "category":

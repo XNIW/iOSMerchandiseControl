@@ -2430,7 +2430,7 @@ private struct RowEditSheetView: View {
                             .keyboardType(.decimalPad)
                     }
                     if bindings.totalPrice != nil {
-                        TextField("Totale riga", text: $totalPrice)
+                        TextField("Prezzo totale", text: $totalPrice)
                             .keyboardType(.decimalPad)
                     }
                     if bindings.retailPrice != nil {
