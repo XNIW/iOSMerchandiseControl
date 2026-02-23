@@ -2,7 +2,19 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
+    @AppStorage("appTheme") private var appTheme: String = "system"
     @StateObject private var excelSession = ExcelSessionViewModel()
+
+    private var resolvedColorScheme: ColorScheme? {
+        switch appTheme {
+        case "light":
+            return .light
+        case "dark":
+            return .dark
+        default:
+            return nil
+        }
+    }
 
     var body: some View {
         TabView {
@@ -39,6 +51,7 @@ struct ContentView: View {
                 Label("Opzioni", systemImage: "gearshape")
             }
         }
+        .preferredColorScheme(resolvedColorScheme)
     }
 }
 
