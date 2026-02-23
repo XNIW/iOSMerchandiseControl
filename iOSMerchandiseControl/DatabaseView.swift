@@ -167,15 +167,6 @@ struct DatabaseView: View {
         }
         .navigationTitle("Database")
         .toolbar {
-            // bottone per aprire Cronologia
-            ToolbarItem(placement: .navigationBarLeading) {
-                NavigationLink {
-                    HistoryView()
-                } label: {
-                    Image(systemName: "clock.arrow.circlepath")
-                }
-            }
-
             // import / export + nuovo prodotto
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack {
