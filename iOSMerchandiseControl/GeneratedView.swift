@@ -1315,8 +1315,10 @@ struct GeneratedView: View {
 
     // MARK: - Pannello dettagli riga
 
-    private func showRowDetail(for rowIndex: Int, headerRow: [String]) {
-        guard data.indices.contains(rowIndex) else { return }
+    private func makeRowDetailData(for rowIndex: Int, headerRow: [String], isComplete: Bool, autoFocusCounted: Bool, skipProductNameLookup: Bool = false) -> RowDetailData {
+        guard data.indices.contains(rowIndex) else {
+            fatalError("makeRowDetailData: rowIndex out of range")
+        }
         let row = data[rowIndex]
 
         func value(for column: String) -> String {
@@ -1328,15 +1330,12 @@ struct GeneratedView: View {
 
         let barcode = value(for: "barcode").trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Nome prodotto dalla riga (productName / secondProductName)
         var rowName = value(for: "productName")
         if rowName.isEmpty {
             rowName = value(for: "secondProductName")
         }
 
-        // Quantità fornitore (colonna "quantity" se presente)
         let supplierQty = value(for: "quantity")
-
         let oldPurchase = value(for: "oldPurchasePrice")
         let oldRetail = value(for: "oldRetailPrice")
 
@@ -1348,10 +1347,10 @@ struct GeneratedView: View {
             return v.isEmpty ? nil : v
         }()
 
-        // Se non ho nome sulla riga, provo a leggerlo dal DB
         var finalName: String? = rowName.isEmpty ? nil : rowName
 
-        if finalName == nil, !barcode.isEmpty {
+        // Lookup nome da DB solo alla prima apertura; in navigazione prev/next si usa solo il dato della riga per risposta istantanea
+        if !skipProductNameLookup, finalName == nil, !barcode.isEmpty {
             do {
                 let descriptor = FetchDescriptor<Product>(
                     predicate: #Predicate { $0.barcode == barcode }
@@ -1369,12 +1368,7 @@ struct GeneratedView: View {
             }
         }
 
-        let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
-
-        let shouldFocus = focusCountedOnNextDetail
-        focusCountedOnNextDetail = false
-        
-        rowDetail = RowDetailData(
+        return RowDetailData(
             rowIndex: rowIndex,
             barcode: barcode,
             productName: finalName,
@@ -1382,9 +1376,25 @@ struct GeneratedView: View {
             oldPurchasePrice: oldPurchase,
             oldRetailPrice: oldRetail,
             syncError: syncError,
-            isComplete: isDone,
-            autoFocusCounted: shouldFocus
+            isComplete: isComplete,
+            autoFocusCounted: autoFocusCounted
         )
+    }
+
+    private func showRowDetail(for rowIndex: Int, headerRow: [String], animated: Bool = true) {
+        guard data.indices.contains(rowIndex) else { return }
+        let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
+        let shouldFocus = focusCountedOnNextDetail
+        focusCountedOnNextDetail = false
+        let skipLookup = !animated
+        let detail = makeRowDetailData(for: rowIndex, headerRow: headerRow, isComplete: isDone, autoFocusCounted: shouldFocus, skipProductNameLookup: skipLookup)
+        if animated {
+            rowDetail = detail
+        } else {
+            var tx = Transaction(animation: nil)
+            tx.disablesAnimations = true
+            withTransaction(tx) { rowDetail = detail }
+        }
     }
 
     // MARK: - Salvataggio & sync
@@ -1792,10 +1802,10 @@ struct GeneratedView: View {
             detail: detail,
             rowOrder: rowOrder,
             onNavigateToRow: { newRow in
-                showRowDetail(for: newRow, headerRow: header)
+                showRowDetail(for: newRow, headerRow: header, animated: false)
             },
             onRefreshRow: { row in
-                showRowDetail(for: row, headerRow: header)
+                showRowDetail(for: row, headerRow: header, animated: false)
             },
             onClose: { rowDetail = nil },
             onEditProduct: { openProductEditor(for: detail.barcode) },
@@ -1915,12 +1925,27 @@ private struct RowDetailSheetView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // Stato / warning
+                // Stato / warning (riga Stato tappabile per toggle, comodo oltre al pulsante in basso)
                 Section {
-                    LabeledContent("Stato") {
-                        Text(isComplete ? "Completata" : "Incompleta")
-                            .foregroundStyle(isComplete ? .green : .secondary)
+                    Button {
+                        if !isComplete, isShortage {
+                            showForceCompleteConfirm = true
+                        } else {
+                            withAnimation(.snappy) { isComplete.toggle() }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        }
+                    } label: {
+                        LabeledContent("Stato") {
+                            HStack(spacing: 6) {
+                                Text(isComplete ? "Completata" : "Incompleta")
+                                    .foregroundStyle(isComplete ? .green : .secondary)
+                                Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
+                                    .font(.subheadline)
+                                    .foregroundStyle(isComplete ? .green : .secondary)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
 
                     if isShortage, let d = qtyDelta {
                         Label("Mancano \(abs(d))", systemImage: "exclamationmark.triangle.fill")
@@ -2104,26 +2129,8 @@ private struct RowDetailSheetView: View {
                         .lineLimit(1)
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        if !isComplete, isShortage {
-                            showForceCompleteConfirm = true
-                        } else {
-                            withAnimation(.snappy) { isComplete.toggle() }
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        }
-                    } label: {
-                        Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 18, weight: .semibold))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(isComplete ? .green : .secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                // Navigazione riga (prev/next) in bottom bar
+                // Navigazione riga + Completata in bottom bar
                 ToolbarItemGroup(placement: .bottomBar) {
-
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         goPrev()
@@ -2154,6 +2161,23 @@ private struct RowDetailSheetView: View {
                     .layoutPriority(1)
 
                     Spacer(minLength: 0)
+
+                    Button {
+                        if !isComplete, isShortage {
+                            showForceCompleteConfirm = true
+                        } else {
+                            withAnimation(.snappy) { isComplete.toggle() }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        }
+                    } label: {
+                        Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
+                            .font(.title3)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(isComplete ? .green : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(isComplete ? "Completata" : "Incompleta")
+                    .accessibilityHint("Tocca per cambiare stato")
 
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
