@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 /// Schermata equivalente a PreGenerateScreen su Android:
 /// - mostra anteprima header + qualche riga
@@ -37,8 +38,36 @@ struct PreGenerateView: View {
     @State private var debouncedCategoryQuery = ""
     
     @State private var showLowConfidenceConfirm = false
+    @State private var filePickerMode: FilePickerMode = .append
+    @State private var isFileImporterPresented = false
+    @State private var filePickerError: String?
 
     private let suggestionDebounceMs: UInt64 = 220
+
+    private enum FilePickerMode {
+        case append
+        case reload
+    }
+
+    private var errorAlertTitle: String {
+        generationError != nil ? "Errore durante la generazione" : "Errore"
+    }
+
+    private var errorAlertMessage: String {
+        generationError ?? filePickerError ?? "Errore sconosciuto."
+    }
+
+    private var isErrorAlertPresented: Binding<Bool> {
+        Binding(
+            get: { generationError != nil || filePickerError != nil },
+            set: { newValue in
+                if !newValue {
+                    generationError = nil
+                    filePickerError = nil
+                }
+            }
+        )
+    }
     
     var body: some View {
         ZStack {
@@ -334,13 +363,13 @@ struct PreGenerateView: View {
             Text("L’analisi del file sembra poco affidabile. Vuoi generare l’inventario lo stesso?")
         }
         // lascia qui TUTTI i tuoi modifier: alert, navigationDestination, sheet, toolbar, task, ecc.
-        .alert("Errore durante la generazione", isPresented: Binding(
-            get: { generationError != nil },
-            set: { newValue in if !newValue { generationError = nil } }
-        )) {
-            Button("OK", role: .cancel) { generationError = nil }
+        .alert(errorAlertTitle, isPresented: isErrorAlertPresented) {
+            Button("OK", role: .cancel) {
+                generationError = nil
+                filePickerError = nil
+            }
         } message: {
-            Text(generationError ?? "Errore sconosciuto.")
+            Text(errorAlertMessage)
         }
         .navigationDestination(isPresented: $navigateToGenerated) {
             Group {
@@ -373,7 +402,62 @@ struct PreGenerateView: View {
                 selection: $excelSession.categoryName
             )
         }
+        .fileImporter(
+            isPresented: $isFileImporterPresented,
+            allowedContentTypes: [.spreadsheet, .html],
+            allowsMultipleSelection: true
+        ) { result in
+            let mode = filePickerMode
+
+            switch result {
+            case .success(let urls):
+                guard !urls.isEmpty else { return }
+
+                Task {
+                    let accessFlags = urls.map { $0.startAccessingSecurityScopedResource() }
+                    defer {
+                        for (url, accessing) in zip(urls, accessFlags) where accessing {
+                            url.stopAccessingSecurityScopedResource()
+                        }
+                    }
+
+                    do {
+                        switch mode {
+                        case .append:
+                            try await excelSession.appendRows(from: urls)
+                        case .reload:
+                            try await excelSession.load(from: urls, in: context)
+                            ignoreWarnings = false
+                        }
+                    } catch {
+                        filePickerError = excelSession.lastError ?? error.localizedDescription
+                    }
+                }
+
+            case .failure(let error):
+                filePickerError = error.localizedDescription
+            }
+        }
         .scrollDismissesKeyboard(.interactively)   // scroll = chiude tastiera (super iOS)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    filePickerMode = .append
+                    isFileImporterPresented = true
+                } label: {
+                    Label("Aggiungi file", systemImage: "doc.badge.plus")
+                }
+                .disabled(excelSession.isLoading || excelSession.rows.isEmpty)
+
+                Button {
+                    filePickerMode = .reload
+                    isFileImporterPresented = true
+                } label: {
+                    Label("Ricarica file", systemImage: "arrow.clockwise")
+                }
+                .disabled(excelSession.isLoading)
+            }
+        }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 // pulsante “cancella” contestuale (optional ma molto iOS)

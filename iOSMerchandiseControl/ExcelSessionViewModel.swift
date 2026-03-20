@@ -26,6 +26,9 @@ final class ExcelSessionViewModel: ObservableObject {
     // 🔹 Header normalizzato (es. ["barcode", "productName", "purchasePrice", ...])
     @Published var normalizedHeader: [String] = []
 
+    // Snapshot dell'header normalizzato iniziale, usato per validare gli append.
+    @Published var initialNormalizedHeader: [String] = []
+
     // Tutte le righe dell'Excel (riga 0 = header normalizzato)
     @Published var rows: [[String]] = []
 
@@ -96,10 +99,12 @@ final class ExcelSessionViewModel: ObservableObject {
     func resetState() {
         originalHeader = []
         normalizedHeader = []
+        initialNormalizedHeader = []
         rows = []
         selectedColumns = []
         supplierName = ""
         categoryName = ""
+        currentHistoryEntry = nil
         isLoading = false
         progress = nil
         lastError = nil
@@ -207,6 +212,7 @@ final class ExcelSessionViewModel: ObservableObject {
             // Torniamo sul MainActor
             self.originalHeader = originalHeader
             self.normalizedHeader = normalizedHeader
+            self.initialNormalizedHeader = normalizedHeader
             self.rows = allRows
             self.selectedColumns = Array(repeating: true, count: normalizedHeader.count)
 
@@ -224,6 +230,70 @@ final class ExcelSessionViewModel: ObservableObject {
 
             progress = 1
         } catch {
+            let message: String
+            if let le = error as? LocalizedError, let desc = le.errorDescription {
+                message = desc
+            } else {
+                message = error.localizedDescription
+            }
+            lastError = message
+            isLoading = false
+            progress = nil
+            throw error
+        }
+
+        isLoading = false
+        progress = nil
+    }
+
+    /// Aggiunge righe da file aggiuntivi ai dati già caricati.
+    /// Valida che gli header normalizzati siano compatibili con il dataset iniziale.
+    func appendRows(from urls: [URL]) async throws {
+        guard !urls.isEmpty else { return }
+        guard !initialNormalizedHeader.isEmpty, !rows.isEmpty else {
+            throw ExcelLoadError.invalidFormat("Nessun dato presente. Carica prima un file.")
+        }
+
+        isLoading = true
+        progress = 0
+        lastError = nil
+
+        do {
+            for (index, url) in urls.enumerated() {
+                let (_, newHeader, newDataRows) = try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
+
+                if newHeader != initialNormalizedHeader {
+                    throw ExcelLoadError.incompatibleHeader
+                }
+
+                rows.append(contentsOf: newDataRows)
+                progress = Double(index + 1) / Double(urls.count)
+            }
+
+            if let metrics = ExcelAnalyzer.computeAnalysisMetrics(
+                header: normalizedHeader,
+                rows: rows
+            ) {
+                analysisMetrics = metrics
+                analysisConfidence = metrics.confidenceScore
+            } else {
+                analysisMetrics = nil
+                analysisConfidence = nil
+            }
+
+            progress = 1
+        } catch {
+            if let metrics = ExcelAnalyzer.computeAnalysisMetrics(
+                header: normalizedHeader,
+                rows: rows
+            ) {
+                analysisMetrics = metrics
+                analysisConfidence = metrics.confidenceScore
+            } else {
+                analysisMetrics = nil
+                analysisConfidence = nil
+            }
+
             let message: String
             if let le = error as? LocalizedError, let desc = le.errorDescription {
                 message = desc

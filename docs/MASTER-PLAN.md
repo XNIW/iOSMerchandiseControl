@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. TASK-002 e` bloccato in attesa di rivalutazione del perimetro sul supporto `Apri con` cross-app.
+Nessun task attivo. TASK-003 completato. Prossimo task da attivare: TASK-004 (GeneratedView editing parity) o TASK-005 (ImportAnalysis error export), entrambi HIGH.
 
 ## Stato globale
 IDLE — Nessun task attivo in lavorazione
-> IDLE = nessun task attivo; il progetto e` fermo su un blocco da riallineare prima della ripresa.
+> IDLE = nessun task attivo; TASK-002 resta bloccato, TASK-003 completato.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -51,7 +51,7 @@ Qualunque altra transizione è invalida.
 ## Task attivo
 Nessuno.
 
-Ultimo task bloccato:
+Task bloccato non attivo:
 - Task ID: TASK-002
 - Titolo: External file opening (document handoff via CFBundleDocumentTypes)
 - File task: `docs/TASKS/TASK-002-external-file-opening.md`
@@ -73,7 +73,7 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | ID | Titolo | Stato | Priorità |
 |----|--------|-------|----------|
 | TASK-002 | External file opening (document handoff) | BLOCKED | CRITICAL |
-| TASK-003 | PreGenerate append/reload parity | TODO | HIGH |
+| TASK-003 | PreGenerate append/reload parity | DONE | HIGH |
 | TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | TODO | HIGH |
 | TASK-005 | ImportAnalysis error export + inline editing | TODO | HIGH |
 | TASK-006 | Database full import/export (multi-sheet) | TODO | HIGH |
@@ -86,6 +86,7 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | ID | Titolo | Data completamento |
 |----|--------|--------------------|
 | TASK-001 | Gap Audit iOS vs Android — Censimento funzionalità mancanti | 2026-03-19 |
+| TASK-003 | PreGenerate append/reload parity | 2026-03-20 |
 
 ## Blocchi e dipendenze
 - TASK-002 bloccato.
