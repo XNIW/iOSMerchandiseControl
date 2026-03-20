@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. TASK-003 completato. Prossimo task da attivare: TASK-004 (GeneratedView editing parity) o TASK-005 (ImportAnalysis error export), entrambi HIGH.
+Nessun task attivo. TASK-004 completato. Prossimo task da attivare: TASK-005 (ImportAnalysis error export) o altro task HIGH nel backlog.
 
 ## Stato globale
 IDLE — Nessun task attivo in lavorazione
-> IDLE = nessun task attivo; TASK-002 resta bloccato, TASK-003 completato.
+> TASK-002 bloccato, TASK-003 completato, TASK-004 completato.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -74,7 +74,7 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 |----|--------|-------|----------|
 | TASK-002 | External file opening (document handoff) | BLOCKED | CRITICAL |
 | TASK-003 | PreGenerate append/reload parity | DONE | HIGH |
-| TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | TODO | HIGH |
+| TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | DONE | HIGH |
 | TASK-005 | ImportAnalysis error export + inline editing | TODO | HIGH |
 | TASK-006 | Database full import/export (multi-sheet) | TODO | HIGH |
 | TASK-007 | History advanced filters | TODO | MEDIUM |
@@ -87,6 +87,7 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 |----|--------|--------------------|
 | TASK-001 | Gap Audit iOS vs Android — Censimento funzionalità mancanti | 2026-03-19 |
 | TASK-003 | PreGenerate append/reload parity | 2026-03-20 |
+| TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | 2026-03-20 |
 
 ## Blocchi e dipendenze
 - TASK-002 bloccato.

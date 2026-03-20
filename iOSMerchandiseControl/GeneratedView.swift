@@ -47,6 +47,9 @@ struct GeneratedView: View {
     @State private var data: [[String]] = []
     @State private var editable: [[String]] = []
     @State private var complete: [Bool] = []
+    @State private var originalData: [[String]] = []
+    @State private var originalEditable: [[String]] = []
+    @State private var originalComplete: [Bool] = []
     
     @Environment(\.scenePhase) private var scenePhase
 
@@ -121,6 +124,12 @@ struct GeneratedView: View {
     }
 
     @State private var pendingForceComplete: PendingForceComplete?
+    @State private var showRevertConfirmation: Bool = false
+    @State private var pendingDeleteRowIndex: Int? = nil
+
+    private var allRowsComplete: Bool {
+        complete.count > 1 && complete.dropFirst().allSatisfy { $0 }
+    }
 
     // MARK: - Body
 
@@ -247,6 +256,12 @@ struct GeneratedView: View {
                                                 } label: {
                                                     Label("Dettagli riga", systemImage: "info.circle")
                                                 }
+
+                                                Button(role: .destructive) {
+                                                    pendingDeleteRowIndex = rowIndex
+                                                } label: {
+                                                    Label("Elimina riga", systemImage: "trash")
+                                                }
                                                 
                                                 if let bIndex = headerRow.firstIndex(of: "barcode"),
                                                    data[rowIndex].indices.contains(bIndex) {
@@ -278,6 +293,13 @@ struct GeneratedView: View {
                                                     Label("Dettagli", systemImage: "info.circle")
                                                 }
                                                 .tint(.blue)
+
+                                                Button(role: .destructive) {
+                                                    pendingDeleteRowIndex = rowIndex
+                                                } label: {
+                                                    Label("Elimina", systemImage: "trash")
+                                                }
+                                                .tint(.red)
                                                 
                                                 if let bIndex = headerRow.firstIndex(of: "barcode"),
                                                    data[rowIndex].indices.contains(bIndex) {
@@ -428,6 +450,23 @@ struct GeneratedView: View {
                         }
 
                         Button {
+                            markAllComplete(!allRowsComplete)
+                        } label: {
+                            Label(
+                                allRowsComplete ? "Segna tutti incompleti" : "Segna tutti completati",
+                                systemImage: allRowsComplete ? "circle" : "checkmark.circle.fill"
+                            )
+                        }
+                        .disabled(data.count <= 1)
+
+                        Button(role: .destructive) {
+                            showRevertConfirmation = true
+                        } label: {
+                            Label("Ripristina originale", systemImage: "arrow.uturn.backward")
+                        }
+                        .disabled(originalData.isEmpty)
+
+                        Button {
                             shareAsXLSX()
                         } label: {
                             Label("Condividi…", systemImage: "square.and.arrow.up")
@@ -499,6 +538,44 @@ struct GeneratedView: View {
             } message: {
                 if let p = pendingForceComplete {
                     Text("Da file: \(p.supplier)\nContata: \(p.counted)")
+                }
+            }
+            .confirmationDialog(
+                "Ripristinare i dati originali?",
+                isPresented: $showRevertConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Ripristina originale", role: .destructive) {
+                    revertToOriginalSnapshot()
+                }
+                Button("Annulla", role: .cancel) { }
+            } message: {
+                Text("La griglia tornerà allo stato caricato all'apertura di questa sessione.")
+            }
+            .confirmationDialog(
+                "Eliminare la riga selezionata?",
+                isPresented: Binding(
+                    get: { pendingDeleteRowIndex != nil },
+                    set: { if !$0 { pendingDeleteRowIndex = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Elimina riga", role: .destructive) {
+                    guard let rowIndex = pendingDeleteRowIndex else { return }
+                    deleteRow(at: rowIndex)
+                    pendingDeleteRowIndex = nil
+                }
+                Button("Annulla", role: .cancel) {
+                    pendingDeleteRowIndex = nil
+                }
+            } message: {
+                if let rowIndex = pendingDeleteRowIndex {
+                    let barcode = barcodeForRow(rowIndex)
+                    if barcode.isEmpty {
+                        Text("Questa azione rimuove definitivamente la riga dalla griglia.")
+                    } else {
+                        Text("Barcode riga: \(barcode)")
+                    }
                 }
             }
             // Sheet per edit prodotto (da pannello dettagli)
@@ -738,6 +815,12 @@ struct GeneratedView: View {
                 complete = Array(repeating: false, count: data.count)
             }
         }
+
+        if originalData.isEmpty, !data.isEmpty {
+            originalData = data
+            originalEditable = editable
+            originalComplete = complete
+        }
     }
 
     @ViewBuilder
@@ -961,8 +1044,14 @@ struct GeneratedView: View {
         return "—"
     }
 
-    private func setComplete(rowIndex: Int, headerRow: [String], value: Bool, haptic: Bool = true) {
-        bindingForComplete(rowIndex).wrappedValue = value
+    private func setComplete(rowIndex: Int, headerRow: [String], value: Bool, haptic: Bool = true, scheduleAutosave: Bool = true) {
+        guard rowIndex >= 1,
+              complete.indices.contains(rowIndex),
+              data.indices.contains(rowIndex) else {
+            return
+        }
+
+        complete[rowIndex] = value
 
         if let cIdx = headerRow.firstIndex(of: "complete"),
            data.indices.contains(rowIndex) {
@@ -970,6 +1059,10 @@ struct GeneratedView: View {
             ensureRow(&row, hasIndex: cIdx)
             row[cIdx] = value ? "1" : ""
             data[rowIndex] = row
+        }
+
+        if scheduleAutosave {
+            markDirtyAndScheduleAutosave()
         }
 
         if haptic {
@@ -994,6 +1087,74 @@ struct GeneratedView: View {
         }
 
         setComplete(rowIndex: rowIndex, headerRow: headerRow, value: value)
+    }
+
+    private func markAllComplete(_ value: Bool) {
+        guard data.count > 1, complete.count > 1 else { return }
+        guard !complete.dropFirst().allSatisfy({ $0 == value }) else { return }
+
+        let headerRow = data[0]
+        for rowIndex in 1..<complete.count {
+            setComplete(
+                rowIndex: rowIndex,
+                headerRow: headerRow,
+                value: value,
+                haptic: false,
+                scheduleAutosave: false
+            )
+        }
+
+        markDirtyAndScheduleAutosave()
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    private func revertToOriginalSnapshot() {
+        guard !originalData.isEmpty else { return }
+
+        rowDetail = nil
+        data = originalData
+        editable = originalEditable
+        complete = originalComplete
+        entry.totalItems = max(0, originalData.count - 1)
+        markDirtyAndScheduleAutosave()
+    }
+
+    private func barcodeForRow(_ rowIndex: Int) -> String {
+        guard data.indices.contains(rowIndex),
+              let header = data.first,
+              let barcodeIndex = header.firstIndex(of: "barcode"),
+              data[rowIndex].indices.contains(barcodeIndex) else {
+            return ""
+        }
+        return data[rowIndex][barcodeIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func invalidateIndexBasedUIStateBeforeRowRemoval() {
+        rowDetail = nil
+        flashRowIndex = nil
+        scrollToRowIndex = nil
+        visibleRowSet.removeAll()
+        pendingForceComplete = nil
+        pendingReopenRowIndexAfterScannerDismiss = nil
+        reopenRowDetailAfterScan = false
+        focusCountedOnNextDetail = false
+    }
+
+    private func deleteRow(at rowIndex: Int) {
+        guard rowIndex >= 1,
+              data.indices.contains(rowIndex),
+              editable.indices.contains(rowIndex),
+              complete.indices.contains(rowIndex) else {
+            return
+        }
+
+        invalidateIndexBasedUIStateBeforeRowRemoval()
+
+        data.remove(at: rowIndex)
+        editable.remove(at: rowIndex)
+        complete.remove(at: rowIndex)
+        entry.totalItems = max(0, data.count - 1)
+        markDirtyAndScheduleAutosave()
     }
     
     /// Conta quante righe hanno un messaggio nella colonna "SyncError".
@@ -1810,6 +1971,11 @@ struct GeneratedView: View {
             onClose: { rowDetail = nil },
             onEditProduct: { openProductEditor(for: detail.barcode) },
             onShowHistory: { openPriceHistory(for: detail.barcode) },
+            onDeleteRow: {
+                let rowIndex = detail.rowIndex
+                pendingDeleteRowIndex = rowIndex
+                rowDetail = nil
+            },
             editBindings: editBindings,
             editSnapshot: editSnapshot,
             onScanNext: { requestScanFromRowDetail() },
@@ -1885,6 +2051,7 @@ private struct RowDetailSheetView: View {
     let onClose: () -> Void
     let onEditProduct: () -> Void
     let onShowHistory: () -> Void
+    let onDeleteRow: () -> Void
 
     let editBindings: RowEditBindings
     let editSnapshot: RowEditSnapshot
@@ -2110,6 +2277,13 @@ private struct RowDetailSheetView: View {
                         Label("Storico prezzi", systemImage: "clock")
                     }
                     .disabled(detail.barcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                    Button(role: .destructive) {
+                        focusedField = nil
+                        onDeleteRow()
+                    } label: {
+                        Label("Elimina riga", systemImage: "trash")
+                    }
                 }
             }
             .navigationTitle("")
@@ -2861,6 +3035,7 @@ private struct InventorySearchSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var searchText: String = ""
     @State private var showScanner: Bool = false
+    @State private var currentResultIndex: Int? = nil
     @FocusState private var isSearchFocused: Bool
 
     private var header: [String] { data.first ?? [] }
@@ -2911,14 +3086,45 @@ private struct InventorySearchSheet: View {
             dismiss()
         }
     }
+
+    private func navigateToNextResult() {
+        let nextIndex = (currentResultIndex ?? -1) + 1
+        guard results.indices.contains(nextIndex) else { return }
+        currentResultIndex = nextIndex
+        onJumpToRow(results[nextIndex])
+    }
+
+    private func navigateToPrevResult() {
+        guard let currentResultIndex, currentResultIndex > 0 else { return }
+        let prevIndex = currentResultIndex - 1
+        guard results.indices.contains(prevIndex) else { return }
+        self.currentResultIndex = prevIndex
+        onJumpToRow(results[prevIndex])
+    }
+
+    private var canNavigateToPrevResult: Bool {
+        guard let currentResultIndex else { return false }
+        return currentResultIndex > 0
+    }
+
+    private var canNavigateToNextResult: Bool {
+        (currentResultIndex ?? -1) < (results.count - 1)
+    }
+
+    private var currentResultDisplayIndex: Int {
+        (currentResultIndex ?? -1) + 1
+    }
     
     private var resultsList: some View {
         ForEach(results, id: \.self) { rowIndex in
             let row = data[rowIndex]
             let name = cell(row, idxName)
             let barcode = cell(row, idxBarcode)
+            let resultIndex = results.firstIndex(of: rowIndex)
 
             Button {
+                currentResultIndex = resultIndex
+
                 // 1) porta la griglia sulla riga (UX molto utile)
                 onJumpToRow(rowIndex)
 
@@ -2954,6 +3160,7 @@ private struct InventorySearchSheet: View {
             }
             .buttonStyle(.plain)
             .listRowSeparator(.visible)
+            .listRowBackground(resultIndex == currentResultIndex ? Color(uiColor: .tertiarySystemFill) : Color.clear)
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if !barcode.isEmpty {
                     Button {
@@ -2964,6 +3171,36 @@ private struct InventorySearchSheet: View {
                     }
                     .tint(.gray)
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var searchNavigationBar: some View {
+        if !results.isEmpty {
+            HStack(spacing: 12) {
+                Button {
+                    navigateToPrevResult()
+                } label: {
+                    Label("Precedente", systemImage: "chevron.up")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(!canNavigateToPrevResult)
+
+                Text("Risultato \(currentResultDisplayIndex) di \(results.count)")
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+
+                Button {
+                    navigateToNextResult()
+                } label: {
+                    Label("Successivo", systemImage: "chevron.down")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(!canNavigateToNextResult)
             }
         }
     }
@@ -3052,14 +3289,18 @@ private struct InventorySearchSheet: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 12) {
-                AppleLikeSearchField(
-                    placeholder: "Barcode, codice, nome…",
-                    text: $searchText,
-                    showScanner: $showScanner,
-                    onSubmit: submitSearch,
-                    focused: $isSearchFocused
-                )
+            VStack(spacing: 10) {
+                searchNavigationBar
+
+                HStack(spacing: 12) {
+                    AppleLikeSearchField(
+                        placeholder: "Barcode, codice, nome…",
+                        text: $searchText,
+                        showScanner: $showScanner,
+                        onSubmit: submitSearch,
+                        focused: $isSearchFocused
+                    )
+                }
             }
             .padding(.horizontal)
             .padding(.top, 10)
@@ -3073,6 +3314,15 @@ private struct InventorySearchSheet: View {
             .shadow(radius: 12, x: 0, y: 6)
         }
         .onAppear { isSearchFocused = true }
+        .onChange(of: searchText) { _, _ in
+            currentResultIndex = nil
+        }
+        .onChange(of: results.count) { _, newCount in
+            guard let currentResultIndex else { return }
+            if currentResultIndex >= newCount {
+                self.currentResultIndex = nil
+            }
+        }
         .sheet(isPresented: $showScanner) {
             ScannerView(title: "Scanner barcode") { code in
                 searchText = code
