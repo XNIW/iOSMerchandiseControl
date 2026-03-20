@@ -63,9 +63,22 @@
 		41B18D3B2EE7B0B400FE61E2 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8C6B8E3C2F1A4B7200A1B2C3 /* Exceptions for "iOSMerchandiseControl" folder in "iOSMerchandiseControl" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 415227B22EE0B07D008233E0 /* iOSMerchandiseControl */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		415227B52EE0B07D008233E0 /* iOSMerchandiseControl */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8C6B8E3C2F1A4B7200A1B2C3 /* Exceptions for "iOSMerchandiseControl" folder in "iOSMerchandiseControl" target */,
+			);
 			path = iOSMerchandiseControl;
 			sourceTree = "<group>";
 		};
@@ -437,6 +450,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/libxls/include";
+				INFOPLIST_FILE = iOSMerchandiseControl/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Uso la camera per scansionare i codici a barre dei prodotti.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -484,6 +498,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/libxls/include";
+				INFOPLIST_FILE = iOSMerchandiseControl/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Uso la camera per scansionare i codici a barre dei prodotti.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

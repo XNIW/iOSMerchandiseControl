@@ -13,6 +13,58 @@ struct InventoryHomeView: View {
     /// Serve per dire a GeneratedView se deve aprire subito lo scanner
     @State private var autoOpenScannerInGenerated = false
 
+    private static let allowedUTTypes: Set<UTType> = [.spreadsheet, .html]
+    private static let allowedExtensions: Set<String> = ["xlsx", "xls", "html", "htm"]
+
+    /// Valida il tipo file usando UTType (primario) con fallback su estensione.
+    /// Gestisce file condivisi da altre app con nomi/estensioni poco affidabili.
+    private func isFileTypeSupported(_ url: URL) -> Bool {
+        // Primario: controlla il content type via URLResourceValues
+        if let resourceValues = try? url.resourceValues(forKeys: [.contentTypeKey]),
+           let contentType = resourceValues.contentType {
+            return Self.allowedUTTypes.contains(where: { contentType.conforms(to: $0) })
+        }
+        // Fallback: estensione (per file senza metadata o da sandbox restrittive)
+        return Self.allowedExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    private func loadExternalFile(_ url: URL) {
+        // Validazione tipo file (UTType primario, estensione come fallback)
+        guard isFileTypeSupported(url) else {
+            let fileDesc = url.pathExtension.isEmpty
+                ? "\"\(url.lastPathComponent)\""
+                : ".\(url.pathExtension)"
+            loadError = "Formato file non supportato: \(fileDesc). Formati accettati: .xlsx, .xls, .html"
+            return
+        }
+
+        // Blocco import concorrente — non avviare un secondo load se uno è già in corso
+        guard !excelSession.isLoading else {
+            loadError = "È già in corso un'importazione. Attendi il completamento prima di aprire un altro file."
+            return
+        }
+
+        // Reset stato navigazione locale per evitare conflitti
+        navigateToManualGenerated = false
+        autoOpenScannerInGenerated = false
+        showPreGenerate = false
+
+        Task {
+            // Accesso difensivo security-scoped (potrebbe non servire per Inbox, ma è sicuro)
+            let accessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if accessing { url.stopAccessingSecurityScopedResource() }
+            }
+
+            do {
+                try await excelSession.load(from: [url], in: context)
+                showPreGenerate = true
+            } catch {
+                loadError = excelSession.lastError ?? error.localizedDescription
+            }
+        }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "doc.badge.plus")
@@ -157,6 +209,19 @@ struct InventoryHomeView: View {
             }
         } message: {
             Text(loadError ?? "Errore sconosciuto.")
+        }
+        // Gestione file ricevuto da "Apri con" — warm resume
+        .onChange(of: excelSession.pendingOpenURL) { _, newURL in
+            guard let url = newURL else { return }
+            excelSession.pendingOpenURL = nil
+            loadExternalFile(url)
+        }
+        // Gestione file ricevuto da "Apri con" — cold launch
+        .onAppear {
+            if let url = excelSession.pendingOpenURL {
+                excelSession.pendingOpenURL = nil
+                loadExternalFile(url)
+            }
         }
     }
 }

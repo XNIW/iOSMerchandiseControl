@@ -4,6 +4,7 @@ import SwiftData
 struct ContentView: View {
     @AppStorage("appTheme") private var appTheme: String = "system"
     @StateObject private var excelSession = ExcelSessionViewModel()
+    @State private var selectedTab = 0
 
     private var resolvedColorScheme: ColorScheme? {
         switch appTheme {
@@ -17,7 +18,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             // TAB 1: Inventario
             NavigationStack {
                 InventoryHomeView()
@@ -26,6 +27,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Inventario", systemImage: "doc.on.doc")
             }
+            .tag(0)
 
             // TAB 2: Database
             NavigationStack {
@@ -34,6 +36,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Database", systemImage: "shippingbox")
             }
+            .tag(1)
 
             // TAB 3: Cronologia
             NavigationStack {
@@ -42,6 +45,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Cronologia", systemImage: "clock.arrow.circlepath")
             }
+            .tag(2)
 
             // TAB 4: Opzioni
             NavigationStack {
@@ -50,8 +54,22 @@ struct ContentView: View {
             .tabItem {
                 Label("Opzioni", systemImage: "gearshape")
             }
+            .tag(3)
         }
         .preferredColorScheme(resolvedColorScheme)
+        .onOpenURL { url in
+            guard url.isFileURL else { return }
+            // Policy URL singolo: se c'è già un URL pendente o un import in corso, scarta
+            guard excelSession.pendingOpenURL == nil, !excelSession.isLoading else {
+                // L'errore verrà mostrato da loadExternalFile quando consuma il pendingOpenURL,
+                // oppure qui se isLoading è true. Per semplicità, ignoriamo silenziosamente
+                // il secondo URL a livello di ContentView — il blocco con errore user-friendly
+                // è già gestito in loadExternalFile per il caso isLoading.
+                return
+            }
+            selectedTab = 0
+            excelSession.pendingOpenURL = url
+        }
     }
 }
 

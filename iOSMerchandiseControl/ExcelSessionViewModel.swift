@@ -43,6 +43,8 @@ final class ExcelSessionViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var progress: Double? = nil   // 0.0 ... 1.0
     @Published var lastError: String? = nil
+    /// URL ricevuto da "Apri con" / Share Sheet — consumato da InventoryHomeView
+    @Published var pendingOpenURL: URL? = nil
 
     // Metriche di analisi del file corrente
     @Published var analysisConfidence: Double?
@@ -101,6 +103,7 @@ final class ExcelSessionViewModel: ObservableObject {
         isLoading = false
         progress = nil
         lastError = nil
+        pendingOpenURL = nil
 
         // resetta anche le metriche
         analysisConfidence = nil
