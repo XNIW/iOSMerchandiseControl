@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. TASK-004 completato. Prossimo task da attivare: TASK-005 (ImportAnalysis error export) o altro task HIGH nel backlog.
+Nessun task attivo. TASK-005 e` temporaneamente sospeso: l'implementazione esiste gia`, ma la validazione manuale e la review finale restano in attesa del completamento dei test manuali.
 
 ## Stato globale
 IDLE — Nessun task attivo in lavorazione
-> TASK-002 bloccato, TASK-003 completato, TASK-004 completato.
+> TASK-002 bloccato, TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -51,13 +51,19 @@ Qualunque altra transizione è invalida.
 ## Task attivo
 Nessuno.
 
-Task bloccato non attivo:
+Task bloccati non attivi:
 - Task ID: TASK-002
 - Titolo: External file opening (document handoff via CFBundleDocumentTypes)
 - File task: `docs/TASKS/TASK-002-external-file-opening.md`
 - Stato: BLOCKED
 - Motivo: `Condividi / Invia copia` funziona, ma `Apri con` non e` affidabilmente disponibile per file `.xlsx` da alcune app di terze parti; le fix minime tentate su `Info.plist` non hanno chiuso il criterio di accettazione in modo verificabile e il comportamento residuo sembra dipendere anche dall'app sorgente / dal flusso esposto da iOS
 - Ultimo aggiornamento: 2026-03-19
+- Task ID: TASK-005
+- Titolo: ImportAnalysis error export + inline editing
+- File task: `docs/TASKS/TASK-005-importanalysis-error-export-inline-editing.md`
+- Stato: BLOCKED
+- Motivo: implementazione completata da Codex e task gia` portato in review, ma la validazione manuale e` ancora incompleta; sospeso temporaneamente in attesa dei test manuali residui prima di emettere APPROVED o CHANGES_REQUIRED
+- Ultimo aggiornamento: 2026-03-20
 
 ## Pipeline standard del task
 1. PLANNING (Claude) → definisce obiettivo, approccio, file coinvolti, criteri di accettazione
@@ -75,7 +81,7 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | TASK-002 | External file opening (document handoff) | BLOCKED | CRITICAL |
 | TASK-003 | PreGenerate append/reload parity | DONE | HIGH |
 | TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | DONE | HIGH |
-| TASK-005 | ImportAnalysis error export + inline editing | TODO | HIGH |
+| TASK-005 | ImportAnalysis error export + inline editing | BLOCKED | HIGH |
 | TASK-006 | Database full import/export (multi-sheet) | TODO | HIGH |
 | TASK-007 | History advanced filters | TODO | MEDIUM |
 | TASK-008 | Generated manual row dialog + calculate | TODO | MEDIUM |

@@ -633,7 +633,9 @@ struct GeneratedView: View {
                 NavigationStack {
                     ImportAnalysisView(
                         analysis: analysis,
-                        onApply: { applyImportAnalysis(analysis) }
+                        onApply: { editedAnalysis in
+                            applyImportAnalysis(editedAnalysis)
+                        }
                     )
                 }
             }

@@ -231,8 +231,8 @@ struct DatabaseView: View {
             NavigationStack {
                 ImportAnalysisView(
                     analysis: analysis,
-                    onApply: {
-                        applyImportAnalysis(analysis)
+                    onApply: { editedAnalysis in
+                        applyImportAnalysis(editedAnalysis)
                         // chiudiamo il sheet azzerando il binding
                         importAnalysisResult = nil
                     }
