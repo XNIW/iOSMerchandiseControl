@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. TASK-005 e` temporaneamente sospeso: l'implementazione esiste gia`, ma la validazione manuale e la review finale restano in attesa del completamento dei test manuali.
+Nessun task attivo. Prossimo candidato: completare TASK-011 (stabilità import grandi), poi sbloccare TASK-006 per validazione finale.
 
 ## Stato globale
-IDLE — Nessun task attivo in lavorazione
-> TASK-002 bloccato, TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi.
+IDLE — nessun task in lavorazione
+> TASK-002 bloccato, TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, problema grandi import estratto in TASK-011).
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,7 +49,7 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-Nessuno.
+Nessun task attivo.
 
 Task bloccati non attivi:
 - Task ID: TASK-002
@@ -64,6 +64,12 @@ Task bloccati non attivi:
 - Stato: BLOCKED
 - Motivo: implementazione completata da Codex e task gia` portato in review, ma la validazione manuale e` ancora incompleta; sospeso temporaneamente in attesa dei test manuali residui prima di emettere APPROVED o CHANGES_REQUIRED
 - Ultimo aggiornamento: 2026-03-20
+- Task ID: TASK-006
+- Titolo: Database full import/export (multi-sheet)
+- File task: `docs/TASKS/TASK-006-database-full-import-export.md`
+- Stato: BLOCKED
+- Motivo: implementazione completata e review emessa APPROVED da Claude; test manuali sospesi prima del completamento; comportamento su import di dataset molto grandi (freeze/memory pressure) non validato; sblocco pratico dipende da TASK-011
+- Ultimo aggiornamento: 2026-03-21
 
 ## Pipeline standard del task
 1. PLANNING (Claude) → definisce obiettivo, approccio, file coinvolti, criteri di accettazione
@@ -82,11 +88,12 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | TASK-003 | PreGenerate append/reload parity | DONE | HIGH |
 | TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | DONE | HIGH |
 | TASK-005 | ImportAnalysis error export + inline editing | BLOCKED | HIGH |
-| TASK-006 | Database full import/export (multi-sheet) | TODO | HIGH |
+| TASK-006 | Database full import/export (multi-sheet) | BLOCKED | HIGH |
 | TASK-007 | History advanced filters | TODO | MEDIUM |
 | TASK-008 | Generated manual row dialog + calculate | TODO | MEDIUM |
 | TASK-009 | Product model old prices + price backfill | TODO | LOW |
 | TASK-010 | Localizzazione UI multilingua | TODO | LOW |
+| TASK-011 | Large import stability, memory e progress UX | TODO | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -96,6 +103,9 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | 2026-03-20 |
 
 ## Blocchi e dipendenze
+- TASK-006 bloccato.
+  Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Test manuali sospesi prima della conferma finale; comportamento su import di dataset molto grandi non validato (freeze UI, memory pressure, possibile app kill). Sblocco pratico subordinato al completamento di TASK-011.
+  Nota criteri: CA-1/CA-12 e CA-14 verificati; CA-13 (round-trip) e stabilità su dataset reali ancora da validare manualmente.
 - TASK-002 bloccato.
   Motivo: il flusso `Condividi / Invia copia` e` funzionante, ma il flusso `Apri con` non e` affidabilmente disponibile per file `.xlsx` da alcune app di terze parti. Le fix minime tentate su `Info.plist` non hanno chiuso il criterio di accettazione in modo verificabile. Il comportamento residuo sembra dipendere anche dall'app sorgente / dal flusso esposto da iOS.
   Nota criteri: soddisfatti il document handoff di base e il flusso `Condividi / Invia copia`; ancora non chiuso il criterio di disponibilita` affidabile di `Apri con` cross-app.

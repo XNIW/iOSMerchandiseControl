@@ -4,7 +4,7 @@ import xlsxwriter
 // MARK: - Modelli per ImportAnalysis (Excel → Database)
 
 /// Snapshot "puro" di un prodotto letto da Excel (non e` ancora SwiftData)
-struct ProductDraft: Identifiable, Hashable {
+struct ProductDraft: Identifiable, Hashable, Sendable {
     var id: String { barcode }
 
     var barcode: String
@@ -19,8 +19,8 @@ struct ProductDraft: Identifiable, Hashable {
 }
 
 /// Descrive un aggiornamento di un prodotto esistente
-struct ProductUpdateDraft: Identifiable {
-    enum ChangedField: String, CaseIterable {
+struct ProductUpdateDraft: Identifiable, Sendable {
+    enum ChangedField: String, CaseIterable, Sendable {
         case itemNumber
         case productName
         case secondProductName
@@ -73,7 +73,7 @@ struct ProductUpdateDraft: Identifiable {
 }
 
 /// Errore di import su una singola riga
-struct ProductImportRowError: Identifiable {
+struct ProductImportRowError: Identifiable, Sendable {
     let id = UUID()
     let rowNumber: Int
     let reason: String
@@ -81,14 +81,14 @@ struct ProductImportRowError: Identifiable {
 }
 
 /// Warning per barcode duplicati nello stesso file
-struct ProductDuplicateWarning: Identifiable {
+struct ProductDuplicateWarning: Identifiable, Sendable {
     var id: String { barcode }
     let barcode: String
     let rowNumbers: [Int]
 }
 
 /// Risultato complessivo dell'analisi
-struct ProductImportAnalysisResult: Identifiable {
+struct ProductImportAnalysisResult: Identifiable, Sendable {
     let id = UUID()
     var newProducts: [ProductDraft]
     var updatedProducts: [ProductUpdateDraft]
@@ -117,39 +117,52 @@ struct ImportAnalysisView: View {
     @State private var analysis: ProductImportAnalysisResult
     @State private var shareItem: ShareItem?
     @State private var exportError: String?
+    @State private var applyError: String?
     @State private var editingDraftItem: EditingItem?
-    let onApply: (ProductImportAnalysisResult) -> Void
+    @State private var isApplying = false
+    let allowsApplyWithoutChanges: Bool
+    let onApply: (ProductImportAnalysisResult) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
 
     init(
         analysis: ProductImportAnalysisResult,
-        onApply: @escaping (ProductImportAnalysisResult) -> Void
+        allowsApplyWithoutChanges: Bool = false,
+        onApply: @escaping (ProductImportAnalysisResult) async throws -> Void
     ) {
         _analysis = State(initialValue: analysis)
+        self.allowsApplyWithoutChanges = allowsApplyWithoutChanges
         self.onApply = onApply
     }
 
     var body: some View {
-        List {
-            summarySection
+        ZStack {
+            List {
+                summarySection
 
-            if !analysis.warnings.isEmpty {
-                warningsSection
+                if !analysis.warnings.isEmpty {
+                    warningsSection
+                }
+
+                if !analysis.newProducts.isEmpty {
+                    newProductsSection
+                }
+
+                if !analysis.updatedProducts.isEmpty {
+                    updatedProductsSection
+                }
+
+                if !analysis.errors.isEmpty {
+                    errorsSection
+                }
             }
+            .disabled(isApplying)
 
-            if !analysis.newProducts.isEmpty {
-                newProductsSection
-            }
-
-            if !analysis.updatedProducts.isEmpty {
-                updatedProductsSection
-            }
-
-            if !analysis.errors.isEmpty {
-                errorsSection
+            if isApplying {
+                processingOverlay
             }
         }
+        .interactiveDismissDisabled(isApplying)
         .navigationTitle("Import da Excel")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -157,13 +170,25 @@ struct ImportAnalysisView: View {
                 Button("Annulla") {
                     dismiss()
                 }
+                .disabled(isApplying)
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Applica") {
-                    onApply(analysis)
-                    dismiss()
+                    guard !isApplying else { return }
+                    isApplying = true
+
+                    Task {
+                        defer { isApplying = false }
+
+                        do {
+                            try await onApply(analysis)
+                            dismiss()
+                        } catch {
+                            applyError = error.localizedDescription
+                        }
+                    }
                 }
-                .disabled(!analysis.hasChanges)
+                .disabled(isApplying || (!analysis.hasChanges && !allowsApplyWithoutChanges))
             }
         }
         .sheet(item: $shareItem) { shareItem in
@@ -184,6 +209,44 @@ struct ImportAnalysisView: View {
             }
         } message: {
             Text(exportError ?? "")
+        }
+        .alert(
+            "Errore applicazione import",
+            isPresented: Binding(
+                get: { applyError != nil },
+                set: { if !$0 { applyError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                applyError = nil
+            }
+        } message: {
+            Text(applyError ?? "")
+        }
+    }
+
+    private var processingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.16)
+                .ignoresSafeArea()
+
+            VStack(spacing: 12) {
+                ProgressView()
+                    .controlSize(.large)
+
+                Text("Importazione in corso...")
+                    .font(.headline)
+
+                Text("L'applicazione dei cambiamenti puo' richiedere alcuni istanti.")
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(radius: 16, x: 0, y: 8)
+            .padding(.horizontal, 24)
         }
     }
 

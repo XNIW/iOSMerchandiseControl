@@ -757,6 +757,16 @@ struct AnalysisMetrics {
 
 struct ExcelAnalyzer {
 
+    private struct WorkbookSheetReference {
+        let name: String
+        let relationshipID: String
+    }
+
+    private struct WorkbookSheetInfo {
+        let name: String
+        let path: String
+    }
+
     // MARK: - XML Parser Delegates
 
     /// Parser per sharedStrings.xml
@@ -790,6 +800,58 @@ struct ExcelAnalyzer {
                 inT = false
                 currentText = ""
             }
+        }
+    }
+
+    /// Parser per workbook.xml (lista fogli + r:id)
+    private final class WorkbookXMLDelegate: NSObject, XMLParserDelegate {
+        var sheets: [WorkbookSheetReference] = []
+
+        func parser(_ parser: XMLParser, didStartElement name: String,
+                    namespaceURI: String?, qualifiedName qName: String?,
+                    attributes attributeDict: [String : String] = [:]) {
+            guard name == "sheet",
+                  let sheetName = attributeDict["name"]?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !sheetName.isEmpty,
+                  let relationshipID = attributeDict["r:id"]?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !relationshipID.isEmpty else {
+                return
+            }
+
+            sheets.append(
+                WorkbookSheetReference(
+                    name: sheetName,
+                    relationshipID: relationshipID
+                )
+            )
+        }
+    }
+
+    /// Parser per workbook.xml.rels (mappa r:id -> target)
+    private final class WorkbookRelationshipsDelegate: NSObject, XMLParserDelegate {
+        var relationships: [String: String] = [:]
+
+        func parser(_ parser: XMLParser, didStartElement name: String,
+                    namespaceURI: String?, qualifiedName qName: String?,
+                    attributes attributeDict: [String : String] = [:]) {
+            guard name == "Relationship",
+                  let id = attributeDict["Id"]?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !id.isEmpty,
+                  let target = attributeDict["Target"]?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !target.isEmpty else {
+                return
+            }
+
+            let type = attributeDict["Type"] ?? ""
+            guard type.isEmpty || type.hasSuffix("/worksheet") else {
+                return
+            }
+
+            relationships[id] = target
         }
     }
     
@@ -965,7 +1027,8 @@ struct ExcelAnalyzer {
             "codigodeproducto"
         ]),
         ("supplier", [
-            "supplier", "供应商", "fornitore", "vendor", "provider",
+            "supplier", "supplierName", "supplier_name",
+            "供应商", "fornitore", "vendor", "provider",
             "fornitore/azienda", "proveedor", "empresa proveedora",
             "vendedor", "distribuidor", "fabricante"
         ]),
@@ -999,7 +1062,8 @@ struct ExcelAnalyzer {
             "cantidad contada"
         ]),
         ("category", [
-            "category", "categoria", "reparto", "department",
+            "category", "categoryName", "category_name",
+            "categoria", "reparto", "department",
             "分类", "类别", "categoría"
         ]),
         ("oldPurchasePrice", [
@@ -1122,6 +1186,31 @@ struct ExcelAnalyzer {
         throw ExcelLoadError.unsupportedExtension(ext)
     }
 
+    static func listSheetNames(at url: URL) throws -> [String] {
+        let archive = try openXLSXArchive(at: url)
+        return try workbookSheets(from: archive).map(\.name)
+    }
+
+    static func readSheetByName(at url: URL, sheetName: String) throws -> [[String]] {
+        let archive = try openXLSXArchive(at: url)
+        let sharedStrings = try sharedStringsFromArchive(archive)
+        let targetKey = normalizedSheetKey(sheetName)
+
+        guard let sheetInfo = try workbookSheets(from: archive).first(where: {
+            normalizedSheetKey($0.name) == targetKey
+        }) else {
+            throw ExcelLoadError.invalidFormat("Foglio '\(sheetName)' non trovato nel file Excel.")
+        }
+
+        let sheetData = try dataFromArchive(archive, path: sheetInfo.path)
+        return parseSheetXML(sheetData, sharedStrings: sharedStrings)
+    }
+
+    static func analyzeSheetRows(_ rows: [[String]])
+        -> (originalHeader: [String], normalizedHeader: [String], dataRows: [[String]]) {
+        analyzeRows(normalizeAllCells(rows))
+    }
+
     private static func looksLikeHtml(data: Data) -> Bool {
         let headLength = min(4096, data.count)
         let headData = data.prefix(headLength)
@@ -1217,23 +1306,10 @@ struct ExcelAnalyzer {
     }
     
     private static func rowsFromXLSX(at url: URL) throws -> [[String]] {
-        let archive: Archive
-        do {
-            // nuovo init throwing consigliato da ZIPFoundation
-            archive = try Archive(url: url, accessMode: .read)
-        } catch {
-            // convertiamo l'errore ZIP in un messaggio user-friendly
-            throw ExcelLoadError.invalidFormat("Impossibile aprire il file Excel (zip non valido).")
-        }
+        let archive = try openXLSXArchive(at: url)
 
         // 1) sharedStrings.xml (può anche non esserci)
-        let sharedStrings: [String]
-        if let ssData = try? dataFromArchive(archive, path: "xl/sharedStrings.xml") {
-            sharedStrings = parseSharedStringsXML(ssData)
-        } else {
-            sharedStrings = []
-        }
-
+        let sharedStrings = try sharedStringsFromArchive(archive)
 
         // 2) Trova il primo sheet
         //   - prima proviamo "xl/worksheets/sheet1.xml"
@@ -1282,6 +1358,102 @@ struct ExcelAnalyzer {
             result = result * 26 + value
         }
         return max(result - 1, 0)
+    }
+
+    private static func openXLSXArchive(at url: URL) throws -> Archive {
+        do {
+            return try Archive(url: url, accessMode: .read)
+        } catch {
+            throw ExcelLoadError.invalidFormat("Impossibile aprire il file Excel (zip non valido).")
+        }
+    }
+
+    private static func sharedStringsFromArchive(_ archive: Archive) throws -> [String] {
+        if let ssData = try? dataFromArchive(archive, path: "xl/sharedStrings.xml") {
+            return parseSharedStringsXML(ssData)
+        }
+        return []
+    }
+
+    private static func workbookSheets(from archive: Archive) throws -> [WorkbookSheetInfo] {
+        let workbookData: Data
+        let relationshipsData: Data
+
+        do {
+            workbookData = try dataFromArchive(archive, path: "xl/workbook.xml")
+            relationshipsData = try dataFromArchive(archive, path: "xl/_rels/workbook.xml.rels")
+        } catch {
+            throw ExcelLoadError.invalidFormat("Impossibile leggere la struttura dei fogli del file Excel.")
+        }
+
+        let sheetReferences = try parseWorkbookXML(workbookData)
+        let relationships = try parseWorkbookRelationshipsXML(relationshipsData)
+
+        let sheets = sheetReferences.compactMap { reference -> WorkbookSheetInfo? in
+            guard let target = relationships[reference.relationshipID] else {
+                return nil
+            }
+
+            let path = normalizeWorkbookTargetPath(target)
+            guard archive[path] != nil else {
+                return nil
+            }
+
+            return WorkbookSheetInfo(name: reference.name, path: path)
+        }
+
+        guard !sheets.isEmpty else {
+            throw ExcelLoadError.invalidFormat("Impossibile risolvere i fogli del file Excel.")
+        }
+
+        return sheets
+    }
+
+    private static func parseWorkbookXML(_ data: Data) throws -> [WorkbookSheetReference] {
+        let delegate = WorkbookXMLDelegate()
+        let parser = XMLParser(data: data)
+        parser.delegate = delegate
+
+        guard parser.parse() else {
+            throw ExcelLoadError.invalidFormat("Impossibile leggere il workbook del file Excel.")
+        }
+
+        guard !delegate.sheets.isEmpty else {
+            throw ExcelLoadError.invalidFormat("Il file Excel non contiene fogli leggibili.")
+        }
+
+        return delegate.sheets
+    }
+
+    private static func parseWorkbookRelationshipsXML(_ data: Data) throws -> [String: String] {
+        let delegate = WorkbookRelationshipsDelegate()
+        let parser = XMLParser(data: data)
+        parser.delegate = delegate
+
+        guard parser.parse() else {
+            throw ExcelLoadError.invalidFormat("Impossibile leggere le relazioni del workbook Excel.")
+        }
+
+        return delegate.relationships
+    }
+
+    private static func normalizeWorkbookTargetPath(_ target: String) -> String {
+        let normalizedTarget = target.replacingOccurrences(of: "\\", with: "/")
+        let baseURL = URL(fileURLWithPath: "/xl/workbook.xml")
+        let resolvedURL = URL(
+            fileURLWithPath: normalizedTarget,
+            relativeTo: baseURL.deletingLastPathComponent()
+        ).standardizedFileURL
+
+        let path = resolvedURL.path
+        if path.hasPrefix("/") {
+            return String(path.dropFirst())
+        }
+        return path
+    }
+
+    private static func normalizedSheetKey(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     /// Estrae i dati di un entry ZIP in memoria
