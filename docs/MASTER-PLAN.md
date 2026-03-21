@@ -4,7 +4,7 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. Prossimo candidato: completare TASK-011 (stabilità import grandi), poi sbloccare TASK-006 per validazione finale.
+Nessun task attivo. TASK-007 completato (2026-03-21).
 
 ## Stato globale
 IDLE — nessun task in lavorazione
@@ -89,7 +89,7 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | DONE | HIGH |
 | TASK-005 | ImportAnalysis error export + inline editing | BLOCKED | HIGH |
 | TASK-006 | Database full import/export (multi-sheet) | BLOCKED | HIGH |
-| TASK-007 | History advanced filters | TODO | MEDIUM |
+| TASK-007 | History advanced filters | DONE | MEDIUM |
 | TASK-008 | Generated manual row dialog + calculate | TODO | MEDIUM |
 | TASK-009 | Product model old prices + price backfill | TODO | LOW |
 | TASK-010 | Localizzazione UI multilingua | TODO | LOW |
@@ -101,6 +101,7 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | TASK-001 | Gap Audit iOS vs Android — Censimento funzionalità mancanti | 2026-03-19 |
 | TASK-003 | PreGenerate append/reload parity | 2026-03-20 |
 | TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | 2026-03-20 |
+| TASK-007 | History advanced filters | 2026-03-21 |
 
 ## Blocchi e dipendenze
 - TASK-006 bloccato.

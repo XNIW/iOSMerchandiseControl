@@ -17,6 +17,10 @@ struct HistoryView: View {
 
     @State private var showOnlyErrorEntries: Bool = false
     @State private var selectedDateFilter: DateFilter = .all
+    @State private var customFrom: Date = Self.defaultCustomFrom
+    @State private var customTo: Date = Date()
+    @State private var editingCustomDate: CustomDateField?
+    @State private var showingDateFilterDialog = false
     
     // 🔹 nuovo stato per la cancellazione con conferma
     @State private var showDeleteConfirmation = false
@@ -39,6 +43,9 @@ struct HistoryView: View {
         case all
         case last7Days
         case last30Days
+        case currentMonth
+        case previousMonth
+        case custom
 
         var id: Self { self }
 
@@ -47,8 +54,36 @@ struct HistoryView: View {
             case .all: return "Tutto"
             case .last7Days: return "Ultimi 7 giorni"
             case .last30Days: return "Ultimi 30 giorni"
+            case .currentMonth: return "Mese corrente"
+            case .previousMonth: return "Mese precedente"
+            case .custom: return "Personalizzato"
             }
         }
+    }
+
+    private enum CustomDateField: String, Identifiable {
+        case from
+        case to
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .from: return "Da"
+            case .to: return "A"
+            }
+        }
+
+        var sheetTitle: String {
+            switch self {
+            case .from: return "Seleziona data iniziale"
+            case .to: return "Seleziona data finale"
+            }
+        }
+    }
+
+    private static var defaultCustomFrom: Date {
+        startOfMonth(for: Date())
     }
     
     /// Applica i filtri (periodo + solo errori) alle entry.
@@ -56,17 +91,35 @@ struct HistoryView: View {
         var result = entries
 
         let now = Date()
+        let calendar = Calendar.current
         switch selectedDateFilter {
         case .all:
             break
         case .last7Days:
-            if let from = Calendar.current.date(byAdding: .day, value: -7, to: now) {
+            if let from = calendar.date(byAdding: .day, value: -7, to: now) {
                 result = result.filter { $0.timestamp >= from }
             }
         case .last30Days:
-            if let from = Calendar.current.date(byAdding: .day, value: -30, to: now) {
+            if let from = calendar.date(byAdding: .day, value: -30, to: now) {
                 result = result.filter { $0.timestamp >= from }
             }
+        case .currentMonth:
+            let from = Self.startOfMonth(for: now)
+            let to = endOfDay(for: now)
+            result = result.filter { $0.timestamp >= from && $0.timestamp <= to }
+        case .previousMonth:
+            let currentMonthStart = Self.startOfMonth(for: now)
+            let previousMonthDate = calendar.date(byAdding: .month, value: -1, to: currentMonthStart)
+                ?? currentMonthStart
+            let previousMonthStart = Self.startOfMonth(for: previousMonthDate)
+            let previousMonthEndDate = calendar.date(byAdding: .day, value: -1, to: currentMonthStart)
+                ?? currentMonthStart
+            let previousMonthEnd = endOfDay(for: previousMonthEndDate)
+            result = result.filter { $0.timestamp >= previousMonthStart && $0.timestamp <= previousMonthEnd }
+        case .custom:
+            let from = startOfDay(for: customFrom)
+            let to = endOfDay(for: customTo)
+            result = result.filter { $0.timestamp >= from && $0.timestamp <= to }
         }
 
         if showOnlyErrorEntries {
@@ -75,6 +128,107 @@ struct HistoryView: View {
         }
 
         return result
+    }
+
+    private static func startOfMonth(for date: Date) -> Date {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month], from: date)
+        return calendar.date(from: components) ?? calendar.startOfDay(for: date)
+    }
+
+    private func startOfDay(for date: Date) -> Date {
+        Calendar.current.startOfDay(for: date)
+    }
+
+    private func endOfDay(for date: Date) -> Date {
+        let startOfNextDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay(for: date))
+            ?? startOfDay(for: date)
+        return startOfNextDay.addingTimeInterval(-1)
+    }
+
+    private func customDateText(for field: CustomDateField) -> String {
+        switch field {
+        case .from:
+            return customFrom.formatted(date: .numeric, time: .omitted)
+        case .to:
+            return customTo.formatted(date: .numeric, time: .omitted)
+        }
+    }
+
+    private var selectedDateFilterText: String {
+        selectedDateFilter.title
+    }
+
+    private func customDateBinding(for field: CustomDateField) -> Binding<Date> {
+        switch field {
+        case .from:
+            return $customFrom
+        case .to:
+            return $customTo
+        }
+    }
+
+    @ViewBuilder
+    private func customDatePicker(for field: CustomDateField) -> some View {
+        switch field {
+        case .from:
+            DatePicker(
+                field.title,
+                selection: customDateBinding(for: field),
+                displayedComponents: .date
+            )
+        case .to:
+            DatePicker(
+                field.title,
+                selection: customDateBinding(for: field),
+                in: customFrom...,
+                displayedComponents: .date
+            )
+        }
+    }
+
+    private func customDateButton(for field: CustomDateField) -> some View {
+        Button {
+            editingCustomDate = field
+        } label: {
+            HStack(spacing: 12) {
+                Text(field.title)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Text(customDateText(for: field))
+                    .foregroundStyle(.secondary)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 10)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var dateFilterButton: some View {
+        Button {
+            showingDateFilterDialog = true
+        } label: {
+            HStack(spacing: 12) {
+                Text("Periodo")
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Text(selectedDateFilterText)
+                    .foregroundStyle(.blue)
+
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.blue)
+            }
+            .padding(.vertical, 10)
+        }
+        .buttonStyle(.plain)
     }
     
     // MARK: - Azioni
@@ -149,12 +303,15 @@ struct HistoryView: View {
                         // Barra filtri in cima alla lista
                         Section {
                             VStack(alignment: .leading, spacing: 8) {
-                                Picker("Periodo", selection: $selectedDateFilter) {
-                                    ForEach(DateFilter.allCases) { filter in
-                                        Text(filter.title).tag(filter)
+                                dateFilterButton
+
+                                if selectedDateFilter == .custom {
+                                    VStack(spacing: 0) {
+                                        customDateButton(for: .from)
+                                        Divider()
+                                        customDateButton(for: .to)
                                     }
                                 }
-                                .pickerStyle(.segmented)
 
                                 HStack {
                                     Toggle("Mostra solo entry con errori", isOn: $showOnlyErrorEntries)
@@ -213,6 +370,44 @@ struct HistoryView: View {
             }
         }
         .navigationTitle("Cronologia")
+        .onChange(of: customFrom) { _, newValue in
+            if customTo < newValue {
+                customTo = newValue
+            }
+        }
+        .confirmationDialog(
+            "Seleziona periodo",
+            isPresented: $showingDateFilterDialog,
+            titleVisibility: .visible
+        ) {
+            ForEach(DateFilter.allCases) { filter in
+                Button(filter.title) {
+                    selectedDateFilter = filter
+                }
+            }
+
+            Button("Annulla", role: .cancel) {}
+        }
+        .sheet(item: $editingCustomDate) { field in
+            NavigationStack {
+                VStack {
+                    customDatePicker(for: field)
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                }
+                .padding()
+                .navigationTitle(field.sheetTitle)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Fine") {
+                            editingCustomDate = nil
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
         .alert(
             "Eliminare questo inventario?",
             isPresented: $showDeleteConfirmation,
