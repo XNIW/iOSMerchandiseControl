@@ -96,16 +96,17 @@ Check previsti:
 - Modifiche coerenti con il planning
 - Criteri di accettazione verificati
 
-## Protocollo di execution per task UI / Simulator
+## Verifiche per task UI / Simulator
 
-Quando il task tocca UI, navigazione, o comportamento visibile nel Simulator, il protocollo completo è in **`docs/CODEX-EXECUTION-PROTOCOL.md`**. Lettura **obbligatoria** prima di iniziare l'execution di questi task.
+Quando il task tocca UI, navigazione, o comportamento visibile nel Simulator:
 
-Punti chiave:
-- Self-test Simulator obbligatorio: dopo le modifiche, Codex usa `tools/sim_ui.sh` per verificare gli effetti nel Simulator
-- Guida operativa wrapper: `tools/sim-ui-guide-codex.md`
+- **Verifiche standard**: build compila, analisi statica del codice, coerenza con il planning
+- **Test Simulator / manuali**: solo quando richiesti esplicitamente dal task o dall'utente — non sono un obbligo automatico
 - Ogni CA e T-NN richiede riga con tipo verifica (STATIC/BUILD/SIM/MANUAL) ed evidenza
-- Un handoff è valido solo se conforme al protocollo — handoff incompleto viene rifiutato in review indipendentemente dalla qualità del codice
-- Se l'ambiente Simulator non è disponibile e il task richiede verifica SIM → il task non avanza a REVIEW, resta BLOCKED
+- Un handoff è valido solo se completo e coerente — handoff incompleto viene rifiutato in review
+- Il protocollo dettagliato per evidenze e handoff è in **`docs/CODEX-EXECUTION-PROTOCOL.md`** (consultare quando il task lo richiede esplicitamente)
+
+> **Nota**: `tools/sim_ui.sh` esiste nel repo come risorsa sperimentale/legacy ma **non è parte del workflow standard**. L'uso è opzionale e solo su richiesta esplicita.
 
 ## Formato output standard
 Sezioni fisse:

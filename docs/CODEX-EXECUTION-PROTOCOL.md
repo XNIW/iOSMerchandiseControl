@@ -1,26 +1,33 @@
 # Codex Execution Protocol
 
-Protocollo universale per execution, self-test e handoff nei task eseguiti da Codex.
+Protocollo per execution, evidenze e handoff nei task eseguiti da Codex.
 Si applica a **tutti** i task che toccano UI, navigazione, o comportamento visibile nel Simulator.
+
+> **Nota (2026-03-22)**: il self-test automatico nel Simulator tramite `tools/sim_ui.sh` **non è più parte del workflow standard**. Le verifiche Simulator sono opzionali e vanno eseguite solo quando il task o l'utente le richiedono esplicitamente. Il workflow standard prevede verifiche build e statiche; i test UI sono manuali o su richiesta.
 
 ## 1. Quando si applica
 
-### Task con obbligo di self-test Simulator
+### Verifiche standard (sempre richieste)
 
-Codex **deve** eseguire self-test nel Simulator quando il task soddisfa **almeno una** di queste condizioni:
+- Build compila senza errori
+- Analisi statica del codice: coerenza con il planning, pattern corretti
+- Criteri di accettazione verificabili staticamente
 
-- Modifica o aggiunge una View SwiftUI visibile all'utente
-- Modifica navigazione, presentazione sheet/alert/popover, o transizioni tra schermate
-- Modifica logica che impatta direttamente l'output visivo (formattazione, ordinamento lista, stato bottone)
-- I criteri di accettazione o i test case del task includono verifiche UI/interattive (es. T-NN)
+### Test Simulator (solo su richiesta esplicita)
+
+Codex esegue test nel Simulator **solo** quando:
+
+- I criteri di accettazione o i test case del task richiedono esplicitamente verifiche `SIM`
+- L'utente richiede esplicitamente test interattivi nel Simulator
+
+Se il task non richiede esplicitamente verifiche Simulator, le verifiche STATIC e BUILD sono sufficienti.
 
 ### Task esenti da self-test Simulator
 
 - Modifiche solo a logica backend/model/data senza effetti visivi diretti
 - Modifiche a file di configurazione, documentazione, script di build
 - Refactor interni che non cambiano comportamento osservabile
-
-In caso di dubbio: **eseguire il self-test**. Se l'ambiente Simulator non è disponibile, documentare come BLOCKED (non come PASS).
+- Qualsiasi task che non richieda esplicitamente verifiche `SIM` nei criteri
 
 ## 2. Tipi di verifica
 
@@ -231,8 +238,8 @@ Se l'intero ambiente Simulator è inutilizzabile (nessun device booted, permessi
 Un task **può passare a REVIEW** solo se tutte queste condizioni sono soddisfatte:
 
 1. La tabella CA → evidenza è **completa** (nessun CA senza riga)
-2. La tabella T-NN → esito è **completa** (nessun T-NN senza riga)
-3. Nessun test `SIM` obbligatorio è `NOT RUN` senza causa ambientale documentata
+2. La tabella T-NN → esito è **completa** (nessun T-NN senza riga), se il task definisce test cases
+3. Se il task richiede esplicitamente verifiche `SIM`: nessun test `SIM` obbligatorio è `NOT RUN` senza causa documentata. Se il task non richiede verifiche `SIM`, questo gate non si applica.
 4. Il build è PASS (o N/A se nessun file compilabile modificato)
 5. La conferma scope è presente
 6. L'handoff è compilato

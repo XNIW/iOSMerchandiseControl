@@ -4,9 +4,9 @@
 - **Task ID**: TASK-012
 - **Titolo**: Simulator automation — dual-agent wrapper + adapter
 - **File task**: `docs/TASKS/TASK-012-simulator-automation-skill.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE (reviewer)
+- **Stato**: DONE
+- **Fase attuale**: DONE
+- **Responsabile attuale**: —
 - **Data creazione**: 2026-03-21
 - **Ultimo aggiornamento**: 2026-03-21
 - **Ultimo agente che ha operato**: CLAUDE
@@ -681,7 +681,7 @@ Fix: rieseguito `./tools/sim_ui.sh tap-name "Inventario"` → exit 0, click conf
 ## Chiusura
 
 ### Conferma utente
-- [ ] Utente ha confermato il completamento
+- [x] Utente ha confermato il completamento
 
 ### Follow-up candidate
 - Test runner wrapper che esegue una suite di test e produce report JSON
@@ -690,9 +690,10 @@ Fix: rieseguito `./tools/sim_ui.sh tap-name "Inventario"` → exit 0, click conf
 - `simctl ui` per status bar override (nascondere orologio/indicatori nei screenshot)
 - MCP server che espone i subcomandi come tool (architettura più pesante, solo se il wrapper non basta)
 - Migrazione completa di `sim_ui_task008.sh` a thin wrapper sopra `sim_ui.sh` (dopo chiusura TASK-008)
+- **Convertito in TASK-013**: ottimizzazione performance wrapper (batch mode, timeout reale, cache device frame)
 
 ### Riepilogo finale
-[da compilare]
+Infrastruttura di automazione UI Simulator creata e funzionante: wrapper universale `sim_ui.sh` con 11 subcomandi, adapter Codex e Claude Code, protocollo operativo universale. Tutti i 20 CA soddisfatti, 19 test V-* passati con evidenza reale su Simulator. Limite noto: performance lenta su sequenze di molte micro-azioni (ogni invocazione paga il costo di bootstrap JXA + AX tree scan) — indirizzato da TASK-013.
 
 ### Data completamento
-[da compilare]
+2026-03-21

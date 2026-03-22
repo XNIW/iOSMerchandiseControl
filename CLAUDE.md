@@ -149,14 +149,16 @@ Distinguere sempre tra:
 
 ## Review contro protocollo di execution
 
-Per task che toccano UI / Simulator, Claude verifica l'handoff di Codex contro **`docs/CODEX-EXECUTION-PROTOCOL.md`**.
+Per task che toccano UI / Simulator, Claude verifica l'handoff di Codex contro **`docs/CODEX-EXECUTION-PROTOCOL.md`** quando il task richiede esplicitamente verifiche Simulator.
 
 In review, Claude deve verificare:
 - Completezza: ogni CA e T-NN ha riga con tipo verifica ed evidenza
-- Coerenza tipo: CA che richiedono `SIM` non possono essere soddisfatti con solo `STATIC`
+- Coerenza tipo: CA che richiedono `SIM` (solo se il task lo richiede esplicitamente) non possono essere soddisfatti con solo `STATIC`
 - Integrità: nessun PASS senza comando effettivamente eseguito, nessun NOT RUN mascherato
 - Stop-on-failure: dopo un FAIL, Codex non deve aver continuato test dipendenti
 - Se l'evidenza è incompleta o incoerente → `CHANGES_REQUIRED` anche se il codice è corretto
+
+> **Nota**: il self-test automatico nel Simulator tramite `tools/sim_ui.sh` non è parte del workflow standard. Le verifiche SIM sono opzionali e task-specific.
 
 ## Regola del loop FIX → REVIEW
 - Dopo FIX il task torna SEMPRE a REVIEW

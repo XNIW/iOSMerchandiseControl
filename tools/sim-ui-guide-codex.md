@@ -1,7 +1,9 @@
 # Guida operativa Simulator UI — per Codex
 
+> **⚠️ DEPRECATED (2026-03-22)**: Questo tool e questa guida **non sono parte del workflow standard** del progetto. Uso solo sperimentale / legacy / su richiesta esplicita dell'utente. Il workflow standard prevede verifiche build/statiche + test manuali su richiesta.
+
 Questa guida insegna a Codex come usare `tools/sim_ui.sh` per eseguire test UI nel Simulator iOS.
-Lettura obbligatoria prima di qualsiasi test UI nel Simulator (vedi `AGENTS.md`).
+Da consultare solo quando un task o l'utente richiede esplicitamente test Simulator automatizzati.
 
 ## Quando usare questa guida
 
@@ -34,9 +36,12 @@ Non usarla per verifiche statiche (analisi codice) o build-only.
 | `wait` | `sim_ui.sh wait <seconds>` | Sempre 0 | — | — |
 | `dump-names` | `sim_ui.sh dump-names [filter]` | stdout: ROLE\tNAME | — | AX non disponibile |
 | `tap-relative` | `sim_ui.sh tap-relative <relX> <relY>` | Click eseguito | Frame non trovato | Simulator non foreground |
+| `replace-field` | `sim_ui.sh replace-field <relX> <relY> <value>` | Tap + clear + type in una sola invocazione | Fallimento operativo | Simulator non foreground / AX non disponibile |
+| `batch` | `sim_ui.sh batch` | Esegue tutte le azioni da stdin | Stop-on-failure con `BATCH FAIL at line N` | Ambiente non disponibile / python3 mancante |
 
 Default: timeout `tap-name` = 5s, timeout `wait-for` = 10s.
 Bundle-id: se omesso, usa `SIM_UI_BUNDLE_ID` env o default `com.niwcyber.iOSMerchandiseControl`.
+Timeout watchdog JXA: `SIM_UI_JXA_TIMEOUT` (default `30`).
 
 ## Exit code semantici
 
@@ -70,6 +75,61 @@ Azione in base all'exit code:
 ./tools/sim_ui.sh terminate
 ```
 
+## Batch mode
+
+Usa `batch` quando devi eseguire molte micro-azioni seriali e vuoi evitare un bootstrap JXA per ogni riga.
+La sintassi e' la stessa dei subcomandi singoli: una riga per azione, quoting shell standard, righe vuote e commenti `#` ignorati.
+
+Esempio completo con heredoc:
+
+```bash
+./tools/sim_ui.sh batch <<'BATCH'
+# Apri dialog e compila due campi
+tap-name "Aggiungi riga"
+wait-for "Barcode" 5
+replace-field 0.5 0.35 "8001234567890"
+replace-field 0.5 0.45 "10"
+tap-name "Conferma"
+wait-for "Inventario" 5
+capture /tmp/after_add.png
+BATCH
+```
+
+Esempio con valori contenenti spazi:
+
+```bash
+./tools/sim_ui.sh batch <<'BATCH'
+type "prezzo unitario"
+replace-field 0.5 0.4 "valore con spazi"
+wait-for "Aggiungi riga" 5
+BATCH
+```
+
+Esempio `replace-field` singolo:
+
+```bash
+./tools/sim_ui.sh replace-field 0.5 0.35 "8001234567890"
+```
+
+Esempio stop-on-failure:
+
+```bash
+./tools/sim_ui.sh batch <<'BATCH'
+tap-relative 0.5 0.5
+wait 0.5
+tap-name "Conferma"
+capture /tmp/should_not_reach.png
+BATCH
+# exit 1 e stderr:
+# [sim_ui] BATCH FAIL at line 3: tap-name — Elemento 'Conferma' non trovato entro 5s
+```
+
+Note pratiche:
+- `capture` e' supportato anche nel batch e mantiene l'ordine della sequenza.
+- Se `capture` non produce davvero il file atteso, il batch fallisce.
+- Per batch molto grandi il wrapper passa automaticamente a `BATCH_ACTIONS_FILE` invece di usare l'env var `BATCH_ACTIONS`.
+- Le azioni non-`capture` consecutive restano nella stessa sessione JXA.
+
 ## Strategia di fallback
 
 1. **Primo tentativo**: `tap-name "NomeElemento"` (usa AX tree)
@@ -88,6 +148,11 @@ Azione in base all'exit code:
 
 **Se exit 2**: fermarsi completamente, l'ambiente non funziona.
 
+**Se il watchdog esterno interviene**:
+- stdout resta `NOT_FOUND` per `wait-for`
+- stderr riporta `[sim_ui] ERROR: JXA timeout dopo Ns`
+- interrompere il test corrente come FAIL o BLOCKED in base al contesto
+
 ## Limiti noti
 
 - Solo Simulator iOS, nessun supporto per device fisici
@@ -95,7 +160,9 @@ Azione in base all'exit code:
 - Richiede permessi Accessibility e Screen Recording su macOS
 - Prompt di approvazione agente possibile per ogni chiamata `osascript` (pre-approvare il pattern `./tools/sim_ui.sh *` se possibile)
 - `win.entireContents()` puo' essere lento su view complesse (1-3s)
+- `wait-for` e `dump-names` possono comunque degradare molto su stati UI complessi; il watchdog `SIM_UI_JXA_TIMEOUT` evita processi appesi ma non rende la scansione AX veloce
 - Le coordinate relative (`tap-relative`) dipendono dal modello device e dalla scala della finestra
+- Il batch riduce il costo del re-bootstrap JXA, ma non elimina il costo di `entireContents()` quando la schermata richiede una scansione AX completa
 
 ## Reporting
 

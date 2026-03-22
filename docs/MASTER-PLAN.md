@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-012 — Simulator automation: dual-agent wrapper + adapter (REVIEW)
+Nessun task attivo.
 
 ## Stato globale
-ACTIVE — TASK-012 in lavorazione
-> TASK-002 bloccato, TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, problema grandi import estratto in TASK-011), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — sblocco dipende da TASK-012).
+IDLE — nessun task in lavorazione
+> TASK-002 bloccato, TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, problema grandi import estratto in TASK-011), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — test manuali, senza obbligo di automazione Simulator), TASK-012 completato, TASK-013 bloccato (sospeso per decisione utente: workflow SIM UI rimosso dal processo standard).
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,15 +49,15 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task ID**: TASK-012
-- **Titolo**: Simulator automation — dual-agent wrapper + adapter
-- **File task**: `docs/TASKS/TASK-012-simulator-automation-skill.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE (reviewer)
-- **Ultimo aggiornamento**: 2026-03-21
+Nessun task attivo. Progetto in stato IDLE.
 
 Task bloccati non attivi:
+- Task ID: TASK-013
+- Titolo: sim_ui.sh performance — batch mode, timeout reale, cache device frame
+- File task: `docs/TASKS/TASK-013-sim-ui-performance.md`
+- Stato: BLOCKED
+- Motivo: sospeso per decisione utente (2026-03-22) — wrapper SIM UI rimosso dal workflow standard del progetto per latenza/prestazioni non adeguate ai test rapidi. Nessun ulteriore lavoro di ottimizzazione previsto.
+- Ultimo aggiornamento: 2026-03-22
 - Task ID: TASK-002
 - Titolo: External file opening (document handoff via CFBundleDocumentTypes)
 - File task: `docs/TASKS/TASK-002-external-file-opening.md`
@@ -100,7 +100,8 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | TASK-009 | Product model old prices + price backfill | TODO | LOW |
 | TASK-010 | Localizzazione UI multilingua | TODO | LOW |
 | TASK-011 | Large import stability, memory e progress UX | TODO | HIGH |
-| TASK-012 | Simulator automation — dual-agent wrapper + adapter (sblocca TASK-008) | ACTIVE | HIGH |
+| TASK-012 | Simulator automation — dual-agent wrapper + adapter (sblocca TASK-008) | DONE | HIGH |
+| TASK-013 | sim_ui.sh performance — batch mode, timeout reale, cache device frame | BLOCKED | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -109,15 +110,16 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | TASK-003 | PreGenerate append/reload parity | 2026-03-20 |
 | TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | 2026-03-20 |
 | TASK-007 | History advanced filters | 2026-03-21 |
+| TASK-012 | Simulator automation — dual-agent wrapper + adapter | 2026-03-21 |
 
 ## Blocchi e dipendenze
 - TASK-006 bloccato.
   Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Test manuali sospesi prima della conferma finale; comportamento su import di dataset molto grandi non validato (freeze UI, memory pressure, possibile app kill). Sblocco pratico subordinato al completamento di TASK-011.
   Nota criteri: CA-1/CA-12 e CA-14 verificati; CA-13 (round-trip) e stabilità su dataset reali ancora da validare manualmente.
 - TASK-008 bloccato.
-  Motivo: review codice completata da Claude — nessun problema critico trovato, tutti i CA verificabili staticamente superati. Build verde. Validazione UI end-to-end (T-1..T-28) sospesa: infrastruttura automazione Simulator non stabile. Sblocco subordinato a completamento di TASK-012 (o task dedicato Simulator automation).
+  Motivo: review codice completata da Claude — nessun problema critico trovato, tutti i CA verificabili staticamente superati. Build verde. Validazione UI end-to-end (T-1..T-28) sospesa: richiede test manuali nel Simulator (l'automazione via wrapper SIM UI non è più parte del workflow standard). Sblocco subordinato a test manuali dell'utente o a decisione esplicita di procedere.
   Nota criteri: CA-1..CA-14, CA-16..CA-20 verificati da code review; CA-15 (autosave/restore round-trip) e test interattivi T-1..T-28 ancora da validare manualmente.
-  Ultimo aggiornamento: 2026-03-21
+  Ultimo aggiornamento: 2026-03-22
 - TASK-002 bloccato.
   Motivo: il flusso `Condividi / Invia copia` e` funzionante, ma il flusso `Apri con` non e` affidabilmente disponibile per file `.xlsx` da alcune app di terze parti. Le fix minime tentate su `Info.plist` non hanno chiuso il criterio di accettazione in modo verificabile. Il comportamento residuo sembra dipendere anche dall'app sorgente / dal flusso esposto da iOS.
   Nota criteri: soddisfatti il document handoff di base e il flusso `Condividi / Invia copia`; ancora non chiuso il criterio di disponibilita` affidabile di `Apri con` cross-app.
