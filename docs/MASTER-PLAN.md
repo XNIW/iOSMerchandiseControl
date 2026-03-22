@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. TASK-007 completato (2026-03-21).
+TASK-012 — Simulator automation: dual-agent wrapper + adapter (REVIEW)
 
 ## Stato globale
-IDLE — nessun task in lavorazione
-> TASK-002 bloccato, TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, problema grandi import estratto in TASK-011).
+ACTIVE — TASK-012 in lavorazione
+> TASK-002 bloccato, TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, problema grandi import estratto in TASK-011), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — sblocco dipende da TASK-012).
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,7 +49,13 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-Nessun task attivo.
+- **Task ID**: TASK-012
+- **Titolo**: Simulator automation — dual-agent wrapper + adapter
+- **File task**: `docs/TASKS/TASK-012-simulator-automation-skill.md`
+- **Stato**: ACTIVE
+- **Fase attuale**: REVIEW
+- **Responsabile attuale**: CLAUDE (reviewer)
+- **Ultimo aggiornamento**: 2026-03-21
 
 Task bloccati non attivi:
 - Task ID: TASK-002
@@ -90,10 +96,11 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | TASK-005 | ImportAnalysis error export + inline editing | BLOCKED | HIGH |
 | TASK-006 | Database full import/export (multi-sheet) | BLOCKED | HIGH |
 | TASK-007 | History advanced filters | DONE | MEDIUM |
-| TASK-008 | Generated manual row dialog + calculate | TODO | MEDIUM |
+| TASK-008 | Generated manual row dialog + calculate | BLOCKED | MEDIUM |
 | TASK-009 | Product model old prices + price backfill | TODO | LOW |
 | TASK-010 | Localizzazione UI multilingua | TODO | LOW |
 | TASK-011 | Large import stability, memory e progress UX | TODO | HIGH |
+| TASK-012 | Simulator automation — dual-agent wrapper + adapter (sblocca TASK-008) | ACTIVE | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -107,6 +114,10 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 - TASK-006 bloccato.
   Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Test manuali sospesi prima della conferma finale; comportamento su import di dataset molto grandi non validato (freeze UI, memory pressure, possibile app kill). Sblocco pratico subordinato al completamento di TASK-011.
   Nota criteri: CA-1/CA-12 e CA-14 verificati; CA-13 (round-trip) e stabilità su dataset reali ancora da validare manualmente.
+- TASK-008 bloccato.
+  Motivo: review codice completata da Claude — nessun problema critico trovato, tutti i CA verificabili staticamente superati. Build verde. Validazione UI end-to-end (T-1..T-28) sospesa: infrastruttura automazione Simulator non stabile. Sblocco subordinato a completamento di TASK-012 (o task dedicato Simulator automation).
+  Nota criteri: CA-1..CA-14, CA-16..CA-20 verificati da code review; CA-15 (autosave/restore round-trip) e test interattivi T-1..T-28 ancora da validare manualmente.
+  Ultimo aggiornamento: 2026-03-21
 - TASK-002 bloccato.
   Motivo: il flusso `Condividi / Invia copia` e` funzionante, ma il flusso `Apri con` non e` affidabilmente disponibile per file `.xlsx` da alcune app di terze parti. Le fix minime tentate su `Info.plist` non hanno chiuso il criterio di accettazione in modo verificabile. Il comportamento residuo sembra dipendere anche dall'app sorgente / dal flusso esposto da iOS.
   Nota criteri: soddisfatti il document handoff di base e il flusso `Condividi / Invia copia`; ancora non chiuso il criterio di disponibilita` affidabile di `Apri con` cross-app.
@@ -123,6 +134,7 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 - Task in stato DONE restano archiviati in `docs/TASKS/` — non vanno riusati né modificati (salvo note documentali minime)
 - Per nuovo lavoro collegato a un task DONE → creare un nuovo task con riferimento (campo "Dipende da"), non riaprire
 - User override: se l'utente dà un'istruzione in conflitto col workflow, gli agent possono seguirla ma devono segnalare l'impatto
+- User override 2026-03-21: autorizzato riallineamento minimo del tracking da parte di Codex per evitare il blocco operativo tra file task e MASTER-PLAN durante l'avvio di TASK-008
 
 ## Criterio di aggiornamento
 Questo file va aggiornato SOLO quando cambia almeno uno di:

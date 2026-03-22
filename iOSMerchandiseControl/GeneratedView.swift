@@ -75,6 +75,8 @@ struct GeneratedView: View {
 
     /// Dettagli riga (sheet stile dialog Android)
     @State private var rowDetail: RowDetailData?
+    @State private var showManualEntrySheet: Bool = false
+    @State private var manualEntryEditIndex: Int? = nil
 
     /// Hook per scanner / input barcode
     @State private var productToEdit: Product?
@@ -616,6 +618,19 @@ struct GeneratedView: View {
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $showManualEntrySheet) {
+                ManualEntrySheet(
+                    editIndex: manualEntryEditIndex,
+                    data: $data,
+                    editable: $editable,
+                    complete: $complete,
+                    isManualEntry: entry.isManualEntry,
+                    onSave: {
+                        entry.totalItems = max(0, data.count - 1)
+                        markDirtyAndScheduleAutosave()
+                    }
+                )
             }
             
             // Sheet per storico prezzi (da pannello dettagli)
@@ -1432,21 +1447,8 @@ struct GeneratedView: View {
 
     /// Aggiunge una nuova riga vuota per entry manuali.
     private func addManualRow() {
-        // Se per qualche motivo non c'è ancora header (entry manuale nuova), crealo
-        if data.isEmpty {
-            data = [
-                ["barcode", "productName", "realQuantity", "RetailPrice"]
-            ]
-        }
-
-        let header = data[0]
-        let emptyRow = Array(repeating: "", count: header.count)
-        data.append(emptyRow)
-
-        let newIndex = data.count - 1
-        ensureEditableCapacity(for: newIndex)
-        ensureCompleteCapacity()
-        markDirtyAndScheduleAutosave()
+        manualEntryEditIndex = nil
+        showManualEntrySheet = true
     }
 
     /// Garantisce che editable abbia abbastanza righe e almeno 2 colonne per la riga indicata.
@@ -1894,7 +1896,12 @@ struct GeneratedView: View {
 
         // apro dettagli subito dopo (delay piccolo ma visibile)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
-            showRowDetail(for: rowIndex, headerRow: headerRow)
+            if entry.isManualEntry {
+                manualEntryEditIndex = rowIndex
+                showManualEntrySheet = true
+            } else {
+                showRowDetail(for: rowIndex, headerRow: headerRow)
+            }
         }
 
         // spengo highlight
@@ -2042,6 +2049,683 @@ struct GeneratedView: View {
                 saveError = "Impossibile esportare XLSX: \(error.localizedDescription)"
             }
         }
+    }
+}
+
+private struct ManualEntrySheet: View {
+    private struct ColumnIndexes {
+        let barcode: Int
+        let productName: Int
+        let quantity: Int
+        let retailPrice: Int
+        let purchasePrice: Int
+        let category: Int
+    }
+
+    private enum Mode {
+        case add
+        case edit(Int)
+    }
+
+    private static let noCategoryToken = "__manual_entry_none__"
+    private static let rawCategoryToken = "__manual_entry_raw__"
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
+
+    @Query(sort: \ProductCategory.name, order: .forward)
+    private var categories: [ProductCategory]
+
+    let editIndex: Int?
+    @Binding var data: [[String]]
+    @Binding var editable: [[String]]
+    @Binding var complete: [Bool]
+    let isManualEntry: Bool
+    let onSave: () -> Void
+
+    @State private var barcode: String = ""
+    @State private var productName: String = ""
+    @State private var retailPrice: String = ""
+    @State private var purchasePrice: String = ""
+    @State private var quantity: String = "1"
+    @State private var selectedCategoryName: String? = nil
+    @State private var rawCategoryString: String = ""
+    @State private var categoryPickerSelection: String = ManualEntrySheet.noCategoryToken
+    @State private var showScannerInDialog: Bool = false
+    @State private var productFromDb: Product? = nil
+    @State private var barcodeError: String? = nil
+    @State private var headerError: String? = nil
+    @State private var didLoadInitialValues: Bool = false
+
+    private var mode: Mode {
+        if let editIndex {
+            return .edit(editIndex)
+        }
+        return .add
+    }
+
+    private var isEditMode: Bool {
+        if case .edit = mode {
+            return true
+        }
+        return false
+    }
+
+    private var navigationTitle: String {
+        isEditMode ? "Modifica riga" : "Aggiungi riga"
+    }
+
+    private var trimmedBarcode: String {
+        barcode.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedProductName: String {
+        productName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedRetailPrice: String {
+        retailPrice.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedPurchasePrice: String {
+        purchasePrice.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedQuantity: String {
+        quantity.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedRawCategory: String {
+        rawCategoryString.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var shouldShowRawCategoryOption: Bool {
+        selectedCategoryName == nil && !trimmedRawCategory.isEmpty
+    }
+
+    private var isQuantityValid: Bool {
+        let value = trimmedQuantity
+        guard !value.isEmpty else { return true }
+        return normalizedNumber(from: value) != nil
+    }
+
+    private var quantityErrorMessage: String? {
+        guard !trimmedQuantity.isEmpty, !isQuantityValid else { return nil }
+        return "La quantità deve essere numerica."
+    }
+
+    private var quantityWarningMessage: String? {
+        guard let qty = normalizedNumber(from: trimmedQuantity), qty < 0 else { return nil }
+        return "Quantità negativa: il salvataggio resta consentito."
+    }
+
+    private var canConfirm: Bool {
+        guard headerError == nil else { return false }
+        guard !trimmedBarcode.isEmpty else { return false }
+        guard let retail = normalizedNumber(from: trimmedRetailPrice), retail > 0 else { return false }
+        guard barcodeError == nil else { return false }
+        return isQuantityValid
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if let headerError {
+                    Section {
+                        Label(headerError, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                Section("Dati riga") {
+                    HStack(spacing: 12) {
+                        TextField("Barcode", text: $barcode)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+
+                        Button {
+                            showScannerInDialog = true
+                        } label: {
+                            Image(systemName: "barcode.viewfinder")
+                                .font(.title3)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Scanner barcode")
+                    }
+
+                    TextField("Nome prodotto", text: $productName)
+
+                    TextField("Prezzo vendita", text: $retailPrice)
+                        .keyboardType(.decimalPad)
+
+                    TextField("Prezzo acquisto", text: $purchasePrice)
+                        .keyboardType(.decimalPad)
+
+                    TextField("Quantità", text: $quantity)
+                        .keyboardType(.numbersAndPunctuation)
+
+                    Picker("Categoria", selection: $categoryPickerSelection) {
+                        Text("Nessuna categoria").tag(Self.noCategoryToken)
+                        if shouldShowRawCategoryOption {
+                            Text("\(trimmedRawCategory) (salvata)").tag(Self.rawCategoryToken)
+                        }
+                        ForEach(categories.map(\.name), id: \.self) { categoryName in
+                            Text(categoryName).tag(categoryName)
+                        }
+                    }
+                    .disabled(categories.isEmpty && !shouldShowRawCategoryOption)
+                    .onChange(of: categoryPickerSelection) { _, newValue in
+                        applyCategorySelection(newValue)
+                    }
+
+                    if let barcodeError {
+                        Text(barcodeError)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+
+                    if let quantityErrorMessage {
+                        Text(quantityErrorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    } else if let quantityWarningMessage {
+                        Text(quantityWarningMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+
+                    if shouldShowRawCategoryOption {
+                        Text("Categoria attuale non presente nel database locale: \(trimmedRawCategory)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if categories.isEmpty {
+                        Text("Nessuna categoria disponibile nel database locale.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let productFromDb {
+                    Section("Dati dal database") {
+                        LabeledContent("Nome") {
+                            Text(productFromDb.productName ?? "")
+                        }
+
+                        LabeledContent("Prezzo vendita") {
+                            Text(displayPrice(productFromDb.retailPrice))
+                        }
+
+                        Button("Copia dati") {
+                            copyDataFromDatabase(productFromDb)
+                        }
+                    }
+                }
+
+                if isEditMode {
+                    Section {
+                        Button("Elimina", role: .destructive) {
+                            deleteCurrentRow()
+                        }
+                    } footer: {
+                        Text("Rimuove la riga da data, editable e complete.")
+                    }
+                }
+            }
+            .navigationTitle(navigationTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annulla") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Conferma") {
+                        confirm()
+                    }
+                    .disabled(!canConfirm)
+                }
+            }
+            .onAppear {
+                loadInitialValuesIfNeeded()
+            }
+            .task(id: barcode) {
+                refreshBarcodeLookup()
+            }
+            .sheet(isPresented: $showScannerInDialog) {
+                ScannerView(title: "Scanner barcode") { code in
+                    barcode = code
+                    showScannerInDialog = false
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+    }
+
+    private func loadInitialValuesIfNeeded() {
+        guard !didLoadInitialValues else { return }
+        didLoadInitialValues = true
+
+        headerError = requiredHeaderErrorMessage(in: data.first ?? [])
+
+        switch mode {
+        case .add:
+            quantity = "1"
+            applyLoadedCategory("")
+
+        case .edit(let rowIndex):
+            guard data.indices.contains(rowIndex) else {
+                dismiss()
+                return
+            }
+
+            let header = data.first ?? []
+            let row = data[rowIndex]
+
+            barcode = safeRead(row, at: columnIndex(in: header, candidates: ["barcode"]))
+            productName = safeRead(row, at: columnIndex(in: header, candidates: ["productName"]))
+            purchasePrice = safeRead(row, at: columnIndex(in: header, candidates: ["purchasePrice"]))
+            quantity = safeEditableValue(row: rowIndex, slot: 0)
+            retailPrice = safeEditableValue(row: rowIndex, slot: 1)
+            applyLoadedCategory(safeRead(row, at: columnIndex(in: header, candidates: ["category"])))
+        }
+    }
+
+    private func confirm() {
+        switch mode {
+        case .add:
+            confirmAdd()
+        case .edit:
+            confirmEdit()
+        }
+    }
+
+    private func confirmAdd() {
+        guard let columns = prepareColumnsForSave() else { return }
+
+        var newRow = Array(repeating: "", count: data[0].count)
+        let persisted = makePersistedValues()
+
+        newRow[columns.barcode] = persisted.barcode
+        newRow[columns.productName] = persisted.productName
+        newRow[columns.retailPrice] = persisted.retailPrice
+        newRow[columns.purchasePrice] = persisted.purchasePrice
+        newRow[columns.quantity] = persisted.quantity
+        newRow[columns.category] = persisted.category
+
+        data.append(newRow)
+
+        let newIndex = data.count - 1
+        ensureEditableCapacity(for: newIndex)
+        editable[newIndex][0] = persisted.quantity
+        editable[newIndex][1] = persisted.retailPrice
+        ensureCompleteCapacity()
+        complete[newIndex] = false
+
+        onSave()
+        dismiss()
+    }
+
+    private func confirmEdit() {
+        guard case .edit(let rowIndex) = mode, data.indices.contains(rowIndex) else {
+            dismiss()
+            return
+        }
+        guard let columns = prepareColumnsForSave() else { return }
+
+        var updatedRow = data[rowIndex]
+        while updatedRow.count < data[0].count {
+            updatedRow.append("")
+        }
+
+        let persisted = makePersistedValues()
+        updatedRow[columns.barcode] = persisted.barcode
+        updatedRow[columns.productName] = persisted.productName
+        updatedRow[columns.retailPrice] = persisted.retailPrice
+        updatedRow[columns.purchasePrice] = persisted.purchasePrice
+        updatedRow[columns.quantity] = persisted.quantity
+        updatedRow[columns.category] = persisted.category
+        data[rowIndex] = updatedRow
+
+        ensureEditableCapacity(for: rowIndex)
+        editable[rowIndex][0] = persisted.quantity
+        editable[rowIndex][1] = persisted.retailPrice
+
+        onSave()
+        dismiss()
+    }
+
+    private func deleteCurrentRow() {
+        guard case .edit(let rowIndex) = mode, rowIndex >= 1, data.indices.contains(rowIndex) else {
+            dismiss()
+            return
+        }
+
+        data.remove(at: rowIndex)
+        if editable.indices.contains(rowIndex) {
+            editable.remove(at: rowIndex)
+        }
+        if complete.indices.contains(rowIndex) {
+            complete.remove(at: rowIndex)
+        }
+
+        normalizeParallelArrays()
+        onSave()
+        dismiss()
+    }
+
+    private func prepareColumnsForSave() -> ColumnIndexes? {
+        guard isManualEntry else {
+            headerError = "Dialog disponibile solo per inventari manuali."
+            return nil
+        }
+
+        guard !data.isEmpty else {
+            headerError = "Sessione non compatibile — header inventario assente."
+            return nil
+        }
+
+        if let requiredError = requiredHeaderErrorMessage(in: data[0]) {
+            headerError = requiredError
+            return nil
+        }
+
+        addColumnIfMissing("purchasePrice")
+        addColumnIfMissing("category")
+        if columnIndex(in: data[0], candidates: ["RetailPrice", "retailPrice"]) == nil {
+            addColumnIfMissing("RetailPrice")
+        }
+
+        guard
+            let barcodeIndex = columnIndex(in: data[0], candidates: ["barcode"]),
+            let productNameIndex = columnIndex(in: data[0], candidates: ["productName"]),
+            let quantityIndex = columnIndex(in: data[0], candidates: ["realQuantity", "quantity"]),
+            let retailPriceIndex = columnIndex(in: data[0], candidates: ["RetailPrice", "retailPrice"]),
+            let purchasePriceIndex = columnIndex(in: data[0], candidates: ["purchasePrice"]),
+            let categoryIndex = columnIndex(in: data[0], candidates: ["category"])
+        else {
+            headerError = "Sessione non compatibile — impossibile risolvere la struttura dell'header."
+            return nil
+        }
+
+        headerError = nil
+        return ColumnIndexes(
+            barcode: barcodeIndex,
+            productName: productNameIndex,
+            quantity: quantityIndex,
+            retailPrice: retailPriceIndex,
+            purchasePrice: purchasePriceIndex,
+            category: categoryIndex
+        )
+    }
+
+    private func makePersistedValues() -> (
+        barcode: String,
+        productName: String,
+        retailPrice: String,
+        purchasePrice: String,
+        quantity: String,
+        category: String
+    ) {
+        let retailDouble = normalizedNumber(from: trimmedRetailPrice) ?? 0
+        let purchaseDouble: Double?
+
+        if trimmedPurchasePrice.isEmpty {
+            purchaseDouble = retailDouble > 0 ? (retailDouble / 2.0).rounded() : nil
+        } else {
+            purchaseDouble = normalizedNumber(from: trimmedPurchasePrice)
+        }
+
+        let categoryToSave: String
+        if let selectedCategoryName {
+            categoryToSave = selectedCategoryName
+        } else if !trimmedRawCategory.isEmpty {
+            categoryToSave = trimmedRawCategory
+        } else {
+            categoryToSave = ""
+        }
+
+        let finalName: String
+        if trimmedProductName.isEmpty {
+            finalName = selectedCategoryName ?? trimmedRawCategory
+        } else {
+            finalName = trimmedProductName
+        }
+
+        return (
+            barcode: trimmedBarcode,
+            productName: finalName,
+            retailPrice: trimmedRetailPrice,
+            purchasePrice: purchaseDouble.map(formatDoubleAsPrice) ?? "",
+            quantity: trimmedQuantity,
+            category: categoryToSave
+        )
+    }
+
+    private func refreshBarcodeLookup() {
+        let cleanedBarcode = trimmedBarcode
+
+        guard !cleanedBarcode.isEmpty else {
+            barcodeError = nil
+            productFromDb = nil
+            return
+        }
+
+        if isDuplicateBarcode(cleanedBarcode) {
+            barcodeError = "Prodotto già presente nella lista."
+            productFromDb = nil
+            return
+        }
+
+        barcodeError = nil
+
+        do {
+            let descriptor = FetchDescriptor<Product>(
+                predicate: #Predicate { $0.barcode == cleanedBarcode }
+            )
+            productFromDb = try context.fetch(descriptor).first
+        } catch {
+            productFromDb = nil
+        }
+    }
+
+    private func isDuplicateBarcode(_ barcode: String) -> Bool {
+        guard let header = data.first,
+              let barcodeIndex = columnIndex(in: header, candidates: ["barcode"]) else {
+            return false
+        }
+
+        for rowIndex in 1..<data.count {
+            let rowBarcode = safeRead(data[rowIndex], at: barcodeIndex)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            let isCurrentRow: Bool
+            if case .edit(let currentRowIndex) = mode {
+                isCurrentRow = rowIndex == currentRowIndex
+            } else {
+                isCurrentRow = false
+            }
+
+            if rowBarcode == barcode && !isCurrentRow {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private func copyDataFromDatabase(_ product: Product) {
+        productName = product.productName ?? ""
+        retailPrice = formatDoubleAsPrice(product.retailPrice ?? 0)
+
+        guard let categoryName = product.category?.name.trimmingCharacters(in: .whitespacesAndNewlines),
+              !categoryName.isEmpty else {
+            return
+        }
+
+        if categories.contains(where: { $0.name == categoryName }) {
+            selectedCategoryName = categoryName
+            rawCategoryString = ""
+            categoryPickerSelection = categoryName
+        } else {
+            selectedCategoryName = nil
+            rawCategoryString = categoryName
+            categoryPickerSelection = Self.rawCategoryToken
+        }
+    }
+
+    private func applyLoadedCategory(_ rawValue: String) {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            selectedCategoryName = nil
+            rawCategoryString = ""
+            categoryPickerSelection = Self.noCategoryToken
+            return
+        }
+
+        if categories.contains(where: { $0.name == trimmed }) {
+            selectedCategoryName = trimmed
+            rawCategoryString = ""
+            categoryPickerSelection = trimmed
+        } else {
+            selectedCategoryName = nil
+            rawCategoryString = trimmed
+            categoryPickerSelection = Self.rawCategoryToken
+        }
+    }
+
+    private func applyCategorySelection(_ selection: String) {
+        switch selection {
+        case Self.noCategoryToken:
+            selectedCategoryName = nil
+            rawCategoryString = ""
+
+        case Self.rawCategoryToken:
+            selectedCategoryName = nil
+
+        default:
+            selectedCategoryName = selection
+            rawCategoryString = ""
+        }
+    }
+
+    private func requiredHeaderErrorMessage(in header: [String]) -> String? {
+        guard !header.isEmpty else {
+            return "Sessione non compatibile — header inventario assente."
+        }
+
+        var missingColumns: [String] = []
+        if columnIndex(in: header, candidates: ["barcode"]) == nil {
+            missingColumns.append("barcode")
+        }
+        if columnIndex(in: header, candidates: ["productName"]) == nil {
+            missingColumns.append("productName")
+        }
+        if columnIndex(in: header, candidates: ["realQuantity", "quantity"]) == nil {
+            missingColumns.append("realQuantity/quantity")
+        }
+
+        guard !missingColumns.isEmpty else { return nil }
+        return "Sessione non compatibile — mancano colonne obbligatorie: \(missingColumns.joined(separator: ", "))."
+    }
+
+    private func addColumnIfMissing(_ key: String) {
+        guard data.indices.contains(0), data[0].firstIndex(of: key) == nil else { return }
+
+        data[0].append(key)
+        let targetCount = data[0].count
+
+        for rowIndex in data.indices.dropFirst() {
+            var row = data[rowIndex]
+            while row.count < targetCount {
+                row.append("")
+            }
+            data[rowIndex] = row
+        }
+    }
+
+    private func normalizeParallelArrays() {
+        if editable.count < data.count {
+            editable.append(contentsOf: Array(repeating: ["", ""], count: data.count - editable.count))
+        } else if editable.count > data.count {
+            editable = Array(editable.prefix(data.count))
+        }
+
+        for rowIndex in editable.indices {
+            var row = editable[rowIndex]
+            while row.count < 2 {
+                row.append("")
+            }
+            editable[rowIndex] = Array(row.prefix(2))
+        }
+
+        if complete.count < data.count {
+            complete.append(contentsOf: Array(repeating: false, count: data.count - complete.count))
+        } else if complete.count > data.count {
+            complete = Array(complete.prefix(data.count))
+        }
+    }
+
+    private func ensureEditableCapacity(for rowIndex: Int) {
+        if editable.count <= rowIndex {
+            let needed = rowIndex + 1 - editable.count
+            editable.append(contentsOf: Array(repeating: ["", ""], count: max(needed, 0)))
+        }
+
+        var row = editable[rowIndex]
+        while row.count < 2 {
+            row.append("")
+        }
+        editable[rowIndex] = Array(row.prefix(2))
+    }
+
+    private func ensureCompleteCapacity() {
+        if complete.count < data.count {
+            complete.append(contentsOf: Array(repeating: false, count: data.count - complete.count))
+        } else if complete.count > data.count {
+            complete = Array(complete.prefix(data.count))
+        }
+    }
+
+    private func safeEditableValue(row rowIndex: Int, slot: Int) -> String {
+        guard editable.indices.contains(rowIndex), editable[rowIndex].indices.contains(slot) else {
+            return ""
+        }
+        return editable[rowIndex][slot]
+    }
+
+    private func safeRead(_ row: [String], at index: Int?) -> String {
+        guard let index, row.indices.contains(index) else { return "" }
+        return row[index]
+    }
+
+    private func columnIndex(in header: [String], candidates: [String]) -> Int? {
+        for candidate in candidates {
+            if let index = header.firstIndex(of: candidate) {
+                return index
+            }
+        }
+        return nil
+    }
+
+    private func normalizedNumber(from raw: String) -> Double? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+    }
+
+    private func displayPrice(_ value: Double?) -> String {
+        guard let value else { return "—" }
+        return formatDoubleAsPrice(value)
+    }
+
+    private func formatDoubleAsPrice(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(Int(value))
+        }
+        return String(format: "%.2f", value)
     }
 }
 

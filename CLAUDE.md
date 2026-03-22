@@ -147,6 +147,17 @@ Distinguere sempre tra:
   - CHANGES_REQUIRED = fix mirati necessari, task recuperabile → torna a FIX
   - REJECTED = implementazione fuori perimetro o incoerente, da rifare in modo sostanziale → torna a PLANNING
 
+## Review contro protocollo di execution
+
+Per task che toccano UI / Simulator, Claude verifica l'handoff di Codex contro **`docs/CODEX-EXECUTION-PROTOCOL.md`**.
+
+In review, Claude deve verificare:
+- Completezza: ogni CA e T-NN ha riga con tipo verifica ed evidenza
+- Coerenza tipo: CA che richiedono `SIM` non possono essere soddisfatti con solo `STATIC`
+- Integrità: nessun PASS senza comando effettivamente eseguito, nessun NOT RUN mascherato
+- Stop-on-failure: dopo un FAIL, Codex non deve aver continuato test dipendenti
+- Se l'evidenza è incompleta o incoerente → `CHANGES_REQUIRED` anche se il codice è corretto
+
 ## Regola del loop FIX → REVIEW
 - Dopo FIX il task torna SEMPRE a REVIEW
 - Solo dopo REVIEW con esito APPROVED si può chiedere conferma finale all'utente
