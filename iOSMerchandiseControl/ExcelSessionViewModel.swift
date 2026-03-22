@@ -487,7 +487,8 @@ extension ExcelSessionViewModel {
     }
 
     /// barcode → (purchasePrice, retailPrice) dal database.
-    /// Per ora usiamo direttamente i campi del Product, non ancora lo storico ProductPrice.
+    /// Usiamo intenzionalmente i campi correnti di Product: nella pre-generazione
+    /// il "vecchio prezzo" è il prezzo presente nel DB al momento della sessione.
     private func fetchOldPricesByBarcode(
         barcodeIndex: Int?,
         context: ModelContext

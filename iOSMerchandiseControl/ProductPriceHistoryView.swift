@@ -55,7 +55,7 @@ struct ProductPriceHistoryView: View {
                                         .foregroundStyle(.secondary)
 
                                     if let source = price.source, !source.isEmpty {
-                                        Text(source)
+                                        Text(displaySource(source))
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
                                     }
@@ -82,6 +82,23 @@ struct ProductPriceHistoryView: View {
             return "Acquisto"
         case .retail:
             return "Vendita"
+        }
+    }
+
+    private func displaySource(_ source: String) -> String {
+        switch source {
+        case "BACKFILL":
+            return "Prezzo iniziale"
+        case "IMPORT_EXCEL":
+            return "Import Excel"
+        case "INVENTORY_SYNC":
+            return "Sync inventario"
+        case "EDIT_PRODUCT":
+            return "Modifica manuale"
+        case "IMPORT_DB_FULL":
+            return "Import database"
+        default:
+            return source
         }
     }
 

@@ -7,8 +7,8 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 Nessun task attivo.
 
 ## Stato globale
-IDLE — nessun task in lavorazione
-> TASK-002 bloccato, TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, problema grandi import estratto in TASK-011), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — test manuali, senza obbligo di automazione Simulator), TASK-012 completato, TASK-013 bloccato (sospeso per decisione utente: workflow SIM UI rimosso dal processo standard).
+IDLE
+> TASK-002 bloccato, TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, problema grandi import estratto in TASK-011), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — test manuali, senza obbligo di automazione Simulator), TASK-009 bloccato (implementazione completata, review codice APPROVED, test manuali sospesi per decisione utente), TASK-012 completato, TASK-013 bloccato (sospeso per decisione utente: workflow SIM UI rimosso dal processo standard).
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,9 +49,15 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-Nessun task attivo. Progetto in stato IDLE.
+Nessun task attivo — progetto IDLE.
 
 Task bloccati non attivi:
+- Task ID: TASK-009
+- Titolo: Product model old prices + price backfill
+- File task: `docs/TASKS/TASK-009-product-model-old-prices-price-backfill.md`
+- Stato: BLOCKED
+- Motivo: implementazione completata e review codice APPROVED da Claude (2026-03-22); test manuali VM-1..VM-9 non ancora eseguiti; task sospeso per decisione utente in attesa di validazione manuale futura. Alla ripresa: eseguire VM-1..VM-9, poi confermare DONE o aprire FIX se emergono regressioni.
+- Ultimo aggiornamento: 2026-03-22
 - Task ID: TASK-013
 - Titolo: sim_ui.sh performance — batch mode, timeout reale, cache device frame
 - File task: `docs/TASKS/TASK-013-sim-ui-performance.md`
@@ -97,7 +103,7 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | TASK-006 | Database full import/export (multi-sheet) | BLOCKED | HIGH |
 | TASK-007 | History advanced filters | DONE | MEDIUM |
 | TASK-008 | Generated manual row dialog + calculate | BLOCKED | MEDIUM |
-| TASK-009 | Product model old prices + price backfill | TODO | LOW |
+| TASK-009 | Product model old prices + price backfill | BLOCKED | LOW |
 | TASK-010 | Localizzazione UI multilingua | TODO | LOW |
 | TASK-011 | Large import stability, memory e progress UX | TODO | HIGH |
 | TASK-012 | Simulator automation — dual-agent wrapper + adapter (sblocca TASK-008) | DONE | HIGH |

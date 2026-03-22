@@ -3,6 +3,7 @@ import SwiftData
 
 struct ContentView: View {
     @AppStorage("appTheme") private var appTheme: String = "system"
+    @Environment(\.modelContext) private var modelContext
     @StateObject private var excelSession = ExcelSessionViewModel()
     @State private var selectedTab = 0
 
@@ -57,6 +58,16 @@ struct ContentView: View {
             .tag(3)
         }
         .preferredColorScheme(resolvedColorScheme)
+        .task {
+            do {
+                let inserted = try PriceHistoryBackfillService.backfillIfNeeded(context: modelContext)
+                if inserted > 0 {
+                    debugPrint("[Backfill] Inseriti \(inserted) record ProductPrice legacy.")
+                }
+            } catch {
+                debugPrint("[Backfill] Errore durante il backfill prezzi: \(error)")
+            }
+        }
         .onOpenURL { url in
             guard url.isFileURL else { return }
             // Policy URL singolo: se c'è già un URL pendente o un import in corso, scarta
