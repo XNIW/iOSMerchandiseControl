@@ -586,7 +586,7 @@ Ogni match di Audit 3 che non è `"中文"` è un literal non latino non previst
 - Tracking riallineato come da override utente: `docs/MASTER-PLAN.md` aggiornato da task inattivo incoerente a TASK-010 attivo; file task portato prima a `EXECUTION` per lavorazione e ora a `REVIEW` per handoff verso Claude.
 - Creata l'infrastruttura di localizzazione in `iOSMerchandiseControl/LocalizationManager.swift` con `currentAppLanguageSelection()`, `appLocale()`, `L(_:...)`, `Bundle.resolvedLanguageCode(for:)`, `Bundle.forLanguage(_:)` e `View.localeOverride(for:)` secondo Decisioni #2, #5, #6 e #9 del planning.
 - Creati `Localizable.strings` in `it.lproj`, `en.lproj`, `zh-Hans.lproj`, `es.lproj`; aggiunte tutte le chiavi richieste dalle view in scope, incluse chiavi emerse durante execution (`database.progress.completed_title`, `database.error.save_sheet`, `database.error.file_not_utf8`, `pregenerate.add_file`, `pregenerate.reload_file`, `generated.row_edit.field.quantity_from_file`, ruoli colonna `pregenerate.role.*`, preview demo `generated.preview.*`).
-- Aggiornato `iOSMerchandiseControl.xcodeproj/project.pbxproj` con `knownRegions = (en, Base, es, it, "zh-Hans")`; `developmentRegion = en` lasciato invariato come richiesto dal planning.
+- Chiarimento `project.pbxproj`: caso **(a)** confermato. `iOSMerchandiseControl.xcodeproj/project.pbxproj` e` stato davvero modificato in modo persistente; `git diff` mostra l'aggiunta di `es`, `it` e `"zh-Hans"` a `knownRegions`, mentre `developmentRegion = en` e` rimasto invariato come richiesto dal planning. Il file va quindi considerato a tutti gli effetti tra i file toccati del task.
 - `ContentView.swift`: aggiunti `@AppStorage("appLanguage")`, tab labels localizzate e `.localeOverride(for: appLanguage)` per propagare locale e rerender runtime.
 - `OptionsView.swift`: localizzati titoli, descrizioni e footer delle opzioni; mantenute hardcoded solo le 4 eccezioni native approvate dal planning (`English`, `Italiano`, `Español`, `中文`).
 - `InventoryHomeView.swift`, `HistoryView.swift`, `DatabaseView.swift`, `PreGenerateView.swift`, `GeneratedView.swift`, `ImportAnalysisView.swift`, `EditProductView.swift`, `ProductPriceHistoryView.swift`, `BarcodeScannerView.swift`, `EntryInfoEditor.swift`: sostituite le stringhe utente con `L(...)`; `GeneratedView.swift` incluso integralmente come richiesto.
@@ -602,7 +602,8 @@ Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO
 - [x] Criteri di accettazione verificati: ⚠️ NON ESEGUIBILE — verificati staticamente/build CA-1, CA-4, CA-5, CA-7, CA-8, CA-9, CA-10, CA-11; CA-2, CA-3 e CA-6 restano da validare manualmente tramite VM del task (`VM-1`, `VM-2`, `VM-3`, `VM-6`, `VM-10`, `VM-11`).
 - Riallineamento tracking pre-execution: ✅ ESEGUITO — `MASTER-PLAN` allineato al file task prima dell'implementazione; nessun backlog/priorita` alterato.
 - Parita` chiavi `.strings`: ✅ ESEGUITO — `diff /tmp/keys_it.txt /tmp/keys_en.txt`, `diff /tmp/keys_it.txt /tmp/keys_zh.txt`, `diff /tmp/keys_it.txt /tmp/keys_es.txt` senza output; duplicati `uniq -d` = 0; confronto tra chiavi usate da `L("...")` nei 12 file in scope e chiavi presenti nei 4 `.strings`: `missing=0`, `dupes=0` per tutte le lingue.
-- `.lproj` riconosciute dal bundle buildato: ✅ ESEGUITO — presenti nel prodotto buildato `.../iOSMerchandiseControl.app/en.lproj`, `es.lproj`, `it.lproj`, `zh-Hans.lproj`; nessun fix aggiuntivo oltre a `knownRegions` richiesto.
+- Wiring runtime localizzazioni: ✅ ESEGUITO (evidenza statica) — `ContentView.swift` usa `@AppStorage("appLanguage")` e `.localeOverride(for: appLanguage)`; `L(...)` legge la lingua corrente da `UserDefaults` e risolve il bundle tramite `Bundle.forLanguage(...)`. Con questo wiring, il cambio lingua in `OptionsView` forza rerender del root e nuovo lookup delle stringhe senza riavvio; la validazione manuale visuale resta comunque pendente nei VM del task.
+- `.lproj` incluse nel prodotto buildato: ✅ ESEGUITO — evidenza concreta usata: ispezione del bundle generato in `DerivedData` dopo la build finale con `find .../iOSMerchandiseControl.app -maxdepth 2 -type d` ha restituito esplicitamente le 4 directory `en.lproj`, `es.lproj`, `it.lproj`, `zh-Hans.lproj`; questo conferma inclusione reale nel prodotto buildato, non solo presenza nel repo.
 - Build intermedia: ✅ ESEGUITO — lanciata durante execution come smoke check dopo il primo batch di modifiche; nessun errore emerso sui file compilati nel passaggio osservato. Gate conclusivo affidato comunque alla build finale completa.
 - Build finale: ✅ ESEGUITO — `** BUILD SUCCEEDED **`.
 - Stato CA (sintesi):
@@ -617,6 +618,14 @@ Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO
 - CA-9 ✅ tutti i 12 file in scope aggiornati; `GeneratedView.swift` inclusa.
 - CA-10 ✅ verificato staticamente: `ContentView` applica `.localeOverride(for: appLanguage)` e i formatter manuali in scope usano `appLocale()`.
 - CA-11 ✅ verificato staticamente: sezione `Non incluso` gia` coerente, nessun nuovo fuori scope richiesto.
+- Categorie residue ammesse negli Audit 2 / Audit 3:
+- chiavi tecniche `@AppStorage`, id interni opzioni e valori enum non user-facing;
+- `systemImage` / SF Symbols e altri identificatori puramente UI-tecnici;
+- nomi tecnici di export/header/sheet/column/source code necessari alla compatibilita` dati (`Products`, `PriceHistory`, `barcode`, `RetailPrice`, `IMPORT_EXCEL`, ecc.);
+- `print` / `debugPrint` / `fatalError` / error domains / formatter tecnici POSIX-UTC;
+- eccezioni approvate dal planning per i nomi nativi lingua in `OptionsView` (`English`, `Italiano`, `Español`, `中文`);
+- simboli non linguistici e placeholder (`—`, `•`, `·`, `÷`, `×`, `−`, `⌫`);
+- dati preview/demo o sample non user-facing residui nel codice di preview.
 - Audit grep Passo 6 per file:
 - `ContentView.swift` — Audit 1 `NO_MATCH`; Audit 2 solo chiavi `@AppStorage("appTheme"/"appLanguage")` e valori interni enum `light`/`dark`; Audit 3 `NO_MATCH`.
 - `OptionsView.swift` — Audit 1 `NO_MATCH`; Audit 2 solo `@AppStorage`, id interni opzioni (`system`, `light`, `dark`, `zh`, `it`, `es`, `en`), `systemImage`, e i 4 nomi nativi lingua; Audit 3 solo whitelist Decisione #7 (`"中文"`, `"Español"`).
@@ -634,7 +643,7 @@ Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO
 ### Rischi rimasti
 - Le verifiche manuali/simulator previste dalla matrice del task non sono state eseguite in questo run: restano da confermare runtime update lingua, persistenza al riavvio, fallback `system` su lingua device non supportata e non-regressione tema (`VM-1`, `VM-2`, `VM-3`, `VM-6`, `VM-10`, `VM-11`).
 - La build finale contiene 1 warning toolchain (`Metadata extraction skipped. No AppIntents.framework dependency found.`); non emergono warning Swift nei file modificati, ma non ho baseline precedente per dimostrare formalmente che non sia "nuovo".
-- Gli audit broad/unicode-safe lasciano solo whitelist tecniche o simboliche documentate sopra; non risultano stringhe UI residue non giustificate nei file in scope.
+- Gli audit broad/unicode-safe lasciano solo whitelist tecniche o simboliche nelle categorie sintetizzate sopra; non risultano stringhe UI residue non giustificate nei file in scope.
 
 ### Handoff → Review
 - **Prossima fase**: REVIEW
@@ -666,10 +675,28 @@ Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO
 <!-- solo Codex aggiorna questa sezione -->
 
 ### Fix applicati
+- Fix mirato applicato per Guardrail #15: aggiornata la chiave `database.error.save_sheet` nei 4 file `Localizable.strings` in modo che usi placeholder posizionali a 2 argomenti invece di placeholder non posizionali.
+- File toccati dal fix:
+- `iOSMerchandiseControl/it.lproj/Localizable.strings`
+- `iOSMerchandiseControl/en.lproj/Localizable.strings`
+- `iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings`
+- `iOSMerchandiseControl/es.lproj/Localizable.strings`
+- Nessun cambio applicato a `DatabaseView.swift`: la chiamata `L("database.error.save_sheet", entityLabel, error.localizedDescription)` era gia` corretta e non richiedeva modifiche.
 
 ### Check post-fix
+- Verifica chiave nei 4 `.strings`: ✅ ESEGUITO — confermata con `rg -n 'database\\.error\\.save_sheet' ...` la presenza delle 4 varianti corrette:
+- `it`: `"Impossibile salvare il foglio %1$@: %2$@"`
+- `en`: `"Unable to save sheet %1$@: %2$@"`
+- `zh-Hans`: `"无法保存工作表 %1$@：%2$@"`
+- `es`: `"No se puede guardar la hoja %1$@: %2$@"`
+- Build rapida finale: ✅ ESEGUITO — `xcodebuild -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'generic/platform=iOS Simulator' build` -> `** BUILD SUCCEEDED **`.
+- Warning: ⚠️ invariato rispetto al run precedente — presente il warning toolchain `Metadata extraction skipped. No AppIntents.framework dependency found.`; nessun warning Swift introdotto dal fix.
+- Scope: ✅ ESEGUITO — fix limitato ai soli 4 `.strings`; nessun refactor, nessun allargamento di scope, nessun file fuori scope toccato.
 
 ### Handoff → Review finale
+- **Prossima fase**: REVIEW
+- **Prossimo agente**: CLAUDE
+- **Azione consigliata**: verificare che il finding su Guardrail #15 sia chiuso e che il task possa rientrare nel normale flusso di review senza ulteriori cambi lato codice Swift.
 
 ---
 

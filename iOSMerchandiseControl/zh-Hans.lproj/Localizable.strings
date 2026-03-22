@@ -224,7 +224,7 @@
 "database.error.export" = "导出错误：%@";
 "database.error.import_excel" = "Excel 导入错误：%@";
 "database.error.import" = "导入错误：%@";
-"database.error.save_sheet" = "无法保存工作表 %@：%@";
+"database.error.save_sheet" = "无法保存工作表 %1$@：%2$@";
 "database.validation.products_sheet_missing" = "导出的文件中没有 Products 工作表。";
 "database.validation.products_columns_missing" = "导出的 Products 工作表缺少预期列。";
 "database.validation.missing_exported_row" = "导出文件中缺少商品 %@ 的行。";

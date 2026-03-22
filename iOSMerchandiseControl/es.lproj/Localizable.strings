@@ -224,7 +224,7 @@
 "database.error.export" = "Error durante la exportación: %@";
 "database.error.import_excel" = "Error durante la importación de Excel: %@";
 "database.error.import" = "Error durante la importación: %@";
-"database.error.save_sheet" = "No se puede guardar la hoja %@: %@";
+"database.error.save_sheet" = "No se puede guardar la hoja %1$@: %2$@";
 "database.validation.products_sheet_missing" = "El archivo exportado no contiene la hoja Products.";
 "database.validation.products_columns_missing" = "La hoja Products exportada no contiene las columnas esperadas.";
 "database.validation.missing_exported_row" = "Falta la fila del producto %@ en el archivo exportado.";

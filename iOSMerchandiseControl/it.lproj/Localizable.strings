@@ -224,7 +224,7 @@
 "database.error.export" = "Errore durante l'export: %@";
 "database.error.import_excel" = "Errore durante l'import Excel: %@";
 "database.error.import" = "Errore durante l'import: %@";
-"database.error.save_sheet" = "Impossibile salvare il foglio %@: %@";
+"database.error.save_sheet" = "Impossibile salvare il foglio %1$@: %2$@";
 "database.validation.products_sheet_missing" = "Il file esportato non contiene il foglio Products.";
 "database.validation.products_columns_missing" = "Il foglio Products esportato non contiene le colonne attese.";
 "database.validation.missing_exported_row" = "Manca la riga del prodotto %@ nel file esportato.";

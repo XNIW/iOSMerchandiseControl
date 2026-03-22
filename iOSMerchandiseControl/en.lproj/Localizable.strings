@@ -224,7 +224,7 @@
 "database.error.export" = "Export error: %@";
 "database.error.import_excel" = "Excel import error: %@";
 "database.error.import" = "Import error: %@";
-"database.error.save_sheet" = "Unable to save sheet %@: %@";
+"database.error.save_sheet" = "Unable to save sheet %1$@: %2$@";
 "database.validation.products_sheet_missing" = "The exported file does not contain the Products sheet.";
 "database.validation.products_columns_missing" = "The exported Products sheet does not contain the expected columns.";
 "database.validation.missing_exported_row" = "Missing product row %@ in exported file.";
