@@ -21,52 +21,56 @@ struct OptionsView: View {
     @AppStorage("appLanguage") private var appLanguage: String = "system"
 
     // Opzioni tema (equivalenti alle scelte Android)
-    private let themeOptions: [ThemeOption] = [
-        ThemeOption(
-            id: "system",
-            title: "Automatico",
-            subtitle: "Usa lo stesso tema (chiaro/scuro) impostato in iOS."
-        ),
-        ThemeOption(
-            id: "light",
-            title: "Chiaro",
-            subtitle: "Sfondo chiaro, ideale in ambienti molto illuminati."
-        ),
-        ThemeOption(
-            id: "dark",
-            title: "Scuro",
-            subtitle: "Sfondo scuro, più riposante al chiuso o di sera."
-        )
-    ]
+    private var themeOptions: [ThemeOption] {
+        [
+            ThemeOption(
+                id: "system",
+                title: L("options.theme.auto.title"),
+                subtitle: L("options.theme.auto.subtitle")
+            ),
+            ThemeOption(
+                id: "light",
+                title: L("options.theme.light.title"),
+                subtitle: L("options.theme.light.subtitle")
+            ),
+            ThemeOption(
+                id: "dark",
+                title: L("options.theme.dark.title"),
+                subtitle: L("options.theme.dark.subtitle")
+            )
+        ]
+    }
 
     // Opzioni lingua (simili al menu della versione Android)
-    private let languageOptions: [LanguageOption] = [
-        LanguageOption(
-            id: "system",
-            title: "Sistema",
-            subtitle: "Usa la lingua predefinita del dispositivo."
-        ),
-        LanguageOption(
-            id: "zh",
-            title: "中文",
-            subtitle: "Cinese (semplificato)."
-        ),
-        LanguageOption(
-            id: "it",
-            title: "Italiano",
-            subtitle: "Lingua principale consigliata per questa installazione."
-        ),
-        LanguageOption(
-            id: "es",
-            title: "Español",
-            subtitle: "Per negozi e personale di lingua spagnola."
-        ),
-        LanguageOption(
-            id: "en",
-            title: "English",
-            subtitle: "Interfaccia internazionale di base."
-        )
-    ]
+    private var languageOptions: [LanguageOption] {
+        [
+            LanguageOption(
+                id: "system",
+                title: L("options.language.system.title"),
+                subtitle: L("options.language.system.subtitle")
+            ),
+            LanguageOption(
+                id: "zh",
+                title: "中文",
+                subtitle: L("options.language.zh.subtitle")
+            ),
+            LanguageOption(
+                id: "it",
+                title: "Italiano",
+                subtitle: L("options.language.it.subtitle")
+            ),
+            LanguageOption(
+                id: "es",
+                title: "Español",
+                subtitle: L("options.language.es.subtitle")
+            ),
+            LanguageOption(
+                id: "en",
+                title: "English",
+                subtitle: L("options.language.en.subtitle")
+            )
+        ]
+    }
 
     var body: some View {
         Form {
@@ -82,9 +86,9 @@ struct OptionsView: View {
                     }
                 }
             } header: {
-                SectionHeader(title: "Tema", systemImage: "paintbrush.fill")
+                SectionHeader(title: L("options.theme.header"), systemImage: "paintbrush.fill")
             } footer: {
-                Text("Se scegli \"Automatico\" l’app seguirà il tema impostato in iOS (chiaro o scuro).")
+                Text(L("options.theme.footer"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -101,9 +105,9 @@ struct OptionsView: View {
                     }
                 }
             } header: {
-                SectionHeader(title: "Lingua", systemImage: "globe")
+                SectionHeader(title: L("options.language.header"), systemImage: "globe")
             } footer: {
-                Text("Le modifiche alla lingua potrebbero richiedere il riavvio dell’app.")
+                Text(L("options.language.footer"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -111,17 +115,17 @@ struct OptionsView: View {
             // Piccola sezione di “aiuto” in fondo
             Section {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Suggerimento")
+                    Text(L("options.tip.header"))
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                    Text("Puoi cambiare tema e lingua in qualsiasi momento dalla tab \"Opzioni\".")
+                    Text(L("options.tip.body"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 4)
             }
         }
-        .navigationTitle("Opzioni")
+        .navigationTitle(L("options.title"))
     }
 }
 
@@ -167,7 +171,7 @@ struct OptionRow: View {
                             .fontWeight(isSelected ? .semibold : .regular)
 
                         if isSelected {
-                            Text("Attuale")
+                            Text(L("options.option.current"))
                                 .font(.caption2)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)

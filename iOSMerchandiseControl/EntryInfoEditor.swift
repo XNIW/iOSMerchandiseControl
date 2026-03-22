@@ -36,7 +36,7 @@ struct EntryInfoEditor: View {
             Form {
                 Section {
                     HStack {
-                        Text("ID file")
+                        Text(L("common.file_id"))
                         Spacer()
                         Text(entry.id)
                             .font(.footnote)
@@ -52,20 +52,20 @@ struct EntryInfoEditor: View {
                             Image(systemName: "doc.on.doc")
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Copia ID")
+                        .accessibilityLabel(L("entry.info.copy_id"))
                         #endif
                     }
                 } header: {
-                    Text("Identità")
+                    Text(L("common.identity"))
                 } footer: {
-                    Text("L’ID è la chiave univoca dell’inventario. Il nome qui sotto è solo un’etichetta.")
+                    Text(L("entry.info.identity_footer"))
                 }
 
                 Section {
-                    TextField("Nome visualizzato (opzionale)", text: $draftTitle)
+                    TextField(L("entry.info.display_name_optional"), text: $draftTitle)
                         .focused($focusedField, equals: .title)
 
-                    TextField("Fornitore", text: $draftSupplier)
+                    TextField(L("common.supplier"), text: $draftSupplier)
                         .focused($focusedField, equals: .supplier)
 
                     InlineSuggestionsBox(
@@ -78,10 +78,10 @@ struct EntryInfoEditor: View {
                     )
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
 
-                    Button("Mostra tutti i fornitori…") { showAllSuppliersSheet = true }
+                    Button(L("entry.info.show_all_suppliers")) { showAllSuppliersSheet = true }
                         .foregroundStyle(.secondary)
 
-                    TextField("Categoria", text: $draftCategory)
+                    TextField(L("common.category"), text: $draftCategory)
                         .focused($focusedField, equals: .category)
 
                     InlineSuggestionsBox(
@@ -94,30 +94,30 @@ struct EntryInfoEditor: View {
                     )
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
 
-                    Button("Mostra tutte le categorie…") { showAllCategoriesSheet = true }
+                    Button(L("entry.info.show_all_categories")) { showAllCategoriesSheet = true }
                         .foregroundStyle(.secondary)
                 } header: {
-                    Text("Dettagli")
+                    Text(L("entry.info.details"))
                 }
             }
-            .navigationTitle("Dettagli entry")
+            .navigationTitle(L("entry.info.title"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Annulla") { dismiss() }
+                    Button(L("common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Salva") { saveAndDismiss() }
+                    Button(L("common.save")) { saveAndDismiss() }
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     if focusedField == .supplier, !draftSupplier.isEmpty {
-                        Button("Cancella") { draftSupplier = "" }
+                        Button(L("common.clear")) { draftSupplier = "" }
                     } else if focusedField == .category, !draftCategory.isEmpty {
-                        Button("Cancella") { draftCategory = "" }
+                        Button(L("common.clear")) { draftCategory = "" }
                     } else if focusedField == .title, !draftTitle.isEmpty {
-                        Button("Cancella") { draftTitle = "" }
+                        Button(L("common.clear")) { draftTitle = "" }
                     }
                     Spacer()
-                    Button("Fine") { focusedField = nil }
+                    Button(L("common.done")) { focusedField = nil }
                 }
             }
             .onAppear {
@@ -129,14 +129,14 @@ struct EntryInfoEditor: View {
             }
             .sheet(isPresented: $showAllSuppliersSheet) {
                 NamePickerSheet(
-                    title: "Fornitori",
+                    title: L("entry.info.suppliers_title"),
                     allItems: suppliers.map(\.name),
                     selection: $draftSupplier
                 )
             }
             .sheet(isPresented: $showAllCategoriesSheet) {
                 NamePickerSheet(
-                    title: "Categorie",
+                    title: L("entry.info.categories_title"),
                     allItems: categories.map(\.name),
                     selection: $draftCategory
                 )
@@ -295,10 +295,10 @@ struct EntryInfoEditor: View {
                 }
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
-                .searchable(text: $searchText, prompt: "Cerca…")
+                .searchable(text: $searchText, prompt: L("common.search"))
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Chiudi") { dismiss() }
+                        Button(L("common.close")) { dismiss() }
                     }
                 }
                 .task(id: searchText) {

@@ -34,13 +34,13 @@ struct InventoryHomeView: View {
             let fileDesc = url.pathExtension.isEmpty
                 ? "\"\(url.lastPathComponent)\""
                 : ".\(url.pathExtension)"
-            loadError = "Formato file non supportato: \(fileDesc). Formati accettati: .xlsx, .xls, .html"
+            loadError = L("inventory.home.error.unsupported_format", fileDesc)
             return
         }
 
         // Blocco import concorrente — non avviare un secondo load se uno è già in corso
         guard !excelSession.isLoading else {
-            loadError = "È già in corso un'importazione. Attendi il completamento prima di aprire un altro file."
+            loadError = L("inventory.home.error.import_in_progress")
             return
         }
 
@@ -71,11 +71,11 @@ struct InventoryHomeView: View {
                 .font(.system(size: 40))
                 .foregroundColor(.accentColor)
 
-            Text("Inventario")
+            Text(L("inventory.home.title"))
                 .font(.title2)
                 .bold()
 
-            Text("Seleziona uno o più file Excel o HTML-export per iniziare la pre-elaborazione.")
+            Text(L("inventory.home.subtitle"))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
@@ -83,7 +83,7 @@ struct InventoryHomeView: View {
             Button {
                 showFileImporter = true
             } label: {
-                Label("Seleziona file Excel / HTML", systemImage: "doc.badge.plus")
+                Label(L("inventory.home.select_files"), systemImage: "doc.badge.plus")
             }
             .buttonStyle(.borderedProminent)
             
@@ -99,7 +99,7 @@ struct InventoryHomeView: View {
                     }
                 }
             } label: {
-                Label("Nuovo inventario manuale", systemImage: "square.and.pencil")
+                Label(L("inventory.home.new_manual"), systemImage: "square.and.pencil")
             }
             .buttonStyle(.bordered)
             
@@ -127,21 +127,21 @@ struct InventoryHomeView: View {
                     }
                 }
             } label: {
-                Label("Scanner inventario veloce", systemImage: "barcode.viewfinder")
+                Label(L("inventory.home.quick_scanner"), systemImage: "barcode.viewfinder")
             }
             .buttonStyle(.bordered)
 
             if excelSession.isLoading {
                 ProgressView(value: excelSession.progress ?? 0) {
-                    Text("Analisi in corso…")
+                    Text(L("inventory.home.loading"))
                 }
                 .padding(.top)
             } else if excelSession.hasData {
-                Text("File caricato: \(excelSession.rows.count - 1) righe dati, \(excelSession.normalizedHeader.count) colonne.")
+                Text(L("inventory.home.file_loaded", excelSession.rows.count - 1, excelSession.normalizedHeader.count))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {
-                Text("Nessun file caricato al momento.")
+                Text(L("inventory.home.no_file"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -149,7 +149,7 @@ struct InventoryHomeView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationTitle("Inventario")
+        .navigationTitle(L("inventory.home.title"))
         // Navigation "nascosta" verso PreGenerateView e GeneratedView (manuale)
         .navigationDestination(isPresented: $showPreGenerate) {
             PreGenerateView(onExitToHome: {
@@ -162,7 +162,7 @@ struct InventoryHomeView: View {
                 if let entry = excelSession.currentHistoryEntry {
                     GeneratedView(entry: entry, autoOpenScanner: autoOpenScannerInGenerated)
                 } else {
-                    Text("Nessun inventario disponibile.")
+                    Text(L("inventory.home.no_inventory"))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -198,17 +198,17 @@ struct InventoryHomeView: View {
                 loadError = error.localizedDescription
             }
         }
-        .alert("Errore durante il caricamento", isPresented: Binding(
+        .alert(L("inventory.home.error.loading_title"), isPresented: Binding(
             get: { loadError != nil },
             set: { newValue in
                 if !newValue { loadError = nil }
             }
         )) {
-            Button("OK", role: .cancel) {
+            Button(L("common.ok"), role: .cancel) {
                 loadError = nil
             }
         } message: {
-            Text(loadError ?? "Errore sconosciuto.")
+            Text(loadError ?? L("inventory.home.error.unknown"))
         }
         // Gestione file ricevuto da "Apri con" — warm resume
         .onChange(of: excelSession.pendingOpenURL) { _, newURL in

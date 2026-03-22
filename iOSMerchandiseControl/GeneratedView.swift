@@ -111,9 +111,9 @@ struct GeneratedView: View {
 
     private var shortageDialogTitle: String {
         if let p = pendingForceComplete {
-            return "Mancano \(p.missing)"
+            return L("generated.shortage.title", p.missing)
         }
-        return "Mancano merce"
+        return L("generated.shortage.generic_title")
     }
     
     private struct PendingForceComplete: Identifiable {
@@ -140,9 +140,9 @@ struct GeneratedView: View {
             ZStack(alignment: .bottomTrailing) {
                 Form {
                     // Sezione principale: griglia inventario
-                    Section("Inventario") {
+                    Section(L("generated.inventory.title")) {
                         if data.isEmpty {
-                            Text("Nessun dato di inventario disponibile.")
+                            Text(L("generated.inventory.no_data"))
                                 .foregroundStyle(.secondary)
                         } else {
                             let headerRow = data[0]
@@ -155,19 +155,19 @@ struct GeneratedView: View {
                             // Piccolo riepilogo righe + errori
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
-                                    Text("Righe dati: \(max(0, data.count - 1))")
+                                    Text(L("generated.inventory.rows_count", max(0, data.count - 1)))
                                     Spacer()
                                     if errorCount > 0 {
-                                        Text("\(errorCount) righe con errore")
+                                        Text(L("generated.inventory.rows_with_error_count", errorCount))
                                             .foregroundStyle(.red)
                                     } else {
-                                        Text("Nessun errore")
+                                        Text(L("generated.inventory.no_error"))
                                             .foregroundStyle(.secondary)
                                     }
                                 }
                                 .font(.footnote)
                                 
-                                Toggle("Mostra solo righe con errore", isOn: $showOnlyErrorRows)
+                                Toggle(L("generated.inventory.only_errors"), isOn: $showOnlyErrorRows)
                                     .font(.footnote)
                             }
                             
@@ -175,7 +175,7 @@ struct GeneratedView: View {
                             let total = max(0, data.count - 1)
                             
                             ProgressView(value: Double(checked), total: Double(max(total, 1))) {
-                                Text("Completati \(checked)/\(total)")
+                                Text(L("generated.inventory.completed_count", checked, total))
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
@@ -186,13 +186,13 @@ struct GeneratedView: View {
                             if showOnlyErrorRows && visibleRowIndices.isEmpty {
                                 if #available(iOS 17.0, *) {
                                     ContentUnavailableView(
-                                        "Nessuna riga con errore",
+                                        L("generated.inventory.no_error_rows"),
                                         systemImage: "checkmark.seal",
-                                        description: Text("Tutte le righe risultano sincronizzabili.")
+                                        description: Text(L("generated.inventory.no_error_rows_description"))
                                     )
                                     .padding(.vertical, 8)
                                 } else {
-                                    Text("Nessuna riga con errore")
+                                    Text(L("generated.inventory.no_error_rows"))
                                         .foregroundStyle(.secondary)
                                 }
                             } else {
@@ -249,20 +249,20 @@ struct GeneratedView: View {
                                                 Button {
                                                     requestSetComplete(rowIndex: rowIndex, headerRow: headerRow, value: !isDone)
                                                 } label: {
-                                                    Label(isDone ? "Segna non completato" : "Segna completato",
+                                                    Label(isDone ? L("generated.action.mark_not_completed") : L("generated.action.mark_completed"),
                                                           systemImage: isDone ? "circle" : "checkmark.circle.fill")
                                                 }
                                                 
                                                 Button {
                                                     showRowDetail(for: rowIndex, headerRow: headerRow)
                                                 } label: {
-                                                    Label("Dettagli riga", systemImage: "info.circle")
+                                                    Label(L("generated.action.row_details"), systemImage: "info.circle")
                                                 }
 
                                                 Button(role: .destructive) {
                                                     pendingDeleteRowIndex = rowIndex
                                                 } label: {
-                                                    Label("Elimina riga", systemImage: "trash")
+                                                    Label(L("generated.action.delete_row"), systemImage: "trash")
                                                 }
                                                 
                                                 if let bIndex = headerRow.firstIndex(of: "barcode"),
@@ -273,7 +273,7 @@ struct GeneratedView: View {
                                                             UIPasteboard.general.string = barcode
                                                             UINotificationFeedbackGenerator().notificationOccurred(.success)
                                                         } label: {
-                                                            Label("Copia barcode", systemImage: "doc.on.doc")
+                                                            Label(L("generated.action.copy_barcode"), systemImage: "doc.on.doc")
                                                         }
                                                     }
                                                 }
@@ -282,7 +282,7 @@ struct GeneratedView: View {
                                                 Button {
                                                     requestSetComplete(rowIndex: rowIndex, headerRow: headerRow, value: !isDone)
                                                 } label: {
-                                                    Label(isDone ? "Non completato" : "Completato",
+                                                    Label(isDone ? L("generated.action.not_completed") : L("generated.action.completed"),
                                                           systemImage: isDone ? "circle" : "checkmark.circle.fill")
                                                 }
                                                 .tint(isDone ? .gray : .green)
@@ -292,14 +292,14 @@ struct GeneratedView: View {
                                                 Button {
                                                     showRowDetail(for: rowIndex, headerRow: headerRow)
                                                 } label: {
-                                                    Label("Dettagli", systemImage: "info.circle")
+                                                    Label(L("generated.action.details"), systemImage: "info.circle")
                                                 }
                                                 .tint(.blue)
 
                                                 Button(role: .destructive) {
                                                     pendingDeleteRowIndex = rowIndex
                                                 } label: {
-                                                    Label("Elimina", systemImage: "trash")
+                                                    Label(L("common.delete"), systemImage: "trash")
                                                 }
                                                 .tint(.red)
                                                 
@@ -311,7 +311,7 @@ struct GeneratedView: View {
                                                             UIPasteboard.general.string = barcode
                                                             UINotificationFeedbackGenerator().notificationOccurred(.success)
                                                         } label: {
-                                                            Label("Copia", systemImage: "doc.on.doc")
+                                                            Label(L("generated.action.copy"), systemImage: "doc.on.doc")
                                                         }
                                                         .tint(.gray)
                                                     }
@@ -327,29 +327,29 @@ struct GeneratedView: View {
                                 Button {
                                     addManualRow()
                                 } label: {
-                                    Label("Aggiungi riga", systemImage: "plus")
+                                    Label(L("generated.action.add_row"), systemImage: "plus")
                                 }
                             }
                         }
                     }
                     
                     // Sezione riassunto base (per ora non ricalcoliamo il totale ordine)
-                    Section("Riassunto") {
+                    Section(L("generated.summary.title")) {
                         let checked = complete.dropFirst().filter { $0 }.count
                         let missing = max(0, entry.totalItems - checked)
                         let errorCount = countSyncErrors()
                         
-                        LabeledContent("Articoli totali") {
+                        LabeledContent(L("generated.summary.total_items")) {
                             Text("\(entry.totalItems)")
                         }
-                        LabeledContent("Articoli da completare") {
+                        LabeledContent(L("generated.summary.items_to_complete")) {
                             Text("\(missing)")
                         }
-                        LabeledContent("Righe in errore") {
+                        LabeledContent(L("generated.summary.rows_in_error")) {
                             Text("\(errorCount)")
                                 .foregroundStyle(errorCount > 0 ? .red : .secondary)
                         }
-                        LabeledContent("Totale ordine (iniziale)") {
+                        LabeledContent(L("generated.summary.initial_order_total")) {
                             Text(formatMoney(entry.orderTotal))
                         }
                     }
@@ -360,7 +360,7 @@ struct GeneratedView: View {
                             Button {
                                 startProductImportAnalysis()
                             } label: {
-                                Text("Aggiorna anagrafica prodotti")
+                                Text(L("generated.action.update_products"))
                             }
                             .disabled(isSaving || isSyncing)
                             
@@ -370,27 +370,28 @@ struct GeneratedView: View {
                                 if isSyncing {
                                     HStack {
                                         ProgressView()
-                                        Text("Sincronizzazione in corso…")
+                                        Text(L("generated.syncing"))
                                     }
                                 } else {
-                                    Text("Applica inventario al DB")
+                                    Text(L("generated.action.apply_inventory_db"))
                                 }
                             }
                             .disabled(isSaving || isSyncing)
                         } else {
                             // entry manuale: nessuna azione DB, ma autosave resta attivo
-                            Text("Salvataggio automatico attivo.")
+                            Text(L("generated.autosave.active"))
                                 .foregroundStyle(.secondary)
                         }
                     } footer: {
                         if isSaving {
-                            Text("Salvataggio…")
+                            Text(L("generated.autosave.saving"))
                         } else if hasUnsavedChanges {
-                            Text("Modifiche non salvate. Salvataggio automatico tra poco…")
+                            Text(L("generated.autosave.pending"))
                         } else if let lastSavedAt {
-                            Text("Salvato alle \(lastSavedAt.formatted(date: .omitted, time: .shortened))")
+                            let savedAt = lastSavedAt.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(appLocale()))
+                            Text(L("generated.autosave.saved_at", savedAt))
                         } else {
-                            Text("Salvataggio automatico attivo.")
+                            Text(L("generated.autosave.active"))
                         }
                     }
                 }
@@ -448,14 +449,14 @@ struct GeneratedView: View {
                         Button {
                             showingEntryInfo = true
                         } label: {
-                            Label("Modifica dettagli", systemImage: "pencil")
+                            Label(L("generated.action.edit_details"), systemImage: "pencil")
                         }
 
                         Button {
                             markAllComplete(!allRowsComplete)
                         } label: {
                             Label(
-                                allRowsComplete ? "Segna tutti incompleti" : "Segna tutti completati",
+                                allRowsComplete ? L("generated.action.mark_all_incomplete") : L("generated.action.mark_all_complete"),
                                 systemImage: allRowsComplete ? "circle" : "checkmark.circle.fill"
                             )
                         }
@@ -464,14 +465,14 @@ struct GeneratedView: View {
                         Button(role: .destructive) {
                             showRevertConfirmation = true
                         } label: {
-                            Label("Ripristina originale", systemImage: "arrow.uturn.backward")
+                            Label(L("generated.action.revert_original"), systemImage: "arrow.uturn.backward")
                         }
                         .disabled(originalData.isEmpty)
 
                         Button {
                             shareAsXLSX()
                         } label: {
-                            Label("Condividi…", systemImage: "square.and.arrow.up")
+                            Label(L("generated.action.share"), systemImage: "square.and.arrow.up")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -480,7 +481,7 @@ struct GeneratedView: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Fine") {
+                    Button(L("common.done")) {
                         Task { @MainActor in
                             flushAutosaveNow()
                             if let onDone { onDone() } else { dismiss() }
@@ -514,7 +515,7 @@ struct GeneratedView: View {
                 }
             }
             .alert(alertTitle, isPresented: isAlertPresented) {
-                Button("OK", role: .cancel) {
+                Button(L("common.ok"), role: .cancel) {
                     saveError = nil
                     syncSummaryMessage = nil
                 }
@@ -529,54 +530,54 @@ struct GeneratedView: View {
                 ),
                 titleVisibility: .visible
             ) {
-                Button("Segna completata comunque") {
+                Button(L("generated.action.force_complete_anyway")) {
                     guard let p = pendingForceComplete else { return }
                     setComplete(rowIndex: p.rowIndex, headerRow: p.headerRow, value: true)
                     pendingForceComplete = nil
                 }
-                Button("Annulla", role: .cancel) {
+                Button(L("common.cancel"), role: .cancel) {
                     pendingForceComplete = nil
                 }
             } message: {
                 if let p = pendingForceComplete {
-                    Text("Da file: \(p.supplier)\nContata: \(p.counted)")
+                    Text(L("generated.shortage.from_file_counted", p.supplier, p.counted))
                 }
             }
             .confirmationDialog(
-                "Ripristinare i dati originali?",
+                L("generated.revert.title"),
                 isPresented: $showRevertConfirmation,
                 titleVisibility: .visible
             ) {
-                Button("Ripristina originale", role: .destructive) {
+                Button(L("generated.action.revert_original"), role: .destructive) {
                     revertToOriginalSnapshot()
                 }
-                Button("Annulla", role: .cancel) { }
+                Button(L("common.cancel"), role: .cancel) { }
             } message: {
-                Text("La griglia tornerà allo stato caricato all'apertura di questa sessione.")
+                Text(L("generated.revert.message"))
             }
             .confirmationDialog(
-                "Eliminare la riga selezionata?",
+                L("generated.delete_row.title"),
                 isPresented: Binding(
                     get: { pendingDeleteRowIndex != nil },
                     set: { if !$0 { pendingDeleteRowIndex = nil } }
                 ),
                 titleVisibility: .visible
             ) {
-                Button("Elimina riga", role: .destructive) {
+                Button(L("generated.action.delete_row"), role: .destructive) {
                     guard let rowIndex = pendingDeleteRowIndex else { return }
                     deleteRow(at: rowIndex)
                     pendingDeleteRowIndex = nil
                 }
-                Button("Annulla", role: .cancel) {
+                Button(L("common.cancel"), role: .cancel) {
                     pendingDeleteRowIndex = nil
                 }
             } message: {
                 if let rowIndex = pendingDeleteRowIndex {
                     let barcode = barcodeForRow(rowIndex)
                     if barcode.isEmpty {
-                        Text("Questa azione rimuove definitivamente la riga dalla griglia.")
+                        Text(L("generated.delete_row.message"))
                     } else {
-                        Text("Barcode riga: \(barcode)")
+                        Text(L("generated.delete_row.message_barcode", barcode))
                     }
                 }
             }
@@ -587,7 +588,7 @@ struct GeneratedView: View {
                 }
             }
             .sheet(isPresented: $showScanner) {
-                ScannerView(title: "Scanner barcode") { code in
+                ScannerView(title: L("scanner.default_title")) { code in
                     let touchedRow = handleScannedBarcode(
                         code,
                         incrementExistingRow: !reopenRowDetailAfterScan
@@ -724,7 +725,7 @@ struct GeneratedView: View {
             .buttonStyle(.plain)
             .disabled(isBusy)
             .opacity(isBusy ? 0.35 : 1)
-            .accessibilityLabel("Cerca riga")
+            .accessibilityLabel(L("generated.search.accessibility"))
 
             // Scanner (primario)
             Button {
@@ -741,7 +742,7 @@ struct GeneratedView: View {
             .buttonStyle(.plain)
             .disabled(isBusy)
             .opacity(isBusy ? 0.35 : 1)
-            .accessibilityLabel("Scansiona barcode")
+            .accessibilityLabel(L("generated.scan.accessibility"))
         }
         .padding(.trailing, 16)
     }
@@ -861,7 +862,7 @@ struct GeneratedView: View {
             .foregroundStyle(.orange)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.vertical, 2)
-            .accessibilityLabel("Mancano \(abs(delta))")
+            .accessibilityLabel(L("generated.missing.accessibility", abs(delta)))
 
         } else {
             Image(systemName: "circle")
@@ -926,8 +927,8 @@ struct GeneratedView: View {
                 completeIndicator(isDone: isDone, delta: delta)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Stato riga")
-            .accessibilityValue(isDone ? "Completata" : "Non completata")
+            .accessibilityLabel(L("generated.status.accessibility"))
+            .accessibilityValue(isDone ? L("generated.status.completed") : L("generated.status.incomplete"))
         } else {
             let raw = valueForCell(rowIndex: rowIndex, columnIndex: columnIndex)
             let shown = displayValue(for: key, raw: raw)
@@ -1294,14 +1295,14 @@ struct GeneratedView: View {
         }
 
         guard !data.isEmpty else {
-            scanError = "Nessuna griglia caricata."
+            scanError = L("generated.error.no_grid")
             return nil
         }
 
         let headerRow = data[0]
 
         guard let barcodeIndex = headerRow.firstIndex(of: "barcode") else {
-            scanError = "La griglia non ha una colonna \"barcode\"."
+            scanError = L("generated.error.no_barcode_column")
             return nil
         }
 
@@ -1315,7 +1316,7 @@ struct GeneratedView: View {
                 
                 // Se esiste: incremento realQuantity
                 guard let realQuantityIndex = headerRow.firstIndex(of: "realQuantity") else {
-                    scanError = "La griglia non ha una colonna \"realQuantity\"."
+                    scanError = L("generated.error.no_real_quantity_column")
                     return nil
                 }
 
@@ -1344,7 +1345,7 @@ struct GeneratedView: View {
                 if newValue.rounded() == newValue {
                     editable[existingIndex][0] = String(Int(newValue))
                 } else {
-                    editable[existingIndex][0] = String(format: "%.2f", newValue)
+                    editable[existingIndex][0] = String(format: "%.2f", locale: appLocale(), newValue)
                 }
 
                 ensureCompleteCapacity()
@@ -1367,7 +1368,7 @@ struct GeneratedView: View {
 
         // 2) Nessuna riga esistente: per entry manuali creo una nuova riga
         guard entry.isManualEntry else {
-            scanError = "Nessuna riga trovata per il barcode \(cleaned)."
+            scanError = L("generated.error.no_row_for_barcode", cleaned)
             return nil
         }
 
@@ -1439,7 +1440,7 @@ struct GeneratedView: View {
         markDirtyAndScheduleAutosave()
 
         scanError = product == nil
-            ? "Prodotto non trovato in database, riga aggiunta solo con barcode."
+            ? L("generated.error.product_not_found_added")
             : nil
 
         return newIndex
@@ -1683,7 +1684,7 @@ struct GeneratedView: View {
     /// Crea l'analisi di import partendo dalla griglia corrente.
     private func startProductImportAnalysis() {
         guard !data.isEmpty else {
-            saveError = "Nessun dato di inventario da analizzare."
+            saveError = L("generated.error.no_inventory_data")
             return
         }
 
@@ -1713,7 +1714,7 @@ struct GeneratedView: View {
         }
 
         guard !mapped.isEmpty else {
-            saveError = "Nessuna riga valida (con barcode) trovata per l'import."
+            saveError = L("generated.error.no_valid_rows")
             return
         }
 
@@ -1758,14 +1759,15 @@ struct GeneratedView: View {
     }
 
     private func formatMoney(_ value: Double) -> String {
-        Self.moneyFormatter.string(from: value as NSNumber) ?? String(value)
+        Self.moneyFormatter.locale = appLocale()
+        return Self.moneyFormatter.string(from: value as NSNumber) ?? String(value)
     }
 
     private func formatDoubleAsPrice(_ value: Double) -> String {
         if value.rounded() == value {
             return String(Int(value))
         } else {
-            return String(format: "%.2f", value)
+            return String(format: "%.2f", locale: appLocale(), value)
         }
     }
 
@@ -1841,19 +1843,19 @@ struct GeneratedView: View {
     private func columnTitle(for key: String) -> String {
         // etichette più umane (Apple-like)
         switch key {
-        case "barcode": return "Barcode"
-        case "productName": return "Nome"
-        case "secondProductName": return "Nome 2"
-        case "itemNumber": return "Codice"
-        case "quantity": return "Qtà"
-        case "realQuantity": return "Qtà reale"
-        case "purchasePrice": return "Acquisto"
-        case "totalPrice": return "Totale"
-        case "oldPurchasePrice": return "Acq. vecchio"
-        case "oldRetailPrice": return "Vend. vecchio"
-        case "RetailPrice": return "Vendita"
-        case "SyncError": return "Errore"
-        case "complete": return "✓"
+        case "barcode": return L("generated.column.barcode")
+        case "productName": return L("generated.column.name")
+        case "secondProductName": return L("generated.column.name2")
+        case "itemNumber": return L("generated.column.code")
+        case "quantity": return L("generated.column.quantity")
+        case "realQuantity": return L("generated.column.real_quantity")
+        case "purchasePrice": return L("generated.column.purchase")
+        case "totalPrice": return L("generated.column.total")
+        case "oldPurchasePrice": return L("generated.column.old_purchase")
+        case "oldRetailPrice": return L("generated.column.old_retail")
+        case "RetailPrice": return L("generated.column.retail")
+        case "SyncError": return L("generated.column.error")
+        case "complete": return L("generated.column.complete")
         default: return key
         }
     }
@@ -1874,6 +1876,7 @@ struct GeneratedView: View {
         let normalized = t.replacingOccurrences(of: ",", with: ".")
         guard let d = Double(normalized) else { return t }
 
+        Self.numericFormatter.locale = appLocale()
         return Self.numericFormatter.string(from: NSNumber(value: d)) ?? t
     }
     
@@ -2019,8 +2022,8 @@ struct GeneratedView: View {
 
     private var alertTitle: String {
         syncSummaryMessage == nil
-            ? "Errore durante il salvataggio"
-            : "Sincronizzazione completata"
+            ? L("generated.error.save_title")
+            : L("generated.sync.completed_title")
     }
 
     private var alertMessageText: String {
@@ -2046,7 +2049,7 @@ struct GeneratedView: View {
                 entry.wasExported = true
                 try? context.save()
             } catch {
-                saveError = "Impossibile esportare XLSX: \(error.localizedDescription)"
+                saveError = L("generated.error.export_xlsx", error.localizedDescription)
             }
         }
     }
@@ -2112,7 +2115,7 @@ private struct ManualEntrySheet: View {
     }
 
     private var navigationTitle: String {
-        isEditMode ? "Modifica riga" : "Aggiungi riga"
+        isEditMode ? L("generated.manual.title.edit") : L("generated.manual.title.add")
     }
 
     private var trimmedBarcode: String {
@@ -2151,12 +2154,12 @@ private struct ManualEntrySheet: View {
 
     private var quantityErrorMessage: String? {
         guard !trimmedQuantity.isEmpty, !isQuantityValid else { return nil }
-        return "La quantità deve essere numerica."
+        return L("generated.manual.error.quantity_numeric")
     }
 
     private var quantityWarningMessage: String? {
         guard let qty = normalizedNumber(from: trimmedQuantity), qty < 0 else { return nil }
-        return "Quantità negativa: il salvataggio resta consentito."
+        return L("generated.manual.warning.quantity_negative")
     }
 
     private var canConfirm: Bool {
@@ -2177,9 +2180,9 @@ private struct ManualEntrySheet: View {
                     }
                 }
 
-                Section("Dati riga") {
+                Section(L("generated.manual.section.row_data")) {
                     HStack(spacing: 12) {
-                        TextField("Barcode", text: $barcode)
+                        TextField(L("product.field.barcode"), text: $barcode)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
 
@@ -2190,24 +2193,24 @@ private struct ManualEntrySheet: View {
                                 .font(.title3)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Scanner barcode")
+                        .accessibilityLabel(L("scanner.default_title"))
                     }
 
-                    TextField("Nome prodotto", text: $productName)
+                    TextField(L("product.field.name"), text: $productName)
 
-                    TextField("Prezzo vendita", text: $retailPrice)
+                    TextField(L("product.field.retail_price"), text: $retailPrice)
                         .keyboardType(.decimalPad)
 
-                    TextField("Prezzo acquisto", text: $purchasePrice)
+                    TextField(L("product.field.purchase_price"), text: $purchasePrice)
                         .keyboardType(.decimalPad)
 
-                    TextField("Quantità", text: $quantity)
+                    TextField(L("common.quantity"), text: $quantity)
                         .keyboardType(.numbersAndPunctuation)
 
-                    Picker("Categoria", selection: $categoryPickerSelection) {
-                        Text("Nessuna categoria").tag(Self.noCategoryToken)
+                    Picker(L("common.category"), selection: $categoryPickerSelection) {
+                        Text(L("generated.manual.category.none")).tag(Self.noCategoryToken)
                         if shouldShowRawCategoryOption {
-                            Text("\(trimmedRawCategory) (salvata)").tag(Self.rawCategoryToken)
+                            Text(L("generated.manual.category.saved", trimmedRawCategory)).tag(Self.rawCategoryToken)
                         }
                         ForEach(categories.map(\.name), id: \.self) { categoryName in
                             Text(categoryName).tag(categoryName)
@@ -2235,29 +2238,29 @@ private struct ManualEntrySheet: View {
                     }
 
                     if shouldShowRawCategoryOption {
-                        Text("Categoria attuale non presente nel database locale: \(trimmedRawCategory)")
+                        Text(L("generated.manual.category.missing_local", trimmedRawCategory))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
 
                     if categories.isEmpty {
-                        Text("Nessuna categoria disponibile nel database locale.")
+                        Text(L("generated.manual.category.none_available"))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
 
                 if let productFromDb {
-                    Section("Dati dal database") {
-                        LabeledContent("Nome") {
+                    Section(L("generated.manual.section.database_data")) {
+                        LabeledContent(L("common.name")) {
                             Text(productFromDb.productName ?? "")
                         }
 
-                        LabeledContent("Prezzo vendita") {
+                        LabeledContent(L("product.field.retail_price")) {
                             Text(displayPrice(productFromDb.retailPrice))
                         }
 
-                        Button("Copia dati") {
+                        Button(L("generated.manual.copy_data")) {
                             copyDataFromDatabase(productFromDb)
                         }
                     }
@@ -2265,11 +2268,11 @@ private struct ManualEntrySheet: View {
 
                 if isEditMode {
                     Section {
-                        Button("Elimina", role: .destructive) {
+                        Button(L("common.delete"), role: .destructive) {
                             deleteCurrentRow()
                         }
                     } footer: {
-                        Text("Rimuove la riga da data, editable e complete.")
+                        Text(L("generated.manual.delete_footer"))
                     }
                 }
             }
@@ -2277,12 +2280,12 @@ private struct ManualEntrySheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Annulla") {
+                    Button(L("common.cancel")) {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Conferma") {
+                    Button(L("generated.manual.confirm")) {
                         confirm()
                     }
                     .disabled(!canConfirm)
@@ -2295,7 +2298,7 @@ private struct ManualEntrySheet: View {
                 refreshBarcodeLookup()
             }
             .sheet(isPresented: $showScannerInDialog) {
-                ScannerView(title: "Scanner barcode") { code in
+                ScannerView(title: L("scanner.default_title")) { code in
                     barcode = code
                     showScannerInDialog = false
                 }
@@ -2418,12 +2421,12 @@ private struct ManualEntrySheet: View {
 
     private func prepareColumnsForSave() -> ColumnIndexes? {
         guard isManualEntry else {
-            headerError = "Dialog disponibile solo per inventari manuali."
+            headerError = L("generated.manual.error.manual_only")
             return nil
         }
 
         guard !data.isEmpty else {
-            headerError = "Sessione non compatibile — header inventario assente."
+            headerError = L("generated.manual.error.header_missing")
             return nil
         }
 
@@ -2446,7 +2449,7 @@ private struct ManualEntrySheet: View {
             let purchasePriceIndex = columnIndex(in: data[0], candidates: ["purchasePrice"]),
             let categoryIndex = columnIndex(in: data[0], candidates: ["category"])
         else {
-            headerError = "Sessione non compatibile — impossibile risolvere la struttura dell'header."
+            headerError = L("generated.manual.error.structure")
             return nil
         }
 
@@ -2514,7 +2517,7 @@ private struct ManualEntrySheet: View {
         }
 
         if isDuplicateBarcode(cleanedBarcode) {
-            barcodeError = "Prodotto già presente nella lista."
+            barcodeError = L("generated.manual.error.duplicate_product")
             productFromDb = nil
             return
         }
@@ -2613,7 +2616,7 @@ private struct ManualEntrySheet: View {
 
     private func requiredHeaderErrorMessage(in header: [String]) -> String? {
         guard !header.isEmpty else {
-            return "Sessione non compatibile — header inventario assente."
+            return L("generated.manual.error.header_missing")
         }
 
         var missingColumns: [String] = []
@@ -2628,7 +2631,7 @@ private struct ManualEntrySheet: View {
         }
 
         guard !missingColumns.isEmpty else { return nil }
-        return "Sessione non compatibile — mancano colonne obbligatorie: \(missingColumns.joined(separator: ", "))."
+        return L("generated.manual.error.required_columns", missingColumns.joined(separator: ", "))
     }
 
     private func addColumnIfMissing(_ key: String) {
@@ -2725,7 +2728,7 @@ private struct ManualEntrySheet: View {
         if value.rounded() == value {
             return String(Int(value))
         }
-        return String(format: "%.2f", value)
+        return String(format: "%.2f", locale: appLocale(), value)
     }
 }
 
@@ -2788,9 +2791,9 @@ private struct RowDetailSheetView: View {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                     } label: {
-                        LabeledContent("Stato") {
+                        LabeledContent(L("generated.detail.status")) {
                             HStack(spacing: 6) {
-                                Text(isComplete ? "Completata" : "Incompleta")
+                                Text(isComplete ? L("generated.detail.completed") : L("generated.detail.incomplete"))
                                     .foregroundStyle(isComplete ? .green : .secondary)
                                 Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
                                     .font(.subheadline)
@@ -2801,7 +2804,7 @@ private struct RowDetailSheetView: View {
                     .buttonStyle(.plain)
 
                     if isShortage, let d = qtyDelta {
-                        Label("Mancano \(abs(d))", systemImage: "exclamationmark.triangle.fill")
+                        Label(L("generated.detail.shortage", abs(d)), systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
 
                         if isComplete {
@@ -2809,18 +2812,18 @@ private struct RowDetailSheetView: View {
                                 withAnimation(.snappy) { isComplete = false }
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             } label: {
-                                Label("Segna incompleta", systemImage: "circle")
+                                Label(L("generated.detail.mark_incomplete"), systemImage: "circle")
                             }
                             .foregroundStyle(.orange)
                         }
                     } else if isSurplus, let d = qtyDelta {
-                        Label("In più: +\(d)", systemImage: "info.circle")
+                        Label(L("generated.detail.surplus", d), systemImage: "info.circle")
                             .foregroundStyle(.secondary)
                     }
                 }
 
-                Section("Prodotto") {
-                    LabeledContent("Barcode") {
+                Section(L("generated.detail.product")) {
+                    LabeledContent(L("generated.detail.barcode")) {
                         HStack(spacing: 12) {
                             Text(detail.barcode)
                                 .monospacedDigit()
@@ -2840,21 +2843,21 @@ private struct RowDetailSheetView: View {
                         }
                     }
 
-                    LabeledContent("Nome") {
+                    LabeledContent(L("generated.detail.name")) {
                         Text(detail.productName ?? "—")
                             .textSelection(.enabled)
                             .foregroundStyle((detail.productName == nil) ? .secondary : .primary)
                     }
                 }
 
-                Section("Quantità") {
-                    LabeledContent("Da file") {
+                Section(L("generated.detail.quantity")) {
+                    LabeledContent(L("generated.detail.from_file")) {
                         Text(formatIntLike(detail.supplierQuantity) ?? "—")
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
                     }
 
-                    LabeledContent("Contata") {
+                    LabeledContent(L("generated.detail.counted")) {
                         VStack(alignment: .leading, spacing: 4) {
                             TextField("—", text: $countedText)
                                 .keyboardType(.numberPad)
@@ -2869,7 +2872,7 @@ private struct RowDetailSheetView: View {
                                focusedField == .counted,
                                countedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             {
-                                Text("✅ automatica quando Contata ≥ Da file")
+                                Text(L("generated.detail.auto_complete_hint"))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                                     .transition(.opacity)
@@ -2885,19 +2888,19 @@ private struct RowDetailSheetView: View {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                     } label: {
-                        Label("Usa quantità da file", systemImage: "arrow.down.circle")
+                        Label(L("generated.detail.use_file_quantity"), systemImage: "arrow.down.circle")
                     }
                     .disabled(formatIntLike(detail.supplierQuantity) == nil)
                 }
 
-                Section("Prezzi") {
-                    LabeledContent("Acquisto (vecchio)") {
+                Section(L("generated.detail.prices")) {
+                    LabeledContent(L("generated.detail.old_purchase")) {
                         Text(formatNumber(detail.oldPurchasePrice) ?? "—")
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
                     }
 
-                    LabeledContent("Vendita (nuovo)") {
+                    LabeledContent(L("generated.detail.new_retail")) {
                         HStack(spacing: 8) {
                             TextField("—", text: $newRetailText)
                                 .keyboardType(.decimalPad)
@@ -2917,7 +2920,7 @@ private struct RowDetailSheetView: View {
                                 Image(systemName: "calculator")
                             }
                             .buttonStyle(.borderless)
-                            .accessibilityLabel("Apri calcolatrice prezzo")
+                            .accessibilityLabel(L("generated.detail.open_price_calculator"))
                         }
                     }
 
@@ -2927,40 +2930,40 @@ private struct RowDetailSheetView: View {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                     } label: {
-                        Label("Usa vendita vecchia", systemImage: "arrow.down.circle")
+                        Label(L("generated.detail.use_old_retail"), systemImage: "arrow.down.circle")
                     }
                     .disabled(formatNumber(detail.oldRetailPrice) == nil)
                 }
 
                 if let err = detail.syncError, !err.isEmpty {
-                    Section("Errori") {
+                    Section(L("generated.detail.errors")) {
                         Label(err, systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.red)
                     }
                 }
 
-                Section("Azioni") {
+                Section(L("generated.detail.actions")) {
                     Button {
                         focusedField = nil
                         showEditRow = true
                     } label: {
-                        Label("Modifica riga", systemImage: "square.and.pencil")
+                        Label(L("generated.detail.edit_row"), systemImage: "square.and.pencil")
                     }
 
                     Button {
                         focusedField = nil
                         showGenericCalculator = true
                     } label: {
-                        Label("Calcolatrice", systemImage: "calculator")
+                        Label(L("generated.detail.calculator"), systemImage: "calculator")
                     }
 
                     Button(action: onEditProduct) {
-                        Label("Modifica prodotto", systemImage: "pencil")
+                        Label(L("generated.detail.edit_product"), systemImage: "pencil")
                     }
                     .disabled(detail.barcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                     Button(action: onShowHistory) {
-                        Label("Storico prezzi", systemImage: "clock")
+                        Label(L("generated.detail.price_history"), systemImage: "clock")
                     }
                     .disabled(detail.barcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
@@ -2968,7 +2971,7 @@ private struct RowDetailSheetView: View {
                         focusedField = nil
                         onDeleteRow()
                     } label: {
-                        Label("Elimina riga", systemImage: "trash")
+                        Label(L("generated.detail.delete_row"), systemImage: "trash")
                     }
                 }
             }
@@ -2976,7 +2979,7 @@ private struct RowDetailSheetView: View {
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Chiudi") {
+                    Button(L("generated.detail.close")) {
                         focusedField = nil
                         syncCompletionFromCountedText(haptic: false) // ✅ ricalcolo finale, niente haptic
                         onClose()
@@ -2984,7 +2987,7 @@ private struct RowDetailSheetView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    Text("Dettagli riga")
+                    Text(L("generated.detail.title"))
                         .font(.headline)
                         .lineLimit(1)
                 }
@@ -2998,7 +3001,7 @@ private struct RowDetailSheetView: View {
                         Image(systemName: "chevron.up.circle").font(.title3)
                     }
                     .disabled(!canGoPrev)
-                    .accessibilityLabel("Riga precedente")
+                    .accessibilityLabel(L("generated.detail.previous_row"))
 
                     Button {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -3006,12 +3009,12 @@ private struct RowDetailSheetView: View {
                     } label: {
                         Image(systemName: "barcode.viewfinder").font(.title3)
                     }
-                    .accessibilityLabel("Scansiona prossimo prodotto")
+                    .accessibilityLabel(L("generated.detail.scan_next"))
 
                     Spacer(minLength: 0)
 
                     ViewThatFits(in: .horizontal) {
-                        Text("Riga \(displayIndex) di \(totalRows)")
+                        Text(L("generated.detail.row_of_total", displayIndex, totalRows))
                         Text("\(displayIndex)/\(totalRows)")
                     }
                     .font(.footnote.monospacedDigit())
@@ -3036,8 +3039,8 @@ private struct RowDetailSheetView: View {
                             .foregroundStyle(isComplete ? .green : .secondary)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(isComplete ? "Completata" : "Incompleta")
-                    .accessibilityHint("Tocca per cambiare stato")
+                    .accessibilityLabel(isComplete ? L("generated.detail.completed") : L("generated.detail.incomplete"))
+                    .accessibilityHint(L("generated.detail.change_status_hint"))
 
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -3046,47 +3049,47 @@ private struct RowDetailSheetView: View {
                         Image(systemName: "chevron.down.circle").font(.title3)
                     }
                     .disabled(!canGoNext)
-                    .accessibilityLabel("Riga successiva")
+                    .accessibilityLabel(L("common.next"))
                 }
             }
             .toolbar {
                 // Toolbar sopra tastiera (Apple-like)
                 ToolbarItemGroup(placement: .keyboard) {
                     if focusedField == .counted {
-                        Button("Usa da file") {
+                        Button(L("generated.detail.use_from_file")) {
                             if let v = formatIntLike(detail.supplierQuantity) { countedText = v }
                         }
                         .disabled(formatIntLike(detail.supplierQuantity) == nil)
                     } else if focusedField == .retail {
-                        Button("Usa vendita vecchia") {
+                        Button(L("generated.detail.use_old_retail")) {
                             if let v = formatNumber(detail.oldRetailPrice) { newRetailText = v }
                         }
                         .disabled(formatNumber(detail.oldRetailPrice) == nil)
                     }
                     Spacer()
-                    Button("Fine") { focusedField = nil }
+                    Button(L("common.done")) { focusedField = nil }
                 }
             }
             .confirmationDialog(
-                qtyDelta == nil ? "Mancano merce" : "Mancano \(abs(qtyDelta!))",
+                qtyDelta == nil ? L("generated.detail.force_complete_generic_title") : L("generated.detail.force_complete_title", abs(qtyDelta!)),
                 isPresented: $showForceCompleteConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Segna completata comunque") {
+                Button(L("generated.action.force_complete_anyway")) {
                     withAnimation(.snappy) { isComplete = true }
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 }
-                Button("Annulla", role: .cancel) { }
+                Button(L("common.cancel"), role: .cancel) { }
             } message: {
-                Text("Da file: \(formatIntLike(detail.supplierQuantity) ?? "—")\nContata: \(countedText.isEmpty ? "—" : countedText)")
+                Text(L("generated.shortage.from_file_counted", formatIntLike(detail.supplierQuantity) ?? "—", countedText.isEmpty ? "—" : countedText))
             }
             // Calcolatrici
             .sheet(isPresented: $showPriceCalculator) {
                 CalculatorSheetView(
-                    title: "Calcolatrice prezzo",
+                    title: L("generated.detail.price_calculator_title"),
                     initialExpression: newRetailText,
                     applyActions: [
-                        .init(title: "Applica a Vendita (nuovo)") { value in
+                        .init(title: L("generated.detail.price_calculator_apply")) { value in
                             newRetailText = formatResult(value, maxFractionDigits: 2)
                         }
                     ],
@@ -3095,13 +3098,13 @@ private struct RowDetailSheetView: View {
             }
             .sheet(isPresented: $showGenericCalculator) {
                 CalculatorSheetView(
-                    title: "Calcolatrice",
+                    title: L("generated.detail.calculator_title"),
                     initialExpression: "",
                     applyActions: [
-                        .init(title: "Usa per Contata") { value in
+                        .init(title: L("generated.detail.calculator_apply_counted")) { value in
                             countedText = String(Int(value.rounded()))
                         },
-                        .init(title: "Usa per Vendita (nuovo)") { value in
+                        .init(title: L("generated.detail.calculator_apply_retail")) { value in
                             newRetailText = formatResult(value, maxFractionDigits: 2)
                         }
                     ],
@@ -3178,7 +3181,7 @@ private struct RowDetailSheetView: View {
 
     private func formatResult(_ value: Double, maxFractionDigits: Int) -> String {
         let f = NumberFormatter()
-        f.locale = Locale.current
+        f.locale = appLocale()
         f.usesGroupingSeparator = false
         f.minimumFractionDigits = 0
         f.maximumFractionDigits = maxFractionDigits
@@ -3196,8 +3199,15 @@ private struct RowDetailSheetView: View {
         guard let raw, !raw.isEmpty else { return nil }
         let normalized = raw.replacingOccurrences(of: ",", with: ".")
         guard let d = Double(normalized) else { return nil }
-        if d.rounded() == d { return String(Int(d)) }
-        return String(d)
+        let f = NumberFormatter()
+        f.locale = appLocale()
+        f.usesGroupingSeparator = false
+        f.minimumFractionDigits = 0
+        f.maximumFractionDigits = 3
+        if d.rounded() == d {
+            f.maximumFractionDigits = 0
+        }
+        return f.string(from: NSNumber(value: d)) ?? String(d)
     }
 }
 
@@ -3275,78 +3285,78 @@ private struct RowEditSheetView: View {
     var body: some View {
         Form {
             Section {
-                Text("Modifica i valori *della riga nella griglia*. Non aggiorna il database prodotti.")
+                Text(L("generated.row_edit.description"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
 
             if anyIdentifiers {
-                Section("Identificativi") {
+                Section(L("product.section.identifiers")) {
                     if bindings.barcode != nil {
-                        TextField("Barcode", text: $barcode)
+                        TextField(L("product.field.barcode"), text: $barcode)
                             .keyboardType(.numberPad)
                     }
                     if bindings.itemNumber != nil {
-                        TextField("Numero articolo", text: $itemNumber)
+                        TextField(L("product.field.item_number_short"), text: $itemNumber)
                     }
                 }
             }
 
             if anyNames {
-                Section("Nomi") {
+                Section(L("product.section.names")) {
                     if bindings.productName != nil {
-                        TextField("Nome prodotto", text: $productName)
+                        TextField(L("product.field.name"), text: $productName)
                     }
                     if bindings.secondProductName != nil {
-                        TextField("Secondo nome", text: $secondProductName)
+                        TextField(L("product.field.second_name"), text: $secondProductName)
                     }
                 }
             }
 
             if anyNumbers {
-                Section("Dati") {
+                Section(L("product.section.data")) {
                     if bindings.quantity != nil {
-                        TextField("Quantità (da file)", text: $quantity)
+                        TextField(L("generated.row_edit.field.quantity_from_file"), text: $quantity)
                             .keyboardType(.numberPad)
                     }
                     if bindings.purchasePrice != nil {
-                        TextField("Prezzo acquisto", text: $purchasePrice)
+                        TextField(L("product.field.purchase_price"), text: $purchasePrice)
                             .keyboardType(.decimalPad)
                     }
                     if bindings.totalPrice != nil {
-                        TextField("Prezzo totale", text: $totalPrice)
+                        TextField(L("product.field.total_price"), text: $totalPrice)
                             .keyboardType(.decimalPad)
                     }
                     if bindings.retailPrice != nil {
-                        TextField("Prezzo vendita (file)", text: $retailPrice)
+                        TextField(L("product.field.retail_price_file"), text: $retailPrice)
                             .keyboardType(.decimalPad)
                     }
                     if bindings.discountedPrice != nil {
-                        TextField("Prezzo scontato", text: $discountedPrice)
+                        TextField(L("product.field.discounted_price"), text: $discountedPrice)
                             .keyboardType(.decimalPad)
                     }
                 }
             }
 
             if anyMeta {
-                Section("Meta") {
+                Section(L("product.section.meta")) {
                     if bindings.supplier != nil {
-                        TextField("Fornitore", text: $supplier)
+                        TextField(L("common.supplier"), text: $supplier)
                     }
                     if bindings.category != nil {
-                        TextField("Categoria", text: $category)
+                        TextField(L("common.category"), text: $category)
                     }
                 }
             }
         }
-        .navigationTitle("Modifica riga")
+        .navigationTitle(L("generated.row_edit.title"))
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Annulla") { dismiss() }
+                Button(L("common.cancel")) { dismiss() }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Salva") {
+                Button(L("common.save")) {
                     apply()
                     onSaved()
                     dismiss()
@@ -3420,7 +3430,7 @@ private struct CalculatorSheetView: View {
         NavigationStack {
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    TextField("Espressione", text: $expression)
+                    TextField(L("generated.calculator.expression"), text: $expression)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .font(.system(.title3, design: .monospaced))
@@ -3429,7 +3439,7 @@ private struct CalculatorSheetView: View {
                         }
 
                     HStack {
-                        Text("Risultato")
+                        Text(L("generated.calculator.result"))
                             .foregroundStyle(.secondary)
                         Spacer()
                         Text(resultText)
@@ -3463,7 +3473,7 @@ private struct CalculatorSheetView: View {
                                 UIPasteboard.general.string = format(r, maxFractionDigits: 6)
                                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                             } label: {
-                                Label("Copia risultato", systemImage: "doc.on.doc")
+                                Label(L("generated.calculator.copy_result"), systemImage: "doc.on.doc")
                             }
                             .disabled(result == nil)
                         }
@@ -3489,7 +3499,7 @@ private struct CalculatorSheetView: View {
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Chiudi") { dismiss() }
+                    Button(L("common.close")) { dismiss() }
                 }
             }
             .onAppear { evaluatePreview() }
@@ -3532,7 +3542,7 @@ private struct CalculatorSheetView: View {
 
     private func format(_ value: Double, maxFractionDigits: Int) -> String {
         let f = NumberFormatter()
-        f.locale = Locale.current
+        f.locale = appLocale()
         f.usesGroupingSeparator = false
         f.minimumFractionDigits = 0
         f.maximumFractionDigits = maxFractionDigits
@@ -3853,7 +3863,7 @@ private struct InventorySearchSheet: View {
                         UIPasteboard.general.string = barcode
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
                     } label: {
-                        Label("Copia", systemImage: "doc.on.doc")
+                        Label(L("generated.search.copy"), systemImage: "doc.on.doc")
                     }
                     .tint(.gray)
                 }
@@ -3868,13 +3878,13 @@ private struct InventorySearchSheet: View {
                 Button {
                     navigateToPrevResult()
                 } label: {
-                    Label("Precedente", systemImage: "chevron.up")
+                    Label(L("generated.search.previous"), systemImage: "chevron.up")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .disabled(!canNavigateToPrevResult)
 
-                Text("Risultato \(currentResultDisplayIndex) di \(results.count)")
+                Text(L("generated.search.result_of_total", currentResultDisplayIndex, results.count))
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
@@ -3882,7 +3892,7 @@ private struct InventorySearchSheet: View {
                 Button {
                     navigateToNextResult()
                 } label: {
-                    Label("Successivo", systemImage: "chevron.down")
+                    Label(L("generated.search.next"), systemImage: "chevron.down")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -3895,7 +3905,7 @@ private struct InventorySearchSheet: View {
     private var resultsHeaderRow: some View {
         if results.count > 0 {
             HStack {
-                Text("Risultati (\(results.count))")
+                Text(L("generated.search.results_count", results.count))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -3967,11 +3977,11 @@ private struct InventorySearchSheet: View {
         .scrollContentBackground(.hidden)
         .background(Color(uiColor: .systemGroupedBackground))
         .scrollDismissesKeyboard(.interactively)
-        .navigationTitle("Cerca")
+        .navigationTitle(L("generated.search.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Chiudi") { dismiss() }
+                Button(L("common.close")) { dismiss() }
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -3980,7 +3990,7 @@ private struct InventorySearchSheet: View {
 
                 HStack(spacing: 12) {
                     AppleLikeSearchField(
-                        placeholder: "Barcode, codice, nome…",
+                        placeholder: L("generated.search.placeholder"),
                         text: $searchText,
                         showScanner: $showScanner,
                         onSubmit: submitSearch,
@@ -4010,7 +4020,7 @@ private struct InventorySearchSheet: View {
             }
         }
         .sheet(isPresented: $showScanner) {
-            ScannerView(title: "Scanner barcode") { code in
+            ScannerView(title: L("scanner.default_title")) { code in
                 searchText = code
                 showScanner = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -4025,15 +4035,15 @@ private struct InventorySearchSheet: View {
     private var emptyState: some View {
         if #available(iOS 17.0, *) {
             ContentUnavailableView(
-                "Cerca un prodotto",
+                L("generated.search.empty_title"),
                 systemImage: "magnifyingglass",
-                description: Text("Digita barcode, codice o nome.")
+                description: Text(L("generated.search.empty_description"))
             )
             .frame(maxWidth: .infinity, minHeight: 260)
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
         } else {
-            Text("Digita barcode, codice o nome.")
+            Text(L("generated.search.empty_fallback"))
                 .foregroundStyle(.secondary)
                 .listRowBackground(Color.clear)
         }
@@ -4043,15 +4053,15 @@ private struct InventorySearchSheet: View {
     private var noResultsState: some View {
         if #available(iOS 17.0, *) {
             ContentUnavailableView(
-                "Nessun risultato",
+                L("generated.search.no_results_title"),
                 systemImage: "magnifyingglass",
-                description: Text("Prova con un barcode/codice/nome diverso.")
+                description: Text(L("generated.search.no_results_description"))
             )
             .frame(maxWidth: .infinity, minHeight: 220)
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
         } else {
-            Text("Nessun risultato")
+            Text(L("generated.search.no_results_fallback"))
                 .foregroundStyle(.secondary)
                 .listRowBackground(Color.clear)
         }
@@ -4061,7 +4071,7 @@ private struct InventorySearchSheet: View {
                 onApplyBarcode(trimmedQuery)
                 dismiss()
             } label: {
-                Label("Applica barcode \(trimmedQuery)", systemImage: "plus.circle.fill")
+                Label(L("generated.search.apply_barcode", trimmedQuery), systemImage: "plus.circle.fill")
             }
         }
     }
@@ -4110,7 +4120,7 @@ private struct AppleLikeSearchField: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Svuota ricerca")
+                .accessibilityLabel(L("generated.search.clear_accessibility"))
             }
 
             Divider()
@@ -4125,7 +4135,7 @@ private struct AppleLikeSearchField: View {
                     .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Scanner")
+            .accessibilityLabel(L("generated.search.scanner_accessibility"))
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
@@ -4145,7 +4155,7 @@ private struct AppleLikeSearchField: View {
     let sampleData: [[String]] = [
         ["barcode", "productName", "purchasePrice", "quantity",
          "oldPurchasePrice", "oldRetailPrice", "realQuantity", "RetailPrice", "complete"],
-        ["1234567890123", "Prodotto di test", "10", "1", "9", "11", "", "", ""]
+        ["1234567890123", L("generated.preview.product_name"), "10", "1", "9", "11", "", "", ""]
     ]
     let sampleEditable: [[String]] = [
         ["", ""],
@@ -4160,8 +4170,8 @@ private struct AppleLikeSearchField: View {
         data: sampleData,
         editable: sampleEditable,
         complete: sampleComplete,
-        supplier: "Fornitore demo",
-        category: "Categoria demo",
+        supplier: L("generated.preview.supplier"),
+        category: L("generated.preview.category"),
         totalItems: 1,
         orderTotal: 10,
         paymentTotal: 10,

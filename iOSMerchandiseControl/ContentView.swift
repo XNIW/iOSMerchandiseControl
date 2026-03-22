@@ -3,6 +3,7 @@ import SwiftData
 
 struct ContentView: View {
     @AppStorage("appTheme") private var appTheme: String = "system"
+    @AppStorage("appLanguage") private var appLanguage: String = "system"
     @Environment(\.modelContext) private var modelContext
     @StateObject private var excelSession = ExcelSessionViewModel()
     @State private var selectedTab = 0
@@ -26,7 +27,7 @@ struct ContentView: View {
                     .environmentObject(excelSession)
             }
             .tabItem {
-                Label("Inventario", systemImage: "doc.on.doc")
+                Label(L("tab.inventory"), systemImage: "doc.on.doc")
             }
             .tag(0)
 
@@ -35,7 +36,7 @@ struct ContentView: View {
                 DatabaseView()
             }
             .tabItem {
-                Label("Database", systemImage: "shippingbox")
+                Label(L("tab.database"), systemImage: "shippingbox")
             }
             .tag(1)
 
@@ -44,7 +45,7 @@ struct ContentView: View {
                 HistoryView()
             }
             .tabItem {
-                Label("Cronologia", systemImage: "clock.arrow.circlepath")
+                Label(L("tab.history"), systemImage: "clock.arrow.circlepath")
             }
             .tag(2)
 
@@ -53,10 +54,11 @@ struct ContentView: View {
                 OptionsView()
             }
             .tabItem {
-                Label("Opzioni", systemImage: "gearshape")
+                Label(L("tab.options"), systemImage: "gearshape")
             }
             .tag(3)
         }
+        .localeOverride(for: appLanguage)
         .preferredColorScheme(resolvedColorScheme)
         .task {
             do {

@@ -114,7 +114,7 @@ struct ScannerView: View {
     @Environment(\.dismiss) private var dismiss
 
     init(
-        title: String = "Scanner barcode",
+        title: String = L("scanner.default_title"),
         onCodeScanned: @escaping (String) -> Void
     ) {
         self.title = title
@@ -152,7 +152,7 @@ struct ScannerView: View {
                     }
                 }
 
-                Text("Allinea il codice a barre alla linea rossa per leggere automaticamente.")
+                Text(L("scanner.instructions"))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.9))
             }

@@ -50,11 +50,11 @@ struct PreGenerateView: View {
     }
 
     private var errorAlertTitle: String {
-        generationError != nil ? "Errore durante la generazione" : "Errore"
+        generationError != nil ? L("pregenerate.error.generation_title") : L("pregenerate.error.title")
     }
 
     private var errorAlertMessage: String {
-        generationError ?? filePickerError ?? "Errore sconosciuto."
+        generationError ?? filePickerError ?? L("pregenerate.error.unknown")
     }
 
     private var isErrorAlertPresented: Binding<Bool> {
@@ -80,9 +80,9 @@ struct PreGenerateView: View {
             
             Form {
                 // ANTEPRIMA FILE
-                Section("Anteprima") {
+                Section(L("pregenerate.preview.title")) {
                     if excelSession.rows.isEmpty {
-                        Text("Nessun file caricato.")
+                        Text(L("pregenerate.preview.no_file"))
                             .foregroundStyle(.secondary)
                     } else {
                         ScrollView(.horizontal) {
@@ -134,14 +134,14 @@ struct PreGenerateView: View {
                             .padding(.vertical, 4)
                         }
                         
-                        Text("Mostrate \(previewRows.count) righe su \(max(excelSession.rows.count - 1, 0)).")
+                        Text(L("pregenerate.preview.rows_shown", previewRows.count, max(excelSession.rows.count - 1, 0)))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                         
                         // 🔎 Badge affidabilità analisi
                         if let confidence = excelSession.analysisConfidence {
                             HStack {
-                                Label("Affidabilità analisi", systemImage: "chart.bar.fill")
+                                Label(L("pregenerate.preview.analysis_reliability"), systemImage: "chart.bar.fill")
                                 Spacer()
                                 Text(String(format: "%.0f%%", confidence * 100))
                                     .font(.caption)
@@ -167,24 +167,24 @@ struct PreGenerateView: View {
                         if let confidence = excelSession.analysisConfidence,
                            confidence < 0.5 {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Suggerimenti per migliorare l'analisi:")
+                                Text(L("pregenerate.preview.tips_title"))
                                     .font(.caption)
                                     .fontWeight(.medium)
                                 
                                 if let metrics = excelSession.analysisMetrics {
                                     if metrics.essentialColumnsFound < metrics.essentialColumnsTotal {
-                                        Text("• Verifica le colonne obbligatorie (barcode, nome prodotto, prezzo acquisto).")
+                                        Text(L("pregenerate.preview.tip_required_columns"))
                                             .font(.caption2)
                                     }
                                     
                                     if metrics.totalRows > 0 &&
                                         Double(metrics.rowsWithValidBarcode) / Double(metrics.totalRows) < 0.3 {
-                                        Text("• Controlla la colonna barcode: molti valori potrebbero essere mancanti.")
+                                        Text(L("pregenerate.preview.tip_barcode"))
                                             .font(.caption2)
                                     }
                                     
                                     if !metrics.issues.isEmpty {
-                                        Text("• Risolvi, se possibile, i problemi elencati qui sopra.")
+                                        Text(L("pregenerate.preview.tip_resolve_issues"))
                                             .font(.caption2)
                                     }
                                 }
@@ -204,9 +204,9 @@ struct PreGenerateView: View {
                 }
                 
                 // SELEZIONE COLONNE
-                Section("Colonne da usare") {
+                Section(L("pregenerate.columns.title")) {
                     if excelSession.normalizedHeader.isEmpty {
-                        Text("Nessuna colonna disponibile.")
+                        Text(L("pregenerate.columns.none"))
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(excelSession.sortedColumnIndices, id: \.self) { index in
@@ -215,25 +215,25 @@ struct PreGenerateView: View {
                         
                         
                         HStack {
-                            Button("Seleziona tutte") {
+                            Button(L("pregenerate.columns.select_all")) {
                                 excelSession.setAllColumns(selected: true, keepEssential: false)
                             }
-                            Button("Deseleziona tutte (tranne obbligatorie)") {
+                            Button(L("pregenerate.columns.deselect_all")) {
                                 excelSession.setAllColumns(selected: false, keepEssential: true)
                             }
                         }
                         .buttonStyle(.borderless)
                         
-                        Text("Le colonne obbligatorie non possono essere disattivate.")
+                        Text(L("pregenerate.columns.required_footer"))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
                 
                 // FORNITORE & CATEGORIA (come in EditProductView)
-                Section("Fornitore") {
+                Section(L("pregenerate.supplier.title")) {
                     VStack(alignment: .leading, spacing: 6) {
-                        TextField("Nome fornitore", text: $excelSession.supplierName)
+                        TextField(L("product.field.supplier_name"), text: $excelSession.supplierName)
                             .textInputAutocapitalization(.words)
                             .autocorrectionDisabled()
                             .focused($focusedField, equals: .supplier)
@@ -261,13 +261,13 @@ struct PreGenerateView: View {
                         focusedField = nil
                         showAllSuppliersSheet = true
                     } label: {
-                        Label("Mostra tutti…", systemImage: "magnifyingglass")
+                        Label(L("pregenerate.show_all"), systemImage: "magnifyingglass")
                     }
                 }
                 
-                Section("Categoria") {
+                Section(L("pregenerate.category.title")) {
                     VStack(alignment: .leading, spacing: 6) {
-                        TextField("Nome categoria", text: $excelSession.categoryName)
+                        TextField(L("product.field.category_name"), text: $excelSession.categoryName)
                             .textInputAutocapitalization(.words)
                             .autocorrectionDisabled()
                             .focused($focusedField, equals: .category)
@@ -295,7 +295,7 @@ struct PreGenerateView: View {
                         focusedField = nil
                         showAllCategoriesSheet = true
                     } label: {
-                        Label("Mostra tutti…", systemImage: "magnifyingglass")
+                        Label(L("pregenerate.show_all"), systemImage: "magnifyingglass")
                     }
                 }
                 
@@ -306,7 +306,7 @@ struct PreGenerateView: View {
                     // Mostra il toggle solo se la confidenza è molto bassa
                     if let confidence = excelSession.analysisConfidence,
                        confidence < 0.4 {
-                        Toggle("Ignora avvisi e procedi comunque", isOn: $ignoreWarnings)
+                        Toggle(L("pregenerate.ignore_warnings"), isOn: $ignoreWarnings)
                             .font(.caption)
                             .padding(.vertical, 4)
                     }
@@ -324,47 +324,47 @@ struct PreGenerateView: View {
                         if isGenerating {
                             HStack {
                                 ProgressView()
-                                Text("Generazione in corso…")
+                                Text(L("pregenerate.generating"))
                             }
                         } else {
-                            Text("Genera inventario")
+                            Text(L("pregenerate.generate"))
                                 .fontWeight(.semibold)
                         }
                     }
                     .disabled(!canGenerate || isGenerating)
                     
                     if let lastID = lastGeneratedEntryID {
-                        Text("Ultimo inventario generato: \(lastID)")
+                        Text(L("pregenerate.last_generated", lastID))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("L’inventario generato comparirà nella scheda \"Cronologia\".")
+                        Text(L("pregenerate.generated_will_appear"))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
         }
-        .navigationTitle("Pre-elaborazione")
+        .navigationTitle(L("pregenerate.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .confirmationDialog(
-            "Analisi poco affidabile",
+            L("pregenerate.low_confidence.title"),
             isPresented: $showLowConfidenceConfirm,
             titleVisibility: .visible
         ) {
-            Button("Procedi comunque", role: .destructive) {
+            Button(L("pregenerate.low_confidence.proceed"), role: .destructive) {
                 // se vuoi: ricordati la scelta per questa sessione
                 ignoreWarnings = true
                 generateInventory()
             }
-            Button("Annulla", role: .cancel) { }
+            Button(L("common.cancel"), role: .cancel) { }
         } message: {
-            Text("L’analisi del file sembra poco affidabile. Vuoi generare l’inventario lo stesso?")
+            Text(L("pregenerate.low_confidence.message"))
         }
         // lascia qui TUTTI i tuoi modifier: alert, navigationDestination, sheet, toolbar, task, ecc.
         .alert(errorAlertTitle, isPresented: isErrorAlertPresented) {
-            Button("OK", role: .cancel) {
+            Button(L("common.ok"), role: .cancel) {
                 generationError = nil
                 filePickerError = nil
             }
@@ -383,21 +383,21 @@ struct PreGenerateView: View {
                         }
                     })
                 } else {
-                    Text("Nessun inventario disponibile.")
+                    Text(L("inventory.home.no_inventory"))
                         .foregroundStyle(.secondary)
                 }
             }
         }
         .sheet(isPresented: $showAllSuppliersSheet) {
             NamePickerSheet(
-                title: "Fornitori",
+                title: L("entry.info.suppliers_title"),
                 allItems: suppliers.map(\.name),
                 selection: $excelSession.supplierName
             )
         }
         .sheet(isPresented: $showAllCategoriesSheet) {
             NamePickerSheet(
-                title: "Categorie",
+                title: L("entry.info.categories_title"),
                 allItems: categories.map(\.name),
                 selection: $excelSession.categoryName
             )
@@ -445,7 +445,7 @@ struct PreGenerateView: View {
                     filePickerMode = .append
                     isFileImporterPresented = true
                 } label: {
-                    Label("Aggiungi file", systemImage: "doc.badge.plus")
+                    Label(L("pregenerate.add_file"), systemImage: "doc.badge.plus")
                 }
                 .disabled(excelSession.isLoading || excelSession.rows.isEmpty)
 
@@ -453,7 +453,7 @@ struct PreGenerateView: View {
                     filePickerMode = .reload
                     isFileImporterPresented = true
                 } label: {
-                    Label("Ricarica file", systemImage: "arrow.clockwise")
+                    Label(L("pregenerate.reload_file"), systemImage: "arrow.clockwise")
                 }
                 .disabled(excelSession.isLoading)
             }
@@ -462,12 +462,12 @@ struct PreGenerateView: View {
             ToolbarItemGroup(placement: .keyboard) {
                 // pulsante “cancella” contestuale (optional ma molto iOS)
                 if focusedField == .supplier, !excelSession.supplierName.isEmpty {
-                    Button("Cancella") {
+                    Button(L("common.clear")) {
                         excelSession.supplierName = ""
                         debouncedSupplierQuery = ""
                     }
                 } else if focusedField == .category, !excelSession.categoryName.isEmpty {
-                    Button("Cancella") {
+                    Button(L("common.clear")) {
                         excelSession.categoryName = ""
                         debouncedCategoryQuery = ""
                     }
@@ -475,7 +475,7 @@ struct PreGenerateView: View {
 
                 Spacer()
 
-                Button("Fine") { focusedField = nil }
+                Button(L("common.done")) { focusedField = nil }
                     .fontWeight(.semibold)
             }
         }
@@ -575,15 +575,6 @@ struct PreGenerateView: View {
         }
     }
     
-    private static let previewNumberFormatter: NumberFormatter = {
-        let f = NumberFormatter()
-        f.locale = .current
-        f.usesGroupingSeparator = false
-        f.minimumFractionDigits = 0
-        f.maximumFractionDigits = 2
-        return f
-    }()
-
     private func previewDisplayValue(for key: String, raw: String) -> String {
         let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return "" }
@@ -601,7 +592,12 @@ struct PreGenerateView: View {
         let normalized = cleaned.replacingOccurrences(of: ",", with: ".")
         guard let d = Double(normalized) else { return cleaned }
 
-        return Self.previewNumberFormatter.string(from: NSNumber(value: d)) ?? cleaned
+        let formatter = NumberFormatter()
+        formatter.locale = appLocale()
+        formatter.usesGroupingSeparator = false
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: d)) ?? cleaned
     }
 }
 
@@ -639,6 +635,37 @@ struct ColumnSelectionRow: View {
     @EnvironmentObject var excelSession: ExcelSessionViewModel
     let index: Int
 
+    private func localizedRoleTitle(_ role: String) -> String {
+        switch role {
+        case "barcode":
+            return L("pregenerate.role.barcode")
+        case "productName":
+            return L("pregenerate.role.product_name")
+        case "secondProductName":
+            return L("pregenerate.role.second_product_name")
+        case "itemNumber":
+            return L("pregenerate.role.item_number")
+        case "rowNumber":
+            return L("pregenerate.role.row_number")
+        case "quantity":
+            return L("pregenerate.role.quantity")
+        case "purchasePrice":
+            return L("pregenerate.role.purchase_price")
+        case "totalPrice":
+            return L("pregenerate.role.total_price")
+        case "retailPrice":
+            return L("pregenerate.role.retail_price")
+        case "discountedPrice":
+            return L("pregenerate.role.discounted_price")
+        case "supplier":
+            return L("pregenerate.role.supplier")
+        case "category":
+            return L("pregenerate.role.category")
+        default:
+            return role
+        }
+    }
+
     var body: some View {
         let normalized = excelSession.normalizedHeader[index]
 
@@ -656,11 +683,11 @@ struct ColumnSelectionRow: View {
 
         // ✅ Titolo = nome nel file (originale). Se vuoto → Colonna N
         let fileHeader = original.trimmingCharacters(in: .whitespacesAndNewlines)
-        let displayHeader = fileHeader.isEmpty ? "Colonna \(index + 1)" : fileHeader
+        let displayHeader = fileHeader.isEmpty ? L("pregenerate.column.numbered", index + 1) : fileHeader
 
         // ✅ Ruolo assegnato (se è un ruolo noto)
         let roleKey = excelSession.roleKeyForColumn(index)               // es: "rowNumber" oppure nil
-        let roleTitle = roleKey.map { ExcelSessionViewModel.titleForRole($0) } ?? "Non riconosciuta"
+        let roleTitle = roleKey.map(localizedRoleTitle) ?? L("pregenerate.column.unknown")
 
         HStack(alignment: .top, spacing: 12) {
 
@@ -676,7 +703,7 @@ struct ColumnSelectionRow: View {
                         .fontWeight(.semibold)
 
                     if isEssential {
-                        Text("Obbligatoria")
+                        Text(L("pregenerate.column.required"))
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -696,9 +723,9 @@ struct ColumnSelectionRow: View {
                                 excelSession.setColumnRole(at: index, to: roleKey)
                             } label: {
                                 if excelSession.roleKeyForColumn(index) == roleKey {
-                                    Label(ExcelSessionViewModel.titleForRole(roleKey), systemImage: "checkmark")
+                                    Label(localizedRoleTitle(roleKey), systemImage: "checkmark")
                                 } else {
-                                    Text(ExcelSessionViewModel.titleForRole(roleKey))
+                                    Text(localizedRoleTitle(roleKey))
                                 }
                             }
                         }
@@ -709,31 +736,31 @@ struct ColumnSelectionRow: View {
                             Button(role: .destructive) {
                                 excelSession.clearColumnRole(at: index)
                             } label: {
-                                Label("Nessun tipo", systemImage: "xmark.circle")
+                                Label(L("pregenerate.column.no_type"), systemImage: "xmark.circle")
                             }
                         }
                     } label: {
-                        Label("Cambia tipo", systemImage: "slider.horizontal.3")
+                        Label(L("pregenerate.column.change_type"), systemImage: "slider.horizontal.3")
                             .labelStyle(.iconOnly)
                             .imageScale(.medium)
                     }
                 }
 
                 // ✅ SOTTO = nome originale della colonna nel file
-                Text("Colonna nel file: \(displayHeader)")
+                Text(L("common.file_column", displayHeader))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
                 // Se vuoi, puoi comunque mostrare “chiave normalizzata” quando non è un ruolo noto:
                 if roleKey == nil && !normalized.isEmpty && normalized != fileHeader {
-                    Text("Identificatore: \(normalized)")
+                    Text(L("common.identifier", normalized))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
 
                 // Esempi di valori
                 if !sample.isEmpty {
-                    Text("Esempi: \(sample)")
+                    Text(L("common.examples", sample))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -869,7 +896,7 @@ private struct NamePickerSheet: View {
                         selection = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
                         dismiss()
                     } label: {
-                        Label("Usa “\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))”", systemImage: "plus")
+                        Label(L("pregenerate.name_picker.use_value", searchText.trimmingCharacters(in: .whitespacesAndNewlines)), systemImage: "plus")
                     }
                 }
 
@@ -885,10 +912,10 @@ private struct NamePickerSheet: View {
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Cerca")
+            .searchable(text: $searchText, prompt: L("common.search"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Chiudi") { dismiss() }
+                    Button(L("common.close")) { dismiss() }
                 }
             }
             .task(id: searchText) {

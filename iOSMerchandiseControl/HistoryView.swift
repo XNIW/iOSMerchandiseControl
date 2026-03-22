@@ -51,12 +51,12 @@ struct HistoryView: View {
 
         var title: String {
             switch self {
-            case .all: return "Tutto"
-            case .last7Days: return "Ultimi 7 giorni"
-            case .last30Days: return "Ultimi 30 giorni"
-            case .currentMonth: return "Mese corrente"
-            case .previousMonth: return "Mese precedente"
-            case .custom: return "Personalizzato"
+            case .all: return L("history.filter.all")
+            case .last7Days: return L("history.filter.last_7_days")
+            case .last30Days: return L("history.filter.last_30_days")
+            case .currentMonth: return L("history.filter.current_month")
+            case .previousMonth: return L("history.filter.previous_month")
+            case .custom: return L("history.filter.custom")
             }
         }
     }
@@ -69,15 +69,15 @@ struct HistoryView: View {
 
         var title: String {
             switch self {
-            case .from: return "Da"
-            case .to: return "A"
+            case .from: return L("history.filter.from")
+            case .to: return L("history.filter.to")
             }
         }
 
         var sheetTitle: String {
             switch self {
-            case .from: return "Seleziona data iniziale"
-            case .to: return "Seleziona data finale"
+            case .from: return L("history.filter.from_sheet_title")
+            case .to: return L("history.filter.to_sheet_title")
             }
         }
     }
@@ -147,11 +147,12 @@ struct HistoryView: View {
     }
 
     private func customDateText(for field: CustomDateField) -> String {
+        let style = Date.FormatStyle(date: .numeric, time: .omitted).locale(appLocale())
         switch field {
         case .from:
-            return customFrom.formatted(date: .numeric, time: .omitted)
+            return customFrom.formatted(style)
         case .to:
-            return customTo.formatted(date: .numeric, time: .omitted)
+            return customTo.formatted(style)
         }
     }
 
@@ -214,7 +215,7 @@ struct HistoryView: View {
             showingDateFilterDialog = true
         } label: {
             HStack(spacing: 12) {
-                Text("Periodo")
+                Text(L("history.filter.period"))
                     .foregroundStyle(.primary)
 
                 Spacer()
@@ -287,9 +288,9 @@ struct HistoryView: View {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(size: 40))
                         .foregroundStyle(.secondary)
-                    Text("Nessuna cronologia")
+                    Text(L("history.empty.title"))
                         .font(.headline)
-                    Text("Quando generi file di inventario, li vedrai qui.")
+                    Text(L("history.empty.body"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -314,17 +315,17 @@ struct HistoryView: View {
                                 }
 
                                 HStack {
-                                    Toggle("Mostra solo entry con errori", isOn: $showOnlyErrorEntries)
+                                    Toggle(L("history.toggle.errors_only"), isOn: $showOnlyErrorEntries)
                                         .font(.footnote)
 
                                     Spacer()
 
                                     if errorEntriesCount > 0 {
-                                        Text("\(errorEntriesCount) su \(totalCount) con errori")
+                                        Text(L("history.filter.errors_count", errorEntriesCount, totalCount))
                                             .font(.footnote)
                                             .foregroundStyle(.red)
                                     } else {
-                                        Text("Nessuna entry con errori")
+                                        Text(L("history.filter.no_error_entries"))
                                             .font(.footnote)
                                             .foregroundStyle(.secondary)
                                     }
@@ -345,7 +346,7 @@ struct HistoryView: View {
                                 Button {
                                     editItem = EditItem(entry: entry)
                                 } label: {
-                                    Label("Modifica", systemImage: "pencil")
+                                    Label(L("common.edit"), systemImage: "pencil")
                                 }
                                 .tint(.blue)
                             }
@@ -354,14 +355,14 @@ struct HistoryView: View {
                                 Button {
                                     exportHistoryEntry(entry)
                                 } label: {
-                                    Label("Condividi", systemImage: "square.and.arrow.up")
+                                    Label(L("common.share"), systemImage: "square.and.arrow.up")
                                 }
                                 
                                 Button(role: .destructive) {
                                     entryPendingDeletion = entry
                                     showDeleteConfirmation = true
                                 } label: {
-                                    Label("Elimina", systemImage: "trash")
+                                    Label(L("common.delete"), systemImage: "trash")
                                 }
                             }
                         }
@@ -369,14 +370,14 @@ struct HistoryView: View {
                 }
             }
         }
-        .navigationTitle("Cronologia")
+        .navigationTitle(L("history.title"))
         .onChange(of: customFrom) { _, newValue in
             if customTo < newValue {
                 customTo = newValue
             }
         }
         .confirmationDialog(
-            "Seleziona periodo",
+            L("history.action.select_period"),
             isPresented: $showingDateFilterDialog,
             titleVisibility: .visible
         ) {
@@ -386,7 +387,7 @@ struct HistoryView: View {
                 }
             }
 
-            Button("Annulla", role: .cancel) {}
+            Button(L("common.cancel"), role: .cancel) {}
         }
         .sheet(item: $editingCustomDate) { field in
             NavigationStack {
@@ -400,7 +401,7 @@ struct HistoryView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Fine") {
+                        Button(L("common.done")) {
                             editingCustomDate = nil
                         }
                     }
@@ -409,21 +410,18 @@ struct HistoryView: View {
             .presentationDetents([.medium, .large])
         }
         .alert(
-            "Eliminare questo inventario?",
+            L("history.delete.confirm_title"),
             isPresented: $showDeleteConfirmation,
             presenting: entryPendingDeletion
         ) { entry in
-            Button("Annulla", role: .cancel) {
+            Button(L("common.cancel"), role: .cancel) {
                 // non facciamo nulla, l'alert si chiude
             }
-            Button("Elimina", role: .destructive) {
+            Button(L("common.delete"), role: .destructive) {
                 deleteEntry(entry)
             }
         } message: { entry in
-            Text("""
-            Questa operazione rimuoverà definitivamente l'inventario:
-            \(entry.id)
-            """)
+            Text(L("history.delete.confirm_message", entry.id))
         }
         // 🔹 nuova sheet per condividere il CSV
         .sheet(item: $shareItem) { item in
@@ -441,7 +439,7 @@ private struct HistoryRow: View {
     let entry: HistoryEntry
     
     private var dateString: String {
-        entry.timestamp.formatted(date: .numeric, time: .shortened)
+        entry.timestamp.formatted(Date.FormatStyle(date: .numeric, time: .shortened).locale(appLocale()))
     }
     
     private var displayName: String {
@@ -489,7 +487,7 @@ private struct HistoryRow: View {
                 if entry.wasExported {
                     Image(systemName: "square.and.arrow.up")
                         .foregroundStyle(.secondary)
-                        .help("Esportato")
+                        .help(L("history.exported"))
                 }
             }
             
@@ -505,12 +503,12 @@ private struct HistoryRow: View {
             .foregroundStyle(.secondary)
             
             HStack(spacing: 16) {
-                HistorySummaryChip(title: "Articoli", value: "\(entry.totalItems)")
-                HistorySummaryChip(title: "Ordine", value: formatMoney(entry.orderTotal))
-                HistorySummaryChip(title: "Pagato", value: formatMoney(entry.paymentTotal))
+                HistorySummaryChip(title: L("history.summary.items"), value: "\(entry.totalItems)")
+                HistorySummaryChip(title: L("history.summary.order"), value: formatMoney(entry.orderTotal))
+                HistorySummaryChip(title: L("history.summary.paid"), value: formatMoney(entry.paymentTotal))
                 
                 if entry.syncStatus == .attemptedWithErrors && errorCount > 0 {
-                    HistorySummaryChip(title: "Errori", value: "\(errorCount)")
+                    HistorySummaryChip(title: L("history.summary.errors"), value: "\(errorCount)")
                         .foregroundStyle(.red)
                 }
             }
@@ -522,7 +520,7 @@ private struct HistoryRow: View {
     private func formatMoney(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.locale = Locale.current
+        formatter.locale = appLocale()
         return formatter.string(from: value as NSNumber) ?? String(value)
     }
 }

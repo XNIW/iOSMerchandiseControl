@@ -4,10 +4,10 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo.
+TASK-010 — Localizzazione UI multilingua: rendere effettiva la scelta lingua, esternalizzare tutte le stringhe hardcoded in file `.strings` localizzati per 4 lingue (it, en, zh-Hans, es).
 
 ## Stato globale
-IDLE
+ACTIVE
 > TASK-002 bloccato, TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, problema grandi import estratto in TASK-011), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — test manuali, senza obbligo di automazione Simulator), TASK-009 bloccato (implementazione completata, review codice APPROVED, test manuali sospesi per decisione utente), TASK-012 completato, TASK-013 bloccato (sospeso per decisione utente: workflow SIM UI rimosso dal processo standard).
 
 ## Fonti di verità
@@ -49,7 +49,13 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-Nessun task attivo — progetto IDLE.
+- **Task ID**: TASK-010
+- **Titolo**: Localizzazione UI multilingua
+- **File task**: `docs/TASKS/TASK-010-localizzazione-ui-multilingua.md`
+- **Stato**: ACTIVE
+- **Fase attuale**: REVIEW
+- **Responsabile attuale**: CLAUDE
+- **Ultimo aggiornamento**: 2026-03-22
 
 Task bloccati non attivi:
 - Task ID: TASK-009
@@ -104,7 +110,7 @@ Motivazione: proposti dal gap audit TASK-001 come risultato dell'analisi iOS vs 
 | TASK-007 | History advanced filters | DONE | MEDIUM |
 | TASK-008 | Generated manual row dialog + calculate | BLOCKED | MEDIUM |
 | TASK-009 | Product model old prices + price backfill | BLOCKED | LOW |
-| TASK-010 | Localizzazione UI multilingua | TODO | LOW |
+| TASK-010 | Localizzazione UI multilingua | ACTIVE | LOW |
 | TASK-011 | Large import stability, memory e progress UX | TODO | HIGH |
 | TASK-012 | Simulator automation — dual-agent wrapper + adapter (sblocca TASK-008) | DONE | HIGH |
 | TASK-013 | sim_ui.sh performance — batch mode, timeout reale, cache device frame | BLOCKED | HIGH |

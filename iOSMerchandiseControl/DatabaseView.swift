@@ -80,12 +80,12 @@ private final class DatabaseImportProgressState: ObservableObject, @unchecked Se
     }
 
     var resultTitle: String {
-        resultIsError ? "Errore import" : "Import completato"
+        resultIsError ? L("database.error.import_title") : L("database.progress.completed_title")
     }
 
     func startPreparation() {
         isRunning = true
-        stageText = "Preparazione import..."
+        stageText = L("database.progress.preparing")
         processedCount = 0
         totalCount = 0
         resultMessage = nil
@@ -196,7 +196,7 @@ struct DatabaseView: View {
         VStack {
             // campo filtro barcode / nome / codice
             HStack(spacing: 8) {
-                TextField("Cerca per barcode, nome o codice", text: $barcodeFilter)
+                TextField(L("database.search_placeholder"), text: $barcodeFilter)
                     .textFieldStyle(.roundedBorder)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -225,7 +225,7 @@ struct DatabaseView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(product.productName ?? "Senza nome")
+                                Text(product.productName ?? L("product.no_name"))
                                     .font(.headline)
 
                                 if let second = product.secondProductName,
@@ -235,13 +235,13 @@ struct DatabaseView: View {
                                         .foregroundStyle(.secondary)
                                 }
 
-                                Text("Barcode: \(product.barcode)")
+                                Text(L("database.row.barcode", product.barcode))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
 
                                 if let item = product.itemNumber,
                                    !item.isEmpty {
-                                    Text("Codice: \(item)")
+                                    Text(L("database.row.code", item))
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
                                 }
@@ -251,15 +251,15 @@ struct DatabaseView: View {
 
                             VStack(alignment: .trailing, spacing: 2) {
                                 if let purchase = product.purchasePrice {
-                                    Text("Acq: \(formatMoney(purchase))")
+                                    Text(L("database.row.purchase", formatMoney(purchase)))
                                         .font(.caption)
                                 }
                                 if let retail = product.retailPrice {
-                                    Text("Vend: \(formatMoney(retail))")
+                                    Text(L("database.row.retail", formatMoney(retail)))
                                         .font(.caption)
                                 }
                                 if let qty = product.stockQuantity {
-                                    Text("Stock: \(formatQuantity(qty))")
+                                    Text(L("database.row.stock", formatQuantity(qty)))
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
                                 }
@@ -269,14 +269,14 @@ struct DatabaseView: View {
                         HStack {
                             if let supplierName = product.supplier?.name,
                                !supplierName.isEmpty {
-                                Text("Fornitore: \(supplierName)")
+                                Text(L("database.row.supplier", supplierName))
                             }
                             if let categoryName = product.category?.name,
                                !categoryName.isEmpty {
                                 if product.supplier != nil {
                                     Text("·")
                                 }
-                                Text("Categoria: \(categoryName)")
+                                Text(L("database.row.category", categoryName))
                             }
                         }
                         .font(.footnote)
@@ -286,7 +286,7 @@ struct DatabaseView: View {
                             Button {
                                 productToEdit = product
                             } label: {
-                                Label("Modifica", systemImage: "pencil")
+                                Label(L("common.edit"), systemImage: "pencil")
                             }
 
                             Spacer()
@@ -294,7 +294,7 @@ struct DatabaseView: View {
                             Button {
                                 productForHistory = product
                             } label: {
-                                Label("Storico prezzi", systemImage: "clock.arrow.circlepath")
+                                Label(L("product.history.title"), systemImage: "clock.arrow.circlepath")
                             }
                             .buttonStyle(.borderless)
                         }
@@ -316,7 +316,7 @@ struct DatabaseView: View {
                 importProgressOverlay
             }
         }
-        .navigationTitle("Database")
+        .navigationTitle(L("database.title"))
         .toolbar {
             // import / export + nuovo prodotto
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -367,7 +367,7 @@ struct DatabaseView: View {
             if let exportURL {
                 ShareSheet(items: [exportURL])
             } else {
-                Text("Nessun file da condividere.")
+                Text(L("database.no_file_to_share"))
                     .padding()
             }
         }
@@ -387,41 +387,41 @@ struct DatabaseView: View {
         }
         // Sheet per scanner barcode
         .sheet(isPresented: $showScanner) {
-            ScannerView(title: "Scanner prodotti") { code in
+            ScannerView(title: L("database.scanner_title")) { code in
                 handleDatabaseScan(code)
             }
         }
 
         .confirmationDialog(
-            "Esporta prodotti",
+            L("database.export.title"),
             isPresented: $showingExportOptions,
             titleVisibility: .visible
         ) {
-            Button("Esporta prodotti") {
+            Button(L("database.export.products")) {
                 exportProducts()
             }
-            Button("Esporta database completo") {
+            Button(L("database.export.full")) {
                 exportFullDatabase()
             }
-            Button("Annulla", role: .cancel) { }
+            Button(L("common.cancel"), role: .cancel) { }
         }
 
         // Dialog per scegliere il tipo di import
         .confirmationDialog(
-            "Importa prodotti",
+            L("database.import.title"),
             isPresented: $showingImportOptions,
             titleVisibility: .visible
         ) {
-            Button("Importa da Excel (analisi)") {
+            Button(L("database.import.excel_analysis")) {
                 showingExcelImportPicker = true
             }
-            Button("Importa database completo") {
+            Button(L("database.import.full")) {
                 showingFullExcelImportPicker = true
             }
-            Button("Importa da CSV (semplice)") {
+            Button(L("database.import.csv_simple")) {
                 showingCSVImportPicker = true
             }
-            Button("Annulla", role: .cancel) { }
+            Button(L("common.cancel"), role: .cancel) { }
         }
 
         // Import CSV (flow semplice esistente)
@@ -472,7 +472,7 @@ struct DatabaseView: View {
         }
 
         .alert(
-            "Errore import",
+            L("database.error.import_title"),
             isPresented: Binding(
                 get: { importError != nil },
                 set: { newValue in
@@ -480,7 +480,7 @@ struct DatabaseView: View {
                 }
             )
         ) {
-            Button("OK", role: .cancel) {
+            Button(L("common.ok"), role: .cancel) {
                 importError = nil
             }
         } message: {
@@ -497,7 +497,7 @@ struct DatabaseView: View {
                 }
             )
         ) {
-            Button("OK", role: .cancel) {
+            Button(L("common.ok"), role: .cancel) {
                 importProgress.clearResult()
             }
         } message: {
@@ -511,7 +511,7 @@ struct DatabaseView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 14) {
-                Text(importProgress.stageText.isEmpty ? "Preparazione import..." : importProgress.stageText)
+                Text(importProgress.stageText.isEmpty ? L("database.progress.preparing") : importProgress.stageText)
                     .font(.headline)
                     .multilineTextAlignment(.center)
 
@@ -575,9 +575,9 @@ struct DatabaseView: View {
         var errorDescription: String? {
             switch self {
             case .invalidWorkbook:
-                return "Impossibile leggere il file. Assicurarsi che sia un file Excel (.xlsx) valido con più fogli."
+                return L("database.progress.invalid_workbook")
             case .missingProductsSheet:
-                return "Il file non contiene un foglio 'Products'. L'importazione completa richiede almeno questo foglio."
+                return L("database.progress.missing_products_sheet")
             }
         }
     }
@@ -591,7 +591,7 @@ struct DatabaseView: View {
             exportURL = url
             showingExportSheet = true
         } catch {
-            importError = "Errore durante l'export: \(error.localizedDescription)"
+            importError = L("database.error.export", error.localizedDescription)
         }
     }
 
@@ -601,7 +601,7 @@ struct DatabaseView: View {
             exportURL = url
             showingExportSheet = true
         } catch {
-            importError = "Errore durante l'export: \(error.localizedDescription)"
+            importError = L("database.error.export", error.localizedDescription)
         }
     }
     
@@ -870,7 +870,7 @@ struct DatabaseView: View {
             throw NSError(
                 domain: "ExportExcel",
                 code: 20,
-                userInfo: [NSLocalizedDescriptionKey: "Il file esportato non contiene il foglio Products."]
+                userInfo: [NSLocalizedDescriptionKey: L("database.validation.products_sheet_missing")]
             )
         }
 
@@ -880,7 +880,7 @@ struct DatabaseView: View {
             throw NSError(
                 domain: "ExportExcel",
                 code: 21,
-                userInfo: [NSLocalizedDescriptionKey: "Il foglio Products esportato non contiene le colonne attese."]
+                userInfo: [NSLocalizedDescriptionKey: L("database.validation.products_columns_missing")]
             )
         }
 
@@ -907,7 +907,7 @@ struct DatabaseView: View {
                 throw NSError(
                     domain: "ExportExcel",
                     code: 22,
-                    userInfo: [NSLocalizedDescriptionKey: "Manca la riga del prodotto \(expected.barcode) nel file esportato."]
+                    userInfo: [NSLocalizedDescriptionKey: L("database.validation.missing_exported_row", expected.barcode)]
                 )
             }
 
@@ -919,7 +919,7 @@ struct DatabaseView: View {
                     domain: "ExportExcel",
                     code: 23,
                     userInfo: [
-                        NSLocalizedDescriptionKey: "I valori supplier/category del prodotto \(expected.barcode) non sono stati esportati correttamente."
+                        NSLocalizedDescriptionKey: L("database.validation.exported_values_mismatch", expected.barcode)
                     ]
                 )
             }
@@ -945,7 +945,7 @@ struct DatabaseView: View {
                 throw NSError(
                     domain: "ImportExcel",
                     code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "Permessi file negati"]
+                    userInfo: [NSLocalizedDescriptionKey: L("database.error.file_permission_denied")]
                 )
             }
             defer { url.stopAccessingSecurityScopedResource() }
@@ -968,7 +968,7 @@ struct DatabaseView: View {
             if let error = error as? LocalizedError, let description = error.errorDescription {
                 importError = description
             } else {
-                importError = "Errore durante l'import Excel: \(error.localizedDescription)"
+                importError = L("database.error.import_excel", error.localizedDescription)
             }
         }
     }
@@ -981,7 +981,7 @@ struct DatabaseView: View {
                 throw NSError(
                     domain: "ImportExcelFull",
                     code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "Permessi file negati"]
+                    userInfo: [NSLocalizedDescriptionKey: L("database.error.file_permission_denied")]
                 )
             }
             defer { url.stopAccessingSecurityScopedResource() }
@@ -1046,7 +1046,7 @@ struct DatabaseView: View {
         } catch let error as LocalizedError {
             importError = error.errorDescription ?? error.localizedDescription
         } catch {
-            importError = "Errore durante l'import Excel: \(error.localizedDescription)"
+            importError = L("database.error.import_excel", error.localizedDescription)
         }
     }
 
@@ -1056,7 +1056,7 @@ struct DatabaseView: View {
         existingProducts: [Product]
     ) throws -> ProductImportAnalysisResult {
         guard header.contains("barcode") else {
-            throw ExcelLoadError.invalidFormat("Impossibile trovare la colonna 'barcode' nel file.")
+            throw ExcelLoadError.invalidFormat(L("database.error.barcode_column_missing"))
         }
 
         // Mappa prodotti esistenti per barcode
@@ -1088,7 +1088,7 @@ struct DatabaseView: View {
                 errors.append(
                     ProductImportRowError(
                         rowNumber: rowNumber,
-                        reason: "Manca il barcode.",
+                        reason: L("database.error.barcode_missing"),
                         rowContent: map
                     )
                 )
@@ -1234,7 +1234,7 @@ struct DatabaseView: View {
                 domain: "ImportExcelApply",
                 code: 2,
                 userInfo: [
-                    NSLocalizedDescriptionKey: "E' gia' in corso un'importazione. Attendere il completamento prima di avviarne un'altra."
+                    NSLocalizedDescriptionKey: L("database.error.import_in_progress")
                 ]
             )
         }
@@ -1261,10 +1261,10 @@ struct DatabaseView: View {
                         await progressState.apply(snapshot)
                     }
                 )
-                progressState.finishSuccess(message: "Import completato con successo.")
+                progressState.finishSuccess(message: L("database.progress.success"))
             } catch {
                 progressState.finishError(
-                    message: "Errore durante l'applicazione dell'import: \(error.localizedDescription)"
+                    message: L("database.error.apply_import", error.localizedDescription)
                 )
             }
         }
@@ -1365,7 +1365,7 @@ struct DatabaseView: View {
             var processedCount = 0
             let totalCount = payload.productsTotalCount
             await Self.reportImportProgress(
-                stagePrefix: "Applicazione prodotti",
+                stagePrefix: L("database.progress.applying_products"),
                 processedCount: 0,
                 totalCount: totalCount,
                 onProgress: onProgress,
@@ -1401,7 +1401,7 @@ struct DatabaseView: View {
 
                 processedCount += 1
                 await Self.reportImportProgress(
-                    stagePrefix: "Applicazione prodotti",
+                    stagePrefix: L("database.progress.applying_products"),
                     processedCount: processedCount,
                     totalCount: totalCount,
                     onProgress: onProgress
@@ -1457,7 +1457,7 @@ struct DatabaseView: View {
 
                 processedCount += 1
                 await Self.reportImportProgress(
-                    stagePrefix: "Applicazione prodotti",
+                    stagePrefix: L("database.progress.applying_products"),
                     processedCount: processedCount,
                     totalCount: totalCount,
                     onProgress: onProgress
@@ -1467,7 +1467,7 @@ struct DatabaseView: View {
 
             try context.save()
             await Self.reportImportProgress(
-                stagePrefix: "Applicazione prodotti",
+                stagePrefix: L("database.progress.applying_products"),
                 processedCount: processedCount,
                 totalCount: totalCount,
                 onProgress: onProgress,
@@ -1522,7 +1522,7 @@ struct DatabaseView: View {
                 domain: "ImportExcelFull",
                 code: 2,
                 userInfo: [
-                    NSLocalizedDescriptionKey: "Errore durante il salvataggio del foglio \(entityLabel): \(error.localizedDescription)"
+                    NSLocalizedDescriptionKey: L("database.error.save_sheet", entityLabel, error.localizedDescription)
                 ]
             )
         }
@@ -1619,7 +1619,7 @@ struct DatabaseView: View {
         var processedCount = 0
         let totalCount = entries.count
         await Self.reportImportProgress(
-            stagePrefix: "Applicazione storico prezzi",
+            stagePrefix: L("database.progress.applying_price_history"),
             processedCount: 0,
             totalCount: totalCount,
             onProgress: onProgress,
@@ -1641,7 +1641,7 @@ struct DatabaseView: View {
 
             processedCount += 1
             await Self.reportImportProgress(
-                stagePrefix: "Applicazione storico prezzi",
+                stagePrefix: L("database.progress.applying_price_history"),
                 processedCount: processedCount,
                 totalCount: totalCount,
                 onProgress: onProgress
@@ -1651,7 +1651,7 @@ struct DatabaseView: View {
 
         try context.save()
         await Self.reportImportProgress(
-            stagePrefix: "Applicazione storico prezzi",
+            stagePrefix: L("database.progress.applying_price_history"),
             processedCount: processedCount,
             totalCount: totalCount,
             onProgress: onProgress,
@@ -1738,19 +1738,19 @@ struct DatabaseView: View {
     private func importProducts(from url: URL) {
         do {
             guard url.startAccessingSecurityScopedResource() else {
-                throw NSError(domain: "Import", code: 1, userInfo: [NSLocalizedDescriptionKey: "Permessi file negati"])
+                throw NSError(domain: "Import", code: 1, userInfo: [NSLocalizedDescriptionKey: L("database.error.file_permission_denied")])
             }
             defer { url.stopAccessingSecurityScopedResource() }
 
             let data = try Data(contentsOf: url)
             guard let content = String(data: data, encoding: .utf8) else {
-                throw NSError(domain: "Import", code: 2, userInfo: [NSLocalizedDescriptionKey: "File non in UTF-8"])
+                throw NSError(domain: "Import", code: 2, userInfo: [NSLocalizedDescriptionKey: L("database.error.file_not_utf8")])
             }
 
             try parseProductsCSV(content)
             try context.save()
         } catch {
-            importError = "Errore durante l'import: \(error.localizedDescription)"
+            importError = L("database.error.import", error.localizedDescription)
         }
     }
 
@@ -1887,7 +1887,7 @@ struct DatabaseView: View {
     private func formatMoney(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.locale = .current
+        formatter.locale = appLocale()
         return formatter.string(from: value as NSNumber) ?? String(value)
     }
 
@@ -1895,7 +1895,12 @@ struct DatabaseView: View {
         if value.rounded() == value {
             return String(Int(value))
         } else {
-            return String(value)
+            let formatter = NumberFormatter()
+            formatter.locale = appLocale()
+            formatter.minimumFractionDigits = 0
+            formatter.maximumFractionDigits = 3
+            formatter.usesGroupingSeparator = false
+            return formatter.string(from: value as NSNumber) ?? String(value)
         }
     }
 

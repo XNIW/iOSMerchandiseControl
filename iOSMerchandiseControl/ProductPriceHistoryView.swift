@@ -25,15 +25,15 @@ struct ProductPriceHistoryView: View {
         List {
             if prices.isEmpty {
                 Section {
-                    Text("Nessuno storico prezzi disponibile.")
+                    Text(L("product.history.empty"))
                         .foregroundStyle(.secondary)
                 }
             } else {
                 // Picker in stile tab “Acquisto / Vendita”
                 Section {
-                    Picker("Tipo prezzo", selection: $selectedType) {
-                        Text("Acquisto").tag(PriceType.purchase)
-                        Text("Vendita").tag(PriceType.retail)
+                    Picker(L("product.history.price_type"), selection: $selectedType) {
+                        Text(L("product.history.purchase")).tag(PriceType.purchase)
+                        Text(L("product.history.retail")).tag(PriceType.retail)
                     }
                     .pickerStyle(.segmented)
                 }
@@ -42,7 +42,7 @@ struct ProductPriceHistoryView: View {
 
                 if currentList.isEmpty {
                     Section {
-                        Text("Nessuno storico \(label(for: selectedType).lowercased()) disponibile.")
+                        Text(L("product.history.empty_type", label(for: selectedType).lowercased()))
                             .foregroundStyle(.secondary)
                     }
                 } else {
@@ -72,31 +72,31 @@ struct ProductPriceHistoryView: View {
                 }
             }
         }
-        .navigationTitle("Storico prezzi")
+        .navigationTitle(L("product.history.title"))
         .navigationBarTitleDisplayMode(.inline)
     }
 
     private func label(for type: PriceType) -> String {
         switch type {
         case .purchase:
-            return "Acquisto"
+            return L("product.history.purchase")
         case .retail:
-            return "Vendita"
+            return L("product.history.retail")
         }
     }
 
     private func displaySource(_ source: String) -> String {
         switch source {
         case "BACKFILL":
-            return "Prezzo iniziale"
+            return L("product.history.source.initial_price")
         case "IMPORT_EXCEL":
-            return "Import Excel"
+            return L("product.history.source.import_excel")
         case "INVENTORY_SYNC":
-            return "Sync inventario"
+            return L("product.history.source.inventory_sync")
         case "EDIT_PRODUCT":
-            return "Modifica manuale"
+            return L("product.history.source.manual_edit")
         case "IMPORT_DB_FULL":
-            return "Import database"
+            return L("product.history.source.database_import")
         default:
             return source
         }
@@ -106,13 +106,14 @@ struct ProductPriceHistoryView: View {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
+        formatter.locale = appLocale()
         return formatter.string(from: date)
     }
 
     private func formatMoney(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.locale = .current
+        formatter.locale = appLocale()
         return formatter.string(from: value as NSNumber) ?? String(value)
     }
 }

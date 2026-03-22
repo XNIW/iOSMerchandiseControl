@@ -163,17 +163,17 @@ struct ImportAnalysisView: View {
             }
         }
         .interactiveDismissDisabled(isApplying)
-        .navigationTitle("Import da Excel")
+        .navigationTitle(L("import.analysis.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Annulla") {
+                Button(L("common.cancel")) {
                     dismiss()
                 }
                 .disabled(isApplying)
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Applica") {
+                Button(L("import.analysis.apply")) {
                     guard !isApplying else { return }
                     isApplying = true
 
@@ -198,26 +198,26 @@ struct ImportAnalysisView: View {
             editDraftSheet(for: item)
         }
         .alert(
-            "Errore export",
+            L("import.analysis.error.export_title"),
             isPresented: Binding(
                 get: { exportError != nil },
                 set: { if !$0 { exportError = nil } }
             )
         ) {
-            Button("OK", role: .cancel) {
+            Button(L("common.ok"), role: .cancel) {
                 exportError = nil
             }
         } message: {
             Text(exportError ?? "")
         }
         .alert(
-            "Errore applicazione import",
+            L("import.analysis.error.apply_title"),
             isPresented: Binding(
                 get: { applyError != nil },
                 set: { if !$0 { applyError = nil } }
             )
         ) {
-            Button("OK", role: .cancel) {
+            Button(L("common.ok"), role: .cancel) {
                 applyError = nil
             }
         } message: {
@@ -234,10 +234,10 @@ struct ImportAnalysisView: View {
                 ProgressView()
                     .controlSize(.large)
 
-                Text("Importazione in corso...")
+                Text(L("import.analysis.processing.title"))
                     .font(.headline)
 
-                Text("L'applicazione dei cambiamenti puo' richiedere alcuni istanti.")
+                Text(L("import.analysis.processing.body"))
                     .font(.caption)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
@@ -253,22 +253,22 @@ struct ImportAnalysisView: View {
     // MARK: - Sezioni
 
     private var summarySection: some View {
-        Section("Riepilogo") {
-            row(label: "Nuovi prodotti", systemImage: "plus.circle", value: analysis.newProducts.count)
-            row(label: "Aggiornamenti", systemImage: "arrow.triangle.2.circlepath", value: analysis.updatedProducts.count)
-            row(label: "Warning", systemImage: "exclamationmark.triangle", value: analysis.warnings.count)
-            row(label: "Errori", systemImage: "xmark.octagon", value: analysis.errors.count)
+        Section(L("import.analysis.summary")) {
+            row(label: L("import.analysis.summary.new_products"), systemImage: "plus.circle", value: analysis.newProducts.count)
+            row(label: L("import.analysis.summary.updates"), systemImage: "arrow.triangle.2.circlepath", value: analysis.updatedProducts.count)
+            row(label: L("import.analysis.summary.warnings"), systemImage: "exclamationmark.triangle", value: analysis.warnings.count)
+            row(label: L("import.analysis.summary.errors"), systemImage: "xmark.octagon", value: analysis.errors.count)
         }
     }
 
     private var warningsSection: some View {
-        Section("Barcode duplicati nel file") {
+        Section(L("import.analysis.duplicate_barcodes")) {
             ForEach(analysis.warnings) { warning in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(warning.barcode)
                         .font(.headline)
 
-                    Text("Righe: \(warning.rowNumbers.map(String.init).joined(separator: ", "))")
+                    Text(L("common.rows", warning.rowNumbers.map(String.init).joined(separator: ", ")))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -278,26 +278,26 @@ struct ImportAnalysisView: View {
     }
 
     private var newProductsSection: some View {
-        Section("Nuovi prodotti (\(analysis.newProducts.count))") {
+        Section(L("import.analysis.new_products_count", analysis.newProducts.count)) {
             ForEach(analysis.newProducts) { draft in
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(draft.productName ?? "Senza nome")
+                        Text(draft.productName ?? L("product.no_name"))
                             .font(.headline)
 
-                        Text("Barcode: \(draft.barcode)")
+                        Text(L("import.analysis.barcode", draft.barcode))
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
                         HStack(spacing: 8) {
                             if let purchase = draft.purchasePrice {
-                                Text("Acquisto: \(formatPrice(purchase))")
+                                Text(L("import.analysis.purchase", formatPrice(purchase)))
                             }
                             if let retail = draft.retailPrice {
-                                Text("Vendita: \(formatPrice(retail))")
+                                Text(L("import.analysis.retail", formatPrice(retail)))
                             }
                             if let qty = draft.stockQuantity {
-                                Text("Stock: \(formatQuantity(qty))")
+                                Text(L("import.analysis.stock", formatQuantity(qty)))
                             }
                         }
                         .font(.caption)
@@ -332,18 +332,18 @@ struct ImportAnalysisView: View {
     }
 
     private var updatedProductsSection: some View {
-        Section("Prodotti aggiornati (\(analysis.updatedProducts.count))") {
+        Section(L("import.analysis.updated_products_count", analysis.updatedProducts.count)) {
             ForEach(analysis.updatedProducts) { update in
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
                         let name = update.new.productName
                             ?? update.old.productName
-                            ?? "Senza nome"
+                            ?? L("product.no_name")
 
                         Text(name)
                             .font(.headline)
 
-                        Text("Barcode: \(update.barcode)")
+                        Text(L("import.analysis.barcode", update.barcode))
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
@@ -390,7 +390,7 @@ struct ImportAnalysisView: View {
         Section {
             ForEach(analysis.errors) { err in
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Riga \(err.rowNumber)")
+                    Text(L("common.row_number", err.rowNumber))
                         .font(.headline)
 
                     Text(err.reason)
@@ -406,9 +406,9 @@ struct ImportAnalysisView: View {
             }
         } header: {
             HStack {
-                Text("Errori (righe ignorate)")
+                Text(L("import.analysis.errors_ignored"))
                 Spacer()
-                Button("Esporta errori") {
+                Button(L("import.analysis.export_errors")) {
                     exportErrors()
                 }
                 .font(.caption.weight(.semibold))
@@ -481,14 +481,14 @@ struct ImportAnalysisView: View {
                 let url = try Self.exportErrorsToXLSX(analysis.errors)
                 shareItem = ShareItem(url: url)
             } catch {
-                exportError = "Impossibile esportare XLSX: \(error.localizedDescription)"
+                exportError = L("import.analysis.export_impossible", error.localizedDescription)
             }
         }
     }
 
     private static func exportErrorsToXLSX(_ errors: [ProductImportRowError]) throws -> URL {
         let allKeys = Array(Set(errors.flatMap { $0.rowContent.keys })).sorted()
-        let headers = allKeys + ["Errore"]
+        let headers = allKeys + [L("import.analysis.error_column")]
 
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("exports", isDirectory: true)
@@ -503,7 +503,7 @@ struct ImportAnalysisView: View {
         let workbook = xlsxwriter.Workbook(name: url.path)
         defer { workbook.close() }
 
-        let sheet = workbook.addWorksheet(name: "Errori di Importazione")
+        let sheet = workbook.addWorksheet(name: L("import.analysis.error_sheet_name"))
 
         for (column, header) in headers.enumerated() {
             sheet.write(.string(header), [0, column])
@@ -531,14 +531,14 @@ struct ImportAnalysisView: View {
 
     private func label(for field: ProductUpdateDraft.ChangedField) -> String {
         switch field {
-        case .itemNumber: return "Codice"
-        case .productName: return "Nome"
-        case .secondProductName: return "Secondo nome"
-        case .purchasePrice: return "Acquisto"
-        case .retailPrice: return "Vendita"
-        case .stockQuantity: return "Stock"
-        case .supplierName: return "Fornitore"
-        case .categoryName: return "Categoria"
+        case .itemNumber: return L("import.analysis.field.item_number")
+        case .productName: return L("import.analysis.field.product_name")
+        case .secondProductName: return L("import.analysis.field.second_name")
+        case .purchasePrice: return L("import.analysis.field.purchase")
+        case .retailPrice: return L("import.analysis.field.retail")
+        case .stockQuantity: return L("import.analysis.field.stock")
+        case .supplierName: return L("import.analysis.field.supplier")
+        case .categoryName: return L("import.analysis.field.category")
         }
     }
 
@@ -566,6 +566,7 @@ struct ImportAnalysisView: View {
     private func formatPrice(_ value: Double?) -> String {
         guard let value else { return "—" }
         let formatter = NumberFormatter()
+        formatter.locale = appLocale()
         formatter.minimumFractionDigits = 0
         formatter.maximumFractionDigits = 3
         formatter.usesGroupingSeparator = false
@@ -577,7 +578,12 @@ struct ImportAnalysisView: View {
         if value.rounded() == value {
             return String(Int(value))
         } else {
-            return String(value)
+            let formatter = NumberFormatter()
+            formatter.locale = appLocale()
+            formatter.minimumFractionDigits = 0
+            formatter.maximumFractionDigits = 3
+            formatter.usesGroupingSeparator = false
+            return formatter.string(from: value as NSNumber) ?? String(value)
         }
     }
 }
@@ -637,48 +643,48 @@ private struct EditProductDraftView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Dati principali") {
-                    TextField("Barcode", text: $barcode)
+                Section(L("product.section.main")) {
+                    TextField(L("product.field.barcode"), text: $barcode)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .disabled(!barcodeEditable)
 
-                    TextField("Codice articolo (itemNumber)", text: $itemNumber)
+                    TextField(L("product.field.item_number"), text: $itemNumber)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
 
-                    TextField("Nome prodotto", text: $productName)
-                    TextField("Secondo nome", text: $secondProductName)
+                    TextField(L("product.field.name"), text: $productName)
+                    TextField(L("product.field.second_name"), text: $secondProductName)
                 }
 
-                Section("Magazzino") {
-                    TextField("Quantita` in stock", text: $stockQuantity)
+                Section(L("product.section.warehouse")) {
+                    TextField(L("product.field.stock_quantity"), text: $stockQuantity)
                         .keyboardType(.decimalPad)
                 }
 
-                Section("Prezzi") {
-                    TextField("Prezzo acquisto", text: $purchasePrice)
+                Section(L("product.section.prices")) {
+                    TextField(L("product.field.purchase_price"), text: $purchasePrice)
                         .keyboardType(.decimalPad)
 
-                    TextField("Prezzo vendita", text: $retailPrice)
+                    TextField(L("product.field.retail_price"), text: $retailPrice)
                         .keyboardType(.decimalPad)
                 }
 
-                Section("Anagrafica") {
-                    TextField("Nome fornitore", text: $supplierName)
-                    TextField("Nome categoria", text: $categoryName)
+                Section(L("product.section.profile")) {
+                    TextField(L("product.field.supplier_name"), text: $supplierName)
+                    TextField(L("product.field.category_name"), text: $categoryName)
                 }
             }
-            .navigationTitle("Modifica prodotto")
+            .navigationTitle(L("product.title.edit"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Annulla") {
+                    Button(L("common.cancel")) {
                         onCancel()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Salva") {
+                    Button(L("common.save")) {
                         save()
                     }
                     .disabled(saveDisabled)

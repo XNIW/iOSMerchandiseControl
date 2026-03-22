@@ -50,38 +50,38 @@ struct EditProductView: View {
 
     var body: some View {
         Form {
-            Section("Dati principali") {
-                TextField("Barcode", text: $barcode)
+            Section(L("product.section.main")) {
+                TextField(L("product.field.barcode"), text: $barcode)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
 
-                TextField("Codice articolo (itemNumber)", text: $itemNumber)
+                TextField(L("product.field.item_number"), text: $itemNumber)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
 
-                TextField("Nome prodotto", text: $name)
+                TextField(L("product.field.name"), text: $name)
 
-                TextField("Secondo nome", text: $secondName)
+                TextField(L("product.field.second_name"), text: $secondName)
             }
 
-            Section("Magazzino") {
-                TextField("Quantità in stock", text: $stockQuantity)
+            Section(L("product.section.warehouse")) {
+                TextField(L("product.field.stock_quantity"), text: $stockQuantity)
                     .keyboardType(.decimalPad)
             }
 
-            Section("Prezzi") {
-                TextField("Prezzo acquisto", text: $purchasePrice)
+            Section(L("product.section.prices")) {
+                TextField(L("product.field.purchase_price"), text: $purchasePrice)
                     .keyboardType(.decimalPad)
 
-                TextField("Prezzo vendita", text: $retailPrice)
+                TextField(L("product.field.retail_price"), text: $retailPrice)
                     .keyboardType(.decimalPad)
             }
 
-            Section("Fornitore") {
-                TextField("Nome fornitore", text: $supplierName)
+            Section(L("product.section.supplier")) {
+                TextField(L("product.field.supplier_name"), text: $supplierName)
 
                 if !suppliers.isEmpty {
-                    Menu("Seleziona esistente") {
+                    Menu(L("product.action.select_existing")) {
                         ForEach(suppliers) { supplier in
                             Button(supplier.name) {
                                 supplierName = supplier.name
@@ -91,11 +91,11 @@ struct EditProductView: View {
                 }
             }
 
-            Section("Categoria") {
-                TextField("Nome categoria", text: $categoryName)
+            Section(L("product.section.category")) {
+                TextField(L("product.field.category_name"), text: $categoryName)
 
                 if !categories.isEmpty {
-                    Menu("Seleziona esistente") {
+                    Menu(L("product.action.select_existing")) {
                         ForEach(categories) { category in
                             Button(category.name) {
                                 categoryName = category.name
@@ -105,13 +105,13 @@ struct EditProductView: View {
                 }
             }
         }
-        .navigationTitle(existingProduct == nil ? "Nuovo prodotto" : "Modifica prodotto")
+        .navigationTitle(existingProduct == nil ? L("product.title.new") : L("product.title.edit"))
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Annulla") { dismiss() }
+                Button(L("common.cancel")) { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Salva") { save() }
+                Button(L("common.save")) { save() }
             }
         }
     }
