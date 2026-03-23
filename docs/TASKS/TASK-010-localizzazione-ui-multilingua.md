@@ -655,19 +655,81 @@ Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO
 ## Review (Claude)
 <!-- solo Claude aggiorna questa sezione -->
 
-### Problemi critici
+### Review 1 — 2026-03-22
 
-### Problemi medi
+#### Problemi critici
+Nessuno.
 
-### Miglioramenti opzionali
+#### Problemi medi
+- **Guardrail #15 — placeholder posizionali**: la chiave `database.error.save_sheet` usava `%@: %@` (2 argomenti non posizionali) in tutti e 4 i `.strings`. Richiesto fix a `%1$@: %2$@`.
 
-### Fix richiesti
+#### Miglioramenti opzionali
+- GeneratedView linee 2623-2630: chiavi colonna raw ("barcode", "productName", ecc.) usate in messaggio errore `missingColumns`. Follow-up candidate, non bloccante.
 
-### Esito
+#### Fix richiesti
+1. `database.error.save_sheet` → `%1$@: %2$@` in it/en/zh-Hans/es `.strings`
 
-### Handoff → Fix (se CHANGES_REQUIRED)
+#### Esito
+CHANGES_REQUIRED
 
-### Handoff → nuovo Planning (se REJECTED)
+#### Handoff → Fix
+- Prossima fase: FIX
+- Prossimo agente: CODEX
+- Azione: sostituire `%@: %@` con `%1$@: %2$@` nella chiave `database.error.save_sheet` nei 4 file `Localizable.strings`. Nessun altro cambio.
+
+---
+
+### Review 2 (post-fix) — 2026-03-22
+
+#### Verifica fix richiesto
+- `database.error.save_sheet` — **CHIUSO**: tutti e 4 i `.strings` ora usano `%1$@: %2$@`:
+  - it: `"Impossibile salvare il foglio %1$@: %2$@"` ✅
+  - en: `"Unable to save sheet %1$@: %2$@"` ✅
+  - zh-Hans: `"无法保存工作表 %1$@：%2$@"` ✅
+  - es: `"No se puede guardar la hoja %1$@: %2$@"` ✅
+
+#### Scope check
+- Commit `b1e1973`: 5 file toccati (4 `.strings` + task doc). Nessun file fuori scope modificato. ✅
+
+#### Build
+- `xcodebuild` → **BUILD SUCCEEDED**. Nessun warning Swift introdotto. ✅
+
+#### Stato CA aggiornato
+| CA | Descrizione | Stato |
+|----|-------------|-------|
+| CA-1 | Infrastruttura `L()`, bundle, fallback italiano | PASS |
+| CA-2 | Cambio lingua runtime senza riavvio | PENDING MANUAL |
+| CA-3 | Modalità "Sistema" segue lingua device | PENDING MANUAL |
+| CA-4 | 4 file `.strings` con chiavi identiche | PASS |
+| CA-5 | View in scope: 0 stringhe hardcoded | PASS |
+| CA-6 | Formattazione numerica locale-aware | PENDING MANUAL |
+| CA-7 | Nessuna regressione tema chiaro/scuro | PASS |
+| CA-8 | Build verde senza warning Swift nuovi | PASS |
+| CA-9 | Nessun file fuori scope modificato | PASS |
+| CA-10 | Guardrail #15 placeholder posizionali | PASS |
+| CA-11 | Key parity 423 chiavi, 0 duplicati | PASS |
+
+#### Problemi critici
+Nessuno.
+
+#### Problemi medi
+Nessuno (fix precedente chiuso).
+
+#### Follow-up candidate (non bloccante)
+- GeneratedView linee 2623-2630: chiavi colonna raw in messaggio errore.
+
+#### Esito
+**APPROVED** — approvato per test manuali.
+
+CA-2, CA-3, CA-6 restano PENDING MANUAL: richiedono validazione su device/Simulator da parte dell'utente prima della chiusura definitiva a DONE.
+
+### Handoff → Test manuali utente
+- **Prossima fase**: conferma utente (test manuali)
+- **Prossimo agente**: UTENTE
+- **Azione consigliata**: validare su Simulator o device i 3 CA residui:
+  - CA-2: cambiare lingua in Opzioni, verificare aggiornamento immediato UI
+  - CA-3: impostare "Sistema", cambiare lingua device, verificare che l'app segua
+  - CA-6: con lingua en/es, verificare che i prezzi usino il separatore decimale corretto (punto vs virgola)
 
 ---
 
@@ -697,6 +759,47 @@ Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO
 - **Prossima fase**: REVIEW
 - **Prossimo agente**: CLAUDE
 - **Azione consigliata**: verificare che il finding su Guardrail #15 sia chiuso e che il task possa rientrare nel normale flusso di review senza ulteriori cambi lato codice Swift.
+
+### Fix 2 — Refresh runtime `InventoryHomeView` (2026-03-22)
+
+#### Obiettivo compreso
+Correggere il bug di refresh lingua della schermata principale Inventario senza riaprire il task di localizzazione in modo ampio: al cambio lingua ripetuto, `InventoryHomeView` doveva tornare a rivalutare i testi `L(...)` a ogni aggiornamento senza richiedere riavvio app.
+
+#### File controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-010-localizzazione-ui-multilingua.md`
+- `iOSMerchandiseControl/ContentView.swift`
+- `iOSMerchandiseControl/InventoryHomeView.swift`
+
+#### Piano minimo
+- Verificare la causa root in `InventoryHomeView.swift`.
+- Introdurre una dipendenza reattiva esplicita da `appLanguage` nel solo `InventoryHomeView`.
+- Evitare `.id(...)` o altri workaround piu` invasivi se il binding diretto a `@AppStorage` basta.
+- Eseguire build rapida finale e riportare il task in `REVIEW` per Claude.
+
+#### Modifiche fatte
+- Causa root confermata: `InventoryHomeView` usava `L(...)`, che legge `appLanguage` da `UserDefaults`, ma la view non osservava direttamente `appLanguage`; di conseguenza SwiftUI non aveva una dipendenza reattiva esplicita per invalidare sempre la root view Inventario ai cambi lingua successivi.
+- In `iOSMerchandiseControl/InventoryHomeView.swift` ho aggiunto `@AppStorage("appLanguage") private var appLanguage: String = "system"`.
+- Ho reso esplicita la dipendenza della `body` da `appLanguage` con un read minimale (`let _ = appLanguage`) prima del `VStack`, cosi` i testi `L(...)` vengono rivalutati a ogni update lingua.
+- Non ho introdotto `.id(Bundle.resolvedLanguageCode(for: appLanguage))`: non e` stato necessario un reset forzato della root view.
+- Nessuna modifica a import/navigation/theme e nessun tocco ad altre schermate che gia` si aggiornano correttamente.
+
+#### Check eseguiti
+- ✅ ESEGUITO — Build compila: `xcodebuild -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'generic/platform=iOS Simulator' build` -> `** BUILD SUCCEEDED **`.
+- ⚠️ NON ESEGUIBILE — Cambio lingua `A -> B -> C` senza riavvio: non ho eseguito un test manuale/Simulator interattivo in questo run; evidenza statica del fix = `InventoryHomeView` ora osserva `@AppStorage("appLanguage")` e legge `appLanguage` nella `body`, quindi la root view viene invalidata quando cambia la lingua selezionata.
+- ⚠️ NON ESEGUIBILE — Verifica manuale che le altre schermate non regrediscano: nessuna sessione UI interattiva eseguita in questo run; evidenza statica = il fix tocca solo `InventoryHomeView.swift`, quindi non altera le altre schermate gia` funzionanti.
+- ⚠️ NON ESEGUIBILE — Verifica manuale `appTheme`: nessun test interattivo eseguito in questo run; evidenza statica = nessun file o codice relativo al tema e` stato modificato.
+- ⚠️ NON ESEGUIBILE — Nessun warning nuovo introdotto: nel log build resta il warning toolchain gia` noto `Metadata extraction skipped. No AppIntents.framework dependency found.`; non emergono warning Swift dal file modificato, ma non ho una baseline strumentale separata per provare formalmente l'assenza assoluta di warning nuovi.
+- ✅ ESEGUITO — Modifiche coerenti con il planning: fix minimale e mirato, limitato alla sola reattivita` di `InventoryHomeView` + riallineamento tracking verso `REVIEW`.
+
+#### Rischi rimasti
+- La validazione runtime del caso utente riportato (`A -> B -> C` senza riavvio) resta da confermare in review/test manuale, anche se il wiring reattivo mancante e` stato corretto.
+- Se il refresh non risultasse ancora sufficiente in Simulator/device, il prossimo fix minimo previsto dal vincolo utente sarebbe forzare la ricreazione della root con `.id(Bundle.resolvedLanguageCode(for: appLanguage))`; non applicato ora per evitare un workaround piu` invasivo senza evidenza di necessita`.
+
+### Handoff → Review finale
+- **Prossima fase**: REVIEW
+- **Prossimo agente**: CLAUDE
+- **Azione consigliata**: verificare il bugfix mirato su `InventoryHomeView` con focus sul wiring reattivo (`@AppStorage("appLanguage")` + read nella `body`) e confermare se e` sufficiente a chiudere il refresh lingua senza introdurre il fallback `.id(...)`.
 
 ---
 

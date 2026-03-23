@@ -3,6 +3,7 @@ import SwiftData
 import UniformTypeIdentifiers
 
 struct InventoryHomeView: View {
+    @AppStorage("appLanguage") private var appLanguage: String = "system"
     @EnvironmentObject var excelSession: ExcelSessionViewModel
     @Environment(\.modelContext) private var context
 
@@ -66,7 +67,10 @@ struct InventoryHomeView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        // Tiene questa root view reattiva ai cambi lingua anche se i testi passano da L(...).
+        let _ = appLanguage
+
+        return VStack(spacing: 16) {
             Image(systemName: "doc.badge.plus")
                 .font(.system(size: 40))
                 .foregroundColor(.accentColor)
