@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-011 ACTIVE — Large import stability, memory e progress UX (PLANNING in corso, responsabile: CLAUDE).
+TASK-022 ACTIVE — Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) (PLANNING in corso, responsabile: CLAUDE).
 
 ## Stato globale
 ACTIVE
-> TASK-011 in PLANNING (large import stability, memory e progress UX). TASK-014 completato (global audit & backlog refresh, 2026-03-22). TASK-002 chiuso come DONE parziale (2026-03-22): "Condividi/Invia copia" funziona; "Apri con" cross-app documentato come limite iOS noto. TASK-015 WONT_DO (2026-03-22). TASK-010 bloccato (review tecnica finale APPROVED, test manuali finali sospesi per decisione utente), TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, sblocco subordinato a TASK-011), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — test manuali), TASK-009 bloccato (implementazione completata, review codice APPROVED, test manuali sospesi per decisione utente), TASK-012 completato, TASK-013 bloccato (sospeso per decisione utente: workflow SIM UI rimosso dal processo standard).
+> TASK-022 in PLANNING (full-database large import: apply crash after analysis). TASK-011 bloccato (sospeso per decisione utente; il problema emerso nei test reali viene estratto in TASK-022 perche' piu' specifico e immediatamente bloccante). TASK-014 completato (global audit & backlog refresh, 2026-03-22). TASK-002 chiuso come DONE parziale (2026-03-22): "Condividi/Invia copia" funziona; "Apri con" cross-app documentato come limite iOS noto. TASK-015 WONT_DO (2026-03-22). TASK-010 bloccato (review tecnica finale APPROVED, test manuali finali sospesi per decisione utente), TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, sblocco subordinato a TASK-022), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — test manuali), TASK-009 bloccato (implementazione completata, review codice APPROVED, test manuali sospesi per decisione utente), TASK-012 completato, TASK-013 bloccato (sospeso per decisione utente: workflow SIM UI rimosso dal processo standard).
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,15 +49,21 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- Task ID: TASK-011
-- Titolo: Large import stability, memory e progress UX
-- File task: `docs/TASKS/TASK-011-large-import-stability-and-progress.md`
+- Task ID: TASK-022
+- Titolo: Full-database large import: apply crash after analysis (EXC_BAD_ACCESS)
+- File task: `docs/TASKS/TASK-022-full-db-large-import-apply-crash.md`
 - Stato: ACTIVE
 - Fase attuale: PLANNING
 - Responsabile attuale: CLAUDE
-- Ultimo aggiornamento: 2026-03-22
+- Ultimo aggiornamento: 2026-03-23
 
 Task bloccati non attivi:
+- Task ID: TASK-011
+- Titolo: Large import stability, memory e progress UX
+- File task: `docs/TASKS/TASK-011-large-import-stability-and-progress.md`
+- Stato: BLOCKED
+- Motivo: sospeso per decisione utente; il problema emerso nei test reali viene estratto in TASK-022 perche' piu' specifico e immediatamente bloccante.
+- Ultimo aggiornamento: 2026-03-23
 - Task ID: TASK-010
 - Titolo: Localizzazione UI multilingua
 - File task: `docs/TASKS/TASK-010-localizzazione-ui-multilingua.md`
@@ -86,8 +92,8 @@ Task bloccati non attivi:
 - Titolo: Database full import/export (multi-sheet)
 - File task: `docs/TASKS/TASK-006-database-full-import-export.md`
 - Stato: BLOCKED
-- Motivo: implementazione completata e review emessa APPROVED da Claude; test manuali sospesi prima del completamento; comportamento su import di dataset molto grandi (freeze/memory pressure) non validato; sblocco pratico dipende da TASK-011
-- Ultimo aggiornamento: 2026-03-21
+- Motivo: implementazione completata e review emessa APPROVED da Claude; test manuali sospesi prima del completamento; il blocker pratico corrente sui dataset molto grandi e' il crash di apply estratto in TASK-022; sblocco pratico dipende da TASK-022
+- Ultimo aggiornamento: 2026-03-23
 - Task ID: TASK-008
 - Titolo: Generated manual row dialog + calculate
 - File task: `docs/TASKS/TASK-008-generated-manual-row-dialog-calculate.md`
@@ -117,7 +123,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-008 | Generated manual row dialog + calculate | BLOCKED | MEDIUM |
 | TASK-009 | Product model old prices + price backfill | BLOCKED | LOW |
 | TASK-010 | Localizzazione UI multilingua | BLOCKED | LOW |
-| TASK-011 | Large import stability, memory e progress UX | ACTIVE | HIGH |
+| TASK-011 | Large import stability, memory e progress UX | BLOCKED | HIGH |
 | TASK-012 | Simulator automation — dual-agent wrapper + adapter (sblocca TASK-008) | DONE | HIGH |
 | TASK-013 | sim_ui.sh performance — batch mode, timeout reale, cache device frame | BLOCKED | HIGH |
 | TASK-014 | Global Audit & Backlog Refresh | DONE | — |
@@ -128,6 +134,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-019 | Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill | TODO | MEDIUM |
 | TASK-020 | Scanner: feedback camera non disponibile | TODO | LOW |
 | TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | TODO | LOW |
+| TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | ACTIVE | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -141,9 +148,12 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-014 | Global Audit & Backlog Refresh | 2026-03-22 |
 
 ## Blocchi e dipendenze
+- TASK-011 bloccato.
+  Motivo: sospeso per decisione utente; il problema emerso nei test reali viene estratto in TASK-022 perche' piu' specifico e immediatamente bloccante.
+  Nota tracking: il planning/execution storico di TASK-011 resta documentato nel suo file task, ma il blocker operativo corrente per l'import full-database grande e' TASK-022.
 - TASK-006 bloccato.
-  Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Test manuali sospesi prima della conferma finale; comportamento su import di dataset molto grandi non validato (freeze UI, memory pressure, possibile app kill). Sblocco pratico subordinato al completamento di TASK-011.
-  Nota criteri: CA-1/CA-12 e CA-14 verificati; CA-13 (round-trip) e stabilità su dataset reali ancora da validare manualmente.
+  Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Test manuali sospesi prima della conferma finale; durante i test reali con file Excel molto grande e' emerso un crash specifico nell'apply dopo analysis completata. Sblocco pratico subordinato al completamento di TASK-022.
+  Nota criteri: CA-1/CA-12 e CA-14 verificati; CA-13 (round-trip) e stabilita' su dataset reali ancora da validare manualmente. TASK-011 resta come contesto storico secondario, ma il blocker pratico corrente e' TASK-022.
 - TASK-008 bloccato.
   Motivo: review codice completata da Claude — nessun problema critico trovato, tutti i CA verificabili staticamente superati. Build verde. Validazione UI end-to-end (T-1..T-28) sospesa: richiede test manuali nel Simulator (l'automazione via wrapper SIM UI non è più parte del workflow standard). Sblocco subordinato a test manuali dell'utente o a decisione esplicita di procedere.
   Nota criteri: CA-1..CA-14, CA-16..CA-20 verificati da code review; CA-15 (autosave/restore round-trip) e test interattivi T-1..T-28 ancora da validare manualmente.
@@ -161,6 +171,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - Per nuovo lavoro collegato a un task DONE → creare un nuovo task con riferimento (campo "Dipende da"), non riaprire
 - User override: se l'utente dà un'istruzione in conflitto col workflow, gli agent possono seguirla ma devono segnalare l'impatto
 - User override 2026-03-21: autorizzato riallineamento minimo del tracking da parte di Codex per evitare il blocco operativo tra file task e MASTER-PLAN durante l'avvio di TASK-008
+- User override 2026-03-23: autorizzata da utente la sospensione di TASK-011 e la creazione/attivazione di TASK-022; backlog e tracking riallineati di conseguenza
 
 ## Criterio di aggiornamento
 Questo file va aggiornato SOLO quando cambia almeno uno di:

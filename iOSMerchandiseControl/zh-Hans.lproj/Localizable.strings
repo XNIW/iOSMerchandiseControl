@@ -195,6 +195,8 @@
 "import.analysis.field.stock" = "库存";
 "import.analysis.field.supplier" = "供应商";
 "import.analysis.field.category" = "分类";
+"import.analysis.preview_notice" = "当前仅显示前 %1$d / %2$d 条。导入仍会包含全部数据。";
+"import.analysis.preview_notice_errors" = "当前仅显示前 %1$d / %2$d 个错误。导出可查看完整列表。";
 
 /* Database */
 "database.title" = "数据库";
@@ -217,8 +219,16 @@
 "database.import.csv_simple" = "从 CSV 导入（简单）";
 "database.error.import_title" = "导入错误";
 "database.progress.preparing" = "正在准备导入...";
+"database.progress.parsing_excel" = "正在读取导入文件";
+"database.progress.parsing_sheet" = "正在读取 %@";
+"database.progress.analyzing" = "正在分析导入内容";
 "database.progress.completed_title" = "导入完成";
 "database.progress.success" = "导入成功完成。";
+"database.progress.success_products_only" = "导入完成。商品：新增 %1$d，更新 %2$d。";
+"database.progress.success_with_price_history" = "导入完成。商品：新增 %1$d，更新 %2$d。价格历史已保存：%3$d。";
+"database.progress.partial_success" = "商品已导入：新增 %1$d，更新 %2$d。价格历史出错：%3$@。已保存 %4$d / %5$d 条历史记录。";
+"database.progress.price_history_total_failure" = "商品已导入：新增 %1$d，更新 %2$d。价格历史完全失败：%3$@。已保存 0 / %4$d 条历史记录。";
+"database.progress.price_history_skipped_suffix" = "已跳过未匹配商品的价格历史行：%d。";
 "database.progress.invalid_workbook" = "无法读取文件。请确保它是有效的多工作表 Excel（.xlsx）文件。";
 "database.progress.missing_products_sheet" = "文件中没有“Products”工作表。完整导入至少需要该工作表。";
 "database.error.export" = "导出错误：%@";

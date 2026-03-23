@@ -756,7 +756,7 @@ struct AnalysisMetrics {
 
 // MARK: - Analisi file Excel/HTML (equivalente di ExcelUtils.kt su Android)
 
-struct ExcelAnalyzer {
+nonisolated struct ExcelAnalyzer {
 
     private struct WorkbookSheetReference {
         let name: String
@@ -2406,7 +2406,7 @@ enum ExcelLoadError: LocalizedError {
 
 extension String {
     /// Replica esatta di parseNumber() di Android
-    func toDouble() -> Double? {
+    nonisolated func toDouble() -> Double? {
         let trimmed = self.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         
@@ -2428,11 +2428,11 @@ extension String {
         return Double(normalized)
     }
     
-    func matches(_ pattern: String) -> Bool {
+    nonisolated func matches(_ pattern: String) -> Bool {
         return range(of: pattern, options: .regularExpression) != nil
     }
     
-    func normalizedExcelNumberString() -> String {
+    nonisolated func normalizedExcelNumberString() -> String {
         let t = self.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return "" }
 
@@ -2463,7 +2463,7 @@ extension String {
         return intPart + String(sepChar) + fracPart
     }
     
-    var columnDescription: String {
+    nonisolated var columnDescription: String {
         switch self {
         case "barcode":
             return "Codice a barre (EAN/ISBN)."
@@ -2495,7 +2495,7 @@ extension String {
 
 extension Sequence {
     /// Conta gli elementi che soddisfano il predicato (comodo per le euristiche).
-    func count(where predicate: (Element) -> Bool) -> Int {
+    nonisolated func count(where predicate: (Element) -> Bool) -> Int {
         var result = 0
         for element in self where predicate(element) {
             result += 1

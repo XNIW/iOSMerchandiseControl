@@ -8,18 +8,19 @@
 - **Fase attuale**: REVIEW (sospeso in questa fase)
 - **Responsabile attuale**: — (task sospeso, nessun agente deve procedere)
 - **Data creazione**: 2026-03-20
-- **Ultimo aggiornamento**: 2026-03-21
-- **Ultimo agente che ha operato**: CLAUDE
+- **Ultimo aggiornamento**: 2026-03-23
+- **Ultimo agente che ha operato**: CODEX
 
-## Blocco (2026-03-21)
+## Blocco (2026-03-23)
 
-- **Motivo**: test manuali sospesi. Il comportamento dell'app su import di dataset molto grandi (freeze, memory pressure, possibile app kill) non è stato validato prima della sospensione dei test. La conferma finale è rinviata finché il problema di stabilità non è risolto e verificato in modo indipendente.
+- **Motivo**: test manuali sospesi. Durante una prova reale con file Excel molto grande e' emerso un blocker specifico nell'apply dopo analysis completata: overlay `Importazione in corso...` prolungato e crash `EXC_BAD_ACCESS` in `DatabaseView.makeImportApplyPayload(...)`. La conferma finale di TASK-006 resta rinviata finche' questo problema non viene risolto e verificato in modo indipendente.
 - **Stato dei criteri**: CA-1 attraverso CA-12 verificati staticamente dal codice e dalla build; CA-13 (round-trip) e la stabilità su dataset reali ancora da validare manualmente.
-- **Azione necessaria per sblocco**: completare i test manuali del dataset minimo definito nel planning su simulatore/device reale, dopo che TASK-011 ha risolto e verificato il problema di stabilità su grandi import.
-- **Task correlato estratto**: TASK-011 (`docs/TASKS/TASK-011-large-import-stability-and-progress.md`) — contiene il problema di stabilità/memoria/progress UX emerso durante i test di TASK-006; va completato prima di riprendere la validazione finale di TASK-006.
+- **Azione necessaria per sblocco**: completare i test manuali del dataset minimo definito nel planning su simulatore/device reale, dopo che TASK-022 ha risolto e verificato il crash specifico di apply su dataset grande reale.
+- **Task correlato estratto**: TASK-022 (`docs/TASKS/TASK-022-full-db-large-import-apply-crash.md`) — contiene il blocker pratico attuale emerso nei test reali di TASK-006; va affrontato prima di riprendere la validazione finale di TASK-006.
+- **Contesto storico secondario**: TASK-011 (`docs/TASKS/TASK-011-large-import-stability-and-progress.md`) — umbrella piu' ampio su stabilita'/memory/progress large import, ora sospeso per decisione utente.
 
 ## Dipendenze
-- **Dipende da**: nessuno (in origine); sblocco pratico dipende da TASK-011 (stabilità import grandi)
+- **Dipende da**: nessuno (in origine); sblocco pratico dipende da TASK-022 (crash specifico di apply su dataset grande reale)
 - **Sblocca**: nessuno
 
 ## Scopo

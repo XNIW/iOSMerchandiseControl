@@ -37,7 +37,7 @@ struct ProductUpdateDraft: Identifiable, Sendable {
     var new: ProductDraft
     var changedFields: [ChangedField]
 
-    static func computeChangedFields(old: ProductDraft, new: ProductDraft) -> [ChangedField] {
+    nonisolated static func computeChangedFields(old: ProductDraft, new: ProductDraft) -> [ChangedField] {
         ChangedField.allCases.filter { field in
             switch field {
             case .itemNumber:
@@ -60,7 +60,7 @@ struct ProductUpdateDraft: Identifiable, Sendable {
         }
     }
 
-    private static func doublesEqual(_ lhs: Double?, _ rhs: Double?, epsilon: Double = 0.0001) -> Bool {
+    nonisolated private static func doublesEqual(_ lhs: Double?, _ rhs: Double?, epsilon: Double = 0.0001) -> Bool {
         switch (lhs, rhs) {
         case (nil, nil):
             return true
@@ -103,6 +103,9 @@ struct ProductImportAnalysisResult: Identifiable, Sendable {
 // MARK: - Vista di riepilogo e conferma Import
 
 struct ImportAnalysisView: View {
+    private static let previewItemLimit = 500
+    private static let previewErrorLimit = 200
+
     private struct ShareItem: Identifiable {
         let id = UUID()
         let url: URL
@@ -134,6 +137,22 @@ struct ImportAnalysisView: View {
         _analysis = State(initialValue: analysis)
         self.allowsApplyWithoutChanges = allowsApplyWithoutChanges
         self.onApply = onApply
+    }
+
+    private var visibleWarnings: [ProductDuplicateWarning] {
+        Array(analysis.warnings.prefix(Self.previewItemLimit))
+    }
+
+    private var visibleNewProducts: [ProductDraft] {
+        Array(analysis.newProducts.prefix(Self.previewItemLimit))
+    }
+
+    private var visibleUpdatedProducts: [ProductUpdateDraft] {
+        Array(analysis.updatedProducts.prefix(Self.previewItemLimit))
+    }
+
+    private var visibleErrors: [ProductImportRowError] {
+        Array(analysis.errors.prefix(Self.previewErrorLimit))
     }
 
     var body: some View {
@@ -267,7 +286,17 @@ struct ImportAnalysisView: View {
 
     private var warningsSection: some View {
         Section(L("import.analysis.duplicate_barcodes")) {
-            ForEach(analysis.warnings) { warning in
+            if visibleWarnings.count < analysis.warnings.count {
+                previewBanner(
+                    text: L(
+                        "import.analysis.preview_notice",
+                        Self.previewItemLimit,
+                        analysis.warnings.count
+                    )
+                )
+            }
+
+            ForEach(visibleWarnings) { warning in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(warning.barcode)
                         .font(.headline)
@@ -283,7 +312,17 @@ struct ImportAnalysisView: View {
 
     private var newProductsSection: some View {
         Section(L("import.analysis.new_products_count", analysis.newProducts.count)) {
-            ForEach(analysis.newProducts) { draft in
+            if visibleNewProducts.count < analysis.newProducts.count {
+                previewBanner(
+                    text: L(
+                        "import.analysis.preview_notice",
+                        Self.previewItemLimit,
+                        analysis.newProducts.count
+                    )
+                )
+            }
+
+            ForEach(visibleNewProducts) { draft in
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(draft.productName ?? L("product.no_name"))
@@ -337,7 +376,17 @@ struct ImportAnalysisView: View {
 
     private var updatedProductsSection: some View {
         Section(L("import.analysis.updated_products_count", analysis.updatedProducts.count)) {
-            ForEach(analysis.updatedProducts) { update in
+            if visibleUpdatedProducts.count < analysis.updatedProducts.count {
+                previewBanner(
+                    text: L(
+                        "import.analysis.preview_notice",
+                        Self.previewItemLimit,
+                        analysis.updatedProducts.count
+                    )
+                )
+            }
+
+            ForEach(visibleUpdatedProducts) { update in
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
                         let name = update.new.productName
@@ -392,7 +441,17 @@ struct ImportAnalysisView: View {
 
     private var errorsSection: some View {
         Section {
-            ForEach(analysis.errors) { err in
+            if visibleErrors.count < analysis.errors.count {
+                previewBanner(
+                    text: L(
+                        "import.analysis.preview_notice_errors",
+                        Self.previewErrorLimit,
+                        analysis.errors.count
+                    )
+                )
+            }
+
+            ForEach(visibleErrors) { err in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L("common.row_number", err.rowNumber))
                         .font(.headline)
@@ -419,6 +478,13 @@ struct ImportAnalysisView: View {
                 .buttonStyle(.borderless)
             }
         }
+    }
+
+    private func previewBanner(text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 6)
     }
 
     // MARK: - Editing

@@ -195,6 +195,8 @@
 "import.analysis.field.stock" = "Stock";
 "import.analysis.field.supplier" = "Proveedor";
 "import.analysis.field.category" = "Categoría";
+"import.analysis.preview_notice" = "Mostrando los primeros %1$d de %2$d elementos. La importación incluirá todo.";
+"import.analysis.preview_notice_errors" = "Mostrando los primeros %1$d de %2$d errores. Exporta para ver la lista completa.";
 
 /* Database */
 "database.title" = "Base de datos";
@@ -217,8 +219,16 @@
 "database.import.csv_simple" = "Importar desde CSV (simple)";
 "database.error.import_title" = "Error de importación";
 "database.progress.preparing" = "Preparando importación...";
+"database.progress.parsing_excel" = "Leyendo archivo de importación";
+"database.progress.parsing_sheet" = "Leyendo %@";
+"database.progress.analyzing" = "Analizando importación";
 "database.progress.completed_title" = "Importación completada";
 "database.progress.success" = "Importación completada correctamente.";
+"database.progress.success_products_only" = "Importación completada. Productos: %1$d nuevos, %2$d actualizados.";
+"database.progress.success_with_price_history" = "Importación completada. Productos: %1$d nuevos, %2$d actualizados. Historial de precios guardado: %3$d.";
+"database.progress.partial_success" = "Productos importados: %1$d nuevos, %2$d actualizados. Error en historial de precios: %3$@. Se guardaron %4$d de %5$d filas de historial.";
+"database.progress.price_history_total_failure" = "Productos importados: %1$d nuevos, %2$d actualizados. Error total en historial de precios: %3$@. Se guardaron 0 de %4$d filas de historial.";
+"database.progress.price_history_skipped_suffix" = "Filas de historial de precios omitidas por barcode no resuelto: %d.";
 "database.progress.invalid_workbook" = "No se puede leer el archivo. Asegúrate de que sea un archivo Excel (.xlsx) válido con varias hojas.";
 "database.progress.missing_products_sheet" = "El archivo no contiene una hoja 'Products'. La importación completa requiere al menos esa hoja.";
 "database.error.export" = "Error durante la exportación: %@";

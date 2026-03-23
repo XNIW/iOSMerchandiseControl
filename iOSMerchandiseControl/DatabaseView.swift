@@ -4,13 +4,13 @@ import Combine
 import UniformTypeIdentifiers
 import xlsxwriter
 
-private struct DatabaseImportProgressSnapshot: Sendable {
-    let stageText: String
+nonisolated private struct DatabaseImportProgressSnapshot: Sendable {
+    let stage: DatabaseImportProgressStage
     let processedCount: Int
     let totalCount: Int
 }
 
-private struct ImportProductDraftSnapshot: Sendable {
+nonisolated private struct ImportProductDraftSnapshot: Sendable {
     let barcode: String
     let itemNumber: String?
     let productName: String?
@@ -34,7 +34,7 @@ private struct ImportProductDraftSnapshot: Sendable {
     }
 }
 
-private struct ImportProductUpdateSnapshot: Sendable {
+nonisolated private struct ImportProductUpdateSnapshot: Sendable {
     let barcode: String
     let newDraft: ImportProductDraftSnapshot
     let changedFields: [ProductUpdateDraft.ChangedField]
@@ -46,7 +46,7 @@ private struct ImportProductUpdateSnapshot: Sendable {
     }
 }
 
-private struct ImportPendingPriceHistoryEntrySnapshot: Sendable {
+nonisolated private struct ImportPendingPriceHistoryEntrySnapshot: Sendable {
     let barcode: String
     let type: PriceType
     let price: Double
@@ -54,7 +54,7 @@ private struct ImportPendingPriceHistoryEntrySnapshot: Sendable {
     let source: String
 }
 
-private struct ImportApplyPayload: Sendable {
+nonisolated private struct ImportApplyPayload: Sendable {
     let newProducts: [ImportProductDraftSnapshot]
     let updatedProducts: [ImportProductUpdateSnapshot]
     let pendingPriceHistoryEntries: [ImportPendingPriceHistoryEntrySnapshot]
@@ -65,9 +65,1155 @@ private struct ImportApplyPayload: Sendable {
     }
 }
 
+nonisolated private struct ImportExistingProductSnapshot: Sendable {
+    let barcode: String
+    let itemNumber: String?
+    let productName: String?
+    let secondProductName: String?
+    let purchasePrice: Double?
+    let retailPrice: Double?
+    let stockQuantity: Double?
+    let supplierName: String?
+    let categoryName: String?
+
+    init(_ product: Product) {
+        barcode = product.barcode
+        itemNumber = product.itemNumber
+        productName = product.productName
+        secondProductName = product.secondProductName
+        purchasePrice = product.purchasePrice
+        retailPrice = product.retailPrice
+        stockQuantity = product.stockQuantity
+        supplierName = product.supplier?.name
+        categoryName = product.category?.name
+    }
+
+    var draft: ProductDraft {
+        ProductDraft(
+            barcode: barcode,
+            itemNumber: itemNumber,
+            productName: productName,
+            secondProductName: secondProductName,
+            purchasePrice: purchasePrice,
+            retailPrice: retailPrice,
+            stockQuantity: stockQuantity,
+            supplierName: supplierName,
+            categoryName: categoryName
+        )
+    }
+}
+
+nonisolated private struct ImportApplyProductsResult: Sendable {
+    let productsInserted: Int
+    let productsUpdated: Int
+}
+
+nonisolated private struct ImportApplyResult: Sendable {
+    let productsInserted: Int
+    let productsUpdated: Int
+    let priceHistoryInserted: Int
+    let priceHistoryTotal: Int
+    let priceHistorySkipped: Int
+    let priceHistoryError: String?
+}
+
+nonisolated private struct ImportApplyPriceHistoryResult: Sendable {
+    let insertedCount: Int
+    let skippedCount: Int
+    let totalResolvableCount: Int
+}
+
+nonisolated private struct PriceHistoryApplyFailure: LocalizedError, Sendable {
+    let insertedCount: Int
+    let skippedCount: Int
+    let totalResolvableCount: Int
+    let message: String
+
+    var errorDescription: String? {
+        message
+    }
+}
+
+nonisolated private enum DatabaseImportProgressStage: Sendable {
+    case parsingExcel
+    case parsingSheet(String)
+    case analyzing
+    case applyingProducts
+    case applyingPriceHistory
+}
+
+nonisolated private struct PendingPriceHistoryImportEntry: Sendable {
+    let barcode: String
+    let type: PriceType
+    let price: Double
+    let effectiveAt: Date
+    let source: String
+}
+
+nonisolated private struct PendingFullImportContext: Sendable {
+    let priceHistoryEntries: [PendingPriceHistoryImportEntry]
+    let suppressAutomaticProductPriceHistory: Bool
+}
+
+nonisolated private enum DatabaseImportPreparationError: Error, Sendable {
+    case invalidWorkbook
+    case missingProductsSheet
+    case barcodeColumnMissing
+}
+
+nonisolated private enum DatabaseImportRowErrorReason: Sendable {
+    case barcodeMissing
+}
+
+nonisolated private struct DatabaseImportRowErrorPayload: Sendable {
+    let rowNumber: Int
+    let reason: DatabaseImportRowErrorReason
+    let rowContent: [String: String]
+}
+
+nonisolated private struct DatabaseImportAnalysisPayload: Sendable {
+    let newProducts: [ProductDraft]
+    let updatedProducts: [ProductUpdateDraft]
+    let errors: [DatabaseImportRowErrorPayload]
+    let warnings: [ProductDuplicateWarning]
+}
+
+nonisolated private struct PreparedImportAnalysis: Sendable {
+    let analysis: DatabaseImportAnalysisPayload
+    let pendingFullImportContext: PendingFullImportContext?
+}
+
+@MainActor
+private enum DatabaseImportUILocalizer {
+    static func progressText(for snapshot: DatabaseImportProgressSnapshot) -> String {
+        let prefix: String
+        switch snapshot.stage {
+        case .parsingExcel:
+            prefix = L("database.progress.parsing_excel")
+        case .parsingSheet(let sheetName):
+            prefix = L("database.progress.parsing_sheet", sheetName)
+        case .analyzing:
+            prefix = L("database.progress.analyzing")
+        case .applyingProducts:
+            prefix = L("database.progress.applying_products")
+        case .applyingPriceHistory:
+            prefix = L("database.progress.applying_price_history")
+        }
+
+        guard snapshot.totalCount > 0 else {
+            return prefix
+        }
+
+        return "\(prefix) \(snapshot.processedCount) / \(snapshot.totalCount)"
+    }
+
+    static func analysisResult(from payload: DatabaseImportAnalysisPayload) -> ProductImportAnalysisResult {
+        ProductImportAnalysisResult(
+            newProducts: payload.newProducts,
+            updatedProducts: payload.updatedProducts,
+            errors: payload.errors.map { error in
+                ProductImportRowError(
+                    rowNumber: error.rowNumber,
+                    reason: rowErrorReason(for: error.reason),
+                    rowContent: error.rowContent
+                )
+            },
+            warnings: payload.warnings
+        )
+    }
+
+    static func importErrorMessage(for error: Error) -> String {
+        if let importError = error as? DatabaseImportPreparationError {
+            switch importError {
+            case .invalidWorkbook:
+                return L("database.progress.invalid_workbook")
+            case .missingProductsSheet:
+                return L("database.progress.missing_products_sheet")
+            case .barcodeColumnMissing:
+                return L("database.error.barcode_column_missing")
+            }
+        }
+
+        if let localizedError = error as? LocalizedError {
+            return localizedError.errorDescription ?? localizedError.localizedDescription
+        }
+
+        return L("database.error.import_excel", error.localizedDescription)
+    }
+
+    private static func rowErrorReason(for reason: DatabaseImportRowErrorReason) -> String {
+        switch reason {
+        case .barcodeMissing:
+            return L("database.error.barcode_missing")
+        }
+    }
+}
+
+nonisolated private enum DatabaseImportPipeline {
+    private static let importSaveBatchSize = 250
+    private static let importProgressBatchSize = 25
+    private static let fullDatabaseTimestampFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
+
+    private static let priceHistoryHeaderAliases: [String: [String]] = [
+        "productBarcode": ["productbarcode", "barcode", "product_barcode"],
+        "timestamp": ["timestamp", "date", "data"],
+        "type": ["type", "tipo", "pricetype"],
+        "oldPrice": ["oldprice", "old_price", "prevprice", "priceold"],
+        "newPrice": ["newprice", "new_price", "price"],
+        "source": ["source", "sorgente"]
+    ]
+
+    static func prepareProductsImport(
+        from url: URL,
+        modelContainer: ModelContainer,
+        onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
+    ) async throws -> PreparedImportAnalysis {
+        try await Task.detached(priority: .userInitiated) {
+            await onProgress(DatabaseImportProgressSnapshot(stage: .parsingExcel, processedCount: 0, totalCount: 0))
+            let parsingStartedAt = Date()
+            let (_, normalizedHeader, dataRows) = try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
+            logTiming(
+                phase: "parsing",
+                sheet: nil,
+                elapsed: Date().timeIntervalSince(parsingStartedAt),
+                rows: dataRows.count
+            )
+
+            await onProgress(DatabaseImportProgressSnapshot(stage: .analyzing, processedCount: 0, totalCount: 0))
+            let analyzeStartedAt = Date()
+            let backgroundContext = ModelContext(modelContainer)
+            let existingProducts = try fetchExistingProductSnapshots(in: backgroundContext)
+            let analysis = try analyzeImport(
+                header: normalizedHeader,
+                dataRows: dataRows,
+                existingProducts: existingProducts
+            )
+            logTiming(
+                phase: "analyze",
+                sheet: "Products",
+                elapsed: Date().timeIntervalSince(analyzeStartedAt),
+                rows: dataRows.count
+            )
+
+            return PreparedImportAnalysis(
+                analysis: analysis,
+                pendingFullImportContext: nil
+            )
+        }.value
+    }
+
+    static func prepareFullDatabaseImport(
+        from url: URL,
+        modelContainer: ModelContainer,
+        onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
+    ) async throws -> PreparedImportAnalysis {
+        try await Task.detached(priority: .userInitiated) {
+            let sheetNames: [String]
+            do {
+                sheetNames = try ExcelAnalyzer.listSheetNames(at: url)
+            } catch {
+                throw DatabaseImportPreparationError.invalidWorkbook
+            }
+
+            let sheetNameMap = Dictionary(
+                uniqueKeysWithValues: sheetNames.map { (normalizedSheetName($0), $0) }
+            )
+            let backgroundContext = ModelContext(modelContainer)
+
+            if let suppliersSheetName = sheetNameMap[normalizedSheetName("Suppliers")] {
+                await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(suppliersSheetName), processedCount: 0, totalCount: 0))
+                let parsingStartedAt = Date()
+                let supplierNames = readNamedEntitiesSheet(at: url, sheetName: suppliersSheetName)
+                logTiming(
+                    phase: "parsing",
+                    sheet: suppliersSheetName,
+                    elapsed: Date().timeIntervalSince(parsingStartedAt),
+                    rows: supplierNames.count
+                )
+                try importSupplierNames(supplierNames, in: backgroundContext)
+            }
+
+            if let categoriesSheetName = sheetNameMap[normalizedSheetName("Categories")] {
+                await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(categoriesSheetName), processedCount: 0, totalCount: 0))
+                let parsingStartedAt = Date()
+                let categoryNames = readNamedEntitiesSheet(at: url, sheetName: categoriesSheetName)
+                logTiming(
+                    phase: "parsing",
+                    sheet: categoriesSheetName,
+                    elapsed: Date().timeIntervalSince(parsingStartedAt),
+                    rows: categoryNames.count
+                )
+                try importCategoryNames(categoryNames, in: backgroundContext)
+            }
+
+            guard let productsSheetName = sheetNameMap[normalizedSheetName("Products")] else {
+                throw DatabaseImportPreparationError.missingProductsSheet
+            }
+
+            await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(productsSheetName), processedCount: 0, totalCount: 0))
+            let productsParsingStartedAt = Date()
+            let productsRows: [[String]]
+            do {
+                productsRows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: productsSheetName)
+            } catch {
+                throw DatabaseImportPreparationError.invalidWorkbook
+            }
+
+            let (_, normalizedHeader, dataRows) = ExcelAnalyzer.analyzeSheetRows(productsRows)
+            logTiming(
+                phase: "parsing",
+                sheet: productsSheetName,
+                elapsed: Date().timeIntervalSince(productsParsingStartedAt),
+                rows: dataRows.count
+            )
+
+            await onProgress(DatabaseImportProgressSnapshot(stage: .analyzing, processedCount: 0, totalCount: 0))
+            let analyzeStartedAt = Date()
+            let existingProducts = try fetchExistingProductSnapshots(in: backgroundContext)
+            let analysis = try analyzeImport(
+                header: normalizedHeader,
+                dataRows: dataRows,
+                existingProducts: existingProducts
+            )
+            logTiming(
+                phase: "analyze",
+                sheet: productsSheetName,
+                elapsed: Date().timeIntervalSince(analyzeStartedAt),
+                rows: dataRows.count
+            )
+
+            let pendingContext: PendingFullImportContext?
+            if let priceHistorySheetName = sheetNameMap[normalizedSheetName("PriceHistory")] {
+                await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(priceHistorySheetName), processedCount: 0, totalCount: 0))
+                let parsingStartedAt = Date()
+                pendingContext = parsePendingPriceHistoryContext(
+                    at: url,
+                    sheetNameMap: sheetNameMap
+                )
+                logTiming(
+                    phase: "parsing",
+                    sheet: priceHistorySheetName,
+                    elapsed: Date().timeIntervalSince(parsingStartedAt),
+                    rows: pendingContext?.priceHistoryEntries.count ?? 0
+                )
+            } else {
+                pendingContext = nil
+            }
+
+            return PreparedImportAnalysis(
+                analysis: analysis,
+                pendingFullImportContext: pendingContext
+            )
+        }.value
+    }
+
+    static func applyImportAnalysisInBackground(
+        _ payload: ImportApplyPayload,
+        modelContainer: ModelContainer,
+        onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
+    ) async throws -> ImportApplyResult {
+        try await Task.detached(priority: .userInitiated) {
+            let context = ModelContext(modelContainer)
+            let productsStartedAt = Date()
+            let productsResult = try await applyImportAnalysis(
+                payload,
+                in: context,
+                onProgress: onProgress
+            )
+            logTiming(
+                phase: "apply_products",
+                sheet: nil,
+                elapsed: Date().timeIntervalSince(productsStartedAt),
+                rows: productsResult.productsInserted + productsResult.productsUpdated,
+                extraFields: [
+                    "productsInserted=\(productsResult.productsInserted)",
+                    "productsUpdated=\(productsResult.productsUpdated)"
+                ]
+            )
+
+            let priceHistoryStartedAt = Date()
+            var priceHistoryResult = ImportApplyPriceHistoryResult(
+                insertedCount: 0,
+                skippedCount: 0,
+                totalResolvableCount: 0
+            )
+            var priceHistoryError: String?
+
+            do {
+                priceHistoryResult = try await applyPendingPriceHistoryImport(
+                    payload.pendingPriceHistoryEntries,
+                    in: context,
+                    onProgress: onProgress
+                )
+                logTiming(
+                    phase: "apply_price_history",
+                    sheet: nil,
+                    elapsed: Date().timeIntervalSince(priceHistoryStartedAt),
+                    rows: priceHistoryResult.totalResolvableCount,
+                    extraFields: [
+                        "inserted=\(priceHistoryResult.insertedCount)",
+                        "skipped=\(priceHistoryResult.skippedCount)"
+                    ]
+                )
+            } catch let error as PriceHistoryApplyFailure {
+                priceHistoryResult = ImportApplyPriceHistoryResult(
+                    insertedCount: error.insertedCount,
+                    skippedCount: error.skippedCount,
+                    totalResolvableCount: error.totalResolvableCount
+                )
+                priceHistoryError = error.message
+                logTiming(
+                    phase: "apply_price_history",
+                    sheet: nil,
+                    elapsed: Date().timeIntervalSince(priceHistoryStartedAt),
+                    rows: priceHistoryResult.totalResolvableCount,
+                    extraFields: [
+                        "inserted=\(priceHistoryResult.insertedCount)",
+                        "skipped=\(priceHistoryResult.skippedCount)",
+                        "error=\(error.message)"
+                    ]
+                )
+            } catch {
+                priceHistoryError = error.localizedDescription
+                logTiming(
+                    phase: "apply_price_history",
+                    sheet: nil,
+                    elapsed: Date().timeIntervalSince(priceHistoryStartedAt),
+                    rows: priceHistoryResult.totalResolvableCount,
+                    extraFields: ["error=\(error.localizedDescription)"]
+                )
+            }
+
+            let result = ImportApplyResult(
+                productsInserted: productsResult.productsInserted,
+                productsUpdated: productsResult.productsUpdated,
+                priceHistoryInserted: priceHistoryResult.insertedCount,
+                priceHistoryTotal: priceHistoryResult.totalResolvableCount,
+                priceHistorySkipped: priceHistoryResult.skippedCount,
+                priceHistoryError: priceHistoryError
+            )
+            logApplyResult(result)
+            return result
+        }.value
+    }
+
+    static func cellValue(in row: [String], at index: Int) -> String {
+        guard index >= 0, index < row.count else { return "" }
+        return row[index]
+    }
+
+    static func parseDouble(from text: String) -> Double? {
+        let normalized = text
+            .replacingOccurrences(of: ",", with: ".")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !normalized.isEmpty else { return nil }
+        return Double(normalized)
+    }
+
+    private static func analyzeImport(
+        header: [String],
+        dataRows: [[String]],
+        existingProducts: [ImportExistingProductSnapshot]
+    ) throws -> DatabaseImportAnalysisPayload {
+        guard header.contains("barcode") else {
+            throw DatabaseImportPreparationError.barcodeColumnMissing
+        }
+
+        let existingByBarcode: [String: ImportExistingProductSnapshot] = Dictionary(
+            uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
+        )
+
+        struct PendingRow {
+            var lastRow: [String: String]
+            var rowNumbers: [Int]
+            var quantitySum: Double
+        }
+
+        var errors: [DatabaseImportRowErrorPayload] = []
+        var pendingByBarcode: [String: PendingRow] = [:]
+
+        for (index, row) in dataRows.enumerated() {
+            let rowNumber = index + 1
+
+            var map: [String: String] = [:]
+            for (colIndex, key) in header.enumerated() {
+                let raw = colIndex < row.count ? row[colIndex] : ""
+                map[key] = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+
+            let barcode = (map["barcode"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if barcode.isEmpty {
+                errors.append(
+                    DatabaseImportRowErrorPayload(
+                        rowNumber: rowNumber,
+                        reason: .barcodeMissing,
+                        rowContent: map
+                    )
+                )
+                continue
+            }
+
+            let quantity = parseDouble(from: map["stockQuantity"] ?? "")
+                ?? parseDouble(from: map["quantity"] ?? "")
+                ?? 0
+
+            if var pending = pendingByBarcode[barcode] {
+                pending.lastRow = map
+                pending.rowNumbers.append(rowNumber)
+                pending.quantitySum += quantity
+                pendingByBarcode[barcode] = pending
+            } else {
+                pendingByBarcode[barcode] = PendingRow(
+                    lastRow: map,
+                    rowNumbers: [rowNumber],
+                    quantitySum: quantity
+                )
+            }
+        }
+
+        var newProducts: [ProductDraft] = []
+        var updates: [ProductUpdateDraft] = []
+        var warnings: [ProductDuplicateWarning] = []
+
+        func trimmedOrNil(_ text: String?) -> String? {
+            guard let value = text?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !value.isEmpty else { return nil }
+            return value
+        }
+
+        for (barcode, pending) in pendingByBarcode.sorted(by: { $0.key < $1.key }) {
+            var row = pending.lastRow
+            if pending.quantitySum > 0 {
+                row["stockQuantity"] = String(pending.quantitySum)
+            }
+
+            let draft = ProductDraft(
+                barcode: barcode,
+                itemNumber: trimmedOrNil(row["itemNumber"]),
+                productName: trimmedOrNil(row["productName"]),
+                secondProductName: trimmedOrNil(row["secondProductName"]),
+                purchasePrice: parseDouble(from: row["purchasePrice"] ?? ""),
+                retailPrice: parseDouble(from: row["retailPrice"] ?? ""),
+                stockQuantity: {
+                    if let text = row["stockQuantity"] ?? row["quantity"],
+                       let value = parseDouble(from: text) {
+                        return value
+                    } else {
+                        return nil
+                    }
+                }(),
+                supplierName: trimmedOrNil(row["supplier"]),
+                categoryName: trimmedOrNil(row["category"])
+            )
+
+            if let existing = existingByBarcode[barcode] {
+                let oldDraft = existing.draft
+                let changedFields = ProductUpdateDraft.computeChangedFields(old: oldDraft, new: draft)
+
+                if !changedFields.isEmpty {
+                    updates.append(
+                        ProductUpdateDraft(
+                            barcode: barcode,
+                            old: oldDraft,
+                            new: draft,
+                            changedFields: changedFields
+                        )
+                    )
+                }
+            } else {
+                newProducts.append(draft)
+            }
+
+            if pending.rowNumbers.count > 1 {
+                warnings.append(
+                    ProductDuplicateWarning(
+                        barcode: barcode,
+                        rowNumbers: pending.rowNumbers
+                    )
+                )
+            }
+        }
+
+        return DatabaseImportAnalysisPayload(
+            newProducts: newProducts,
+            updatedProducts: updates,
+            errors: errors,
+            warnings: warnings
+        )
+    }
+
+    private static func fetchExistingProductSnapshots(
+        in context: ModelContext
+    ) throws -> [ImportExistingProductSnapshot] {
+        try context.fetch(FetchDescriptor<Product>()).map(ImportExistingProductSnapshot.init)
+    }
+
+    private static func readNamedEntitiesSheet(at url: URL, sheetName: String) -> [String] {
+        let rows: [[String]]
+        do {
+            rows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: sheetName)
+        } catch {
+            debugPrint("Full import: impossibile leggere il foglio \(sheetName), skip.")
+            return []
+        }
+
+        guard !rows.isEmpty else {
+            debugPrint("Full import: foglio \(sheetName) vuoto, skip.")
+            return []
+        }
+
+        let header = rows[0].map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+        guard let nameIndex = header.firstIndex(of: "name") else {
+            debugPrint("Full import: foglio \(sheetName) senza colonna name, skip.")
+            return []
+        }
+
+        guard rows.count > 1 else {
+            debugPrint("Full import: foglio \(sheetName) con soli header, skip.")
+            return []
+        }
+
+        return Array(
+            Set(
+                rows.dropFirst().compactMap { row in
+                    let name = cellValue(in: row, at: nameIndex)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    return name.isEmpty ? nil : name
+                }
+            )
+        ).sorted()
+    }
+
+    private static func importSupplierNames(_ names: [String], in context: ModelContext) throws {
+        guard !names.isEmpty else { return }
+
+        let existingSuppliers = try context.fetch(FetchDescriptor<Supplier>())
+        var suppliersByName = Dictionary(
+            uniqueKeysWithValues: existingSuppliers.map { ($0.name, $0) }
+        )
+
+        for name in names where suppliersByName[name] == nil {
+            let supplier = Supplier(name: name)
+            context.insert(supplier)
+            suppliersByName[name] = supplier
+        }
+
+        try context.save()
+    }
+
+    private static func importCategoryNames(_ names: [String], in context: ModelContext) throws {
+        guard !names.isEmpty else { return }
+
+        let existingCategories = try context.fetch(FetchDescriptor<ProductCategory>())
+        var categoriesByName = Dictionary(
+            uniqueKeysWithValues: existingCategories.map { ($0.name, $0) }
+        )
+
+        for name in names where categoriesByName[name] == nil {
+            let category = ProductCategory(name: name)
+            context.insert(category)
+            categoriesByName[name] = category
+        }
+
+        try context.save()
+    }
+
+    private static func logTiming(
+        phase: String,
+        sheet: String?,
+        elapsed: TimeInterval,
+        rows: Int,
+        extraFields: [String] = []
+    ) {
+        let formattedElapsed = String(format: "%.2f", elapsed)
+        var fields = ["phase=\(phase)", "elapsed=\(formattedElapsed)s", "rows=\(rows)"]
+        if let sheet {
+            fields.insert("sheet=\(sheet)", at: 1)
+        }
+        fields.append(contentsOf: extraFields)
+        print("[TASK-011] \(fields.joined(separator: " "))")
+    }
+
+    private static func logApplyResult(_ result: ImportApplyResult) {
+        var fields = [
+            "phase=apply_result",
+            "productsInserted=\(result.productsInserted)",
+            "productsUpdated=\(result.productsUpdated)",
+            "priceHistoryInserted=\(result.priceHistoryInserted)",
+            "priceHistoryTotal=\(result.priceHistoryTotal)",
+            "priceHistorySkipped=\(result.priceHistorySkipped)"
+        ]
+        fields.append("priceHistoryError=\(result.priceHistoryError ?? "nil")")
+        print("[TASK-011] \(fields.joined(separator: " "))")
+    }
+
+    private static func applyImportAnalysis(
+        _ payload: ImportApplyPayload,
+        in context: ModelContext,
+        onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
+    ) async throws -> ImportApplyProductsResult {
+        let existingProducts = try context.fetch(FetchDescriptor<Product>())
+        var productsByBarcode = Dictionary(
+            uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
+        )
+
+        let existingSuppliers = try context.fetch(FetchDescriptor<Supplier>())
+        var suppliersByName = Dictionary(
+            uniqueKeysWithValues: existingSuppliers.map { ($0.name, $0) }
+        )
+
+        let existingCategories = try context.fetch(FetchDescriptor<ProductCategory>())
+        var categoriesByName = Dictionary(
+            uniqueKeysWithValues: existingCategories.map { ($0.name, $0) }
+        )
+
+        func resolveSupplier(named rawName: String?) -> Supplier? {
+            guard let rawName else { return nil }
+            let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return nil }
+
+            if let existing = suppliersByName[trimmed] {
+                return existing
+            }
+
+            let supplier = Supplier(name: trimmed)
+            context.insert(supplier)
+            suppliersByName[trimmed] = supplier
+            return supplier
+        }
+
+        func resolveCategory(named rawName: String?) -> ProductCategory? {
+            guard let rawName else { return nil }
+            let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return nil }
+
+            if let existing = categoriesByName[trimmed] {
+                return existing
+            }
+
+            let category = ProductCategory(name: trimmed)
+            context.insert(category)
+            categoriesByName[trimmed] = category
+            return category
+        }
+
+        var processedCount = 0
+        var insertedCount = 0
+        var updatedCount = 0
+        let totalCount = payload.productsTotalCount
+        await reportImportProgress(
+            stage: .applyingProducts,
+            processedCount: 0,
+            totalCount: totalCount,
+            onProgress: onProgress,
+            force: true
+        )
+
+        for draft in payload.newProducts {
+            autoreleasepool {
+                let product = Product(
+                    barcode: draft.barcode,
+                    itemNumber: draft.itemNumber,
+                    productName: draft.productName,
+                    secondProductName: draft.secondProductName,
+                    purchasePrice: draft.purchasePrice,
+                    retailPrice: draft.retailPrice,
+                    stockQuantity: draft.stockQuantity,
+                    supplier: resolveSupplier(named: draft.supplierName),
+                    category: resolveCategory(named: draft.categoryName)
+                )
+                context.insert(product)
+                productsByBarcode[draft.barcode] = product
+
+                if payload.recordPriceHistory {
+                    createPriceHistoryForImport(
+                        product: product,
+                        oldPurchase: nil,
+                        newPurchase: draft.purchasePrice,
+                        oldRetail: nil,
+                        newRetail: draft.retailPrice,
+                        in: context
+                    )
+                }
+            }
+
+            processedCount += 1
+            insertedCount += 1
+            await reportImportProgress(
+                stage: .applyingProducts,
+                processedCount: processedCount,
+                totalCount: totalCount,
+                onProgress: onProgress
+            )
+            _ = try await saveImportProgressIfNeeded(after: processedCount, in: context)
+        }
+
+        for update in payload.updatedProducts {
+            guard let product = productsByBarcode[update.barcode] else {
+                continue
+            }
+
+            let newDraft = update.newDraft
+            let oldPurchase = product.purchasePrice
+            let oldRetail = product.retailPrice
+
+            autoreleasepool {
+                if update.changedFields.contains(.itemNumber) {
+                    product.itemNumber = newDraft.itemNumber
+                }
+                if update.changedFields.contains(.productName) {
+                    product.productName = newDraft.productName
+                }
+                if update.changedFields.contains(.secondProductName) {
+                    product.secondProductName = newDraft.secondProductName
+                }
+                if update.changedFields.contains(.purchasePrice) {
+                    product.purchasePrice = newDraft.purchasePrice
+                }
+                if update.changedFields.contains(.retailPrice) {
+                    product.retailPrice = newDraft.retailPrice
+                }
+                if update.changedFields.contains(.stockQuantity) {
+                    product.stockQuantity = newDraft.stockQuantity
+                }
+                if update.changedFields.contains(.supplierName) {
+                    product.supplier = resolveSupplier(named: newDraft.supplierName)
+                }
+                if update.changedFields.contains(.categoryName) {
+                    product.category = resolveCategory(named: newDraft.categoryName)
+                }
+
+                if payload.recordPriceHistory {
+                    createPriceHistoryForImport(
+                        product: product,
+                        oldPurchase: oldPurchase,
+                        newPurchase: newDraft.purchasePrice,
+                        oldRetail: oldRetail,
+                        newRetail: newDraft.retailPrice,
+                        in: context
+                    )
+                }
+            }
+
+            processedCount += 1
+            updatedCount += 1
+            await reportImportProgress(
+                stage: .applyingProducts,
+                processedCount: processedCount,
+                totalCount: totalCount,
+                onProgress: onProgress
+            )
+            _ = try await saveImportProgressIfNeeded(after: processedCount, in: context)
+        }
+
+        try context.save()
+        await reportImportProgress(
+            stage: .applyingProducts,
+            processedCount: processedCount,
+            totalCount: totalCount,
+            onProgress: onProgress,
+            force: true
+        )
+        await Task.yield()
+        return ImportApplyProductsResult(
+            productsInserted: insertedCount,
+            productsUpdated: updatedCount
+        )
+    }
+
+    private static func parsePendingPriceHistoryContext(
+        at url: URL,
+        sheetNameMap: [String: String]
+    ) -> PendingFullImportContext? {
+        guard let sheetName = sheetNameMap[normalizedSheetName("PriceHistory")] else {
+            return nil
+        }
+
+        let entries: [PendingPriceHistoryImportEntry]
+        do {
+            let rows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: sheetName)
+            guard !rows.isEmpty else {
+                debugPrint("Full import: foglio \(sheetName) vuoto, skip.")
+                return nil
+            }
+
+            let header = rows[0].map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            }
+            guard let barcodeIndex = indexForPriceHistoryColumn("productBarcode", in: header),
+                  let timestampIndex = indexForPriceHistoryColumn("timestamp", in: header),
+                  let typeIndex = indexForPriceHistoryColumn("type", in: header),
+                  let newPriceIndex = indexForPriceHistoryColumn("newPrice", in: header) else {
+                debugPrint("Full import: foglio \(sheetName) con header non valido, skip.")
+                return nil
+            }
+
+            let sourceIndex = indexForPriceHistoryColumn("source", in: header)
+            var parsedEntries: [PendingPriceHistoryImportEntry] = []
+
+            if rows.count > 1 {
+                for row in rows.dropFirst() {
+                    let barcode = cellValue(in: row, at: barcodeIndex)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !barcode.isEmpty else { continue }
+
+                    let typeRaw = cellValue(in: row, at: typeIndex)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .lowercased()
+                    guard let type = parsePriceType(typeRaw) else { continue }
+
+                    let priceRaw = cellValue(in: row, at: newPriceIndex)
+                    guard let price = parseDouble(from: priceRaw) else { continue }
+
+                    let timestampRaw = cellValue(in: row, at: timestampIndex)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    let effectiveAt = parseFullDatabaseTimestamp(timestampRaw) ?? Date()
+
+                    let sourceRaw = sourceIndex.map { cellValue(in: row, at: $0) } ?? ""
+                    let source = sourceRaw.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let normalizedSource = source.isEmpty ? "IMPORT_DB_FULL" : source
+
+                    parsedEntries.append(
+                        PendingPriceHistoryImportEntry(
+                            barcode: barcode,
+                            type: type,
+                            price: price,
+                            effectiveAt: effectiveAt,
+                            source: normalizedSource
+                        )
+                    )
+                }
+            }
+
+            entries = parsedEntries
+        } catch {
+            debugPrint("Full import: impossibile leggere il foglio \(sheetName), skip.")
+            return nil
+        }
+
+        return PendingFullImportContext(
+            priceHistoryEntries: entries,
+            suppressAutomaticProductPriceHistory: true
+        )
+    }
+
+    private static func applyPendingPriceHistoryImport(
+        _ entries: [ImportPendingPriceHistoryEntrySnapshot],
+        in context: ModelContext,
+        onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
+    ) async throws -> ImportApplyPriceHistoryResult {
+        guard !entries.isEmpty else {
+            return ImportApplyPriceHistoryResult(
+                insertedCount: 0,
+                skippedCount: 0,
+                totalResolvableCount: 0
+            )
+        }
+
+        var persistedCount = 0
+        var skippedCount = 0
+        var totalResolvableCount = 0
+
+        do {
+            let existingProducts = try context.fetch(FetchDescriptor<Product>())
+            let productsByBarcode = Dictionary(
+                uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
+            )
+
+            totalResolvableCount = entries.reduce(into: 0) { count, entry in
+                if productsByBarcode[entry.barcode] != nil {
+                    count += 1
+                }
+            }
+            skippedCount = entries.count - totalResolvableCount
+
+            let now = Date()
+            var processedCount = 0
+            var insertedCount = 0
+            let totalCount = entries.count
+            await reportImportProgress(
+                stage: .applyingPriceHistory,
+                processedCount: 0,
+                totalCount: totalCount,
+                onProgress: onProgress,
+                force: true
+            )
+
+            for entry in entries {
+                processedCount += 1
+
+                guard let product = productsByBarcode[entry.barcode] else {
+                    await reportImportProgress(
+                        stage: .applyingPriceHistory,
+                        processedCount: processedCount,
+                        totalCount: totalCount,
+                        onProgress: onProgress
+                    )
+                    continue
+                }
+
+                autoreleasepool {
+                    let history = ProductPrice(
+                        type: entry.type,
+                        price: entry.price,
+                        effectiveAt: entry.effectiveAt,
+                        source: entry.source,
+                        note: nil,
+                        createdAt: now,
+                        product: product
+                    )
+                    context.insert(history)
+                }
+
+                insertedCount += 1
+                await reportImportProgress(
+                    stage: .applyingPriceHistory,
+                    processedCount: processedCount,
+                    totalCount: totalCount,
+                    onProgress: onProgress
+                )
+                if try await saveImportProgressIfNeeded(after: processedCount, in: context) {
+                    persistedCount = insertedCount
+                }
+            }
+
+            try context.save()
+            persistedCount = insertedCount
+            await reportImportProgress(
+                stage: .applyingPriceHistory,
+                processedCount: processedCount,
+                totalCount: totalCount,
+                onProgress: onProgress,
+                force: true
+            )
+            await Task.yield()
+            return ImportApplyPriceHistoryResult(
+                insertedCount: persistedCount,
+                skippedCount: skippedCount,
+                totalResolvableCount: totalResolvableCount
+            )
+        } catch {
+            throw PriceHistoryApplyFailure(
+                insertedCount: persistedCount,
+                skippedCount: skippedCount,
+                totalResolvableCount: totalResolvableCount,
+                message: error.localizedDescription
+            )
+        }
+    }
+
+    private static func reportImportProgress(
+        stage: DatabaseImportProgressStage,
+        processedCount: Int,
+        totalCount: Int,
+        onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void,
+        force: Bool = false
+    ) async {
+        guard totalCount > 0 else { return }
+        guard force ||
+                processedCount == totalCount ||
+                processedCount.isMultiple(of: importProgressBatchSize) else {
+            return
+        }
+
+        await onProgress(
+            DatabaseImportProgressSnapshot(
+                stage: stage,
+                processedCount: processedCount,
+                totalCount: totalCount
+            )
+        )
+    }
+
+    private static func saveImportProgressIfNeeded(
+        after processedCount: Int,
+        in context: ModelContext
+    ) async throws -> Bool {
+        guard processedCount > 0,
+              processedCount.isMultiple(of: importSaveBatchSize) else {
+            return false
+        }
+
+        try context.save()
+        await Task.yield()
+        return true
+    }
+
+    private static func createPriceHistoryForImport(
+        product: Product,
+        oldPurchase: Double?,
+        newPurchase: Double?,
+        oldRetail: Double?,
+        newRetail: Double?,
+        in context: ModelContext
+    ) {
+        let now = Date()
+
+        if let newPurchase, newPurchase != oldPurchase {
+            let history = ProductPrice(
+                type: .purchase,
+                price: newPurchase,
+                effectiveAt: now,
+                source: "IMPORT_EXCEL",
+                note: nil,
+                createdAt: now,
+                product: product
+            )
+            context.insert(history)
+        }
+
+        if let newRetail, newRetail != oldRetail {
+            let history = ProductPrice(
+                type: .retail,
+                price: newRetail,
+                effectiveAt: now,
+                source: "IMPORT_EXCEL",
+                note: nil,
+                createdAt: now,
+                product: product
+            )
+            context.insert(history)
+        }
+    }
+
+    private static func normalizedSheetName(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private static func indexForPriceHistoryColumn(
+        _ logicalName: String,
+        in header: [String]
+    ) -> Int? {
+        guard let aliases = priceHistoryHeaderAliases[logicalName] else {
+            return nil
+        }
+
+        return header.firstIndex { aliases.contains($0) }
+    }
+
+    private static func parsePriceType(_ value: String) -> PriceType? {
+        PriceType(rawValue: value)
+    }
+
+    private static func parseFullDatabaseTimestamp(_ value: String) -> Date? {
+        guard !value.isEmpty else { return nil }
+        return fullDatabaseTimestampFormatter.date(from: value)
+    }
+}
+
 @MainActor
 private final class DatabaseImportProgressState: ObservableObject, @unchecked Sendable {
     @Published var isRunning = false
+    @Published var showsOverlay = false
     @Published var stageText = ""
     @Published var processedCount = 0
     @Published var totalCount = 0
@@ -83,9 +1229,10 @@ private final class DatabaseImportProgressState: ObservableObject, @unchecked Se
         resultIsError ? L("database.error.import_title") : L("database.progress.completed_title")
     }
 
-    func startPreparation() {
+    func startPreparation(stageText: String? = nil) {
         isRunning = true
-        stageText = L("database.progress.preparing")
+        showsOverlay = true
+        self.stageText = stageText ?? L("database.progress.preparing")
         processedCount = 0
         totalCount = 0
         resultMessage = nil
@@ -94,19 +1241,36 @@ private final class DatabaseImportProgressState: ObservableObject, @unchecked Se
 
     func apply(_ snapshot: DatabaseImportProgressSnapshot) {
         isRunning = true
-        stageText = snapshot.stageText
+        showsOverlay = true
+        stageText = DatabaseImportUILocalizer.progressText(for: snapshot)
         processedCount = snapshot.processedCount
         totalCount = snapshot.totalCount
     }
 
-    func finishSuccess(message: String) {
+    func awaitingConfirmation() {
+        isRunning = true
+        showsOverlay = false
+        stageText = ""
+        processedCount = 0
+        totalCount = 0
+    }
+
+    func resetRunningState() {
         isRunning = false
+        showsOverlay = false
+        stageText = ""
+        processedCount = 0
+        totalCount = 0
+    }
+
+    func finishSuccess(message: String) {
+        resetRunningState()
         resultMessage = message
         resultIsError = false
     }
 
     func finishError(message: String) {
-        isRunning = false
+        resetRunningState()
         resultMessage = message
         resultIsError = true
     }
@@ -150,19 +1314,6 @@ struct DatabaseView: View {
     @State private var pendingFullImportContext: PendingFullImportContext?
     @StateObject private var importProgress = DatabaseImportProgressState()
 
-    private struct PendingPriceHistoryImportEntry: Sendable {
-        let barcode: String
-        let type: PriceType
-        let price: Double
-        let effectiveAt: Date
-        let source: String
-    }
-
-    private struct PendingFullImportContext: Sendable {
-        let priceHistoryEntries: [PendingPriceHistoryImportEntry]
-        let suppressAutomaticProductPriceHistory: Bool
-    }
-
     private struct ExportedProductRow {
         let barcode: String
         let itemNumber: String
@@ -175,9 +1326,6 @@ struct DatabaseView: View {
         let categoryName: String
     }
 
-    private static let importSaveBatchSize = 250
-    private static let importProgressBatchSize = 25
-    
     // filtro in memoria sui prodotti, come facevi in Compose
     private var filteredProducts: [Product] {
         let trimmed = barcodeFilter.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -316,7 +1464,7 @@ struct DatabaseView: View {
         }
         .disabled(importProgress.isRunning)
         .overlay {
-            if importProgress.isRunning {
+            if importProgress.showsOverlay {
                 importProgressOverlay
             }
         }
@@ -331,12 +1479,14 @@ struct DatabaseView: View {
                     } label: {
                         Image(systemName: "tray.and.arrow.down")
                     }
+                    .disabled(importProgress.isRunning)
 
                     Button {
                         showingExportOptions = true
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
+                    .disabled(importProgress.isRunning)
 
                     Button {
                         pendingBarcodeForNewProduct = nil
@@ -344,6 +1494,7 @@ struct DatabaseView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .disabled(importProgress.isRunning)
                 }
             }
 
@@ -377,7 +1528,7 @@ struct DatabaseView: View {
         }
 
         // Sheet per l’analisi di import da Excel
-        .sheet(item: $importAnalysisResult) { analysis in
+        .sheet(item: $importAnalysisResult, onDismiss: handleImportAnalysisDismissed) { analysis in
             NavigationStack {
                 ImportAnalysisView(
                     analysis: analysis,
@@ -569,20 +1720,6 @@ struct DatabaseView: View {
             try context.save()
         } catch {
             print("Errore durante l'eliminazione: \(error)")
-        }
-    }
-
-    private enum FullDatabaseImportError: LocalizedError {
-        case invalidWorkbook
-        case missingProductsSheet
-
-        var errorDescription: String? {
-            switch self {
-            case .invalidWorkbook:
-                return L("database.progress.invalid_workbook")
-            case .missingProductsSheet:
-                return L("database.progress.missing_products_sheet")
-            }
         }
     }
 
@@ -801,6 +1938,11 @@ struct DatabaseView: View {
             priceHistorySheet.write(.string(header), [0, columnIndex])
         }
 
+        let timestampFormatter = DateFormatter()
+        timestampFormatter.locale = Locale(identifier: "en_US_POSIX")
+        timestampFormatter.timeZone = TimeZone(identifier: "UTC")
+        timestampFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+
         var previousPriceByGroup: [String: Double] = [:]
         for (rowIndex, rowData) in priceHistoryRows.enumerated() {
             let row = rowIndex + 1
@@ -809,7 +1951,7 @@ struct DatabaseView: View {
 
             priceHistorySheet.write(.string(rowData.productBarcode), [row, 0])
             priceHistorySheet.write(
-                .string(Self.fullDatabaseTimestampFormatter.string(from: rowData.timestamp)),
+                .string(timestampFormatter.string(from: rowData.timestamp)),
                 [row, 1]
             )
             priceHistorySheet.write(.string(rowData.type), [row, 2])
@@ -890,16 +2032,16 @@ struct DatabaseView: View {
 
         let actualByBarcode = Dictionary(
             uniqueKeysWithValues: rows.dropFirst().compactMap { row -> (String, (String, String))? in
-                let barcode = Self.cellValue(in: row, at: barcodeIndex)
+                let barcode = DatabaseImportPipeline.cellValue(in: row, at: barcodeIndex)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !barcode.isEmpty else { return nil }
 
                 return (
                     barcode,
                     (
-                        Self.cellValue(in: row, at: supplierIndex)
+                        DatabaseImportPipeline.cellValue(in: row, at: supplierIndex)
                             .trimmingCharacters(in: .whitespacesAndNewlines),
-                        Self.cellValue(in: row, at: categoryIndex)
+                        DatabaseImportPipeline.cellValue(in: row, at: categoryIndex)
                             .trimmingCharacters(in: .whitespacesAndNewlines)
                     )
                 )
@@ -943,297 +2085,182 @@ struct DatabaseView: View {
     // MARK: - Import Excel con analisi (stile Android)
 
     private func importProductsFromExcel(url: URL) {
+        guard !importProgress.isRunning else {
+            importError = L("database.error.import_in_progress")
+            return
+        }
+
+        importError = nil
+        importAnalysisResult = nil
+        pendingFullImportContext = nil
+        importProgress.startPreparation()
+
         do {
-            pendingFullImportContext = nil
-            guard url.startAccessingSecurityScopedResource() else {
-                throw NSError(
-                    domain: "ImportExcel",
-                    code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: L("database.error.file_permission_denied")]
-                )
+            let tempURL = try copySecurityScopedImportFileToTemporaryLocation(from: url)
+            let modelContainer = context.container
+            let progressState = importProgress
+
+            Task {
+                defer { try? FileManager.default.removeItem(at: tempURL) }
+
+                do {
+                    let prepared = try await DatabaseImportPipeline.prepareProductsImport(
+                        from: tempURL,
+                        modelContainer: modelContainer,
+                        onProgress: { snapshot in
+                            await MainActor.run {
+                                progressState.apply(snapshot)
+                            }
+                        }
+                    )
+
+                    await MainActor.run {
+                        pendingFullImportContext = nil
+                        importAnalysisResult = DatabaseImportUILocalizer.analysisResult(from: prepared.analysis)
+                        progressState.awaitingConfirmation()
+                    }
+                } catch {
+                    await MainActor.run {
+                        finalizeImportPreparationFailure(error)
+                    }
+                }
             }
-            defer { url.stopAccessingSecurityScopedResource() }
-
-            // Usa lo stesso motore dell’inventario per leggere Excel/HTML
-            let (_, normalizedHeader, dataRows) = try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
-
-            // Carichiamo i prodotti esistenti una sola volta
-            let descriptor = FetchDescriptor<Product>()
-            let existingProducts = try context.fetch(descriptor)
-
-            let analysis = try analyzeImport(
-                header: normalizedHeader,   // <-- usiamo l'header normalizzato
-                dataRows: dataRows,
-                existingProducts: existingProducts
-            )
-
-            importAnalysisResult = analysis
         } catch {
-            if let error = error as? LocalizedError, let description = error.errorDescription {
-                importError = description
-            } else {
-                importError = L("database.error.import_excel", error.localizedDescription)
-            }
+            finalizeImportPreparationFailure(error)
         }
     }
 
     private func importFullDatabaseFromExcel(url: URL) {
+        guard !importProgress.isRunning else {
+            importError = L("database.error.import_in_progress")
+            return
+        }
+
+        importError = nil
+        importAnalysisResult = nil
+        pendingFullImportContext = nil
+        importProgress.startPreparation()
+
         do {
-            pendingFullImportContext = nil
+            let tempURL = try copySecurityScopedImportFileToTemporaryLocation(from: url)
+            let modelContainer = context.container
+            let progressState = importProgress
 
-            guard url.startAccessingSecurityScopedResource() else {
-                throw NSError(
-                    domain: "ImportExcelFull",
-                    code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: L("database.error.file_permission_denied")]
-                )
-            }
-            defer { url.stopAccessingSecurityScopedResource() }
+            Task {
+                defer { try? FileManager.default.removeItem(at: tempURL) }
 
-            let sheetNames: [String]
-            do {
-                sheetNames = try ExcelAnalyzer.listSheetNames(at: url)
-            } catch {
-                throw FullDatabaseImportError.invalidWorkbook
-            }
+                do {
+                    let prepared = try await DatabaseImportPipeline.prepareFullDatabaseImport(
+                        from: tempURL,
+                        modelContainer: modelContainer,
+                        onProgress: { snapshot in
+                            await MainActor.run {
+                                progressState.apply(snapshot)
+                            }
+                        }
+                    )
 
-            let sheetNameMap = Dictionary(
-                uniqueKeysWithValues: sheetNames.map { (Self.normalizedSheetName($0), $0) }
-            )
-
-            if let suppliersSheetName = sheetNameMap[Self.normalizedSheetName("Suppliers")] {
-                try importNamedEntitiesSheet(
-                    at: url,
-                    sheetName: suppliersSheetName,
-                    entityLabel: "Suppliers",
-                    createEntity: { name in
-                        _ = findOrCreateSupplier(named: name)
+                    await MainActor.run {
+                        pendingFullImportContext = prepared.pendingFullImportContext
+                        importAnalysisResult = DatabaseImportUILocalizer.analysisResult(from: prepared.analysis)
+                        progressState.awaitingConfirmation()
                     }
-                )
-            }
-
-            if let categoriesSheetName = sheetNameMap[Self.normalizedSheetName("Categories")] {
-                try importNamedEntitiesSheet(
-                    at: url,
-                    sheetName: categoriesSheetName,
-                    entityLabel: "Categories",
-                    createEntity: { name in
-                        _ = findOrCreateCategory(named: name)
+                } catch {
+                    await MainActor.run {
+                        finalizeImportPreparationFailure(error)
                     }
-                )
+                }
             }
-
-            guard let productsSheetName = sheetNameMap[Self.normalizedSheetName("Products")] else {
-                throw FullDatabaseImportError.missingProductsSheet
-            }
-
-            let productsRows: [[String]]
-            do {
-                productsRows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: productsSheetName)
-            } catch {
-                throw FullDatabaseImportError.invalidWorkbook
-            }
-
-            let (_, normalizedHeader, dataRows) = ExcelAnalyzer.analyzeSheetRows(productsRows)
-            let existingProducts = try context.fetch(FetchDescriptor<Product>())
-            let analysis = try analyzeImport(
-                header: normalizedHeader,
-                dataRows: dataRows,
-                existingProducts: existingProducts
-            )
-
-            pendingFullImportContext = parsePendingPriceHistoryContext(
-                at: url,
-                sheetNameMap: sheetNameMap
-            )
-            importAnalysisResult = analysis
         } catch let error as LocalizedError {
-            importError = error.errorDescription ?? error.localizedDescription
+            finalizeImportPreparationFailure(error)
         } catch {
-            importError = L("database.error.import_excel", error.localizedDescription)
+            finalizeImportPreparationFailure(error)
         }
     }
 
-    private func analyzeImport(
-        header: [String],
-        dataRows: [[String]],
-        existingProducts: [Product]
-    ) throws -> ProductImportAnalysisResult {
-        guard header.contains("barcode") else {
-            throw ExcelLoadError.invalidFormat(L("database.error.barcode_column_missing"))
-        }
+    private func handleImportAnalysisDismissed() {
+        pendingFullImportContext = nil
+        guard importProgress.isRunning else { return }
+        importProgress.resetRunningState()
+    }
 
-        // Mappa prodotti esistenti per barcode
-        let existingByBarcode: [String: Product] = Dictionary(
-            uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
-        )
+    private func finalizeImportPreparationFailure(_ error: Error) {
+        pendingFullImportContext = nil
+        importAnalysisResult = nil
+        importProgress.resetRunningState()
+        importError = DatabaseImportUILocalizer.importErrorMessage(for: error)
+    }
 
-        struct PendingRow {
-            var lastRow: [String: String]
-            var rowNumbers: [Int]
-            var quantitySum: Double
-        }
-
-        var errors: [ProductImportRowError] = []
-        var pendingByBarcode: [String: PendingRow] = [:]
-
-        // 1) Normalizza righe e raggruppa per barcode
-        for (index, row) in dataRows.enumerated() {
-            let rowNumber = index + 1 // 1-based
-
-            var map: [String: String] = [:]
-            for (colIndex, key) in header.enumerated() {
-                let raw = colIndex < row.count ? row[colIndex] : ""
-                map[key] = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            let barcode = (map["barcode"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            if barcode.isEmpty {
-                errors.append(
-                    ProductImportRowError(
-                        rowNumber: rowNumber,
-                        reason: L("database.error.barcode_missing"),
-                        rowContent: map
-                    )
-                )
-                continue
-            }
-
-            // quantity / stockQuantity (supporta entrambi i nomi)
-            let quantity = Self.parseDouble(from: map["stockQuantity"] ?? "")
-                ?? Self.parseDouble(from: map["quantity"] ?? "")
-                ?? 0
-
-            if var pending = pendingByBarcode[barcode] {
-                pending.lastRow = map
-                pending.rowNumbers.append(rowNumber)
-                pending.quantitySum += quantity
-                pendingByBarcode[barcode] = pending
-            } else {
-                pendingByBarcode[barcode] = PendingRow(
-                    lastRow: map,
-                    rowNumbers: [rowNumber],
-                    quantitySum: quantity
-                )
-            }
-        }
-
-        // 2) Converte PendingRow → ProductDraft / ProductUpdateDraft
-        var newProducts: [ProductDraft] = []
-        var updates: [ProductUpdateDraft] = []
-        var warnings: [ProductDuplicateWarning] = []
-
-        func trimmedOrNil(_ text: String?) -> String? {
-            guard let value = text?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !value.isEmpty else { return nil }
-            return value
-        }
-
-        func doublesEqual(_ lhs: Double?, _ rhs: Double?, epsilon: Double = 0.0001) -> Bool {
-            switch (lhs, rhs) {
-            case (nil, nil):
-                return true
-            case let (l?, r?):
-                return abs(l - r) < epsilon
-            default:
-                return false
-            }
-        }
-
-        for (barcode, pending) in pendingByBarcode.sorted(by: { $0.key < $1.key }) {
-            var row = pending.lastRow
-            if pending.quantitySum > 0 {
-                row["stockQuantity"] = String(pending.quantitySum)
-            }
-
-            let draft = ProductDraft(
-                barcode: barcode,
-                itemNumber: trimmedOrNil(row["itemNumber"]),
-                productName: trimmedOrNil(row["productName"]),
-                secondProductName: trimmedOrNil(row["secondProductName"]),
-                purchasePrice: Self.parseDouble(from: row["purchasePrice"] ?? ""),
-                retailPrice: Self.parseDouble(from: row["retailPrice"] ?? ""),
-                stockQuantity: {
-                    if let text = row["stockQuantity"] ?? row["quantity"],
-                       let value = Self.parseDouble(from: text) {
-                        return value
-                    } else {
-                        return nil
-                    }
-                }(),
-                supplierName: trimmedOrNil(row["supplier"]),
-                categoryName: trimmedOrNil(row["category"])
+    private func copySecurityScopedImportFileToTemporaryLocation(from url: URL) throws -> URL {
+        guard url.startAccessingSecurityScopedResource() else {
+            throw NSError(
+                domain: "ImportExcel",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: L("database.error.file_permission_denied")]
             )
+        }
+        defer { url.stopAccessingSecurityScopedResource() }
 
-            if let existing = existingByBarcode[barcode] {
-                let oldDraft = ProductDraft(
-                    barcode: existing.barcode,
-                    itemNumber: existing.itemNumber,
-                    productName: existing.productName,
-                    secondProductName: existing.secondProductName,
-                    purchasePrice: existing.purchasePrice,
-                    retailPrice: existing.retailPrice,
-                    stockQuantity: existing.stockQuantity,
-                    supplierName: existing.supplier?.name,
-                    categoryName: existing.category?.name
+        let tempDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("import-cache", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+
+        let fileName = "\(UUID().uuidString)-\(url.lastPathComponent)"
+        let tempURL = tempDirectory.appendingPathComponent(fileName)
+        try FileManager.default.copyItem(at: url, to: tempURL)
+        return tempURL
+    }
+
+    @MainActor
+    private static func userMessage(for result: ImportApplyResult) -> String {
+        let baseMessage: String
+        if let priceHistoryError = result.priceHistoryError {
+            if result.priceHistoryInserted > 0 {
+                baseMessage = L(
+                    "database.progress.partial_success",
+                    result.productsInserted,
+                    result.productsUpdated,
+                    priceHistoryError,
+                    result.priceHistoryInserted,
+                    result.priceHistoryTotal
                 )
-
-                let changedFields = ProductUpdateDraft.ChangedField.allCases.filter { field in
-                    switch field {
-                    case .itemNumber:
-                        return (oldDraft.itemNumber ?? "") != (draft.itemNumber ?? "")
-                    case .productName:
-                        return (oldDraft.productName ?? "") != (draft.productName ?? "")
-                    case .secondProductName:
-                        return (oldDraft.secondProductName ?? "") != (draft.secondProductName ?? "")
-                    case .purchasePrice:
-                        return !doublesEqual(oldDraft.purchasePrice, draft.purchasePrice)
-                    case .retailPrice:
-                        return !doublesEqual(oldDraft.retailPrice, draft.retailPrice)
-                    case .stockQuantity:
-                        return !doublesEqual(oldDraft.stockQuantity, draft.stockQuantity)
-                    case .supplierName:
-                        return (oldDraft.supplierName ?? "") != (draft.supplierName ?? "")
-                    case .categoryName:
-                        return (oldDraft.categoryName ?? "") != (draft.categoryName ?? "")
-                    }
-                }
-
-                if !changedFields.isEmpty {
-                    updates.append(
-                        ProductUpdateDraft(
-                            barcode: barcode,
-                            old: oldDraft,
-                            new: draft,
-                            changedFields: changedFields
-                        )
-                    )
-                }
             } else {
-                newProducts.append(draft)
-            }
-
-            if pending.rowNumbers.count > 1 {
-                warnings.append(
-                    ProductDuplicateWarning(
-                        barcode: barcode,
-                        rowNumbers: pending.rowNumbers
-                    )
+                baseMessage = L(
+                    "database.progress.price_history_total_failure",
+                    result.productsInserted,
+                    result.productsUpdated,
+                    priceHistoryError,
+                    result.priceHistoryTotal
                 )
             }
+        } else if result.priceHistoryTotal > 0 {
+            baseMessage = L(
+                "database.progress.success_with_price_history",
+                result.productsInserted,
+                result.productsUpdated,
+                result.priceHistoryInserted
+            )
+        } else {
+            baseMessage = L(
+                "database.progress.success_products_only",
+                result.productsInserted,
+                result.productsUpdated
+            )
         }
 
-        return ProductImportAnalysisResult(
-            newProducts: newProducts,
-            updatedProducts: updates,
-            errors: errors,
-            warnings: warnings
+        guard result.priceHistorySkipped > 0 else {
+            return baseMessage
+        }
+
+        return baseMessage + " " + L(
+            "database.progress.price_history_skipped_suffix",
+            result.priceHistorySkipped
         )
     }
 
     @MainActor
     private func applyConfirmedImportAnalysis(_ analysis: ProductImportAnalysisResult) async throws {
-        guard !importProgress.isRunning else {
+        guard !importProgress.isRunning || importAnalysisResult != nil else {
             throw NSError(
                 domain: "ImportExcelApply",
                 code: 2,
@@ -1254,23 +2281,26 @@ struct DatabaseView: View {
         let progressState = importProgress
 
         importProgress.startPreparation()
-        pendingFullImportContext = nil
 
-        Task {
-            do {
-                try await Self.applyImportAnalysisInBackground(
-                    payload,
-                    modelContainer: modelContainer,
-                    onProgress: { snapshot in
-                        await progressState.apply(snapshot)
-                    }
-                )
-                progressState.finishSuccess(message: L("database.progress.success"))
-            } catch {
-                progressState.finishError(
-                    message: L("database.error.apply_import", error.localizedDescription)
-                )
-            }
+        do {
+            let result = try await DatabaseImportPipeline.applyImportAnalysisInBackground(
+                payload,
+                modelContainer: modelContainer,
+                onProgress: { snapshot in
+                    await progressState.apply(snapshot)
+                }
+            )
+            pendingFullImportContext = nil
+            progressState.finishSuccess(message: Self.userMessage(for: result))
+        } catch {
+            progressState.resetRunningState()
+            throw NSError(
+                domain: "ImportExcelApply",
+                code: 3,
+                userInfo: [
+                    NSLocalizedDescriptionKey: L("database.error.apply_import", error.localizedDescription)
+                ]
+            )
         }
     }
 
@@ -1294,447 +2324,6 @@ struct DatabaseView: View {
             },
             recordPriceHistory: recordPriceHistory
         )
-    }
-
-    private static func applyImportAnalysisInBackground(
-        _ payload: ImportApplyPayload,
-        modelContainer: ModelContainer,
-        onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
-    ) async throws {
-        try await Task.detached(priority: .userInitiated) {
-            let context = ModelContext(modelContainer)
-            try await Self.applyImportAnalysis(
-                payload,
-                in: context,
-                onProgress: onProgress
-            )
-            try await Self.applyPendingPriceHistoryImport(
-                payload.pendingPriceHistoryEntries,
-                in: context,
-                onProgress: onProgress
-            )
-        }.value
-    }
-
-    private static func applyImportAnalysis(
-        _ payload: ImportApplyPayload,
-        in context: ModelContext,
-        onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
-    ) async throws {
-            let existingProducts = try context.fetch(FetchDescriptor<Product>())
-            var productsByBarcode = Dictionary(
-                uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
-            )
-
-            let existingSuppliers = try context.fetch(FetchDescriptor<Supplier>())
-            var suppliersByName = Dictionary(
-                uniqueKeysWithValues: existingSuppliers.map { ($0.name, $0) }
-            )
-
-            let existingCategories = try context.fetch(FetchDescriptor<ProductCategory>())
-            var categoriesByName = Dictionary(
-                uniqueKeysWithValues: existingCategories.map { ($0.name, $0) }
-            )
-
-            func resolveSupplier(named rawName: String?) -> Supplier? {
-                guard let rawName else { return nil }
-                let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { return nil }
-
-                if let existing = suppliersByName[trimmed] {
-                    return existing
-                }
-
-                let supplier = Supplier(name: trimmed)
-                context.insert(supplier)
-                suppliersByName[trimmed] = supplier
-                return supplier
-            }
-
-            func resolveCategory(named rawName: String?) -> ProductCategory? {
-                guard let rawName else { return nil }
-                let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { return nil }
-
-                if let existing = categoriesByName[trimmed] {
-                    return existing
-                }
-
-                let category = ProductCategory(name: trimmed)
-                context.insert(category)
-                categoriesByName[trimmed] = category
-                return category
-            }
-
-            var processedCount = 0
-            let totalCount = payload.productsTotalCount
-            await Self.reportImportProgress(
-                stagePrefix: L("database.progress.applying_products"),
-                processedCount: 0,
-                totalCount: totalCount,
-                onProgress: onProgress,
-                force: true
-            )
-
-            // Nuovi prodotti
-            for draft in payload.newProducts {
-                let product = Product(
-                    barcode: draft.barcode,
-                    itemNumber: draft.itemNumber,
-                    productName: draft.productName,
-                    secondProductName: draft.secondProductName,
-                    purchasePrice: draft.purchasePrice,
-                    retailPrice: draft.retailPrice,
-                    stockQuantity: draft.stockQuantity,
-                    supplier: resolveSupplier(named: draft.supplierName),
-                    category: resolveCategory(named: draft.categoryName)
-                )
-                context.insert(product)
-                productsByBarcode[draft.barcode] = product
-
-                if payload.recordPriceHistory {
-                    Self.createPriceHistoryForImport(
-                        product: product,
-                        oldPurchase: nil,
-                        newPurchase: draft.purchasePrice,
-                        oldRetail: nil,
-                        newRetail: draft.retailPrice,
-                        in: context
-                    )
-                }
-
-                processedCount += 1
-                await Self.reportImportProgress(
-                    stagePrefix: L("database.progress.applying_products"),
-                    processedCount: processedCount,
-                    totalCount: totalCount,
-                    onProgress: onProgress
-                )
-                try await Self.saveImportProgressIfNeeded(after: processedCount, in: context)
-            }
-
-            // Aggiornamenti
-            for update in payload.updatedProducts {
-                guard let product = productsByBarcode[update.barcode] else {
-                    continue
-                }
-
-                let newDraft = update.newDraft
-                let oldPurchase = product.purchasePrice
-                let oldRetail = product.retailPrice
-
-                if update.changedFields.contains(.itemNumber) {
-                    product.itemNumber = newDraft.itemNumber
-                }
-                if update.changedFields.contains(.productName) {
-                    product.productName = newDraft.productName
-                }
-                if update.changedFields.contains(.secondProductName) {
-                    product.secondProductName = newDraft.secondProductName
-                }
-                if update.changedFields.contains(.purchasePrice) {
-                    product.purchasePrice = newDraft.purchasePrice
-                }
-                if update.changedFields.contains(.retailPrice) {
-                    product.retailPrice = newDraft.retailPrice
-                }
-                if update.changedFields.contains(.stockQuantity) {
-                    product.stockQuantity = newDraft.stockQuantity
-                }
-                if update.changedFields.contains(.supplierName) {
-                    product.supplier = resolveSupplier(named: newDraft.supplierName)
-                }
-                if update.changedFields.contains(.categoryName) {
-                    product.category = resolveCategory(named: newDraft.categoryName)
-                }
-
-                if payload.recordPriceHistory {
-                    Self.createPriceHistoryForImport(
-                        product: product,
-                        oldPurchase: oldPurchase,
-                        newPurchase: newDraft.purchasePrice,
-                        oldRetail: oldRetail,
-                        newRetail: newDraft.retailPrice,
-                        in: context
-                    )
-                }
-
-                processedCount += 1
-                await Self.reportImportProgress(
-                    stagePrefix: L("database.progress.applying_products"),
-                    processedCount: processedCount,
-                    totalCount: totalCount,
-                    onProgress: onProgress
-                )
-                try await Self.saveImportProgressIfNeeded(after: processedCount, in: context)
-            }
-
-            try context.save()
-            await Self.reportImportProgress(
-                stagePrefix: L("database.progress.applying_products"),
-                processedCount: processedCount,
-                totalCount: totalCount,
-                onProgress: onProgress,
-                force: true
-            )
-            await Task.yield()
-    }
-
-    private func importNamedEntitiesSheet(
-        at url: URL,
-        sheetName: String,
-        entityLabel: String,
-        createEntity: (String) -> Void
-    ) throws {
-        let rows: [[String]]
-        do {
-            rows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: sheetName)
-        } catch {
-            debugPrint("Full import: impossibile leggere il foglio \(sheetName), skip.")
-            return
-        }
-
-        guard !rows.isEmpty else {
-            debugPrint("Full import: foglio \(sheetName) vuoto, skip.")
-            return
-        }
-
-        let header = rows[0].map {
-            $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        }
-        guard let nameIndex = header.firstIndex(of: "name") else {
-            debugPrint("Full import: foglio \(sheetName) senza colonna name, skip.")
-            return
-        }
-
-        guard rows.count > 1 else {
-            debugPrint("Full import: foglio \(sheetName) con soli header, skip.")
-            return
-        }
-
-        for row in rows.dropFirst() {
-            let name = Self.cellValue(in: row, at: nameIndex)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !name.isEmpty else { continue }
-            createEntity(name)
-        }
-
-        do {
-            try context.save()
-        } catch {
-            throw NSError(
-                domain: "ImportExcelFull",
-                code: 2,
-                userInfo: [
-                    NSLocalizedDescriptionKey: L("database.error.save_sheet", entityLabel, error.localizedDescription)
-                ]
-            )
-        }
-    }
-
-    private func parsePendingPriceHistoryContext(
-        at url: URL,
-        sheetNameMap: [String: String]
-    ) -> PendingFullImportContext? {
-        guard let sheetName = sheetNameMap[Self.normalizedSheetName("PriceHistory")] else {
-            return nil
-        }
-
-        let rows: [[String]]
-        do {
-            rows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: sheetName)
-        } catch {
-            debugPrint("Full import: impossibile leggere il foglio \(sheetName), skip.")
-            return nil
-        }
-
-        guard !rows.isEmpty else {
-            debugPrint("Full import: foglio \(sheetName) vuoto, skip.")
-            return nil
-        }
-
-        let header = rows[0].map {
-            $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        }
-        guard let barcodeIndex = Self.indexForPriceHistoryColumn("productBarcode", in: header),
-              let timestampIndex = Self.indexForPriceHistoryColumn("timestamp", in: header),
-              let typeIndex = Self.indexForPriceHistoryColumn("type", in: header),
-              let newPriceIndex = Self.indexForPriceHistoryColumn("newPrice", in: header) else {
-            debugPrint("Full import: foglio \(sheetName) con header non valido, skip.")
-            return nil
-        }
-
-        let sourceIndex = Self.indexForPriceHistoryColumn("source", in: header)
-        var entries: [PendingPriceHistoryImportEntry] = []
-
-        if rows.count > 1 {
-            for row in rows.dropFirst() {
-                let barcode = Self.cellValue(in: row, at: barcodeIndex)
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !barcode.isEmpty else { continue }
-
-                let typeRaw = Self.cellValue(in: row, at: typeIndex)
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                    .lowercased()
-                guard let type = Self.parsePriceType(typeRaw) else { continue }
-
-                let priceRaw = Self.cellValue(in: row, at: newPriceIndex)
-                guard let price = Self.parseDouble(from: priceRaw) else { continue }
-
-                let timestampRaw = Self.cellValue(in: row, at: timestampIndex)
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                let effectiveAt = Self.parseFullDatabaseTimestamp(timestampRaw) ?? Date()
-
-                let sourceRaw = sourceIndex.map { Self.cellValue(in: row, at: $0) } ?? ""
-                let source = sourceRaw.trimmingCharacters(in: .whitespacesAndNewlines)
-                let normalizedSource = source.isEmpty ? "IMPORT_DB_FULL" : source
-
-                entries.append(
-                    PendingPriceHistoryImportEntry(
-                        barcode: barcode,
-                        type: type,
-                        price: price,
-                        effectiveAt: effectiveAt,
-                        source: normalizedSource
-                    )
-                )
-            }
-        }
-
-        return PendingFullImportContext(
-            priceHistoryEntries: entries,
-            suppressAutomaticProductPriceHistory: true
-        )
-    }
-
-    private static func applyPendingPriceHistoryImport(
-        _ entries: [ImportPendingPriceHistoryEntrySnapshot],
-        in context: ModelContext,
-        onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
-    ) async throws {
-        guard !entries.isEmpty else { return }
-
-        let existingProducts = try context.fetch(FetchDescriptor<Product>())
-        let productsByBarcode = Dictionary(
-            uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
-        )
-
-        let now = Date()
-        var processedCount = 0
-        let totalCount = entries.count
-        await Self.reportImportProgress(
-            stagePrefix: L("database.progress.applying_price_history"),
-            processedCount: 0,
-            totalCount: totalCount,
-            onProgress: onProgress,
-            force: true
-        )
-        for entry in entries {
-            guard let product = productsByBarcode[entry.barcode] else { continue }
-
-            let history = ProductPrice(
-                type: entry.type,
-                price: entry.price,
-                effectiveAt: entry.effectiveAt,
-                source: entry.source,
-                note: nil,
-                createdAt: now,
-                product: product
-            )
-            context.insert(history)
-
-            processedCount += 1
-            await Self.reportImportProgress(
-                stagePrefix: L("database.progress.applying_price_history"),
-                processedCount: processedCount,
-                totalCount: totalCount,
-                onProgress: onProgress
-            )
-            try await Self.saveImportProgressIfNeeded(after: processedCount, in: context)
-        }
-
-        try context.save()
-        await Self.reportImportProgress(
-            stagePrefix: L("database.progress.applying_price_history"),
-            processedCount: processedCount,
-            totalCount: totalCount,
-            onProgress: onProgress,
-            force: true
-        )
-        await Task.yield()
-    }
-
-    private static func reportImportProgress(
-        stagePrefix: String,
-        processedCount: Int,
-        totalCount: Int,
-        onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void,
-        force: Bool = false
-    ) async {
-        guard totalCount > 0 else { return }
-        guard force ||
-                processedCount == totalCount ||
-                processedCount.isMultiple(of: Self.importProgressBatchSize) else {
-            return
-        }
-
-        await onProgress(
-            DatabaseImportProgressSnapshot(
-                stageText: "\(stagePrefix) \(processedCount) / \(totalCount)",
-                processedCount: processedCount,
-                totalCount: totalCount
-            )
-        )
-    }
-
-    private static func saveImportProgressIfNeeded(
-        after processedCount: Int,
-        in context: ModelContext
-    ) async throws {
-        guard processedCount > 0,
-              processedCount.isMultiple(of: Self.importSaveBatchSize) else {
-            return
-        }
-
-        try context.save()
-        await Task.yield()
-    }
-
-    private static func createPriceHistoryForImport(
-        product: Product,
-        oldPurchase: Double?,
-        newPurchase: Double?,
-        oldRetail: Double?,
-        newRetail: Double?,
-        in context: ModelContext
-    ) {
-        let now = Date()
-
-        if let newPurchase, newPurchase != oldPurchase {
-            let history = ProductPrice(
-                type: .purchase,
-                price: newPurchase,
-                effectiveAt: now,
-                source: "IMPORT_EXCEL",
-                note: nil,
-                createdAt: now,
-                product: product
-            )
-            context.insert(history)
-        }
-
-        if let newRetail, newRetail != oldRetail {
-            let history = ProductPrice(
-                type: .retail,
-                price: newRetail,
-                effectiveAt: now,
-                source: "IMPORT_EXCEL",
-                note: nil,
-                createdAt: now,
-                product: product
-            )
-            context.insert(history)
-        }
     }
 
     // MARK: - Import CSV
@@ -1783,9 +2372,9 @@ struct DatabaseView: View {
             let itemNumber = col(1).trimmingCharacters(in: .whitespacesAndNewlines)
             let productName = col(2).trimmingCharacters(in: .whitespacesAndNewlines)
             let secondName = col(3).trimmingCharacters(in: .whitespacesAndNewlines)
-            let purchase = Self.parseDouble(from: col(4))
-            let retail = Self.parseDouble(from: col(5))
-            let stock = Self.parseDouble(from: col(6))
+            let purchase = DatabaseImportPipeline.parseDouble(from: col(4))
+            let retail = DatabaseImportPipeline.parseDouble(from: col(5))
+            let stock = DatabaseImportPipeline.parseDouble(from: col(6))
             let supplierName = col(7).trimmingCharacters(in: .whitespacesAndNewlines)
             let categoryName = col(8).trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -1905,62 +2494,4 @@ struct DatabaseView: View {
         }
     }
 
-    private static let fullDatabaseTimestampFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter
-    }()
-
-    private static let priceHistoryHeaderAliases: [String: [String]] = [
-        "productBarcode": ["productbarcode", "barcode", "product_barcode"],
-        "timestamp": ["timestamp", "date", "data"],
-        "type": ["type", "tipo", "pricetype"],
-        "oldPrice": ["oldprice", "old_price", "prevprice", "priceold"],
-        "newPrice": ["newprice", "new_price", "price"],
-        "source": ["source", "sorgente"]
-    ]
-
-    private static func normalizedSheetName(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-
-    private static func normalizedHeaderValue(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-
-    private static func cellValue(in row: [String], at index: Int) -> String {
-        guard index >= 0, index < row.count else { return "" }
-        return row[index]
-    }
-
-    private static func indexForPriceHistoryColumn(
-        _ logicalName: String,
-        in header: [String]
-    ) -> Int? {
-        guard let aliases = priceHistoryHeaderAliases[logicalName] else {
-            return nil
-        }
-
-        return header.firstIndex { aliases.contains($0) }
-    }
-
-    private static func parsePriceType(_ value: String) -> PriceType? {
-        PriceType(rawValue: value)
-    }
-
-    private static func parseFullDatabaseTimestamp(_ value: String) -> Date? {
-        guard !value.isEmpty else { return nil }
-        return fullDatabaseTimestampFormatter.date(from: value)
-    }
-
-    private static func parseDouble(from text: String) -> Double? {
-        let normalized = text
-            .replacingOccurrences(of: ",", with: ".")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !normalized.isEmpty else { return nil }
-        return Double(normalized)
-    }
 }

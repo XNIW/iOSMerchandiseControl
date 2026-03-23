@@ -195,6 +195,8 @@
 "import.analysis.field.stock" = "Stock";
 "import.analysis.field.supplier" = "Supplier";
 "import.analysis.field.category" = "Category";
+"import.analysis.preview_notice" = "Showing the first %1$d of %2$d items. Import will include all.";
+"import.analysis.preview_notice_errors" = "Showing the first %1$d of %2$d errors. Export for the full list.";
 
 /* Database */
 "database.title" = "Database";
@@ -217,8 +219,16 @@
 "database.import.csv_simple" = "Import from CSV (simple)";
 "database.error.import_title" = "Import error";
 "database.progress.preparing" = "Preparing import...";
+"database.progress.parsing_excel" = "Reading import file";
+"database.progress.parsing_sheet" = "Reading %@";
+"database.progress.analyzing" = "Analyzing import";
 "database.progress.completed_title" = "Import completed";
 "database.progress.success" = "Import completed successfully.";
+"database.progress.success_products_only" = "Import completed. Products: %1$d new, %2$d updated.";
+"database.progress.success_with_price_history" = "Import completed. Products: %1$d new, %2$d updated. Price history saved: %3$d.";
+"database.progress.partial_success" = "Products imported: %1$d new, %2$d updated. Price history error: %3$@. Saved %4$d of %5$d history rows.";
+"database.progress.price_history_total_failure" = "Products imported: %1$d new, %2$d updated. Price history failed: %3$@. Saved 0 of %4$d history rows.";
+"database.progress.price_history_skipped_suffix" = "Skipped unmatched price history rows: %d.";
 "database.progress.invalid_workbook" = "Unable to read the file. Make sure it is a valid Excel (.xlsx) file with multiple sheets.";
 "database.progress.missing_products_sheet" = "The file does not contain a 'Products' sheet. Full import requires at least this sheet.";
 "database.error.export" = "Export error: %@";
