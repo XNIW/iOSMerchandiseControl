@@ -10,54 +10,10 @@ nonisolated private struct DatabaseImportProgressSnapshot: Sendable {
     let totalCount: Int
 }
 
-nonisolated private struct ImportProductDraftSnapshot: Sendable {
-    let barcode: String
-    let itemNumber: String?
-    let productName: String?
-    let secondProductName: String?
-    let purchasePrice: Double?
-    let retailPrice: Double?
-    let stockQuantity: Double?
-    let supplierName: String?
-    let categoryName: String?
-
-    init(_ draft: ProductDraft) {
-        barcode = draft.barcode
-        itemNumber = draft.itemNumber
-        productName = draft.productName
-        secondProductName = draft.secondProductName
-        purchasePrice = draft.purchasePrice
-        retailPrice = draft.retailPrice
-        stockQuantity = draft.stockQuantity
-        supplierName = draft.supplierName
-        categoryName = draft.categoryName
-    }
-}
-
-nonisolated private struct ImportProductUpdateSnapshot: Sendable {
-    let barcode: String
-    let newDraft: ImportProductDraftSnapshot
-    let changedFields: [ProductUpdateDraft.ChangedField]
-
-    init(_ update: ProductUpdateDraft) {
-        barcode = update.barcode
-        newDraft = ImportProductDraftSnapshot(update.new)
-        changedFields = Array(update.changedFields)
-    }
-}
-
-nonisolated private struct ImportPendingPriceHistoryEntrySnapshot: Sendable {
-    let barcode: String
-    let type: PriceType
-    let price: Double
-    let effectiveAt: Date
-    let source: String
-}
-
 nonisolated private struct ImportApplyPayload: Sendable {
-    let newProducts: [ImportProductDraftSnapshot]
-    let updatedProducts: [ImportProductUpdateSnapshot]
-    let pendingPriceHistoryEntries: [ImportPendingPriceHistoryEntrySnapshot]
+    let newProducts: [ProductDraft]
+    let updatedProducts: [ProductUpdateDraft]
+    let pendingPriceHistoryEntries: [PendingPriceHistoryImportEntry]
     let recordPriceHistory: Bool
 
     var productsTotalCount: Int {
@@ -862,7 +818,7 @@ nonisolated private enum DatabaseImportPipeline {
                 continue
             }
 
-            let newDraft = update.newDraft
+            let newDraft = update.new
             let oldPurchase = product.purchasePrice
             let oldRetail = product.retailPrice
 
@@ -1007,7 +963,7 @@ nonisolated private enum DatabaseImportPipeline {
     }
 
     private static func applyPendingPriceHistoryImport(
-        _ entries: [ImportPendingPriceHistoryEntrySnapshot],
+        _ entries: [PendingPriceHistoryImportEntry],
         in context: ModelContext,
         onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
     ) async throws -> ImportApplyPriceHistoryResult {
@@ -1310,7 +1266,7 @@ struct DatabaseView: View {
     @State private var importError: String?
     
     // Risultato analisi import da Excel
-    @State private var importAnalysisResult: ProductImportAnalysisResult?
+    @State private var importAnalysisSession: ImportAnalysisSession?
     @State private var pendingFullImportContext: PendingFullImportContext?
     @StateObject private var importProgress = DatabaseImportProgressState()
 
@@ -1528,14 +1484,14 @@ struct DatabaseView: View {
         }
 
         // Sheet per l’analisi di import da Excel
-        .sheet(item: $importAnalysisResult, onDismiss: handleImportAnalysisDismissed) { analysis in
+        .sheet(item: $importAnalysisSession, onDismiss: handleImportAnalysisDismissed) { session in
             NavigationStack {
                 ImportAnalysisView(
-                    analysis: analysis,
+                    session: session,
                     allowsApplyWithoutChanges: pendingFullImportContext != nil,
-                    onApply: { editedAnalysis in
-                        try await applyConfirmedImportAnalysis(editedAnalysis)
-                        importAnalysisResult = nil
+                    onApply: {
+                        try await applyConfirmedImportAnalysis()
+                        importAnalysisSession = nil
                     }
                 )
             }
@@ -2091,7 +2047,7 @@ struct DatabaseView: View {
         }
 
         importError = nil
-        importAnalysisResult = nil
+        importAnalysisSession = nil
         pendingFullImportContext = nil
         importProgress.startPreparation()
 
@@ -2116,7 +2072,9 @@ struct DatabaseView: View {
 
                     await MainActor.run {
                         pendingFullImportContext = nil
-                        importAnalysisResult = DatabaseImportUILocalizer.analysisResult(from: prepared.analysis)
+                        importAnalysisSession = ImportAnalysisSession(
+                            analysis: DatabaseImportUILocalizer.analysisResult(from: prepared.analysis)
+                        )
                         progressState.awaitingConfirmation()
                     }
                 } catch {
@@ -2137,7 +2095,7 @@ struct DatabaseView: View {
         }
 
         importError = nil
-        importAnalysisResult = nil
+        importAnalysisSession = nil
         pendingFullImportContext = nil
         importProgress.startPreparation()
 
@@ -2162,7 +2120,9 @@ struct DatabaseView: View {
 
                     await MainActor.run {
                         pendingFullImportContext = prepared.pendingFullImportContext
-                        importAnalysisResult = DatabaseImportUILocalizer.analysisResult(from: prepared.analysis)
+                        importAnalysisSession = ImportAnalysisSession(
+                            analysis: DatabaseImportUILocalizer.analysisResult(from: prepared.analysis)
+                        )
                         progressState.awaitingConfirmation()
                     }
                 } catch {
@@ -2179,6 +2139,7 @@ struct DatabaseView: View {
     }
 
     private func handleImportAnalysisDismissed() {
+        importAnalysisSession = nil
         pendingFullImportContext = nil
         guard importProgress.isRunning else { return }
         importProgress.resetRunningState()
@@ -2186,7 +2147,7 @@ struct DatabaseView: View {
 
     private func finalizeImportPreparationFailure(_ error: Error) {
         pendingFullImportContext = nil
-        importAnalysisResult = nil
+        importAnalysisSession = nil
         importProgress.resetRunningState()
         importError = DatabaseImportUILocalizer.importErrorMessage(for: error)
     }
@@ -2259,8 +2220,8 @@ struct DatabaseView: View {
     }
 
     @MainActor
-    private func applyConfirmedImportAnalysis(_ analysis: ProductImportAnalysisResult) async throws {
-        guard !importProgress.isRunning || importAnalysisResult != nil else {
+    private func applyConfirmedImportAnalysis() async throws {
+        guard !importProgress.isRunning || importAnalysisSession != nil else {
             throw NSError(
                 domain: "ImportExcelApply",
                 code: 2,
@@ -2270,15 +2231,36 @@ struct DatabaseView: View {
             )
         }
 
-        let pendingContext = pendingFullImportContext
-        let recordAutomaticPriceHistory = !(pendingContext?.suppressAutomaticProductPriceHistory ?? false)
-        let payload = Self.makeImportApplyPayload(
-            analysis: analysis,
-            recordPriceHistory: recordAutomaticPriceHistory,
-            pendingPriceHistoryEntries: pendingContext?.priceHistoryEntries ?? []
-        )
+        guard let confirmedSession = importAnalysisSession else {
+            throw NSError(
+                domain: "ImportExcelApply",
+                code: 6,
+                userInfo: [
+                    NSLocalizedDescriptionKey: L("inventory.home.error.unknown")
+                ]
+            )
+        }
+
         let modelContainer = context.container
         let progressState = importProgress
+        let confirmedPendingContext = pendingFullImportContext
+        let payload: ImportApplyPayload
+
+        do {
+            payload = try Self.makeImportApplyPayload(
+                session: confirmedSession,
+                pendingFullImportContext: confirmedPendingContext
+            )
+        } catch {
+            progressState.resetRunningState()
+            throw NSError(
+                domain: "ImportExcelApply",
+                code: 4,
+                userInfo: [
+                    NSLocalizedDescriptionKey: L("database.error.apply_import", error.localizedDescription)
+                ]
+            )
+        }
 
         importProgress.startPreparation()
 
@@ -2293,7 +2275,11 @@ struct DatabaseView: View {
             pendingFullImportContext = nil
             progressState.finishSuccess(message: Self.userMessage(for: result))
         } catch {
-            progressState.resetRunningState()
+            pendingFullImportContext = nil
+            importAnalysisSession = nil
+            progressState.finishError(
+                message: L("database.error.apply_import", error.localizedDescription)
+            )
             throw NSError(
                 domain: "ImportExcelApply",
                 code: 3,
@@ -2306,23 +2292,27 @@ struct DatabaseView: View {
 
     @MainActor
     private static func makeImportApplyPayload(
-        analysis: ProductImportAnalysisResult,
-        recordPriceHistory: Bool,
-        pendingPriceHistoryEntries: [PendingPriceHistoryImportEntry]
-    ) -> ImportApplyPayload {
-        ImportApplyPayload(
-            newProducts: analysis.newProducts.map(ImportProductDraftSnapshot.init),
-            updatedProducts: analysis.updatedProducts.map(ImportProductUpdateSnapshot.init),
-            pendingPriceHistoryEntries: pendingPriceHistoryEntries.map { entry in
-                ImportPendingPriceHistoryEntrySnapshot(
-                    barcode: entry.barcode,
-                    type: entry.type,
-                    price: entry.price,
-                    effectiveAt: entry.effectiveAt,
-                    source: entry.source
-                )
-            },
-            recordPriceHistory: recordPriceHistory
+        session: ImportAnalysisSession,
+        pendingFullImportContext: PendingFullImportContext?
+    ) throws -> ImportApplyPayload {
+        let newProducts = session.newProducts
+        let updatedProducts = session.updatedProducts
+        let pendingPriceHistoryEntries = pendingFullImportContext?.priceHistoryEntries ?? []
+        guard !newProducts.isEmpty || !updatedProducts.isEmpty || !pendingPriceHistoryEntries.isEmpty else {
+            throw NSError(
+                domain: "ImportExcelApply",
+                code: 5,
+                userInfo: [
+                    NSLocalizedDescriptionKey: L("inventory.home.error.unknown")
+                ]
+            )
+        }
+
+        return ImportApplyPayload(
+            newProducts: newProducts,
+            updatedProducts: updatedProducts,
+            pendingPriceHistoryEntries: pendingPriceHistoryEntries,
+            recordPriceHistory: !(pendingFullImportContext?.suppressAutomaticProductPriceHistory ?? false)
         )
     }
 

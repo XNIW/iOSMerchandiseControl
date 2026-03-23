@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import xlsxwriter
 
 // MARK: - Modelli per ImportAnalysis (Excel → Database)
@@ -100,6 +101,28 @@ struct ProductImportAnalysisResult: Identifiable, Sendable {
     }
 }
 
+@MainActor
+final class ImportAnalysisSession: ObservableObject, Identifiable {
+    let id: UUID
+
+    @Published var newProducts: [ProductDraft]
+    @Published var updatedProducts: [ProductUpdateDraft]
+    @Published var errors: [ProductImportRowError]
+    @Published var warnings: [ProductDuplicateWarning]
+
+    init(analysis: ProductImportAnalysisResult) {
+        id = analysis.id
+        newProducts = analysis.newProducts
+        updatedProducts = analysis.updatedProducts
+        errors = analysis.errors
+        warnings = analysis.warnings
+    }
+
+    var hasChanges: Bool {
+        !newProducts.isEmpty || !updatedProducts.isEmpty
+    }
+}
+
 // MARK: - Vista di riepilogo e conferma Import
 
 struct ImportAnalysisView: View {
@@ -117,7 +140,7 @@ struct ImportAnalysisView: View {
         let isUpdate: Bool
     }
 
-    @State private var analysis: ProductImportAnalysisResult
+    @ObservedObject private var session: ImportAnalysisSession
     @State private var shareItem: ShareItem?
     @State private var exportError: String?
     @State private var applyError: String?
@@ -125,34 +148,34 @@ struct ImportAnalysisView: View {
     @State private var isApplying = false
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     let allowsApplyWithoutChanges: Bool
-    let onApply: (ProductImportAnalysisResult) async throws -> Void
+    let onApply: () async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
 
     init(
-        analysis: ProductImportAnalysisResult,
+        session: ImportAnalysisSession,
         allowsApplyWithoutChanges: Bool = false,
-        onApply: @escaping (ProductImportAnalysisResult) async throws -> Void
+        onApply: @escaping () async throws -> Void
     ) {
-        _analysis = State(initialValue: analysis)
+        _session = ObservedObject(wrappedValue: session)
         self.allowsApplyWithoutChanges = allowsApplyWithoutChanges
         self.onApply = onApply
     }
 
     private var visibleWarnings: [ProductDuplicateWarning] {
-        Array(analysis.warnings.prefix(Self.previewItemLimit))
+        Array(session.warnings.prefix(Self.previewItemLimit))
     }
 
     private var visibleNewProducts: [ProductDraft] {
-        Array(analysis.newProducts.prefix(Self.previewItemLimit))
+        Array(session.newProducts.prefix(Self.previewItemLimit))
     }
 
     private var visibleUpdatedProducts: [ProductUpdateDraft] {
-        Array(analysis.updatedProducts.prefix(Self.previewItemLimit))
+        Array(session.updatedProducts.prefix(Self.previewItemLimit))
     }
 
     private var visibleErrors: [ProductImportRowError] {
-        Array(analysis.errors.prefix(Self.previewErrorLimit))
+        Array(session.errors.prefix(Self.previewErrorLimit))
     }
 
     var body: some View {
@@ -162,19 +185,19 @@ struct ImportAnalysisView: View {
             List {
                 summarySection
 
-                if !analysis.warnings.isEmpty {
+                if !session.warnings.isEmpty {
                     warningsSection
                 }
 
-                if !analysis.newProducts.isEmpty {
+                if !session.newProducts.isEmpty {
                     newProductsSection
                 }
 
-                if !analysis.updatedProducts.isEmpty {
+                if !session.updatedProducts.isEmpty {
                     updatedProductsSection
                 }
 
-                if !analysis.errors.isEmpty {
+                if !session.errors.isEmpty {
                     errorsSection
                 }
             }
@@ -204,14 +227,14 @@ struct ImportAnalysisView: View {
                         defer { isApplying = false }
 
                         do {
-                            try await onApply(analysis)
+                            try await onApply()
                             dismiss()
                         } catch {
                             applyError = error.localizedDescription
                         }
                     }
                 }
-                .disabled(isApplying || (!analysis.hasChanges && !allowsApplyWithoutChanges))
+                .disabled(isApplying || (!session.hasChanges && !allowsApplyWithoutChanges))
             }
         }
         .sheet(item: $shareItem) { shareItem in
@@ -277,21 +300,21 @@ struct ImportAnalysisView: View {
 
     private var summarySection: some View {
         Section(L("import.analysis.summary")) {
-            row(label: L("import.analysis.summary.new_products"), systemImage: "plus.circle", value: analysis.newProducts.count)
-            row(label: L("import.analysis.summary.updates"), systemImage: "arrow.triangle.2.circlepath", value: analysis.updatedProducts.count)
-            row(label: L("import.analysis.summary.warnings"), systemImage: "exclamationmark.triangle", value: analysis.warnings.count)
-            row(label: L("import.analysis.summary.errors"), systemImage: "xmark.octagon", value: analysis.errors.count)
+            row(label: L("import.analysis.summary.new_products"), systemImage: "plus.circle", value: session.newProducts.count)
+            row(label: L("import.analysis.summary.updates"), systemImage: "arrow.triangle.2.circlepath", value: session.updatedProducts.count)
+            row(label: L("import.analysis.summary.warnings"), systemImage: "exclamationmark.triangle", value: session.warnings.count)
+            row(label: L("import.analysis.summary.errors"), systemImage: "xmark.octagon", value: session.errors.count)
         }
     }
 
     private var warningsSection: some View {
         Section(L("import.analysis.duplicate_barcodes")) {
-            if visibleWarnings.count < analysis.warnings.count {
+            if visibleWarnings.count < session.warnings.count {
                 previewBanner(
                     text: L(
                         "import.analysis.preview_notice",
                         Self.previewItemLimit,
-                        analysis.warnings.count
+                        session.warnings.count
                     )
                 )
             }
@@ -311,13 +334,13 @@ struct ImportAnalysisView: View {
     }
 
     private var newProductsSection: some View {
-        Section(L("import.analysis.new_products_count", analysis.newProducts.count)) {
-            if visibleNewProducts.count < analysis.newProducts.count {
+        Section(L("import.analysis.new_products_count", session.newProducts.count)) {
+            if visibleNewProducts.count < session.newProducts.count {
                 previewBanner(
                     text: L(
                         "import.analysis.preview_notice",
                         Self.previewItemLimit,
-                        analysis.newProducts.count
+                        session.newProducts.count
                     )
                 )
             }
@@ -375,13 +398,13 @@ struct ImportAnalysisView: View {
     }
 
     private var updatedProductsSection: some View {
-        Section(L("import.analysis.updated_products_count", analysis.updatedProducts.count)) {
-            if visibleUpdatedProducts.count < analysis.updatedProducts.count {
+        Section(L("import.analysis.updated_products_count", session.updatedProducts.count)) {
+            if visibleUpdatedProducts.count < session.updatedProducts.count {
                 previewBanner(
                     text: L(
                         "import.analysis.preview_notice",
                         Self.previewItemLimit,
-                        analysis.updatedProducts.count
+                        session.updatedProducts.count
                     )
                 )
             }
@@ -441,12 +464,12 @@ struct ImportAnalysisView: View {
 
     private var errorsSection: some View {
         Section {
-            if visibleErrors.count < analysis.errors.count {
+            if visibleErrors.count < session.errors.count {
                 previewBanner(
                     text: L(
                         "import.analysis.preview_notice_errors",
                         Self.previewErrorLimit,
-                        analysis.errors.count
+                        session.errors.count
                     )
                 )
             }
@@ -492,21 +515,21 @@ struct ImportAnalysisView: View {
     @ViewBuilder
     private func editDraftSheet(for item: EditingItem) -> some View {
         if item.isUpdate {
-            if let index = analysis.updatedProducts.firstIndex(where: { $0.id.uuidString == item.productID }) {
+            if let index = session.updatedProducts.firstIndex(where: { $0.id.uuidString == item.productID }) {
                 EditProductDraftView(
-                    draft: analysis.updatedProducts[index].new,
+                    draft: session.updatedProducts[index].new,
                     barcodeEditable: false,
                     forbiddenBarcodes: [],
                     onSave: { editedDraft in
                         let newChangedFields = ProductUpdateDraft.computeChangedFields(
-                            old: analysis.updatedProducts[index].old,
+                            old: session.updatedProducts[index].old,
                             new: editedDraft
                         )
                         if newChangedFields.isEmpty {
-                            analysis.updatedProducts.remove(at: index)
+                            session.updatedProducts.remove(at: index)
                         } else {
-                            analysis.updatedProducts[index].new = editedDraft
-                            analysis.updatedProducts[index].changedFields = newChangedFields
+                            session.updatedProducts[index].new = editedDraft
+                            session.updatedProducts[index].changedFields = newChangedFields
                         }
                         editingDraftItem = nil
                     },
@@ -520,17 +543,17 @@ struct ImportAnalysisView: View {
                         editingDraftItem = nil
                     }
             }
-        } else if let index = analysis.newProducts.firstIndex(where: { $0.barcode == item.productID }) {
+        } else if let index = session.newProducts.firstIndex(where: { $0.barcode == item.productID }) {
             EditProductDraftView(
-                draft: analysis.newProducts[index],
+                draft: session.newProducts[index],
                 barcodeEditable: true,
                 forbiddenBarcodes: Set(
-                    analysis.newProducts
+                    session.newProducts
                         .map(\.barcode)
                         .filter { $0 != item.productID }
                 ),
                 onSave: { editedDraft in
-                    analysis.newProducts[index] = editedDraft
+                    session.newProducts[index] = editedDraft
                     editingDraftItem = nil
                 },
                 onCancel: {
@@ -548,7 +571,7 @@ struct ImportAnalysisView: View {
     private func exportErrors() {
         Task { @MainActor in
             do {
-                let url = try Self.exportErrorsToXLSX(analysis.errors)
+                let url = try Self.exportErrorsToXLSX(session.errors)
                 shareItem = ShareItem(url: url)
             } catch {
                 exportError = L("import.analysis.export_impossible", error.localizedDescription)

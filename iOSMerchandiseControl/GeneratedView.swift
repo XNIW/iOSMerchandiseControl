@@ -69,7 +69,7 @@ struct GeneratedView: View {
     
     /// Motore per l'import prodotti (Excel → DB)
     @State private var productImportVM: ProductImportViewModel?
-    @State private var importAnalysis: ProductImportAnalysisResult?
+    @State private var importAnalysisSession: ImportAnalysisSession?
 
     /// filtro righe solo con errori
     @State private var showOnlyErrorRows: Bool = false
@@ -134,6 +134,38 @@ struct GeneratedView: View {
         complete.count > 1 && complete.dropFirst().allSatisfy { $0 }
     }
 
+    private var inventoryHeaderRow: [String] {
+        data.first ?? []
+    }
+
+    private var inventoryErrorCount: Int {
+        data.isEmpty ? 0 : countSyncErrors()
+    }
+
+    private var inventoryAllRowIndices: [Int] {
+        guard data.count > 1 else { return [] }
+        return Array(1..<data.count)
+    }
+
+    private var inventoryVisibleRowIndices: [Int] {
+        guard !data.isEmpty else { return [] }
+        return showOnlyErrorRows
+            ? inventoryAllRowIndices.filter { rowHasError(rowIndex: $0, headerRow: inventoryHeaderRow) }
+            : inventoryAllRowIndices
+    }
+
+    private var inventoryCheckedCount: Int {
+        complete.dropFirst().filter { $0 }.count
+    }
+
+    private var inventoryTotalCount: Int {
+        max(0, data.count - 1)
+    }
+
+    private var inventoryColumns: [Int] {
+        Array(inventoryHeaderRow.indices)
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -141,555 +173,563 @@ struct GeneratedView: View {
         let _ = appLanguage
 
         ScrollViewReader { proxy in
-            ZStack(alignment: .bottomTrailing) {
-                Form {
-                    // Sezione principale: griglia inventario
-                    Section(L("generated.inventory.title")) {
-                        if data.isEmpty {
-                            Text(L("generated.inventory.no_data"))
-                                .foregroundStyle(.secondary)
-                        } else {
-                            let headerRow = data[0]
-                            let errorCount = countSyncErrors()
-                            let allRowIndices = 1..<data.count
-                            let visibleRowIndices: [Int] = showOnlyErrorRows
-                            ? allRowIndices.filter { rowHasError(rowIndex: $0, headerRow: headerRow) }
-                            : Array(allRowIndices)
-                            
-                            // Piccolo riepilogo righe + errori
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(L("generated.inventory.rows_count", max(0, data.count - 1)))
-                                    Spacer()
-                                    if errorCount > 0 {
-                                        Text(L("generated.inventory.rows_with_error_count", errorCount))
-                                            .foregroundStyle(.red)
-                                    } else {
-                                        Text(L("generated.inventory.no_error"))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                .font(.footnote)
-                                
-                                Toggle(L("generated.inventory.only_errors"), isOn: $showOnlyErrorRows)
-                                    .font(.footnote)
-                            }
-                            
-                            let checked = complete.dropFirst().filter { $0 }.count
-                            let total = max(0, data.count - 1)
-                            
-                            ProgressView(value: Double(checked), total: Double(max(total, 1))) {
-                                Text(L("generated.inventory.completed_count", checked, total))
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                            
-                            // ✅ UN SOLO scroll orizzontale per header + righe (niente scroll per-riga)
-                            let columns = Array(headerRow.indices)
-                            
-                            if showOnlyErrorRows && visibleRowIndices.isEmpty {
-                                if #available(iOS 17.0, *) {
-                                    ContentUnavailableView(
-                                        L("generated.inventory.no_error_rows"),
-                                        systemImage: "checkmark.seal",
-                                        description: Text(L("generated.inventory.no_error_rows_description"))
-                                    )
-                                    .padding(.vertical, 8)
-                                } else {
-                                    Text(L("generated.inventory.no_error_rows"))
-                                        .foregroundStyle(.secondary)
-                                }
-                            } else {
-                                ScrollView(.horizontal) {
-                                    LazyVStack(alignment: .leading, spacing: 0) {
-                                        
-                                        // HEADER
-                                        HStack(alignment: .center, spacing: 6) {
-                                            ForEach(columns, id: \.self) { col in
-                                                let key = headerRow[col]
-                                                Text(columnTitle(for: key))
-                                                    .font(.caption)
-                                                    .fontWeight(.semibold)
-                                                    .foregroundStyle(.secondary)
-                                                    .lineLimit(1)
-                                                    .frame(width: columnWidth(for: key), alignment: columnAlignment(for: key))
-                                            }
-                                        }
-                                        .padding(.vertical, 6)
-                                        .background(.thinMaterial)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                        
-                                        Divider().padding(.vertical, 4)
-                                        
-                                        // RIGHE
-                                        ForEach(visibleRowIndices, id: \.self) { rowIndex in
-                                            let hasError = rowHasError(rowIndex: rowIndex, headerRow: headerRow)
-                                            let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
-                                            let hasShortage = rowHasShortage(rowIndex: rowIndex, headerRow: headerRow)
+            generatedContent(proxy: proxy)
+        }
+    }
 
-                                            HStack(alignment: .center, spacing: 6) {
-                                                ForEach(columns, id: \.self) { col in
-                                                    cellView(
-                                                        rowIndex: rowIndex,
-                                                        columnIndex: col,
-                                                        headerRow: headerRow,
-                                                        isDone: isDone
-                                                    )
-                                                    .frame(
-                                                        width: columnWidth(for: headerRow[col]),
-                                                        alignment: columnAlignment(for: headerRow[col])
-                                                    )
-                                                }
-                                            }
-                                            .id("row-\(rowIndex)")
-                                            .onAppear { visibleRowSet.insert(rowIndex) }
-                                            .onDisappear { visibleRowSet.remove(rowIndex) }
-                                            .padding(.vertical, 6)
-                                            .contentShape(Rectangle())
-                                            .onTapGesture { flashAndOpenRow(rowIndex, headerRow: headerRow) }
-                                            .background(rowBackground(hasError: hasError, hasShortage: hasShortage, isDone: isDone, rowIndex: rowIndex))
-                                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                            .contextMenu {
-                                                Button {
-                                                    requestSetComplete(rowIndex: rowIndex, headerRow: headerRow, value: !isDone)
-                                                } label: {
-                                                    Label(isDone ? L("generated.action.mark_not_completed") : L("generated.action.mark_completed"),
-                                                          systemImage: isDone ? "circle" : "checkmark.circle.fill")
-                                                }
-                                                
-                                                Button {
-                                                    showRowDetail(for: rowIndex, headerRow: headerRow)
-                                                } label: {
-                                                    Label(L("generated.action.row_details"), systemImage: "info.circle")
-                                                }
+    private func generatedContent(proxy: ScrollViewProxy) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            generatedForm
 
-                                                Button(role: .destructive) {
-                                                    pendingDeleteRowIndex = rowIndex
-                                                } label: {
-                                                    Label(L("generated.action.delete_row"), systemImage: "trash")
-                                                }
-                                                
-                                                if let bIndex = headerRow.firstIndex(of: "barcode"),
-                                                   data[rowIndex].indices.contains(bIndex) {
-                                                    let barcode = data[rowIndex][bIndex].trimmingCharacters(in: .whitespacesAndNewlines)
-                                                    if !barcode.isEmpty {
-                                                        Button {
-                                                            UIPasteboard.general.string = barcode
-                                                            UINotificationFeedbackGenerator().notificationOccurred(.success)
-                                                        } label: {
-                                                            Label(L("generated.action.copy_barcode"), systemImage: "doc.on.doc")
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                                Button {
-                                                    requestSetComplete(rowIndex: rowIndex, headerRow: headerRow, value: !isDone)
-                                                } label: {
-                                                    Label(isDone ? L("generated.action.not_completed") : L("generated.action.completed"),
-                                                          systemImage: isDone ? "circle" : "checkmark.circle.fill")
-                                                }
-                                                .tint(isDone ? .gray : .green)
-                                            }
-                                            
-                                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                                Button {
-                                                    showRowDetail(for: rowIndex, headerRow: headerRow)
-                                                } label: {
-                                                    Label(L("generated.action.details"), systemImage: "info.circle")
-                                                }
-                                                .tint(.blue)
-
-                                                Button(role: .destructive) {
-                                                    pendingDeleteRowIndex = rowIndex
-                                                } label: {
-                                                    Label(L("common.delete"), systemImage: "trash")
-                                                }
-                                                .tint(.red)
-                                                
-                                                if let bIndex = headerRow.firstIndex(of: "barcode"),
-                                                   data[rowIndex].indices.contains(bIndex) {
-                                                    let barcode = data[rowIndex][bIndex].trimmingCharacters(in: .whitespacesAndNewlines)
-                                                    if !barcode.isEmpty {
-                                                        Button {
-                                                            UIPasteboard.general.string = barcode
-                                                            UINotificationFeedbackGenerator().notificationOccurred(.success)
-                                                        } label: {
-                                                            Label(L("generated.action.copy"), systemImage: "doc.on.doc")
-                                                        }
-                                                        .tint(.gray)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } // ✅ QUESTA era la parentesi mancante (chiude LazyVStack)
-                                    .padding(.vertical, 4)
-                                }
-                                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                            }
-                            if entry.isManualEntry {
-                                Button {
-                                    addManualRow()
-                                } label: {
-                                    Label(L("generated.action.add_row"), systemImage: "plus")
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Sezione riassunto base (per ora non ricalcoliamo il totale ordine)
-                    Section(L("generated.summary.title")) {
-                        let checked = complete.dropFirst().filter { $0 }.count
-                        let missing = max(0, entry.totalItems - checked)
-                        let errorCount = countSyncErrors()
-                        
-                        LabeledContent(L("generated.summary.total_items")) {
-                            Text("\(entry.totalItems)")
-                        }
-                        LabeledContent(L("generated.summary.items_to_complete")) {
-                            Text("\(missing)")
-                        }
-                        LabeledContent(L("generated.summary.rows_in_error")) {
-                            Text("\(errorCount)")
-                                .foregroundStyle(errorCount > 0 ? .red : .secondary)
-                        }
-                        LabeledContent(L("generated.summary.initial_order_total")) {
-                            Text(formatMoney(entry.orderTotal))
-                        }
-                    }
-                    
-                    /// Bottone Salva / Sincronizza
-                    Section {
-                        if !entry.isManualEntry {
-                            Button {
-                                startProductImportAnalysis()
-                            } label: {
-                                Text(L("generated.action.update_products"))
-                            }
-                            .disabled(isSaving || isSyncing)
-                            
-                            Button {
-                                syncWithDatabase()
-                            } label: {
-                                if isSyncing {
-                                    HStack {
-                                        ProgressView()
-                                        Text(L("generated.syncing"))
-                                    }
-                                } else {
-                                    Text(L("generated.action.apply_inventory_db"))
-                                }
-                            }
-                            .disabled(isSaving || isSyncing)
-                        } else {
-                            // entry manuale: nessuna azione DB, ma autosave resta attivo
-                            Text(L("generated.autosave.active"))
-                                .foregroundStyle(.secondary)
-                        }
-                    } footer: {
-                        if isSaving {
-                            Text(L("generated.autosave.saving"))
-                        } else if hasUnsavedChanges {
-                            Text(L("generated.autosave.pending"))
-                        } else if let lastSavedAt {
-                            let savedAt = lastSavedAt.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(appLocale()))
-                            Text(L("generated.autosave.saved_at", savedAt))
-                        } else {
-                            Text(L("generated.autosave.active"))
-                        }
-                    }
-                }
-                .safeAreaInset(edge: .bottom) {
-                    Color.clear.frame(height: 140)
-            }
-            
             floatingActions
                 .padding(.trailing, 16)
                 .safeAreaPadding(.bottom, 12)
-            }
-            .onChange(of: scrollToRowIndex) { _, newValue in
-                guard let rowIndex = newValue else { return }
+        }
+        .onChange(of: scrollToRowIndex) { _, newValue in
+            guard let rowIndex = newValue else { return }
 
-                DispatchQueue.main.async {
-                    if visibleRowSet.contains(rowIndex) {
-                        // ✅ già visibile: niente scroll, solo pulse
-                        pulseHighlightRow(rowIndex)
-                    } else {
-                        // ✅ non visibile: scroll + pulse
-                        withAnimation(.snappy) {
-                            proxy.scrollTo("row-\(rowIndex)", anchor: .center)
-                        }
-                        pulseHighlightRow(rowIndex)
+            DispatchQueue.main.async {
+                if visibleRowSet.contains(rowIndex) {
+                    pulseHighlightRow(rowIndex)
+                } else {
+                    withAnimation(.snappy) {
+                        proxy.scrollTo("row-\(rowIndex)", anchor: .center)
                     }
+                    pulseHighlightRow(rowIndex)
+                }
 
-                    scrollToRowIndex = nil
+                scrollToRowIndex = nil
+            }
+        }
+        .onChange(of: showScanner) { _, isShown in
+            guard !isShown else { return }
+
+            if reopenRowDetailAfterScan,
+               let rowIndex = pendingReopenRowIndexAfterScannerDismiss,
+               rowDetail == nil
+            {
+                pendingReopenRowIndexAfterScannerDismiss = nil
+                reopenRowDetailAfterScan = false
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
+                    let header = data.first ?? []
+                    showRowDetail(for: rowIndex, headerRow: header)
                 }
             }
-            .onChange(of: showScanner) { _, isShown in
-                guard !isShown else { return }
-
-                // se lo scanner si chiude senza aver scansionato (cancel),
-                // riapri il dettaglio originale
-                if reopenRowDetailAfterScan,
-                   let rowIndex = pendingReopenRowIndexAfterScannerDismiss,
-                   rowDetail == nil
-                {
-                    pendingReopenRowIndexAfterScannerDismiss = nil
-                    reopenRowDetailAfterScan = false
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
-                        let header = data.first ?? []
-                        showRowDetail(for: rowIndex, headerRow: header)
-                    }
-                }
-            }
-            .id(entry.id)
-            .navigationTitle(entryTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .tabBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            showingEntryInfo = true
-                        } label: {
-                            Label(L("generated.action.edit_details"), systemImage: "pencil")
-                        }
-
-                        Button {
-                            markAllComplete(!allRowsComplete)
-                        } label: {
-                            Label(
-                                allRowsComplete ? L("generated.action.mark_all_incomplete") : L("generated.action.mark_all_complete"),
-                                systemImage: allRowsComplete ? "circle" : "checkmark.circle.fill"
-                            )
-                        }
-                        .disabled(data.count <= 1)
-
-                        Button(role: .destructive) {
-                            showRevertConfirmation = true
-                        } label: {
-                            Label(L("generated.action.revert_original"), systemImage: "arrow.uturn.backward")
-                        }
-                        .disabled(originalData.isEmpty)
-
-                        Button {
-                            shareAsXLSX()
-                        } label: {
-                            Label(L("generated.action.share"), systemImage: "square.and.arrow.up")
-                        }
+        }
+        .id(entry.id)
+        .navigationTitle(entryTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        showingEntryInfo = true
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Label(L("generated.action.edit_details"), systemImage: "pencil")
                     }
-                    .disabled(isBusy)
-                }
 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L("common.done")) {
-                        Task { @MainActor in
-                            flushAutosaveNow()
-                            if let onDone { onDone() } else { dismiss() }
-                        }
+                    Button {
+                        markAllComplete(!allRowsComplete)
+                    } label: {
+                        Label(
+                            allRowsComplete ? L("generated.action.mark_all_incomplete") : L("generated.action.mark_all_complete"),
+                            systemImage: allRowsComplete ? "circle" : "checkmark.circle.fill"
+                        )
                     }
-                    .disabled(isBusy)
+                    .disabled(data.count <= 1)
+
+                    Button(role: .destructive) {
+                        showRevertConfirmation = true
+                    } label: {
+                        Label(L("generated.action.revert_original"), systemImage: "arrow.uturn.backward")
+                    }
+                    .disabled(originalData.isEmpty)
+
+                    Button {
+                        shareAsXLSX()
+                    } label: {
+                        Label(L("generated.action.share"), systemImage: "square.and.arrow.up")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .disabled(isBusy)
+            }
+
+            ToolbarItem(placement: .confirmationAction) {
+                Button(L("common.done")) {
+                    Task { @MainActor in
+                        flushAutosaveNow()
+                        if let onDone { onDone() } else { dismiss() }
+                    }
+                }
+                .disabled(isBusy)
+            }
+        }
+        .onAppear {
+            initializeFromEntryIfNeeded()
+
+            if entry.isManualEntry && autoOpenScanner {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    showScanner = true
                 }
             }
-            .onAppear {
-                // inizializza i dati dalla HistoryEntry (come facevi già)
-                initializeFromEntryIfNeeded()
-                
-                // se è un inventario manuale e siamo arrivati dal
-                // bottone "Scanner inventario veloce", apri lo scanner subito
-                if entry.isManualEntry && autoOpenScanner {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showScanner = true
-                    }
-                }
+        }
+        .onDisappear {
+            Task { @MainActor in
+                flushAutosaveNow()
             }
-            .onDisappear {
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase != .active {
                 Task { @MainActor in
                     flushAutosaveNow()
                 }
             }
-            .onChange(of: scenePhase) { _, newPhase in
-                if newPhase != .active {
-                    Task { @MainActor in
-                        flushAutosaveNow()
+        }
+        .alert(alertTitle, isPresented: isAlertPresented) {
+            Button(L("common.ok"), role: .cancel) {
+                saveError = nil
+                syncSummaryMessage = nil
+            }
+        } message: {
+            Text(alertMessageText)
+        }
+        .confirmationDialog(
+            shortageDialogTitle,
+            isPresented: Binding(
+                get: { pendingForceComplete != nil },
+                set: { if !$0 { pendingForceComplete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(L("generated.action.force_complete_anyway")) {
+                guard let p = pendingForceComplete else { return }
+                setComplete(rowIndex: p.rowIndex, headerRow: p.headerRow, value: true)
+                pendingForceComplete = nil
+            }
+            Button(L("common.cancel"), role: .cancel) {
+                pendingForceComplete = nil
+            }
+        } message: {
+            if let p = pendingForceComplete {
+                Text(L("generated.shortage.from_file_counted", p.supplier, p.counted))
+            }
+        }
+        .confirmationDialog(
+            L("generated.revert.title"),
+            isPresented: $showRevertConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L("generated.action.revert_original"), role: .destructive) {
+                revertToOriginalSnapshot()
+            }
+            Button(L("common.cancel"), role: .cancel) { }
+        } message: {
+            Text(L("generated.revert.message"))
+        }
+        .confirmationDialog(
+            L("generated.delete_row.title"),
+            isPresented: Binding(
+                get: { pendingDeleteRowIndex != nil },
+                set: { if !$0 { pendingDeleteRowIndex = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(L("generated.action.delete_row"), role: .destructive) {
+                guard let rowIndex = pendingDeleteRowIndex else { return }
+                deleteRow(at: rowIndex)
+                pendingDeleteRowIndex = nil
+            }
+            Button(L("common.cancel"), role: .cancel) {
+                pendingDeleteRowIndex = nil
+            }
+        } message: {
+            if let rowIndex = pendingDeleteRowIndex {
+                let barcode = barcodeForRow(rowIndex)
+                if barcode.isEmpty {
+                    Text(L("generated.delete_row.message"))
+                } else {
+                    Text(L("generated.delete_row.message_barcode", barcode))
+                }
+            }
+        }
+        .sheet(item: $productToEdit) { product in
+            NavigationStack {
+                EditProductView(product: product)
+            }
+        }
+        .sheet(isPresented: $showScanner) {
+            ScannerView(title: L("scanner.default_title")) { code in
+                let touchedRow = handleScannedBarcode(
+                    code,
+                    incrementExistingRow: !reopenRowDetailAfterScan
+                )
+
+                if reopenRowDetailAfterScan, touchedRow != nil {
+                    pendingReopenRowIndexAfterScannerDismiss = nil
+                }
+
+                let shouldReopenDetail = reopenRowDetailAfterScan
+                reopenRowDetailAfterScan = false
+
+                showScanner = false
+
+                if shouldReopenDetail,
+                   let touchedRow,
+                   let header = data.first
+                {
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    focusCountedOnNextDetail = true
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        showRowDetail(for: touchedRow, headerRow: header)
                     }
                 }
             }
-            .alert(alertTitle, isPresented: isAlertPresented) {
-                Button(L("common.ok"), role: .cancel) {
-                    saveError = nil
-                    syncSummaryMessage = nil
+        }
+        .sheet(isPresented: $showManualEntrySheet) {
+            ManualEntrySheet(
+                editIndex: manualEntryEditIndex,
+                data: $data,
+                editable: $editable,
+                complete: $complete,
+                isManualEntry: entry.isManualEntry,
+                onSave: {
+                    entry.totalItems = max(0, data.count - 1)
+                    markDirtyAndScheduleAutosave()
                 }
-            } message: {
-                Text(alertMessageText)
+            )
+        }
+        .sheet(item: $productForHistory) { product in
+            NavigationStack {
+                ProductPriceHistoryView(product: product)
             }
-            .confirmationDialog(
-                shortageDialogTitle,
-                isPresented: Binding(
-                    get: { pendingForceComplete != nil },
-                    set: { if !$0 { pendingForceComplete = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button(L("generated.action.force_complete_anyway")) {
-                    guard let p = pendingForceComplete else { return }
-                    setComplete(rowIndex: p.rowIndex, headerRow: p.headerRow, value: true)
-                    pendingForceComplete = nil
-                }
-                Button(L("common.cancel"), role: .cancel) {
-                    pendingForceComplete = nil
-                }
-            } message: {
-                if let p = pendingForceComplete {
-                    Text(L("generated.shortage.from_file_counted", p.supplier, p.counted))
-                }
-            }
-            .confirmationDialog(
-                L("generated.revert.title"),
-                isPresented: $showRevertConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button(L("generated.action.revert_original"), role: .destructive) {
-                    revertToOriginalSnapshot()
-                }
-                Button(L("common.cancel"), role: .cancel) { }
-            } message: {
-                Text(L("generated.revert.message"))
-            }
-            .confirmationDialog(
-                L("generated.delete_row.title"),
-                isPresented: Binding(
-                    get: { pendingDeleteRowIndex != nil },
-                    set: { if !$0 { pendingDeleteRowIndex = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button(L("generated.action.delete_row"), role: .destructive) {
-                    guard let rowIndex = pendingDeleteRowIndex else { return }
-                    deleteRow(at: rowIndex)
-                    pendingDeleteRowIndex = nil
-                }
-                Button(L("common.cancel"), role: .cancel) {
-                    pendingDeleteRowIndex = nil
-                }
-            } message: {
-                if let rowIndex = pendingDeleteRowIndex {
-                    let barcode = barcodeForRow(rowIndex)
-                    if barcode.isEmpty {
-                        Text(L("generated.delete_row.message"))
-                    } else {
-                        Text(L("generated.delete_row.message_barcode", barcode))
-                    }
-                }
-            }
-            // Sheet per edit prodotto (da pannello dettagli)
-            .sheet(item: $productToEdit) { product in
-                NavigationStack {
-                    EditProductView(product: product)
-                }
-            }
-            .sheet(isPresented: $showScanner) {
-                ScannerView(title: L("scanner.default_title")) { code in
-                    let touchedRow = handleScannedBarcode(
-                        code,
-                        incrementExistingRow: !reopenRowDetailAfterScan
-                    )
-
-                    // ✅ Se ho scansionato davvero (touchedRow != nil) non voglio riaprire la vecchia riga
-                    if reopenRowDetailAfterScan, touchedRow != nil {
-                        pendingReopenRowIndexAfterScannerDismiss = nil
-                    }
-
-                    let shouldReopenDetail = reopenRowDetailAfterScan
-                    reopenRowDetailAfterScan = false
-
-                    showScanner = false
-
-                    if shouldReopenDetail,
-                       let touchedRow,
-                       let header = data.first
-                    {
-                        // ✅ micro-polish: feedback “success” quando troviamo/agganciamo una riga
-                        UINotificationFeedbackGenerator().notificationOccurred(.success)
-
-                        // ✅ garantisce focus su “Contata” quando si riapre il dettaglio
-                        focusCountedOnNextDetail = true
-
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                            showRowDetail(for: touchedRow, headerRow: header)
-                        }
-                    }
-                }
-            }
-            .sheet(isPresented: $showManualEntrySheet) {
-                ManualEntrySheet(
-                    editIndex: manualEntryEditIndex,
-                    data: $data,
-                    editable: $editable,
-                    complete: $complete,
-                    isManualEntry: entry.isManualEntry,
-                    onSave: {
-                        entry.totalItems = max(0, data.count - 1)
-                        markDirtyAndScheduleAutosave()
+        }
+        .sheet(item: $rowDetail) { detail in
+            rowDetailSheet(detail)
+        }
+        .sheet(item: $importAnalysisSession) { session in
+            NavigationStack {
+                ImportAnalysisView(
+                    session: session,
+                    onApply: {
+                        applyImportAnalysis(session)
                     }
                 )
             }
-            
-            // Sheet per storico prezzi (da pannello dettagli)
-            .sheet(item: $productForHistory) { product in
-                NavigationStack {
-                    ProductPriceHistoryView(product: product)
-                }
-            }
-            // Sheet scanner barcode (camera)
-            .sheet(item: $rowDetail) { detail in
-                rowDetailSheet(detail)
-            }
-            // 🔹 NUOVO: sheet per l’analisi di import prodotti
-            .sheet(item: $importAnalysis) { analysis in
-                NavigationStack {
-                    ImportAnalysisView(
-                        analysis: analysis,
-                        onApply: { editedAnalysis in
-                            applyImportAnalysis(editedAnalysis)
+        }
+        .sheet(isPresented: $showSearch) {
+            NavigationStack {
+                InventorySearchSheet(
+                    data: data,
+                    onJumpToRow: { rowIndex in
+                        if showOnlyErrorRows {
+                            withAnimation(.snappy) { showOnlyErrorRows = false }
                         }
-                    )
-                }
-            }
-            .sheet(isPresented: $showSearch) {
-                NavigationStack {
-                    InventorySearchSheet(
-                        data: data,
-                        onJumpToRow: { rowIndex in
-                            if showOnlyErrorRows {
-                                withAnimation(.snappy) { showOnlyErrorRows = false }
-                            }
-                            scrollToRowIndex = rowIndex
-                        },
-                        onOpenDetail: { rowIndex in
-                            if showOnlyErrorRows {
-                                withAnimation(.snappy) { showOnlyErrorRows = false }
-                            }
-                            // evita “present while dismissing”
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                                let headerRow = data.first ?? []
-                                showRowDetail(for: rowIndex, headerRow: headerRow)
-                            }
-                        },
-                        onApplyBarcode: { code in
-                            handleScannedBarcode(code)
+                        scrollToRowIndex = rowIndex
+                    },
+                    onOpenDetail: { rowIndex in
+                        if showOnlyErrorRows {
+                            withAnimation(.snappy) { showOnlyErrorRows = false }
                         }
-                    )
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            let headerRow = data.first ?? []
+                            showRowDetail(for: rowIndex, headerRow: headerRow)
+                        }
+                    },
+                    onApplyBarcode: { code in
+                        handleScannedBarcode(code)
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: $showingEntryInfo) {
+            EntryInfoEditor(entry: entry)
+        }
+        .sheet(item: $shareItem) { item in
+            ShareSheet(items: [item.url])
+        }
+    }
+
+    private var generatedForm: some View {
+        Form {
+            inventorySection
+            summarySection
+            databaseActionsSection
+        }
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 140)
+        }
+    }
+
+    @ViewBuilder
+    private var inventorySection: some View {
+        Section(L("generated.inventory.title")) {
+            if data.isEmpty {
+                Text(L("generated.inventory.no_data"))
+                    .foregroundStyle(.secondary)
+            } else {
+                inventoryStatusView
+                inventoryProgressView
+                inventoryGridContent
+
+                if entry.isManualEntry {
+                    Button {
+                        addManualRow()
+                    } label: {
+                        Label(L("generated.action.add_row"), systemImage: "plus")
+                    }
                 }
             }
-            .sheet(isPresented: $showingEntryInfo) {
-                EntryInfoEditor(entry: entry)
+        }
+    }
+
+    private var inventoryStatusView: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(L("generated.inventory.rows_count", inventoryTotalCount))
+                Spacer()
+                if inventoryErrorCount > 0 {
+                    Text(L("generated.inventory.rows_with_error_count", inventoryErrorCount))
+                        .foregroundStyle(.red)
+                } else {
+                    Text(L("generated.inventory.no_error"))
+                        .foregroundStyle(.secondary)
+                }
             }
-            .sheet(item: $shareItem) { item in
-                ShareSheet(items: [item.url])
+            .font(.footnote)
+
+            Toggle(L("generated.inventory.only_errors"), isOn: $showOnlyErrorRows)
+                .font(.footnote)
+        }
+    }
+
+    private var inventoryProgressView: some View {
+        ProgressView(value: Double(inventoryCheckedCount), total: Double(max(inventoryTotalCount, 1))) {
+            Text(L("generated.inventory.completed_count", inventoryCheckedCount, inventoryTotalCount))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var inventoryGridContent: some View {
+        if showOnlyErrorRows && inventoryVisibleRowIndices.isEmpty {
+            if #available(iOS 17.0, *) {
+                ContentUnavailableView(
+                    L("generated.inventory.no_error_rows"),
+                    systemImage: "checkmark.seal",
+                    description: Text(L("generated.inventory.no_error_rows_description"))
+                )
+                .padding(.vertical, 8)
+            } else {
+                Text(L("generated.inventory.no_error_rows"))
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            inventoryGridView
+        }
+    }
+
+    private var inventoryGridView: some View {
+        ScrollView(.horizontal) {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                inventoryHeaderView
+
+                Divider()
+                    .padding(.vertical, 4)
+
+                ForEach(inventoryVisibleRowIndices, id: \.self) { rowIndex in
+                    inventoryRowView(rowIndex)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+    }
+
+    private var inventoryHeaderView: some View {
+        HStack(alignment: .center, spacing: 6) {
+            ForEach(inventoryColumns, id: \.self) { columnIndex in
+                let key = inventoryHeaderRow[columnIndex]
+                Text(columnTitle(for: key))
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .frame(width: columnWidth(for: key), alignment: columnAlignment(for: key))
+            }
+        }
+        .padding(.vertical, 6)
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func inventoryRowView(_ rowIndex: Int) -> some View {
+        let headerRow = inventoryHeaderRow
+        let hasError = rowHasError(rowIndex: rowIndex, headerRow: headerRow)
+        let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
+        let hasShortage = rowHasShortage(rowIndex: rowIndex, headerRow: headerRow)
+
+        return HStack(alignment: .center, spacing: 6) {
+            ForEach(inventoryColumns, id: \.self) { columnIndex in
+                cellView(
+                    rowIndex: rowIndex,
+                    columnIndex: columnIndex,
+                    headerRow: headerRow,
+                    isDone: isDone
+                )
+                .frame(
+                    width: columnWidth(for: headerRow[columnIndex]),
+                    alignment: columnAlignment(for: headerRow[columnIndex])
+                )
+            }
+        }
+        .id("row-\(rowIndex)")
+        .onAppear { visibleRowSet.insert(rowIndex) }
+        .onDisappear { visibleRowSet.remove(rowIndex) }
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
+        .onTapGesture { flashAndOpenRow(rowIndex, headerRow: headerRow) }
+        .background(rowBackground(hasError: hasError, hasShortage: hasShortage, isDone: isDone, rowIndex: rowIndex))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .contextMenu {
+            Button {
+                requestSetComplete(rowIndex: rowIndex, headerRow: headerRow, value: !isDone)
+            } label: {
+                Label(
+                    isDone ? L("generated.action.mark_not_completed") : L("generated.action.mark_completed"),
+                    systemImage: isDone ? "circle" : "checkmark.circle.fill"
+                )
+            }
+
+            Button {
+                showRowDetail(for: rowIndex, headerRow: headerRow)
+            } label: {
+                Label(L("generated.action.row_details"), systemImage: "info.circle")
+            }
+
+            Button(role: .destructive) {
+                pendingDeleteRowIndex = rowIndex
+            } label: {
+                Label(L("generated.action.delete_row"), systemImage: "trash")
+            }
+
+            if let bIndex = headerRow.firstIndex(of: "barcode"),
+               data[rowIndex].indices.contains(bIndex) {
+                let barcode = data[rowIndex][bIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !barcode.isEmpty {
+                    Button {
+                        UIPasteboard.general.string = barcode
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    } label: {
+                        Label(L("generated.action.copy_barcode"), systemImage: "doc.on.doc")
+                    }
+                }
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                requestSetComplete(rowIndex: rowIndex, headerRow: headerRow, value: !isDone)
+            } label: {
+                Label(
+                    isDone ? L("generated.action.not_completed") : L("generated.action.completed"),
+                    systemImage: isDone ? "circle" : "checkmark.circle.fill"
+                )
+            }
+            .tint(isDone ? .gray : .green)
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button {
+                showRowDetail(for: rowIndex, headerRow: headerRow)
+            } label: {
+                Label(L("generated.action.details"), systemImage: "info.circle")
+            }
+            .tint(.blue)
+
+            Button(role: .destructive) {
+                pendingDeleteRowIndex = rowIndex
+            } label: {
+                Label(L("common.delete"), systemImage: "trash")
+            }
+            .tint(.red)
+
+            if let bIndex = headerRow.firstIndex(of: "barcode"),
+               data[rowIndex].indices.contains(bIndex) {
+                let barcode = data[rowIndex][bIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !barcode.isEmpty {
+                    Button {
+                        UIPasteboard.general.string = barcode
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    } label: {
+                        Label(L("generated.action.copy"), systemImage: "doc.on.doc")
+                    }
+                    .tint(.gray)
+                }
+            }
+        }
+    }
+
+    private var summarySection: some View {
+        let missing = max(0, entry.totalItems - inventoryCheckedCount)
+
+        return Section(L("generated.summary.title")) {
+            LabeledContent(L("generated.summary.total_items")) {
+                Text("\(entry.totalItems)")
+            }
+            LabeledContent(L("generated.summary.items_to_complete")) {
+                Text("\(missing)")
+            }
+            LabeledContent(L("generated.summary.rows_in_error")) {
+                Text("\(inventoryErrorCount)")
+                    .foregroundStyle(inventoryErrorCount > 0 ? .red : .secondary)
+            }
+            LabeledContent(L("generated.summary.initial_order_total")) {
+                Text(formatMoney(entry.orderTotal))
+            }
+        }
+    }
+
+    private var databaseActionsSection: some View {
+        Section {
+            if !entry.isManualEntry {
+                Button {
+                    startProductImportAnalysis()
+                } label: {
+                    Text(L("generated.action.update_products"))
+                }
+                .disabled(isSaving || isSyncing)
+
+                Button {
+                    syncWithDatabase()
+                } label: {
+                    if isSyncing {
+                        HStack {
+                            ProgressView()
+                            Text(L("generated.syncing"))
+                        }
+                    } else {
+                        Text(L("generated.action.apply_inventory_db"))
+                    }
+                }
+                .disabled(isSaving || isSyncing)
+            } else {
+                Text(L("generated.autosave.active"))
+                    .foregroundStyle(.secondary)
+            }
+        } footer: {
+            if isSaving {
+                Text(L("generated.autosave.saving"))
+            } else if hasUnsavedChanges {
+                Text(L("generated.autosave.pending"))
+            } else if let lastSavedAt {
+                let savedAt = lastSavedAt.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(appLocale()))
+                Text(L("generated.autosave.saved_at", savedAt))
+            } else {
+                Text(L("generated.autosave.active"))
             }
         }
     }
@@ -1722,7 +1762,7 @@ struct GeneratedView: View {
         if let analysis = vm.analysis {
             // Salviamo sia il risultato che il view model da usare su "Applica"
             self.productImportVM = vm
-            self.importAnalysis = analysis
+            self.importAnalysisSession = ImportAnalysisSession(analysis: analysis)
         } else if let error = vm.lastError {
             self.saveError = error
         }
@@ -1993,15 +2033,20 @@ struct GeneratedView: View {
         )
     }
     
-    private func applyImportAnalysis(_ analysis: ProductImportAnalysisResult) {
+    private func applyImportAnalysis(_ session: ImportAnalysisSession) {
         if let vm = productImportVM {
-            vm.analysis = analysis
+            vm.analysis = ProductImportAnalysisResult(
+                newProducts: session.newProducts,
+                updatedProducts: session.updatedProducts,
+                errors: session.errors,
+                warnings: session.warnings
+            )
             vm.applyImport()
             if let error = vm.lastError {
                 saveError = error
             }
         }
-        importAnalysis = nil
+        importAnalysisSession = nil
     }
     
     private var isAlertPresented: Binding<Bool> {

@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-022 ACTIVE — Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) (PLANNING in corso, responsabile: CLAUDE).
+TASK-022 ACTIVE — Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) (EXECUTION in corso, responsabile: CODEX).
 
 ## Stato globale
 ACTIVE
-> TASK-022 in PLANNING (full-database large import: apply crash after analysis). TASK-011 bloccato (sospeso per decisione utente; il problema emerso nei test reali viene estratto in TASK-022 perche' piu' specifico e immediatamente bloccante). TASK-014 completato (global audit & backlog refresh, 2026-03-22). TASK-002 chiuso come DONE parziale (2026-03-22): "Condividi/Invia copia" funziona; "Apri con" cross-app documentato come limite iOS noto. TASK-015 WONT_DO (2026-03-22). TASK-010 bloccato (review tecnica finale APPROVED, test manuali finali sospesi per decisione utente), TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, sblocco subordinato a TASK-022), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — test manuali), TASK-009 bloccato (implementazione completata, review codice APPROVED, test manuali sospesi per decisione utente), TASK-012 completato, TASK-013 bloccato (sospeso per decisione utente: workflow SIM UI rimosso dal processo standard).
+> TASK-022 in EXECUTION (full-database large import: apply crash after analysis). In workspace e' stato applicato il fix di ownership tra `DatabaseView` e `ImportAnalysisView` per eliminare la doppia copia di `ProductImportAnalysisResult`, ma il task non e' review-ready: il build richiesto fallisce su `GeneratedView.swift:139` e il rerun simulator disponibile ha colpito il binary gia' installato, che al tap su `Applica` crasha ancora con stack vecchio (`ProductImportAnalysisResult.hasChanges` -> `DatabaseView.makeImportApplyPayload(analysis:pendingFullImportContext:)` -> `DatabaseView.applyConfirmedImportAnalysis(_)`). TASK-011 bloccato (sospeso per decisione utente; il problema emerso nei test reali viene estratto in TASK-022 perche' piu' specifico e immediatamente bloccante). TASK-014 completato (global audit & backlog refresh, 2026-03-22). TASK-002 chiuso come DONE parziale (2026-03-22): "Condividi/Invia copia" funziona; "Apri con" cross-app documentato come limite iOS noto. TASK-015 WONT_DO (2026-03-22). TASK-010 bloccato (review tecnica finale APPROVED, test manuali finali sospesi per decisione utente), TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, sblocco subordinato a TASK-022), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — test manuali), TASK-009 bloccato (implementazione completata, review codice APPROVED, test manuali sospesi per decisione utente), TASK-012 completato, TASK-013 bloccato (sospeso per decisione utente: workflow SIM UI rimosso dal processo standard).
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -53,8 +53,8 @@ Qualunque altra transizione è invalida.
 - Titolo: Full-database large import: apply crash after analysis (EXC_BAD_ACCESS)
 - File task: `docs/TASKS/TASK-022-full-db-large-import-apply-crash.md`
 - Stato: ACTIVE
-- Fase attuale: PLANNING
-- Responsabile attuale: CLAUDE
+- Fase attuale: EXECUTION
+- Responsabile attuale: CODEX
 - Ultimo aggiornamento: 2026-03-23
 
 Task bloccati non attivi:
@@ -172,6 +172,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - User override: se l'utente dà un'istruzione in conflitto col workflow, gli agent possono seguirla ma devono segnalare l'impatto
 - User override 2026-03-21: autorizzato riallineamento minimo del tracking da parte di Codex per evitare il blocco operativo tra file task e MASTER-PLAN durante l'avvio di TASK-008
 - User override 2026-03-23: autorizzata da utente la sospensione di TASK-011 e la creazione/attivazione di TASK-022; backlog e tracking riallineati di conseguenza
+- User override 2026-03-23: per TASK-022 il planning operativo viene svolto da Codex; il task resta in PLANNING fino all'avvio esplicito dell'execution
 
 ## Criterio di aggiornamento
 Questo file va aggiornato SOLO quando cambia almeno uno di:
