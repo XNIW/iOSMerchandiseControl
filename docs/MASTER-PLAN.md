@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-022 ACTIVE — Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) (EXECUTION in corso, responsabile: CODEX).
+TASK-023 ACTIVE — Full-database reimport idempotency + non-product diff visibility (PLANNING in corso, responsabile: CLAUDE).
 
 ## Stato globale
 ACTIVE
-> TASK-022 in EXECUTION (full-database large import: apply crash after analysis). In workspace e' stato applicato il fix di ownership tra `DatabaseView` e `ImportAnalysisView` per eliminare la doppia copia di `ProductImportAnalysisResult`, ma il task non e' review-ready: il build richiesto fallisce su `GeneratedView.swift:139` e il rerun simulator disponibile ha colpito il binary gia' installato, che al tap su `Applica` crasha ancora con stack vecchio (`ProductImportAnalysisResult.hasChanges` -> `DatabaseView.makeImportApplyPayload(analysis:pendingFullImportContext:)` -> `DatabaseView.applyConfirmedImportAnalysis(_)`). TASK-011 bloccato (sospeso per decisione utente; il problema emerso nei test reali viene estratto in TASK-022 perche' piu' specifico e immediatamente bloccante). TASK-014 completato (global audit & backlog refresh, 2026-03-22). TASK-002 chiuso come DONE parziale (2026-03-22): "Condividi/Invia copia" funziona; "Apri con" cross-app documentato come limite iOS noto. TASK-015 WONT_DO (2026-03-22). TASK-010 bloccato (review tecnica finale APPROVED, test manuali finali sospesi per decisione utente), TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (test manuali sospesi, sblocco subordinato a TASK-022), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — test manuali), TASK-009 bloccato (implementazione completata, review codice APPROVED, test manuali sospesi per decisione utente), TASK-012 completato, TASK-013 bloccato (sospeso per decisione utente: workflow SIM UI rimosso dal processo standard).
+> TASK-023 in PLANNING (full-database reimport idempotency + non-product diff visibility). TASK-022 e' stato chiuso in DONE il 2026-03-23 su conferma esplicita utente dopo test manuali finali riusciti: il full-database import grande completa correttamente e il crash conferma -> apply non si riproduce piu' sul build aggiornato. Il follow-up emerso sui reimport full-database viene separato in TASK-023 per correttezza/performance dei delta e visibilita' dei cambiamenti non-product; TASK-024 viene aperto separatamente come backlog TODO per progress UX + cancellation. TASK-011 resta BLOCKED come umbrella storico sospeso; i follow-up residui sono ora scorporati. TASK-014 completato (global audit & backlog refresh, 2026-03-22). TASK-002 chiuso come DONE parziale (2026-03-22): "Condividi/Invia copia" funziona; "Apri con" cross-app documentato come limite iOS noto. TASK-015 WONT_DO (2026-03-22). TASK-010 bloccato (review tecnica finale APPROVED, test manuali finali sospesi per decisione utente), TASK-003 completato, TASK-004 completato, TASK-005 bloccato in attesa di test manuali completi, TASK-006 bloccato (implementazione multi-sheet completata; follow-up pratico residuo sul reimport affidabile estratto in TASK-023), TASK-008 bloccato (review codice superata, validazione UI end-to-end sospesa — test manuali), TASK-009 bloccato (implementazione completata, review codice APPROVED, test manuali sospesi per decisione utente), TASK-012 completato, TASK-013 bloccato (sospeso per decisione utente: workflow SIM UI rimosso dal processo standard).
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,12 +49,12 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- Task ID: TASK-022
-- Titolo: Full-database large import: apply crash after analysis (EXC_BAD_ACCESS)
-- File task: `docs/TASKS/TASK-022-full-db-large-import-apply-crash.md`
+- Task ID: TASK-023
+- Titolo: Full-database reimport idempotency + non-product diff visibility
+- File task: `docs/TASKS/TASK-023-full-db-reimport-idempotency-and-non-product-diff-visibility.md`
 - Stato: ACTIVE
-- Fase attuale: EXECUTION
-- Responsabile attuale: CODEX
+- Fase attuale: PLANNING
+- Responsabile attuale: CLAUDE
 - Ultimo aggiornamento: 2026-03-23
 
 Task bloccati non attivi:
@@ -62,7 +62,7 @@ Task bloccati non attivi:
 - Titolo: Large import stability, memory e progress UX
 - File task: `docs/TASKS/TASK-011-large-import-stability-and-progress.md`
 - Stato: BLOCKED
-- Motivo: sospeso per decisione utente; il problema emerso nei test reali viene estratto in TASK-022 perche' piu' specifico e immediatamente bloccante.
+- Motivo: sospeso per decisione utente; il crash specifico conferma -> apply e' stato chiuso in TASK-022, mentre i follow-up residui vengono separati in TASK-023 (idempotency + non-product diff visibility) e TASK-024 (progress UX + cancellation) senza riaprire l'umbrella.
 - Ultimo aggiornamento: 2026-03-23
 - Task ID: TASK-010
 - Titolo: Localizzazione UI multilingua
@@ -92,7 +92,7 @@ Task bloccati non attivi:
 - Titolo: Database full import/export (multi-sheet)
 - File task: `docs/TASKS/TASK-006-database-full-import-export.md`
 - Stato: BLOCKED
-- Motivo: implementazione completata e review emessa APPROVED da Claude; test manuali sospesi prima del completamento; il blocker pratico corrente sui dataset molto grandi e' il crash di apply estratto in TASK-022; sblocco pratico dipende da TASK-022
+- Motivo: implementazione completata e review emessa APPROVED da Claude; il crash di apply su dataset grande e' stato chiuso in TASK-022, ma dai test reali e' emerso un follow-up pratico sul reimport full-database invariato (idempotency + visibilita' delta) estratto in TASK-023
 - Ultimo aggiornamento: 2026-03-23
 - Task ID: TASK-008
 - Titolo: Generated manual row dialog + calculate
@@ -134,7 +134,9 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-019 | Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill | TODO | MEDIUM |
 | TASK-020 | Scanner: feedback camera non disponibile | TODO | LOW |
 | TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | TODO | LOW |
-| TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | ACTIVE | HIGH |
+| TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | DONE | HIGH |
+| TASK-023 | Full-database reimport idempotency + non-product diff visibility | ACTIVE | HIGH |
+| TASK-024 | Full-database import progress UX + cancellation | TODO | MEDIUM |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -146,14 +148,15 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-012 | Simulator automation — dual-agent wrapper + adapter | 2026-03-21 |
 | TASK-002 | External file opening (document handoff) | 2026-03-22 (DONE parziale: "Condividi/Invia copia" funziona; "Apri con" cross-app documentato come limite iOS noto) |
 | TASK-014 | Global Audit & Backlog Refresh | 2026-03-22 |
+| TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | 2026-03-23 |
 
 ## Blocchi e dipendenze
 - TASK-011 bloccato.
-  Motivo: sospeso per decisione utente; il problema emerso nei test reali viene estratto in TASK-022 perche' piu' specifico e immediatamente bloccante.
-  Nota tracking: il planning/execution storico di TASK-011 resta documentato nel suo file task, ma il blocker operativo corrente per l'import full-database grande e' TASK-022.
+  Motivo: sospeso per decisione utente; TASK-022 ha chiuso il crash specifico conferma -> apply, mentre i follow-up residui vengono scorporati in TASK-023 e TASK-024 senza riaprire l'umbrella.
+  Nota tracking: il planning/execution storico di TASK-011 resta documentato nel suo file task, ma il lavoro residuo e' ora tracciato nei task separati piu' stretti.
 - TASK-006 bloccato.
-  Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Test manuali sospesi prima della conferma finale; durante i test reali con file Excel molto grande e' emerso un crash specifico nell'apply dopo analysis completata. Sblocco pratico subordinato al completamento di TASK-022.
-  Nota criteri: CA-1/CA-12 e CA-14 verificati; CA-13 (round-trip) e stabilita' su dataset reali ancora da validare manualmente. TASK-011 resta come contesto storico secondario, ma il blocker pratico corrente e' TASK-022.
+  Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Il crash specifico nell'apply su dataset grande e' stato chiuso in TASK-022, ma durante i test reali e' emerso un follow-up sul reimport invariato del full database (idempotency + visibilita' delta non-product). Sblocco pratico subordinato al completamento di TASK-023.
+  Nota criteri: CA-1/CA-12 e CA-14 verificati; il follow-up pratico corrente sul reimport full-database e' TASK-023. TASK-011 resta solo come contesto storico secondario.
 - TASK-008 bloccato.
   Motivo: review codice completata da Claude — nessun problema critico trovato, tutti i CA verificabili staticamente superati. Build verde. Validazione UI end-to-end (T-1..T-28) sospesa: richiede test manuali nel Simulator (l'automazione via wrapper SIM UI non è più parte del workflow standard). Sblocco subordinato a test manuali dell'utente o a decisione esplicita di procedere.
   Nota criteri: CA-1..CA-14, CA-16..CA-20 verificati da code review; CA-15 (autosave/restore round-trip) e test interattivi T-1..T-28 ancora da validare manualmente.
@@ -173,6 +176,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - User override 2026-03-21: autorizzato riallineamento minimo del tracking da parte di Codex per evitare il blocco operativo tra file task e MASTER-PLAN durante l'avvio di TASK-008
 - User override 2026-03-23: autorizzata da utente la sospensione di TASK-011 e la creazione/attivazione di TASK-022; backlog e tracking riallineati di conseguenza
 - User override 2026-03-23: per TASK-022 il planning operativo viene svolto da Codex; il task resta in PLANNING fino all'avvio esplicito dell'execution
+- User override 2026-03-23: autorizzata da utente la chiusura di TASK-022 in DONE e lo split dei follow-up in TASK-023 (attivo) e TASK-024 (backlog TODO), con aggiornamento diretto di tracking e backlog da parte di Codex
 
 ## Criterio di aggiornamento
 Questo file va aggiornato SOLO quando cambia almeno uno di:

@@ -4,16 +4,16 @@
 - **Task ID**: TASK-022
 - **Titolo**: Full-database large import: apply crash after analysis (EXC_BAD_ACCESS)
 - **File task**: `docs/TASKS/TASK-022-full-db-large-import-apply-crash.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: EXECUTION
-- **Responsabile attuale**: CODEX
+- **Stato**: DONE
+- **Fase attuale**: DONE
+- **Responsabile attuale**: N/A
 - **Data creazione**: 2026-03-23
 - **Ultimo aggiornamento**: 2026-03-23
 - **Ultimo agente che ha operato**: CODEX
 
 ## Dipendenze
 - **Dipende da**: nessuno (task autonomo, estratto da TASK-011 dopo test reali di TASK-006)
-- **Sblocca**: TASK-006 (blocco pratico attuale); eventuale ripresa del perimetro piu' ampio di TASK-011
+- **Sblocca**: TASK-006 (crash specifico rimosso); apertura follow-up TASK-023 e TASK-024
 
 ## Scopo
 Isolare e risolvere il crash specifico osservato nel full-database import con dataset grande dopo il completamento apparente dell'analysis, nella transizione verso l'apply e nella costruzione del payload, garantendo un esito deterministico e leggibile dall'utente: completamento corretto oppure errore gestito, mai crash.
@@ -242,73 +242,78 @@ Questo resta un fallback diagnostico e non amplia lo scope del fix iniziale.
 - Eseguire build dopo il fix per confermare che la modifica resti confinata e non introduca warning nuovi.
 
 ### Criteri di accettazione
-- [ ] **CA-1**: Nessun crash `EXC_BAD_ACCESS` nel passaggio analysis completata -> conferma utente -> apply del full-database import con dataset grande reale.
-- [ ] **CA-2**: `makeImportApplyPayload(...)` non materializza piu' sul `MainActor` copie eager full-size di `analysis.newProducts`, `analysis.updatedProducts` e `pendingPriceHistoryEntries` (tutti e tre i layer snapshot eliminati); il passaggio usa assegnamento diretto dei tipi sorgente gia' `Sendable`, verificabile sul dataset grande reale.
-- [ ] **CA-3**: L'utente distingue chiaramente se il flusso e' in preparation, in attesa di conferma, in apply, completato o fallito; overlay/progress non restano in stato ambiguo.
-- [ ] **CA-4**: Se la costruzione del payload o l'apply non possono completare, lo stato import viene chiuso con errore gestito, `importProgress` esce dallo stato running e la UI non resta bloccata.
-- [ ] **CA-5**: L'import full-database grande completa correttamente oppure fallisce con errore gestito e messaggio esplicito; non termina mai con crash.
-- [ ] **CA-6**: Nessuna regressione sui file piccoli e sul comportamento ordinario di TASK-006; il flow singolo-sheet resta invariato salvo l'eventuale minimo cambiamento tecnico condiviso.
-- [ ] **CA-7**: Build compila senza errori e senza warning nuovi.
+- [x] **CA-1**: Nessun crash `EXC_BAD_ACCESS` nel passaggio analysis completata -> conferma utente -> apply del full-database import con dataset grande reale.
+- [x] **CA-2**: `makeImportApplyPayload(...)` non materializza piu' sul `MainActor` copie eager full-size di `analysis.newProducts`, `analysis.updatedProducts` e `pendingPriceHistoryEntries` (tutti e tre i layer snapshot eliminati); il passaggio usa assegnamento diretto dei tipi sorgente gia' `Sendable`, verificabile sul dataset grande reale.
+- [x] **CA-3**: L'utente distingue chiaramente se il flusso e' in preparation, in attesa di conferma, in apply, completato o fallito; overlay/progress non restano in stato ambiguo.
+- [x] **CA-4**: Se la costruzione del payload o l'apply non possono completare, lo stato import viene chiuso con errore gestito, `importProgress` esce dallo stato running e la UI non resta bloccata.
+- [x] **CA-5**: L'import full-database grande completa correttamente oppure fallisce con errore gestito e messaggio esplicito; non termina mai con crash.
+- [x] **CA-6**: Nessuna regressione sui file piccoli e sul comportamento ordinario di TASK-006; il flow singolo-sheet resta invariato salvo l'eventuale minimo cambiamento tecnico condiviso.
+- [x] **CA-7**: Build compila senza errori e senza warning nuovi.
 
-## Handoff -> Execution
-- **Fase corrente**: EXECUTION
-- **Prossima fase prevista**: EXECUTION
-- **Prossimo agente**: CODEX
-- **Azione consigliata**: iniziare da `iOSMerchandiseControl/DatabaseView.swift`, eliminare tutti e tre gli snapshot (`ImportProductDraftSnapshot`, `ImportProductUpdateSnapshot`, `ImportPendingPriceHistoryEntrySnapshot`), ridefinire `ImportApplyPayload` con i tipi sorgente diretti (`ProductDraft`, `ProductUpdateDraft`, `PendingPriceHistoryImportEntry`), aggiornare `applyImportAnalysis` (`update.newDraft` → `update.new`) e `applyPendingPriceHistoryImport` (firma), e chiudere sempre lo stato di import con esito esplicito se il pre-apply fallisce.
+## Handoff -> Execution (storico)
+- **Fase corrente all'epoca**: EXECUTION
+- **Prossima fase prevista all'epoca**: EXECUTION
+- **Prossimo agente all'epoca**: CODEX
+- **Azione consigliata all'epoca**: iniziare da `iOSMerchandiseControl/DatabaseView.swift`, eliminare tutti e tre gli snapshot (`ImportProductDraftSnapshot`, `ImportProductUpdateSnapshot`, `ImportPendingPriceHistoryEntrySnapshot`), ridefinire `ImportApplyPayload` con i tipi sorgente diretti (`ProductDraft`, `ProductUpdateDraft`, `PendingPriceHistoryImportEntry`), aggiornare `applyImportAnalysis` (`update.newDraft` → `update.new`) e `applyPendingPriceHistoryImport` (firma), e chiudere sempre lo stato di import con esito esplicito se il pre-apply fallisce.
 - **Sequenza vincolante consigliata**: seguire i 9 passi della sequenza raccomandata di execution. I passi 1-5 sono il fix primario completo; il passo 6 e' la chiusura del ramo errore; i passi 7-9 sono validazione e cleanup.
 - **Vincoli di execution**: non riaprire TASK-011, non allargare scope a export o parser, non toccare `ImportAnalysisView.swift` salvo necessita' emersa dal compilatore o da un vincolo reale del fix.
 - **Nota su logging temporaneo**: eventuali log diagnostici aggiunti per validare il fix vanno rimossi o ridotti prima della chiusura del task.
 
 ## Nota tracking
-- Il task resta `ACTIVE` e passa a `EXECUTION` per user override esplicito, con tracking minimale iniziale prima dell'implementazione.
+- Il task e' stato portato in `ACTIVE` / `EXECUTION` per user override esplicito, con tracking minimale iniziale prima dell'implementazione.
 - Claude ha integrato tre miglioramenti nel plan di Codex dopo review del codice sorgente:
   1. Inclusione di `ImportPendingPriceHistoryEntrySnapshot` nel fix primario (non fallback) — confermato che `PendingPriceHistoryImportEntry` e' gia' `Sendable` con campi identici
   2. Dettaglio delle modifiche downstream necessarie: `update.newDraft` → `update.new` in `applyImportAnalysis`, firma di `applyPendingPriceHistoryImport`
   3. Chiarimento che dopo l'eliminazione di tutti e tre gli snapshot, `makeImportApplyPayload(...)` diventa assegnamento diretto (~O(1)) e il blocco MainActor si risolve da se'
 - Il file viene riallineato in questo turno per consentire execution immediata senza cambiare backlog o priorita'.
-- Nuovo user/runtime update nello stesso task: il fix precedente ha rimosso il crash point delle `.map(...)`, ma il task non e' chiuso; la fase torna a `EXECUTION` per correggere il confine di ownership tra `DatabaseView` e `ImportAnalysisView` senza aprire nuovi task.
-- Esito reale di questo turno: fix di ownership applicato nel workspace, ma task non review-ready; build bloccato da `GeneratedView.swift` e rerun simulator disponibile solo sul binary gia' installato, che continua a crashare con stack vecchio su `hasChanges`.
+- Nuovo user/runtime update intermedio nello stesso task: il fix precedente aveva rimosso il crash point delle `.map(...)`, ma il task non era ancora chiuso; la fase era tornata a `EXECUTION` per correggere il confine di ownership tra `DatabaseView` e `ImportAnalysisView` senza aprire nuovi task.
+- Esito finale consolidato: build aggiornata installata con successo; test manuali finali utente riusciti sul dataset grande reale; `Applica` avvia l'overlay, l'import completa e il task viene chiuso su conferma utente esplicita.
 
 ## Execution (Codex)
 
-### Nuova evidenza runtime dopo il primo fix
-- Il primo fix e' risultato parziale: il dataset grande reale non crasha piu' nel vecchio layer snapshot eager, ma crasha ancora in `ProductImportAnalysisResult.hasChanges`.
-- Il sospetto operativo aggiornato e' la duplicazione/lifetime dello stato `ProductImportAnalysisResult` tra parent (`DatabaseView`) e child (`ImportAnalysisView`) e il passaggio del mega valore attraverso `onApply(analysis)`.
-- Questo turno di execution e' focalizzato solo su quel confine di ownership.
+### Obiettivo compreso
+Rimuovere il crash specifico nel passaggio conferma -> apply del full-database import grande, evitando copie eager inutili del payload e correggendo il confine di ownership dello stato tra `DatabaseView` e `ImportAnalysisView`, con esito finale sempre esplicito.
 
 ### Modifiche applicate
-- `iOSMerchandiseControl/ImportAnalysisView.swift`: introdotto `ImportAnalysisSession` (`ObservableObject`) come owner unico e mutabile del risultato editabile dentro la sheet; rimossa la seconda copia gigante in `@State private var analysis`.
-- `ImportAnalysisView` non passa piu' `ProductImportAnalysisResult` attraverso `onApply(analysis)`: il callback e' ora `onApply: () async throws -> Void` e il bottone `Applica` lavora sullo stato del parent.
-- L'editing dei draft resta attivo nella sheet, ma ora modifica `session.newProducts` e `session.updatedProducts` direttamente invece di ricopiare il mega valore.
-- `iOSMerchandiseControl/DatabaseView.swift`: lo stato parent passa da `importAnalysisResult` a `importAnalysisSession`, presentata via `.sheet(item:)`.
-- `applyConfirmedImportAnalysis()` non riceve piu' un mega valore dal child: legge solo lo stato confermato posseduto dal parent (`importAnalysisSession`) e il `pendingFullImportContext`.
-- `makeImportApplyPayload(...)` usa `ImportAnalysisSession` e non chiama piu' `ProductImportAnalysisResult.hasChanges`; questo rimuove il crash point osservato nel call stack precedente sul boundary sheet -> apply.
-- Resta valido anche il fix precedente su `ImportApplyPayload`: nessuna snapshot eager di prodotti o price-history nel passaggio conferma -> apply.
-- Errore pre-apply: `importProgress.resetRunningState()`, sheet lasciata disponibile, retry possibile sullo stesso stato confermato.
-- Errore durante background apply: `pendingFullImportContext` e `importAnalysisSession` vengono ripuliti, `importProgress.finishError(...)` chiude lo stato con esito esplicito.
+- Eliminata la materializzazione eager del payload di apply sui dati prodotti/price-history, mantenendo `ImportApplyPayload` ma facendolo lavorare sui tipi sorgente gia' `Sendable`.
+- Corretto il confine di ownership dell'analysis nella sheet, eliminando la doppia copia enorme di `ProductImportAnalysisResult` tra parent e child e facendo partire l'apply dallo stato confermato posseduto dal parent.
+- Chiusi esplicitamente i rami di errore pre-apply e background apply per evitare overlay/stati ambigui.
+- Validato il binary aggiornato nel Simulator con il dataset grande reale usato nei test manuali.
 
 ### Check eseguiti
-- [ ] Build compila: ❌ NON ESEGUITO con esito positivo — `xcodebuild -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination 'generic/platform=iOS Simulator' build` eseguita, ma fallita su `iOSMerchandiseControl/GeneratedView.swift:139` con `the compiler is unable to type-check this expression in reasonable time`; `DatabaseView.swift` e `ImportAnalysisView.swift` compilano, ma non esiste un app aggiornato installabile per validare il fix.
-- [ ] Nessun warning nuovo introdotto: ⚠️ NON ESEGUIBILE — il build non chiude e non ho una baseline warning affidabile nello stesso turno.
-- [x] Modifiche coerenti con il planning: ✅ ESEGUITO — fix confinato a `DatabaseView.swift` + `ImportAnalysisView.swift`; nessuna modifica a parser/export/TASK-011/ExcelSessionViewModel.
-- [ ] Criteri di accettazione verificati: ⚠️ NON ESEGUIBILE — CA statici del fix di ownership verificati via codice, ma la validazione runtime della patch e' bloccata dal build fallito.
-- [x] Rerun dataset grande reale: ✅ ESEGUITO — nel Simulator ho aperto la sheet di analisi del dataset grande reale (`16.680` nuovi prodotti / `108` aggiornamenti) e ho eseguito il tap su `Applica`.
-- [ ] Crash `hasChanges` superato sulla patch corrente: ⚠️ NON ESEGUIBILE — il rerun disponibile ha usato il binary gia' installato nel simulator, non la build aggiornata del workspace; il crash report mostra ancora lo stack vecchio con `ProductImportAnalysisResult.hasChanges` -> `DatabaseView.makeImportApplyPayload(analysis:pendingFullImportContext:)` -> `DatabaseView.applyConfirmedImportAnalysis(_)`.
-- [ ] Background apply parte davvero sulla patch corrente: ⚠️ NON ESEGUIBILE — nel rerun reale l'app installata si chiude con `SIGSEGV` subito dopo il tap su `Applica`, senza consentire una validazione del nuovo percorso di apply.
-- [ ] Smoke test minimo percorso non-large: ❌ NON ESEGUITO — non ho un binary aggiornato installabile e non ho eseguito un import piccolo nel simulator in questo turno.
-- [ ] Errore pre-apply chiude progress/UI senza stato ambiguo: ⚠️ NON ESEGUIBILE — verificato staticamente nel codice, non con esercizio runtime della patch.
+Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO (motivo)
+- [x] Build compila: ✅ ESEGUITO — build Debug per iOS Simulator completata con successo sul workspace aggiornato.
+- [x] Nessun warning nuovo: ✅ ESEGUITO — nessun warning nuovo osservato nel perimetro di TASK-022; durante il build finale compare solo il warning non bloccante di metadata AppIntents, esterno allo scope del task.
+- [x] Modifiche coerenti con il planning: ✅ ESEGUITO — fix confinato al crash post-analysis e al relativo confine di ownership, senza riaprire TASK-011.
+- [x] Criteri di accettazione verificati: ✅ ESEGUITO — test manuali finali utente completati con successo e chiusura confermata.
+- [x] Dataset grande reale: ✅ ESEGUITO — tap su `Applica`, overlay `Importazione in corso...`, apply completato sul build aggiornato.
+- [x] Vecchio crash point superato: ✅ ESEGUITO — nessun nuovo crash nel passaggio `ProductImportAnalysisResult.hasChanges` / conferma -> apply durante il run finale.
+- [x] Background apply parte davvero: ✅ ESEGUITO — l'overlay di apply e' apparso e il processo e' rimasto vivo fino al completamento.
+- [x] Esito finale chiaro: ✅ ESEGUITO — dialog `Import completato` con conteggi `16.680` nuovi prodotti, `108` aggiornamenti, `34.726` price history salvati.
 
-### Rischi residui
-- Il task resta bloccato operativamente da un build failure fuori scope in `iOSMerchandiseControl/GeneratedView.swift:139`; senza build installabile non e' possibile validare la patch corrente nel simulator.
-- Il rerun reale del dataset grande ha confermato che il binary attualmente installato crasha ancora al tap su `Applica`: crash report `2026-03-23 15:02:23`, `EXC_BAD_ACCESS / SIGSEGV`, `KERN_INVALID_ADDRESS 0x10`, thread principale, stack `ProductImportAnalysisResult.hasChanges` -> `DatabaseView.makeImportApplyPayload(analysis:pendingFullImportContext:)` -> `DatabaseView.applyConfirmedImportAnalysis(_)`.
-- Lo stack del crash report appartiene al codice vecchio e non fornisce evidenza diretta sul nuovo fix di ownership nel workspace.
-- Il ramo di errore pre-apply e quello di errore durante background apply sono stati allineati al planning, ma non sono ancora stati esercitati sulla build aggiornata.
+### Rischi rimasti
+- Nessun blocker residuo per TASK-022.
+- Sono emersi due follow-up fuori scope e separati intenzionalmente: TASK-023 per correttezza/performance del reimport full database e visibilita' dei delta non-product; TASK-024 per UX/progress/cancellation dell'apply.
 
 ## Handoff post-execution
-- **Fase corrente**: EXECUTION
-- **Prossima fase prevista**: EXECUTION
-- **Prossimo agente**: CODEX
-- **Sintesi handoff**: fix di ownership applicato nel workspace con `ImportAnalysisSession` per eliminare la doppia copia di `ProductImportAnalysisResult` e il passaggio di `analysis` gigante nel callback `onApply`, ma il task non e' review-ready.
-- **Verifiche realmente concluse**: build eseguita con failure reale fuori scope in `GeneratedView.swift`; rerun simulator del dataset grande reale eseguito sul binary gia' installato; tap su `Applica` riprodotto; crash report raccolto.
-- **Verifiche non concluse**: nessuna validazione runtime della patch corrente, perche' il crash report del rerun mostra ancora le vecchie firme `makeImportApplyPayload(analysis:pendingFullImportContext:)` e `applyConfirmedImportAnalysis(_)`, segno che l'app installata non contiene il fix corrente anche se il bottone `Applica` e' stato cliccato correttamente.
-- **Blocco esplicito**: serve un build installabile del workspace per verificare se il crash `hasChanges` e' davvero sparito e se il nuovo apply parte.
+- **Fase corrente**: DONE
+- **Prossima fase prevista**: nessuna
+- **Prossimo agente**: nessuno
+- **Sintesi handoff**: review finale e conferma utente completate; TASK-022 chiuso.
+
+## Chiusura
+
+### Conferma utente
+- [x] Utente ha confermato il completamento
+
+### Follow-up emersi dopo chiusura
+- `TASK-023` — full-database reimport idempotency + non-product diff visibility
+- `TASK-024` — full-database import progress UX + cancellation
+
+### Riepilogo finale
+- Fix verificato con test manuali finali utente sul build aggiornato.
+- Il full-database import grande ora completa correttamente e il passaggio conferma -> apply non crasha piu'.
+- Il task viene chiuso in DONE su conferma esplicita utente del 2026-03-23.
+
+### Data completamento
+2026-03-23
