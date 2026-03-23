@@ -5,7 +5,29 @@ import SwiftData
 import UIKit
 #endif
 
+private func historyResolvedLanguageCode(for appLanguage: String) -> String {
+    Bundle.resolvedLanguageCode(for: appLanguage)
+}
+
+// History usa locale con regione esplicita solo per date/label locali,
+// senza legare la currency alla lingua UI.
+private func historyDisplayLocale(for appLanguage: String) -> Locale {
+    switch historyResolvedLanguageCode(for: appLanguage) {
+    case "it":
+        return Locale(identifier: "it_IT")
+    case "en":
+        return Locale(identifier: "en_US")
+    case "zh-Hans":
+        return Locale(identifier: "zh_CN")
+    case "es":
+        return Locale(identifier: "es_ES")
+    default:
+        return Locale(identifier: "it_IT")
+    }
+}
+
 struct HistoryView: View {
+    @AppStorage("appLanguage") private var appLanguage: String = "system"
     @Environment(\.modelContext) private var context
     
     // Legge tutte le HistoryEntry ordinate per timestamp decrescente
@@ -37,6 +59,14 @@ struct HistoryView: View {
         let entry: HistoryEntry
     }
     @State private var editItem: EditItem?
+
+    private var resolvedLanguageCode: String {
+        historyResolvedLanguageCode(for: appLanguage)
+    }
+
+    private var displayLocale: Locale {
+        historyDisplayLocale(for: appLanguage)
+    }
 
     /// Filtro per periodo temporale (es. tutti, ultimi 7 giorni, ultimo mese)
     private enum DateFilter: String, CaseIterable, Identifiable {
@@ -147,7 +177,7 @@ struct HistoryView: View {
     }
 
     private func customDateText(for field: CustomDateField) -> String {
-        let style = Date.FormatStyle(date: .numeric, time: .omitted).locale(appLocale())
+        let style = Date.FormatStyle(date: .numeric, time: .omitted).locale(displayLocale)
         switch field {
         case .from:
             return customFrom.formatted(style)
@@ -339,7 +369,7 @@ struct HistoryView: View {
                             NavigationLink(
                                 destination: GeneratedView(entry: entry)
                             ) {
-                                HistoryRow(entry: entry)
+                                HistoryRow(entry: entry, appLanguage: appLanguage)
                             }
                             // ✅ Leading: Modifica
                             .swipeActions(edge: .leading, allowsFullSwipe: false) {
@@ -368,6 +398,7 @@ struct HistoryView: View {
                         }
                     }
                 }
+                .id(resolvedLanguageCode)
             }
         }
         .navigationTitle(L("history.title"))
@@ -437,9 +468,14 @@ struct HistoryView: View {
 
 private struct HistoryRow: View {
     let entry: HistoryEntry
+    let appLanguage: String
+
+    private var displayLocale: Locale {
+        historyDisplayLocale(for: appLanguage)
+    }
     
     private var dateString: String {
-        entry.timestamp.formatted(Date.FormatStyle(date: .numeric, time: .shortened).locale(appLocale()))
+        entry.timestamp.formatted(Date.FormatStyle(date: .numeric, time: .shortened).locale(displayLocale))
     }
     
     private var displayName: String {
@@ -518,10 +554,7 @@ private struct HistoryRow: View {
     }
     
     private func formatMoney(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = appLocale()
-        return formatter.string(from: value as NSNumber) ?? String(value)
+        formatCLPMoney(value)
     }
 }
 

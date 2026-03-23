@@ -733,6 +733,45 @@ CA-2, CA-3, CA-6 restano PENDING MANUAL: richiedono validazione su device/Simula
 
 ---
 
+## Review finale (Codex — user override)
+
+### Review 3 — 2026-03-22
+
+#### Contesto
+User override esplicito: review finale eseguita da CODEX al posto di Claude, con facolta` di chiudere direttamente `DONE` solo in caso di esito realmente `APPROVED`.
+
+#### Verifiche eseguite
+- Coerenza tracking/documentazione: verificati `docs/MASTER-PLAN.md` e questo task file; la regola monetaria finale valida e` CLP app-wide. La precedente narrativa transitoria su `EUR` in **Fix 3** e` stata marcata esplicitamente come superseduta da **Fix 4** per evitare ambiguita`.
+- Review codice finale su file chiave: `PriceFormatting.swift`, `ContentView.swift`, `InventoryHomeView.swift`, `HistoryView.swift`, `DatabaseView.swift`, `GeneratedView.swift`, `ImportAnalysisView.swift`, `ProductPriceHistoryView.swift`.
+- Audit monetario finale: unico `numberStyle = .currency` residuo in `PriceFormatting.swift`; nessun residuo `EUR`, `XXX`, `¤` nei file Swift dell'app.
+- Build finale: `xcodebuild -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'generic/platform=iOS Simulator' build` -> `** BUILD SUCCEEDED **`.
+
+#### Problemi critici
+Nessuno.
+
+#### Problemi medi
+- **CA-2 non chiuso app-wide: reattivita` lingua ancora non garantita nelle altre schermate principali che usano `L(...)`.** Dopo i fix mirati su `InventoryHomeView` e `HistoryView`, restano schermate root con lo stesso pattern che aveva gia` causato bug reali: uso esteso di `L(...)` senza una dipendenza reattiva esplicita da `appLanguage`. In particolare:
+  - `iOSMerchandiseControl/DatabaseView.swift` definisce `DatabaseView` a riga 119 e usa `L(...)` in tutta la `body` (`195-319`) senza `@AppStorage("appLanguage")` o identity refresh per lingua.
+  - `iOSMerchandiseControl/GeneratedView.swift` definisce `GeneratedView` a riga 27 e usa `L(...)` in tutta la schermata senza osservare `appLanguage`.
+  - `iOSMerchandiseControl/ImportAnalysisView.swift` definisce `ImportAnalysisView` a riga 105 e usa `L(...)` nella `body`/toolbar senza osservare `appLanguage`.
+  - `iOSMerchandiseControl/ProductPriceHistoryView.swift` definisce `ProductPriceHistoryView` a riga 5 e usa `L(...)`/`formatDate(...)` nella lista senza osservare `appLanguage`.
+
+#### Note minori non bloccanti
+- Build finale verde confermata; nel log resta il warning toolchain gia` noto `Metadata extraction skipped. No AppIntents.framework dependency found.`. Non lo tratto come blocker.
+- La review non ha eseguito test UI interattivi Simulator/device; il blocker sopra deriva da evidenza statica concreta e dal precedente bug gia` confermato sullo stesso pattern in Inventario/Cronologia.
+
+#### Esito
+CHANGES_REQUIRED
+
+`TASK-010` non e` pronta per `DONE`: la localizzazione runtime non e` ancora verificabile/affidabile app-wide per `CA-2`, quindi la chiusura finale sarebbe prematura.
+
+### Handoff → Fix
+- **Prossima fase**: FIX
+- **Prossimo agente**: CODEX
+- **Azione consigliata**: applicare il fix minimo di reattivita` lingua alle schermate ancora esposte allo stesso pattern (`DatabaseView`, `GeneratedView`, `ImportAnalysisView`, `ProductPriceHistoryView`), rieseguire build e poi riportare il task in `REVIEW`.
+
+---
+
 ## Fix (Codex)
 <!-- solo Codex aggiorna questa sezione -->
 
@@ -800,6 +839,156 @@ Correggere il bug di refresh lingua della schermata principale Inventario senza 
 - **Prossima fase**: REVIEW
 - **Prossimo agente**: CLAUDE
 - **Azione consigliata**: verificare il bugfix mirato su `InventoryHomeView` con focus sul wiring reattivo (`@AppStorage("appLanguage")` + read nella `body`) e confermare se e` sufficiente a chiudere il refresh lingua senza introdurre il fallback `.id(...)`.
+
+### Fix 3 — Refresh runtime `HistoryView` + formatter soldi (2026-03-22)
+
+#### Obiettivo compreso
+Correggere in modo minimale i bug runtime della schermata Cronologia: righe che restavano in lingua precedente o mischiavano lingue diverse dopo il cambio lingua, e valori monetari che in alcuni casi mostravano `XXX`/`¤`. User override esplicito: fix applicato direttamente dal contesto `REVIEW`, senza riaprire planning e senza allargare il task.
+
+#### File controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-010-localizzazione-ui-multilingua.md`
+- `iOSMerchandiseControl/HistoryView.swift`
+- `iOSMerchandiseControl/LocalizationManager.swift`
+
+#### Piano minimo
+- Verificare la causa root in `HistoryView` / `HistoryRow`.
+- Introdurre una dipendenza reattiva esplicita dalla lingua selezionata per la schermata Cronologia e per le sue righe.
+- Applicare il refresh minimo necessario della `List` solo al cambio lingua.
+- Correggere `dateString` e `formatMoney` con una locale regionale esplicita derivata da `appLanguage`, mantenendo `entry.supplier` e `entry.category` come dati raw non localizzati.
+- Eseguire build finale e lasciare il task in `REVIEW` per Claude.
+
+#### Modifiche fatte
+- Causa root bug lingua confermata: `HistoryView` / `HistoryRow` usavano `L(...)` e `appLocale()` che leggono indirettamente da `UserDefaults`, ma la `List` e le righe non avevano una dipendenza reattiva esplicita dal cambio lingua; con il riuso/caching delle righe SwiftUI alcune celle potevano restare nella lingua precedente, producendo liste miste.
+- In `iOSMerchandiseControl/HistoryView.swift` ho aggiunto `@AppStorage("appLanguage") private var appLanguage: String = "system"` a `HistoryView`.
+- Ho reso esplicito il wiring reattivo passando `appLanguage` a `HistoryRow` e forzando il refresh minimo della `List` con `.id(resolvedLanguageCode)` al cambio lingua. Questo evita il riuso sporco delle righe tra lingue diverse senza toccare altre schermate.
+- `customDateText` in `HistoryView` e `dateString` in `HistoryRow` ora usano una locale regionale esplicita derivata da `appLanguage` (`it_IT`, `en_US`, `zh_CN`, `es_ES`) invece della sola lingua nuda.
+- Causa root bug soldi confermata: `NumberFormatter.numberStyle = .currency` con locale solo-lingua (`"en"`, `"es"`, `"zh-Hans"`) puo` non avere regione/currency valida, quindi produce `XXX`, `¤` o simboli incompleti.
+- Nota storica: in questo passaggio intermedio il sintomo `XXX`/`¤` era stato ridotto rendendo esplicito un formatter monetario solo per Cronologia. Quella scelta e` stata poi completamente **superata da Fix 4**: la regola finale valida del task e` `CLP` app-wide (`$`, zero decimali, separatore migliaia attivo, indipendente da `appLanguage`).
+- `entry.supplier` e `entry.category` sono rimasti volutamente raw e non localizzati in questo fix, come richiesto.
+
+#### Check eseguiti
+- ✅ ESEGUITO — Build compila: `xcodebuild -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'generic/platform=iOS Simulator' build` -> `** BUILD SUCCEEDED **`.
+- ⚠️ NON ESEGUIBILE — Cambio lingua `A -> B -> C` senza riavvio su Cronologia: nessun test manuale/Simulator interattivo eseguito in questo run; evidenza statica del fix = `HistoryView` osserva `@AppStorage("appLanguage")`, la `List` si ricrea con `.id(resolvedLanguageCode)` e `HistoryRow` riceve esplicitamente `appLanguage`.
+- ⚠️ NON ESEGUIBILE — Verifica manuale assenza di righe miste nella stessa lista: non eseguita interattivamente; evidenza statica = il refresh della `List` e il passaggio esplicito di `appLanguage` eliminano il path precedente basato su lookup indiretto e riuso celle.
+- ⚠️ NON ESEGUIBILE — Verifica manuale valori monetari senza `XXX`/`¤`: non eseguita su UI in questo run; evidenza statica del passaggio storico = il formatter non usava piu` `.currency` con locale solo-lingua. La regola monetaria finale del task e` stata poi riallineata definitivamente in **Fix 4** a `CLP` app-wide.
+- ✅ ESEGUITO — Scope: fix confinato a `iOSMerchandiseControl/HistoryView.swift` + documentazione task; nessuna modifica a `InventoryHomeView` o altre schermate.
+- ✅ ESEGUITO — Coerenza con vincoli: `entry.supplier` e `entry.category` lasciati raw; nessun refactor architetturale, nessun cambio modello dati, nessuna dipendenza nuova.
+- ⚠️ NON ESEGUIBILE — Nessun warning nuovo introdotto: nel log build resta il warning toolchain gia` noto `Metadata extraction skipped. No AppIntents.framework dependency found.`; non emergono errori/warning Swift attribuibili al fix, ma non ho una baseline separata per certificare formalmente l'assenza assoluta di warning nuovi.
+
+#### Rischi rimasti
+- La validazione manuale dei casi runtime richiesti in quel run (`A -> B -> C`, assenza di righe miste, assenza di `XXX`/`¤` nella UI) restava da confermare in review/test manuale.
+- La parte monetaria documentata in questo passaggio e` solo storica: per la review finale vale esclusivamente la regola `CLP` app-wide formalizzata in **Fix 4**.
+- Nessuna evidenza in questo run di regressioni su Inventario o altre schermate; staticamente non risultano toccate, ma la verifica interattiva cross-screen resta manuale.
+
+### Handoff → Review finale
+- **Prossima fase**: REVIEW
+- **Prossimo agente**: CLAUDE
+- **Azione consigliata**: verificare il bugfix di `HistoryView` con focus su due punti: (1) refresh lingua della `List` e delle righe tramite `@AppStorage("appLanguage")` + `.id(resolvedLanguageCode)`, (2) mantenimento raw di `supplier/category`. La parte monetaria di questo passaggio e` stata poi superata da **Fix 4** e non e` piu` il riferimento finale del task.
+
+### Fix 4 — Regola CLP app-wide per prezzi e somme (2026-03-22)
+
+#### Obiettivo compreso
+Correggere in modo centralizzato la formattazione monetaria dell'app: la currency era stata legata erroneamente alla lingua UI (`appLanguage`), ma il comportamento reale richiesto e` diverso. Regola di business/UX unica per tutta l'app: valuta CLP, simbolo `$`, nessun decimale, separatore migliaia attivo, indipendentemente dalla lingua selezionata.
+
+#### File controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-010-localizzazione-ui-multilingua.md`
+- `iOSMerchandiseControl/PriceFormatting.swift`
+- `iOSMerchandiseControl/HistoryView.swift`
+- `iOSMerchandiseControl/DatabaseView.swift`
+- `iOSMerchandiseControl/ProductPriceHistoryView.swift`
+- `iOSMerchandiseControl/GeneratedView.swift`
+- `iOSMerchandiseControl/ImportAnalysisView.swift`
+
+#### Piano minimo
+- Introdurre un formatter centrale condiviso per CLP.
+- Rimuovere i formatter soldi locali/sparsi che dipendevano da `appLocale()`.
+- Riallineare almeno Cronologia, Database e storico prezzi prodotto; includere gli altri punti user-facing trovati durante il grep.
+- Lasciare invariata la logica delle date e non toccare quantita`/stock non monetari.
+- Eseguire build finale e riportare il task in `REVIEW`.
+
+#### Modifiche fatte
+- Causa root confermata: i prezzi e le somme erano formattati in piu` punti con `NumberFormatter.numberStyle = .currency` usando `appLocale()` o locale derivata dalla lingua UI. Questo rendeva la currency dipendente dalla lingua invece che dalla regola business dell'app, oltre a produrre `EUR`, `XXX` o `¤` in configurazioni non coerenti.
+- Ho introdotto il formatter centrale in `iOSMerchandiseControl/PriceFormatting.swift` con API condivisa `formatCLPMoney(_ value: Double) -> String`.
+- Regola CLP app-wide resa esplicita nel codice:
+  - `locale = es_CL`
+  - `currencyCode = CLP`
+  - `currencySymbol = "$"`
+  - `minimumFractionDigits = 0`
+  - `maximumFractionDigits = 0`
+  - `usesGroupingSeparator = true`
+- Ho sostituito i formatter money locali in:
+  - `HistoryView.swift`
+  - `DatabaseView.swift`
+  - `ProductPriceHistoryView.swift`
+- Ho riallineato anche altri punti monetari user-facing emersi dal grep:
+  - `GeneratedView.swift` (`summary.initial_order_total` e `displayPrice` della sezione dati DB)
+  - `ImportAnalysisView.swift` (`purchase` / `retail` nel riepilogo modifiche)
+- Ho lasciato invariata la logica delle date: la dipendenza da `appLanguage` resta solo per i formatter temporali.
+- Non ho toccato quantita`, stock, parsing/modello dati o conversioni valuta: i valori numerici restano quelli persistiti, cambia solo la loro resa testuale.
+
+#### Check eseguiti
+- ✅ ESEGUITO — Build compila: `xcodebuild -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'generic/platform=iOS Simulator' build` -> `** BUILD SUCCEEDED **`.
+- ✅ ESEGUITO — Formatter centrale introdotto: unico `numberStyle = .currency` rimasto nel repo sotto `iOSMerchandiseControl/` e` in `PriceFormatting.swift`.
+- ✅ ESEGUITO — Nessun residuo `EUR`, `XXX`, `¤` o `historyCurrencyCode` nei file Swift dell'app: `rg -n "EUR|XXX|¤|historyCurrencyCode" iOSMerchandiseControl/*.swift iOSMerchandiseControl/**/*.swift -S` -> nessun risultato.
+- ✅ ESEGUITO — Call site monetari allineati alla utility centrale: `rg -n "formatCLPMoney\\(" iOSMerchandiseControl -S` mostra usi in `HistoryView`, `DatabaseView`, `ProductPriceHistoryView`, `GeneratedView`, `ImportAnalysisView` e definizione in `PriceFormatting.swift`.
+- ✅ ESEGUITO — Coerenza con i vincoli: nessuna data modificata, nessuna quantita`/stock non monetaria toccata, nessun cambio modello dati, nessuna conversione valuta.
+- ⚠️ NON ESEGUIBILE — Verifica manuale UI completa dell'output visivo (`$1.000`, `$1.274.980`) in tutti i punti schermata: non eseguita interattivamente in questo run; evidenza statica = formatter CLP unico con `es_CL`, `CLP`, 0 decimali e grouping attivo.
+- ⚠️ NON ESEGUIBILE — Nessun warning nuovo introdotto: nel log build resta il warning toolchain gia` noto `Metadata extraction skipped. No AppIntents.framework dependency found.`; non emergono errori/warning Swift attribuibili al fix, ma non ho una baseline separata per certificare formalmente l'assenza assoluta di warning nuovi.
+
+#### Rischi rimasti
+- La verifica manuale cross-screen della resa finale (`$` + migliaia + zero decimali) resta da confermare in review/test manuale, anche se il wiring statico e` ora unificato.
+- I campi di editing/pre-parsing restano volontariamente raw numerici e non monetizzati; e` coerente col perimetro del fix ma va tenuto presente in review per evitare aspettative di formattazione dentro i `TextField`.
+- Nessuna evidenza in questo run di regressioni funzionali fuori dall'ambito monetario; staticamente non sono state modificate date o logica dati.
+
+### Handoff → Review finale
+- **Prossima fase**: REVIEW
+- **Prossimo agente**: CLAUDE
+- **Azione consigliata**: verificare la nuova regola CLP app-wide con focus su cinque punti: (1) `PriceFormatting.swift` come unica fonte di verita`, (2) assenza di formatter currency locali residui, (3) resa coerente tra Cronologia, Database, storico prezzi prodotto, Generated e ImportAnalysis, (4) nessun legame della currency con `appLanguage`, (5) date ancora dipendenti solo dalla lingua UI.
+
+### Fix 5 — Reattivita` lingua finale nelle schermate residue (2026-03-22)
+
+#### Obiettivo compreso
+Chiudere il blocker finale emerso in review: alcune schermate principali usavano `L(...)` in modo esteso ma senza una dipendenza reattiva esplicita da `appLanguage`, replicando lo stesso pattern che aveva gia` causato bug runtime reali in `InventoryHomeView` e `HistoryView`.
+
+#### File controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-010-localizzazione-ui-multilingua.md`
+- `iOSMerchandiseControl/DatabaseView.swift`
+- `iOSMerchandiseControl/GeneratedView.swift`
+- `iOSMerchandiseControl/ImportAnalysisView.swift`
+- `iOSMerchandiseControl/ProductPriceHistoryView.swift`
+
+#### Piano minimo
+- Introdurre una dipendenza reattiva esplicita da `appLanguage` nelle 4 schermate residue indicate dalla review.
+- Usare lo stesso criterio minimo gia` applicato nei fix runtime precedenti.
+- Dove la schermata usa `List` e il riuso celle puo` lasciare testo misto, legare solo la `List` alla lingua risolta.
+- Evitare reset inutili di stato locale nelle schermate piu` complesse.
+
+#### Modifiche fatte
+- Root cause comune confermata: `L(...)` legge la lingua corrente da `UserDefaults`, ma senza osservare direttamente `@AppStorage("appLanguage")` le root view possono non invalidarsi in modo affidabile a ogni cambio lingua; nelle schermate con `List` il riuso/caching delle celle puo` lasciare label nella lingua precedente.
+- `DatabaseView.swift`: aggiunto `@AppStorage("appLanguage") private var appLanguage: String = "system"` e introdotto `resolvedLanguageCode` nella `body`; la `List` prodotti ora usa `.id("database-list-\(resolvedLanguageCode)")` per riallineare celle e label al cambio lingua senza toccare filtro, import/export o logica dati.
+- `GeneratedView.swift`: aggiunto `@AppStorage("appLanguage") private var appLanguage: String = "system"` e read minimale `let _ = appLanguage` nella `body`; scelto volutamente di NON usare `.id(...)` per non resettare stato locale dell'editor, scroll, dettaglio riga o flussi di salvataggio.
+- `ImportAnalysisView.swift`: aggiunto `@AppStorage("appLanguage") private var appLanguage: String = "system"`, introdotto `resolvedLanguageCode` e applicato `.id("import-analysis-list-\(resolvedLanguageCode)")` alla `List` per evitare riuso sporco delle righe dell'analisi.
+- `ProductPriceHistoryView.swift`: aggiunto `@AppStorage("appLanguage") private var appLanguage: String = "system"`, introdotto `resolvedLanguageCode` e applicato `.id("product-price-history-list-\(resolvedLanguageCode)")` alla `List` per riallineare sempre titolo sezione, source display e date formattate.
+- Nessuna modifica a logica dati, layout, regola CLP, parsing, persistenza o tema. Nessun file fuori scope toccato oltre tracking/task.
+
+#### Check eseguiti
+- ✅ ESEGUITO — Build compila: `xcodebuild -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'generic/platform=iOS Simulator' build` -> `** BUILD SUCCEEDED **`.
+- ✅ ESEGUITO — Scope: fix limitato ai 4 file richiesti (`DatabaseView.swift`, `GeneratedView.swift`, `ImportAnalysisView.swift`, `ProductPriceHistoryView.swift`) + tracking/task.
+- ✅ ESEGUITO — Strategia minimale coerente con i fix runtime precedenti: `@AppStorage("appLanguage")` in tutte e 4 le schermate; `.id(...)` usato solo dove la `List` rende plausibile riuso/caching sporco.
+- ⚠️ NON ESEGUIBILE — Verifica manuale runtime `A -> B -> C` sulle 4 schermate: nessuna sessione UI interattiva eseguita in questo run; evidenza statica = le root view osservano ora `appLanguage` in modo esplicito e, nei casi `List`, la lista e` legata alla lingua risolta.
+- ⚠️ NON ESEGUIBILE — Nessun warning nuovo introdotto: la build finale riporta solo il warning toolchain gia` noto `Metadata extraction skipped. No AppIntents.framework dependency found.`; non emergono warning Swift attribuibili al fix, ma non ho una baseline separata per certificare formalmente l'assenza assoluta di warning nuovi.
+
+#### Rischi rimasti
+- La validazione interattiva finale resta da confermare in review/test manuale, ma il gap strutturale segnalato dalla review (`L(...)` senza dipendenza reattiva esplicita) risulta chiuso nelle 4 schermate residue.
+- In `GeneratedView` ho evitato intenzionalmente `.id(...)` per non resettare lo stato dell'editor durante il cambio lingua; se in review emergesse ancora testo stale in sottoview persistenti, il prossimo passo minimo sarebbe valutare un identity refresh piu` mirato solo sulla porzione che mostra testo localizzato.
+
+### Handoff → Review finale
+- **Prossima fase**: REVIEW
+- **Prossimo agente**: CLAUDE
+- **Azione consigliata**: verificare il fix finale di reattivita` lingua su `DatabaseView`, `GeneratedView`, `ImportAnalysisView` e `ProductPriceHistoryView`, con focus sul fatto che il pattern strutturale segnalato dalla review (`L(...)` senza osservazione esplicita di `appLanguage`) e` ora chiuso senza allargare scope o toccare la logica applicativa.
 
 ---
 

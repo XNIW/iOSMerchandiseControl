@@ -26,6 +26,7 @@ private struct RowDetailData: Identifiable {
 ///   - fare entry manuali e usare uno pseudo-scanner barcode
 struct GeneratedView: View {
     @Environment(\.modelContext) private var context
+    @AppStorage("appLanguage") private var appLanguage: String = "system"
 
     /// Entry da modificare (passata dal chiamante, es. PreGenerateView o HistoryView)
     let entry: HistoryEntry
@@ -136,6 +137,9 @@ struct GeneratedView: View {
     // MARK: - Body
 
     var body: some View {
+        // Tiene questa schermata reattiva ai cambi lingua senza resettare lo stato locale dell'editor.
+        let _ = appLanguage
+
         ScrollViewReader { proxy in
             ZStack(alignment: .bottomTrailing) {
                 Form {
@@ -943,13 +947,6 @@ struct GeneratedView: View {
         }
     }
     
-    private static let moneyFormatter: NumberFormatter = {
-        let f = NumberFormatter()
-        f.numberStyle = .currency
-        f.locale = .current
-        return f
-    }()
-
     private static let numericFormatter: NumberFormatter = {
         let f = NumberFormatter()
         f.locale = .current
@@ -1759,8 +1756,7 @@ struct GeneratedView: View {
     }
 
     private func formatMoney(_ value: Double) -> String {
-        Self.moneyFormatter.locale = appLocale()
-        return Self.moneyFormatter.string(from: value as NSNumber) ?? String(value)
+        formatCLPMoney(value)
     }
 
     private func formatDoubleAsPrice(_ value: Double) -> String {
@@ -2721,7 +2717,7 @@ private struct ManualEntrySheet: View {
 
     private func displayPrice(_ value: Double?) -> String {
         guard let value else { return "—" }
-        return formatDoubleAsPrice(value)
+        return formatCLPMoney(value)
     }
 
     private func formatDoubleAsPrice(_ value: Double) -> String {

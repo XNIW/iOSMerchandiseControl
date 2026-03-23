@@ -118,6 +118,7 @@ private final class DatabaseImportProgressState: ObservableObject, @unchecked Se
 
 struct DatabaseView: View {
     @Environment(\.modelContext) private var context
+    @AppStorage("appLanguage") private var appLanguage: String = "system"
 
     // Tutti i prodotti dal database, ordinati per barcode
     @Query(sort: \Product.barcode, order: .forward)
@@ -193,6 +194,8 @@ struct DatabaseView: View {
     }
 
     var body: some View {
+        let resolvedLanguageCode = Bundle.resolvedLanguageCode(for: appLanguage)
+
         VStack {
             // campo filtro barcode / nome / codice
             HStack(spacing: 8) {
@@ -308,6 +311,7 @@ struct DatabaseView: View {
                 }
                 .onDelete(perform: deleteProducts)
             }
+            .id("database-list-\(resolvedLanguageCode)")
             .listStyle(.plain)
         }
         .disabled(importProgress.isRunning)
@@ -1885,10 +1889,7 @@ struct DatabaseView: View {
     // MARK: - Formattazione / parsing numeri
 
     private func formatMoney(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = appLocale()
-        return formatter.string(from: value as NSNumber) ?? String(value)
+        formatCLPMoney(value)
     }
 
     private func formatQuantity(_ value: Double) -> String {

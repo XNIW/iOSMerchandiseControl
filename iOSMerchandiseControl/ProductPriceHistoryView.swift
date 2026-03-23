@@ -7,6 +7,7 @@ struct ProductPriceHistoryView: View {
 
     /// Tipo di prezzo attualmente selezionato (come i tab Android)
     @State private var selectedType: PriceType = .purchase
+    @AppStorage("appLanguage") private var appLanguage: String = "system"
 
     /// Storico completo, ordinato dal più recente
     private var prices: [ProductPrice] {
@@ -22,6 +23,8 @@ struct ProductPriceHistoryView: View {
     }
 
     var body: some View {
+        let resolvedLanguageCode = Bundle.resolvedLanguageCode(for: appLanguage)
+
         List {
             if prices.isEmpty {
                 Section {
@@ -72,6 +75,7 @@ struct ProductPriceHistoryView: View {
                 }
             }
         }
+        .id("product-price-history-list-\(resolvedLanguageCode)")
         .navigationTitle(L("product.history.title"))
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -111,9 +115,6 @@ struct ProductPriceHistoryView: View {
     }
 
     private func formatMoney(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = appLocale()
-        return formatter.string(from: value as NSNumber) ?? String(value)
+        formatCLPMoney(value)
     }
 }

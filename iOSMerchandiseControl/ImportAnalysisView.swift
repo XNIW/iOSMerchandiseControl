@@ -120,6 +120,7 @@ struct ImportAnalysisView: View {
     @State private var applyError: String?
     @State private var editingDraftItem: EditingItem?
     @State private var isApplying = false
+    @AppStorage("appLanguage") private var appLanguage: String = "system"
     let allowsApplyWithoutChanges: Bool
     let onApply: (ProductImportAnalysisResult) async throws -> Void
 
@@ -136,6 +137,8 @@ struct ImportAnalysisView: View {
     }
 
     var body: some View {
+        let resolvedLanguageCode = Bundle.resolvedLanguageCode(for: appLanguage)
+
         ZStack {
             List {
                 summarySection
@@ -156,6 +159,7 @@ struct ImportAnalysisView: View {
                     errorsSection
                 }
             }
+            .id("import-analysis-list-\(resolvedLanguageCode)")
             .disabled(isApplying)
 
             if isApplying {
@@ -565,12 +569,7 @@ struct ImportAnalysisView: View {
 
     private func formatPrice(_ value: Double?) -> String {
         guard let value else { return "—" }
-        let formatter = NumberFormatter()
-        formatter.locale = appLocale()
-        formatter.minimumFractionDigits = 0
-        formatter.maximumFractionDigits = 3
-        formatter.usesGroupingSeparator = false
-        return formatter.string(from: value as NSNumber) ?? String(value)
+        return formatCLPMoney(value)
     }
 
     private func formatQuantity(_ value: Double?) -> String {
