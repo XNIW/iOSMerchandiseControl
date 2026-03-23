@@ -4,12 +4,14 @@
 - **Task ID**: TASK-010
 - **Titolo**: Localizzazione UI multilingua
 - **File task**: `docs/TASKS/TASK-010-localizzazione-ui-multilingua.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE
+- **Stato**: BLOCKED
+- **Fase attuale**: — (sospeso dopo REVIEW APPROVED)
+- **Responsabile attuale**: — (in attesa di test manuali da parte dell'utente)
 - **Data creazione**: 2026-03-22
 - **Ultimo aggiornamento**: 2026-03-22
 - **Ultimo agente che ha operato**: CODEX
+
+> Stato sospeso: review tecnica finale APPROVATA; test manuali finali ancora pendenti. La task resta in attesa di futura ripresa per i soli test manuali conclusivi e la conferma finale.
 
 ## Dipendenze
 - **Dipende da**: nessuno
@@ -1000,5 +1002,10 @@ Chiudere il blocker finale emerso in review: alcune schermate principali usavano
 ### Follow-up candidate
 
 ### Riepilogo finale
+- Review tecnica finale: APPROVATA.
+- Motivo della sospensione: test manuali finali non ancora eseguiti per decisione utente.
+- Per chiudere in DONE manca solo: eseguire i test manuali finali residui (`CA-2`, `CA-3`, `CA-6`) e registrare la conferma finale.
+- Alla ripresa il task richiede solo test manuali + eventuale conferma finale; se emergono regressioni, riaprire FIX invece di chiudere DONE.
 
 ### Data completamento
+- — (task non chiusa; sospesa in attesa di test manuali finali)
