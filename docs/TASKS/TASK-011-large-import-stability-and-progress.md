@@ -4,11 +4,11 @@
 - **Task ID**: TASK-011
 - **Titolo**: Large import stability, memory e progress UX
 - **File task**: `docs/TASKS/TASK-011-large-import-stability-and-progress.md`
-- **Stato**: TODO
-- **Fase attuale**: —
-- **Responsabile attuale**: —
+- **Stato**: ACTIVE
+- **Fase attuale**: PLANNING
+- **Responsabile attuale**: CLAUDE
 - **Data creazione**: 2026-03-21
-- **Ultimo aggiornamento**: 2026-03-21
+- **Ultimo aggiornamento**: 2026-03-22
 - **Ultimo agente che ha operato**: CLAUDE
 
 ## Dipendenze
