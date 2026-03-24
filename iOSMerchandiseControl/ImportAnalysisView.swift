@@ -289,11 +289,20 @@ struct ImportAnalysisView: View {
         }
         .id("import-analysis-list-\(resolvedLanguageCode)")
         .disabled(isApplying)
-        .safeAreaInset(edge: .bottom) {
+        .overlay {
             if isApplying {
-                applyingNotice
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
+                GeometryReader { geo in
+                    let cardW = min(max(geo.size.width - 64, 280), 440)
+                    ZStack {
+                        Color.black.opacity(0.16)
+                            .ignoresSafeArea()
+
+                        applyingNotice
+                            .frame(width: cardW)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .allowsHitTesting(true)
             }
         }
         .interactiveDismissDisabled(isApplying)
@@ -360,19 +369,23 @@ struct ImportAnalysisView: View {
     }
 
     private var applyingNotice: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 10) {
+            ProgressView()
+                .controlSize(.regular)
+
             Text(L("import.analysis.processing.title"))
-                .font(.headline)
+                .font(.subheadline.weight(.medium))
+                .multilineTextAlignment(.center)
 
             Text(L("import.analysis.processing.body"))
                 .font(.caption)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
     }
 
     // MARK: - Sezioni

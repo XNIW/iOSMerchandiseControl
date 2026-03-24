@@ -169,7 +169,7 @@
 "import.analysis.error.export_title" = "Error de exportación";
 "import.analysis.error.apply_title" = "Error al aplicar la importación";
 "import.analysis.processing.title" = "Importando...";
-"import.analysis.processing.body" = "El progreso detallado continúa en la pantalla de Base de datos mientras se aplican los cambios.";
+"import.analysis.processing.body" = "Los cambios se están guardando. Mantén esta ventana abierta hasta que termine la operación.";
 "import.analysis.summary" = "Resumen";
 "import.analysis.summary.new_products" = "Productos nuevos";
 "import.analysis.summary.updates" = "Actualizaciones";

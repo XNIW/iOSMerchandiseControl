@@ -8,7 +8,7 @@
 - **Fase attuale**: REVIEW
 - **Responsabile attuale**: CLAUDE
 - **Data creazione**: 2026-03-24
-- **Ultimo aggiornamento**: 2026-03-24
+- **Ultimo aggiornamento**: 2026-03-23
 - **Ultimo agente che ha operato**: CODEX
 
 ## Dipendenze
@@ -278,7 +278,180 @@ Dopo TASK-022 il apply grande non crasha. TASK-023 ha affinato idempotency/delta
 - Se emergono problemi, il loop successivo e' **FIX → REVIEW**; nessun DONE da impostare in questa fase.
 
 ## Fix (Codex)
-*(Da compilare se necessario.)*
+### Contesto
+- Fix da review manuale utente (post-execution): coerenza visiva e stabilita' delle superfici full-database import **senza** cambiare logica prepare/apply/cancel/outcome.
+
+### File toccati
+- `iOSMerchandiseControl/DatabaseView.swift`
+- `iOSMerchandiseControl/ImportAnalysisView.swift`
+- `iOSMerchandiseControl/en.lproj/Localizable.strings`
+- `iOSMerchandiseControl/it.lproj/Localizable.strings`
+- `iOSMerchandiseControl/es.lproj/Localizable.strings`
+- `iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings`
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
+
+### Modifiche (UI/UX)
+- **Overlay progresso Database**: card piu' larga (larghezza da `GeometryReader`, clamp 300–620 pt), angolo 20, ombra leggera; area titolo/progresso/bottone Annulla con altezze piu' stabili (sezione progresso fissa 72 pt, riga bottone riservata quando il cancel non e' mostrato).
+- **Esito full import**: rimosso `.sheet` + `presentationDetents` / drag indicator; stesso payload (`FullImportResultView`) presentato come **overlay centrato** sul `ZStack` della tab Database, stessa famiglia visiva (material + corner 20). OK con `.controlSize(.large)` e larghezza piena nella card.
+- **Apply in `ImportAnalysisView`**: eliminato `safeAreaInset` in basso; overlay full-screen sulla lista con card centrata (stesso stile material/radius/ombra). Nessun secondo `ProgressView` (solo icona statica + testi).
+- **Copy `import.analysis.processing.body`**: rimosso il messaggio che rimandava alla schermata Database; testo neutro sul salvataggio in corso e sul tenere aperta la finestra.
+- **Type-checker**: estratte sotto-viste `ImportProgressMaterialCard` e `FullImportResultMaterialCard` per evitare crash del compiler Swift 6.2 su espressioni troppo annidate; `importSurfaceCardWidth(for:)` a livello file in `DatabaseView.swift`.
+
+### Verifiche eseguite
+- ✅ **BUILD** — `xcodebuild` su Simulator `iPhone 17` / iOS 26.2, `ONLY_ACTIVE_ARCH=YES`, `CODE_SIGNING_ALLOWED=NO` — **BUILD SUCCEEDED**
+- ✅ **STATIC** — confermato che non risultano modifiche a pipeline dati, policy cancel/apply, o TASK-023
+- ⚠️ **SIM / manuali** — non eseguiti in questa sessione; restano per l'utente (checklist sotto)
+
+### Rischi residui
+- Larghezza card in `ImportAnalysisView` duplica la formula numerica usata in `DatabaseView` (stesso clamp) senza helper condiviso tra file: accettato per perimetro minimo.
+- Durante apply restano due livelli visivi (sheet analisi + overlay Database con progresso numerico): ora il copy non li contraddice; se l'utente volesse una sola superficie fisica servirebbe un task separato (fuori scope).
+
+### Handoff → Review (Claude)
+- **Prossima fase**: REVIEW
+- **Prossimo agente**: CLAUDE
+- **Azione consigliata**: Verificare in Simulator i criteri del fix UX (stabilita' card, apply centrato, result non-bottom-sheet, OK proporzionato) e rieseguire un sottoinsieme di TM-5, TM-11, TM-14, TM-18; nessun DONE finche' l'utente non conferma.
+
+## Fix #2 (Claude — UI polish)
+### Contesto
+- Fix da review manuale utente: le surface del full-database import sono troppo grandi, troppo pesanti, con troppo spazio vuoto e gerarchia visiva non Apple-like. Richiesto polish sobrio senza toccare logica.
+
+### File toccati
+- `iOSMerchandiseControl/DatabaseView.swift`
+- `iOSMerchandiseControl/ImportAnalysisView.swift`
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
+
+### Modifiche (UI/UX polish)
+- **Card width ridotta**: `importSurfaceCardWidth` da `width - 40, clamp 300–620` a `width - 64, clamp 280–440`. Stessa formula in `ImportAnalysisView`. Card meno invasive su iPhone, piu' proporzionate.
+- **Prepare/analyze card** (`ImportProgressMaterialCard`):
+  - Spacing ridotto da 18 a 14; padding da 24 a 20; corner radius da 20 a 16
+  - Rimosso `minHeight: 240` — card si dimensiona naturalmente in base al contenuto
+  - Rimosso placeholder `Color.clear.frame(height: 50)` quando cancel non e' mostrato — il bottone cancel ora appare solo quando serve, senza riserva di spazio
+  - Titolo fase: da `.headline` a `.subheadline.weight(.medium)` — meno pesante
+  - ProgressView indeterminato: da `.controlSize(.large)` a `.regular`, rimosso testo placeholder invisibile
+  - Contatore: da `.caption` a `.caption2`, tinta `.tertiary` — piu' discreto
+  - Cancel button: da `.borderedProminent` + `.large` + full-width a `.bordered` + `.regular` — piu' sobrio e secondario
+  - Shadow ridotta da `0.12/20/10` a `0.08/12/4`
+- **Result dialog** (`FullImportResultView` + `FullImportResultMaterialCard`):
+  - Rimosso `minHeight: 320` — card si chiude sul contenuto
+  - Padding da 24 a 20; corner radius da 20 a 16; shadow da `0.12/24/12` a `0.08/12/4`
+  - Icona da 44pt a 32pt
+  - Spacing principale da 20 a 14; spacing titolo/summary da 8 a 4
+  - Titolo da `.title3.weight(.semibold)` a `.headline`; summary da `.body` a `.subheadline` — gerarchia piu' naturale
+  - Metriche: font da `.body` a `.subheadline`; padding interno da 16 a 12; corner radius da 16 a 10; background da `.thinMaterial` a `.quaternary.opacity(0.5)` — meno "card-within-card"
+  - Note: font da `.footnote` a `.caption`; stessi riduzioni padding/radius/background
+  - Scroll area condizionale: ScrollView e' ora wrappata in `if !metrics.isEmpty || !notes.isEmpty` — nessuna area scroll vuota
+  - maxScrollHeight da `180–420 (0.4)` a `120–280 (0.3)` — meno altezza inutile
+  - OK button: da `.large` + `frame(maxWidth: .infinity)` a `.regular` senza full-width — meno isolato, piu' naturale
+- **Apply card** (`applyingNotice` in `ImportAnalysisView`):
+  - Icona statica sostituita con `ProgressView()` `.regular` — feedback piu' chiaro e nativo
+  - Titolo da `.headline` a `.subheadline.weight(.medium)`; body da `.subheadline` a `.caption`
+  - Spacing da 14 a 10; padding da 24 a 16; corner radius da 20 a 12
+  - Shadow da `0.12/20/10` a `0.06/8/2` — piu' discreta
+- **Scrim** (dimming dietro le overlay): opacita' uniformata a `0.12` (da 0.16/0.18) — meno pesante
+
+### Cosa NON e' stato toccato
+- Nessuna modifica a pipeline dati, anti-race, policy cancel/apply, outcome payload, state flow
+- Nessuna modifica a stringhe localizzate
+- Nessuna modifica a import CSV / Excel semplice
+- Nessuna modifica a TASK-023
+
+### Verifiche
+- ✅ **BUILD** — `xcodebuild` su Simulator generic, `CODE_SIGNING_ALLOWED=NO` — **BUILD SUCCEEDED**
+- ✅ **STATIC** — confermato scope solo UI: padding/spacing/font/radius/shadow/opacity; nessun cambio a logica
+- ⚠️ **SIM / manuali** — restano per l'utente
+
+### Limiti residui
+- Il bottone Cancel nella prepare card ora non ha piu' riserva di spazio quando assente: la card cambia leggermente altezza tra stato con/senza cancel. Effetto atteso e corretto per un layout naturale.
+- Le due card (DatabaseView e ImportAnalysisView) usano la stessa formula numerica per il width senza un helper condiviso tra file — accettato come nel fix precedente.
+
+### Handoff → Review (Claude)
+- **Prossima fase**: REVIEW
+- **Prossimo agente**: CLAUDE
+- **Azione consigliata**: Verificare in Simulator che le superfici siano ora piu' compatte, proporzionate e Apple-like. Sottoinsieme TM consigliato: TM-3 (successo con metriche), TM-5 (apply completo), TM-14 (metriche multiple), TM-16 (annullato). Nessun DONE.
+
+## Fix #3 (Claude — result surface layout fix)
+### Contesto
+- Fix da review manuale utente: la finestra "Import completato" ha metriche con label collassate/invisibili (bug di layout), troppo spazio vuoto, bottone OK troppo distante, aspetto non Apple-like.
+
+### File toccati
+- `iOSMerchandiseControl/DatabaseView.swift`
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
+
+### Root cause del bug metriche
+Il layout `HStack { Text(label) Spacer(minLength: 8) Text(value) }` comprimeva la label a zero su card strette (280–440pt meno padding). Il Spacer e il value text prendevano priorita', la label senza `layoutPriority` ne' `fixedSize` collassava.
+
+### Modifiche
+- **Bug metriche risolto**: label ha ora `layoutPriority(1)` + `fixedSize(horizontal: false, vertical: true)` (wrappa ma non collassa); value ha `fixedSize(horizontal: true, vertical: false)` (non si tronca); `Spacer(minLength: 12)` tra i due.
+- **Metriche ristrutturate**: blocco ora usa `Divider()` tra righe invece di spacing, con padding `vertical: 6` + `horizontal: 10` per riga. Background da `.quaternary.opacity(0.5)` a `Color(.secondarySystemGroupedBackground)` — stile grouped iOS nativo. Corner radius da 10 a 8.
+- **Header piu' compatto**: icona da 32pt a 28pt; titolo da `.headline` a `.subheadline.weight(.semibold)`; spacing header interno da 4 a 6 (icona+titolo raggruppati); summary separato, da `.subheadline` a `.footnote`.
+- **Spacing generale**: VStack principale da 14 a 12.
+- **Notes**: font da `.caption` a `.caption2`, tinta `.tertiary`; rimosso background `.quaternary` — solo testo leggero con padding orizzontale minimo.
+- **OK button**: da `.controlSize(.regular)` a `.controlSize(.small)` + `padding(.top, 2)` — proporzionato al contenuto senza dominare.
+- **Card wrapper** (`FullImportResultMaterialCard`): padding da `20` uniforme a `horizontal: 16, vertical: 18`; corner radius da 16 a 14; shadow da `0.08/12/4` a `0.1/10/4` — leggermente piu' definita ma non pesante.
+- **Font metriche**: da `.subheadline` / `.subheadline.weight(.semibold)` a `.footnote` / `.footnote.weight(.medium)` — proporzionate alla card.
+
+### Cosa NON e' stato toccato
+- Nessuna modifica a logica, payload, state flow, anti-race, cancel/apply
+- Nessuna modifica a prepare/analyze card
+- Nessuna modifica a ImportAnalysisView
+- Nessuna modifica a stringhe localizzate
+- Nessuna modifica a TASK-023
+
+### Verifiche
+- ✅ **BUILD** — `xcodebuild` Simulator generic — **BUILD SUCCEEDED**
+- ✅ **STATIC** — scope solo layout/styling della result surface; nessun cambio logica
+- ⚠️ **SIM / manuali** — restano per l'utente
+
+### Limiti residui
+- Il `maxScrollHeight` e' ancora passato dall'overlay come `max(120, min(geo.size.height * 0.3, 280))` — con poche metriche potrebbe non servire scroll; ma ScrollView e' wrappato in condizionale e non aggiunge altezza inutile quando il contenuto e' breve.
+
+### Handoff → Review (Claude)
+- **Prossima fase**: REVIEW
+- **Prossimo agente**: CLAUDE
+- **Azione consigliata**: Verificare in Simulator che le metriche siano ora visibili (label + value), la card sia compatta, e il bottone OK sia integrato. TM-3, TM-14, TM-15, TM-16.
+
+## Fix #4 (Claude — result surface: torna a sheet nativa)
+### Contesto
+- Fix da review manuale utente: la finestra "Import completato" presentata come overlay centrato con material card non piace. L'utente vuole tornare alla presentazione **bottom sheet nativa** come nella vecchia versione (`2-4.png`).
+
+### File toccati
+- `iOSMerchandiseControl/DatabaseView.swift`
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
+
+### Modifiche
+- **Presentazione**: da **overlay centrato** (`GeometryReader` + `ZStack` + scrim + `FullImportResultMaterialCard`) a **`.sheet(item: $fullImportResultPayload)`** con `presentationDetents([.medium])` + `presentationDragIndicator(.visible)`. Nativa iOS, bottom sheet standard.
+- **Rimossi**: `FullImportResultMaterialCard`, `fullImportResultOverlay()`, e il ramo overlay nel body `ZStack`. Codice morto eliminato.
+- **`FullImportResultView` semplificata**: rimosso parametro `maxScrollHeight` (non serve in una sheet nativa); layout riscritto per contesto sheet:
+  - Icona 44pt (piu' visibile nella sheet), titolo `.title3.weight(.semibold)`, summary `.subheadline`
+  - Metriche: `.body` font, `Divider()` tra righe, padding 16h/10v per riga, sfondo `secondarySystemGroupedBackground` con corner radius 10 — stile grouped iOS nativo
+  - Notes: `.footnote`, `.secondary`, allineate a sinistra
+  - OK: `.borderedProminent` + `.controlSize(.large)` + `frame(maxWidth: .infinity)` — CTA piena larghezza come nella vecchia UI
+  - Padding: 20 orizzontale, 16 bottom
+- **Sheet non dismissabile a swipe**: `.interactiveDismissDisabled()` — l'utente deve premere OK per chiudere (coerente col cleanup state-driven di `clearPresentedFullImportResult`).
+
+### Cosa NON e' stato toccato
+- Nessuna modifica a logica, payload, state flow, anti-race, cancel/apply/retry
+- Nessuna modifica a prepare/analyze overlay
+- Nessuna modifica a ImportAnalysisView
+- Nessuna modifica a stringhe localizzate
+- Nessuna modifica a TASK-023
+
+### Verifiche
+- ✅ **BUILD** — due build successive, entrambe **BUILD SUCCEEDED**
+- ✅ **STATIC** — scope solo presentazione result; overlay rimosso, sheet aggiunta; nessun cambio logica
+- ⚠️ **SIM / manuali** — restano per l'utente
+
+### Limiti residui
+- Con `.presentationDetents([.medium])` la sheet occupa meta' schermo. Se le metriche fossero moltissime o le note molto lunghe, potrebbe non bastare. Se serve, si puo' aggiungere `.large` ai detents.
+
+### Handoff → Review (Claude)
+- **Prossima fase**: REVIEW
+- **Prossimo agente**: CLAUDE
+- **Azione consigliata**: Verificare in Simulator che la sheet finale sia visivamente vicina a `2-4.png`. TM-3, TM-14, TM-16, TM-18.
 
 ## Review (Claude)
 *(Da compilare in fase REVIEW.)*

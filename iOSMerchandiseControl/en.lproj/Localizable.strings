@@ -169,7 +169,7 @@
 "import.analysis.error.export_title" = "Export error";
 "import.analysis.error.apply_title" = "Import apply error";
 "import.analysis.processing.title" = "Importing...";
-"import.analysis.processing.body" = "Detailed progress continues on the Database screen while the changes are applied.";
+"import.analysis.processing.body" = "Changes are being saved. Please keep this window open until the operation finishes.";
 "import.analysis.summary" = "Summary";
 "import.analysis.summary.new_products" = "New products";
 "import.analysis.summary.updates" = "Updates";

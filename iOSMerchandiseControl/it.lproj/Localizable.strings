@@ -169,7 +169,7 @@
 "import.analysis.error.export_title" = "Errore export";
 "import.analysis.error.apply_title" = "Errore applicazione import";
 "import.analysis.processing.title" = "Importazione in corso...";
-"import.analysis.processing.body" = "Il progresso dettagliato continua nella schermata Database mentre i cambiamenti vengono applicati.";
+"import.analysis.processing.body" = "Le modifiche sono in corso di salvataggio. Tieni questa schermata aperta fino al termine dell'operazione.";
 "import.analysis.summary" = "Riepilogo";
 "import.analysis.summary.new_products" = "Nuovi prodotti";
 "import.analysis.summary.updates" = "Aggiornamenti";

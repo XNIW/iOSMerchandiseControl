@@ -1627,6 +1627,12 @@ private final class DatabaseImportProgressState: ObservableObject, @unchecked Se
     }
 }
 
+/// Larghezza card coerente per overlay full import (margini laterali, max su iPad).
+private func importSurfaceCardWidth(for geometry: GeometryProxy) -> CGFloat {
+    let raw = geometry.size.width - 64
+    return min(max(raw, 280), 440)
+}
+
 struct DatabaseView: View {
     @Environment(\.modelContext) private var context
     @AppStorage("appLanguage") private var appLanguage: String = "system"
@@ -1695,62 +1701,117 @@ struct DatabaseView: View {
         var body: some View {
             VStack(spacing: 20) {
                 Image(systemName: symbolName)
-                    .font(.system(size: 42))
+                    .font(.system(size: 44))
                     .foregroundStyle(tint)
+                    .padding(.top, 8)
 
-                VStack(spacing: 8) {
-                    Text(payload.title)
-                        .font(.title3.weight(.semibold))
-                        .multilineTextAlignment(.center)
+                Text(payload.title)
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
 
+                if !payload.summary.isEmpty {
                     Text(payload.summary)
-                        .font(.body)
+                        .font(.subheadline)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
                 }
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        if !payload.metrics.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
-                                ForEach(payload.metrics) { metric in
-                                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                                        Text(metric.label)
-                                            .foregroundStyle(.secondary)
-                                        Spacer(minLength: 12)
-                                        Text(metric.value)
-                                            .font(.body.monospacedDigit().weight(.semibold))
-                                    }
-                                }
+                if !payload.metrics.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(Array(payload.metrics.enumerated()), id: \.element.id) { index, metric in
+                            if index > 0 {
+                                Divider()
                             }
-                            .padding(16)
-                            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        }
-
-                        if !payload.notes.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                ForEach(Array(payload.notes.enumerated()), id: \.offset) { _, note in
-                                    Text(note)
-                                        .font(.footnote)
-                                        .foregroundStyle(.secondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
+                            HStack {
+                                Text(metric.label)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(metric.value)
+                                    .fontWeight(.semibold)
+                                    .monospacedDigit()
                             }
-                            .padding(16)
-                            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
                         }
                     }
+                    .font(.body)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(.horizontal, 4)
                 }
 
-                Button(L("common.ok")) {
-                    onClose()
+                if !payload.notes.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(payload.notes.enumerated()), id: \.offset) { _, note in
+                            Text(note)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+                }
+
+                Button(action: onClose) {
+                    Text(L("common.ok"))
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(tint)
+                .controlSize(.large)
+                .padding(.top, 4)
             }
-            .padding(24)
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+        }
+    }
+
+    /// Sotto-vista per alleggerire il type-checking di `importProgressOverlay` (Swift 6.2).
+    private struct ImportProgressMaterialCard: View {
+        @ObservedObject var importProgress: DatabaseImportProgressState
+        var cardWidth: CGFloat
+        var onCancel: () -> Void
+
+        var body: some View {
+            VStack(spacing: 14) {
+                Text(importProgress.stageText.isEmpty ? L("database.progress.preparing") : importProgress.stageText)
+                    .font(.subheadline.weight(.medium))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                progressSection
+                    .frame(maxWidth: .infinity)
+
+                if importProgress.canCancelPreparation {
+                    cancelSection
+                }
+            }
+            .frame(width: cardWidth)
+            .padding(20)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        }
+
+        @ViewBuilder
+        private var progressSection: some View {
+            if let progressFraction = importProgress.progressFraction {
+                VStack(spacing: 6) {
+                    ProgressView(value: progressFraction)
+                        .progressViewStyle(.linear)
+                    Text("\(importProgress.processedCount) / \(importProgress.totalCount)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.tertiary)
+                }
+            } else {
+                ProgressView()
+                    .controlSize(.regular)
+            }
+        }
+
+        private var cancelSection: some View {
+            Button(L("common.cancel"), action: onCancel)
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
         }
     }
 
@@ -1908,6 +1969,7 @@ struct DatabaseView: View {
             if importProgress.showsOverlay {
                 importProgressOverlay
             }
+
         }
         .navigationTitle(L("database.title"))
         .toolbar {
@@ -1984,16 +2046,20 @@ struct DatabaseView: View {
                 )
             }
         }
-        .sheet(item: $fullImportResultPayload, onDismiss: clearPresentedFullImportResult) { payload in
-            FullImportResultView(payload: payload) {
-                clearPresentedFullImportResult()
-            }
-        }
         // Sheet per scanner barcode
         .sheet(isPresented: $showScanner) {
             ScannerView(title: L("database.scanner_title")) { code in
                 handleDatabaseScan(code)
             }
+        }
+        .sheet(item: $fullImportResultPayload) { payload in
+            FullImportResultView(
+                payload: payload,
+                onClose: clearPresentedFullImportResult
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+            .interactiveDismissDisabled()
         }
 
         .confirmationDialog(
@@ -2110,40 +2176,19 @@ struct DatabaseView: View {
     }
 
     private var importProgressOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.16)
-                .ignoresSafeArea()
+        GeometryReader { geo in
+            ZStack {
+                Color.black.opacity(0.12)
+                    .ignoresSafeArea()
 
-            VStack(spacing: 14) {
-                Text(importProgress.stageText.isEmpty ? L("database.progress.preparing") : importProgress.stageText)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-
-                if let progressFraction = importProgress.progressFraction {
-                    ProgressView(value: progressFraction)
-                        .progressViewStyle(.linear)
-
-                    Text("\(importProgress.processedCount) / \(importProgress.totalCount)")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                } else {
-                    ProgressView()
-                        .controlSize(.large)
-                }
-
-                if importProgress.canCancelPreparation {
-                    Button(L("common.cancel")) {
-                        cancelFullImportPreparation()
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+                ImportProgressMaterialCard(
+                    importProgress: importProgress,
+                    cardWidth: importSurfaceCardWidth(for: geo),
+                    onCancel: cancelFullImportPreparation
+                )
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(radius: 16, x: 0, y: 8)
-            .padding(.horizontal, 24)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
 
