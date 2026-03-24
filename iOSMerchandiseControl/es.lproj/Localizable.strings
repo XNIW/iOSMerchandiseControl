@@ -175,6 +175,11 @@
 "import.analysis.summary.updates" = "Actualizaciones";
 "import.analysis.summary.warnings" = "Avisos";
 "import.analysis.summary.errors" = "Errores";
+"import.analysis.summary.suppliers_to_add" = "Proveedores por agregar";
+"import.analysis.summary.categories_to_add" = "Categorias por agregar";
+"import.analysis.summary.price_history_to_insert" = "Historial de precios por insertar";
+"import.analysis.summary.price_history_already_present" = "Historial de precios ya presente";
+"import.analysis.summary.price_history_unresolved" = "Historial de precios no resuelto";
 "import.analysis.duplicate_barcodes" = "Barcodes duplicados en el archivo";
 "import.analysis.new_products_count" = "Productos nuevos (%d)";
 "import.analysis.updated_products_count" = "Productos actualizados (%d)";
@@ -228,7 +233,9 @@
 "database.progress.success_with_price_history" = "Importación completada. Productos: %1$d nuevos, %2$d actualizados. Historial de precios guardado: %3$d.";
 "database.progress.partial_success" = "Productos importados: %1$d nuevos, %2$d actualizados. Error en historial de precios: %3$@. Se guardaron %4$d de %5$d filas de historial.";
 "database.progress.price_history_total_failure" = "Productos importados: %1$d nuevos, %2$d actualizados. Error total en historial de precios: %3$@. Se guardaron 0 de %4$d filas de historial.";
-"database.progress.price_history_skipped_suffix" = "Filas de historial de precios omitidas por barcode no resuelto: %d.";
+"database.progress.suppliers_created_suffix" = "Proveedores creados: %d.";
+"database.progress.categories_created_suffix" = "Categorias creadas: %d.";
+"database.progress.price_history_unresolved_suffix" = "Filas de historial de precios no resueltas: %d.";
 "database.progress.invalid_workbook" = "No se puede leer el archivo. Asegúrate de que sea un archivo Excel (.xlsx) válido con varias hojas.";
 "database.progress.missing_products_sheet" = "El archivo no contiene una hoja 'Products'. La importación completa requiere al menos esa hoja.";
 "database.error.export" = "Error durante la exportación: %@";

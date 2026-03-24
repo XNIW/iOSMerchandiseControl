@@ -14,6 +14,10 @@ nonisolated private struct ImportApplyPayload: Sendable {
     let newProducts: [ProductDraft]
     let updatedProducts: [ProductUpdateDraft]
     let pendingPriceHistoryEntries: [PendingPriceHistoryImportEntry]
+    let alreadyPresentPriceHistoryCount: Int
+    let unresolvedPriceHistoryCount: Int
+    let pendingSupplierNames: [String]
+    let pendingCategoryNames: [String]
     let recordPriceHistory: Bool
 
     var productsTotalCount: Int {
@@ -62,27 +66,39 @@ nonisolated private struct ImportExistingProductSnapshot: Sendable {
 nonisolated private struct ImportApplyProductsResult: Sendable {
     let productsInserted: Int
     let productsUpdated: Int
+    let suppliersCreated: Int
+    let categoriesCreated: Int
 }
 
 nonisolated private struct ImportApplyResult: Sendable {
     let productsInserted: Int
     let productsUpdated: Int
+    let suppliersCreated: Int
+    let categoriesCreated: Int
     let priceHistoryInserted: Int
-    let priceHistoryTotal: Int
-    let priceHistorySkipped: Int
+    let priceHistoryAlreadyPresent: Int
+    let priceHistoryUnresolved: Int
     let priceHistoryError: String?
+
+    var priceHistoryProcessedCount: Int {
+        priceHistoryInserted + priceHistoryAlreadyPresent + priceHistoryUnresolved
+    }
 }
 
 nonisolated private struct ImportApplyPriceHistoryResult: Sendable {
     let insertedCount: Int
-    let skippedCount: Int
-    let totalResolvableCount: Int
+    let alreadyPresentCount: Int
+    let unresolvedCount: Int
+
+    var totalCount: Int {
+        insertedCount + alreadyPresentCount + unresolvedCount
+    }
 }
 
 nonisolated private struct PriceHistoryApplyFailure: LocalizedError, Sendable {
     let insertedCount: Int
-    let skippedCount: Int
-    let totalResolvableCount: Int
+    let alreadyPresentCount: Int
+    let unresolvedCount: Int
     let message: String
 
     var errorDescription: String? {
@@ -108,7 +124,15 @@ nonisolated private struct PendingPriceHistoryImportEntry: Sendable {
 
 nonisolated private struct PendingFullImportContext: Sendable {
     let priceHistoryEntries: [PendingPriceHistoryImportEntry]
+    let alreadyPresentPriceHistoryCount: Int
+    let unresolvedPriceHistoryCount: Int
+    let pendingSupplierNames: [String]
+    let pendingCategoryNames: [String]
     let suppressAutomaticProductPriceHistory: Bool
+
+    var hasWorkToApply: Bool {
+        !priceHistoryEntries.isEmpty || !pendingSupplierNames.isEmpty || !pendingCategoryNames.isEmpty
+    }
 }
 
 nonisolated private enum DatabaseImportPreparationError: Error, Sendable {
@@ -137,6 +161,15 @@ nonisolated private struct DatabaseImportAnalysisPayload: Sendable {
 nonisolated private struct PreparedImportAnalysis: Sendable {
     let analysis: DatabaseImportAnalysisPayload
     let pendingFullImportContext: PendingFullImportContext?
+    let nonProductSummary: NonProductDeltaSummary?
+}
+
+nonisolated private struct PriceHistoryFingerprint: Hashable, Sendable {
+    let barcode: String
+    let type: PriceType
+    let effectiveAtEpochSeconds: Int64
+    let priceFixed4: Int64
+    let source: String
 }
 
 @MainActor
@@ -224,6 +257,7 @@ nonisolated private enum DatabaseImportPipeline {
         "newPrice": ["newprice", "new_price", "price"],
         "source": ["source", "sorgente"]
     ]
+    private static let fullDatabasePriceHistorySource = "IMPORT_DB_FULL"
 
     static func prepareProductsImport(
         from url: URL,
@@ -259,7 +293,8 @@ nonisolated private enum DatabaseImportPipeline {
 
             return PreparedImportAnalysis(
                 analysis: analysis,
-                pendingFullImportContext: nil
+                pendingFullImportContext: nil,
+                nonProductSummary: nil
             )
         }.value
     }
@@ -281,31 +316,35 @@ nonisolated private enum DatabaseImportPipeline {
                 uniqueKeysWithValues: sheetNames.map { (normalizedSheetName($0), $0) }
             )
             let backgroundContext = ModelContext(modelContainer)
+            let supplierSheetNames: [String]
+            let categorySheetNames: [String]
 
             if let suppliersSheetName = sheetNameMap[normalizedSheetName("Suppliers")] {
                 await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(suppliersSheetName), processedCount: 0, totalCount: 0))
                 let parsingStartedAt = Date()
-                let supplierNames = readNamedEntitiesSheet(at: url, sheetName: suppliersSheetName)
+                supplierSheetNames = readNamedEntitiesSheet(at: url, sheetName: suppliersSheetName)
                 logTiming(
                     phase: "parsing",
                     sheet: suppliersSheetName,
                     elapsed: Date().timeIntervalSince(parsingStartedAt),
-                    rows: supplierNames.count
+                    rows: supplierSheetNames.count
                 )
-                try importSupplierNames(supplierNames, in: backgroundContext)
+            } else {
+                supplierSheetNames = []
             }
 
             if let categoriesSheetName = sheetNameMap[normalizedSheetName("Categories")] {
                 await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(categoriesSheetName), processedCount: 0, totalCount: 0))
                 let parsingStartedAt = Date()
-                let categoryNames = readNamedEntitiesSheet(at: url, sheetName: categoriesSheetName)
+                categorySheetNames = readNamedEntitiesSheet(at: url, sheetName: categoriesSheetName)
                 logTiming(
                     phase: "parsing",
                     sheet: categoriesSheetName,
                     elapsed: Date().timeIntervalSince(parsingStartedAt),
-                    rows: categoryNames.count
+                    rows: categorySheetNames.count
                 )
-                try importCategoryNames(categoryNames, in: backgroundContext)
+            } else {
+                categorySheetNames = []
             }
 
             guard let productsSheetName = sheetNameMap[normalizedSheetName("Products")] else {
@@ -344,19 +383,50 @@ nonisolated private enum DatabaseImportPipeline {
                 rows: dataRows.count
             )
 
-            let pendingContext: PendingFullImportContext?
+            let parsedPriceHistoryEntries: [PendingPriceHistoryImportEntry]
             if let priceHistorySheetName = sheetNameMap[normalizedSheetName("PriceHistory")] {
                 await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(priceHistorySheetName), processedCount: 0, totalCount: 0))
                 let parsingStartedAt = Date()
-                pendingContext = parsePendingPriceHistoryContext(
+                parsedPriceHistoryEntries = parsePendingPriceHistoryEntries(
                     at: url,
                     sheetNameMap: sheetNameMap
-                )
+                ) ?? []
                 logTiming(
                     phase: "parsing",
                     sheet: priceHistorySheetName,
                     elapsed: Date().timeIntervalSince(parsingStartedAt),
-                    rows: pendingContext?.priceHistoryEntries.count ?? 0
+                    rows: parsedPriceHistoryEntries.count
+                )
+            } else {
+                parsedPriceHistoryEntries = []
+            }
+
+            let classifiedPriceHistory = try classifyParsedPriceHistoryForFullImport(
+                parsedPriceHistoryEntries,
+                existingProducts: existingProducts,
+                newProducts: analysis.newProducts,
+                updatedProducts: analysis.updatedProducts,
+                in: backgroundContext
+            )
+            let namedEntities = try buildPendingSuppliersCategoriesAndNonProductSummary(
+                supplierSheetNames: supplierSheetNames,
+                categorySheetNames: categorySheetNames,
+                analysis: analysis,
+                priceHistoryToInsertCount: classifiedPriceHistory.toInsert.count,
+                priceHistoryAlreadyPresentCount: classifiedPriceHistory.alreadyPresentCount,
+                priceHistoryUnresolvedCount: classifiedPriceHistory.unresolvedCount,
+                in: backgroundContext
+            )
+            let hasPriceHistorySheet = sheetNameMap[normalizedSheetName("PriceHistory")] != nil
+            let pendingContext: PendingFullImportContext?
+            if hasPriceHistorySheet || !namedEntities.pendingSupplierNames.isEmpty || !namedEntities.pendingCategoryNames.isEmpty {
+                pendingContext = PendingFullImportContext(
+                    priceHistoryEntries: classifiedPriceHistory.toInsert,
+                    alreadyPresentPriceHistoryCount: classifiedPriceHistory.alreadyPresentCount,
+                    unresolvedPriceHistoryCount: classifiedPriceHistory.unresolvedCount,
+                    pendingSupplierNames: namedEntities.pendingSupplierNames,
+                    pendingCategoryNames: namedEntities.pendingCategoryNames,
+                    suppressAutomaticProductPriceHistory: hasPriceHistorySheet
                 )
             } else {
                 pendingContext = nil
@@ -364,7 +434,8 @@ nonisolated private enum DatabaseImportPipeline {
 
             return PreparedImportAnalysis(
                 analysis: analysis,
-                pendingFullImportContext: pendingContext
+                pendingFullImportContext: pendingContext,
+                nonProductSummary: namedEntities.summary
             )
         }.value
     }
@@ -389,21 +460,25 @@ nonisolated private enum DatabaseImportPipeline {
                 rows: productsResult.productsInserted + productsResult.productsUpdated,
                 extraFields: [
                     "productsInserted=\(productsResult.productsInserted)",
-                    "productsUpdated=\(productsResult.productsUpdated)"
+                    "productsUpdated=\(productsResult.productsUpdated)",
+                    "suppliersCreated=\(productsResult.suppliersCreated)",
+                    "categoriesCreated=\(productsResult.categoriesCreated)"
                 ]
             )
 
             let priceHistoryStartedAt = Date()
             var priceHistoryResult = ImportApplyPriceHistoryResult(
                 insertedCount: 0,
-                skippedCount: 0,
-                totalResolvableCount: 0
+                alreadyPresentCount: payload.alreadyPresentPriceHistoryCount,
+                unresolvedCount: payload.unresolvedPriceHistoryCount
             )
             var priceHistoryError: String?
 
             do {
                 priceHistoryResult = try await applyPendingPriceHistoryImport(
                     payload.pendingPriceHistoryEntries,
+                    alreadyPresentCount: payload.alreadyPresentPriceHistoryCount,
+                    unresolvedCount: payload.unresolvedPriceHistoryCount,
                     in: context,
                     onProgress: onProgress
                 )
@@ -411,27 +486,29 @@ nonisolated private enum DatabaseImportPipeline {
                     phase: "apply_price_history",
                     sheet: nil,
                     elapsed: Date().timeIntervalSince(priceHistoryStartedAt),
-                    rows: priceHistoryResult.totalResolvableCount,
+                    rows: priceHistoryResult.totalCount,
                     extraFields: [
                         "inserted=\(priceHistoryResult.insertedCount)",
-                        "skipped=\(priceHistoryResult.skippedCount)"
+                        "alreadyPresent=\(priceHistoryResult.alreadyPresentCount)",
+                        "unresolved=\(priceHistoryResult.unresolvedCount)"
                     ]
                 )
             } catch let error as PriceHistoryApplyFailure {
                 priceHistoryResult = ImportApplyPriceHistoryResult(
                     insertedCount: error.insertedCount,
-                    skippedCount: error.skippedCount,
-                    totalResolvableCount: error.totalResolvableCount
+                    alreadyPresentCount: error.alreadyPresentCount,
+                    unresolvedCount: error.unresolvedCount
                 )
                 priceHistoryError = error.message
                 logTiming(
                     phase: "apply_price_history",
                     sheet: nil,
                     elapsed: Date().timeIntervalSince(priceHistoryStartedAt),
-                    rows: priceHistoryResult.totalResolvableCount,
+                    rows: priceHistoryResult.totalCount,
                     extraFields: [
                         "inserted=\(priceHistoryResult.insertedCount)",
-                        "skipped=\(priceHistoryResult.skippedCount)",
+                        "alreadyPresent=\(priceHistoryResult.alreadyPresentCount)",
+                        "unresolved=\(priceHistoryResult.unresolvedCount)",
                         "error=\(error.message)"
                     ]
                 )
@@ -441,7 +518,7 @@ nonisolated private enum DatabaseImportPipeline {
                     phase: "apply_price_history",
                     sheet: nil,
                     elapsed: Date().timeIntervalSince(priceHistoryStartedAt),
-                    rows: priceHistoryResult.totalResolvableCount,
+                    rows: priceHistoryResult.totalCount,
                     extraFields: ["error=\(error.localizedDescription)"]
                 )
             }
@@ -449,9 +526,11 @@ nonisolated private enum DatabaseImportPipeline {
             let result = ImportApplyResult(
                 productsInserted: productsResult.productsInserted,
                 productsUpdated: productsResult.productsUpdated,
+                suppliersCreated: productsResult.suppliersCreated,
+                categoriesCreated: productsResult.categoriesCreated,
                 priceHistoryInserted: priceHistoryResult.insertedCount,
-                priceHistoryTotal: priceHistoryResult.totalResolvableCount,
-                priceHistorySkipped: priceHistoryResult.skippedCount,
+                priceHistoryAlreadyPresent: priceHistoryResult.alreadyPresentCount,
+                priceHistoryUnresolved: priceHistoryResult.unresolvedCount,
                 priceHistoryError: priceHistoryError
             )
             logApplyResult(result)
@@ -565,8 +644,8 @@ nonisolated private enum DatabaseImportPipeline {
                         return nil
                     }
                 }(),
-                supplierName: trimmedOrNil(row["supplier"]),
-                categoryName: trimmedOrNil(row["category"])
+                supplierName: normalizeNamedEntityName(row["supplier"]),
+                categoryName: normalizeNamedEntityName(row["category"])
             )
 
             if let existing = existingByBarcode[barcode] {
@@ -638,49 +717,106 @@ nonisolated private enum DatabaseImportPipeline {
             return []
         }
 
-        return Array(
-            Set(
-                rows.dropFirst().compactMap { row in
-                    let name = cellValue(in: row, at: nameIndex)
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                    return name.isEmpty ? nil : name
-                }
+        return normalizedUniqueSortedNames(
+            rows.dropFirst().compactMap { row in
+                normalizeNamedEntityName(cellValue(in: row, at: nameIndex))
+            }
+        )
+    }
+
+    private static func normalizeNamedEntityName(_ rawName: String?) -> String? {
+        normalizedImportNamedEntityName(rawName)
+    }
+
+    private static func normalizedUniqueSortedNames<S: Sequence>(_ names: S) -> [String] where S.Element == String {
+        Array(Set(names.compactMap(normalizeNamedEntityName))).sorted()
+    }
+
+    private static func normalizedFullDatabasePriceHistorySource(_ rawSource: String?) -> String {
+        normalizeNamedEntityName(rawSource) ?? fullDatabasePriceHistorySource
+    }
+
+    private static func makePriceHistoryFingerprint(
+        barcode: String,
+        type: PriceType,
+        effectiveAt: Date,
+        price: Double,
+        source: String?
+    ) -> PriceHistoryFingerprint {
+        PriceHistoryFingerprint(
+            barcode: barcode,
+            type: type,
+            effectiveAtEpochSeconds: Int64(floor(effectiveAt.timeIntervalSince1970)),
+            priceFixed4: Int64((price * 10_000).rounded()),
+            source: normalizedFullDatabasePriceHistorySource(source)
+        )
+    }
+
+    private static func referencedSupplierNames(
+        from analysis: DatabaseImportAnalysisPayload
+    ) -> Set<String> {
+        var names = Set(analysis.newProducts.compactMap { normalizeNamedEntityName($0.supplierName) })
+        for update in analysis.updatedProducts where update.changedFields.contains(.supplierName) {
+            if let name = normalizeNamedEntityName(update.new.supplierName) {
+                names.insert(name)
+            }
+        }
+        return names
+    }
+
+    private static func referencedCategoryNames(
+        from analysis: DatabaseImportAnalysisPayload
+    ) -> Set<String> {
+        var names = Set(analysis.newProducts.compactMap { normalizeNamedEntityName($0.categoryName) })
+        for update in analysis.updatedProducts where update.changedFields.contains(.categoryName) {
+            if let name = normalizeNamedEntityName(update.new.categoryName) {
+                names.insert(name)
+            }
+        }
+        return names
+    }
+
+    private static func buildPendingSuppliersCategoriesAndNonProductSummary(
+        supplierSheetNames: [String],
+        categorySheetNames: [String],
+        analysis: DatabaseImportAnalysisPayload,
+        priceHistoryToInsertCount: Int,
+        priceHistoryAlreadyPresentCount: Int,
+        priceHistoryUnresolvedCount: Int,
+        in context: ModelContext
+    ) throws -> (
+        pendingSupplierNames: [String],
+        pendingCategoryNames: [String],
+        summary: NonProductDeltaSummary
+    ) {
+        let existingSupplierNames = Set(
+            try context.fetch(FetchDescriptor<Supplier>()).compactMap { normalizeNamedEntityName($0.name) }
+        )
+        let existingCategoryNames = Set(
+            try context.fetch(FetchDescriptor<ProductCategory>()).compactMap { normalizeNamedEntityName($0.name) }
+        )
+
+        let pendingSupplierNames = normalizedUniqueSortedNames(supplierSheetNames)
+            .filter { !existingSupplierNames.contains($0) }
+        let pendingCategoryNames = normalizedUniqueSortedNames(categorySheetNames)
+            .filter { !existingCategoryNames.contains($0) }
+
+        let suppliersToAdd = Set(pendingSupplierNames)
+            .union(referencedSupplierNames(from: analysis).filter { !existingSupplierNames.contains($0) })
+        let categoriesToAdd = Set(pendingCategoryNames)
+            .union(referencedCategoryNames(from: analysis).filter { !existingCategoryNames.contains($0) })
+
+        return (
+            pendingSupplierNames: pendingSupplierNames,
+            pendingCategoryNames: pendingCategoryNames,
+            summary: NonProductDeltaSummary(
+                suppliersToAdd: suppliersToAdd.count,
+                categoriesToAdd: categoriesToAdd.count,
+                priceHistoryToInsert: priceHistoryToInsertCount,
+                priceHistoryAlreadyPresent: priceHistoryAlreadyPresentCount,
+                priceHistoryUnresolved: priceHistoryUnresolvedCount
             )
-        ).sorted()
-    }
-
-    private static func importSupplierNames(_ names: [String], in context: ModelContext) throws {
-        guard !names.isEmpty else { return }
-
-        let existingSuppliers = try context.fetch(FetchDescriptor<Supplier>())
-        var suppliersByName = Dictionary(
-            uniqueKeysWithValues: existingSuppliers.map { ($0.name, $0) }
         )
-
-        for name in names where suppliersByName[name] == nil {
-            let supplier = Supplier(name: name)
-            context.insert(supplier)
-            suppliersByName[name] = supplier
-        }
-
-        try context.save()
-    }
-
-    private static func importCategoryNames(_ names: [String], in context: ModelContext) throws {
-        guard !names.isEmpty else { return }
-
-        let existingCategories = try context.fetch(FetchDescriptor<ProductCategory>())
-        var categoriesByName = Dictionary(
-            uniqueKeysWithValues: existingCategories.map { ($0.name, $0) }
-        )
-
-        for name in names where categoriesByName[name] == nil {
-            let category = ProductCategory(name: name)
-            context.insert(category)
-            categoriesByName[name] = category
-        }
-
-        try context.save()
     }
 
     private static func logTiming(
@@ -704,9 +840,11 @@ nonisolated private enum DatabaseImportPipeline {
             "phase=apply_result",
             "productsInserted=\(result.productsInserted)",
             "productsUpdated=\(result.productsUpdated)",
+            "suppliersCreated=\(result.suppliersCreated)",
+            "categoriesCreated=\(result.categoriesCreated)",
             "priceHistoryInserted=\(result.priceHistoryInserted)",
-            "priceHistoryTotal=\(result.priceHistoryTotal)",
-            "priceHistorySkipped=\(result.priceHistorySkipped)"
+            "priceHistoryAlreadyPresent=\(result.priceHistoryAlreadyPresent)",
+            "priceHistoryUnresolved=\(result.priceHistoryUnresolved)"
         ]
         fields.append("priceHistoryError=\(result.priceHistoryError ?? "nil")")
         print("[TASK-011] \(fields.joined(separator: " "))")
@@ -723,42 +861,54 @@ nonisolated private enum DatabaseImportPipeline {
         )
 
         let existingSuppliers = try context.fetch(FetchDescriptor<Supplier>())
-        var suppliersByName = Dictionary(
-            uniqueKeysWithValues: existingSuppliers.map { ($0.name, $0) }
+        var suppliersByName: [String: Supplier] = Dictionary(
+            uniqueKeysWithValues: existingSuppliers.compactMap { supplier in
+                guard let normalizedName = normalizeNamedEntityName(supplier.name) else {
+                    return nil
+                }
+
+                return (normalizedName, supplier)
+            }
         )
 
         let existingCategories = try context.fetch(FetchDescriptor<ProductCategory>())
-        var categoriesByName = Dictionary(
-            uniqueKeysWithValues: existingCategories.map { ($0.name, $0) }
+        var categoriesByName: [String: ProductCategory] = Dictionary(
+            uniqueKeysWithValues: existingCategories.compactMap { category in
+                guard let normalizedName = normalizeNamedEntityName(category.name) else {
+                    return nil
+                }
+
+                return (normalizedName, category)
+            }
         )
+        var createdSupplierNames: Set<String> = []
+        var createdCategoryNames: Set<String> = []
 
         func resolveSupplier(named rawName: String?) -> Supplier? {
-            guard let rawName else { return nil }
-            let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return nil }
+            guard let normalizedName = normalizeNamedEntityName(rawName) else { return nil }
 
-            if let existing = suppliersByName[trimmed] {
+            if let existing = suppliersByName[normalizedName] {
                 return existing
             }
 
-            let supplier = Supplier(name: trimmed)
+            let supplier = Supplier(name: normalizedName)
             context.insert(supplier)
-            suppliersByName[trimmed] = supplier
+            suppliersByName[normalizedName] = supplier
+            createdSupplierNames.insert(normalizedName)
             return supplier
         }
 
         func resolveCategory(named rawName: String?) -> ProductCategory? {
-            guard let rawName else { return nil }
-            let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return nil }
+            guard let normalizedName = normalizeNamedEntityName(rawName) else { return nil }
 
-            if let existing = categoriesByName[trimmed] {
+            if let existing = categoriesByName[normalizedName] {
                 return existing
             }
 
-            let category = ProductCategory(name: trimmed)
+            let category = ProductCategory(name: normalizedName)
             context.insert(category)
-            categoriesByName[trimmed] = category
+            categoriesByName[normalizedName] = category
+            createdCategoryNames.insert(normalizedName)
             return category
         }
 
@@ -773,6 +923,14 @@ nonisolated private enum DatabaseImportPipeline {
             onProgress: onProgress,
             force: true
         )
+
+        for supplierName in payload.pendingSupplierNames {
+            _ = resolveSupplier(named: supplierName)
+        }
+
+        for categoryName in payload.pendingCategoryNames {
+            _ = resolveCategory(named: categoryName)
+        }
 
         for draft in payload.newProducts {
             autoreleasepool {
@@ -882,14 +1040,16 @@ nonisolated private enum DatabaseImportPipeline {
         await Task.yield()
         return ImportApplyProductsResult(
             productsInserted: insertedCount,
-            productsUpdated: updatedCount
+            productsUpdated: updatedCount,
+            suppliersCreated: createdSupplierNames.count,
+            categoriesCreated: createdCategoryNames.count
         )
     }
 
-    private static func parsePendingPriceHistoryContext(
+    private static func parsePendingPriceHistoryEntries(
         at url: URL,
         sheetNameMap: [String: String]
-    ) -> PendingFullImportContext? {
+    ) -> [PendingPriceHistoryImportEntry]? {
         guard let sheetName = sheetNameMap[normalizedSheetName("PriceHistory")] else {
             return nil
         }
@@ -934,17 +1094,15 @@ nonisolated private enum DatabaseImportPipeline {
                         .trimmingCharacters(in: .whitespacesAndNewlines)
                     let effectiveAt = parseFullDatabaseTimestamp(timestampRaw) ?? Date()
 
-                    let sourceRaw = sourceIndex.map { cellValue(in: row, at: $0) } ?? ""
-                    let source = sourceRaw.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let normalizedSource = source.isEmpty ? "IMPORT_DB_FULL" : source
-
                     parsedEntries.append(
                         PendingPriceHistoryImportEntry(
                             barcode: barcode,
                             type: type,
                             price: price,
                             effectiveAt: effectiveAt,
-                            source: normalizedSource
+                            source: normalizedFullDatabasePriceHistorySource(
+                                sourceIndex.map { cellValue(in: row, at: $0) }
+                            )
                         )
                     )
                 }
@@ -956,41 +1114,101 @@ nonisolated private enum DatabaseImportPipeline {
             return nil
         }
 
-        return PendingFullImportContext(
-            priceHistoryEntries: entries,
-            suppressAutomaticProductPriceHistory: true
+        return entries
+    }
+
+    private static func classifyParsedPriceHistoryForFullImport(
+        _ entries: [PendingPriceHistoryImportEntry],
+        existingProducts: [ImportExistingProductSnapshot],
+        newProducts: [ProductDraft],
+        updatedProducts: [ProductUpdateDraft],
+        in context: ModelContext
+    ) throws -> (
+        toInsert: [PendingPriceHistoryImportEntry],
+        alreadyPresentCount: Int,
+        unresolvedCount: Int
+    ) {
+        guard !entries.isEmpty else {
+            return (toInsert: [], alreadyPresentCount: 0, unresolvedCount: 0)
+        }
+
+        let existingPriceHistory = try context.fetch(FetchDescriptor<ProductPrice>())
+        var knownFingerprints = Set(
+            existingPriceHistory.compactMap { entry -> PriceHistoryFingerprint? in
+                guard let barcode = entry.product?.barcode.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !barcode.isEmpty else {
+                    return nil
+                }
+
+                return makePriceHistoryFingerprint(
+                    barcode: barcode,
+                    type: entry.type,
+                    effectiveAt: entry.effectiveAt,
+                    price: entry.price,
+                    source: entry.source
+                )
+            }
+        )
+        var resolvableBarcodes = Set(existingProducts.map(\.barcode))
+        resolvableBarcodes.formUnion(newProducts.map(\.barcode))
+        resolvableBarcodes.formUnion(updatedProducts.map(\.barcode))
+
+        var toInsert: [PendingPriceHistoryImportEntry] = []
+        var alreadyPresentCount = 0
+        var unresolvedCount = 0
+
+        for entry in entries {
+            guard resolvableBarcodes.contains(entry.barcode) else {
+                unresolvedCount += 1
+                continue
+            }
+
+            let fingerprint = makePriceHistoryFingerprint(
+                barcode: entry.barcode,
+                type: entry.type,
+                effectiveAt: entry.effectiveAt,
+                price: entry.price,
+                source: entry.source
+            )
+            if knownFingerprints.contains(fingerprint) {
+                alreadyPresentCount += 1
+                continue
+            }
+
+            knownFingerprints.insert(fingerprint)
+            toInsert.append(entry)
+        }
+
+        return (
+            toInsert: toInsert,
+            alreadyPresentCount: alreadyPresentCount,
+            unresolvedCount: unresolvedCount
         )
     }
 
     private static func applyPendingPriceHistoryImport(
         _ entries: [PendingPriceHistoryImportEntry],
+        alreadyPresentCount: Int,
+        unresolvedCount: Int,
         in context: ModelContext,
         onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
     ) async throws -> ImportApplyPriceHistoryResult {
         guard !entries.isEmpty else {
             return ImportApplyPriceHistoryResult(
                 insertedCount: 0,
-                skippedCount: 0,
-                totalResolvableCount: 0
+                alreadyPresentCount: alreadyPresentCount,
+                unresolvedCount: unresolvedCount
             )
         }
 
         var persistedCount = 0
-        var skippedCount = 0
-        var totalResolvableCount = 0
+        var finalUnresolvedCount = unresolvedCount
 
         do {
             let existingProducts = try context.fetch(FetchDescriptor<Product>())
             let productsByBarcode = Dictionary(
                 uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
             )
-
-            totalResolvableCount = entries.reduce(into: 0) { count, entry in
-                if productsByBarcode[entry.barcode] != nil {
-                    count += 1
-                }
-            }
-            skippedCount = entries.count - totalResolvableCount
 
             let now = Date()
             var processedCount = 0
@@ -1008,6 +1226,7 @@ nonisolated private enum DatabaseImportPipeline {
                 processedCount += 1
 
                 guard let product = productsByBarcode[entry.barcode] else {
+                    finalUnresolvedCount += 1
                     await reportImportProgress(
                         stage: .applyingPriceHistory,
                         processedCount: processedCount,
@@ -1022,7 +1241,7 @@ nonisolated private enum DatabaseImportPipeline {
                         type: entry.type,
                         price: entry.price,
                         effectiveAt: entry.effectiveAt,
-                        source: entry.source,
+                        source: normalizedFullDatabasePriceHistorySource(entry.source),
                         note: nil,
                         createdAt: now,
                         product: product
@@ -1054,14 +1273,14 @@ nonisolated private enum DatabaseImportPipeline {
             await Task.yield()
             return ImportApplyPriceHistoryResult(
                 insertedCount: persistedCount,
-                skippedCount: skippedCount,
-                totalResolvableCount: totalResolvableCount
+                alreadyPresentCount: alreadyPresentCount,
+                unresolvedCount: finalUnresolvedCount
             )
         } catch {
             throw PriceHistoryApplyFailure(
                 insertedCount: persistedCount,
-                skippedCount: skippedCount,
-                totalResolvableCount: totalResolvableCount,
+                alreadyPresentCount: alreadyPresentCount,
+                unresolvedCount: finalUnresolvedCount,
                 message: error.localizedDescription
             )
         }
@@ -1488,7 +1707,12 @@ struct DatabaseView: View {
             NavigationStack {
                 ImportAnalysisView(
                     session: session,
-                    allowsApplyWithoutChanges: pendingFullImportContext != nil,
+                    hasWorkToApply: {
+                        Self.hasWorkToApply(
+                            session: session,
+                            pendingFullImportContext: pendingFullImportContext
+                        )
+                    },
                     onApply: {
                         try await applyConfirmedImportAnalysis()
                         importAnalysisSession = nil
@@ -2119,9 +2343,24 @@ struct DatabaseView: View {
                     )
 
                     await MainActor.run {
+                        let existingSupplierNames = Set(
+                            (try? context.fetch(FetchDescriptor<Supplier>()))?
+                                .compactMap { normalizedImportNamedEntityName($0.name) }
+                            ?? []
+                        )
+                        let existingCategoryNames = Set(
+                            (try? context.fetch(FetchDescriptor<ProductCategory>()))?
+                                .compactMap { normalizedImportNamedEntityName($0.name) }
+                            ?? []
+                        )
                         pendingFullImportContext = prepared.pendingFullImportContext
                         importAnalysisSession = ImportAnalysisSession(
-                            analysis: DatabaseImportUILocalizer.analysisResult(from: prepared.analysis)
+                            analysis: DatabaseImportUILocalizer.analysisResult(from: prepared.analysis),
+                            nonProductSummary: prepared.nonProductSummary,
+                            pendingSupplierNames: prepared.pendingFullImportContext?.pendingSupplierNames ?? [],
+                            pendingCategoryNames: prepared.pendingFullImportContext?.pendingCategoryNames ?? [],
+                            existingSupplierNames: existingSupplierNames,
+                            existingCategoryNames: existingCategoryNames
                         )
                         progressState.awaitingConfirmation()
                     }
@@ -2183,7 +2422,7 @@ struct DatabaseView: View {
                     result.productsUpdated,
                     priceHistoryError,
                     result.priceHistoryInserted,
-                    result.priceHistoryTotal
+                    result.priceHistoryProcessedCount
                 )
             } else {
                 baseMessage = L(
@@ -2191,10 +2430,10 @@ struct DatabaseView: View {
                     result.productsInserted,
                     result.productsUpdated,
                     priceHistoryError,
-                    result.priceHistoryTotal
+                    result.priceHistoryProcessedCount
                 )
             }
-        } else if result.priceHistoryTotal > 0 {
+        } else if result.priceHistoryInserted > 0 {
             baseMessage = L(
                 "database.progress.success_with_price_history",
                 result.productsInserted,
@@ -2209,14 +2448,19 @@ struct DatabaseView: View {
             )
         }
 
-        guard result.priceHistorySkipped > 0 else {
-            return baseMessage
+        var suffixes: [String] = []
+        if result.suppliersCreated > 0 {
+            suffixes.append(L("database.progress.suppliers_created_suffix", result.suppliersCreated))
+        }
+        if result.categoriesCreated > 0 {
+            suffixes.append(L("database.progress.categories_created_suffix", result.categoriesCreated))
+        }
+        if result.priceHistoryUnresolved > 0 {
+            suffixes.append(L("database.progress.price_history_unresolved_suffix", result.priceHistoryUnresolved))
         }
 
-        return baseMessage + " " + L(
-            "database.progress.price_history_skipped_suffix",
-            result.priceHistorySkipped
-        )
+        guard !suffixes.isEmpty else { return baseMessage }
+        return ([baseMessage] + suffixes).joined(separator: " ")
     }
 
     @MainActor
@@ -2295,10 +2539,7 @@ struct DatabaseView: View {
         session: ImportAnalysisSession,
         pendingFullImportContext: PendingFullImportContext?
     ) throws -> ImportApplyPayload {
-        let newProducts = session.newProducts
-        let updatedProducts = session.updatedProducts
-        let pendingPriceHistoryEntries = pendingFullImportContext?.priceHistoryEntries ?? []
-        guard !newProducts.isEmpty || !updatedProducts.isEmpty || !pendingPriceHistoryEntries.isEmpty else {
+        guard hasWorkToApply(session: session, pendingFullImportContext: pendingFullImportContext) else {
             throw NSError(
                 domain: "ImportExcelApply",
                 code: 5,
@@ -2309,11 +2550,25 @@ struct DatabaseView: View {
         }
 
         return ImportApplyPayload(
-            newProducts: newProducts,
-            updatedProducts: updatedProducts,
-            pendingPriceHistoryEntries: pendingPriceHistoryEntries,
+            newProducts: session.newProducts,
+            updatedProducts: session.updatedProducts,
+            pendingPriceHistoryEntries: pendingFullImportContext?.priceHistoryEntries ?? [],
+            alreadyPresentPriceHistoryCount: pendingFullImportContext?.alreadyPresentPriceHistoryCount ?? 0,
+            unresolvedPriceHistoryCount: pendingFullImportContext?.unresolvedPriceHistoryCount ?? 0,
+            pendingSupplierNames: pendingFullImportContext?.pendingSupplierNames ?? [],
+            pendingCategoryNames: pendingFullImportContext?.pendingCategoryNames ?? [],
             recordPriceHistory: !(pendingFullImportContext?.suppressAutomaticProductPriceHistory ?? false)
         )
+    }
+
+    @MainActor
+    private static func hasWorkToApply(
+        session: ImportAnalysisSession,
+        pendingFullImportContext: PendingFullImportContext?
+    ) -> Bool {
+        !session.newProducts.isEmpty
+        || !session.updatedProducts.isEmpty
+        || (pendingFullImportContext?.hasWorkToApply ?? false)
     }
 
     // MARK: - Import CSV

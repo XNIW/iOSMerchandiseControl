@@ -415,6 +415,7 @@ struct GeneratedView: View {
             NavigationStack {
                 ImportAnalysisView(
                     session: session,
+                    hasWorkToApply: { session.hasChanges },
                     onApply: {
                         applyImportAnalysis(session)
                     }

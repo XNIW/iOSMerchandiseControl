@@ -175,6 +175,11 @@
 "import.analysis.summary.updates" = "更新";
 "import.analysis.summary.warnings" = "警告";
 "import.analysis.summary.errors" = "错误";
+"import.analysis.summary.suppliers_to_add" = "待新增供应商";
+"import.analysis.summary.categories_to_add" = "待新增分类";
+"import.analysis.summary.price_history_to_insert" = "待插入价格历史";
+"import.analysis.summary.price_history_already_present" = "已存在价格历史";
+"import.analysis.summary.price_history_unresolved" = "未解析价格历史";
 "import.analysis.duplicate_barcodes" = "文件中重复的条码";
 "import.analysis.new_products_count" = "新商品（%d）";
 "import.analysis.updated_products_count" = "已更新商品（%d）";
@@ -228,7 +233,9 @@
 "database.progress.success_with_price_history" = "导入完成。商品：新增 %1$d，更新 %2$d。价格历史已保存：%3$d。";
 "database.progress.partial_success" = "商品已导入：新增 %1$d，更新 %2$d。价格历史出错：%3$@。已保存 %4$d / %5$d 条历史记录。";
 "database.progress.price_history_total_failure" = "商品已导入：新增 %1$d，更新 %2$d。价格历史完全失败：%3$@。已保存 0 / %4$d 条历史记录。";
-"database.progress.price_history_skipped_suffix" = "已跳过未匹配商品的价格历史行：%d。";
+"database.progress.suppliers_created_suffix" = "已创建供应商：%d。";
+"database.progress.categories_created_suffix" = "已创建分类：%d。";
+"database.progress.price_history_unresolved_suffix" = "未解析的价格历史行：%d。";
 "database.progress.invalid_workbook" = "无法读取文件。请确保它是有效的多工作表 Excel（.xlsx）文件。";
 "database.progress.missing_products_sheet" = "文件中没有“Products”工作表。完整导入至少需要该工作表。";
 "database.error.export" = "导出错误：%@";

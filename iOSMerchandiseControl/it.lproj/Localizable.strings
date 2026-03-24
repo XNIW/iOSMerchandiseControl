@@ -175,6 +175,11 @@
 "import.analysis.summary.updates" = "Aggiornamenti";
 "import.analysis.summary.warnings" = "Warning";
 "import.analysis.summary.errors" = "Errori";
+"import.analysis.summary.suppliers_to_add" = "Fornitori da aggiungere";
+"import.analysis.summary.categories_to_add" = "Categorie da aggiungere";
+"import.analysis.summary.price_history_to_insert" = "Storico prezzi da inserire";
+"import.analysis.summary.price_history_already_present" = "Storico prezzi gia' presenti";
+"import.analysis.summary.price_history_unresolved" = "Storico prezzi non risolvibili";
 "import.analysis.duplicate_barcodes" = "Barcode duplicati nel file";
 "import.analysis.new_products_count" = "Nuovi prodotti (%d)";
 "import.analysis.updated_products_count" = "Prodotti aggiornati (%d)";
@@ -228,7 +233,9 @@
 "database.progress.success_with_price_history" = "Import completato. Prodotti: %1$d nuovi, %2$d aggiornati. Storico prezzi salvato: %3$d.";
 "database.progress.partial_success" = "Prodotti importati: %1$d nuovi, %2$d aggiornati. Errore storico prezzi: %3$@. Salvate %4$d righe su %5$d.";
 "database.progress.price_history_total_failure" = "Prodotti importati: %1$d nuovi, %2$d aggiornati. Errore totale storico prezzi: %3$@. Salvate 0 righe su %4$d.";
-"database.progress.price_history_skipped_suffix" = "Righe storico prezzi non abbinate saltate: %d.";
+"database.progress.suppliers_created_suffix" = "Fornitori creati: %d.";
+"database.progress.categories_created_suffix" = "Categorie create: %d.";
+"database.progress.price_history_unresolved_suffix" = "Righe storico prezzi non risolvibili: %d.";
 "database.progress.invalid_workbook" = "Impossibile leggere il file. Assicurarsi che sia un file Excel (.xlsx) valido con più fogli.";
 "database.progress.missing_products_sheet" = "Il file non contiene un foglio 'Products'. L'importazione completa richiede almeno questo foglio.";
 "database.error.export" = "Errore durante l'export: %@";

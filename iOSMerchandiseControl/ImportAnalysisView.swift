@@ -2,6 +2,15 @@ import SwiftUI
 import Combine
 import xlsxwriter
 
+nonisolated func normalizedImportNamedEntityName(_ rawName: String?) -> String? {
+    guard let normalized = rawName?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !normalized.isEmpty else {
+        return nil
+    }
+
+    return normalized
+}
+
 // MARK: - Modelli per ImportAnalysis (Excel → Database)
 
 /// Snapshot "puro" di un prodotto letto da Excel (non e` ancora SwiftData)
@@ -101,6 +110,14 @@ struct ProductImportAnalysisResult: Identifiable, Sendable {
     }
 }
 
+struct NonProductDeltaSummary: Sendable {
+    let suppliersToAdd: Int
+    let categoriesToAdd: Int
+    let priceHistoryToInsert: Int
+    let priceHistoryAlreadyPresent: Int
+    let priceHistoryUnresolved: Int
+}
+
 @MainActor
 final class ImportAnalysisSession: ObservableObject, Identifiable {
     let id: UUID
@@ -109,17 +126,87 @@ final class ImportAnalysisSession: ObservableObject, Identifiable {
     @Published var updatedProducts: [ProductUpdateDraft]
     @Published var errors: [ProductImportRowError]
     @Published var warnings: [ProductDuplicateWarning]
+    @Published var nonProductSummary: NonProductDeltaSummary?
 
-    init(analysis: ProductImportAnalysisResult) {
+    private let pendingSupplierNames: [String]
+    private let pendingCategoryNames: [String]
+    private let existingSupplierNames: Set<String>
+    private let existingCategoryNames: Set<String>
+    private let priceHistoryToInsert: Int
+    private let priceHistoryAlreadyPresent: Int
+    private let priceHistoryUnresolved: Int
+
+    init(
+        analysis: ProductImportAnalysisResult,
+        nonProductSummary: NonProductDeltaSummary? = nil,
+        pendingSupplierNames: [String] = [],
+        pendingCategoryNames: [String] = [],
+        existingSupplierNames: Set<String> = [],
+        existingCategoryNames: Set<String> = []
+    ) {
         id = analysis.id
         newProducts = analysis.newProducts
         updatedProducts = analysis.updatedProducts
         errors = analysis.errors
         warnings = analysis.warnings
+        self.nonProductSummary = nonProductSummary
+        self.pendingSupplierNames = pendingSupplierNames
+        self.pendingCategoryNames = pendingCategoryNames
+        self.existingSupplierNames = existingSupplierNames
+        self.existingCategoryNames = existingCategoryNames
+        priceHistoryToInsert = nonProductSummary?.priceHistoryToInsert ?? 0
+        priceHistoryAlreadyPresent = nonProductSummary?.priceHistoryAlreadyPresent ?? 0
+        priceHistoryUnresolved = nonProductSummary?.priceHistoryUnresolved ?? 0
+        refreshNonProductSummary()
     }
 
     var hasChanges: Bool {
         !newProducts.isEmpty || !updatedProducts.isEmpty
+    }
+
+    func refreshNonProductSummary() {
+        guard nonProductSummary != nil else { return }
+
+        let suppliersToAdd = Set(pendingSupplierNames.filter { !existingSupplierNames.contains($0) })
+            .union(referencedNames(from: newProducts, keyPath: \.supplierName).filter { !existingSupplierNames.contains($0) })
+            .union(referencedNames(from: updatedProducts, changedField: .supplierName).filter { !existingSupplierNames.contains($0) })
+        let categoriesToAdd = Set(pendingCategoryNames.filter { !existingCategoryNames.contains($0) })
+            .union(referencedNames(from: newProducts, keyPath: \.categoryName).filter { !existingCategoryNames.contains($0) })
+            .union(referencedNames(from: updatedProducts, changedField: .categoryName).filter { !existingCategoryNames.contains($0) })
+
+        nonProductSummary = NonProductDeltaSummary(
+            suppliersToAdd: suppliersToAdd.count,
+            categoriesToAdd: categoriesToAdd.count,
+            priceHistoryToInsert: priceHistoryToInsert,
+            priceHistoryAlreadyPresent: priceHistoryAlreadyPresent,
+            priceHistoryUnresolved: priceHistoryUnresolved
+        )
+    }
+
+    private func referencedNames(
+        from drafts: [ProductDraft],
+        keyPath: KeyPath<ProductDraft, String?>
+    ) -> Set<String> {
+        Set(drafts.compactMap { normalizedImportNamedEntityName($0[keyPath: keyPath]) })
+    }
+
+    private func referencedNames(
+        from updates: [ProductUpdateDraft],
+        changedField: ProductUpdateDraft.ChangedField
+    ) -> Set<String> {
+        Set(
+            updates.compactMap { update in
+                guard update.changedFields.contains(changedField) else { return nil }
+                switch changedField {
+                case .supplierName:
+                    return normalizedImportNamedEntityName(update.new.supplierName)
+                case .categoryName:
+                    return normalizedImportNamedEntityName(update.new.categoryName)
+                default:
+                    return nil
+                }
+            }
+        )
     }
 }
 
@@ -147,18 +234,18 @@ struct ImportAnalysisView: View {
     @State private var editingDraftItem: EditingItem?
     @State private var isApplying = false
     @AppStorage("appLanguage") private var appLanguage: String = "system"
-    let allowsApplyWithoutChanges: Bool
+    let hasWorkToApply: () -> Bool
     let onApply: () async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
 
     init(
         session: ImportAnalysisSession,
-        allowsApplyWithoutChanges: Bool = false,
+        hasWorkToApply: @escaping () -> Bool,
         onApply: @escaping () async throws -> Void
     ) {
         _session = ObservedObject(wrappedValue: session)
-        self.allowsApplyWithoutChanges = allowsApplyWithoutChanges
+        self.hasWorkToApply = hasWorkToApply
         self.onApply = onApply
     }
 
@@ -234,7 +321,7 @@ struct ImportAnalysisView: View {
                         }
                     }
                 }
-                .disabled(isApplying || (!session.hasChanges && !allowsApplyWithoutChanges))
+                .disabled(isApplying || !hasWorkToApply())
             }
         }
         .sheet(item: $shareItem) { shareItem in
@@ -304,6 +391,40 @@ struct ImportAnalysisView: View {
             row(label: L("import.analysis.summary.updates"), systemImage: "arrow.triangle.2.circlepath", value: session.updatedProducts.count)
             row(label: L("import.analysis.summary.warnings"), systemImage: "exclamationmark.triangle", value: session.warnings.count)
             row(label: L("import.analysis.summary.errors"), systemImage: "xmark.octagon", value: session.errors.count)
+
+            if let nonProductSummary = session.nonProductSummary {
+                if nonProductSummary.suppliersToAdd > 0 {
+                    row(
+                        label: L("import.analysis.summary.suppliers_to_add"),
+                        systemImage: "building.2",
+                        value: nonProductSummary.suppliersToAdd
+                    )
+                }
+
+                if nonProductSummary.categoriesToAdd > 0 {
+                    row(
+                        label: L("import.analysis.summary.categories_to_add"),
+                        systemImage: "tag",
+                        value: nonProductSummary.categoriesToAdd
+                    )
+                }
+
+                row(
+                    label: L("import.analysis.summary.price_history_to_insert"),
+                    systemImage: "clock.badge.plus",
+                    value: nonProductSummary.priceHistoryToInsert
+                )
+                row(
+                    label: L("import.analysis.summary.price_history_already_present"),
+                    systemImage: "checkmark.circle",
+                    value: nonProductSummary.priceHistoryAlreadyPresent
+                )
+                row(
+                    label: L("import.analysis.summary.price_history_unresolved"),
+                    systemImage: "questionmark.circle",
+                    value: nonProductSummary.priceHistoryUnresolved
+                )
+            }
         }
     }
 
@@ -531,6 +652,7 @@ struct ImportAnalysisView: View {
                             session.updatedProducts[index].new = editedDraft
                             session.updatedProducts[index].changedFields = newChangedFields
                         }
+                        session.refreshNonProductSummary()
                         editingDraftItem = nil
                     },
                     onCancel: {
@@ -554,6 +676,7 @@ struct ImportAnalysisView: View {
                 ),
                 onSave: { editedDraft in
                     session.newProducts[index] = editedDraft
+                    session.refreshNonProductSummary()
                     editingDraftItem = nil
                 },
                 onCancel: {
@@ -806,8 +929,7 @@ private struct EditProductDraftView: View {
     }
 
     private nonisolated static func trimmedOrNil(_ text: String) -> String? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        normalizedImportNamedEntityName(text)
     }
 
     private nonisolated static func parseDouble(from text: String) -> Double? {
