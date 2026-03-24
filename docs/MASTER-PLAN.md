@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-024 ACTIVE — Full-database import progress UX + cancellation (REVIEW in corso, responsabile: CLAUDE).
+TASK-016 ACTIVE — Deduplicazione logica import DatabaseView/ProductImportViewModel (REVIEW in corso, responsabile: CLAUDE).
 
 ## Stato globale
 ACTIVE
-> **User override 2026-03-24:** TASK-023 messo in **BLOCKED** (test manuali residui non conclusi; review codice gia' APPROVED ma nessun DONE). TASK-024 e' ora il **task attivo** in **PLANNING** (progress UX + cancellation full-database import), separato dalla logica dati di TASK-023. TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED (umbrella storico); non riaperto. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota su TASK-023 sotto.
+> **User override 2026-03-24:** TASK-024 e' stato messo in **BLOCKED** (review/fix UI non finalizzati; non DONE; riprendibile dal punto corrente). TASK-016 ha completato l'**EXECUTION** del core condiviso import Excel/simple e ora e' il **task attivo** in **REVIEW**, con ownership corrente **CLAUDE**. TASK-023 resta **BLOCKED** (test manuali residui non conclusi; review codice gia' APPROVED ma nessun DONE). TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED (umbrella storico); non riaperto. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,15 +49,21 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- Task ID: TASK-024
-- Titolo: Full-database import progress UX + cancellation
-- File task: `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
+- Task ID: TASK-016
+- Titolo: Deduplicazione logica import DatabaseView/ProductImportViewModel
+- File task: `docs/TASKS/TASK-016-deduplicazione-logica-import-databaseview-productimportviewmodel.md`
 - Stato: ACTIVE
 - Fase attuale: REVIEW
 - Responsabile attuale: CLAUDE
-- Ultimo aggiornamento: 2026-03-23
+- Ultimo aggiornamento: 2026-03-24
 
 Task bloccati non attivi:
+- Task ID: TASK-024
+- Titolo: Full-database import progress UX + cancellation
+- File task: `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
+- Stato: BLOCKED
+- Motivo: sospeso temporaneamente per decisione utente; review/fix UI non portati a finalizzazione; nessun DONE. Alla ripresa si continua dal punto corrente (review/fix residuo) senza rifare planning da zero.
+- Ultimo aggiornamento: 2026-03-24
 - Task ID: TASK-023
 - Titolo: Full-database reimport idempotency + non-product diff visibility
 - File task: `docs/TASKS/TASK-023-full-db-reimport-idempotency-and-non-product-diff-visibility.md`
@@ -98,7 +104,7 @@ Task bloccati non attivi:
 - Titolo: Database full import/export (multi-sheet)
 - File task: `docs/TASKS/TASK-006-database-full-import-export.md`
 - Stato: BLOCKED
-- Motivo: implementazione completata e review emessa APPROVED da Claude; il crash di apply su dataset grande e' stato chiuso in TASK-022; follow-up reimport/idempotency in TASK-023 (**BLOCKED** 2026-03-24, test manuali pendenti); UX progress in TASK-024 (attivo).
+- Motivo: implementazione completata e review emessa APPROVED da Claude; il crash di apply su dataset grande e' stato chiuso in TASK-022; follow-up reimport/idempotency in TASK-023 (**BLOCKED** 2026-03-24, test manuali pendenti); UX progress in TASK-024 (**BLOCKED** 2026-03-24, sospeso prima della finalizzazione review/fix UI).
 - Ultimo aggiornamento: 2026-03-24
 - Task ID: TASK-008
 - Titolo: Generated manual row dialog + calculate
@@ -134,7 +140,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-013 | sim_ui.sh performance — batch mode, timeout reale, cache device frame | BLOCKED | HIGH |
 | TASK-014 | Global Audit & Backlog Refresh | DONE | — |
 | TASK-015 | Calculate dialog in GeneratedView (GAP-15 residuo) | WONT_DO | LOW |
-| TASK-016 | Deduplicazione logica import DatabaseView/ProductImportViewModel | TODO | LOW |
+| TASK-016 | Deduplicazione logica import DatabaseView/ProductImportViewModel | ACTIVE | LOW |
 | TASK-017 | PreGenerate: validazione esplicita colonne obbligatorie | TODO | MEDIUM |
 | TASK-018 | GeneratedView: secondo livello revert (ai dati originali import) | TODO | MEDIUM |
 | TASK-019 | Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill | TODO | MEDIUM |
@@ -142,7 +148,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | TODO | LOW |
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | DONE | HIGH |
 | TASK-023 | Full-database reimport idempotency + non-product diff visibility | BLOCKED | HIGH |
-| TASK-024 | Full-database import progress UX + cancellation | ACTIVE | MEDIUM |
+| TASK-024 | Full-database import progress UX + cancellation | BLOCKED | MEDIUM |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -161,7 +167,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
   Motivo: sospeso per decisione utente; TASK-022 ha chiuso il crash specifico conferma -> apply, mentre i follow-up residui vengono scorporati in TASK-023 e TASK-024 senza riaprire l'umbrella.
   Nota tracking: il planning/execution storico di TASK-011 resta documentato nel suo file task, ma il lavoro residuo e' ora tracciato nei task separati piu' stretti.
 - TASK-006 bloccato.
-  Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Il crash specifico nell'apply su dataset grande e' stato chiuso in TASK-022; follow-up reimport/idempotency in TASK-023 (**BLOCKED** dal 2026-03-24 per test manuali pendenti). UX progress/cancel in TASK-024 (attivo).
+  Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Il crash specifico nell'apply su dataset grande e' stato chiuso in TASK-022; follow-up reimport/idempotency in TASK-023 (**BLOCKED** dal 2026-03-24 per test manuali pendenti). UX progress/cancel in TASK-024 (**BLOCKED** dal 2026-03-24; sospeso prima della finalizzazione review/fix UI).
   Nota criteri: CA-1/CA-12 e CA-14 verificati; TASK-011 resta contesto storico secondario.
 - TASK-008 bloccato.
   Motivo: review codice completata da Claude — nessun problema critico trovato, tutti i CA verificabili staticamente superati. Build verde. Validazione UI end-to-end (T-1..T-28) sospesa: richiede test manuali nel Simulator (l'automazione via wrapper SIM UI non è più parte del workflow standard). Sblocco subordinato a test manuali dell'utente o a decisione esplicita di procedere.
@@ -184,6 +190,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - User override 2026-03-23: per TASK-022 il planning operativo viene svolto da Codex; il task resta in PLANNING fino all'avvio esplicito dell'execution
 - User override 2026-03-23: autorizzata da utente la chiusura di TASK-022 in DONE e lo split dei follow-up in TASK-023 (attivo) e TASK-024 (backlog TODO), con aggiornamento diretto di tracking e backlog da parte di Codex
 - User override 2026-03-24: TASK-023 messo in **BLOCKED** (test manuali non conclusi; non DONE); TASK-024 attivato come **task attivo** in **PLANNING** con file canonico `TASK-024-full-database-import-progress-ux-cancellation.md`; planning TASK-024 completato da Claude, execution non avviata
+- User override 2026-03-24: TASK-024 sospeso in **BLOCKED** (review/fix UI non finalizzati; non DONE, riprendibile dal punto corrente) e TASK-016 attivato come **task attivo** in **PLANNING** con file canonico `TASK-016-deduplicazione-logica-import-databaseview-productimportviewmodel.md`
 
 ## Criterio di aggiornamento
 Questo file va aggiornato SOLO quando cambia almeno uno di:

@@ -677,12 +677,7 @@ nonisolated private enum DatabaseImportPipeline {
     }
 
     static func parseDouble(from text: String) -> Double? {
-        let normalized = text
-            .replacingOccurrences(of: ",", with: ".")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !normalized.isEmpty else { return nil }
-        return Double(normalized)
+        ProductImportCore.parseDouble(from: text)
     }
 
     private static func analyzeImport(
@@ -694,126 +689,26 @@ nonisolated private enum DatabaseImportPipeline {
             throw DatabaseImportPreparationError.barcodeColumnMissing
         }
 
-        let existingByBarcode: [String: ImportExistingProductSnapshot] = Dictionary(
-            uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0) }
+        let existingProductsByBarcode: [String: ProductDraft] = Dictionary(
+            uniqueKeysWithValues: existingProducts.map { ($0.barcode, $0.draft) }
+        )
+        let analysis = ProductImportCore.analyzeImport(
+            header: header,
+            dataRows: dataRows,
+            existingProductsByBarcode: existingProductsByBarcode
         )
 
-        struct PendingRow {
-            var lastRow: [String: String]
-            var rowNumbers: [Int]
-            var quantitySum: Double
-        }
-
-        var errors: [DatabaseImportRowErrorPayload] = []
-        var pendingByBarcode: [String: PendingRow] = [:]
-
-        for (index, row) in dataRows.enumerated() {
-            let rowNumber = index + 1
-
-            var map: [String: String] = [:]
-            for (colIndex, key) in header.enumerated() {
-                let raw = colIndex < row.count ? row[colIndex] : ""
-                map[key] = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            let barcode = (map["barcode"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            if barcode.isEmpty {
-                errors.append(
-                    DatabaseImportRowErrorPayload(
-                        rowNumber: rowNumber,
-                        reason: .barcodeMissing,
-                        rowContent: map
-                    )
-                )
-                continue
-            }
-
-            let quantity = parseDouble(from: map["stockQuantity"] ?? "")
-                ?? parseDouble(from: map["quantity"] ?? "")
-                ?? 0
-
-            if var pending = pendingByBarcode[barcode] {
-                pending.lastRow = map
-                pending.rowNumbers.append(rowNumber)
-                pending.quantitySum += quantity
-                pendingByBarcode[barcode] = pending
-            } else {
-                pendingByBarcode[barcode] = PendingRow(
-                    lastRow: map,
-                    rowNumbers: [rowNumber],
-                    quantitySum: quantity
-                )
-            }
-        }
-
-        var newProducts: [ProductDraft] = []
-        var updates: [ProductUpdateDraft] = []
-        var warnings: [ProductDuplicateWarning] = []
-
-        func trimmedOrNil(_ text: String?) -> String? {
-            guard let value = text?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !value.isEmpty else { return nil }
-            return value
-        }
-
-        for (barcode, pending) in pendingByBarcode.sorted(by: { $0.key < $1.key }) {
-            var row = pending.lastRow
-            if pending.quantitySum > 0 {
-                row["stockQuantity"] = String(pending.quantitySum)
-            }
-
-            let draft = ProductDraft(
-                barcode: barcode,
-                itemNumber: trimmedOrNil(row["itemNumber"]),
-                productName: trimmedOrNil(row["productName"]),
-                secondProductName: trimmedOrNil(row["secondProductName"]),
-                purchasePrice: parseDouble(from: row["purchasePrice"] ?? ""),
-                retailPrice: parseDouble(from: row["retailPrice"] ?? ""),
-                stockQuantity: {
-                    if let text = row["stockQuantity"] ?? row["quantity"],
-                       let value = parseDouble(from: text) {
-                        return value
-                    } else {
-                        return nil
-                    }
-                }(),
-                supplierName: normalizeNamedEntityName(row["supplier"]),
-                categoryName: normalizeNamedEntityName(row["category"])
-            )
-
-            if let existing = existingByBarcode[barcode] {
-                let oldDraft = existing.draft
-                let changedFields = ProductUpdateDraft.computeChangedFields(old: oldDraft, new: draft)
-
-                if !changedFields.isEmpty {
-                    updates.append(
-                        ProductUpdateDraft(
-                            barcode: barcode,
-                            old: oldDraft,
-                            new: draft,
-                            changedFields: changedFields
-                        )
-                    )
-                }
-            } else {
-                newProducts.append(draft)
-            }
-
-            if pending.rowNumbers.count > 1 {
-                warnings.append(
-                    ProductDuplicateWarning(
-                        barcode: barcode,
-                        rowNumbers: pending.rowNumbers
-                    )
-                )
-            }
-        }
-
         return DatabaseImportAnalysisPayload(
-            newProducts: newProducts,
-            updatedProducts: updates,
-            errors: errors,
-            warnings: warnings
+            newProducts: analysis.newProducts,
+            updatedProducts: analysis.updatedProducts,
+            errors: analysis.errors.map { error in
+                DatabaseImportRowErrorPayload(
+                    rowNumber: error.rowNumber,
+                    reason: .barcodeMissing,
+                    rowContent: error.rowContent
+                )
+            },
+            warnings: analysis.warnings
         )
     }
 
@@ -994,56 +889,12 @@ nonisolated private enum DatabaseImportPipeline {
         )
 
         let existingSuppliers = try context.fetch(FetchDescriptor<Supplier>())
-        var suppliersByName: [String: Supplier] = Dictionary(
-            uniqueKeysWithValues: existingSuppliers.compactMap { supplier in
-                guard let normalizedName = normalizeNamedEntityName(supplier.name) else {
-                    return nil
-                }
-
-                return (normalizedName, supplier)
-            }
-        )
-
         let existingCategories = try context.fetch(FetchDescriptor<ProductCategory>())
-        var categoriesByName: [String: ProductCategory] = Dictionary(
-            uniqueKeysWithValues: existingCategories.compactMap { category in
-                guard let normalizedName = normalizeNamedEntityName(category.name) else {
-                    return nil
-                }
-
-                return (normalizedName, category)
-            }
+        let resolver = try ProductImportNamedEntityResolver(
+            context: context,
+            existingSuppliers: existingSuppliers,
+            existingCategories: existingCategories
         )
-        var createdSupplierNames: Set<String> = []
-        var createdCategoryNames: Set<String> = []
-
-        func resolveSupplier(named rawName: String?) -> Supplier? {
-            guard let normalizedName = normalizeNamedEntityName(rawName) else { return nil }
-
-            if let existing = suppliersByName[normalizedName] {
-                return existing
-            }
-
-            let supplier = Supplier(name: normalizedName)
-            context.insert(supplier)
-            suppliersByName[normalizedName] = supplier
-            createdSupplierNames.insert(normalizedName)
-            return supplier
-        }
-
-        func resolveCategory(named rawName: String?) -> ProductCategory? {
-            guard let normalizedName = normalizeNamedEntityName(rawName) else { return nil }
-
-            if let existing = categoriesByName[normalizedName] {
-                return existing
-            }
-
-            let category = ProductCategory(name: normalizedName)
-            context.insert(category)
-            categoriesByName[normalizedName] = category
-            createdCategoryNames.insert(normalizedName)
-            return category
-        }
 
         var processedCount = 0
         var insertedCount = 0
@@ -1057,40 +908,18 @@ nonisolated private enum DatabaseImportPipeline {
             force: true
         )
 
-        for supplierName in payload.pendingSupplierNames {
-            _ = resolveSupplier(named: supplierName)
-        }
-
-        for categoryName in payload.pendingCategoryNames {
-            _ = resolveCategory(named: categoryName)
-        }
+        resolver.preloadSuppliers(named: payload.pendingSupplierNames)
+        resolver.preloadCategories(named: payload.pendingCategoryNames)
 
         for draft in payload.newProducts {
             autoreleasepool {
-                let product = Product(
-                    barcode: draft.barcode,
-                    itemNumber: draft.itemNumber,
-                    productName: draft.productName,
-                    secondProductName: draft.secondProductName,
-                    purchasePrice: draft.purchasePrice,
-                    retailPrice: draft.retailPrice,
-                    stockQuantity: draft.stockQuantity,
-                    supplier: resolveSupplier(named: draft.supplierName),
-                    category: resolveCategory(named: draft.categoryName)
+                let product = ProductImportCore.insertProduct(
+                    from: draft,
+                    in: context,
+                    resolver: resolver,
+                    recordPriceHistory: payload.recordPriceHistory
                 )
-                context.insert(product)
                 productsByBarcode[draft.barcode] = product
-
-                if payload.recordPriceHistory {
-                    createPriceHistoryForImport(
-                        product: product,
-                        oldPurchase: nil,
-                        newPurchase: draft.purchasePrice,
-                        oldRetail: nil,
-                        newRetail: draft.retailPrice,
-                        in: context
-                    )
-                }
             }
 
             processedCount += 1
@@ -1109,46 +938,14 @@ nonisolated private enum DatabaseImportPipeline {
                 continue
             }
 
-            let newDraft = update.new
-            let oldPurchase = product.purchasePrice
-            let oldRetail = product.retailPrice
-
             autoreleasepool {
-                if update.changedFields.contains(.itemNumber) {
-                    product.itemNumber = newDraft.itemNumber
-                }
-                if update.changedFields.contains(.productName) {
-                    product.productName = newDraft.productName
-                }
-                if update.changedFields.contains(.secondProductName) {
-                    product.secondProductName = newDraft.secondProductName
-                }
-                if update.changedFields.contains(.purchasePrice) {
-                    product.purchasePrice = newDraft.purchasePrice
-                }
-                if update.changedFields.contains(.retailPrice) {
-                    product.retailPrice = newDraft.retailPrice
-                }
-                if update.changedFields.contains(.stockQuantity) {
-                    product.stockQuantity = newDraft.stockQuantity
-                }
-                if update.changedFields.contains(.supplierName) {
-                    product.supplier = resolveSupplier(named: newDraft.supplierName)
-                }
-                if update.changedFields.contains(.categoryName) {
-                    product.category = resolveCategory(named: newDraft.categoryName)
-                }
-
-                if payload.recordPriceHistory {
-                    createPriceHistoryForImport(
-                        product: product,
-                        oldPurchase: oldPurchase,
-                        newPurchase: newDraft.purchasePrice,
-                        oldRetail: oldRetail,
-                        newRetail: newDraft.retailPrice,
-                        in: context
-                    )
-                }
+                ProductImportCore.applyUpdate(
+                    update,
+                    to: product,
+                    in: context,
+                    resolver: resolver,
+                    recordPriceHistory: payload.recordPriceHistory
+                )
             }
 
             processedCount += 1
@@ -1174,8 +971,8 @@ nonisolated private enum DatabaseImportPipeline {
         return ImportApplyProductsResult(
             productsInserted: insertedCount,
             productsUpdated: updatedCount,
-            suppliersCreated: createdSupplierNames.count,
-            categoriesCreated: createdCategoryNames.count
+            suppliersCreated: resolver.suppliersCreatedCount,
+            categoriesCreated: resolver.categoriesCreatedCount
         )
     }
 
@@ -1464,33 +1261,14 @@ nonisolated private enum DatabaseImportPipeline {
         newRetail: Double?,
         in context: ModelContext
     ) {
-        let now = Date()
-
-        if let newPurchase, newPurchase != oldPurchase {
-            let history = ProductPrice(
-                type: .purchase,
-                price: newPurchase,
-                effectiveAt: now,
-                source: "IMPORT_EXCEL",
-                note: nil,
-                createdAt: now,
-                product: product
-            )
-            context.insert(history)
-        }
-
-        if let newRetail, newRetail != oldRetail {
-            let history = ProductPrice(
-                type: .retail,
-                price: newRetail,
-                effectiveAt: now,
-                source: "IMPORT_EXCEL",
-                note: nil,
-                createdAt: now,
-                product: product
-            )
-            context.insert(history)
-        }
+        ProductImportCore.createPriceHistoryForImport(
+            product: product,
+            oldPurchase: oldPurchase,
+            newPurchase: newPurchase,
+            oldRetail: oldRetail,
+            newRetail: newRetail,
+            in: context
+        )
     }
 
     private static func normalizedSheetName(_ value: String) -> String {

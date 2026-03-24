@@ -4,12 +4,21 @@
 - **Task ID**: TASK-024
 - **Titolo**: Full-database import progress UX + cancellation
 - **File task**: `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE
+- **Stato**: BLOCKED
+- **Fase attuale**: REVIEW (sospeso in questa fase)
+- **Responsabile attuale**: — (task sospeso, nessuna nuova execution in corso)
 - **Data creazione**: 2026-03-24
-- **Ultimo aggiornamento**: 2026-03-23
+- **Ultimo aggiornamento**: 2026-03-24
 - **Ultimo agente che ha operato**: CODEX
+
+## Blocco (2026-03-24)
+
+- **Motivo**: task sospeso per decisione utente; la UI e' "piu' o meno" accettabile per ora, ma non e' ancora finalizzata del tutto.
+- **Stato operativo**: nessun ulteriore intervento richiesto in questo momento; nessuna nuova execution o fix va avviata ora.
+- **Chiusura**: task non chiuso e non DONE.
+- **Ripresa**: alla riapertura si continua dal punto corrente (review/fix residuo), senza rifare planning da zero.
+
+> Nota tracking 2026-03-24: planning, execution, fix e review sotto questo punto restano come storico del lavoro gia' svolto. Non costituiscono handoff operativo corrente finche' il task resta sospeso.
 
 ## Dipendenze
 - **Dipende da**: TASK-022 (apply full-database stabile); la pipeline `DatabaseImportPipeline` / progress snapshot in `DatabaseView.swift` e' il presupposto. TASK-023 (idempotency + delta non-product) puo' essere in corso o in pausa: **non e' prerequisito** per TASK-024 e non va mescolato nel perimetro.
