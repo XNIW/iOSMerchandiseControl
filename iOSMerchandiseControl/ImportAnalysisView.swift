@@ -268,31 +268,32 @@ struct ImportAnalysisView: View {
     var body: some View {
         let resolvedLanguageCode = Bundle.resolvedLanguageCode(for: appLanguage)
 
-        ZStack {
-            List {
-                summarySection
+        List {
+            summarySection
 
-                if !session.warnings.isEmpty {
-                    warningsSection
-                }
-
-                if !session.newProducts.isEmpty {
-                    newProductsSection
-                }
-
-                if !session.updatedProducts.isEmpty {
-                    updatedProductsSection
-                }
-
-                if !session.errors.isEmpty {
-                    errorsSection
-                }
+            if !session.warnings.isEmpty {
+                warningsSection
             }
-            .id("import-analysis-list-\(resolvedLanguageCode)")
-            .disabled(isApplying)
 
+            if !session.newProducts.isEmpty {
+                newProductsSection
+            }
+
+            if !session.updatedProducts.isEmpty {
+                updatedProductsSection
+            }
+
+            if !session.errors.isEmpty {
+                errorsSection
+            }
+        }
+        .id("import-analysis-list-\(resolvedLanguageCode)")
+        .disabled(isApplying)
+        .safeAreaInset(edge: .bottom) {
             if isApplying {
-                processingOverlay
+                applyingNotice
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
             }
         }
         .interactiveDismissDisabled(isApplying)
@@ -358,29 +359,20 @@ struct ImportAnalysisView: View {
         }
     }
 
-    private var processingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.16)
-                .ignoresSafeArea()
+    private var applyingNotice: some View {
+        VStack(spacing: 6) {
+            Text(L("import.analysis.processing.title"))
+                .font(.headline)
 
-            VStack(spacing: 12) {
-                ProgressView()
-                    .controlSize(.large)
-
-                Text(L("import.analysis.processing.title"))
-                    .font(.headline)
-
-                Text(L("import.analysis.processing.body"))
-                    .font(.caption)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(radius: 16, x: 0, y: 8)
-            .padding(.horizontal, 24)
+            Text(L("import.analysis.processing.body"))
+                .font(.caption)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     // MARK: - Sezioni

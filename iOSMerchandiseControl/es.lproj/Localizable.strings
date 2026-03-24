@@ -169,7 +169,7 @@
 "import.analysis.error.export_title" = "Error de exportación";
 "import.analysis.error.apply_title" = "Error al aplicar la importación";
 "import.analysis.processing.title" = "Importando...";
-"import.analysis.processing.body" = "La aplicación de los cambios puede tardar unos instantes.";
+"import.analysis.processing.body" = "El progreso detallado continúa en la pantalla de Base de datos mientras se aplican los cambios.";
 "import.analysis.summary" = "Resumen";
 "import.analysis.summary.new_products" = "Productos nuevos";
 "import.analysis.summary.updates" = "Actualizaciones";
@@ -228,6 +228,7 @@
 "database.progress.parsing_sheet" = "Leyendo %@";
 "database.progress.analyzing" = "Analizando importación";
 "database.progress.completed_title" = "Importación completada";
+"database.progress.cancelling" = "Cancelando importación...";
 "database.progress.success" = "Importación completada correctamente.";
 "database.progress.success_products_only" = "Importación completada. Productos: %1$d nuevos, %2$d actualizados.";
 "database.progress.success_with_price_history" = "Importación completada. Productos: %1$d nuevos, %2$d actualizados. Historial de precios guardado: %3$d.";
@@ -236,6 +237,18 @@
 "database.progress.suppliers_created_suffix" = "Proveedores creados: %d.";
 "database.progress.categories_created_suffix" = "Categorias creadas: %d.";
 "database.progress.price_history_unresolved_suffix" = "Filas de historial de precios no resueltas: %d.";
+"database.full_import.result.cancelled_title" = "Importación cancelada";
+"database.full_import.result.cancelled_summary" = "La importación completa de la base de datos se canceló antes de aplicar el análisis.";
+"database.full_import.result.success_summary" = "La importación completa de la base de datos se completó correctamente.";
+"database.full_import.result.partial_summary" = "La importación completa de la base de datos terminó con algunas notas.";
+"database.full_import.result.error_summary" = "No se pudo completar la importación completa de la base de datos.";
+"database.full_import.result.products_inserted" = "Productos nuevos";
+"database.full_import.result.products_updated" = "Productos actualizados";
+"database.full_import.result.price_history_saved" = "Historial de precios guardado";
+"database.full_import.result.suppliers_created" = "Proveedores creados";
+"database.full_import.result.categories_created" = "Categorías creadas";
+"database.full_import.result.price_history_unresolved" = "Historial de precios no resuelto";
+"database.full_import.result.price_history_error_note" = "Nota del historial de precios: %@";
 "database.progress.invalid_workbook" = "No se puede leer el archivo. Asegúrate de que sea un archivo Excel (.xlsx) válido con varias hojas.";
 "database.progress.missing_products_sheet" = "El archivo no contiene una hoja 'Products'. La importación completa requiere al menos esa hoja.";
 "database.error.export" = "Error durante la exportación: %@";

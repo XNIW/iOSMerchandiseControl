@@ -169,7 +169,7 @@
 "import.analysis.error.export_title" = "导出错误";
 "import.analysis.error.apply_title" = "应用导入错误";
 "import.analysis.processing.title" = "导入中...";
-"import.analysis.processing.body" = "应用更改可能需要一点时间。";
+"import.analysis.processing.body" = "应用更改时，详细进度会继续显示在数据库页面。";
 "import.analysis.summary" = "摘要";
 "import.analysis.summary.new_products" = "新商品";
 "import.analysis.summary.updates" = "更新";
@@ -228,6 +228,7 @@
 "database.progress.parsing_sheet" = "正在读取 %@";
 "database.progress.analyzing" = "正在分析导入内容";
 "database.progress.completed_title" = "导入完成";
+"database.progress.cancelling" = "正在取消导入...";
 "database.progress.success" = "导入成功完成。";
 "database.progress.success_products_only" = "导入完成。商品：新增 %1$d，更新 %2$d。";
 "database.progress.success_with_price_history" = "导入完成。商品：新增 %1$d，更新 %2$d。价格历史已保存：%3$d。";
@@ -236,6 +237,18 @@
 "database.progress.suppliers_created_suffix" = "已创建供应商：%d。";
 "database.progress.categories_created_suffix" = "已创建分类：%d。";
 "database.progress.price_history_unresolved_suffix" = "未解析的价格历史行：%d。";
+"database.full_import.result.cancelled_title" = "导入已取消";
+"database.full_import.result.cancelled_summary" = "完整数据库导入已在应用分析前取消。";
+"database.full_import.result.success_summary" = "完整数据库导入已成功完成。";
+"database.full_import.result.partial_summary" = "完整数据库导入已完成，但有一些备注。";
+"database.full_import.result.error_summary" = "无法完成完整数据库导入。";
+"database.full_import.result.products_inserted" = "新增商品";
+"database.full_import.result.products_updated" = "更新商品";
+"database.full_import.result.price_history_saved" = "已保存价格历史";
+"database.full_import.result.suppliers_created" = "已创建供应商";
+"database.full_import.result.categories_created" = "已创建分类";
+"database.full_import.result.price_history_unresolved" = "未解析价格历史";
+"database.full_import.result.price_history_error_note" = "价格历史备注：%@";
 "database.progress.invalid_workbook" = "无法读取文件。请确保它是有效的多工作表 Excel（.xlsx）文件。";
 "database.progress.missing_products_sheet" = "文件中没有“Products”工作表。完整导入至少需要该工作表。";
 "database.error.export" = "导出错误：%@";

@@ -85,6 +85,27 @@ nonisolated private struct ImportApplyResult: Sendable {
     }
 }
 
+nonisolated private enum FullImportResultKind: Sendable {
+    case success
+    case error
+    case cancelled
+}
+
+nonisolated private struct FullImportResultMetric: Identifiable, Sendable {
+    let id = UUID()
+    let label: String
+    let value: String
+}
+
+nonisolated private struct FullImportResultPayload: Identifiable, Sendable {
+    let id = UUID()
+    let kind: FullImportResultKind
+    let title: String
+    let summary: String
+    let metrics: [FullImportResultMetric]
+    let notes: [String]
+}
+
 nonisolated private struct ImportApplyPriceHistoryResult: Sendable {
     let insertedCount: Int
     let alreadyPresentCount: Int
@@ -112,6 +133,18 @@ nonisolated private enum DatabaseImportProgressStage: Sendable {
     case analyzing
     case applyingProducts
     case applyingPriceHistory
+}
+
+nonisolated private enum DatabaseImportJobKind: Sendable {
+    case analysisImport
+    case fullDatabaseImport
+}
+
+nonisolated private enum DatabaseImportOperationPhase: Sendable {
+    case idle
+    case preparing
+    case awaitingConfirmation
+    case applying
 }
 
 nonisolated private struct PendingPriceHistoryImportEntry: Sendable {
@@ -230,6 +263,90 @@ private enum DatabaseImportUILocalizer {
         return L("database.error.import_excel", error.localizedDescription)
     }
 
+    static func fullImportSuccessResult(from result: ImportApplyResult) -> FullImportResultPayload {
+        var metrics: [FullImportResultMetric] = [
+            FullImportResultMetric(
+                label: L("database.full_import.result.products_inserted"),
+                value: String(result.productsInserted)
+            ),
+            FullImportResultMetric(
+                label: L("database.full_import.result.products_updated"),
+                value: String(result.productsUpdated)
+            )
+        ]
+
+        if result.priceHistoryInserted > 0 {
+            metrics.append(
+                FullImportResultMetric(
+                    label: L("database.full_import.result.price_history_saved"),
+                    value: String(result.priceHistoryInserted)
+                )
+            )
+        }
+
+        if result.suppliersCreated > 0 {
+            metrics.append(
+                FullImportResultMetric(
+                    label: L("database.full_import.result.suppliers_created"),
+                    value: String(result.suppliersCreated)
+                )
+            )
+        }
+
+        if result.categoriesCreated > 0 {
+            metrics.append(
+                FullImportResultMetric(
+                    label: L("database.full_import.result.categories_created"),
+                    value: String(result.categoriesCreated)
+                )
+            )
+        }
+
+        if result.priceHistoryUnresolved > 0 {
+            metrics.append(
+                FullImportResultMetric(
+                    label: L("database.full_import.result.price_history_unresolved"),
+                    value: String(result.priceHistoryUnresolved)
+                )
+            )
+        }
+
+        var notes: [String] = []
+        if let priceHistoryError = result.priceHistoryError {
+            notes.append(L("database.full_import.result.price_history_error_note", priceHistoryError))
+        }
+
+        return FullImportResultPayload(
+            kind: .success,
+            title: L("database.progress.completed_title"),
+            summary: result.priceHistoryError == nil
+                ? L("database.full_import.result.success_summary")
+                : L("database.full_import.result.partial_summary"),
+            metrics: metrics,
+            notes: notes
+        )
+    }
+
+    static func fullImportErrorResult(message: String) -> FullImportResultPayload {
+        FullImportResultPayload(
+            kind: .error,
+            title: L("database.error.import_title"),
+            summary: L("database.full_import.result.error_summary"),
+            metrics: [],
+            notes: [message]
+        )
+    }
+
+    static func fullImportCancelledResult() -> FullImportResultPayload {
+        FullImportResultPayload(
+            kind: .cancelled,
+            title: L("database.full_import.result.cancelled_title"),
+            summary: L("database.full_import.result.cancelled_summary"),
+            metrics: [],
+            notes: []
+        )
+    }
+
     private static func rowErrorReason(for reason: DatabaseImportRowErrorReason) -> String {
         switch reason {
         case .barcodeMissing:
@@ -304,140 +421,156 @@ nonisolated private enum DatabaseImportPipeline {
         modelContainer: ModelContainer,
         onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
     ) async throws -> PreparedImportAnalysis {
-        try await Task.detached(priority: .userInitiated) {
-            let sheetNames: [String]
-            do {
-                sheetNames = try ExcelAnalyzer.listSheetNames(at: url)
-            } catch {
-                throw DatabaseImportPreparationError.invalidWorkbook
-            }
+        try Task.checkCancellation()
 
-            let sheetNameMap = Dictionary(
-                uniqueKeysWithValues: sheetNames.map { (normalizedSheetName($0), $0) }
-            )
-            let backgroundContext = ModelContext(modelContainer)
-            let supplierSheetNames: [String]
-            let categorySheetNames: [String]
+        let sheetNames: [String]
+        do {
+            sheetNames = try ExcelAnalyzer.listSheetNames(at: url)
+        } catch {
+            throw DatabaseImportPreparationError.invalidWorkbook
+        }
 
-            if let suppliersSheetName = sheetNameMap[normalizedSheetName("Suppliers")] {
-                await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(suppliersSheetName), processedCount: 0, totalCount: 0))
-                let parsingStartedAt = Date()
-                supplierSheetNames = readNamedEntitiesSheet(at: url, sheetName: suppliersSheetName)
-                logTiming(
-                    phase: "parsing",
-                    sheet: suppliersSheetName,
-                    elapsed: Date().timeIntervalSince(parsingStartedAt),
-                    rows: supplierSheetNames.count
-                )
-            } else {
-                supplierSheetNames = []
-            }
+        try Task.checkCancellation()
 
-            if let categoriesSheetName = sheetNameMap[normalizedSheetName("Categories")] {
-                await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(categoriesSheetName), processedCount: 0, totalCount: 0))
-                let parsingStartedAt = Date()
-                categorySheetNames = readNamedEntitiesSheet(at: url, sheetName: categoriesSheetName)
-                logTiming(
-                    phase: "parsing",
-                    sheet: categoriesSheetName,
-                    elapsed: Date().timeIntervalSince(parsingStartedAt),
-                    rows: categorySheetNames.count
-                )
-            } else {
-                categorySheetNames = []
-            }
+        let sheetNameMap = Dictionary(
+            uniqueKeysWithValues: sheetNames.map { (normalizedSheetName($0), $0) }
+        )
+        let backgroundContext = ModelContext(modelContainer)
+        let supplierSheetNames: [String]
+        let categorySheetNames: [String]
 
-            guard let productsSheetName = sheetNameMap[normalizedSheetName("Products")] else {
-                throw DatabaseImportPreparationError.missingProductsSheet
-            }
-
-            await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(productsSheetName), processedCount: 0, totalCount: 0))
-            let productsParsingStartedAt = Date()
-            let productsRows: [[String]]
-            do {
-                productsRows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: productsSheetName)
-            } catch {
-                throw DatabaseImportPreparationError.invalidWorkbook
-            }
-
-            let (_, normalizedHeader, dataRows) = ExcelAnalyzer.analyzeSheetRows(productsRows)
+        if let suppliersSheetName = sheetNameMap[normalizedSheetName("Suppliers")] {
+            await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(suppliersSheetName), processedCount: 0, totalCount: 0))
+            try Task.checkCancellation()
+            let parsingStartedAt = Date()
+            supplierSheetNames = readNamedEntitiesSheet(at: url, sheetName: suppliersSheetName)
             logTiming(
                 phase: "parsing",
-                sheet: productsSheetName,
-                elapsed: Date().timeIntervalSince(productsParsingStartedAt),
-                rows: dataRows.count
+                sheet: suppliersSheetName,
+                elapsed: Date().timeIntervalSince(parsingStartedAt),
+                rows: supplierSheetNames.count
             )
+            try Task.checkCancellation()
+        } else {
+            supplierSheetNames = []
+        }
 
-            await onProgress(DatabaseImportProgressSnapshot(stage: .analyzing, processedCount: 0, totalCount: 0))
-            let analyzeStartedAt = Date()
-            let existingProducts = try fetchExistingProductSnapshots(in: backgroundContext)
-            let analysis = try analyzeImport(
-                header: normalizedHeader,
-                dataRows: dataRows,
-                existingProducts: existingProducts
-            )
+        if let categoriesSheetName = sheetNameMap[normalizedSheetName("Categories")] {
+            await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(categoriesSheetName), processedCount: 0, totalCount: 0))
+            try Task.checkCancellation()
+            let parsingStartedAt = Date()
+            categorySheetNames = readNamedEntitiesSheet(at: url, sheetName: categoriesSheetName)
             logTiming(
-                phase: "analyze",
-                sheet: productsSheetName,
-                elapsed: Date().timeIntervalSince(analyzeStartedAt),
-                rows: dataRows.count
+                phase: "parsing",
+                sheet: categoriesSheetName,
+                elapsed: Date().timeIntervalSince(parsingStartedAt),
+                rows: categorySheetNames.count
             )
+            try Task.checkCancellation()
+        } else {
+            categorySheetNames = []
+        }
 
-            let parsedPriceHistoryEntries: [PendingPriceHistoryImportEntry]
-            if let priceHistorySheetName = sheetNameMap[normalizedSheetName("PriceHistory")] {
-                await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(priceHistorySheetName), processedCount: 0, totalCount: 0))
-                let parsingStartedAt = Date()
-                parsedPriceHistoryEntries = parsePendingPriceHistoryEntries(
-                    at: url,
-                    sheetNameMap: sheetNameMap
-                ) ?? []
-                logTiming(
-                    phase: "parsing",
-                    sheet: priceHistorySheetName,
-                    elapsed: Date().timeIntervalSince(parsingStartedAt),
-                    rows: parsedPriceHistoryEntries.count
-                )
-            } else {
-                parsedPriceHistoryEntries = []
-            }
+        guard let productsSheetName = sheetNameMap[normalizedSheetName("Products")] else {
+            throw DatabaseImportPreparationError.missingProductsSheet
+        }
 
-            let classifiedPriceHistory = try classifyParsedPriceHistoryForFullImport(
-                parsedPriceHistoryEntries,
-                existingProducts: existingProducts,
-                newProducts: analysis.newProducts,
-                updatedProducts: analysis.updatedProducts,
-                in: backgroundContext
-            )
-            let namedEntities = try buildPendingSuppliersCategoriesAndNonProductSummary(
-                supplierSheetNames: supplierSheetNames,
-                categorySheetNames: categorySheetNames,
-                analysis: analysis,
-                priceHistoryToInsertCount: classifiedPriceHistory.toInsert.count,
-                priceHistoryAlreadyPresentCount: classifiedPriceHistory.alreadyPresentCount,
-                priceHistoryUnresolvedCount: classifiedPriceHistory.unresolvedCount,
-                in: backgroundContext
-            )
-            let hasPriceHistorySheet = sheetNameMap[normalizedSheetName("PriceHistory")] != nil
-            let pendingContext: PendingFullImportContext?
-            if hasPriceHistorySheet || !namedEntities.pendingSupplierNames.isEmpty || !namedEntities.pendingCategoryNames.isEmpty {
-                pendingContext = PendingFullImportContext(
-                    priceHistoryEntries: classifiedPriceHistory.toInsert,
-                    alreadyPresentPriceHistoryCount: classifiedPriceHistory.alreadyPresentCount,
-                    unresolvedPriceHistoryCount: classifiedPriceHistory.unresolvedCount,
-                    pendingSupplierNames: namedEntities.pendingSupplierNames,
-                    pendingCategoryNames: namedEntities.pendingCategoryNames,
-                    suppressAutomaticProductPriceHistory: hasPriceHistorySheet
-                )
-            } else {
-                pendingContext = nil
-            }
+        await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(productsSheetName), processedCount: 0, totalCount: 0))
+        try Task.checkCancellation()
+        let productsParsingStartedAt = Date()
+        let productsRows: [[String]]
+        do {
+            productsRows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: productsSheetName)
+        } catch {
+            throw DatabaseImportPreparationError.invalidWorkbook
+        }
 
-            return PreparedImportAnalysis(
-                analysis: analysis,
-                pendingFullImportContext: pendingContext,
-                nonProductSummary: namedEntities.summary
+        try Task.checkCancellation()
+
+        let (_, normalizedHeader, dataRows) = ExcelAnalyzer.analyzeSheetRows(productsRows)
+        logTiming(
+            phase: "parsing",
+            sheet: productsSheetName,
+            elapsed: Date().timeIntervalSince(productsParsingStartedAt),
+            rows: dataRows.count
+        )
+
+        await onProgress(DatabaseImportProgressSnapshot(stage: .analyzing, processedCount: 0, totalCount: 0))
+        try Task.checkCancellation()
+        let analyzeStartedAt = Date()
+        let existingProducts = try fetchExistingProductSnapshots(in: backgroundContext)
+        let analysis = try analyzeImport(
+            header: normalizedHeader,
+            dataRows: dataRows,
+            existingProducts: existingProducts
+        )
+        logTiming(
+            phase: "analyze",
+            sheet: productsSheetName,
+            elapsed: Date().timeIntervalSince(analyzeStartedAt),
+            rows: dataRows.count
+        )
+
+        try Task.checkCancellation()
+
+        let parsedPriceHistoryEntries: [PendingPriceHistoryImportEntry]
+        if let priceHistorySheetName = sheetNameMap[normalizedSheetName("PriceHistory")] {
+            await onProgress(DatabaseImportProgressSnapshot(stage: .parsingSheet(priceHistorySheetName), processedCount: 0, totalCount: 0))
+            try Task.checkCancellation()
+            let parsingStartedAt = Date()
+            parsedPriceHistoryEntries = parsePendingPriceHistoryEntries(
+                at: url,
+                sheetNameMap: sheetNameMap
+            ) ?? []
+            logTiming(
+                phase: "parsing",
+                sheet: priceHistorySheetName,
+                elapsed: Date().timeIntervalSince(parsingStartedAt),
+                rows: parsedPriceHistoryEntries.count
             )
-        }.value
+            try Task.checkCancellation()
+        } else {
+            parsedPriceHistoryEntries = []
+        }
+
+        let classifiedPriceHistory = try classifyParsedPriceHistoryForFullImport(
+            parsedPriceHistoryEntries,
+            existingProducts: existingProducts,
+            newProducts: analysis.newProducts,
+            updatedProducts: analysis.updatedProducts,
+            in: backgroundContext
+        )
+        try Task.checkCancellation()
+        let namedEntities = try buildPendingSuppliersCategoriesAndNonProductSummary(
+            supplierSheetNames: supplierSheetNames,
+            categorySheetNames: categorySheetNames,
+            analysis: analysis,
+            priceHistoryToInsertCount: classifiedPriceHistory.toInsert.count,
+            priceHistoryAlreadyPresentCount: classifiedPriceHistory.alreadyPresentCount,
+            priceHistoryUnresolvedCount: classifiedPriceHistory.unresolvedCount,
+            in: backgroundContext
+        )
+        try Task.checkCancellation()
+        let hasPriceHistorySheet = sheetNameMap[normalizedSheetName("PriceHistory")] != nil
+        let pendingContext: PendingFullImportContext?
+        if hasPriceHistorySheet || !namedEntities.pendingSupplierNames.isEmpty || !namedEntities.pendingCategoryNames.isEmpty {
+            pendingContext = PendingFullImportContext(
+                priceHistoryEntries: classifiedPriceHistory.toInsert,
+                alreadyPresentPriceHistoryCount: classifiedPriceHistory.alreadyPresentCount,
+                unresolvedPriceHistoryCount: classifiedPriceHistory.unresolvedCount,
+                pendingSupplierNames: namedEntities.pendingSupplierNames,
+                pendingCategoryNames: namedEntities.pendingCategoryNames,
+                suppressAutomaticProductPriceHistory: hasPriceHistorySheet
+            )
+        } else {
+            pendingContext = nil
+        }
+
+        return PreparedImportAnalysis(
+            analysis: analysis,
+            pendingFullImportContext: pendingContext,
+            nonProductSummary: namedEntities.summary
+        )
     }
 
     static func applyImportAnalysisInBackground(
@@ -1394,19 +1527,39 @@ private final class DatabaseImportProgressState: ObservableObject, @unchecked Se
     @Published var totalCount = 0
     @Published var resultMessage: String?
     @Published var resultIsError = false
+    @Published private(set) var jobKind: DatabaseImportJobKind?
+    @Published private(set) var phase: DatabaseImportOperationPhase = .idle
+    @Published private(set) var isCancellationPending = false
 
     var progressFraction: Double? {
         guard totalCount > 0 else { return nil }
         return Double(processedCount) / Double(totalCount)
     }
 
+    var isFullDatabaseFlow: Bool {
+        jobKind == .fullDatabaseImport
+    }
+
+    var canCancelPreparation: Bool {
+        jobKind == .fullDatabaseImport
+        && phase == .preparing
+        && showsOverlay
+        && !isCancellationPending
+    }
+
     var resultTitle: String {
         resultIsError ? L("database.error.import_title") : L("database.progress.completed_title")
     }
 
-    func startPreparation(stageText: String? = nil) {
+    func startPreparation(
+        jobKind: DatabaseImportJobKind,
+        stageText: String? = nil
+    ) {
         isRunning = true
         showsOverlay = true
+        self.jobKind = jobKind
+        phase = .preparing
+        isCancellationPending = false
         self.stageText = stageText ?? L("database.progress.preparing")
         processedCount = 0
         totalCount = 0
@@ -1414,9 +1567,15 @@ private final class DatabaseImportProgressState: ObservableObject, @unchecked Se
         resultIsError = false
     }
 
+    func startApplying(jobKind: DatabaseImportJobKind) {
+        startPreparation(jobKind: jobKind)
+        phase = .applying
+    }
+
     func apply(_ snapshot: DatabaseImportProgressSnapshot) {
         isRunning = true
         showsOverlay = true
+        isCancellationPending = false
         stageText = DatabaseImportUILocalizer.progressText(for: snapshot)
         processedCount = snapshot.processedCount
         totalCount = snapshot.totalCount
@@ -1425,7 +1584,17 @@ private final class DatabaseImportProgressState: ObservableObject, @unchecked Se
     func awaitingConfirmation() {
         isRunning = true
         showsOverlay = false
+        phase = .awaitingConfirmation
+        isCancellationPending = false
         stageText = ""
+        processedCount = 0
+        totalCount = 0
+    }
+
+    func beginCancellation() {
+        showsOverlay = true
+        isCancellationPending = true
+        stageText = L("database.progress.cancelling")
         processedCount = 0
         totalCount = 0
     }
@@ -1433,6 +1602,9 @@ private final class DatabaseImportProgressState: ObservableObject, @unchecked Se
     func resetRunningState() {
         isRunning = false
         showsOverlay = false
+        jobKind = nil
+        phase = .idle
+        isCancellationPending = false
         stageText = ""
         processedCount = 0
         totalCount = 0
@@ -1488,6 +1660,99 @@ struct DatabaseView: View {
     @State private var importAnalysisSession: ImportAnalysisSession?
     @State private var pendingFullImportContext: PendingFullImportContext?
     @StateObject private var importProgress = DatabaseImportProgressState()
+    @State private var fullImportPrepareTask: Task<Void, Never>?
+    @State private var fullImportPrepareTaskID: UUID?
+    @State private var cancelledFullImportPrepareTaskID: UUID?
+    @State private var fullImportResultPayload: FullImportResultPayload?
+    @State private var deferredFullImportResultPayload: FullImportResultPayload?
+
+    private struct FullImportResultView: View {
+        let payload: FullImportResultPayload
+        let onClose: () -> Void
+
+        private var symbolName: String {
+            switch payload.kind {
+            case .success:
+                return "checkmark.circle.fill"
+            case .error:
+                return "xmark.octagon.fill"
+            case .cancelled:
+                return "slash.circle.fill"
+            }
+        }
+
+        private var tint: SwiftUI.Color {
+            switch payload.kind {
+            case .success:
+                return .green
+            case .error:
+                return .red
+            case .cancelled:
+                return .orange
+            }
+        }
+
+        var body: some View {
+            VStack(spacing: 20) {
+                Image(systemName: symbolName)
+                    .font(.system(size: 42))
+                    .foregroundStyle(tint)
+
+                VStack(spacing: 8) {
+                    Text(payload.title)
+                        .font(.title3.weight(.semibold))
+                        .multilineTextAlignment(.center)
+
+                    Text(payload.summary)
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                }
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        if !payload.metrics.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                ForEach(payload.metrics) { metric in
+                                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                                        Text(metric.label)
+                                            .foregroundStyle(.secondary)
+                                        Spacer(minLength: 12)
+                                        Text(metric.value)
+                                            .font(.body.monospacedDigit().weight(.semibold))
+                                    }
+                                }
+                            }
+                            .padding(16)
+                            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+
+                        if !payload.notes.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                ForEach(Array(payload.notes.enumerated()), id: \.offset) { _, note in
+                                    Text(note)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .padding(16)
+                            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                    }
+                }
+
+                Button(L("common.ok")) {
+                    onClose()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(tint)
+            }
+            .padding(24)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+    }
 
     private struct ExportedProductRow {
         let barcode: String
@@ -1519,126 +1784,127 @@ struct DatabaseView: View {
     var body: some View {
         let resolvedLanguageCode = Bundle.resolvedLanguageCode(for: appLanguage)
 
-        VStack {
-            // campo filtro barcode / nome / codice
-            HStack(spacing: 8) {
-                TextField(L("database.search_placeholder"), text: $barcodeFilter)
-                    .textFieldStyle(.roundedBorder)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+        ZStack {
+            VStack {
+                // campo filtro barcode / nome / codice
+                HStack(spacing: 8) {
+                    TextField(L("database.search_placeholder"), text: $barcodeFilter)
+                        .textFieldStyle(.roundedBorder)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
 
-                if !barcodeFilter.isEmpty {
+                    if !barcodeFilter.isEmpty {
+                        Button {
+                            barcodeFilter = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
                     Button {
-                        barcodeFilter = ""
+                        showScanner = true
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
+                        Image(systemName: "camera.viewfinder")
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top)
+
+                // lista prodotti
+                List {
+                    ForEach(filteredProducts) { (product: Product) in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(product.productName ?? L("product.no_name"))
+                                        .font(.headline)
+
+                                    if let second = product.secondProductName,
+                                       !second.isEmpty {
+                                        Text(second)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Text(L("database.row.barcode", product.barcode))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+
+                                    if let item = product.itemNumber,
+                                       !item.isEmpty {
+                                        Text(L("database.row.code", item))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    if let purchase = product.purchasePrice {
+                                        Text(L("database.row.purchase", formatMoney(purchase)))
+                                            .font(.caption)
+                                    }
+                                    if let retail = product.retailPrice {
+                                        Text(L("database.row.retail", formatMoney(retail)))
+                                            .font(.caption)
+                                    }
+                                    if let qty = product.stockQuantity {
+                                        Text(L("database.row.stock", formatQuantity(qty)))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+
+                            HStack {
+                                if let supplierName = product.supplier?.name,
+                                   !supplierName.isEmpty {
+                                    Text(L("database.row.supplier", supplierName))
+                                }
+                                if let categoryName = product.category?.name,
+                                   !categoryName.isEmpty {
+                                    if product.supplier != nil {
+                                        Text("·")
+                                    }
+                                    Text(L("database.row.category", categoryName))
+                                }
+                            }
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
-                    }
-                }
 
-                Button {
-                    showScanner = true
-                } label: {
-                    Image(systemName: "camera.viewfinder")
+                            HStack {
+                                Button {
+                                    productToEdit = product
+                                } label: {
+                                    Label(L("common.edit"), systemImage: "pencil")
+                                }
+
+                                Spacer()
+
+                                Button {
+                                    productForHistory = product
+                                } label: {
+                                    Label(L("product.history.title"), systemImage: "clock.arrow.circlepath")
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                            .font(.footnote)
+                            .padding(.top, 2)
+                        }
+                        .contentShape(Rectangle()) // tutta la riga tappabile
+                        .onTapGesture {
+                            productToEdit = product
+                        }
+                    }
+                    .onDelete(perform: deleteProducts)
                 }
+                .id("database-list-\(resolvedLanguageCode)")
+                .listStyle(.plain)
             }
-            .padding(.horizontal)
-            .padding(.top)
+            .disabled(importProgress.isRunning)
 
-            // lista prodotti
-            List {
-                ForEach(filteredProducts) { (product: Product) in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(product.productName ?? L("product.no_name"))
-                                    .font(.headline)
-
-                                if let second = product.secondProductName,
-                                   !second.isEmpty {
-                                    Text(second)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Text(L("database.row.barcode", product.barcode))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-
-                                if let item = product.itemNumber,
-                                   !item.isEmpty {
-                                    Text(L("database.row.code", item))
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-
-                            Spacer()
-
-                            VStack(alignment: .trailing, spacing: 2) {
-                                if let purchase = product.purchasePrice {
-                                    Text(L("database.row.purchase", formatMoney(purchase)))
-                                        .font(.caption)
-                                }
-                                if let retail = product.retailPrice {
-                                    Text(L("database.row.retail", formatMoney(retail)))
-                                        .font(.caption)
-                                }
-                                if let qty = product.stockQuantity {
-                                    Text(L("database.row.stock", formatQuantity(qty)))
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-
-                        HStack {
-                            if let supplierName = product.supplier?.name,
-                               !supplierName.isEmpty {
-                                Text(L("database.row.supplier", supplierName))
-                            }
-                            if let categoryName = product.category?.name,
-                               !categoryName.isEmpty {
-                                if product.supplier != nil {
-                                    Text("·")
-                                }
-                                Text(L("database.row.category", categoryName))
-                            }
-                        }
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-
-                        HStack {
-                            Button {
-                                productToEdit = product
-                            } label: {
-                                Label(L("common.edit"), systemImage: "pencil")
-                            }
-
-                            Spacer()
-
-                            Button {
-                                productForHistory = product
-                            } label: {
-                                Label(L("product.history.title"), systemImage: "clock.arrow.circlepath")
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                        .font(.footnote)
-                        .padding(.top, 2)
-                    }
-                    .contentShape(Rectangle()) // tutta la riga tappabile
-                    .onTapGesture {
-                        productToEdit = product
-                    }
-                }
-                .onDelete(perform: deleteProducts)
-            }
-            .id("database-list-\(resolvedLanguageCode)")
-            .listStyle(.plain)
-        }
-        .disabled(importProgress.isRunning)
-        .overlay {
             if importProgress.showsOverlay {
                 importProgressOverlay
             }
@@ -1672,7 +1938,6 @@ struct DatabaseView: View {
                     .disabled(importProgress.isRunning)
                 }
             }
-
         }
         // Sheet per NUOVO prodotto
         .sheet(isPresented: $showAddSheet) {
@@ -1715,9 +1980,13 @@ struct DatabaseView: View {
                     },
                     onApply: {
                         try await applyConfirmedImportAnalysis()
-                        importAnalysisSession = nil
                     }
                 )
+            }
+        }
+        .sheet(item: $fullImportResultPayload, onDismiss: clearPresentedFullImportResult) { payload in
+            FullImportResultView(payload: payload) {
+                clearPresentedFullImportResult()
             }
         }
         // Sheet per scanner barcode
@@ -1860,6 +2129,13 @@ struct DatabaseView: View {
                 } else {
                     ProgressView()
                         .controlSize(.large)
+                }
+
+                if importProgress.canCancelPreparation {
+                    Button(L("common.cancel")) {
+                        cancelFullImportPreparation()
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
             }
             .padding(.horizontal, 24)
@@ -2270,10 +2546,11 @@ struct DatabaseView: View {
             return
         }
 
+        clearAllFullImportResultState()
         importError = nil
         importAnalysisSession = nil
         pendingFullImportContext = nil
-        importProgress.startPreparation()
+        importProgress.startPreparation(jobKind: .analysisImport)
 
         do {
             let tempURL = try copySecurityScopedImportFileToTemporaryLocation(from: url)
@@ -2318,17 +2595,22 @@ struct DatabaseView: View {
             return
         }
 
+        clearAllFullImportResultState()
         importError = nil
         importAnalysisSession = nil
         pendingFullImportContext = nil
-        importProgress.startPreparation()
+        fullImportPrepareTask?.cancel()
+        fullImportPrepareTask = nil
+        fullImportPrepareTaskID = nil
+        cancelledFullImportPrepareTaskID = nil
+        importProgress.startPreparation(jobKind: .fullDatabaseImport)
 
         do {
             let tempURL = try copySecurityScopedImportFileToTemporaryLocation(from: url)
             let modelContainer = context.container
             let progressState = importProgress
-
-            Task {
+            let runID = UUID()
+            let task = Task {
                 defer { try? FileManager.default.removeItem(at: tempURL) }
 
                 do {
@@ -2342,46 +2624,29 @@ struct DatabaseView: View {
                         }
                     )
 
-                    await MainActor.run {
-                        let existingSupplierNames = Set(
-                            (try? context.fetch(FetchDescriptor<Supplier>()))?
-                                .compactMap { normalizedImportNamedEntityName($0.name) }
-                            ?? []
-                        )
-                        let existingCategoryNames = Set(
-                            (try? context.fetch(FetchDescriptor<ProductCategory>()))?
-                                .compactMap { normalizedImportNamedEntityName($0.name) }
-                            ?? []
-                        )
-                        pendingFullImportContext = prepared.pendingFullImportContext
-                        importAnalysisSession = ImportAnalysisSession(
-                            analysis: DatabaseImportUILocalizer.analysisResult(from: prepared.analysis),
-                            nonProductSummary: prepared.nonProductSummary,
-                            pendingSupplierNames: prepared.pendingFullImportContext?.pendingSupplierNames ?? [],
-                            pendingCategoryNames: prepared.pendingFullImportContext?.pendingCategoryNames ?? [],
-                            existingSupplierNames: existingSupplierNames,
-                            existingCategoryNames: existingCategoryNames
-                        )
-                        progressState.awaitingConfirmation()
-                    }
+                    handlePreparedFullImportSuccess(prepared, runID: runID)
+                } catch is CancellationError {
+                    handlePreparedFullImportCancellation(runID: runID)
                 } catch {
-                    await MainActor.run {
-                        finalizeImportPreparationFailure(error)
-                    }
+                    handlePreparedFullImportFailure(error, runID: runID)
                 }
             }
+            fullImportPrepareTask = task
+            fullImportPrepareTaskID = runID
         } catch let error as LocalizedError {
-            finalizeImportPreparationFailure(error)
+            finalizeFullImportPreparationFailure(error)
         } catch {
-            finalizeImportPreparationFailure(error)
+            finalizeFullImportPreparationFailure(error)
         }
     }
 
     private func handleImportAnalysisDismissed() {
         importAnalysisSession = nil
         pendingFullImportContext = nil
-        guard importProgress.isRunning else { return }
-        importProgress.resetRunningState()
+        if importProgress.isRunning {
+            importProgress.resetRunningState()
+        }
+        presentDeferredFullImportResultIfNeeded()
     }
 
     private func finalizeImportPreparationFailure(_ error: Error) {
@@ -2389,6 +2654,129 @@ struct DatabaseView: View {
         importAnalysisSession = nil
         importProgress.resetRunningState()
         importError = DatabaseImportUILocalizer.importErrorMessage(for: error)
+    }
+
+    private func finalizeFullImportPreparationFailure(_ error: Error) {
+        pendingFullImportContext = nil
+        importAnalysisSession = nil
+        importProgress.resetRunningState()
+        fullImportResultPayload = DatabaseImportUILocalizer.fullImportErrorResult(
+            message: DatabaseImportUILocalizer.importErrorMessage(for: error)
+        )
+    }
+
+    private func finalizeFullImportPreparationCancellation() {
+        pendingFullImportContext = nil
+        importAnalysisSession = nil
+        importProgress.resetRunningState()
+        fullImportResultPayload = DatabaseImportUILocalizer.fullImportCancelledResult()
+    }
+
+    private func handlePreparedFullImportSuccess(
+        _ prepared: PreparedImportAnalysis,
+        runID: UUID
+    ) {
+        guard fullImportPrepareTaskID == runID else {
+            if cancelledFullImportPrepareTaskID == runID {
+                cancelledFullImportPrepareTaskID = nil
+                finalizeFullImportPreparationCancellation()
+            }
+            return
+        }
+
+        fullImportPrepareTask = nil
+        fullImportPrepareTaskID = nil
+        let existingSupplierNames = Set(
+            (try? context.fetch(FetchDescriptor<Supplier>()))?
+                .compactMap { normalizedImportNamedEntityName($0.name) }
+            ?? []
+        )
+        let existingCategoryNames = Set(
+            (try? context.fetch(FetchDescriptor<ProductCategory>()))?
+                .compactMap { normalizedImportNamedEntityName($0.name) }
+            ?? []
+        )
+        pendingFullImportContext = prepared.pendingFullImportContext
+        importAnalysisSession = ImportAnalysisSession(
+            analysis: DatabaseImportUILocalizer.analysisResult(from: prepared.analysis),
+            nonProductSummary: prepared.nonProductSummary,
+            pendingSupplierNames: prepared.pendingFullImportContext?.pendingSupplierNames ?? [],
+            pendingCategoryNames: prepared.pendingFullImportContext?.pendingCategoryNames ?? [],
+            existingSupplierNames: existingSupplierNames,
+            existingCategoryNames: existingCategoryNames
+        )
+        importProgress.awaitingConfirmation()
+    }
+
+    private func handlePreparedFullImportCancellation(runID: UUID) {
+        let isActiveRun = fullImportPrepareTaskID == runID
+
+        if isActiveRun {
+            fullImportPrepareTask = nil
+            fullImportPrepareTaskID = nil
+        }
+        guard isActiveRun || cancelledFullImportPrepareTaskID == runID else {
+            return
+        }
+        cancelledFullImportPrepareTaskID = nil
+        finalizeFullImportPreparationCancellation()
+    }
+
+    private func handlePreparedFullImportFailure(
+        _ error: Error,
+        runID: UUID
+    ) {
+        let isActiveRun = fullImportPrepareTaskID == runID
+
+        if isActiveRun {
+            fullImportPrepareTask = nil
+            fullImportPrepareTaskID = nil
+        }
+        guard isActiveRun || cancelledFullImportPrepareTaskID == runID else {
+            return
+        }
+        guard cancelledFullImportPrepareTaskID != runID else {
+            cancelledFullImportPrepareTaskID = nil
+            finalizeFullImportPreparationCancellation()
+            return
+        }
+        finalizeFullImportPreparationFailure(error)
+    }
+
+    private func cancelFullImportPreparation() {
+        guard importProgress.canCancelPreparation,
+              let runID = fullImportPrepareTaskID else {
+            return
+        }
+
+        cancelledFullImportPrepareTaskID = runID
+        importProgress.beginCancellation()
+        fullImportPrepareTask?.cancel()
+        fullImportPrepareTask = nil
+        fullImportPrepareTaskID = nil
+    }
+
+    private func clearPresentedFullImportResult() {
+        fullImportResultPayload = nil
+    }
+
+    private func clearAllFullImportResultState() {
+        deferredFullImportResultPayload = nil
+        fullImportResultPayload = nil
+    }
+
+    private func deferFullImportResultUntilAnalysisDismiss(_ payload: FullImportResultPayload) {
+        deferredFullImportResultPayload = payload
+    }
+
+    private func presentDeferredFullImportResultIfNeeded() {
+        guard importAnalysisSession == nil,
+              let payload = deferredFullImportResultPayload else {
+            return
+        }
+
+        deferredFullImportResultPayload = nil
+        fullImportResultPayload = payload
     }
 
     private func copySecurityScopedImportFileToTemporaryLocation(from url: URL) throws -> URL {
@@ -2488,6 +2876,7 @@ struct DatabaseView: View {
         let modelContainer = context.container
         let progressState = importProgress
         let confirmedPendingContext = pendingFullImportContext
+        let isFullDatabaseFlow = progressState.isFullDatabaseFlow
         let payload: ImportApplyPayload
 
         do {
@@ -2497,16 +2886,28 @@ struct DatabaseView: View {
             )
         } catch {
             progressState.resetRunningState()
+            let applyMessage = L("database.error.apply_import", error.localizedDescription)
+            if isFullDatabaseFlow {
+                pendingFullImportContext = nil
+                deferFullImportResultUntilAnalysisDismiss(
+                    DatabaseImportUILocalizer.fullImportErrorResult(message: applyMessage)
+                )
+                importAnalysisSession = nil
+                return
+            }
+
             throw NSError(
                 domain: "ImportExcelApply",
                 code: 4,
                 userInfo: [
-                    NSLocalizedDescriptionKey: L("database.error.apply_import", error.localizedDescription)
+                    NSLocalizedDescriptionKey: applyMessage
                 ]
             )
         }
 
-        importProgress.startPreparation()
+        importProgress.startApplying(
+            jobKind: isFullDatabaseFlow ? .fullDatabaseImport : .analysisImport
+        )
 
         do {
             let result = try await DatabaseImportPipeline.applyImportAnalysisInBackground(
@@ -2517,18 +2918,35 @@ struct DatabaseView: View {
                 }
             )
             pendingFullImportContext = nil
+            if isFullDatabaseFlow {
+                progressState.resetRunningState()
+                deferFullImportResultUntilAnalysisDismiss(
+                    DatabaseImportUILocalizer.fullImportSuccessResult(from: result)
+                )
+                importAnalysisSession = nil
+                return
+            }
+
             progressState.finishSuccess(message: Self.userMessage(for: result))
         } catch {
+            let applyMessage = L("database.error.apply_import", error.localizedDescription)
             pendingFullImportContext = nil
+            if isFullDatabaseFlow {
+                progressState.resetRunningState()
+                deferFullImportResultUntilAnalysisDismiss(
+                    DatabaseImportUILocalizer.fullImportErrorResult(message: applyMessage)
+                )
+                importAnalysisSession = nil
+                return
+            }
+
             importAnalysisSession = nil
-            progressState.finishError(
-                message: L("database.error.apply_import", error.localizedDescription)
-            )
+            progressState.finishError(message: applyMessage)
             throw NSError(
                 domain: "ImportExcelApply",
                 code: 3,
                 userInfo: [
-                    NSLocalizedDescriptionKey: L("database.error.apply_import", error.localizedDescription)
+                    NSLocalizedDescriptionKey: applyMessage
                 ]
             )
         }

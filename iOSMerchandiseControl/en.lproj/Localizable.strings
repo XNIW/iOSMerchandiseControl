@@ -169,7 +169,7 @@
 "import.analysis.error.export_title" = "Export error";
 "import.analysis.error.apply_title" = "Import apply error";
 "import.analysis.processing.title" = "Importing...";
-"import.analysis.processing.body" = "Applying the changes may take a few moments.";
+"import.analysis.processing.body" = "Detailed progress continues on the Database screen while the changes are applied.";
 "import.analysis.summary" = "Summary";
 "import.analysis.summary.new_products" = "New products";
 "import.analysis.summary.updates" = "Updates";
@@ -228,6 +228,7 @@
 "database.progress.parsing_sheet" = "Reading %@";
 "database.progress.analyzing" = "Analyzing import";
 "database.progress.completed_title" = "Import completed";
+"database.progress.cancelling" = "Cancelling import...";
 "database.progress.success" = "Import completed successfully.";
 "database.progress.success_products_only" = "Import completed. Products: %1$d new, %2$d updated.";
 "database.progress.success_with_price_history" = "Import completed. Products: %1$d new, %2$d updated. Price history saved: %3$d.";
@@ -236,6 +237,18 @@
 "database.progress.suppliers_created_suffix" = "Suppliers created: %d.";
 "database.progress.categories_created_suffix" = "Categories created: %d.";
 "database.progress.price_history_unresolved_suffix" = "Unresolved price history rows: %d.";
+"database.full_import.result.cancelled_title" = "Import cancelled";
+"database.full_import.result.cancelled_summary" = "The full database import was cancelled before the analysis could be applied.";
+"database.full_import.result.success_summary" = "The full database import completed successfully.";
+"database.full_import.result.partial_summary" = "The full database import completed with some notes.";
+"database.full_import.result.error_summary" = "The full database import could not be completed.";
+"database.full_import.result.products_inserted" = "New products";
+"database.full_import.result.products_updated" = "Updated products";
+"database.full_import.result.price_history_saved" = "Price history saved";
+"database.full_import.result.suppliers_created" = "Suppliers created";
+"database.full_import.result.categories_created" = "Categories created";
+"database.full_import.result.price_history_unresolved" = "Unresolved price history";
+"database.full_import.result.price_history_error_note" = "Price history note: %@";
 "database.progress.invalid_workbook" = "Unable to read the file. Make sure it is a valid Excel (.xlsx) file with multiple sheets.";
 "database.progress.missing_products_sheet" = "The file does not contain a 'Products' sheet. Full import requires at least this sheet.";
 "database.error.export" = "Export error: %@";

@@ -4,7 +4,7 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-024 ACTIVE — Full-database import progress UX + cancellation (PLANNING in corso, responsabile: CLAUDE).
+TASK-024 ACTIVE — Full-database import progress UX + cancellation (REVIEW in corso, responsabile: CLAUDE).
 
 ## Stato globale
 ACTIVE
@@ -53,7 +53,7 @@ Qualunque altra transizione è invalida.
 - Titolo: Full-database import progress UX + cancellation
 - File task: `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
 - Stato: ACTIVE
-- Fase attuale: PLANNING
+- Fase attuale: REVIEW
 - Responsabile attuale: CLAUDE
 - Ultimo aggiornamento: 2026-03-24
 

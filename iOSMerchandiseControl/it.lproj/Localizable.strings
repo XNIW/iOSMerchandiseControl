@@ -169,7 +169,7 @@
 "import.analysis.error.export_title" = "Errore export";
 "import.analysis.error.apply_title" = "Errore applicazione import";
 "import.analysis.processing.title" = "Importazione in corso...";
-"import.analysis.processing.body" = "L'applicazione dei cambiamenti può richiedere alcuni istanti.";
+"import.analysis.processing.body" = "Il progresso dettagliato continua nella schermata Database mentre i cambiamenti vengono applicati.";
 "import.analysis.summary" = "Riepilogo";
 "import.analysis.summary.new_products" = "Nuovi prodotti";
 "import.analysis.summary.updates" = "Aggiornamenti";
@@ -228,6 +228,7 @@
 "database.progress.parsing_sheet" = "Lettura %@";
 "database.progress.analyzing" = "Analisi import";
 "database.progress.completed_title" = "Import completato";
+"database.progress.cancelling" = "Annullamento import in corso...";
 "database.progress.success" = "Import completato con successo.";
 "database.progress.success_products_only" = "Import completato. Prodotti: %1$d nuovi, %2$d aggiornati.";
 "database.progress.success_with_price_history" = "Import completato. Prodotti: %1$d nuovi, %2$d aggiornati. Storico prezzi salvato: %3$d.";
@@ -236,6 +237,18 @@
 "database.progress.suppliers_created_suffix" = "Fornitori creati: %d.";
 "database.progress.categories_created_suffix" = "Categorie create: %d.";
 "database.progress.price_history_unresolved_suffix" = "Righe storico prezzi non risolvibili: %d.";
+"database.full_import.result.cancelled_title" = "Import annullato";
+"database.full_import.result.cancelled_summary" = "L'import completo del database è stato annullato prima di applicare l'analisi.";
+"database.full_import.result.success_summary" = "L'import completo del database è stato completato con successo.";
+"database.full_import.result.partial_summary" = "L'import completo del database è terminato con alcune note.";
+"database.full_import.result.error_summary" = "Non è stato possibile completare l'import completo del database.";
+"database.full_import.result.products_inserted" = "Prodotti nuovi";
+"database.full_import.result.products_updated" = "Prodotti aggiornati";
+"database.full_import.result.price_history_saved" = "Storico prezzi salvato";
+"database.full_import.result.suppliers_created" = "Fornitori creati";
+"database.full_import.result.categories_created" = "Categorie create";
+"database.full_import.result.price_history_unresolved" = "Storico prezzi non risolto";
+"database.full_import.result.price_history_error_note" = "Nota storico prezzi: %@";
 "database.progress.invalid_workbook" = "Impossibile leggere il file. Assicurarsi che sia un file Excel (.xlsx) valido con più fogli.";
 "database.progress.missing_products_sheet" = "Il file non contiene un foglio 'Products'. L'importazione completa richiede almeno questo foglio.";
 "database.error.export" = "Errore durante l'export: %@";
