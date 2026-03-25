@@ -8,7 +8,7 @@
 - **Fase attuale**: — (sospeso dopo REVIEW APPROVED)
 - **Responsabile attuale**: — (in attesa di test manuali da parte dell'utente)
 - **Data creazione**: 2026-03-22
-- **Ultimo aggiornamento**: 2026-03-22
+- **Ultimo aggiornamento**: 2026-03-25 (hotfix minimo su `.strings` malformati; review/test manuali finali ancora pendenti)
 - **Ultimo agente che ha operato**: CODEX
 
 > Stato sospeso: review tecnica finale APPROVATA; test manuali finali ancora pendenti. La task resta in attesa di futura ripresa per i soli test manuali conclusivi e la conferma finale.
@@ -991,6 +991,60 @@ Chiudere il blocker finale emerso in review: alcune schermate principali usavano
 - **Prossima fase**: REVIEW
 - **Prossimo agente**: CLAUDE
 - **Azione consigliata**: verificare il fix finale di reattivita` lingua su `DatabaseView`, `GeneratedView`, `ImportAnalysisView` e `ProductPriceHistoryView`, con focus sul fatto che il pattern strutturale segnalato dalla review (`L(...)` senza osservazione esplicita di `appLanguage`) e` ora chiuso senza allargare scope o toccare la logica applicativa.
+
+### Fix 6 — Hotfix regressione `.strings` malformati (2026-03-25)
+
+#### Obiettivo compreso
+Correggere con patch minima la regressione in cui varie schermate mostravano chiavi raw (`database.title`, `database.search_placeholder`, `history.summary.items`, `generated.detail.title`, `generated.detail.close`) pur avendo le traduzioni presenti nel repo e nel bundle buildato.
+
+#### File controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-021-historyentry-warning-dati-corrotti-deserializzazione.md`
+- `docs/TASKS/TASK-010-localizzazione-ui-multilingua.md`
+- `iOSMerchandiseControl/LocalizationManager.swift`
+- `iOSMerchandiseControl/ContentView.swift`
+- `iOSMerchandiseControl/DatabaseView.swift`
+- `iOSMerchandiseControl/HistoryView.swift`
+- `iOSMerchandiseControl/GeneratedView.swift`
+- `iOSMerchandiseControl/OptionsView.swift`
+- `iOSMerchandiseControl/en.lproj/Localizable.strings`
+- `iOSMerchandiseControl/it.lproj/Localizable.strings`
+- `iOSMerchandiseControl/es.lproj/Localizable.strings`
+- `iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings`
+- `iOSMerchandiseControl.xcodeproj/project.pbxproj`
+
+#### Piano minimo
+- Verificare se la regressione dipende da bundle/progetto Xcode oppure dal contenuto dei `.strings`.
+- Correggere solo la causa reale, senza workaround in `L(...)` o fix sparsi nelle view.
+- Rieseguire build e probe statico sul bundle per confermare la risoluzione delle chiavi osservate.
+
+#### Modifiche fatte
+- Root cause confermata: in `it.lproj`, `es.lproj` e `zh-Hans.lproj` la riga `history.exported` era scritta con virgolette tipografiche Unicode (`“ ”`) invece delle virgolette ASCII richieste dal formato Apple `.strings`.
+- Effetto osservato: il bundle localizzato esisteva davvero, ma il parser `.strings` non riusciva a leggere correttamente le entry successive; di conseguenza `Bundle.localizedString(forKey:value:table:)` restituiva la chiave raw per molte stringhe dopo quella riga malformata.
+- Hotfix applicato: sostituite solo le tre righe malformate con sintassi `.strings` valida ASCII:
+- `iOSMerchandiseControl/it.lproj/Localizable.strings`
+- `iOSMerchandiseControl/es.lproj/Localizable.strings`
+- `iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings`
+- Nessuna modifica a `LocalizationManager.swift`, alle view o al `project.pbxproj`: bundle e wiring runtime risultano corretti, il bug era nel contenuto dei file localizzati.
+- User override operativo: fix eseguito fuori dal task attivo di `MASTER-PLAN` per risolvere una regressione localizzata senza riaprire planning o alterare il tracking globale di `TASK-021`.
+
+#### Check eseguiti
+- ✅ ESEGUITO — Inclusione risorse nel bundle: build iOS eseguita; il prodotto contiene `en.lproj`, `es.lproj`, `it.lproj`, `zh-Hans.lproj` e i rispettivi `Localizable.strings`.
+- ✅ ESEGUITO — Verifica `project.pbxproj`: nessuna regressione trovata nei riferimenti localizzazione; `knownRegions` contiene `en`, `Base`, `es`, `it`, `zh-Hans`; il bug non dipende da target membership o copy resources mancanti.
+- ✅ ESEGUITO — Probe runtime sul bundle buildato: prima del fix le chiavi `history.summary.items`, `database.title`, `database.search_placeholder`, `generated.detail.title`, `generated.detail.close` tornavano raw in `it/es/zh-Hans`; dopo il fix la risoluzione dal bundle restituisce di nuovo i valori tradotti.
+- ✅ ESEGUITO — Build compila: `xcodebuild -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build` -> `** BUILD SUCCEEDED **`.
+- ✅ ESEGUITO — Nessun warning nuovo introdotto nei file toccati: il build mantiene solo warning gia` noti di toolchain (`multiple matching destinations`, `Metadata extraction skipped. No AppIntents.framework dependency found.`).
+- ✅ ESEGUITO — Coerenza con planning: fix minimo, nessun refactor, nessuna dipendenza nuova, nessun cambio API o workaround nel codice Swift.
+- ⚠️ NON ESEGUIBILE — Verifica manuale UI/Simulator del cambio lingua da `OptionsView`: non eseguita in questo run; evidenza statica invariata = `OptionsView` continua a scrivere `@AppStorage("appLanguage")` e `ContentView` continua ad applicare `.localeOverride(for: appLanguage)`.
+
+#### Rischi rimasti
+- Non ho eseguito una sessione UI interattiva su Simulator/device in questo turno; la conferma visuale finale del cambio lingua resta manuale.
+- La repository mantiene ancora virgolette tipografiche come semplice contenuto testuale dentro alcune traduzioni (`Use “%@”`, testi cinesi con parole quotate). Non sono un bug perche' sono interne al valore ASCII-quoted, ma futuri edit manuali dei `.strings` dovrebbero evitare editor che trasformano anche i delimitatori della sintassi.
+
+### Handoff → Review finale
+- **Prossima fase**: REVIEW
+- **Prossimo agente**: CLAUDE
+- **Azione consigliata**: verificare il hotfix puntuale sui tre `Localizable.strings` non inglesi, con focus sulla root cause sintattica (`“ ”` come delimitatori invalidi) e sul fatto che bundle/pbxproj/wiring `L(...)` non richiedono ulteriori modifiche.
 
 ---
 

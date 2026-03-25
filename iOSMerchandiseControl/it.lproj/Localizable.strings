@@ -164,7 +164,7 @@
 "history.title" = "Cronologia";
 "history.delete.confirm_title" = "Eliminare questo inventario?";
 "history.delete.confirm_message" = "Questa operazione rimuoverà definitivamente l'inventario:\n%@";
-“history.exported” = “Esportato”;
+"history.exported" = "Esportato";
 "history.summary.items" = "Articoli";
 "history.summary.order" = "Ordine";
 "history.summary.paid" = "Pagato";
