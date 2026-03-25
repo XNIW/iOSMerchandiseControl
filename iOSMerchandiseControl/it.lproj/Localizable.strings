@@ -82,6 +82,13 @@
 /* Scanner */
 "scanner.default_title" = "Scanner barcode";
 "scanner.instructions" = "Allinea il codice a barre alla linea rossa per leggere automaticamente.";
+"scanner.status.authorizing" = "Verifica accesso alla fotocamera...";
+"scanner.status.starting" = "Avvio della fotocamera...";
+"scanner.fallback.permission_denied.message" = "L'accesso alla fotocamera è disattivato per questa app. Abilitalo dalle Impostazioni per continuare a scansionare.";
+"scanner.fallback.restricted.message" = "L'accesso alla fotocamera è limitato su questo dispositivo e lo scanner non può essere avviato.";
+"scanner.fallback.camera_unavailable.message" = "Nessuna fotocamera disponibile su questo dispositivo. Usa un iPhone o iPad con fotocamera per scansionare i codici a barre.";
+"scanner.fallback.session_failed.message" = "La fotocamera non può essere avviata in questo momento. Chiudi e riapri lo scanner per riprovare.";
+"scanner.action.open_settings" = "Apri impostazioni";
 
 /* Product shared */
 "product.no_name" = "Senza nome";

@@ -82,6 +82,13 @@
 /* Scanner */
 "scanner.default_title" = "条码扫描器";
 "scanner.instructions" = "将条码对准红线即可自动扫描。";
+"scanner.status.authorizing" = "正在检查相机访问权限...";
+"scanner.status.starting" = "正在启动相机...";
+"scanner.fallback.permission_denied.message" = "此 App 的相机权限已关闭。请前往“设置”启用后再继续扫描。";
+"scanner.fallback.restricted.message" = "此设备的相机访问受到限制，无法启动扫描器。";
+"scanner.fallback.camera_unavailable.message" = "此设备没有可用的相机。请使用带相机的 iPhone 或 iPad 扫描条码。";
+"scanner.fallback.session_failed.message" = "当前无法启动相机。请关闭扫描器后重试。";
+"scanner.action.open_settings" = "打开设置";
 
 /* Product shared */
 "product.no_name" = "无名称";

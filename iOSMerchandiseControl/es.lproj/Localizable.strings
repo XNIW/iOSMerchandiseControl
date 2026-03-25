@@ -82,6 +82,13 @@
 /* Scanner */
 "scanner.default_title" = "Escáner de barcode";
 "scanner.instructions" = "Alinea el código de barras con la línea roja para leerlo automáticamente.";
+"scanner.status.authorizing" = "Comprobando acceso a la cámara...";
+"scanner.status.starting" = "Iniciando cámara...";
+"scanner.fallback.permission_denied.message" = "El acceso a la cámara está desactivado para esta app. Actívalo desde Ajustes para seguir escaneando.";
+"scanner.fallback.restricted.message" = "El acceso a la cámara está restringido en este dispositivo y el escáner no puede iniciarse.";
+"scanner.fallback.camera_unavailable.message" = "No hay ninguna cámara disponible en este dispositivo. Usa un iPhone o iPad con cámara para escanear códigos de barras.";
+"scanner.fallback.session_failed.message" = "La cámara no puede iniciarse en este momento. Cierra y vuelve a abrir el escáner para intentarlo de nuevo.";
+"scanner.action.open_settings" = "Abrir ajustes";
 
 /* Product shared */
 "product.no_name" = "Sin nombre";

@@ -82,6 +82,13 @@
 /* Scanner */
 "scanner.default_title" = "Barcode scanner";
 "scanner.instructions" = "Align the barcode with the red line for automatic scanning.";
+"scanner.status.authorizing" = "Checking camera access...";
+"scanner.status.starting" = "Starting camera...";
+"scanner.fallback.permission_denied.message" = "Camera access is turned off for this app. Enable it in Settings to keep scanning.";
+"scanner.fallback.restricted.message" = "Camera access is restricted on this device, so the scanner cannot start.";
+"scanner.fallback.camera_unavailable.message" = "No camera is available on this device. Use an iPhone or iPad with a camera to scan barcodes.";
+"scanner.fallback.session_failed.message" = "The camera cannot start right now. Close and reopen the scanner to try again.";
+"scanner.action.open_settings" = "Open settings";
 
 /* Product shared */
 "product.no_name" = "No name";

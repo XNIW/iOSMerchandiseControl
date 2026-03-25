@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-020 ACTIVE — Scanner: feedback camera non disponibile — **PLANNING** (file task bootstrap 2026-03-25; planning operativo da completare; responsabile **CLAUDE**).
+TASK-021 ACTIVE — HistoryEntry: warning su dati corrotti / deserializzazione fallita — **PLANNING** (bootstrap file task; responsabile **CLAUDE**; planning operativo da completare prima di EXECUTION).
 
 ## Stato globale
 ACTIVE
-> **User override 2026-03-25:** **TASK-019** e' **BLOCKED**: execution **completata**; review tecnica **APPROVED**; **nessun fix richiesto**; **test manuali non eseguiti** in questo turno (es. CA-2B/CA-3B, CA-2C); **non** DONE. Alla ripresa: test manuali → eventuale **FIX** solo se regressioni → **REVIEW** finale → conferma utente → DONE. **Task attivo** = **TASK-020** in **PLANNING** (CLAUDE). **User override 2026-03-24:** TASK-016 e' **BLOCKED** (review APPROVED, test manuali pendenti; non DONE). **TASK-017** **BLOCKED** (review APPROVED, test manuali non eseguiti; non DONE). **TASK-018** **BLOCKED** (review APPROVED, CA-7 test manuali pendenti; non DONE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
+> **User override 2026-03-25:** **TASK-020** e' **BLOCKED**: review **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** finale → conferma utente → DONE. **Task attivo** = **TASK-021** in **PLANNING** (CLAUDE). **TASK-019** resta **BLOCKED** (test manuali pendenti). **User override 2026-03-24:** TASK-016..018 **BLOCKED** (review APPROVED / test manuali pendenti; non DONE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,15 +49,21 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- Task ID: TASK-020
-- Titolo: Scanner: feedback camera non disponibile
-- File task: `docs/TASKS/TASK-020-scanner-feedback-camera-non-disponibile.md`
+- Task ID: TASK-021
+- Titolo: HistoryEntry: warning su dati corrotti / deserializzazione fallita
+- File task: `docs/TASKS/TASK-021-historyentry-warning-dati-corrotti-deserializzazione.md`
 - Stato: ACTIVE
 - Fase attuale: PLANNING
 - Responsabile attuale: CLAUDE
 - Ultimo aggiornamento: 2026-03-25
 
 Task bloccati non attivi:
+- Task ID: TASK-020
+- Titolo: Scanner: feedback camera non disponibile
+- File task: `docs/TASKS/TASK-020-scanner-feedback-camera-non-disponibile.md`
+- Stato: BLOCKED
+- Motivo: **user override 2026-03-25** — review **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; task **non** DONE. Alla ripresa: test manuali → eventuale **FIX** solo se regressioni → **REVIEW** finale → conferma utente → DONE.
+- Ultimo aggiornamento: 2026-03-25
 - Task ID: TASK-019
 - Titolo: Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill
 - File task: `docs/TASKS/TASK-019-robustezza-guardie-generatedview-cascade-delete-async-backfill.md`
@@ -168,8 +174,8 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-017 | PreGenerate: validazione esplicita colonne obbligatorie | BLOCKED | MEDIUM |
 | TASK-018 | GeneratedView: secondo livello revert (ai dati originali import) | BLOCKED | MEDIUM |
 | TASK-019 | Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill | BLOCKED | MEDIUM |
-| TASK-020 | Scanner: feedback camera non disponibile | ACTIVE | LOW |
-| TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | TODO | LOW |
+| TASK-020 | Scanner: feedback camera non disponibile | BLOCKED | LOW |
+| TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | ACTIVE | LOW |
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | DONE | HIGH |
 | TASK-023 | Full-database reimport idempotency + non-product diff visibility | BLOCKED | HIGH |
 | TASK-024 | Full-database import progress UX + cancellation | BLOCKED | MEDIUM |
@@ -187,6 +193,9 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | 2026-03-23 |
 
 ## Blocchi e dipendenze
+- TASK-020 bloccato.
+  Motivo: **user override 2026-03-25** — review **APPROVED**; **nessun fix richiesto**; **test manuali T-1..T-6 pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
+  Nota: sospensione per attivare **TASK-021**; non invalida execution/review documentati nel file task.
 - TASK-019 bloccato.
   Motivo: **user override 2026-03-25** — review tecnica **APPROVED**; **nessun fix richiesto**; **test manuali pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
   Nota: sospensione per attivare **TASK-020**; non invalida execution/review documentati nel file task.
@@ -233,6 +242,10 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - Tracking 2026-03-25: **TASK-018** execution completata da **CODEX**; fase **REVIEW**, responsabile **CLAUDE**. Build OK; verifiche manuali `S-1` / `M-1..M-10` / `M-12` non eseguite in questo turno e restano aperte.
 - User override 2026-03-25: **TASK-018** messo in **BLOCKED** (review **APPROVED**, test manuali CA-7 pendenti; **non** DONE); **TASK-019** attivato come **task attivo** con file `TASK-019-robustezza-guardie-generatedview-cascade-delete-async-backfill.md` (bootstrap da backlog/TASK-014). Tracking 2026-03-25: planning tecnico TASK-019 completato; execution Codex completata; fase **REVIEW**, responsabile **CLAUDE**. Build Debug iphonesimulator OK; review richiesta su adattamento minimo Fix B per limite macro SwiftData sull'inverse reciproco.
 - User override 2026-03-25: **TASK-019** messo in **BLOCKED** (review tecnica **APPROVED**, **nessun fix richiesto**, test manuali **non eseguiti**; **non** DONE); **TASK-020** attivato come **task attivo** in **PLANNING** con file `TASK-020-scanner-feedback-camera-non-disponibile.md` (bootstrap da TASK-014 gap N-10); responsabile **CLAUDE** fino a planning operativo completo e handoff verso EXECUTION.
+- Tracking 2026-03-25: **TASK-020** planning operativo completato (stati scanner, architettura `ScannerView`/`BarcodeScannerView`, CA, matrice test, rischi); fase **EXECUTION**, responsabile **CODEX**.
+- Tracking 2026-03-25: **TASK-020** execution completata da **CODEX**; fase **REVIEW**, responsabile **CLAUDE**. Build Debug iphonesimulator OK; verifiche statiche sui CA documentate nel file task; test manuali `T-1..T-6` non eseguiti in questo turno.
+- Tracking 2026-03-25: **TASK-020** review completata da **CLAUDE**: **APPROVED**, nessun fix richiesto. In attesa **conferma utente** + test manuali `T-1..T-6`.
+- User override 2026-03-25: **TASK-020** messo in **BLOCKED** (review **APPROVED**, **nessun fix richiesto**, test manuali **T-1..T-6 non eseguiti**; **non** DONE); **TASK-021** attivato come **unico task attivo** in **PLANNING** con file `TASK-021-historyentry-warning-dati-corrotti-deserializzazione.md` (bootstrap da backlog/TASK-014 gap N-12/DT-07); responsabile **CLAUDE**.
 
 ## Criterio di aggiornamento
 Questo file va aggiornato SOLO quando cambia almeno uno di:
