@@ -1,12 +1,26 @@
 import SwiftUI
 import SwiftData
 
+private actor PriceHistoryBackfillRunner {
+    private let modelContainer: ModelContainer
+
+    init(modelContainer: ModelContainer) {
+        self.modelContainer = modelContainer
+    }
+
+    func runIfNeeded() throws -> Int {
+        let backgroundContext = ModelContext(modelContainer)
+        return try PriceHistoryBackfillService.backfillIfNeeded(context: backgroundContext)
+    }
+}
+
 struct ContentView: View {
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     @Environment(\.modelContext) private var modelContext
     @StateObject private var excelSession = ExcelSessionViewModel()
     @State private var selectedTab = 0
+    @State private var didSchedulePriceHistoryBackfillThisLaunch = false
 
     private var resolvedColorScheme: ColorScheme? {
         switch appTheme {
@@ -61,14 +75,7 @@ struct ContentView: View {
         .localeOverride(for: appLanguage)
         .preferredColorScheme(resolvedColorScheme)
         .task {
-            do {
-                let inserted = try PriceHistoryBackfillService.backfillIfNeeded(context: modelContext)
-                if inserted > 0 {
-                    debugPrint("[Backfill] Inseriti \(inserted) record ProductPrice legacy.")
-                }
-            } catch {
-                debugPrint("[Backfill] Errore durante il backfill prezzi: \(error)")
-            }
+            schedulePriceHistoryBackfillIfNeeded()
         }
         .onOpenURL { url in
             guard url.isFileURL else { return }
@@ -82,6 +89,24 @@ struct ContentView: View {
             }
             selectedTab = 0
             excelSession.pendingOpenURL = url
+        }
+    }
+
+    @MainActor
+    private func schedulePriceHistoryBackfillIfNeeded() {
+        guard !didSchedulePriceHistoryBackfillThisLaunch else { return }
+        didSchedulePriceHistoryBackfillThisLaunch = true
+
+        let runner = PriceHistoryBackfillRunner(modelContainer: modelContext.container)
+        Task(priority: .utility) {
+            do {
+                let inserted = try await runner.runIfNeeded()
+                if inserted > 0 {
+                    debugPrint("[Backfill] Inseriti \(inserted) record ProductPrice legacy.")
+                }
+            } catch {
+                debugPrint("[Backfill] Errore durante il backfill prezzi: \(error)")
+            }
         }
     }
 }

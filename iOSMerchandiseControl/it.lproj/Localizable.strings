@@ -353,6 +353,9 @@
 "generated.autosave.saving" = "Salvataggio…";
 "generated.autosave.pending" = "Modifiche non salvate. Salvataggio automatico tra poco…";
 "generated.autosave.saved_at" = "Salvato alle %@";
+"generated.invariant.title" = "Incoerenza griglia";
+"generated.invariant.message" = "La griglia inventario è temporaneamente incoerente. Salvataggio, sync e condivisione restano sospesi finché la struttura delle righe non torna allineata.";
+"generated.invariant.counts" = "Conteggi righe: griglia %1$d, modificabili %2$d, complete %3$d.";
 "generated.action.edit_details" = "Modifica dettagli";
 "generated.action.mark_all_incomplete" = "Segna tutti incompleti";
 "generated.action.mark_all_complete" = "Segna tutti completati";

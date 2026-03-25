@@ -56,7 +56,7 @@ final class Product {
     var category: ProductCategory?
 
     /// Storico prezzi associato
-    @Relationship var priceHistory: [ProductPrice] = []
+    @Relationship(deleteRule: .cascade, inverse: \ProductPrice.product) var priceHistory: [ProductPrice] = []
 
     init(
         barcode: String,
@@ -92,8 +92,9 @@ final class ProductPrice {
     var note: String?
     var createdAt: Date
 
-    /// Relazione verso il prodotto (per ora senza inverse, per evitare problemi di key path)
-    @Relationship var product: Product?
+    /// Relazione verso il prodotto. L'inverse esplicito vive sul lato Product per evitare
+    /// la circular macro expansion di SwiftData con doppia annotazione reciproca.
+    var product: Product?
 
     init(
         type: PriceType,

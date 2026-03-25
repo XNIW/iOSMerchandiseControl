@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-019 ACTIVE — Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill — **PLANNING** (file task bootstrap 2026-03-25; planning tecnico da completare **CLAUDE** prima di EXECUTION).
+TASK-020 ACTIVE — Scanner: feedback camera non disponibile — **PLANNING** (file task bootstrap 2026-03-25; planning operativo da completare; responsabile **CLAUDE**).
 
 ## Stato globale
 ACTIVE
-> **User override 2026-03-24:** TASK-016 e' stato **sospeso in BLOCKED**: review **APPROVED** e warning sistemati, ma **test manuali ancora pendenti/non completati**; **non** DONE; riprendibile per validazione manuale ed eventuale FIX. **TASK-017** e' **BLOCKED** dal 2026-03-24: implementazione completata, review tecnica **APPROVED**, **test manuali utente non eseguiti adesso**; **non** DONE; chiusura differita. **TASK-018** e' **BLOCKED** dal 2026-03-25: execution completata, review **APPROVED**, **nessun fix richiesto**, ma test manuali **CA-7** (`S-1`, `M-1..M-10`, `M-12`) **non eseguiti**; **non** DONE. **Task attivo** = **TASK-019** in **PLANNING** (CLAUDE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
+> **User override 2026-03-25:** **TASK-019** e' **BLOCKED**: execution **completata**; review tecnica **APPROVED**; **nessun fix richiesto**; **test manuali non eseguiti** in questo turno (es. CA-2B/CA-3B, CA-2C); **non** DONE. Alla ripresa: test manuali → eventuale **FIX** solo se regressioni → **REVIEW** finale → conferma utente → DONE. **Task attivo** = **TASK-020** in **PLANNING** (CLAUDE). **User override 2026-03-24:** TASK-016 e' **BLOCKED** (review APPROVED, test manuali pendenti; non DONE). **TASK-017** **BLOCKED** (review APPROVED, test manuali non eseguiti; non DONE). **TASK-018** **BLOCKED** (review APPROVED, CA-7 test manuali pendenti; non DONE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,15 +49,21 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- Task ID: TASK-019
-- Titolo: Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill
-- File task: `docs/TASKS/TASK-019-robustezza-guardie-generatedview-cascade-delete-async-backfill.md`
+- Task ID: TASK-020
+- Titolo: Scanner: feedback camera non disponibile
+- File task: `docs/TASKS/TASK-020-scanner-feedback-camera-non-disponibile.md`
 - Stato: ACTIVE
 - Fase attuale: PLANNING
 - Responsabile attuale: CLAUDE
 - Ultimo aggiornamento: 2026-03-25
 
 Task bloccati non attivi:
+- Task ID: TASK-019
+- Titolo: Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill
+- File task: `docs/TASKS/TASK-019-robustezza-guardie-generatedview-cascade-delete-async-backfill.md`
+- Stato: BLOCKED
+- Motivo: **user override 2026-03-25** — execution **completata**; review tecnica **APPROVED**; **nessun fix richiesto**; **test manuali non eseguiti** in questo turno; task **non** DONE. Alla ripresa: test manuali (CA-2B/CA-3B store/delete, CA-2C dataset grande, smoke Fix A se opportuno) → eventuale **FIX** solo se emergono regressioni → **REVIEW** finale → conferma utente → DONE.
+- Ultimo aggiornamento: 2026-03-25
 - Task ID: TASK-018
 - Titolo: GeneratedView: secondo livello revert (ai dati originali import)
 - File task: `docs/TASKS/TASK-018-generatedview-second-level-revert.md`
@@ -161,8 +167,8 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-016 | Deduplicazione logica import DatabaseView/ProductImportViewModel | BLOCKED | LOW |
 | TASK-017 | PreGenerate: validazione esplicita colonne obbligatorie | BLOCKED | MEDIUM |
 | TASK-018 | GeneratedView: secondo livello revert (ai dati originali import) | BLOCKED | MEDIUM |
-| TASK-019 | Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill | ACTIVE | MEDIUM |
-| TASK-020 | Scanner: feedback camera non disponibile | TODO | LOW |
+| TASK-019 | Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill | BLOCKED | MEDIUM |
+| TASK-020 | Scanner: feedback camera non disponibile | ACTIVE | LOW |
 | TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | TODO | LOW |
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | DONE | HIGH |
 | TASK-023 | Full-database reimport idempotency + non-product diff visibility | BLOCKED | HIGH |
@@ -181,6 +187,9 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | 2026-03-23 |
 
 ## Blocchi e dipendenze
+- TASK-019 bloccato.
+  Motivo: **user override 2026-03-25** — review tecnica **APPROVED**; **nessun fix richiesto**; **test manuali pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
+  Nota: sospensione per attivare **TASK-020**; non invalida execution/review documentati nel file task.
 - TASK-018 bloccato.
   Motivo: **user override 2026-03-25** — review **APPROVED**; test manuali **CA-7** (**S-1**, **M-1..M-10**, **M-12**) **pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato.
   Nota: sospensione per spostare il focus operativo su **TASK-019**; non invalida l'execution/review gia' documentati nel file task.
@@ -222,7 +231,8 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - User override 2026-03-24: **TASK-017** messo in **BLOCKED** (review APPROVED, test manuali non eseguiti adesso; non DONE); creato file task **TASK-018** `TASK-018-generatedview-second-level-revert.md`; **TASK-018** attivato come **task attivo** in **PLANNING** con responsabile **CLAUDE** (planning dettagliato obbligatorio prima di EXECUTION)
 - User conferma 2026-03-24: **TASK-018** planning **approvato**; fase **EXECUTION**, responsabile **CODEX**; vincoli execution/review nel file task (*Vincoli execution / review*)
 - Tracking 2026-03-25: **TASK-018** execution completata da **CODEX**; fase **REVIEW**, responsabile **CLAUDE**. Build OK; verifiche manuali `S-1` / `M-1..M-10` / `M-12` non eseguite in questo turno e restano aperte.
-- User override 2026-03-25: **TASK-018** messo in **BLOCKED** (review **APPROVED**, test manuali CA-7 pendenti; **non** DONE); **TASK-019** attivato come **task attivo** in **PLANNING** con file `TASK-019-robustezza-guardie-generatedview-cascade-delete-async-backfill.md` (bootstrap da backlog/TASK-014)
+- User override 2026-03-25: **TASK-018** messo in **BLOCKED** (review **APPROVED**, test manuali CA-7 pendenti; **non** DONE); **TASK-019** attivato come **task attivo** con file `TASK-019-robustezza-guardie-generatedview-cascade-delete-async-backfill.md` (bootstrap da backlog/TASK-014). Tracking 2026-03-25: planning tecnico TASK-019 completato; execution Codex completata; fase **REVIEW**, responsabile **CLAUDE**. Build Debug iphonesimulator OK; review richiesta su adattamento minimo Fix B per limite macro SwiftData sull'inverse reciproco.
+- User override 2026-03-25: **TASK-019** messo in **BLOCKED** (review tecnica **APPROVED**, **nessun fix richiesto**, test manuali **non eseguiti**; **non** DONE); **TASK-020** attivato come **task attivo** in **PLANNING** con file `TASK-020-scanner-feedback-camera-non-disponibile.md` (bootstrap da TASK-014 gap N-10); responsabile **CLAUDE** fino a planning operativo completo e handoff verso EXECUTION.
 
 ## Criterio di aggiornamento
 Questo file va aggiornato SOLO quando cambia almeno uno di:

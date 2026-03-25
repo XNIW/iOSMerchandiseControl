@@ -353,6 +353,9 @@
 "generated.autosave.saving" = "Guardando…";
 "generated.autosave.pending" = "Hay cambios sin guardar. El guardado automático se ejecutará pronto…";
 "generated.autosave.saved_at" = "Guardado a las %@";
+"generated.invariant.title" = "Inconsistencia de la cuadrícula";
+"generated.invariant.message" = "La cuadrícula del inventario está temporalmente desalineada. Guardado, sync y compartición quedan en pausa hasta que la estructura de filas vuelva a alinearse.";
+"generated.invariant.counts" = "Conteos de filas: cuadrícula %1$d, editables %2$d, completas %3$d.";
 "generated.action.edit_details" = "Editar detalles";
 "generated.action.mark_all_incomplete" = "Marcar todo incompleto";
 "generated.action.mark_all_complete" = "Marcar todo completado";

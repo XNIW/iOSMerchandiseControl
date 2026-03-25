@@ -151,6 +151,7 @@ struct GeneratedView: View {
     @State private var showRevertConfirmation: Bool = false
     @State private var showImportRevertConfirmation: Bool = false
     @State private var pendingDeleteRowIndex: Int? = nil
+    @State private var gridParallelArraysFault: Bool = false
 
     private var allRowsComplete: Bool {
         complete.count > 1 && complete.dropFirst().allSatisfy { $0 }
@@ -282,6 +283,7 @@ struct GeneratedView: View {
                     } label: {
                         Label(L("generated.action.share"), systemImage: "square.and.arrow.up")
                     }
+                    .disabled(gridParallelArraysFault)
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -439,6 +441,9 @@ struct GeneratedView: View {
                 editable: $editable,
                 complete: $complete,
                 isManualEntry: entry.isManualEntry,
+                onShapeMutation: { context in
+                    evaluateParallelGridConsistency(context: context)
+                },
                 onSave: {
                     entry.totalItems = max(0, data.count - 1)
                     markDirtyAndScheduleAutosave()
@@ -511,6 +516,10 @@ struct GeneratedView: View {
     @ViewBuilder
     private var inventorySection: some View {
         Section(L("generated.inventory.title")) {
+            if gridParallelArraysFault {
+                gridParallelArraysWarningView
+            }
+
             if data.isEmpty {
                 Text(L("generated.inventory.no_data"))
                     .foregroundStyle(.secondary)
@@ -528,6 +537,29 @@ struct GeneratedView: View {
                 }
             }
         }
+    }
+
+    private var gridParallelArraysWarningView: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.yellow)
+                .font(.title3)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L("generated.invariant.title"))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Text(L("generated.invariant.message"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Text(L("generated.invariant.counts", data.count, editable.count, complete.count))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 6)
     }
 
     private var inventoryStatusView: some View {
@@ -758,7 +790,7 @@ struct GeneratedView: View {
                         Text(L("generated.action.apply_inventory_db"))
                     }
                 }
-                .disabled(isSaving || isSyncing)
+                .disabled(isSaving || isSyncing || gridParallelArraysFault)
             } else {
                 Text(L("generated.autosave.active"))
                     .foregroundStyle(.secondary)
@@ -860,7 +892,7 @@ struct GeneratedView: View {
 
     @MainActor
     private func autosaveIfNeeded() {
-        guard hasUnsavedChanges, !isSaving, !isSyncing else { return }
+        guard hasUnsavedChanges, !isSaving, !isSyncing, !gridParallelArraysFault else { return }
         saveChanges() // se va bene, dentro saveChanges azzeriamo hasUnsavedChanges
     }
 
@@ -869,6 +901,25 @@ struct GeneratedView: View {
         autosaveTask?.cancel()
         autosaveTask = nil
         autosaveIfNeeded()
+    }
+
+    @discardableResult
+    private func evaluateParallelGridConsistency(context: String) -> Bool {
+        let dataCount = data.count
+        let editableCount = editable.count
+        let completeCount = complete.count
+        let isConsistent = dataCount == editableCount && editableCount == completeCount
+
+        if isConsistent {
+            gridParallelArraysFault = false
+            return true
+        }
+
+        debugPrint(
+            "[GeneratedView] INVARIANT_FAIL data=\(dataCount) editable=\(editableCount) complete=\(completeCount) context=\(context)"
+        )
+        gridParallelArraysFault = true
+        return false
     }
 
     // MARK: - Inizializzazione dati
@@ -932,6 +983,8 @@ struct GeneratedView: View {
             originalEditable = editable
             originalComplete = complete
         }
+
+        evaluateParallelGridConsistency(context: "initializeFromEntryIfNeeded")
     }
 
     @ViewBuilder
@@ -1219,6 +1272,7 @@ struct GeneratedView: View {
         data = originalData
         editable = originalEditable
         complete = originalComplete
+        evaluateParallelGridConsistency(context: "revertToOriginalSnapshot")
         entry.totalItems = max(0, originalData.count - 1)
         markDirtyAndScheduleAutosave()
     }
@@ -1272,6 +1326,7 @@ struct GeneratedView: View {
         data = snapshotData
         editable = HistoryImportedGridSupport.editableTemplate(forGrid: snapshotData)
         complete = Array(repeating: false, count: snapshotData.count)
+        evaluateParallelGridConsistency(context: "revertToImportSnapshot")
         entry.totalItems = summary.totalItems
         entry.orderTotal = summary.orderTotal
         entry.paymentTotal = summary.orderTotal
@@ -1279,9 +1334,7 @@ struct GeneratedView: View {
         entry.syncStatus = .notAttempted
         entry.wasExported = false
 
-        saveChanges()
-
-        if saveError == nil {
+        if saveChanges() {
             originalData = data
             originalEditable = editable
             originalComplete = complete
@@ -1324,6 +1377,7 @@ struct GeneratedView: View {
         data.remove(at: rowIndex)
         editable.remove(at: rowIndex)
         complete.remove(at: rowIndex)
+        evaluateParallelGridConsistency(context: "deleteRow")
         entry.totalItems = max(0, data.count - 1)
         markDirtyAndScheduleAutosave()
     }
@@ -1358,6 +1412,7 @@ struct GeneratedView: View {
                     complete.append(contentsOf: Array(repeating: false, count: max(needed, 0)))
                 }
                 complete[rowIndex] = newValue
+                evaluateParallelGridConsistency(context: "bindingForComplete")
                 markDirtyAndScheduleAutosave()
             }
         )
@@ -1387,6 +1442,7 @@ struct GeneratedView: View {
                     )
                 }
                 editable[row][slot] = newValue
+                evaluateParallelGridConsistency(context: "bindingForEditable")
                 markDirtyAndScheduleAutosave()
             }
         )
@@ -1443,7 +1499,7 @@ struct GeneratedView: View {
             ]
             editable = Array(repeating: ["", ""], count: data.count)
             complete = Array(repeating: false, count: data.count)
-            
+            evaluateParallelGridConsistency(context: "handleScannedBarcode.manualHeaderBootstrap")
             markDirtyAndScheduleAutosave()
         }
 
@@ -1503,6 +1559,7 @@ struct GeneratedView: View {
 
                 ensureCompleteCapacity()
                 syncCompletionForRow(rowIndex: existingIndex, headerRow: headerRow, haptic: true)
+                evaluateParallelGridConsistency(context: "handleScannedBarcode")
 
                 scanError = nil
 
@@ -1590,6 +1647,7 @@ struct GeneratedView: View {
         // ✅ QUI (subito dopo editable)
         ensureCompleteCapacity()
         if complete.indices.contains(newIndex) { complete[newIndex] = true } // opzionale: scan = completato
+        evaluateParallelGridConsistency(context: "handleScannedBarcode")
         markDirtyAndScheduleAutosave()
 
         scanError = product == nil
@@ -1636,7 +1694,18 @@ struct GeneratedView: View {
 
     private func makeRowDetailData(for rowIndex: Int, headerRow: [String], isComplete: Bool, autoFocusCounted: Bool, skipProductNameLookup: Bool = false) -> RowDetailData {
         guard data.indices.contains(rowIndex) else {
-            fatalError("makeRowDetailData: rowIndex out of range")
+            debugPrint("[GeneratedView] ROW_DETAIL_SKIP rowIndex=\(rowIndex) context=makeRowDetailData")
+            return RowDetailData(
+                rowIndex: rowIndex,
+                barcode: "",
+                productName: nil,
+                supplierQuantity: nil,
+                oldPurchasePrice: nil,
+                oldRetailPrice: nil,
+                syncError: nil,
+                isComplete: isComplete,
+                autoFocusCounted: autoFocusCounted
+            )
         }
         let row = data[rowIndex]
 
@@ -1725,6 +1794,7 @@ struct GeneratedView: View {
         data = stateBackup.data
         editable = stateBackup.editable
         complete = stateBackup.complete
+        evaluateParallelGridConsistency(context: "restoreRevertImportState")
         entry.data = stateBackup.data
         entry.editable = stateBackup.editable
         entry.complete = stateBackup.complete
@@ -1739,8 +1809,9 @@ struct GeneratedView: View {
 
     // MARK: - Salvataggio & sync
 
-    private func saveChanges() {
-        guard !data.isEmpty else { return }
+    @discardableResult
+    private func saveChanges() -> Bool {
+        guard !data.isEmpty, !gridParallelArraysFault else { return false }
 
         isSaving = true
         saveError = nil
@@ -1815,11 +1886,12 @@ struct GeneratedView: View {
         isSaving = false
         // aggiorna anche il buffer locale, così rimane in sync
         data = newData
+        return saveError == nil
     }
 
     /// Applica i dati dell'inventario al database prodotti e aggiorna la griglia con gli errori.
     private func syncWithDatabase() {
-        guard !isSyncing else { return }
+        guard !isSyncing, !gridParallelArraysFault else { return }
 
         isSyncing = true
         // Puliamo eventuali messaggi precedenti
@@ -1827,10 +1899,7 @@ struct GeneratedView: View {
         syncSummaryMessage = nil
 
         // 1) Prima cosa: salvare la griglia in HistoryEntry
-        saveChanges()
-
-        // Se il salvataggio ha fallito (saveError impostato), non partiamo con la sync
-        if saveError != nil {
+        guard saveChanges() else {
             isSyncing = false
             return
         }
@@ -1843,6 +1912,7 @@ struct GeneratedView: View {
             // Ricarichiamo la griglia dall'entry,
             // così la nuova colonna "SyncError" e i messaggi vengono mostrati
             data = entry.data
+            evaluateParallelGridConsistency(context: "syncWithDatabase")
 
             // Prepariamo il riepilogo da mostrare all'utente
             syncSummaryMessage = result.summaryMessage
@@ -2210,6 +2280,7 @@ struct GeneratedView: View {
 
     @MainActor
     private func shareAsXLSX() {
+        guard !gridParallelArraysFault else { return }
         flushAutosaveNow() // esporta la versione aggiornata
 
         guard !isExportingShare else { return }
@@ -2262,6 +2333,7 @@ private struct ManualEntrySheet: View {
     @Binding var editable: [[String]]
     @Binding var complete: [Bool]
     let isManualEntry: Bool
+    let onShapeMutation: (String) -> Void
     let onSave: () -> Void
 
     @State private var barcode: String = ""
@@ -2545,6 +2617,7 @@ private struct ManualEntrySheet: View {
         ensureCompleteCapacity()
         complete[newIndex] = false
 
+        onShapeMutation("manualEntry.confirmAdd")
         onSave()
         dismiss()
     }
@@ -2593,6 +2666,7 @@ private struct ManualEntrySheet: View {
         }
 
         normalizeParallelArrays()
+        onShapeMutation("manualEntry.deleteCurrentRow")
         onSave()
         dismiss()
     }

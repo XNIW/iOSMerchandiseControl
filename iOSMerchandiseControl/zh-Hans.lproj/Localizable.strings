@@ -353,6 +353,9 @@
 "generated.autosave.saving" = "保存中…";
 "generated.autosave.pending" = "有未保存的更改。自动保存即将执行…";
 "generated.autosave.saved_at" = "保存于 %@";
+"generated.invariant.title" = "表格不一致";
+"generated.invariant.message" = "库存表格暂时不一致。在行结构重新对齐之前，保存、同步和分享都会暂停。";
+"generated.invariant.counts" = "行计数：表格 %1$d，可编辑 %2$d，已完成 %3$d。";
 "generated.action.edit_details" = "编辑详情";
 "generated.action.mark_all_incomplete" = "全部标记为未完成";
 "generated.action.mark_all_complete" = "全部标记为已完成";

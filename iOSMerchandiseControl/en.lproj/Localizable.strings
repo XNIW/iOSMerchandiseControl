@@ -353,6 +353,9 @@
 "generated.autosave.saving" = "Saving…";
 "generated.autosave.pending" = "Unsaved changes. Autosave will run soon…";
 "generated.autosave.saved_at" = "Saved at %@";
+"generated.invariant.title" = "Grid inconsistency";
+"generated.invariant.message" = "The inventory grid is temporarily out of sync. Save, sync, and share are paused until the row structure is aligned again.";
+"generated.invariant.counts" = "Row counts: grid %1$d, editable %2$d, complete %3$d.";
 "generated.action.edit_details" = "Edit details";
 "generated.action.mark_all_incomplete" = "Mark all incomplete";
 "generated.action.mark_all_complete" = "Mark all complete";
