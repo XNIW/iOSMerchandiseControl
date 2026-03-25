@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-021 ACTIVE — HistoryEntry: warning su dati corrotti / deserializzazione fallita — **PLANNING** (bootstrap file task; responsabile **CLAUDE**; planning operativo da completare prima di EXECUTION).
+TASK-021 ACTIVE — HistoryEntry: warning su dati corrotti / deserializzazione fallita — **REVIEW APPROVED** (fix F-1 completato; in attesa **conferma utente**).
 
 ## Stato globale
 ACTIVE
-> **User override 2026-03-25:** **TASK-020** e' **BLOCKED**: review **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** finale → conferma utente → DONE. **Task attivo** = **TASK-021** in **PLANNING** (CLAUDE). **TASK-019** resta **BLOCKED** (test manuali pendenti). **User override 2026-03-24:** TASK-016..018 **BLOCKED** (review APPROVED / test manuali pendenti; non DONE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
+> **User override 2026-03-25:** **TASK-020** e' **BLOCKED**: review **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** finale → conferma utente → DONE. **TASK-019** resta **BLOCKED** (test manuali pendenti). **User override 2026-03-24:** TASK-016..018 **BLOCKED** (review APPROVED / test manuali pendenti; non DONE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -53,9 +53,9 @@ Qualunque altra transizione è invalida.
 - Titolo: HistoryEntry: warning su dati corrotti / deserializzazione fallita
 - File task: `docs/TASKS/TASK-021-historyentry-warning-dati-corrotti-deserializzazione.md`
 - Stato: ACTIVE
-- Fase attuale: PLANNING
-- Responsabile attuale: CLAUDE
-- Ultimo aggiornamento: 2026-03-25
+- Fase attuale: REVIEW (APPROVED)
+- Responsabile attuale: UTENTE (conferma finale)
+- Ultimo aggiornamento: 2026-03-25 (TASK-021 → review post-fix APPROVED; in attesa conferma utente)
 
 Task bloccati non attivi:
 - Task ID: TASK-020
@@ -246,6 +246,10 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - Tracking 2026-03-25: **TASK-020** execution completata da **CODEX**; fase **REVIEW**, responsabile **CLAUDE**. Build Debug iphonesimulator OK; verifiche statiche sui CA documentate nel file task; test manuali `T-1..T-6` non eseguiti in questo turno.
 - Tracking 2026-03-25: **TASK-020** review completata da **CLAUDE**: **APPROVED**, nessun fix richiesto. In attesa **conferma utente** + test manuali `T-1..T-6`.
 - User override 2026-03-25: **TASK-020** messo in **BLOCKED** (review **APPROVED**, **nessun fix richiesto**, test manuali **T-1..T-6 non eseguiti**; **non** DONE); **TASK-021** attivato come **unico task attivo** in **PLANNING** con file `TASK-021-historyentry-warning-dati-corrotti-deserializzazione.md` (bootstrap da backlog/TASK-014 gap N-12/DT-07); responsabile **CLAUDE**.
+- Tracking 2026-03-25: **TASK-021** execution completata da **CODEX**; fase **REVIEW**, responsabile **CLAUDE**. Build Debug iphonesimulator OK; verifiche statiche su CA-1..CA-4 documentate nel file task; test runtime/manuali e verifica store esistente non eseguiti in questo turno.
+- Tracking 2026-03-25: **TASK-021** review completata da **CLAUDE**: **CHANGES_REQUIRED** (un fix: scope creep export blocking). → **FIX** / CODEX.
+- Tracking 2026-03-25: **TASK-021** fix **F-1** applicato (rimosso export blocking + `.exportBlocked` + stringhe localizzazione); build OK. → **REVIEW** post-fix / CLAUDE.
+- Tracking 2026-03-25: **TASK-021** review post-fix completata da **CLAUDE**: **APPROVED**. CA-1..CA-4 soddisfatti. In attesa **conferma utente**. Test manuali T-5 (store migration) e scenari runtime T-1..T-3/T-7 restano rischi noti non eseguiti.
 
 ## Criterio di aggiornamento
 Questo file va aggiornato SOLO quando cambia almeno uno di:

@@ -169,6 +169,7 @@
 "history.summary.order" = "Order";
 "history.summary.paid" = "Paid";
 "history.summary.errors" = "Errors";
+"history.json_fault.accessibility" = "This session contains corrupted saved data.";
 
 /* Import analysis */
 "import.analysis.title" = "Import from Excel";
@@ -330,6 +331,8 @@
 "generated.shortage.title" = "Missing %d";
 "generated.shortage.generic_title" = "Missing goods";
 "generated.inventory.title" = "Inventory";
+"generated.json_fault.title" = "Partial saved data";
+"generated.json_fault.message" = "Some saved data in this session could not be read correctly. Check the grid, editable fields, and completion states before continuing.";
 "generated.inventory.no_data" = "No inventory data available.";
 "generated.inventory.rows_count" = "Data rows: %d";
 "generated.inventory.rows_with_error_count" = "%d rows with errors";

@@ -164,11 +164,12 @@
 "history.title" = "Historial";
 "history.delete.confirm_title" = "¿Eliminar este inventario?";
 "history.delete.confirm_message" = "Esta operación eliminará definitivamente el inventario:\n%@";
-"history.exported" = "Exportado";
+“history.exported” = “Exportado”;
 "history.summary.items" = "Artículos";
 "history.summary.order" = "Pedido";
 "history.summary.paid" = "Pagado";
 "history.summary.errors" = "Errores";
+"history.json_fault.accessibility" = "Esta sesión contiene datos guardados corruptos.";
 
 /* Import analysis */
 "import.analysis.title" = "Importar desde Excel";
@@ -330,6 +331,8 @@
 "generated.shortage.title" = "Faltan %d";
 "generated.shortage.generic_title" = "Falta mercancía";
 "generated.inventory.title" = "Inventario";
+"generated.json_fault.title" = "Datos guardados parciales";
+"generated.json_fault.message" = "Algunos datos guardados de esta sesión no se pudieron leer correctamente. Revisa la cuadrícula, los campos editables y los estados completados antes de continuar.";
 "generated.inventory.no_data" = "No hay datos de inventario disponibles.";
 "generated.inventory.rows_count" = "Filas de datos: %d";
 "generated.inventory.rows_with_error_count" = "%d filas con error";

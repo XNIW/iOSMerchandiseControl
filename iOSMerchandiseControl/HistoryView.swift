@@ -44,15 +44,23 @@ struct HistoryView: View {
     @State private var editingCustomDate: CustomDateField?
     @State private var showingDateFilterDialog = false
     
-    // 🔹 nuovo stato per la cancellazione con conferma
-    @State private var showDeleteConfirmation = false
-    @State private var entryPendingDeletion: HistoryEntry?
+    private enum ActiveAlert: Identifiable {
+        case delete(HistoryEntry)
+
+        var id: String {
+            switch self {
+            case .delete(let entry):
+                return "delete-\(entry.uid.uuidString)"
+            }
+        }
+    }
     
     private struct ShareItem: Identifiable {
         let id = UUID()
         let url: URL
     }
     @State private var shareItem: ShareItem?
+    @State private var activeAlert: ActiveAlert?
 
     private struct EditItem: Identifiable {
         let id = UUID()
@@ -294,9 +302,7 @@ struct HistoryView: View {
         let grid = entry.data
         guard !grid.isEmpty else { return }
 
-        let name = entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? entry.id
-            : entry.title
+        let name = exportDisplayName(for: entry)
 
         Task {
             do {
@@ -308,6 +314,11 @@ struct HistoryView: View {
                 print("Errore durante l'esportazione XLSX:", error)
             }
         }
+    }
+
+    private func exportDisplayName(for entry: HistoryEntry) -> String {
+        let title = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? entry.id : title
     }
 
     var body: some View {
@@ -389,8 +400,7 @@ struct HistoryView: View {
                                 }
                                 
                                 Button(role: .destructive) {
-                                    entryPendingDeletion = entry
-                                    showDeleteConfirmation = true
+                                    activeAlert = .delete(entry)
                                 } label: {
                                     Label(L("common.delete"), systemImage: "trash")
                                 }
@@ -440,19 +450,18 @@ struct HistoryView: View {
             }
             .presentationDetents([.medium, .large])
         }
-        .alert(
-            L("history.delete.confirm_title"),
-            isPresented: $showDeleteConfirmation,
-            presenting: entryPendingDeletion
-        ) { entry in
-            Button(L("common.cancel"), role: .cancel) {
-                // non facciamo nulla, l'alert si chiude
+        .alert(item: $activeAlert) { activeAlert in
+            switch activeAlert {
+            case .delete(let entry):
+                return Alert(
+                    title: Text(L("history.delete.confirm_title")),
+                    message: Text(L("history.delete.confirm_message", entry.id)),
+                    primaryButton: .destructive(Text(L("common.delete"))) {
+                        deleteEntry(entry)
+                    },
+                    secondaryButton: .cancel(Text(L("common.cancel")))
+                )
             }
-            Button(L("common.delete"), role: .destructive) {
-                deleteEntry(entry)
-            }
-        } message: { entry in
-            Text(L("history.delete.confirm_message", entry.id))
         }
         // 🔹 nuova sheet per condividere il CSV
         .sheet(item: $shareItem) { item in
@@ -485,12 +494,14 @@ private struct HistoryRow: View {
     
     /// Conta quante righe di questo HistoryEntry hanno un messaggio nella colonna "SyncError".
     private var errorCount: Int {
-        guard !entry.data.isEmpty else { return 0 }
-        let header = entry.data[0]
+        guard !entry.hasPersistedJSONDecodeFault else { return 0 }
+        let grid = entry.data
+        guard !grid.isEmpty else { return 0 }
+        let header = grid[0]
         guard let errorIndex = header.firstIndex(of: "SyncError") else {
             return 0
         }
-        return entry.data.dropFirst().reduce(0) { partial, row in
+        return grid.dropFirst().reduce(0) { partial, row in
             guard row.indices.contains(errorIndex) else { return partial }
             let value = row[errorIndex]
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -502,6 +513,13 @@ private struct HistoryRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
                 SyncStatusIcon(status: entry.syncStatus)
+
+                if entry.hasPersistedJSONDecodeFault {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                        .accessibilityLabel(L("history.json_fault.accessibility"))
+                        .help(L("history.json_fault.accessibility"))
+                }
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayName).font(.headline).lineLimit(1)

@@ -164,11 +164,12 @@
 "history.title" = "历史";
 "history.delete.confirm_title" = "删除此库存？";
 "history.delete.confirm_message" = "此操作将永久删除该库存：\n%@";
-"history.exported" = "已导出";
+“history.exported” = “已导出”;
 "history.summary.items" = "项目";
 "history.summary.order" = "订单";
 "history.summary.paid" = "已支付";
 "history.summary.errors" = "错误";
+"history.json_fault.accessibility" = "此会话包含损坏的已保存数据。";
 
 /* Import analysis */
 "import.analysis.title" = "从 Excel 导入";
@@ -330,6 +331,8 @@
 "generated.shortage.title" = "缺少 %d";
 "generated.shortage.generic_title" = "缺少货物";
 "generated.inventory.title" = "库存";
+"generated.json_fault.title" = "保存的数据不完整";
+"generated.json_fault.message" = "此会话中的部分已保存数据无法正确读取。继续前请检查表格、可编辑字段和完成状态。";
 "generated.inventory.no_data" = "没有可用的库存数据。";
 "generated.inventory.rows_count" = "数据行：%d";
 "generated.inventory.rows_with_error_count" = "%d 行有错误";

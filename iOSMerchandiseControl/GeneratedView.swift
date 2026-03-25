@@ -152,6 +152,7 @@ struct GeneratedView: View {
     @State private var showImportRevertConfirmation: Bool = false
     @State private var pendingDeleteRowIndex: Int? = nil
     @State private var gridParallelArraysFault: Bool = false
+    @State private var hasVisibleJSONDecodeFault: Bool = false
 
     private var allRowsComplete: Bool {
         complete.count > 1 && complete.dropFirst().allSatisfy { $0 }
@@ -301,7 +302,7 @@ struct GeneratedView: View {
             }
         }
         .onAppear {
-            initializeFromEntryIfNeeded()
+            prepareEntryForDisplay()
 
             if entry.isManualEntry && autoOpenScanner {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -516,6 +517,10 @@ struct GeneratedView: View {
     @ViewBuilder
     private var inventorySection: some View {
         Section(L("generated.inventory.title")) {
+            if hasVisibleJSONDecodeFault {
+                jsonDecodeFaultWarningView
+            }
+
             if gridParallelArraysFault {
                 gridParallelArraysWarningView
             }
@@ -537,6 +542,25 @@ struct GeneratedView: View {
                 }
             }
         }
+    }
+
+    private var jsonDecodeFaultWarningView: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .font(.title3)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L("generated.json_fault.title"))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Text(L("generated.json_fault.message"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 6)
     }
 
     private var gridParallelArraysWarningView: some View {
@@ -903,6 +927,28 @@ struct GeneratedView: View {
         autosaveIfNeeded()
     }
 
+    private func prepareEntryForDisplay() {
+        let snapshot = entry.evaluateJSONDecodeSnapshot()
+        hasVisibleJSONDecodeFault = entry.hasPersistedJSONDecodeFault || snapshot.hasAnyFault
+        persistJSONDecodeFaultIfNeeded(using: snapshot)
+        initializeFromEntryIfNeeded(snapshot: snapshot)
+    }
+
+    private func persistJSONDecodeFaultIfNeeded(using snapshot: HistoryEntryJSONDecodeSnapshot) {
+        guard snapshot.hasAnyFault, !entry.hasPersistedJSONDecodeFault else { return }
+
+        entry.hasPersistedJSONDecodeFault = true
+
+        do {
+            try context.save()
+        } catch {
+            entry.hasPersistedJSONDecodeFault = false
+            debugPrint(
+                "[HistoryEntry JSON persist] uid=\(entry.uid.uuidString) id=\(entry.id) error=\(error)"
+            )
+        }
+    }
+
     @discardableResult
     private func evaluateParallelGridConsistency(context: String) -> Bool {
         let dataCount = data.count
@@ -924,27 +970,27 @@ struct GeneratedView: View {
 
     // MARK: - Inizializzazione dati
 
-    /// Copia i dati dalla HistoryEntry solo la prima volta.
-    private func initializeFromEntryIfNeeded() {
+    /// Copia i dati dalla HistoryEntry solo la prima volta usando lo snapshot gia' decodificato.
+    private func initializeFromEntryIfNeeded(snapshot: HistoryEntryJSONDecodeSnapshot) {
         // DATA
         if data.isEmpty {
-            if entry.isManualEntry && entry.data.isEmpty {
+            if entry.isManualEntry && snapshot.dataGrid.isEmpty && !snapshot.hasDataFault {
                 // Header minimale per entry manuali
                 data = [
                     ["barcode", "productName", "realQuantity", "RetailPrice"]
                 ]
             } else {
-                data = entry.data
+                data = snapshot.dataGrid
             }
         }
 
         // EDITABLE
         if editable.isEmpty {
-            if entry.isManualEntry && entry.editable.isEmpty {
+            if entry.isManualEntry && snapshot.editableGrid.isEmpty && !snapshot.hasEditableFault {
                 // Per ogni riga (header compreso) due “slot”: quantità reale e prezzo vendita
                 editable = Array(repeating: ["", ""], count: data.count)
             } else {
-                editable = entry.editable
+                editable = snapshot.editableGrid
 
                 // Allinea lunghezza a data
                 if editable.count != data.count {
@@ -967,10 +1013,10 @@ struct GeneratedView: View {
 
         // COMPLETE
         if complete.isEmpty {
-            if entry.isManualEntry && entry.complete.isEmpty {
+            if entry.isManualEntry && snapshot.completeFlags.isEmpty && !snapshot.hasCompleteFault {
                 complete = Array(repeating: false, count: data.count)
             } else {
-                complete = entry.complete
+                complete = snapshot.completeFlags
             }
 
             if complete.count != data.count {
