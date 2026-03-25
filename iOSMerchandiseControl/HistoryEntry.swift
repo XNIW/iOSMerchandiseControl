@@ -14,6 +14,9 @@ final class HistoryEntry {
     
     /// Griglia dell'Excel generato (intestazione + righe)
     var dataJSON: Data?
+
+    /// Snapshot immutabile della griglia al momento della generazione dell'inventario
+    var originalDataJSON: Data?
     
     /// Valori editabili (quantità contata, ecc.)
     var editableJSON: Data?
@@ -71,6 +74,7 @@ final class HistoryEntry {
         timestamp: Date = Date(),
         isManualEntry: Bool = false,
         data: [[String]] = [],
+        originalDataJSON: Data? = nil,
         editable: [[String]] = [],
         complete: [Bool] = [],
         supplier: String = "",
@@ -87,6 +91,7 @@ final class HistoryEntry {
         self.timestamp = timestamp
         self.isManualEntry = isManualEntry
         self.dataJSON = try? JSONEncoder().encode(data)
+        self.originalDataJSON = originalDataJSON
         self.editableJSON = try? JSONEncoder().encode(editable)
         self.completeJSON = try? JSONEncoder().encode(complete)
         self.supplier = supplier

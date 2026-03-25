@@ -436,12 +436,14 @@ extension ExcelSessionViewModel {
             filteredData.append(newRow)
         }
 
+        let originalDataJSON = try JSONEncoder().encode(filteredData)
+
         // 4. editable/complete (come editableValues/completeStates su Android)
-        let editable = createEditableValues(for: filteredData)
+        let editable = HistoryImportedGridSupport.editableTemplate(forGrid: filteredData)
         let complete = Array(repeating: false, count: filteredData.count)
 
         // 5. Riassunto iniziale (numero articoli + totale ordine)
-        let (totalItems, orderTotal) = calculateInitialSummary(from: filteredData)
+        let (totalItems, orderTotal) = HistoryImportedGridSupport.initialSummary(forGrid: filteredData)
 
         let now = Date()
         let fileId = makeHistoryEntryId(supplier: supplierName, date: now)
@@ -454,6 +456,7 @@ extension ExcelSessionViewModel {
             timestamp: now,
             isManualEntry: false,
             data: filteredData,
+            originalDataJSON: originalDataJSON,
             editable: editable,
             complete: complete,
             supplier: supplierName,
@@ -535,58 +538,6 @@ extension ExcelSessionViewModel {
             map[product.barcode] = (product.purchasePrice, product.retailPrice)
         }
         return map
-    }
-
-    /// editable: una coppia [qty, price] per ogni riga (più header dummy)
-    private func createEditableValues(for data: [[String]]) -> [[String]] {
-        guard !data.isEmpty else { return [] }
-
-        var result: [[String]] = []
-        result.append(["", ""]) // header
-
-        for _ in data.dropFirst() {
-            result.append(["", ""])
-        }
-        return result
-    }
-
-    /// Port di calculateInitialSummary:
-    /// cerca "purchasePrice" e "quantity" nell'header e somma purchase*quantity per le righe con qty>0.
-    private func calculateInitialSummary(from data: [[String]]) -> (Int, Double) {
-        guard let headerRow = data.first else { return (0, 0) }
-
-        let purchaseIndex = headerRow.firstIndex(of: "purchasePrice")
-        let quantityIndex = headerRow.firstIndex(of: "quantity")
-
-        guard let pIndex = purchaseIndex, let qIndex = quantityIndex else {
-            return (0, 0)
-        }
-
-        var totalItems = 0
-        var orderTotal = 0.0
-
-        for row in data.dropFirst() {
-            guard qIndex < row.count else { continue }
-
-            let quantityString = row[qIndex]
-                .replacingOccurrences(of: ",", with: ".")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            guard let quantity = Double(quantityString), quantity > 0 else {
-                continue
-            }
-
-            totalItems += 1
-
-            let priceString = (pIndex < row.count ? row[pIndex] : "")
-                .replacingOccurrences(of: ",", with: ".")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            let price = Double(priceString) ?? 0.0
-            orderTotal += price * quantity
-        }
-
-        return (totalItems, orderTotal)
     }
 
     /// Formattazione semplice tipo formatNumberAsRoundedStringForInput su Android.

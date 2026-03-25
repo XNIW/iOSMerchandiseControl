@@ -17,6 +17,10 @@ private struct RowDetailData: Identifiable {
     let autoFocusCounted: Bool
 }
 
+private enum RevertImportDecodeError: Error {
+    case missingSnapshot
+}
+
 /// Schermata di editing inventario (equivalente base di GeneratedScreen su Android).
 /// - Mostra la griglia salvata in HistoryEntry.data
 /// - Permette di:
@@ -126,8 +130,26 @@ struct GeneratedView: View {
         let counted: String
     }
 
+    private struct RevertImportUIBackup {
+        let hasUnsavedChanges: Bool
+        let lastSavedAt: Date?
+    }
+
+    private struct RevertImportStateBackup {
+        let data: [[String]]
+        let editable: [[String]]
+        let complete: [Bool]
+        let totalItems: Int
+        let orderTotal: Double
+        let paymentTotal: Double
+        let missingItems: Int
+        let syncStatus: HistorySyncStatus
+        let wasExported: Bool
+    }
+
     @State private var pendingForceComplete: PendingForceComplete?
     @State private var showRevertConfirmation: Bool = false
+    @State private var showImportRevertConfirmation: Bool = false
     @State private var pendingDeleteRowIndex: Int? = nil
 
     private var allRowsComplete: Bool {
@@ -243,9 +265,17 @@ struct GeneratedView: View {
                     Button(role: .destructive) {
                         showRevertConfirmation = true
                     } label: {
-                        Label(L("generated.action.revert_original"), systemImage: "arrow.uturn.backward")
+                        Label(L("generated.action.revert_session_open"), systemImage: "arrow.uturn.backward")
                     }
                     .disabled(originalData.isEmpty)
+
+                    if entry.originalDataJSON != nil {
+                        Button(role: .destructive) {
+                            showImportRevertConfirmation = true
+                        } label: {
+                            Label(L("generated.action.revert_import_original"), systemImage: "arrow.uturn.backward.circle")
+                        }
+                    }
 
                     Button {
                         shareAsXLSX()
@@ -319,16 +349,28 @@ struct GeneratedView: View {
             }
         }
         .confirmationDialog(
-            L("generated.revert.title"),
+            L("generated.revert_session.title"),
             isPresented: $showRevertConfirmation,
             titleVisibility: .visible
         ) {
-            Button(L("generated.action.revert_original"), role: .destructive) {
+            Button(L("generated.action.revert_session_open"), role: .destructive) {
                 revertToOriginalSnapshot()
             }
             Button(L("common.cancel"), role: .cancel) { }
         } message: {
-            Text(L("generated.revert.message"))
+            Text(L("generated.revert_session.message"))
+        }
+        .confirmationDialog(
+            L("generated.revert_import.title"),
+            isPresented: $showImportRevertConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L("generated.action.revert_import_original"), role: .destructive) {
+                revertToImportSnapshot()
+            }
+            Button(L("common.cancel"), role: .cancel) { }
+        } message: {
+            Text(L("generated.revert_import.message"))
         }
         .confirmationDialog(
             L("generated.delete_row.title"),
@@ -802,8 +844,14 @@ struct GeneratedView: View {
 
         autosaveTask?.cancel()
         autosaveTask = Task {
-            // debounce leggero: evita di salvare ad ogni tasto
-            try? await Task.sleep(nanoseconds: 800_000_000) // 0.8s
+            do {
+                // debounce leggero: evita di salvare ad ogni tasto
+                try await Task.sleep(nanoseconds: 800_000_000) // 0.8s
+                try Task.checkCancellation()
+            } catch {
+                return
+            }
+
             await MainActor.run {
                 autosaveIfNeeded()
             }
@@ -1173,6 +1221,73 @@ struct GeneratedView: View {
         complete = originalComplete
         entry.totalItems = max(0, originalData.count - 1)
         markDirtyAndScheduleAutosave()
+    }
+
+    private func revertToImportSnapshot() {
+        autosaveTask?.cancel()
+        autosaveTask = nil
+
+        let uiBackup = RevertImportUIBackup(
+            hasUnsavedChanges: hasUnsavedChanges,
+            lastSavedAt: lastSavedAt
+        )
+
+        hasUnsavedChanges = false
+        rowDetail = nil
+        saveError = nil
+        syncSummaryMessage = nil
+
+        let snapshotData: [[String]]
+        do {
+            guard let originalDataJSON = entry.originalDataJSON else {
+                throw RevertImportDecodeError.missingSnapshot
+            }
+            snapshotData = try JSONDecoder().decode([[String]].self, from: originalDataJSON)
+        } catch {
+            restoreRevertImportUIState(from: uiBackup)
+            saveError = L("generated.revert_import.decode_error")
+            return
+        }
+
+        guard HistoryImportedGridSupport.isValidImportSnapshotGrid(snapshotData) else {
+            restoreRevertImportUIState(from: uiBackup)
+            saveError = L("generated.revert_import.snapshot_invalid")
+            return
+        }
+
+        let stateBackup = RevertImportStateBackup(
+            data: data,
+            editable: editable,
+            complete: complete,
+            totalItems: entry.totalItems,
+            orderTotal: entry.orderTotal,
+            paymentTotal: entry.paymentTotal,
+            missingItems: entry.missingItems,
+            syncStatus: entry.syncStatus,
+            wasExported: entry.wasExported
+        )
+
+        let summary = HistoryImportedGridSupport.initialSummary(forGrid: snapshotData)
+
+        data = snapshotData
+        editable = HistoryImportedGridSupport.editableTemplate(forGrid: snapshotData)
+        complete = Array(repeating: false, count: snapshotData.count)
+        entry.totalItems = summary.totalItems
+        entry.orderTotal = summary.orderTotal
+        entry.paymentTotal = summary.orderTotal
+        entry.missingItems = summary.totalItems
+        entry.syncStatus = .notAttempted
+        entry.wasExported = false
+
+        saveChanges()
+
+        if saveError == nil {
+            originalData = data
+            originalEditable = editable
+            originalComplete = complete
+        } else {
+            restoreRevertImportState(from: stateBackup, uiBackup: uiBackup)
+        }
     }
 
     private func barcodeForRow(_ rowIndex: Int) -> String {
@@ -1599,6 +1714,27 @@ struct GeneratedView: View {
             tx.disablesAnimations = true
             withTransaction(tx) { rowDetail = detail }
         }
+    }
+
+    private func restoreRevertImportUIState(from backup: RevertImportUIBackup) {
+        hasUnsavedChanges = backup.hasUnsavedChanges
+        lastSavedAt = backup.lastSavedAt
+    }
+
+    private func restoreRevertImportState(from stateBackup: RevertImportStateBackup, uiBackup: RevertImportUIBackup) {
+        data = stateBackup.data
+        editable = stateBackup.editable
+        complete = stateBackup.complete
+        entry.data = stateBackup.data
+        entry.editable = stateBackup.editable
+        entry.complete = stateBackup.complete
+        entry.totalItems = stateBackup.totalItems
+        entry.orderTotal = stateBackup.orderTotal
+        entry.paymentTotal = stateBackup.paymentTotal
+        entry.missingItems = stateBackup.missingItems
+        entry.syncStatus = stateBackup.syncStatus
+        entry.wasExported = stateBackup.wasExported
+        restoreRevertImportUIState(from: uiBackup)
     }
 
     // MARK: - Salvataggio & sync
