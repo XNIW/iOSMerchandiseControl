@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-016 ACTIVE — Deduplicazione logica import DatabaseView/ProductImportViewModel (REVIEW in corso, responsabile: CLAUDE).
+TASK-018 ACTIVE — GeneratedView: secondo livello revert (ai dati originali import) — **PLANNING** (file task creato 2026-03-24; planning tecnico dettagliato da completare CLAUDE prima di EXECUTION).
 
 ## Stato globale
 ACTIVE
-> **User override 2026-03-24:** TASK-024 e' stato messo in **BLOCKED** (review/fix UI non finalizzati; non DONE; riprendibile dal punto corrente). TASK-016 ha completato l'**EXECUTION** del core condiviso import Excel/simple e ora e' il **task attivo** in **REVIEW**, con ownership corrente **CLAUDE**. TASK-023 resta **BLOCKED** (test manuali residui non conclusi; review codice gia' APPROVED ma nessun DONE). TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED (umbrella storico); non riaperto. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
+> **User override 2026-03-24:** TASK-016 e' stato **sospeso in BLOCKED**: review **APPROVED** e warning sistemati, ma **test manuali ancora pendenti/non completati**; **non** DONE; riprendibile per validazione manuale ed eventuale FIX. **TASK-017** e' **BLOCKED** dal 2026-03-24: implementazione completata, review tecnica **APPROVED**, **test manuali utente non eseguiti adesso**; **non** DONE; chiusura differita. **Task attivo** = **TASK-018** in **PLANNING**. TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,15 +49,27 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- Task ID: TASK-016
-- Titolo: Deduplicazione logica import DatabaseView/ProductImportViewModel
-- File task: `docs/TASKS/TASK-016-deduplicazione-logica-import-databaseview-productimportviewmodel.md`
+- Task ID: TASK-018
+- Titolo: GeneratedView: secondo livello revert (ai dati originali import)
+- File task: `docs/TASKS/TASK-018-generatedview-second-level-revert.md`
 - Stato: ACTIVE
-- Fase attuale: REVIEW
+- Fase attuale: PLANNING
 - Responsabile attuale: CLAUDE
 - Ultimo aggiornamento: 2026-03-24
 
 Task bloccati non attivi:
+- Task ID: TASK-017
+- Titolo: PreGenerate: validazione esplicita colonne obbligatorie
+- File task: `docs/TASKS/TASK-017-pregenerate-validazione-esplicita-colonne-obbligatorie.md`
+- Stato: BLOCKED
+- Motivo: **user override 2026-03-24** — implementazione (execution + fix) **completata**; review tecnica **APPROVED**; **test manuali utente (T-1..T-10) non eseguiti in questa fase**; task **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** → conferma utente → DONE.
+- Ultimo aggiornamento: 2026-03-24
+- Task ID: TASK-016
+- Titolo: Deduplicazione logica import DatabaseView/ProductImportViewModel
+- File task: `docs/TASKS/TASK-016-deduplicazione-logica-import-databaseview-productimportviewmodel.md`
+- Stato: BLOCKED
+- Motivo: review **APPROVED** (Claude) e warning build/concurrency sistemati; **test manuali ancora pendenti/non eseguiti**; task **non** DONE. Alla ripresa: test manuali → eventuale **FIX** solo se emergono regressioni → **REVIEW** → conferma utente → DONE. Riprendibile dal punto corrente senza rifare planning da zero.
+- Ultimo aggiornamento: 2026-03-24
 - Task ID: TASK-024
 - Titolo: Full-database import progress UX + cancellation
 - File task: `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
@@ -140,9 +152,9 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-013 | sim_ui.sh performance — batch mode, timeout reale, cache device frame | BLOCKED | HIGH |
 | TASK-014 | Global Audit & Backlog Refresh | DONE | — |
 | TASK-015 | Calculate dialog in GeneratedView (GAP-15 residuo) | WONT_DO | LOW |
-| TASK-016 | Deduplicazione logica import DatabaseView/ProductImportViewModel | ACTIVE | LOW |
-| TASK-017 | PreGenerate: validazione esplicita colonne obbligatorie | TODO | MEDIUM |
-| TASK-018 | GeneratedView: secondo livello revert (ai dati originali import) | TODO | MEDIUM |
+| TASK-016 | Deduplicazione logica import DatabaseView/ProductImportViewModel | BLOCKED | LOW |
+| TASK-017 | PreGenerate: validazione esplicita colonne obbligatorie | BLOCKED | MEDIUM |
+| TASK-018 | GeneratedView: secondo livello revert (ai dati originali import) | ACTIVE | MEDIUM |
 | TASK-019 | Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill | TODO | MEDIUM |
 | TASK-020 | Scanner: feedback camera non disponibile | TODO | LOW |
 | TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | TODO | LOW |
@@ -163,6 +175,12 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | 2026-03-23 |
 
 ## Blocchi e dipendenze
+- TASK-017 bloccato.
+  Motivo: **user override 2026-03-24** — review **APPROVED**; test manuali utente **pendenti**; **non** DONE. Alla ripresa: validazione manuale PreGenerate (matrice T-1..T-10 a integrazione); se OK conferma utente, altrimenti FIX mirato.
+  Nota: sospensione per spostare il focus operativo su **TASK-018**; non invalida il merge/review gia' documentati nel file task.
+- TASK-016 bloccato.
+  Motivo: **user override 2026-03-24** — deduplicazione import eseguita e review **APPROVED**; test manuali utente non completati; chiusura **DONE** differita. Alla ripresa: validazione manuale perimetro Excel/simple + consumer collegati; se OK conferma utente, altrimenti FIX mirato.
+  Nota: sospensione per avviare TASK-017 su richiesta utente; non invalida il lavoro gia' mergiato in review.
 - TASK-011 bloccato.
   Motivo: sospeso per decisione utente; TASK-022 ha chiuso il crash specifico conferma -> apply, mentre i follow-up residui vengono scorporati in TASK-023 e TASK-024 senza riaprire l'umbrella.
   Nota tracking: il planning/execution storico di TASK-011 resta documentato nel suo file task, ma il lavoro residuo e' ora tracciato nei task separati piu' stretti.
@@ -191,6 +209,8 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - User override 2026-03-23: autorizzata da utente la chiusura di TASK-022 in DONE e lo split dei follow-up in TASK-023 (attivo) e TASK-024 (backlog TODO), con aggiornamento diretto di tracking e backlog da parte di Codex
 - User override 2026-03-24: TASK-023 messo in **BLOCKED** (test manuali non conclusi; non DONE); TASK-024 attivato come **task attivo** in **PLANNING** con file canonico `TASK-024-full-database-import-progress-ux-cancellation.md`; planning TASK-024 completato da Claude, execution non avviata
 - User override 2026-03-24: TASK-024 sospeso in **BLOCKED** (review/fix UI non finalizzati; non DONE, riprendibile dal punto corrente) e TASK-016 attivato come **task attivo** in **PLANNING** con file canonico `TASK-016-deduplicazione-logica-import-databaseview-productimportviewmodel.md`
+- User override 2026-03-24: TASK-016 messo in **BLOCKED** (review APPROVED, test manuali pendenti; non DONE); **TASK-017** attivato come **task attivo** in **PLANNING** con file `TASK-017-pregenerate-validazione-esplicita-colonne-obbligatorie.md`
+- User override 2026-03-24: **TASK-017** messo in **BLOCKED** (review APPROVED, test manuali non eseguiti adesso; non DONE); creato file task **TASK-018** `TASK-018-generatedview-second-level-revert.md`; **TASK-018** attivato come **task attivo** in **PLANNING** con responsabile **CLAUDE** (planning dettagliato obbligatorio prima di EXECUTION)
 
 ## Criterio di aggiornamento
 Questo file va aggiornato SOLO quando cambia almeno uno di:

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum ProductImportCore {
+nonisolated enum ProductImportCore {
     static func parseDouble(from text: String) -> Double? {
         let normalized = text
             .replacingOccurrences(of: ",", with: ".")
@@ -246,7 +246,7 @@ enum ProductImportCore {
     }
 }
 
-final class ProductImportNamedEntityResolver {
+nonisolated final class ProductImportNamedEntityResolver {
     private let context: ModelContext
     private var suppliersByName: [String: Supplier]
     private var categoriesByName: [String: ProductCategory]

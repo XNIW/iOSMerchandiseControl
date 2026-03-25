@@ -70,6 +70,10 @@ struct PreGenerateView: View {
     }
     
     var body: some View {
+        let validationSnapshot = excelSession.preGenerateValidationSnapshot
+        let canGenerate = canGenerate(using: validationSnapshot)
+        let previewSelectedIndices = validationSnapshot.effectiveSelectedIndices
+
         ZStack {
             // ✅ tap “dietro” al Form: non ruba i tap ai Button
             Color.clear
@@ -89,16 +93,14 @@ struct PreGenerateView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 // Header
                                 HStack(alignment: .bottom, spacing: 4) {
-                                    ForEach(Array(excelSession.normalizedHeader.enumerated()), id: \.offset) { index, key in
-                                        if excelSession.selectedColumns.indices.contains(index),
-                                           excelSession.selectedColumns[index] {
-                                            let width = columnWidth(for: key)
-                                            Text(key)
-                                                .font(.caption2)
-                                                .fontWeight(.semibold)
-                                                .lineLimit(1)
-                                                .frame(width: width, alignment: .leading)
-                                        }
+                                    ForEach(previewSelectedIndices, id: \.self) { index in
+                                        let key = excelSession.normalizedHeader[index]
+                                        let width = columnWidth(for: key)
+                                        Text(key)
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
+                                            .lineLimit(1)
+                                            .frame(width: width, alignment: .leading)
                                     }
                                 }
                                 
@@ -107,26 +109,23 @@ struct PreGenerateView: View {
                                 // Prime righe dati
                                 ForEach(Array(previewRows.enumerated()), id: \.offset) { _, row in
                                     HStack(alignment: .top, spacing: 4) {
-                                        ForEach(excelSession.normalizedHeader.indices, id: \.self) { colIdx in
-                                            if excelSession.selectedColumns.indices.contains(colIdx),
-                                               excelSession.selectedColumns[colIdx] {
-                                                let key = excelSession.normalizedHeader[colIdx]
-                                                let width = columnWidth(for: key)
-                                                let value = colIdx < row.count ? row[colIdx] : ""
-                                                
-                                                let shown = previewDisplayValue(for: key, raw: value)
+                                        ForEach(previewSelectedIndices, id: \.self) { colIdx in
+                                            let key = excelSession.normalizedHeader[colIdx]
+                                            let width = columnWidth(for: key)
+                                            let value = colIdx < row.count ? row[colIdx] : ""
+                                            
+                                            let shown = previewDisplayValue(for: key, raw: value)
 
-                                                Text(shown)
-                                                    .font(
-                                                        isNumericColumn(key)
-                                                        ? .system(.caption2, design: .monospaced)
-                                                        : .caption2
-                                                    )
-                                                    .lineLimit(1)
-                                                    .truncationMode(.tail)
-                                                    .frame(width: width, alignment: .leading)
-                                                    .monospacedDigit()
-                                            }
+                                            Text(shown)
+                                                .font(
+                                                    isNumericColumn(key)
+                                                    ? .system(.caption2, design: .monospaced)
+                                                    : .caption2
+                                                )
+                                                .lineLimit(1)
+                                                .truncationMode(.tail)
+                                                .frame(width: width, alignment: .leading)
+                                                .monospacedDigit()
                                         }
                                     }
                                 }
@@ -309,6 +308,12 @@ struct PreGenerateView: View {
                         Toggle(L("pregenerate.ignore_warnings"), isOn: $ignoreWarnings)
                             .font(.caption)
                             .padding(.vertical, 4)
+                    }
+
+                    if let missingMessage = validationSnapshot.missingEssentialMessage {
+                        Text(missingMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
                     }
                     
                     Button {
@@ -501,11 +506,13 @@ struct PreGenerateView: View {
         let dataRows = excelSession.rows.dropFirst()
         return Array(dataRows.prefix(maxPreviewRows))
     }
-
-    /// Possiamo generare solo se c'è un file caricato e supplier/category non sono vuoti
-    private var canGenerate: Bool {
+    
+    /// Possiamo generare solo se c'è un file caricato, le colonne essenziali sono valide
+    /// e supplier/category non sono vuoti.
+    private func canGenerate(using validationSnapshot: ExcelSessionViewModel.PreGenerateValidationSnapshot) -> Bool {
         !excelSession.normalizedHeader.isEmpty &&
         !excelSession.rows.isEmpty &&
+        validationSnapshot.missingEssentialCanonicalKeys.isEmpty &&
         !excelSession.supplierName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !excelSession.categoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -540,7 +547,8 @@ struct PreGenerateView: View {
     }
     
     private func generateInventory() {
-        guard canGenerate else { return }
+        let validationSnapshot = excelSession.preGenerateValidationSnapshot
+        guard canGenerate(using: validationSnapshot) else { return }
         isGenerating = true
 
         Task {
@@ -636,34 +644,7 @@ struct ColumnSelectionRow: View {
     let index: Int
 
     private func localizedRoleTitle(_ role: String) -> String {
-        switch role {
-        case "barcode":
-            return L("pregenerate.role.barcode")
-        case "productName":
-            return L("pregenerate.role.product_name")
-        case "secondProductName":
-            return L("pregenerate.role.second_product_name")
-        case "itemNumber":
-            return L("pregenerate.role.item_number")
-        case "rowNumber":
-            return L("pregenerate.role.row_number")
-        case "quantity":
-            return L("pregenerate.role.quantity")
-        case "purchasePrice":
-            return L("pregenerate.role.purchase_price")
-        case "totalPrice":
-            return L("pregenerate.role.total_price")
-        case "retailPrice":
-            return L("pregenerate.role.retail_price")
-        case "discountedPrice":
-            return L("pregenerate.role.discounted_price")
-        case "supplier":
-            return L("pregenerate.role.supplier")
-        case "category":
-            return L("pregenerate.role.category")
-        default:
-            return role
-        }
+        ExcelSessionViewModel.titleForRole(role)
     }
 
     var body: some View {
@@ -713,7 +694,7 @@ struct ColumnSelectionRow: View {
 
                     // ✅ Icona per cambiare tipo (al posto della riga “Tipo: …”)
                     Menu {
-                        let essential = Array(ExcelSessionViewModel.essentialColumnKeys)
+                        let essential = ExcelSessionViewModel.orderedEssentialColumnKeys
                         let otherRoles = ExcelSessionViewModel.overridableRoles
                             .filter { !ExcelSessionViewModel.essentialColumnKeys.contains($0) }
                         let roles = essential + otherRoles

@@ -272,6 +272,7 @@
 "pregenerate.error.generation_title" = "Generation error";
 "pregenerate.error.title" = "Error";
 "pregenerate.error.unknown" = "Unknown error.";
+"pregenerate.validation.missing_required_columns" = "Required columns are missing: %@.";
 "pregenerate.preview.title" = "Preview";
 "pregenerate.preview.no_file" = "No file loaded.";
 "pregenerate.preview.rows_shown" = "Showing %1$d rows out of %2$d.";

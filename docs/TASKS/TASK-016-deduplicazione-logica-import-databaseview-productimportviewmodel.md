@@ -4,11 +4,11 @@
 - **Task ID**: TASK-016
 - **Titolo**: Deduplicazione logica import DatabaseView/ProductImportViewModel
 - **File task**: `docs/TASKS/TASK-016-deduplicazione-logica-import-databaseview-productimportviewmodel.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE
+- **Stato**: BLOCKED
+- **Fase attuale**: REVIEW *(sospesa — task non attivo progetto; ultima fase operativa prima della sospensione)*
+- **Responsabile attuale**: UTENTE *(test manuali pendenti; se regressioni → segnalare per FIX/CODEX)*
 - **Data creazione**: 2026-03-24
-- **Ultimo aggiornamento**: 2026-03-24 (review: APPROVED — nessun problema critico/medio; deduplicazione reale e perimetro rispettato; attende conferma utente e test manuali)
+- **Ultimo aggiornamento**: 2026-03-24 (sospensione BLOCKED: review APPROVED, test manuali non eseguiti; TASK-017 attivato su richiesta utente)
 - **Ultimo agente che ha operato**: CLAUDE
 
 ## Dipendenze
@@ -198,19 +198,8 @@ Adapter / mapping / error handling che possono restare separati:
 - **Apply condiviso full/simple**: refactor che ignora **`recordPriceHistory`** / **`suppressAutomaticProductPriceHistory`** puo' far riapparire storico prezzi automatico nel full import quando oggi e' soppresso (**Decisione 8**)
 - **Contatori full import**: riuso di find-or-create o helper estratti senza threadare i contatori corretti puo' gonfiare o azzerare **`suppliersCreated` / `categoriesCreated`** o alterare la result surface (**Decisione 9**)
 
-### Handoff interno
-- **Stato planning**: perimetro operativo rafforzato (Excel/simple vs CSV, `ImportAnalysisView`, matrice no-regression, Decisioni 6-9 inclusi guardrail full-import); integrato con dettagli su divergenze concrete (tipi input/output, normalizzazione nomi, snapshot vs Product, contatori opzionali); **utente dichiara il piano pronto per passare a execution** (2026-03-24).
-- **Prossima fase**: EXECUTION
-- **Prossimo agente**: CODEX
-- **Azione consigliata**:
-  1. operare solo sul ramo **Excel/simple** (`DatabaseImportPipeline` / `importProductsFromExcel`) e su `ProductImportViewModel`; **non** toccare path CSV (`importProducts` / `parseProductsCSV` / `findOrCreate*` in coda al file) salvo eccezione documentata nel file task con prova di equivalenza
-  2. seguire **Decisioni 4-9**, **contratto di estrazione** (core piccolo; **no** progress/cancel/full payload/`PendingFullImportContext`/`DatabaseImportUILocalizer`; `applyImportAnalysis` **scomposta**, non spostata monolitica); se si tocca apply riusato dal full import, verificare **Decisioni 8-9** (price history soppresso quando previsto; contatori/result surface invariati nel significato)
-  3. **tipi input/output**: il core di analisi deve lavorare su **draft/righe normalizzate** (non su `Product` ne' `ImportExistingProductSnapshot` direttamente); ciascun orchestratore converte i propri input prima di delegare al core e wrappa il risultato nel proprio payload (`ProductImportAnalysisResult` vs `DatabaseImportAnalysisPayload`)
-  4. **normalizzazione nomi**: unificare su `normalizedImportNamedEntityName` (gia' in `ImportAnalysisView.swift`); eliminare `trimmedOrNil` in `ProductImportViewModel` come variante locale (**Decisione 7**)
-  5. **find-or-create / contatori**: modellarsi sulla variante **closure con contatori** (come fa oggi `DatabaseView` per Excel/simple), non sugli instance method CSV; il core deve **restituire** i conteggi nuovi supplier/category, lasciando al ViewModel la liberta' di ignorarli
-  6. verificare no-regression con **Call site e consumer** e **Matrice no-regression — casi concreti** (incluso editing in `ImportAnalysisView`)
-  7. valutare la **strategia a due micro-passi** (analisi + `changedFields`, poi apply/helper DB nel perimetro Excel/ViewModel) se riduce il rischio
-  8. dopo execution, handoff a REVIEW (CLAUDE) con evidenze sui check previsti
+### Handoff interno (storico — pre-sospensione)
+*La execution e la review sotto sono state completate; il task e' poi stato messo in **BLOCKED** per test manuali pendenti (vedi **Sospensione progetto — BLOCKED**).*
 
 ---
 
@@ -322,10 +311,28 @@ Nessuno.
 
 Il task puo' passare alla **conferma utente** e ai **test manuali** consigliati sotto.
 
-### Handoff → conferma utente
-- **Prossima fase**: conferma utente → DONE
-- **Prossimo agente**: UTENTE
-- **Azione consigliata**: eseguire i test manuali sotto, poi confermare DONE o segnalare regressioni
+### Handoff → conferma utente *(sospeso — non eseguire DONE finche' il task non esce da BLOCKED)*
+- **Prossima fase prevista (dopo test manuali)**: conferma utente → DONE, oppure FIX se emergono regressioni
+- **Prossimo agente**: UTENTE (test manuali), poi CLAUDE/CODEX se necessario
+- **Azione consigliata**: eseguire i test manuali elencati nella review; **non** dichiarare DONE senza esito reale
+
+---
+
+## Sospensione progetto — BLOCKED (user override 2026-03-24)
+
+**Motivo della sospensione**
+- Review codice **APPROVED** (Claude); nessun fix richiesto; warning build/concurrency trattati in execution.
+- **Test manuali** previsti dalla review **non ancora eseguiti/completati** dall'utente.
+- Il task **non** e' **DONE** e **non** e' piu' il **task attivo** del progetto (attivo: **TASK-017** su richiesta utente).
+
+**Alla ripresa (ordine consigliato)**
+1. **Test manuali** sul perimetro TASK-016 (simple import Excel, `ImportAnalysisView`, `ProductImportViewModel`, smoke full import se il diff lo tocca — come da matrice/review).
+2. Se emergono regressioni → fase **FIX** (CODEX) → **REVIEW** (CLAUDE).
+3. Solo dopo esito positivo e verifica criteri: **conferma utente** → **DONE**.
+
+**Handoff operativo (task BLOCKED, non attivo)**
+- **Prossima azione**: UTENTE — completare validazione manuale; poi aggiornare tracking e chiudere o aprire FIX.
+- **Prossimo agente dopo i test**: CLAUDE (review post-test) o CODEX (solo se FIX necessario).
 
 ---
 

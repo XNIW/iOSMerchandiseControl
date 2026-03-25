@@ -56,9 +56,10 @@ final class ExcelSessionViewModel: ObservableObject {
     var hasData: Bool { !rows.isEmpty }
 
     // Colonne essenziali (come su Android: barcode, productName, purchasePrice)
-    static let essentialColumnKeys: Set<String> = [
+    static let orderedEssentialColumnKeys: [String] = [
         "barcode", "productName", "purchasePrice"
     ]
+    static let essentialColumnKeys: Set<String> = Set(orderedEssentialColumnKeys)
 
     /// Ordine “logico” delle colonne (obbligatorie prima, poi le altre conosciute)
     private static let columnPriority: [String] = [
@@ -317,10 +318,28 @@ extension ExcelSessionViewModel {
 
     enum GenerateHistoryError: Error {
         case emptySession
+        case missingEssentialColumns([String])
     }
 
     enum ManualHistoryError: Error {
         case unableToCreate
+    }
+
+    struct PreGenerateValidationSnapshot {
+        let effectiveSelectedColumns: [Bool]
+        let effectiveSelectedIndices: [Int]
+        let missingEssentialCanonicalKeys: [String]
+        let displayLabelsForMissing: [String]
+        let missingEssentialMessage: String?
+    }
+
+    var preGenerateValidationSnapshot: PreGenerateValidationSnapshot {
+        Self.buildPreGenerateValidationSnapshot(
+            originalHeader: originalHeader,
+            normalizedHeader: normalizedHeader,
+            rows: rows,
+            selectedColumns: selectedColumns
+        )
     }
 
     /// Crea una HistoryEntry “vuota” per un inventario manuale
@@ -352,15 +371,17 @@ extension ExcelSessionViewModel {
             throw GenerateHistoryError.emptySession
         }
 
-        // Selezione colonne coerente (fallback: tutte selezionate)
-        if selectedColumns.count != normalizedHeader.count {
-            selectedColumns = Array(repeating: true, count: normalizedHeader.count)
+        let validationSnapshot = preGenerateValidationSnapshot
+        guard validationSnapshot.missingEssentialCanonicalKeys.isEmpty else {
+            throw GenerateHistoryError.missingEssentialColumns(validationSnapshot.missingEssentialCanonicalKeys)
         }
 
-        let selectedIndices: [Int] = normalizedHeader.indices.filter { idx in
-            guard selectedColumns.indices.contains(idx) else { return true }
-            return selectedColumns[idx]
+        // Selezione colonne coerente (fallback: tutte selezionate)
+        if selectedColumns.count != normalizedHeader.count {
+            selectedColumns = validationSnapshot.effectiveSelectedColumns
         }
+
+        let selectedIndices = validationSnapshot.effectiveSelectedIndices
 
         // Indice colonna barcode nell'header normalizzato
         let barcodeIndex = normalizedHeader.firstIndex(of: "barcode")
@@ -626,20 +647,22 @@ extension ExcelSessionViewModel {
 
         /// Nome umano da mostrare nella UI per ciascun ruolo
         static func titleForRole(_ role: String) -> String {
-            switch role {
-            case "barcode": return "Barcode"
-            case "productName": return "Nome prodotto"
-            case "secondProductName": return "Secondo nome"
-            case "itemNumber": return "Numero articolo"
-            case "rowNumber": return "Numero riga"
-            case "quantity": return "Quantità"
-            case "purchasePrice": return "Prezzo d’acquisto"
-            case "totalPrice": return "Prezzo totale"
-            case "retailPrice": return "Prezzo di vendita"
-            case "discountedPrice": return "Prezzo scontato"
-            case "supplier": return "Fornitore"
-            case "category": return "Categoria"
-            default: return role
+            MainActor.assumeIsolated {
+                switch role {
+                case "barcode": return L("pregenerate.role.barcode")
+                case "productName": return L("pregenerate.role.product_name")
+                case "secondProductName": return L("pregenerate.role.second_product_name")
+                case "itemNumber": return L("pregenerate.role.item_number")
+                case "rowNumber": return L("pregenerate.role.row_number")
+                case "quantity": return L("pregenerate.role.quantity")
+                case "purchasePrice": return L("pregenerate.role.purchase_price")
+                case "totalPrice": return L("pregenerate.role.total_price")
+                case "retailPrice": return L("pregenerate.role.retail_price")
+                case "discountedPrice": return L("pregenerate.role.discounted_price")
+                case "supplier": return L("pregenerate.role.supplier")
+                case "category": return L("pregenerate.role.category")
+                default: return role
+                }
             }
         }
 
@@ -739,6 +762,93 @@ extension ExcelSessionViewModel {
 
             return samples.joined(separator: ", ")
         }
+}
+
+extension ExcelSessionViewModel.GenerateHistoryError: LocalizedError {
+    var errorDescription: String? {
+        MainActor.assumeIsolated {
+            switch self {
+            case .emptySession:
+                return L("pregenerate.preview.no_file")
+            case .missingEssentialColumns(let missingKeys):
+                let labels = missingKeys.map(ExcelSessionViewModel.titleForRole)
+                return ExcelSessionViewModel.missingEssentialColumnsMessage(for: labels)
+            }
+        }
+    }
+}
+
+private extension ExcelSessionViewModel {
+    static func buildPreGenerateValidationSnapshot(
+        originalHeader: [String],
+        normalizedHeader: [String],
+        rows: [[String]],
+        selectedColumns: [Bool]
+    ) -> PreGenerateValidationSnapshot {
+        let effectiveSelectedColumns: [Bool]
+        if selectedColumns.count != normalizedHeader.count {
+            effectiveSelectedColumns = Array(repeating: true, count: normalizedHeader.count)
+        } else {
+            effectiveSelectedColumns = selectedColumns
+        }
+
+        let effectiveSelectedIndices = normalizedHeader.indices.filter { idx in
+            guard effectiveSelectedColumns.indices.contains(idx) else { return true }
+            return effectiveSelectedColumns[idx]
+        }
+
+        guard !normalizedHeader.isEmpty, !rows.isEmpty else {
+            return PreGenerateValidationSnapshot(
+                effectiveSelectedColumns: effectiveSelectedColumns,
+                effectiveSelectedIndices: effectiveSelectedIndices,
+                missingEssentialCanonicalKeys: [],
+                displayLabelsForMissing: [],
+                missingEssentialMessage: nil
+            )
+        }
+
+        let hasInsertedColumns = normalizedHeader.count > originalHeader.count
+        let selectedIndexSet = Set(effectiveSelectedIndices)
+
+        let missingKeys = orderedEssentialColumnKeys.filter { key in
+            guard let index = normalizedHeader.firstIndex(of: key) else {
+                return true
+            }
+
+            guard selectedIndexSet.contains(index) else {
+                return true
+            }
+
+            if hasInsertedColumns && !columnHasNonEmptyData(at: index, rows: rows) {
+                return true
+            }
+
+            return false
+        }
+
+        let displayLabels = missingKeys.map(titleForRole)
+        return PreGenerateValidationSnapshot(
+            effectiveSelectedColumns: effectiveSelectedColumns,
+            effectiveSelectedIndices: effectiveSelectedIndices,
+            missingEssentialCanonicalKeys: missingKeys,
+            displayLabelsForMissing: displayLabels,
+            missingEssentialMessage: missingEssentialColumnsMessage(for: displayLabels)
+        )
+    }
+
+    static func columnHasNonEmptyData(at index: Int, rows: [[String]]) -> Bool {
+        rows.dropFirst().contains { row in
+            guard index < row.count else { return false }
+            return !row[index].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
+    static func missingEssentialColumnsMessage(for displayLabels: [String]) -> String? {
+        guard !displayLabels.isEmpty else { return nil }
+        return MainActor.assumeIsolated {
+            L("pregenerate.validation.missing_required_columns", displayLabels.joined(separator: ", "))
+        }
+    }
 }
 
 // MARK: - Metriche di analisi

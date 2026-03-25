@@ -272,6 +272,7 @@
 "pregenerate.error.generation_title" = "生成错误";
 "pregenerate.error.title" = "错误";
 "pregenerate.error.unknown" = "未知错误。";
+"pregenerate.validation.missing_required_columns" = "缺少必需列：%@。";
 "pregenerate.preview.title" = "预览";
 "pregenerate.preview.no_file" = "没有已加载文件。";
 "pregenerate.preview.rows_shown" = "显示 %1$d / %2$d 行。";

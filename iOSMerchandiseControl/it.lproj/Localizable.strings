@@ -272,6 +272,7 @@
 "pregenerate.error.generation_title" = "Errore durante la generazione";
 "pregenerate.error.title" = "Errore";
 "pregenerate.error.unknown" = "Errore sconosciuto.";
+"pregenerate.validation.missing_required_columns" = "Mancano le colonne obbligatorie: %@.";
 "pregenerate.preview.title" = "Anteprima";
 "pregenerate.preview.no_file" = "Nessun file caricato.";
 "pregenerate.preview.rows_shown" = "Mostrate %1$d righe su %2$d.";
