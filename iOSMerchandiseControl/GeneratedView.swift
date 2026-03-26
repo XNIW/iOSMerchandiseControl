@@ -3117,18 +3117,52 @@ private struct RowDetailSheetView: View {
     @Binding var countedText: String
     @Binding var newRetailText: String
 
-    @FocusState private var focusedField: Field?
+    @State private var focusedField: Field?
     private enum Field { case counted, retail }
 
     @State private var showPriceCalculator = false
     @State private var showGenericCalculator = false
     @State private var showEditRow = false
+    @State private var primaryEditorsWidth: CGFloat = 0
+
+    private let calculatorSymbol = "plus.forwardslash.minus"
+    private let editorInlineControlWidth: CGFloat = 28
+    private let editorFieldHeight: CGFloat = 36
 
     private var currentIndex: Int { rowOrder.firstIndex(of: detail.rowIndex) ?? 0 }
     private var canGoPrev: Bool { currentIndex > 0 }
     private var canGoNext: Bool { currentIndex < (rowOrder.count - 1) }
+    private var trimmedBarcode: String {
+        detail.barcode.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    private var displayProductName: String? {
+        normalizedText(detail.productName)
+    }
+    private var displaySecondProductName: String? {
+        guard let secondary = normalizedText(editSnapshot.secondProductName) else { return nil }
+        guard !matchesIgnoringCaseAndWhitespace(secondary, displayProductName) else { return nil }
+        return secondary
+    }
+    private var displayItemNumber: String? {
+        normalizedText(editSnapshot.itemNumber)
+    }
+    private var displaySupplierQuantity: String? {
+        formatIntLike(detail.supplierQuantity) ?? formatIntLike(editSnapshot.quantity)
+    }
+    private var displayCurrentPurchasePrice: String? {
+        formatNumber(editSnapshot.purchasePrice)
+    }
+    private var displayOldPurchasePrice: String? {
+        formatNumber(detail.oldPurchasePrice)
+    }
+    private var displayOldRetailPrice: String? {
+        formatNumber(detail.oldRetailPrice)
+    }
+    private var displayTotalPrice: String? {
+        formatNumber(editSnapshot.totalPrice)
+    }
 
-    private var supplierQtyInt: Int? { parseIntLike(detail.supplierQuantity) }
+    private var supplierQtyInt: Int? { parseIntLike(displaySupplierQuantity) }
     private var countedQtyInt: Int? {
         let t = countedText.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.isEmpty { return nil }
@@ -3140,166 +3174,115 @@ private struct RowDetailSheetView: View {
         return c - s
     }
 
-    private var isShortage: Bool { (qtyDelta ?? 0) < 0 }
-    private var isSurplus: Bool { (qtyDelta ?? 0) > 0 }
+    private var deltaState: DeltaState? {
+        guard let qtyDelta else { return nil }
+        if qtyDelta < 0 {
+            return .shortage(abs(qtyDelta))
+        }
+        if qtyDelta > 0 {
+            return .surplus(qtyDelta)
+        }
+        return .match
+    }
+
+    private var isShortage: Bool {
+        if case .shortage = deltaState { return true }
+        return false
+    }
+    private var isSurplus: Bool {
+        if case .surplus = deltaState { return true }
+        return false
+    }
+    private var hasSupplementalProductInfo: Bool {
+        displaySecondProductName != nil || displayItemNumber != nil
+    }
+    private var hasSupplementalPriceInfo: Bool {
+        displayCurrentPurchasePrice != nil ||
+        displayOldPurchasePrice != nil ||
+        displayOldRetailPrice != nil ||
+        displayTotalPrice != nil
+    }
+    private var displayDistinctOldPurchasePrice: String? {
+        guard let oldPurchase = displayOldPurchasePrice else { return nil }
+        guard !matchesIgnoringCaseAndWhitespace(oldPurchase, displayCurrentPurchasePrice) else { return nil }
+        return oldPurchase
+    }
+    private var hasPurchaseReferenceSummary: Bool {
+        displayCurrentPurchasePrice != nil || displayDistinctOldPurchasePrice != nil
+    }
+    private var hasQuickActions: Bool {
+        displaySupplierQuantity != nil || displayOldRetailPrice != nil
+    }
+    private var usesStackedPrimaryEditorsLayout: Bool {
+        primaryEditorsWidth > 0 && primaryEditorsWidth < 390
+    }
 
     @State private var showForceCompleteConfirm = false
 
     var body: some View {
         NavigationStack {
             Form {
-                // Stato / warning (riga Stato tappabile per toggle, comodo oltre al pulsante in basso)
                 Section {
-                    Button {
-                        if !isComplete, isShortage {
-                            showForceCompleteConfirm = true
-                        } else {
-                            withAnimation(.snappy) { isComplete.toggle() }
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        }
-                    } label: {
-                        LabeledContent(L("generated.detail.status")) {
-                            HStack(spacing: 6) {
-                                Text(isComplete ? L("generated.detail.completed") : L("generated.detail.incomplete"))
-                                    .foregroundStyle(isComplete ? .green : .secondary)
-                                Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
-                                    .font(.subheadline)
-                                    .foregroundStyle(isComplete ? .green : .secondary)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    if isShortage, let d = qtyDelta {
-                        Label(L("generated.detail.shortage", abs(d)), systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-
-                        if isComplete {
-                            Button {
-                                withAnimation(.snappy) { isComplete = false }
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            } label: {
-                                Label(L("generated.detail.mark_incomplete"), systemImage: "circle")
-                            }
-                            .foregroundStyle(.orange)
-                        }
-                    } else if isSurplus, let d = qtyDelta {
-                        Label(L("generated.detail.surplus", d), systemImage: "info.circle")
-                            .foregroundStyle(.secondary)
+                    detailHeader
+                    primaryEditors
+                    if hasQuickActions {
+                        quickActions
                     }
                 }
 
-                Section(L("generated.detail.product")) {
-                    LabeledContent(L("generated.detail.barcode")) {
-                        HStack(spacing: 12) {
-                            Text(detail.barcode)
-                                .monospacedDigit()
-                                .textSelection(.enabled)
-
-                            Button {
-                                UIPasteboard.general.string = detail.barcode
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            } label: {
-                                Image(systemName: "doc.on.doc")
+                if hasSupplementalProductInfo {
+                    Section(L("generated.detail.product")) {
+                        if let secondName = displaySecondProductName {
+                            LabeledContent(L("product.field.second_name")) {
+                                Text(secondName)
+                                    .textSelection(.enabled)
                             }
-                            .buttonStyle(.borderless)
+                        }
 
-                            ShareLink(item: detail.barcode) {
-                                Image(systemName: "square.and.arrow.up")
+                        if let itemNumber = displayItemNumber {
+                            LabeledContent(L("product.field.item_number_short")) {
+                                Text(itemNumber)
+                                    .monospaced()
+                                    .textSelection(.enabled)
                             }
                         }
                     }
-
-                    LabeledContent(L("generated.detail.name")) {
-                        Text(detail.productName ?? "—")
-                            .textSelection(.enabled)
-                            .foregroundStyle((detail.productName == nil) ? .secondary : .primary)
-                    }
                 }
 
-                Section(L("generated.detail.quantity")) {
-                    LabeledContent(L("generated.detail.from_file")) {
-                        Text(formatIntLike(detail.supplierQuantity) ?? "—")
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-
-                    LabeledContent(L("generated.detail.counted")) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            TextField("—", text: $countedText)
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                                .focused($focusedField, equals: .counted)
-                                .onChange(of: countedText) { _, _ in
-                                    syncCompletionFromCountedText(haptic: true)
-                                }
-
-                            if supplierQtyInt != nil,
-                               focusedField == .counted,
-                               countedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            {
-                                Text(L("generated.detail.auto_complete_hint"))
-                                    .font(.caption2)
+                if hasSupplementalPriceInfo {
+                    Section(L("generated.detail.prices")) {
+                        if let currentPurchase = displayCurrentPurchasePrice {
+                            LabeledContent(L("product.field.purchase_price")) {
+                                Text(currentPurchase)
+                                    .monospacedDigit()
                                     .foregroundStyle(.secondary)
-                                    .transition(.opacity)
                             }
                         }
-                        .animation(.snappy, value: focusedField == .counted)
-                        .animation(.snappy, value: countedText)
-                    }
 
-                    Button {
-                        if let v = formatIntLike(detail.supplierQuantity) {
-                            countedText = v
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        }
-                    } label: {
-                        Label(L("generated.detail.use_file_quantity"), systemImage: "arrow.down.circle")
-                    }
-                    .disabled(formatIntLike(detail.supplierQuantity) == nil)
-                }
-
-                Section(L("generated.detail.prices")) {
-                    LabeledContent(L("generated.detail.old_purchase")) {
-                        Text(formatNumber(detail.oldPurchasePrice) ?? "—")
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-
-                    LabeledContent(L("generated.detail.new_retail")) {
-                        HStack(spacing: 8) {
-                            TextField("—", text: $newRetailText)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .focused($focusedField, equals: .retail)
-                                .onChange(of: newRetailText) { _, newValue in
-                                    let allowed = Set("0123456789.,")
-                                    let filtered = String(newValue.filter { allowed.contains($0) })
-                                    if filtered != newValue { newRetailText = filtered }
-                                }
-
-                            Button {
-                                focusedField = nil
-                                showPriceCalculator = true
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            } label: {
-                                Image(systemName: "calculator")
+                        if let oldPurchase = displayOldPurchasePrice {
+                            LabeledContent(L("generated.detail.old_purchase")) {
+                                Text(oldPurchase)
+                                    .monospacedDigit()
+                                    .foregroundStyle(.secondary)
                             }
-                            .buttonStyle(.borderless)
-                            .accessibilityLabel(L("generated.detail.open_price_calculator"))
                         }
-                    }
 
-                    Button {
-                        if let v = formatNumber(detail.oldRetailPrice) {
-                            newRetailText = v
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        if let oldRetail = displayOldRetailPrice {
+                            LabeledContent(L("generated.detail.old_retail")) {
+                                Text(oldRetail)
+                                    .monospacedDigit()
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                    } label: {
-                        Label(L("generated.detail.use_old_retail"), systemImage: "arrow.down.circle")
+
+                        if let totalPrice = displayTotalPrice {
+                            LabeledContent(L("product.field.total_price")) {
+                                Text(totalPrice)
+                                    .monospacedDigit()
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
-                    .disabled(formatNumber(detail.oldRetailPrice) == nil)
                 }
 
                 if let err = detail.syncError, !err.isEmpty {
@@ -3321,7 +3304,7 @@ private struct RowDetailSheetView: View {
                         focusedField = nil
                         showGenericCalculator = true
                     } label: {
-                        Label(L("generated.detail.calculator"), systemImage: "calculator")
+                        Label(L("generated.detail.calculator"), systemImage: calculatorSymbol)
                     }
 
                     Button(action: onEditProduct) {
@@ -3419,24 +3402,6 @@ private struct RowDetailSheetView: View {
                     .accessibilityLabel(L("common.next"))
                 }
             }
-            .toolbar {
-                // Toolbar sopra tastiera (Apple-like)
-                ToolbarItemGroup(placement: .keyboard) {
-                    if focusedField == .counted {
-                        Button(L("generated.detail.use_from_file")) {
-                            if let v = formatIntLike(detail.supplierQuantity) { countedText = v }
-                        }
-                        .disabled(formatIntLike(detail.supplierQuantity) == nil)
-                    } else if focusedField == .retail {
-                        Button(L("generated.detail.use_old_retail")) {
-                            if let v = formatNumber(detail.oldRetailPrice) { newRetailText = v }
-                        }
-                        .disabled(formatNumber(detail.oldRetailPrice) == nil)
-                    }
-                    Spacer()
-                    Button(L("common.done")) { focusedField = nil }
-                }
-            }
             .confirmationDialog(
                 qtyDelta == nil ? L("generated.detail.force_complete_generic_title") : L("generated.detail.force_complete_title", abs(qtyDelta!)),
                 isPresented: $showForceCompleteConfirm,
@@ -3448,7 +3413,7 @@ private struct RowDetailSheetView: View {
                 }
                 Button(L("common.cancel"), role: .cancel) { }
             } message: {
-                Text(L("generated.shortage.from_file_counted", formatIntLike(detail.supplierQuantity) ?? "—", countedText.isEmpty ? "—" : countedText))
+                Text(L("generated.shortage.from_file_counted", displaySupplierQuantity ?? "—", countedText.isEmpty ? "—" : countedText))
             }
             // Calcolatrici
             .sheet(isPresented: $showPriceCalculator) {
@@ -3490,20 +3455,422 @@ private struct RowDetailSheetView: View {
                     )
                 }
             }
-            .onAppear {
-                if detail.autoFocusCounted {
-                    DispatchQueue.main.async {
-                        focusedField = .counted
-                    }
-                }
+            .task(id: detail.rowIndex * 2 + (detail.autoFocusCounted ? 1 : 0)) {
+                await requestInitialFocusIfNeeded()
             }
         }
     }
 
     // MARK: - Helpers
 
+    private enum DeltaState {
+        case shortage(Int)
+        case surplus(Int)
+        case match
+    }
+
     private var totalRows: Int { rowOrder.count }
     private var displayIndex: Int { currentIndex + 1 } // 1-based
+
+    private var detailHeader: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 12) {
+                    productIdentity
+                    Spacer(minLength: 12)
+                    badgesColumn
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    productIdentity
+                    badgesRow
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var productIdentity: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let productName = displayProductName {
+                Text(productName)
+                    .font(.headline)
+                    .textSelection(.enabled)
+            }
+
+            if !trimmedBarcode.isEmpty {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        barcodeLabel
+                        barcodeActions
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        barcodeLabel
+                        barcodeActions
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var barcodeLabel: some View {
+        Text(trimmedBarcode)
+            .font(.subheadline.monospaced())
+            .foregroundStyle(.secondary)
+            .textSelection(.enabled)
+    }
+
+    private var barcodeActions: some View {
+        HStack(spacing: 12) {
+            Button {
+                UIPasteboard.general.string = trimmedBarcode
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                Image(systemName: "doc.on.doc")
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(L("generated.action.copy_barcode"))
+
+            ShareLink(item: trimmedBarcode) {
+                Image(systemName: "square.and.arrow.up")
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(L("common.share"))
+        }
+        .foregroundStyle(.secondary)
+    }
+
+    private var badgesColumn: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            completionStatusBadge
+            if let deltaBadgeView = deltaBadgeView {
+                deltaBadgeView
+            }
+        }
+    }
+
+    private var badgesRow: some View {
+        HStack(spacing: 8) {
+            completionStatusBadge
+            if let deltaBadgeView = deltaBadgeView {
+                deltaBadgeView
+            }
+        }
+    }
+
+    private var completionStatusBadge: some View {
+        secondaryBadge(
+            title: isComplete ? L("generated.detail.completed") : L("generated.detail.incomplete"),
+            systemImage: isComplete ? "checkmark.circle.fill" : "circle",
+            tint: isComplete ? .green : .blue
+        )
+        .accessibilityLabel(isComplete ? L("generated.detail.completed") : L("generated.detail.incomplete"))
+    }
+
+    private var deltaBadgeView: AnyView? {
+        switch deltaState {
+        case .shortage(let amount):
+            return AnyView(
+                badge(
+                    title: L("generated.detail.shortage", amount),
+                    systemImage: "exclamationmark.triangle.fill",
+                    tint: .orange
+                )
+            )
+        case .surplus(let amount):
+            return AnyView(
+                badge(
+                    title: L("generated.detail.surplus", amount),
+                    systemImage: "info.circle",
+                    tint: .blue
+                )
+            )
+        case .match:
+            return AnyView(
+                badge(
+                    title: L("generated.detail.match"),
+                    systemImage: "checkmark.circle",
+                    tint: .green
+                )
+            )
+        case .none:
+            return nil
+        }
+    }
+
+    private var primaryEditors: some View {
+        Group {
+            if usesStackedPrimaryEditorsLayout {
+                VStack(alignment: .leading, spacing: 14) {
+                    countedEditor
+                    retailEditor
+                }
+            } else {
+                HStack(alignment: .top, spacing: 16) {
+                    countedEditor
+                    retailEditor
+                }
+            }
+        }
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: RowDetailPrimaryEditorsWidthPreferenceKey.self,
+                    value: proxy.size.width
+                )
+            }
+        )
+        .onPreferenceChange(RowDetailPrimaryEditorsWidthPreferenceKey.self) { width in
+            guard abs(width - primaryEditorsWidth) > 0.5 else { return }
+            primaryEditorsWidth = width
+        }
+    }
+
+    private var countedEditor: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            countedEditorHeader
+
+            HStack(alignment: .center, spacing: 8) {
+                RowDetailInputField(
+                    placeholder: "—",
+                    text: $countedText,
+                    keyboardType: .numberPad,
+                    returnKeyType: .next,
+                    fieldHeight: editorFieldHeight,
+                    isFirstResponder: focusedField == .counted,
+                    shortcutTitle: displaySupplierQuantity == nil ? nil : L("generated.detail.use_from_file"),
+                    primaryTitle: L("common.next"),
+                    usesMonospacedDigits: false,
+                    onShortcut: applyCountedShortcut,
+                    onPrimaryAction: moveFocusToRetail,
+                    onFocusChange: { isFocused in
+                        if isFocused {
+                            focusedField = .counted
+                        } else if focusedField == .counted {
+                            focusedField = nil
+                        }
+                    },
+                    onTextChange: { _ in
+                        syncCompletionFromCountedText(haptic: true)
+                    }
+                )
+                .frame(height: editorFieldHeight)
+
+                Color.clear
+                    .frame(width: editorInlineControlWidth, height: editorInlineControlWidth)
+                    .accessibilityHidden(true)
+            }
+
+            if supplierQtyInt != nil,
+               focusedField == .counted,
+               countedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            {
+                Text(L("generated.detail.auto_complete_hint"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var countedEditorHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(L("generated.detail.counted"))
+                .font(.subheadline.weight(.semibold))
+
+            if let supplierQuantity = displaySupplierQuantity {
+                countedInlineReference(quantity: supplierQuantity)
+            }
+        }
+    }
+
+    private var retailEditor: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            retailEditorHeader
+
+            HStack(spacing: 8) {
+                RowDetailInputField(
+                    placeholder: "—",
+                    text: $newRetailText,
+                    keyboardType: .decimalPad,
+                    returnKeyType: .done,
+                    fieldHeight: editorFieldHeight,
+                    isFirstResponder: focusedField == .retail,
+                    shortcutTitle: displayOldRetailPrice == nil ? nil : L("generated.detail.use_old_retail"),
+                    primaryTitle: L("common.done"),
+                    usesMonospacedDigits: true,
+                    onShortcut: applyRetailShortcut,
+                    onPrimaryAction: submitRetailEditor,
+                    onFocusChange: { isFocused in
+                        if isFocused {
+                            focusedField = .retail
+                        } else if focusedField == .retail {
+                            focusedField = nil
+                        }
+                    },
+                    onTextChange: { newValue in
+                        let allowed = Set("0123456789.,")
+                        let filtered = String(newValue.filter { allowed.contains($0) })
+                        if filtered != newValue { newRetailText = filtered }
+                    }
+                )
+                .frame(height: editorFieldHeight)
+
+                Button {
+                    focusedField = nil
+                    showPriceCalculator = true
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    Image(systemName: calculatorSymbol)
+                        .frame(width: editorInlineControlWidth, height: editorInlineControlWidth)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(L("generated.detail.open_price_calculator"))
+            }
+
+            if hasPurchaseReferenceSummary {
+                purchaseReferenceSummary
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var retailEditorHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(L("generated.detail.new_retail"))
+                .font(.subheadline.weight(.semibold))
+
+            if let oldRetail = displayOldRetailPrice {
+                priceInlineReference(
+                    title: L("generated.detail.old_retail"),
+                    value: oldRetail
+                )
+            }
+        }
+    }
+
+    private var purchaseReferenceSummary: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                if let currentPurchase = displayCurrentPurchasePrice {
+                    priceReferenceCard(
+                        title: L("product.field.purchase_price"),
+                        value: currentPurchase
+                    )
+                }
+
+                if let oldPurchase = displayDistinctOldPurchasePrice {
+                    priceReferenceCard(
+                        title: L("generated.detail.old_purchase"),
+                        value: oldPurchase
+                    )
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                if let currentPurchase = displayCurrentPurchasePrice {
+                    priceReferenceCard(
+                        title: L("product.field.purchase_price"),
+                        value: currentPurchase
+                    )
+                }
+
+                if let oldPurchase = displayDistinctOldPurchasePrice {
+                    priceReferenceCard(
+                        title: L("generated.detail.old_purchase"),
+                        value: oldPurchase
+                    )
+                }
+            }
+        }
+    }
+
+    private func priceInlineReference(title: String, value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func countedInlineReference(quantity: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(L("generated.detail.from_file"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(quantity)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func priceReferenceCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemBackground))
+        )
+    }
+
+    private var quickActions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 6) {
+                shortcutButtons
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                shortcutButtons
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    @ViewBuilder
+    private var shortcutButtons: some View {
+        if let supplierQuantity = displaySupplierQuantity {
+            shortcutButton(
+                title: L("generated.detail.use_file_quantity"),
+                systemImage: "arrow.down.circle"
+            ) {
+                countedText = supplierQuantity
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+        }
+
+        if let oldRetail = displayOldRetailPrice {
+            shortcutButton(
+                title: L("generated.detail.use_old_retail"),
+                systemImage: "arrow.down.circle"
+            ) {
+                newRetailText = oldRetail
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+        }
+    }
 
     private func goPrev() {
         guard canGoPrev else { return }
@@ -3527,18 +3894,117 @@ private struct RowDetailSheetView: View {
         guard let c = Int(t) else {
             // se svuota/non valido -> incompleta
             if isComplete {
-                withAnimation(.snappy) { isComplete = false }
+                isComplete = false
             }
             return
         }
 
         let shouldBeComplete = (c >= s)
         if shouldBeComplete != isComplete {
-            withAnimation(.snappy) { isComplete = shouldBeComplete }
+            isComplete = shouldBeComplete
             if haptic {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }
         }
+    }
+
+    private func applyCountedShortcut() {
+        if let value = displaySupplierQuantity {
+            countedText = value
+            syncCompletionFromCountedText(haptic: true)
+        }
+    }
+
+    private func applyRetailShortcut() {
+        if let value = displayOldRetailPrice {
+            newRetailText = value
+        }
+    }
+
+    private func moveFocusToRetail() {
+        syncCompletionFromCountedText(haptic: false)
+        focusedField = .retail
+    }
+
+    private func submitRetailEditor() {
+        syncCompletionFromCountedText(haptic: false)
+        focusedField = nil
+    }
+
+    @MainActor
+    private func requestInitialFocusIfNeeded() async {
+        focusedField = nil
+        await Task.yield()
+        focusedField = .counted
+        await Task.yield()
+        if focusedField != .counted {
+            focusedField = .counted
+        }
+    }
+
+    private func badge(title: String, systemImage: String, tint: Color) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.footnote.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .foregroundStyle(tint)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(tint.opacity(0.14))
+            )
+    }
+
+    private func secondaryBadge(title: String, systemImage: String, tint: Color) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.caption.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .foregroundStyle(tint)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(tint.opacity(0.13))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(tint.opacity(0.24), lineWidth: 1)
+            )
+    }
+
+    private func shortcutButton(title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .foregroundStyle(.blue)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(Color.blue.opacity(0.10))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(Color.blue.opacity(0.22), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .contentShape(Capsule(style: .continuous))
+    }
+
+    private func normalizedText(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func matchesIgnoringCaseAndWhitespace(_ lhs: String?, _ rhs: String?) -> Bool {
+        guard let lhs = normalizedText(lhs), let rhs = normalizedText(rhs) else { return false }
+        return lhs.compare(rhs, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
     }
     
     private func parseIntLike(_ raw: String?) -> Int? {
@@ -3575,6 +4041,223 @@ private struct RowDetailSheetView: View {
             f.maximumFractionDigits = 0
         }
         return f.string(from: NSNumber(value: d)) ?? String(d)
+    }
+}
+
+private struct RowDetailPrimaryEditorsWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct RowDetailInputField: UIViewRepresentable {
+    let placeholder: String
+    @Binding var text: String
+    let keyboardType: UIKeyboardType
+    let returnKeyType: UIReturnKeyType
+    let fieldHeight: CGFloat
+    let isFirstResponder: Bool
+    let shortcutTitle: String?
+    let primaryTitle: String
+    let usesMonospacedDigits: Bool
+    let onShortcut: () -> Void
+    let onPrimaryAction: () -> Void
+    let onFocusChange: (Bool) -> Void
+    let onTextChange: (String) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeUIView(context: Context) -> RowDetailInputTextField {
+        let textField = RowDetailInputTextField()
+        textField.borderStyle = .roundedRect
+        textField.delegate = context.coordinator
+        textField.autocorrectionType = .no
+        textField.autocapitalizationType = .none
+        textField.spellCheckingType = .no
+        textField.clearButtonMode = .never
+        textField.contentVerticalAlignment = .center
+        textField.adjustsFontForContentSizeCategory = true
+        textField.addTarget(context.coordinator, action: #selector(Coordinator.textDidChange(_:)), for: .editingChanged)
+        return textField
+    }
+
+    func updateUIView(_ uiView: RowDetailInputTextField, context: Context) {
+        context.coordinator.parent = self
+
+        if uiView.text != text {
+            uiView.text = text
+        }
+
+        uiView.placeholder = placeholder
+        uiView.keyboardType = keyboardType
+        uiView.returnKeyType = returnKeyType
+        uiView.preferredHeight = fieldHeight
+        uiView.font = usesMonospacedDigits
+            ? UIFont.monospacedDigitSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .semibold)
+            : UIFont.preferredFont(forTextStyle: .body)
+        uiView.accessoryConfiguration = .init(
+            shortcutTitle: shortcutTitle,
+            primaryTitle: primaryTitle
+        )
+        uiView.shortcutHandler = context.coordinator
+        uiView.primaryHandler = context.coordinator
+        uiView.desiredFirstResponder = isFirstResponder
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate, RowDetailAccessoryHandler {
+        var parent: RowDetailInputField
+
+        init(parent: RowDetailInputField) {
+            self.parent = parent
+        }
+
+        @objc
+        func textDidChange(_ sender: UITextField) {
+            let newValue = sender.text ?? ""
+            if parent.text != newValue {
+                parent.text = newValue
+            }
+            parent.onTextChange(newValue)
+        }
+
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            parent.onFocusChange(true)
+        }
+
+        func textFieldDidEndEditing(_ textField: UITextField) {
+            parent.onFocusChange(false)
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            parent.onPrimaryAction()
+            return false
+        }
+
+        func didTapShortcut() {
+            parent.onShortcut()
+        }
+
+        func didTapPrimaryAction() {
+            parent.onPrimaryAction()
+        }
+    }
+}
+
+private protocol RowDetailAccessoryHandler: AnyObject {
+    func didTapShortcut()
+    func didTapPrimaryAction()
+}
+
+private final class RowDetailInputTextField: UITextField {
+    struct AccessoryConfiguration: Equatable {
+        let shortcutTitle: String?
+        let primaryTitle: String
+    }
+
+    var desiredFirstResponder = false {
+        didSet { updateFirstResponderIfNeeded() }
+    }
+
+    var preferredHeight: CGFloat = 36 {
+        didSet {
+            guard preferredHeight != oldValue else { return }
+            invalidateIntrinsicContentSize()
+        }
+    }
+
+    var accessoryConfiguration: AccessoryConfiguration? {
+        didSet {
+            guard accessoryConfiguration != oldValue else { return }
+            rebuildAccessoryToolbar()
+        }
+    }
+
+    weak var shortcutHandler: RowDetailAccessoryHandler?
+    weak var primaryHandler: RowDetailAccessoryHandler?
+
+    override var intrinsicContentSize: CGSize {
+        var size = super.intrinsicContentSize
+        size.height = preferredHeight
+        return size
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        updateFirstResponderIfNeeded()
+    }
+
+
+
+    private func updateFirstResponderIfNeeded() {
+        guard window != nil else { return }
+
+        if desiredFirstResponder, !isFirstResponder {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.desiredFirstResponder, self.window != nil, !self.isFirstResponder else { return }
+                self.becomeFirstResponder()
+            }
+        } else if !desiredFirstResponder, isFirstResponder {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.desiredFirstResponder, self.isFirstResponder else { return }
+                self.resignFirstResponder()
+            }
+        }
+    }
+
+    private func rebuildAccessoryToolbar() {
+        guard let accessoryConfiguration else {
+            inputAccessoryView = nil
+            reloadInputViews()
+            return
+        }
+
+        let toolbar = UIToolbar()
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        toolbar.items = makeAccessoryItems(configuration: accessoryConfiguration)
+        toolbar.sizeToFit()
+        inputAccessoryView = toolbar
+        reloadInputViews()
+    }
+
+    private func makeAccessoryItems(configuration: AccessoryConfiguration) -> [UIBarButtonItem] {
+        var items: [UIBarButtonItem] = []
+
+        if let shortcutTitle = configuration.shortcutTitle {
+            items.append(UIBarButtonItem(
+                title: shortcutTitle,
+                style: .plain,
+                target: self,
+                action: #selector(handleShortcutTap)
+            ))
+        }
+
+        items.append(.flexibleSpace())
+        items.append(UIBarButtonItem(
+            title: configuration.primaryTitle,
+            style: primaryButtonItemStyle,
+            target: self,
+            action: #selector(handlePrimaryTap)
+        ))
+
+        return items
+    }
+
+    @objc
+    private func handleShortcutTap() {
+        shortcutHandler?.didTapShortcut()
+    }
+
+    private var primaryButtonItemStyle: UIBarButtonItem.Style {
+        .prominent
+    }
+
+    @objc
+    private func handlePrimaryTap() {
+        primaryHandler?.didTapPrimaryAction()
     }
 }
 

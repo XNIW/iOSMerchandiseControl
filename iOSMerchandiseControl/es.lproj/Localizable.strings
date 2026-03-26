@@ -452,6 +452,7 @@
 "generated.detail.completed" = "Completada";
 "generated.detail.incomplete" = "Incompleta";
 "generated.detail.shortage" = "Faltan %d";
+"generated.detail.match" = "Coincide con el archivo";
 "generated.detail.mark_incomplete" = "Marcar incompleta";
 "generated.detail.surplus" = "De más: +%d";
 "generated.detail.barcode" = "Barcode";
@@ -461,6 +462,7 @@
 "generated.detail.auto_complete_hint" = "✅ automática cuando Contada ≥ Del archivo";
 "generated.detail.use_file_quantity" = "Usar cantidad del archivo";
 "generated.detail.old_purchase" = "Compra (antigua)";
+"generated.detail.old_retail" = "Venta (antigua)";
 "generated.detail.new_retail" = "Venta (nueva)";
 "generated.detail.open_price_calculator" = "Abrir calculadora de precio";
 "generated.detail.use_old_retail" = "Usar venta antigua";

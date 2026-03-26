@@ -4,17 +4,20 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**Nessun task ACTIVE** (2026-03-25). **TASK-027** — **ManualEntrySheet** «Aggiungi e continua» (rapid entry) — **BLOCKED**: execution e review **completate** (review **APPROVED**); **test manuali T-1…T-13 non eseguiti**; **non** **DONE**. **Stato globale progetto: IDLE** fino a nuova attivazione esplicita di un task.
+**TASK-028** — **GeneratedView: Row Detail UX Refinement vs Android** — **ACTIVE**, fase **REVIEW** (esito **APPROVED**), responsabile **UTENTE**. Review codice completata da Claude: implementazione coerente col planning, fix minimo applicato (`reloadInputViews` condizionale per stabilita' tastiera), build pulita, warning risolti. In attesa conferma utente e validazione visiva/runtime su device.
 
 ## Stato globale
-IDLE
-> **Tracking 2026-03-25 (aggiornamento post TASK-027):** **TASK-027** messo in **BLOCKED** — implementation **completata**; review **APPROVED** (OK); **test manuali T-1…T-13 non eseguiti**; **non** **DONE**. **In sospensione / pending manual verification**. Alla ripresa: test manuali sul file task → eventuale **FIX** → **REVIEW** → conferma utente → **DONE**. **Nessun** nuovo task **ACTIVE**: nel backlog **non** risultano voci **TODO**; i task aperti restano **BLOCKED** / **WONT_DO** / **SUPERSEDED** — attivazione del prossimo lavoro solo su **scelta utente** (nessun task automaticamente «sbloccato» per execution). **TASK-026** resta **BLOCKED** (test T-1…T-9 pendenti). **User override 2026-03-25:** **TASK-025** messo in **BLOCKED** — review tecnica **APPROVED** acquisita; **test manuali utente** (T-0..T-15) **non eseguiti**; **non** DONE; task congelata in attesa validazione manuale futura. **User override 2026-03-25 (focus TASK-025):** **TASK-021** messo in **BLOCKED** — sospeso temporaneamente per spostare il focus operativo su **TASK-025**; review tecnica **APPROVED** gia' acquisita (post-fix F-1); **non** DONE; in attesa **conferma finale utente** alla ripresa. **User override 2026-03-25:** **TASK-020** e' **BLOCKED**: review **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** finale → conferma utente → DONE. **TASK-019** resta **BLOCKED** (test manuali pendenti). **User override 2026-03-24:** TASK-016..018 **BLOCKED** (review APPROVED / test manuali pendenti; non DONE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). **TASK-010 e' DONE (2026-03-25).** TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
+ACTIVE
+> **Tracking 2026-03-26 (allineamento ufficiale TASK-027):** **TASK-027** — implementation **completata**; review **completata** con esito **OK** / **APPROVED**; **test manuali T-1…T-13 non eseguiti**; task **non** **DONE**; stato **BLOCKED** / **on hold for manual verification**. **Motivo sospensione:** mancano i **test manuali**. **Pipeline attiva:** **TASK-028** è l’**unico** task **ACTIVE** (REVIEW **APPROVED**, responsabile **UTENTE**). Nel backlog non risultano voci **TODO** realmente sbloccate da promuovere ad **ACTIVE** al posto di TASK-028 senza superare blocchi o validazioni manuali su altri ID; **nessun** task **BLOCKED** è stato forzato. **TASK-026** resta **BLOCKED** (test T-1…T-9 pendenti). **User override 2026-03-25:** **TASK-025** messo in **BLOCKED** — review tecnica **APPROVED** acquisita; **test manuali utente** (T-0..T-15) **non eseguiti**; **non** DONE; task congelata in attesa validazione manuale futura. **User override 2026-03-25 (focus TASK-025):** **TASK-021** messo in **BLOCKED** — sospeso temporaneamente per spostare il focus operativo su **TASK-025**; review tecnica **APPROVED** gia' acquisita (post-fix F-1); **non** DONE; in attesa **conferma finale utente** alla ripresa. **User override 2026-03-25:** **TASK-020** e' **BLOCKED**: review **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** finale → conferma utente → DONE. **TASK-019** resta **BLOCKED** (test manuali pendenti). **User override 2026-03-24:** TASK-016..018 **BLOCKED** (review APPROVED / test manuali pendenti; non DONE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). **TASK-010 e' DONE (2026-03-25).** TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
 
 ## Workflow task attivo
-_(Nessun task ACTIVE — 2026-03-25.)_
-
-- **Ultimo task lavorato (tracking):** **TASK-027** — planning approvato; execution completata; review **APPROVED**; chiusura **DONE** subordinata a test manuali + conferma utente (task ora **BLOCKED**).
-- **Prossimo step operativo:** definito solo dopo **scelta utente** (es. validare TASK-027 manualmente, riprendere un altro **BLOCKED** con lavoro residuo, o creare/attivare un nuovo task — fuori scope di questo aggiornamento).
+- **Task attivo:** TASK-028 — GeneratedView: Row Detail UX Refinement vs Android
+- **File task:** `docs/TASKS/TASK-028-generatedview-row-detail-ux-refinement.md`
+- **Stato:** ACTIVE
+- **Fase:** REVIEW (esito: APPROVED — in attesa conferma utente)
+- **Responsabile:** UTENTE
+- **Ultimo aggiornamento:** 2026-03-26
+- **Nota tracking:** review codice completata da Claude; fix minimo applicato (reloadInputViews condizionale); build pulita; in attesa conferma utente e validazione visiva/runtime su device
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -55,15 +58,22 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-_(Nessuno — stato **IDLE**; 2026-03-25.)_
+- Task ID: TASK-028
+- Titolo: GeneratedView: Row Detail UX Refinement vs Android
+- File task: `docs/TASKS/TASK-028-generatedview-row-detail-ux-refinement.md`
+- Stato: ACTIVE
+- Fase attuale: REVIEW (esito: APPROVED — in attesa conferma utente)
+- Responsabile attuale: UTENTE
+- Ultimo aggiornamento: 2026-03-26
+- Nota tracking: review codice completata da Claude; fix minimo applicato (reloadInputViews condizionale); build pulita; in attesa conferma utente e validazione visiva/runtime su device
 
 Task bloccati non attivi:
 - Task ID: TASK-027
 - Titolo: ManualEntrySheet: modalità «Aggiungi e continua» (rapid entry)
 - File task: `docs/TASKS/TASK-027-manualentrysheet-aggiungi-e-prossimo.md`
-- Stato: BLOCKED
-- Motivo: execution **completata**; review **APPROVED** (OK); **test manuali T-1…T-13 non eseguiti**; task **non** **DONE**. **Pending manual verification** / on hold. Alla ripresa: test manuali → eventuale **FIX** → **REVIEW** → conferma utente → **DONE**.
-- Ultimo aggiornamento: 2026-03-25
+- Stato: BLOCKED *(sospeso — **non** **DONE** definitivo)*
+- Motivo: implementation **completata**; review **completata** con esito **OK** / **APPROVED**; **test manuali T-1…T-13 non eseguiti** — **motivo esplicito della sospensione:** validazione manuale mancante. **On hold for manual verification**. Alla ripresa: test manuali → eventuale **FIX** → **REVIEW** → conferma utente → **DONE**. Planning tecnico del file task **invariato**.
+- Ultimo aggiornamento: 2026-03-26
 - Task ID: TASK-026
 - Titolo: Scanner: toggle torcia (flashlight)
 - File task: `docs/TASKS/TASK-026-scanner-toggle-torcia-flashlight.md`
@@ -200,6 +210,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-025 | GeneratedView: ricalcolo dinamico paymentTotal + missingItems su History card | BLOCKED | MEDIUM |
 | TASK-026 | Scanner: toggle torcia (flashlight) | BLOCKED | LOW |
 | TASK-027 | ManualEntrySheet: modalità «Aggiungi e continua» (rapid entry) | BLOCKED | LOW |
+| TASK-028 | GeneratedView: Row Detail UX Refinement vs Android | ACTIVE | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -216,11 +227,11 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 
 ## Blocchi e dipendenze
 - TASK-027 bloccato.
-  Motivo: implementation **completata**; review **APPROVED** (OK); **test manuali T-1…T-13 pendenti**; **non** **DONE**. **Pending manual verification**. Alla ripresa: test manuali → eventuale FIX → REVIEW → conferma utente → DONE.
-  Nota: planning tecnico invariato nel file task; nessun **DONE** finché mancano validazione manuale e conferma utente.
+  Motivo: implementation **completata**; review **completata** con esito **OK** / **APPROVED**; **test manuali T-1…T-13 non eseguiti** — **sospensione esplicita** perché mancano i test manuali; **non** **DONE**; **on hold for manual verification**. Alla ripresa: test manuali → eventuale FIX → REVIEW → conferma utente → DONE.
+  Nota: planning tecnico invariato nel file task; nessun **DONE** finché mancano test manuali e conferma utente. *(Tracking allineato 2026-03-26.)*
 - TASK-026 bloccato.
   Motivo: review **APPROVED** acquisita; **nessun fix** aperto; **test manuali T-1…T-9 pendenti**; **non** DONE. **In sospensione / pending manual validation**. Alla ripresa: test manuali → eventuale FIX → REVIEW → conferma utente → DONE.
-  Nota: non invalida execution/review gia' documentati nel file task; **nessun** task **ACTIVE** corrente (stato **IDLE**).
+  Nota: non invalida execution/review gia' documentati nel file task. *(Nota storica 2026-03-25: a quel punto non c’era task ACTIVE; oggi il task attivo è **TASK-028** — vedi **Obiettivo attuale**.)*
 - TASK-025 bloccato.
   Motivo: review tecnica **APPROVED** acquisita; **test manuali utente** (T-0..T-15) **pendenti**; **non** DONE. Task congelata in attesa validazione manuale. Alla ripresa: test → eventuale FIX → REVIEW finale → conferma utente → DONE.
   Nota: non invalida execution/review gia' documentati nel file task.
@@ -229,7 +240,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
   Nota: non invalida CA-1..CA-4 ne' l'execution/review gia' archiviati nel file task.
 - TASK-020 bloccato.
   Motivo: **user override 2026-03-25** — review **APPROVED**; **nessun fix richiesto**; **test manuali T-1..T-6 pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
-  Nota: sospensione storica per attivare **TASK-021** (ora **TASK-021** e' **BLOCKED**); **TASK-027** ora **BLOCKED**; stato progetto **IDLE** senza task attivo.
+  Nota: sospensione storica per attivare **TASK-021** (ora **TASK-021** e' **BLOCKED**); **TASK-027** **BLOCKED**. *(Riferimento storico: non descrive lo stato attuale del progetto — vedi **TASK-028** come task **ACTIVE** in testa al piano.)*
 - TASK-019 bloccato.
   Motivo: **user override 2026-03-25** — review tecnica **APPROVED**; **nessun fix richiesto**; **test manuali pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
   Nota: sospensione per attivare **TASK-020**; non invalida execution/review documentati nel file task.
@@ -292,8 +303,10 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - Tracking 2026-03-25: **TASK-026** — planning **completato**; handoff **EXECUTION** registrato; stato **ACTIVE**, fase **EXECUTION**, responsabile **CODEX**; parte preparatoria (documentazione + **MASTER-PLAN**) chiusa da **CLAUDE**; **prossimo step = execution Codex** (nessun avvio implementazione in questo aggiornamento).
 - Tracking 2026-03-25: **TASK-026** review **APPROVED** (nessun fix); task messo in **BLOCKED** — **test manuali T-1…T-9 non eseguiti**; **pending manual validation**. **TASK-027** attivato come unico **ACTIVE** in **PLANNING** con file `TASK-027-manualentrysheet-aggiungi-e-prossimo.md`; responsabile **CLAUDE** fino a planning completo e handoff verso **EXECUTION**.
 - Tracking 2026-03-25: **TASK-027** — planning **completato e approvato** dall'utente; transizione **PLANNING → EXECUTION**; responsabile **CODEX**; handoff post-planning nel file task dichiarato **valido**; aggiornamento **solo tracking** (nessun ripensamento tecnico/UX nel planning).
-- Tracking 2026-03-25: **TASK-027** — execution **completata**; review **APPROVED** (OK); test manuali **non eseguiti**; task messo in **BLOCKED** (**pending manual verification**); **non** **DONE**. **Nessun** task **ACTIVE** nel backlog (nessuna voce **TODO**); stato globale **IDLE** fino a nuova scelta operativa dell'utente.
+- Tracking 2026-03-25: **TASK-027** — execution **completata**; review **APPROVED** (OK); test manuali **non eseguiti**; task messo in **BLOCKED** (**pending manual verification**); **non** **DONE**. *(Subito dopo è stato attivato **TASK-028** come unico **ACTIVE**.)*
+- Tracking 2026-03-26: riallineamento documentazione **TASK-027** (stato ufficiale: implementation + review OK; test manuali **non eseguiti**; **non** **DONE**; motivo blocco = test manuali mancanti). **TASK-028** confermato **unico task ACTIVE** (REVIEW **APPROVED**, UTENTE); nessun altro ID del backlog promosso ad **ACTIVE** senza superare blocchi o dipendenze.
 - Tracking 2026-03-25: **TASK-010** chiusa in **DONE** su conferma utente. Regressione localizzazione verificata come risolta: root cause = delimitatori Unicode invalidi in 3 `Localizable.strings` non inglesi; hotfix minimo applicato e verificato, nessun task figlio aperto.
+- Tracking 2026-03-26: **TASK-028** creato e attivato come **unico task ACTIVE** in **PLANNING** con file `TASK-028-generatedview-row-detail-ux-refinement.md`; responsabile **CLAUDE**. Planning tecnico completato: audit comparativo Android vs iOS, target UX, 5 execution slices (A-E), 9 criteri di accettazione. Handoff verso **EXECUTION** / **CODEX** pronto — in attesa conferma utente per procedere.
 - Audit 2026-03-25: **audit completo iOS vs Android** eseguito su richiesta utente. Confronto granulare di tutte le aree funzionali (inventario, database, cronologia, scanner, import/export, opzioni, sync, storico prezzi). Risultato: iOS copre ~95% delle feature Android. Gap residui: (1) paymentTotal non ricalcolato dinamicamente, (2) assenza toggle torcia nello scanner, (3) rapid entry manuale affrontata da **TASK-027** (copy «Aggiungi e continua»; task **BLOCKED** — validazione manuale pendente). Creati **TASK-025**, **TASK-026**, **TASK-027**. Aggiornati: **TASK-011** → SUPERSEDED, **TASK-013** → WONT_DO.
 
 ## Criterio di aggiornamento

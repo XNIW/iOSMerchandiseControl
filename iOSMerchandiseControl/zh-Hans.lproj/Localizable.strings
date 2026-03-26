@@ -452,6 +452,7 @@
 "generated.detail.completed" = "已完成";
 "generated.detail.incomplete" = "未完成";
 "generated.detail.shortage" = "缺少 %d";
+"generated.detail.match" = "与文件一致";
 "generated.detail.mark_incomplete" = "标记为未完成";
 "generated.detail.surplus" = "多出：+%d";
 "generated.detail.barcode" = "条码";
@@ -461,6 +462,7 @@
 "generated.detail.auto_complete_hint" = "✅ 当已计数 ≥ 文件数量时自动完成";
 "generated.detail.use_file_quantity" = "使用文件数量";
 "generated.detail.old_purchase" = "进货（旧）";
+"generated.detail.old_retail" = "零售（旧）";
 "generated.detail.new_retail" = "零售（新）";
 "generated.detail.open_price_calculator" = "打开价格计算器";
 "generated.detail.use_old_retail" = "使用旧零售价";

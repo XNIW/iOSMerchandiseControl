@@ -452,6 +452,7 @@
 "generated.detail.completed" = "Completed";
 "generated.detail.incomplete" = "Incomplete";
 "generated.detail.shortage" = "Missing %d";
+"generated.detail.match" = "Matches file";
 "generated.detail.mark_incomplete" = "Mark incomplete";
 "generated.detail.surplus" = "Extra: +%d";
 "generated.detail.barcode" = "Barcode";
@@ -461,6 +462,7 @@
 "generated.detail.auto_complete_hint" = "✅ automatic when Counted ≥ From file";
 "generated.detail.use_file_quantity" = "Use file quantity";
 "generated.detail.old_purchase" = "Purchase (old)";
+"generated.detail.old_retail" = "Retail (old)";
 "generated.detail.new_retail" = "Retail (new)";
 "generated.detail.open_price_calculator" = "Open price calculator";
 "generated.detail.use_old_retail" = "Use old retail";

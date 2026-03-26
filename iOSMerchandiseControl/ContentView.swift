@@ -8,9 +8,12 @@ private actor PriceHistoryBackfillRunner {
         self.modelContainer = modelContainer
     }
 
-    func runIfNeeded() throws -> Int {
-        let backgroundContext = ModelContext(modelContainer)
-        return try PriceHistoryBackfillService.backfillIfNeeded(context: backgroundContext)
+    func runIfNeeded() async throws -> Int {
+        let modelContainer = self.modelContainer
+        return try await MainActor.run {
+            let backgroundContext = ModelContext(modelContainer)
+            return try PriceHistoryBackfillService.backfillIfNeeded(context: backgroundContext)
+        }
     }
 }
 

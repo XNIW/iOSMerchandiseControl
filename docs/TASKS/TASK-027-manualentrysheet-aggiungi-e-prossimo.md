@@ -4,18 +4,24 @@
 - **Task ID**: TASK-027
 - **Titolo**: ManualEntrySheet: modalità «Aggiungi e continua» (rapid entry)
 - **File task**: `docs/TASKS/TASK-027-manualentrysheet-aggiungi-e-prossimo.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: — *(task **BLOCKED**; ultima fase di workflow chiusa: **REVIEW** con esito **APPROVED**; **DONE** solo dopo test manuali + conferma utente)*
+- **Stato**: BLOCKED *(sospeso — **non** **DONE** definitivo)*
+- **Fase attuale**: — *(workflow chiuso fino a validazione manuale: ultima fase completata **REVIEW** con esito **APPROVED** / OK; **DONE** solo dopo test manuali T-1…T-13 + conferma utente)*
 - **Responsabile attuale**: **UTENTE** *(test manuali T-1…T-13)*; alla ripresa post-test **CLAUDE** (review finale / verso DONE) o **CODEX** (**FIX** se necessario)
 - **Data creazione**: 2026-03-25
-- **Ultimo aggiornamento**: 2026-03-25 *(execution **completata**; review **APPROVED** (OK); test manuali **non eseguiti**; task **BLOCKED** / pending manual verification; **non** **DONE**; planning tecnico **invariato**)*
-- **Ultimo agente che ha operato**: CLAUDE *(review post-execution / allineamento tracking)*
+- **Ultimo aggiornamento**: 2026-03-26 *(allineamento tracking ufficiale: implementation + review OK; test manuali **non eseguiti**; stato **on hold**; planning tecnico **invariato** — nessuna modifica alle sezioni Planning/Decisioni)*
+- **Ultimo agente che ha operato**: CLAUDE *(aggiornamento solo documentazione / piano)*
 
-## Stato operativo e sospensione (tracking 2026-03-25)
-- **Implementation (Codex):** **completata** secondo planning e CA (nessun dettaglio implementativo modificato in questo aggiornamento).
-- **Review (Claude):** **completata** — esito **APPROVED** / OK; nessun ciclo **FIX** richiesto dalla review.
-- **Test manuali** (piano T-1…T-13 nel file task): **non eseguiti** in questo turno.
-- **Chiusura:** task **non** **DONE**. Stato **BLOCKED** — *on hold for manual verification*.
+## Stato ufficiale (riepilogo tracking)
+| Voce | Valore |
+|------|--------|
+| **Implementation** | **Completata** (conforme al planning nel file task) |
+| **Review** | **Completata** — esito **OK** / **APPROVED**; nessun **FIX** richiesto dalla review |
+| **Test manuali** (T-1…T-13) | **Non eseguiti** |
+| **Stato task** | **BLOCKED** — *pending manual test* / *on hold for manual verification* |
+| **DONE** | **No** — la chiusura è bloccata **finché mancano** i test manuali (e la conferma utente) |
+
+## Stato operativo e sospensione (dettaglio)
+- **Motivo della sospensione (esplicito):** mancano i **test manuali** del piano T-1…T-13; senza quelli il task **non** può essere dichiarato **DONE** anche se implementation e review sono chiuse con esito positivo.
 - **Alla ripresa:** eseguire test manuali → eventuale **FIX** (Codex) → **REVIEW** (Claude) → conferma utente → **DONE**.
 
 ## Dipendenze
