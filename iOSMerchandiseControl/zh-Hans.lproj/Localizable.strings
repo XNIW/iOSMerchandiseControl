@@ -435,6 +435,7 @@
 "generated.manual.copy_data" = "复制数据";
 "generated.manual.delete_footer" = "从 data、editable 和 complete 中移除该行。";
 "generated.manual.confirm" = "确认";
+"generated.manual.add_and_continue" = "添加并继续";
 "generated.manual.error.manual_only" = "该对话框仅适用于手动库存。";
 "generated.manual.error.header_missing" = "会话不兼容——缺少库存表头。";
 "generated.manual.error.structure" = "会话不兼容——无法解析表头结构。";

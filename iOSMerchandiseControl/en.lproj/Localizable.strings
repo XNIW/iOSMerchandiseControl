@@ -435,6 +435,7 @@
 "generated.manual.copy_data" = "Copy data";
 "generated.manual.delete_footer" = "Removes the row from data, editable, and complete.";
 "generated.manual.confirm" = "Confirm";
+"generated.manual.add_and_continue" = "Add & continue";
 "generated.manual.error.manual_only" = "Dialog available only for manual inventories.";
 "generated.manual.error.header_missing" = "Incompatible session — inventory header is missing.";
 "generated.manual.error.structure" = "Incompatible session — unable to resolve the header structure.";

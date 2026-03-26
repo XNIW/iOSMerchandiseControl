@@ -435,6 +435,7 @@
 "generated.manual.copy_data" = "Copiar datos";
 "generated.manual.delete_footer" = "Elimina la fila de data, editable y complete.";
 "generated.manual.confirm" = "Confirmar";
+"generated.manual.add_and_continue" = "Añadir y continuar";
 "generated.manual.error.manual_only" = "Diálogo disponible solo para inventarios manuales.";
 "generated.manual.error.header_missing" = "Sesión incompatible: falta el encabezado del inventario.";
 "generated.manual.error.structure" = "Sesión incompatible: no se puede resolver la estructura del encabezado.";

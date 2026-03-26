@@ -2428,6 +2428,7 @@ private struct ManualEntrySheet: View {
     @State private var barcodeError: String? = nil
     @State private var headerError: String? = nil
     @State private var didLoadInitialValues: Bool = false
+    @FocusState private var isBarcodeFieldFocused: Bool
 
     private var mode: Mode {
         if let editIndex {
@@ -2514,6 +2515,7 @@ private struct ManualEntrySheet: View {
                         TextField(L("product.field.barcode"), text: $barcode)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
+                            .focused($isBarcodeFieldFocused)
 
                         Button {
                             showScannerInDialog = true
@@ -2604,6 +2606,15 @@ private struct ManualEntrySheet: View {
                         Text(L("generated.manual.delete_footer"))
                     }
                 }
+
+                if !isEditMode {
+                    Section {
+                        Button(L("generated.manual.add_and_continue")) {
+                            confirmAddAndNext()
+                        }
+                        .disabled(!canConfirm)
+                    }
+                }
             }
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -2675,7 +2686,18 @@ private struct ManualEntrySheet: View {
     }
 
     private func confirmAdd() {
-        guard let columns = prepareColumnsForSave() else { return }
+        guard performAdd() else { return }
+        dismiss()
+    }
+
+    private func confirmAddAndNext() {
+        guard case .add = mode else { return }
+        guard performAdd() else { return }
+        resetForNextEntry()
+    }
+
+    private func performAdd() -> Bool {
+        guard let columns = prepareColumnsForSave() else { return false }
 
         var newRow = Array(repeating: "", count: data[0].count)
         let persisted = makePersistedValues()
@@ -2696,9 +2718,23 @@ private struct ManualEntrySheet: View {
         ensureCompleteCapacity()
         complete[newIndex] = false
 
-        onShapeMutation("manualEntry.confirmAdd")
+        onShapeMutation("manualEntry.performAdd")
         onSave()
-        dismiss()
+        return true
+    }
+
+    private func resetForNextEntry() {
+        barcode = ""
+        productName = ""
+        retailPrice = ""
+        purchasePrice = ""
+        quantity = "1"
+        productFromDb = nil
+        barcodeError = nil
+
+        DispatchQueue.main.async {
+            isBarcodeFieldFocused = true
+        }
     }
 
     private func confirmEdit() {

@@ -435,6 +435,7 @@
 "generated.manual.copy_data" = "Copia dati";
 "generated.manual.delete_footer" = "Rimuove la riga da data, editable e complete.";
 "generated.manual.confirm" = "Conferma";
+"generated.manual.add_and_continue" = "Aggiungi e continua";
 "generated.manual.error.manual_only" = "Dialog disponibile solo per inventari manuali.";
 "generated.manual.error.header_missing" = "Sessione non compatibile — header inventario assente.";
 "generated.manual.error.structure" = "Sessione non compatibile — impossibile risolvere la struttura dell'header.";
