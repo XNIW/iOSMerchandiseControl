@@ -4,12 +4,12 @@
 - **Task ID**: TASK-021
 - **Titolo**: HistoryEntry: warning su dati corrotti / deserializzazione fallita
 - **File task**: `docs/TASKS/TASK-021-historyentry-warning-dati-corrotti-deserializzazione.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW (APPROVED — in attesa conferma utente)
-- **Responsabile attuale**: UTENTE
+- **Stato**: BLOCKED
+- **Fase attuale**: REVIEW *(sospesa — task non attivo progetto; review post-fix **APPROVED** gia' acquisita; **non** DONE; conferma finale utente **differita**)*
+- **Responsabile attuale**: UTENTE *(alla ripresa: conferma completamento → DONE; oppure test manuali T-5 / T-1..T-3/T-7 se ancora desiderati prima della chiusura)*
 - **Data creazione**: 2026-03-25
-- **Ultimo aggiornamento**: 2026-03-25 (review post-fix APPROVED; in attesa conferma utente)
-- **Ultimo agente che ha operato**: CLAUDE *(review post-fix)*
+- **Ultimo aggiornamento**: 2026-03-25 (**user override / tracking**) — sospeso temporaneamente per focus operativo su **TASK-025**; review **APPROVED** non annullata; **non** DONE.
+- **Ultimo agente che ha operato**: CLAUDE *(tracking + riallineamento master plan)*
 
 ## Dipendenze
 - **Dipende da**: nessuno (TASK-014 gap **N-12** / debito **DT-07**).
@@ -46,6 +46,7 @@ Origine: **TASK-014** (gap **N-12**, **DT-07**, VERIFICATO_IN_CODICE). I compute
 |---|-----------|---------------------|-------------|-------|
 | 1 | Bootstrap da TASK-014 senza planning tecnico completo in questo turno | Planning completo immediato | Attivazione backlog + file reale; planning dettagliato a CLAUDE in fase PLANNING | sostituita da riga 2 |
 | 2 | Campo persistito `hasPersistedJSONDecodeFault` + banner anche per fault parziali (non solo griglia vuota) | Flag opzionale generico; solo empty grid | Contratto CA-2/CA-4 e richiesta utente 2026-03-25 | attiva |
+| 3 | **User override 2026-03-25**: task messo in **BLOCKED** mentre il progetto attiva **TASK-025** | Forzare DONE senza conferma utente | L'utente richiede di iniziare TASK-025 senza chiudere TASK-021 in questo turno; review **APPROVED** resta valida; chiusura **DONE** solo dopo conferma esplicita utente | attiva |
 
 ---
 

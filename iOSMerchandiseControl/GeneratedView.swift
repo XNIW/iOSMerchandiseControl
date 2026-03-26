@@ -155,7 +155,9 @@ struct GeneratedView: View {
     @State private var hasVisibleJSONDecodeFault: Bool = false
 
     private var allRowsComplete: Bool {
-        complete.count > 1 && complete.dropFirst().allSatisfy { $0 }
+        !inventoryAllRowIndices.isEmpty && inventoryAllRowIndices.allSatisfy { rowIndex in
+            rowIndex < complete.count && complete[rowIndex]
+        }
     }
 
     private var inventoryHeaderRow: [String] {
@@ -179,7 +181,9 @@ struct GeneratedView: View {
     }
 
     private var inventoryCheckedCount: Int {
-        complete.dropFirst().filter { $0 }.count
+        inventoryAllRowIndices.reduce(0) { partial, rowIndex in
+            partial + ((rowIndex < complete.count && complete[rowIndex]) ? 1 : 0)
+        }
     }
 
     private var inventoryTotalCount: Int {
@@ -446,7 +450,6 @@ struct GeneratedView: View {
                     evaluateParallelGridConsistency(context: context)
                 },
                 onSave: {
-                    entry.totalItems = max(0, data.count - 1)
                     markDirtyAndScheduleAutosave()
                 }
             )
@@ -773,11 +776,12 @@ struct GeneratedView: View {
     }
 
     private var summarySection: some View {
-        let missing = max(0, entry.totalItems - inventoryCheckedCount)
+        let totalItems = inventoryTotalCount
+        let missing = max(0, totalItems - inventoryCheckedCount)
 
         return Section(L("generated.summary.title")) {
             LabeledContent(L("generated.summary.total_items")) {
-                Text("\(entry.totalItems)")
+                Text("\(totalItems)")
             }
             LabeledContent(L("generated.summary.items_to_complete")) {
                 Text("\(missing)")
@@ -1293,11 +1297,13 @@ struct GeneratedView: View {
     }
 
     private func markAllComplete(_ value: Bool) {
-        guard data.count > 1, complete.count > 1 else { return }
-        guard !complete.dropFirst().allSatisfy({ $0 == value }) else { return }
+        guard data.count > 1 else { return }
+        guard !inventoryAllRowIndices.allSatisfy({
+            $0 < complete.count && complete[$0] == value
+        }) else { return }
 
         let headerRow = data[0]
-        for rowIndex in 1..<complete.count {
+        for rowIndex in inventoryAllRowIndices {
             setComplete(
                 rowIndex: rowIndex,
                 headerRow: headerRow,
@@ -1314,12 +1320,18 @@ struct GeneratedView: View {
     private func revertToOriginalSnapshot() {
         guard !originalData.isEmpty else { return }
 
+        let mergedSnapshot = mergedGridSnapshot(
+            dataGrid: originalData,
+            editableGrid: originalEditable,
+            completeFlags: originalComplete
+        )
+
         rowDetail = nil
         data = originalData
         editable = originalEditable
         complete = originalComplete
         evaluateParallelGridConsistency(context: "revertToOriginalSnapshot")
-        entry.totalItems = max(0, originalData.count - 1)
+        applyRuntimeSummary(mergedSnapshot.runtimeSummary)
         markDirtyAndScheduleAutosave()
     }
 
@@ -1367,16 +1379,13 @@ struct GeneratedView: View {
             wasExported: entry.wasExported
         )
 
-        let summary = HistoryImportedGridSupport.initialSummary(forGrid: snapshotData)
+        let initialSummary = HistoryImportedGridSupport.initialSummary(forGrid: snapshotData)
 
         data = snapshotData
         editable = HistoryImportedGridSupport.editableTemplate(forGrid: snapshotData)
         complete = Array(repeating: false, count: snapshotData.count)
         evaluateParallelGridConsistency(context: "revertToImportSnapshot")
-        entry.totalItems = summary.totalItems
-        entry.orderTotal = summary.orderTotal
-        entry.paymentTotal = summary.orderTotal
-        entry.missingItems = summary.totalItems
+        entry.orderTotal = initialSummary.orderTotal
         entry.syncStatus = .notAttempted
         entry.wasExported = false
 
@@ -1424,7 +1433,6 @@ struct GeneratedView: View {
         editable.remove(at: rowIndex)
         complete.remove(at: rowIndex)
         evaluateParallelGridConsistency(context: "deleteRow")
-        entry.totalItems = max(0, data.count - 1)
         markDirtyAndScheduleAutosave()
     }
     
@@ -1844,13 +1852,81 @@ struct GeneratedView: View {
         entry.data = stateBackup.data
         entry.editable = stateBackup.editable
         entry.complete = stateBackup.complete
-        entry.totalItems = stateBackup.totalItems
         entry.orderTotal = stateBackup.orderTotal
-        entry.paymentTotal = stateBackup.paymentTotal
-        entry.missingItems = stateBackup.missingItems
+        applyRuntimeSummary(
+            HistoryEntryRuntimeSummary(
+                totalItems: stateBackup.totalItems,
+                missingItems: stateBackup.missingItems,
+                paymentTotal: stateBackup.paymentTotal
+            )
+        )
         entry.syncStatus = stateBackup.syncStatus
         entry.wasExported = stateBackup.wasExported
         restoreRevertImportUIState(from: uiBackup)
+    }
+
+    private func mergedGridSnapshot(
+        dataGrid: [[String]],
+        editableGrid: [[String]],
+        completeFlags: [Bool]
+    ) -> (mergedData: [[String]], runtimeSummary: HistoryEntryRuntimeSummary) {
+        guard !dataGrid.isEmpty else {
+            let runtimeSummary = HistoryEntryRuntimeSummary.compute(from: [], complete: completeFlags)
+            return ([], runtimeSummary)
+        }
+
+        var mergedData = dataGrid
+        let headerRow = mergedData[0]
+        let qtyIndex = headerRow.firstIndex(of: "realQuantity")
+        let priceIndex = headerRow.firstIndex(of: "RetailPrice")
+        let completeIndex = headerRow.firstIndex(of: "complete")
+
+        if let qtyIndex {
+            for rowIndex in 1..<mergedData.count {
+                let qtyText: String = {
+                    guard editableGrid.indices.contains(rowIndex),
+                          editableGrid[rowIndex].indices.contains(0) else {
+                        return ""
+                    }
+                    return editableGrid[rowIndex][0]
+                }()
+
+                ensureRow(&mergedData[rowIndex], hasIndex: qtyIndex)
+                mergedData[rowIndex][qtyIndex] = qtyText
+            }
+        }
+
+        if let priceIndex {
+            for rowIndex in 1..<mergedData.count {
+                let priceText: String = {
+                    guard editableGrid.indices.contains(rowIndex),
+                          editableGrid[rowIndex].indices.contains(1) else {
+                        return ""
+                    }
+                    return editableGrid[rowIndex][1]
+                }()
+
+                ensureRow(&mergedData[rowIndex], hasIndex: priceIndex)
+                mergedData[rowIndex][priceIndex] = priceText
+            }
+        }
+
+        if let completeIndex {
+            for rowIndex in 1..<mergedData.count {
+                ensureRow(&mergedData[rowIndex], hasIndex: completeIndex)
+                let isDone = completeFlags.indices.contains(rowIndex) ? completeFlags[rowIndex] : false
+                mergedData[rowIndex][completeIndex] = isDone ? "1" : ""
+            }
+        }
+
+        let runtimeSummary = HistoryEntryRuntimeSummary.compute(from: mergedData, complete: completeFlags)
+        return (mergedData, runtimeSummary)
+    }
+
+    private func applyRuntimeSummary(_ runtimeSummary: HistoryEntryRuntimeSummary) {
+        entry.totalItems = runtimeSummary.totalItems
+        entry.paymentTotal = runtimeSummary.paymentTotal
+        entry.missingItems = runtimeSummary.missingItems
     }
 
     // MARK: - Salvataggio & sync
@@ -1862,61 +1938,18 @@ struct GeneratedView: View {
         isSaving = true
         saveError = nil
 
-        // Copia mutabile dei dati griglia
-        var newData = data
-
-        let headerRow = newData[0]
-        let qtyIndex = headerRow.firstIndex(of: "realQuantity")
-        let priceIndex = headerRow.firstIndex(of: "RetailPrice")
-
-        // Aggiorna le colonne "realQuantity" e "RetailPrice" in base a editable[row][0/1]
-        if let qIdx = qtyIndex {
-            for rowIndex in 1..<newData.count {
-                let qtyText: String = {
-                    guard editable.indices.contains(rowIndex),
-                          editable[rowIndex].indices.contains(0) else {
-                        return ""
-                    }
-                    return editable[rowIndex][0]
-                }()
-
-                ensureRow(&newData[rowIndex], hasIndex: qIdx)
-                newData[rowIndex][qIdx] = qtyText
-            }
-        }
-
-        if let pIdx = priceIndex {
-            for rowIndex in 1..<newData.count {
-                let priceText: String = {
-                    guard editable.indices.contains(rowIndex),
-                          editable[rowIndex].indices.contains(1) else {
-                        return ""
-                    }
-                    return editable[rowIndex][1]
-                }()
-
-                ensureRow(&newData[rowIndex], hasIndex: pIdx)
-                newData[rowIndex][pIdx] = priceText
-            }
-        }
-        
-        if let cIdx = headerRow.firstIndex(of: "complete") {
-            for rowIndex in 1..<newData.count {
-                ensureRow(&newData[rowIndex], hasIndex: cIdx)
-                let isDone = complete.indices.contains(rowIndex) ? complete[rowIndex] : false
-                newData[rowIndex][cIdx] = isDone ? "1" : ""
-            }
-        }
-
-        // Aggiorna missingItems in base al numero di righe completate
-        let checked = complete.dropFirst().filter { $0 }.count
-        let missing = max(0, entry.totalItems - checked)
+        let mergedSnapshot = mergedGridSnapshot(
+            dataGrid: data,
+            editableGrid: editable,
+            completeFlags: complete
+        )
+        let newData = mergedSnapshot.mergedData
 
         // Scrive nella HistoryEntry
         entry.data = newData
         entry.editable = editable
         entry.complete = complete
-        entry.missingItems = missing
+        applyRuntimeSummary(mergedSnapshot.runtimeSummary)
 
         do {
             try context.save()

@@ -442,8 +442,9 @@ extension ExcelSessionViewModel {
         let editable = HistoryImportedGridSupport.editableTemplate(forGrid: filteredData)
         let complete = Array(repeating: false, count: filteredData.count)
 
-        // 5. Riassunto iniziale (numero articoli + totale ordine)
-        let (totalItems, orderTotal) = HistoryImportedGridSupport.initialSummary(forGrid: filteredData)
+        // 5. Riassunto iniziale: orderTotal dal fornitore, summary runtime dalla griglia inventario
+        let initialSummary = HistoryImportedGridSupport.initialSummary(forGrid: filteredData)
+        let runtimeSummary = HistoryEntryRuntimeSummary.compute(from: filteredData, complete: complete)
 
         let now = Date()
         let fileId = makeHistoryEntryId(supplier: supplierName, date: now)
@@ -461,10 +462,10 @@ extension ExcelSessionViewModel {
             complete: complete,
             supplier: supplierName,
             category: categoryName,
-            totalItems: totalItems,
-            orderTotal: orderTotal,
-            paymentTotal: orderTotal,
-            missingItems: totalItems,
+            totalItems: runtimeSummary.totalItems,
+            orderTotal: initialSummary.orderTotal,
+            paymentTotal: runtimeSummary.paymentTotal,
+            missingItems: runtimeSummary.missingItems,
             syncStatus: .notAttempted,
             wasExported: false
         )

@@ -4,11 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-TASK-021 ACTIVE — HistoryEntry: warning su dati corrotti / deserializzazione fallita — **REVIEW APPROVED** (fix F-1 completato; in attesa **conferma utente**).
+TASK-026 ACTIVE — Scanner: toggle **torcia (flashlight)** — **PLANNING** (responsabile **CLAUDE**).
 
 ## Stato globale
 ACTIVE
-> **User override 2026-03-25:** **TASK-020** e' **BLOCKED**: review **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** finale → conferma utente → DONE. **TASK-019** resta **BLOCKED** (test manuali pendenti). **User override 2026-03-24:** TASK-016..018 **BLOCKED** (review APPROVED / test manuali pendenti; non DONE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
+> **User override 2026-03-25:** **TASK-025** messo in **BLOCKED** — review tecnica **APPROVED** acquisita; **test manuali utente** (T-0..T-15) **non eseguiti**; **non** DONE; task congelata in attesa validazione manuale futura. **TASK-026** attivato come **unico** task **ACTIVE** in **PLANNING**. **User override 2026-03-25 (focus TASK-025):** **TASK-021** messo in **BLOCKED** — sospeso temporaneamente per spostare il focus operativo su **TASK-025**; review tecnica **APPROVED** gia' acquisita (post-fix F-1); **non** DONE; in attesa **conferma finale utente** alla ripresa. **TASK-025** e' l'**unico** task **ACTIVE** in **REVIEW**. **User override 2026-03-25:** **TASK-020** e' **BLOCKED**: review **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** finale → conferma utente → DONE. **TASK-019** resta **BLOCKED** (test manuali pendenti). **User override 2026-03-24:** TASK-016..018 **BLOCKED** (review APPROVED / test manuali pendenti; non DONE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). **TASK-010 e' DONE (2026-03-25).** TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -49,15 +49,27 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
+- Task ID: TASK-026
+- Titolo: Scanner: toggle torcia (flashlight)
+- File task: `docs/TASKS/TASK-026-scanner-toggle-torcia-flashlight.md`
+- Stato: ACTIVE
+- Fase attuale: PLANNING
+- Responsabile attuale: CLAUDE
+- Ultimo aggiornamento: 2026-03-25 (attivazione da backlog; bootstrap planning iniziale; nessuna execution)
+
+Task bloccati non attivi:
+- Task ID: TASK-025
+- Titolo: GeneratedView: ricalcolo dinamico paymentTotal + missingItems su History card
+- File task: `docs/TASKS/TASK-025-generatedview-ricalcolo-paymenttotal-missingitems-history-card.md`
+- Stato: BLOCKED
+- Motivo: review tecnica **APPROVED** gia' acquisita; **test manuali utente** (T-0..T-15) **non ancora eseguiti**; task **non** DONE. Congelata in attesa di futura validazione manuale. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** finale → conferma utente → DONE.
+- Ultimo aggiornamento: 2026-03-25
 - Task ID: TASK-021
 - Titolo: HistoryEntry: warning su dati corrotti / deserializzazione fallita
 - File task: `docs/TASKS/TASK-021-historyentry-warning-dati-corrotti-deserializzazione.md`
-- Stato: ACTIVE
-- Fase attuale: REVIEW (APPROVED)
-- Responsabile attuale: UTENTE (conferma finale)
-- Ultimo aggiornamento: 2026-03-25 (TASK-021 → review post-fix APPROVED; in attesa conferma utente)
-
-Task bloccati non attivi:
+- Stato: BLOCKED
+- Motivo: **user override 2026-03-25** — sospeso temporaneamente per focus operativo su **TASK-025**; review post-fix **APPROVED** gia' acquisita; **non** DONE; in attesa **conferma finale utente** alla ripresa (eventuali test manuali T-5 / runtime T-1..T-3/T-7 restano rischi noti documentati nel file task).
+- Ultimo aggiornamento: 2026-03-25
 - Task ID: TASK-020
 - Titolo: Scanner: feedback camera non disponibile
 - File task: `docs/TASKS/TASK-020-scanner-feedback-camera-non-disponibile.md`
@@ -103,15 +115,9 @@ Task bloccati non attivi:
 - Task ID: TASK-011
 - Titolo: Large import stability, memory e progress UX
 - File task: `docs/TASKS/TASK-011-large-import-stability-and-progress.md`
-- Stato: BLOCKED
-- Motivo: sospeso per decisione utente; il crash specifico conferma -> apply e' stato chiuso in TASK-022, mentre i follow-up residui vengono separati in TASK-023 (idempotency + non-product diff visibility) e TASK-024 (progress UX + cancellation) senza riaprire l'umbrella.
-- Ultimo aggiornamento: 2026-03-23
-- Task ID: TASK-010
-- Titolo: Localizzazione UI multilingua
-- File task: `docs/TASKS/TASK-010-localizzazione-ui-multilingua.md`
-- Stato: BLOCKED
-- Motivo: review tecnica finale APPROVED; test manuali finali ancora pendenti (CA-2, CA-3, CA-6). Task sospesa per decisione utente in attesa di futura ripresa. Alla ripresa: eseguire solo test manuali finali, poi confermare DONE o aprire FIX se emergono regressioni.
-- Ultimo aggiornamento: 2026-03-22
+- Stato: SUPERSEDED
+- Motivo: umbrella completamente superato da TASK-022 (DONE, crash fix), TASK-023 (reimport idempotency), TASK-024 (progress UX). Nessun lavoro residuo non coperto. Aggiornato da audit 2026-03-25.
+- Ultimo aggiornamento: 2026-03-25
 - Task ID: TASK-009
 - Titolo: Product model old prices + price backfill
 - File task: `docs/TASKS/TASK-009-product-model-old-prices-price-backfill.md`
@@ -121,9 +127,9 @@ Task bloccati non attivi:
 - Task ID: TASK-013
 - Titolo: sim_ui.sh performance — batch mode, timeout reale, cache device frame
 - File task: `docs/TASKS/TASK-013-sim-ui-performance.md`
-- Stato: BLOCKED
-- Motivo: sospeso per decisione utente (2026-03-22) — wrapper SIM UI rimosso dal workflow standard del progetto per latenza/prestazioni non adeguate ai test rapidi. Nessun ulteriore lavoro di ottimizzazione previsto.
-- Ultimo aggiornamento: 2026-03-22
+- Stato: WONT_DO
+- Motivo: wrapper SIM UI rimosso dal workflow standard (2026-03-22); nessun ulteriore lavoro previsto. Aggiornato da BLOCKED a WONT_DO da audit 2026-03-25.
+- Ultimo aggiornamento: 2026-03-25
 - Task ID: TASK-005
 - Titolo: ImportAnalysis error export + inline editing
 - File task: `docs/TASKS/TASK-005-importanalysis-error-export-inline-editing.md`
@@ -152,7 +158,7 @@ Task bloccati non attivi:
 
 ## Backlog
 (Task futuri ordinati per priorità — aggiornabile solo da Claude o dall'utente, con motivazione esplicita)
-Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22).
+Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25).
 
 | ID | Titolo | Stato | Priorità |
 |----|--------|-------|----------|
@@ -164,10 +170,10 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-007 | History advanced filters | DONE | MEDIUM |
 | TASK-008 | Generated manual row dialog + calculate | BLOCKED | MEDIUM |
 | TASK-009 | Product model old prices + price backfill | BLOCKED | LOW |
-| TASK-010 | Localizzazione UI multilingua | BLOCKED | LOW |
-| TASK-011 | Large import stability, memory e progress UX | BLOCKED | HIGH |
+| TASK-010 | Localizzazione UI multilingua | DONE | LOW |
+| TASK-011 | Large import stability, memory e progress UX | SUPERSEDED | HIGH |
 | TASK-012 | Simulator automation — dual-agent wrapper + adapter (sblocca TASK-008) | DONE | HIGH |
-| TASK-013 | sim_ui.sh performance — batch mode, timeout reale, cache device frame | BLOCKED | HIGH |
+| TASK-013 | sim_ui.sh performance — batch mode, timeout reale, cache device frame | WONT_DO | — |
 | TASK-014 | Global Audit & Backlog Refresh | DONE | — |
 | TASK-015 | Calculate dialog in GeneratedView (GAP-15 residuo) | WONT_DO | LOW |
 | TASK-016 | Deduplicazione logica import DatabaseView/ProductImportViewModel | BLOCKED | LOW |
@@ -175,10 +181,13 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-018 | GeneratedView: secondo livello revert (ai dati originali import) | BLOCKED | MEDIUM |
 | TASK-019 | Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill | BLOCKED | MEDIUM |
 | TASK-020 | Scanner: feedback camera non disponibile | BLOCKED | LOW |
-| TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | ACTIVE | LOW |
+| TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | BLOCKED | LOW |
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | DONE | HIGH |
 | TASK-023 | Full-database reimport idempotency + non-product diff visibility | BLOCKED | HIGH |
 | TASK-024 | Full-database import progress UX + cancellation | BLOCKED | MEDIUM |
+| TASK-025 | GeneratedView: ricalcolo dinamico paymentTotal + missingItems su History card | BLOCKED | MEDIUM |
+| TASK-026 | Scanner: toggle torcia (flashlight) | ACTIVE | LOW |
+| TASK-027 | ManualEntrySheet: modalità "Aggiungi e prossimo" (rapid entry) | TODO | LOW |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -191,11 +200,18 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-002 | External file opening (document handoff) | 2026-03-22 (DONE parziale: "Condividi/Invia copia" funziona; "Apri con" cross-app documentato come limite iOS noto) |
 | TASK-014 | Global Audit & Backlog Refresh | 2026-03-22 |
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | 2026-03-23 |
+| TASK-010 | Localizzazione UI multilingua | 2026-03-25 |
 
 ## Blocchi e dipendenze
+- TASK-025 bloccato.
+  Motivo: review tecnica **APPROVED** acquisita; **test manuali utente** (T-0..T-15) **pendenti**; **non** DONE. Task congelata in attesa validazione manuale. Alla ripresa: test → eventuale FIX → REVIEW finale → conferma utente → DONE.
+  Nota: non invalida execution/review gia' documentati nel file task; **TASK-026** e' ora il task attivo.
+- TASK-021 bloccato.
+  Motivo: **user override 2026-03-25** — sospeso per focus su **TASK-025**; review **APPROVED** (post-fix F-1) gia' acquisita; **non** DONE; alla ripresa: **conferma utente** (e eventuali test manuali documentati nel file task se ancora desiderati) → DONE.
+  Nota: non invalida CA-1..CA-4 ne' l'execution/review gia' archiviati nel file task.
 - TASK-020 bloccato.
   Motivo: **user override 2026-03-25** — review **APPROVED**; **nessun fix richiesto**; **test manuali T-1..T-6 pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
-  Nota: sospensione per attivare **TASK-021**; non invalida execution/review documentati nel file task.
+  Nota: sospensione storica per attivare **TASK-021** (ora **TASK-021** e' **BLOCKED**; focus attivo **TASK-025**); non invalida execution/review documentati nel file task.
 - TASK-019 bloccato.
   Motivo: **user override 2026-03-25** — review tecnica **APPROVED**; **nessun fix richiesto**; **test manuali pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
   Nota: sospensione per attivare **TASK-020**; non invalida execution/review documentati nel file task.
@@ -208,9 +224,9 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - TASK-016 bloccato.
   Motivo: **user override 2026-03-24** — deduplicazione import eseguita e review **APPROVED**; test manuali utente non completati; chiusura **DONE** differita. Alla ripresa: validazione manuale perimetro Excel/simple + consumer collegati; se OK conferma utente, altrimenti FIX mirato.
   Nota: sospensione per avviare TASK-017 su richiesta utente; non invalida il lavoro gia' mergiato in review.
-- TASK-011 bloccato.
-  Motivo: sospeso per decisione utente; TASK-022 ha chiuso il crash specifico conferma -> apply, mentre i follow-up residui vengono scorporati in TASK-023 e TASK-024 senza riaprire l'umbrella.
-  Nota tracking: il planning/execution storico di TASK-011 resta documentato nel suo file task, ma il lavoro residuo e' ora tracciato nei task separati piu' stretti.
+- TASK-011 **SUPERSEDED**.
+  Motivo: umbrella task completamente superato; il crash è stato chiuso in TASK-022 (DONE), reimport idempotency in TASK-023, progress UX in TASK-024. Nessun lavoro residuo non coperto dai task derivati. Aggiornato a SUPERSEDED da audit 2026-03-25.
+  Nota tracking: il planning/execution storico di TASK-011 resta documentato nel suo file task.
 - TASK-006 bloccato.
   Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Il crash specifico nell'apply su dataset grande e' stato chiuso in TASK-022; follow-up reimport/idempotency in TASK-023 (**BLOCKED** dal 2026-03-24 per test manuali pendenti). UX progress/cancel in TASK-024 (**BLOCKED** dal 2026-03-24; sospeso prima della finalizzazione review/fix UI).
   Nota criteri: CA-1/CA-12 e CA-14 verificati; TASK-011 resta contesto storico secondario.
@@ -250,6 +266,13 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - Tracking 2026-03-25: **TASK-021** review completata da **CLAUDE**: **CHANGES_REQUIRED** (un fix: scope creep export blocking). → **FIX** / CODEX.
 - Tracking 2026-03-25: **TASK-021** fix **F-1** applicato (rimosso export blocking + `.exportBlocked` + stringhe localizzazione); build OK. → **REVIEW** post-fix / CLAUDE.
 - Tracking 2026-03-25: **TASK-021** review post-fix completata da **CLAUDE**: **APPROVED**. CA-1..CA-4 soddisfatti. In attesa **conferma utente**. Test manuali T-5 (store migration) e scenari runtime T-1..T-3/T-7 restano rischi noti non eseguiti.
+- User override 2026-03-25: **TASK-021** messo in **BLOCKED** (review **APPROVED** acquisita; **non** DONE; conferma utente differita); **TASK-025** attivato come **unico task attivo** in **PLANNING** con file `TASK-025-generatedview-ricalcolo-paymenttotal-missingitems-history-card.md`; planning tecnico (inclusa formula **paymentTotal** allineata Android, SSOT, UI History, **GeneratedView.summarySection** strategia A, contratto difensivo **RuntimeSummary**) documentato da **CLAUDE**.
+- Tracking 2026-03-25: **TASK-025** riallineato in **EXECUTION**; responsabile **CODEX**. Scope confermato: summary runtime (`paymentTotal` / `missingItems` / `totalItems`), SSOT su `saveChanges()`, stato iniziale coerente, chip `missingItems` in `HistoryView`, layout card a due righe, anti-regressione `GeneratedView.summarySection`.
+- Tracking 2026-03-25: **TASK-025** execution completata da **CODEX**; fase **REVIEW**, responsabile **CLAUDE**. Build Debug iphonesimulator OK; implementati helper runtime summary, integrazione `saveChanges()`/`generateHistoryEntry`/revert, chip `missingItems` in `HistoryView`, layout card a due righe e anti-regressione `GeneratedView.summarySection`. Verifiche Simulator/manuali non eseguite in questo turno.
+- Tracking 2026-03-25: **TASK-025** review tecnica completata da **CLAUDE**: **APPROVED**. CA-1..CA-9 verificati staticamente; formula `paymentTotal` conforme Decisione #1; SSOT su `saveChanges()` coerente; contratto difensivo rispettato; guardrail handoff rispettati; build OK; nessun fix richiesto. In attesa **test manuali utente** (T-0..T-15) e **conferma utente**.
+- User override 2026-03-25: **TASK-025** messo in **BLOCKED** (review **APPROVED** acquisita; test manuali **non eseguiti**; **non** DONE). **TASK-026** attivato come **unico task attivo** in **PLANNING** con file `TASK-026-scanner-toggle-torcia-flashlight.md`; bootstrap planning iniziale; responsabile **CLAUDE**.
+- Tracking 2026-03-25: **TASK-010** chiusa in **DONE** su conferma utente. Regressione localizzazione verificata come risolta: root cause = delimitatori Unicode invalidi in 3 `Localizable.strings` non inglesi; hotfix minimo applicato e verificato, nessun task figlio aperto.
+- Audit 2026-03-25: **audit completo iOS vs Android** eseguito su richiesta utente. Confronto granulare di tutte le aree funzionali (inventario, database, cronologia, scanner, import/export, opzioni, sync, storico prezzi). Risultato: iOS copre ~95% delle feature Android. Gap residui: (1) paymentTotal non ricalcolato dinamicamente, (2) assenza toggle torcia nello scanner, (3) assenza modalità "Aggiungi e prossimo" nell'entry manuale. Creati **TASK-025**, **TASK-026**, **TASK-027**. Aggiornati: **TASK-011** → SUPERSEDED, **TASK-013** → WONT_DO.
 
 ## Criterio di aggiornamento
 Questo file va aggiornato SOLO quando cambia almeno uno di:

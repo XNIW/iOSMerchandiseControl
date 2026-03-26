@@ -4,14 +4,14 @@
 - **Task ID**: TASK-010
 - **Titolo**: Localizzazione UI multilingua
 - **File task**: `docs/TASKS/TASK-010-localizzazione-ui-multilingua.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: — (sospeso dopo REVIEW APPROVED)
-- **Responsabile attuale**: — (in attesa di test manuali da parte dell'utente)
+- **Stato**: DONE
+- **Fase attuale**: — (completata; conferma utente 2026-03-25)
+- **Responsabile attuale**: — (nessuna azione aperta)
 - **Data creazione**: 2026-03-22
-- **Ultimo aggiornamento**: 2026-03-25 (hotfix minimo su `.strings` malformati; review/test manuali finali ancora pendenti)
+- **Ultimo aggiornamento**: 2026-03-25 (utente conferma regressione localizzazione risolta e verificata; tracking chiuso in DONE)
 - **Ultimo agente che ha operato**: CODEX
 
-> Stato sospeso: review tecnica finale APPROVATA; test manuali finali ancora pendenti. La task resta in attesa di futura ripresa per i soli test manuali conclusivi e la conferma finale.
+> Stato finale: localizzazione UI completata. Hotfix su `.strings` malformati verificato, conferma utente ricevuta il 2026-03-25, nessun blocco residuo aperto.
 
 ## Dipendenze
 - **Dipende da**: nessuno
@@ -1051,15 +1051,17 @@ Correggere con patch minima la regressione in cui varie schermate mostravano chi
 ## Chiusura
 
 ### Conferma utente
-- [ ] Utente ha confermato il completamento
+- [x] Utente ha confermato il completamento
 
 ### Follow-up candidate
+- Nessuno.
 
 ### Riepilogo finale
-- Review tecnica finale: APPROVATA.
-- Motivo della sospensione: test manuali finali non ancora eseguiti per decisione utente.
-- Per chiudere in DONE manca solo: eseguire i test manuali finali residui (`CA-2`, `CA-3`, `CA-6`) e registrare la conferma finale.
-- Alla ripresa il task richiede solo test manuali + eventuale conferma finale; se emergono regressioni, riaprire FIX invece di chiudere DONE.
+- Problema riscontrato: in varie schermate (`Database`, `History`, `Generated`) comparivano chiavi raw invece dei testi localizzati.
+- Root cause trovata: tre file `Localizable.strings` non inglesi avevano una riga malformata con virgolette tipografiche Unicode come delimitatori della sintassi `.strings`, rompendo il parsing delle entry successive.
+- Fix applicato: sostituite solo le tre righe malformate con delimitatori ASCII validi, senza modificare `LocalizationManager`, view Swift o `project.pbxproj`.
+- Verifica eseguita: lint `.strings` OK, build `xcodebuild` riuscita, probe del bundle buildato positivo sulle chiavi osservate; l'utente conferma inoltre che la regressione e` risolta e verificata.
+- Esito finale: `TASK-010` chiusa in `DONE`; nessun task figlio aperto, nessun debito residuo collegato a questa anomalia.
 
 ### Data completamento
-- — (task non chiusa; sospesa in attesa di test manuali finali)
+- 2026-03-25

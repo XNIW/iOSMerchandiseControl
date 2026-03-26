@@ -168,6 +168,7 @@
 "history.summary.items" = "Articoli";
 "history.summary.order" = "Ordine";
 "history.summary.paid" = "Pagato";
+"history.summary.missing" = "Mancanti";
 "history.summary.errors" = "Errori";
 "history.json_fault.accessibility" = "Questa sessione contiene dati salvati corrotti.";
 

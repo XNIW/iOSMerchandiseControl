@@ -556,14 +556,22 @@ private struct HistoryRow: View {
             .font(.caption)
             .foregroundStyle(.secondary)
             
-            HStack(spacing: 16) {
-                HistorySummaryChip(title: L("history.summary.items"), value: "\(entry.totalItems)")
-                HistorySummaryChip(title: L("history.summary.order"), value: formatMoney(entry.orderTotal))
-                HistorySummaryChip(title: L("history.summary.paid"), value: formatMoney(entry.paymentTotal))
-                
-                if entry.syncStatus == .attemptedWithErrors && errorCount > 0 {
-                    HistorySummaryChip(title: L("history.summary.errors"), value: "\(errorCount)")
-                        .foregroundStyle(.red)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top, spacing: 12) {
+                    HistorySummaryChip(title: L("history.summary.items"), value: "\(entry.totalItems)")
+                    HistorySummaryChip(title: L("history.summary.order"), value: formatMoney(entry.orderTotal))
+                    HistorySummaryChip(title: L("history.summary.paid"), value: formatMoney(entry.paymentTotal))
+                }
+
+                HStack(alignment: .top, spacing: 12) {
+                    HistorySummaryChip(title: L("history.summary.missing"), value: "\(entry.missingItems)")
+
+                    if entry.syncStatus == .attemptedWithErrors && errorCount > 0 {
+                        HistorySummaryChip(title: L("history.summary.errors"), value: "\(errorCount)")
+                            .foregroundStyle(.red)
+                    } else {
+                        Spacer(minLength: 0)
+                    }
                 }
             }
             .font(.caption2)
@@ -603,11 +611,15 @@ private struct HistorySummaryChip: View {
     let value: String
     
     var body: some View {
-        HStack(spacing: 4) {
-            Text(title + ":")
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .foregroundStyle(.secondary)
             Text(value)
                 .fontWeight(.semibold)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
