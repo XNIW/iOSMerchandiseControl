@@ -89,6 +89,10 @@
 "scanner.fallback.camera_unavailable.message" = "Nessuna fotocamera disponibile su questo dispositivo. Usa un iPhone o iPad con fotocamera per scansionare i codici a barre.";
 "scanner.fallback.session_failed.message" = "La fotocamera non può essere avviata in questo momento. Chiudi e riapri lo scanner per riprovare.";
 "scanner.action.open_settings" = "Apri impostazioni";
+"scanner.torch.accessibility.label" = "Torcia";
+"scanner.torch.accessibility.value.on" = "Accesa";
+"scanner.torch.accessibility.value.off" = "Spenta";
+"scanner.torch.accessibility.hint" = "Attiva o disattiva la torcia per leggere meglio il codice a barre.";
 
 /* Product shared */
 "product.no_name" = "Senza nome";

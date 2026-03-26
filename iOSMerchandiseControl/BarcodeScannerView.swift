@@ -44,15 +44,20 @@ final class CameraPreviewView: UIView {
 /// Wrapper UIKit → SwiftUI che espone un callback con il barcode letto
 struct BarcodeScannerView: UIViewRepresentable {
     let shouldRunSession: Bool
+    let desiredTorchOn: Bool
     let onCodeScanned: (String) -> Void
     let onSessionReady: () -> Void
     let onSessionSetupFailed: () -> Void
+    let onTorchAvailabilityChanged: (Bool) -> Void
+    let onTorchStateResetRequested: () -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
             onCodeScanned: onCodeScanned,
             onSessionReady: onSessionReady,
-            onSessionSetupFailed: onSessionSetupFailed
+            onSessionSetupFailed: onSessionSetupFailed,
+            onTorchAvailabilityChanged: onTorchAvailabilityChanged,
+            onTorchStateResetRequested: onTorchStateResetRequested
         )
     }
 
@@ -62,10 +67,15 @@ struct BarcodeScannerView: UIViewRepresentable {
         context.coordinator.updateCallbacks(
             onCodeScanned: onCodeScanned,
             onSessionReady: onSessionReady,
-            onSessionSetupFailed: onSessionSetupFailed
+            onSessionSetupFailed: onSessionSetupFailed,
+            onTorchAvailabilityChanged: onTorchAvailabilityChanged,
+            onTorchStateResetRequested: onTorchStateResetRequested
         )
         context.coordinator.attachPreview(to: view)
-        context.coordinator.updateSessionState(shouldRun: shouldRunSession)
+        context.coordinator.updateScannerState(
+            shouldRun: shouldRunSession,
+            desiredTorchOn: desiredTorchOn
+        )
         return view
     }
 
@@ -74,9 +84,14 @@ struct BarcodeScannerView: UIViewRepresentable {
         context.coordinator.updateCallbacks(
             onCodeScanned: onCodeScanned,
             onSessionReady: onSessionReady,
-            onSessionSetupFailed: onSessionSetupFailed
+            onSessionSetupFailed: onSessionSetupFailed,
+            onTorchAvailabilityChanged: onTorchAvailabilityChanged,
+            onTorchStateResetRequested: onTorchStateResetRequested
         )
-        context.coordinator.updateSessionState(shouldRun: shouldRunSession)
+        context.coordinator.updateScannerState(
+            shouldRun: shouldRunSession,
+            desiredTorchOn: desiredTorchOn
+        )
     }
 
     static func dismantleUIView(_ uiView: CameraPreviewView, coordinator: Coordinator) {
@@ -91,6 +106,8 @@ struct BarcodeScannerView: UIViewRepresentable {
         var onCodeScanned: (String) -> Void
         var onSessionReady: () -> Void
         var onSessionSetupFailed: () -> Void
+        var onTorchAvailabilityChanged: (Bool) -> Void
+        var onTorchStateResetRequested: () -> Void
 
         private var didCaptureCode = false
         private var didEmitSessionReady = false
@@ -99,25 +116,36 @@ struct BarcodeScannerView: UIViewRepresentable {
         private var isConfigured = false
         private var isTornDown = false
         private var shouldRunSession = false
+        private var desiredTorchOn = false
+        private var captureDevice: AVCaptureDevice?
+        private var lastReportedTorchAvailability: Bool?
 
         init(
             onCodeScanned: @escaping (String) -> Void,
             onSessionReady: @escaping () -> Void,
-            onSessionSetupFailed: @escaping () -> Void
+            onSessionSetupFailed: @escaping () -> Void,
+            onTorchAvailabilityChanged: @escaping (Bool) -> Void,
+            onTorchStateResetRequested: @escaping () -> Void
         ) {
             self.onCodeScanned = onCodeScanned
             self.onSessionReady = onSessionReady
             self.onSessionSetupFailed = onSessionSetupFailed
+            self.onTorchAvailabilityChanged = onTorchAvailabilityChanged
+            self.onTorchStateResetRequested = onTorchStateResetRequested
         }
 
         func updateCallbacks(
             onCodeScanned: @escaping (String) -> Void,
             onSessionReady: @escaping () -> Void,
-            onSessionSetupFailed: @escaping () -> Void
+            onSessionSetupFailed: @escaping () -> Void,
+            onTorchAvailabilityChanged: @escaping (Bool) -> Void,
+            onTorchStateResetRequested: @escaping () -> Void
         ) {
             self.onCodeScanned = onCodeScanned
             self.onSessionReady = onSessionReady
             self.onSessionSetupFailed = onSessionSetupFailed
+            self.onTorchAvailabilityChanged = onTorchAvailabilityChanged
+            self.onTorchStateResetRequested = onTorchStateResetRequested
         }
 
         func attachPreview(to view: CameraPreviewView) {
@@ -125,10 +153,11 @@ struct BarcodeScannerView: UIViewRepresentable {
             view.videoPreviewLayer.videoGravity = .resizeAspectFill
         }
 
-        func updateSessionState(shouldRun: Bool) {
+        func updateScannerState(shouldRun: Bool, desiredTorchOn: Bool) {
             sessionQueue.async { [weak self] in
                 guard let self else { return }
                 self.shouldRunSession = shouldRun
+                self.desiredTorchOn = desiredTorchOn
                 self.applyDesiredSessionState()
             }
         }
@@ -138,10 +167,10 @@ struct BarcodeScannerView: UIViewRepresentable {
                 guard let self else { return }
                 self.isTornDown = true
                 self.shouldRunSession = false
+                self.forceTorchOffAndStopSessionIfNeeded(resetDesiredTorch: true)
 
-                if self.session.isRunning {
-                    self.session.stopRunning()
-                }
+                self.captureDevice = nil
+                self.reportTorchAvailability(false)
 
                 guard self.isConfigured else { return }
 
@@ -161,20 +190,30 @@ struct BarcodeScannerView: UIViewRepresentable {
             guard !isTornDown else { return }
 
             if shouldRunSession {
-                guard !didEncounterSetupFailure else { return }
-                guard configureSessionIfNeeded() else { return }
-
-                guard !session.isRunning else { return }
-
-                session.startRunning()
-                if session.isRunning {
-                    reportSessionReadyIfNeeded()
-                } else {
-                    didEncounterSetupFailure = true
-                    reportSetupFailureIfNeeded()
+                guard !didEncounterSetupFailure else {
+                    applyDesiredTorchState()
+                    return
                 }
-            } else if session.isRunning {
-                session.stopRunning()
+                guard configureSessionIfNeeded() else {
+                    applyDesiredTorchState()
+                    return
+                }
+
+                if !session.isRunning {
+                    session.startRunning()
+                    if session.isRunning {
+                        reportSessionReadyIfNeeded()
+                    } else {
+                        didEncounterSetupFailure = true
+                        reportSetupFailureIfNeeded()
+                    }
+                }
+                applyDesiredTorchState()
+            } else {
+                forceTorchOffAndStopSessionIfNeeded(
+                    resetDesiredTorch: false,
+                    reapplyTorchOffAfterStoppingSession: true
+                )
             }
         }
 
@@ -185,6 +224,7 @@ struct BarcodeScannerView: UIViewRepresentable {
                   let input = try? AVCaptureDeviceInput(device: device),
                   session.canAddInput(input) else {
                 didEncounterSetupFailure = true
+                reportTorchAvailability(false)
                 reportSetupFailureIfNeeded()
                 return false
             }
@@ -192,6 +232,7 @@ struct BarcodeScannerView: UIViewRepresentable {
             let output = AVCaptureMetadataOutput()
             guard session.canAddOutput(output) else {
                 didEncounterSetupFailure = true
+                reportTorchAvailability(false)
                 reportSetupFailureIfNeeded()
                 return false
             }
@@ -213,8 +254,134 @@ struct BarcodeScannerView: UIViewRepresentable {
                 .qr
             ]
 
+            captureDevice = device
             isConfigured = true
+            reportTorchAvailability(currentTorchAvailability(for: device))
             return true
+        }
+
+        private func applyDesiredTorchState() {
+            let shouldEnableTorch = desiredTorchOn
+                && shouldRunSession
+                && session.isRunning
+                && !didEncounterSetupFailure
+                && !isTornDown
+
+            if shouldEnableTorch, !setTorchStateIfPossible(true) {
+                requestTorchStateReset()
+            } else if !shouldEnableTorch {
+                _ = setTorchStateIfPossible(false)
+            }
+        }
+
+        private func forceTorchOffAndStopSessionIfNeeded(
+            resetDesiredTorch: Bool,
+            reapplyTorchOffAfterStoppingSession: Bool = false
+        ) {
+            if resetDesiredTorch {
+                desiredTorchOn = false
+            }
+
+            applyDesiredTorchState()
+
+            guard session.isRunning else { return }
+            session.stopRunning()
+
+            if reapplyTorchOffAfterStoppingSession {
+                applyDesiredTorchState()
+            }
+        }
+
+        @discardableResult
+        private func setTorchStateIfPossible(_ shouldTurnOn: Bool) -> Bool {
+            guard let captureDevice else {
+                reportTorchAvailability(false)
+                return !shouldTurnOn
+            }
+
+            let isTorchAvailable = currentTorchAvailability(for: captureDevice)
+            reportTorchAvailability(isTorchAvailable)
+
+            if shouldTurnOn {
+                guard isTorchAvailable else {
+                    return false
+                }
+            } else {
+                guard captureDevice.hasTorch else {
+                    return true
+                }
+            }
+
+            if shouldTurnOn, captureDevice.isTorchActive || captureDevice.torchMode == .on {
+                return true
+            }
+
+            if !shouldTurnOn, !captureDevice.isTorchActive, captureDevice.torchMode == .off {
+                return true
+            }
+
+            do {
+                try captureDevice.lockForConfiguration()
+                defer { captureDevice.unlockForConfiguration() }
+
+                if shouldTurnOn {
+                    try captureDevice.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
+                } else {
+                    captureDevice.torchMode = .off
+                }
+            } catch {
+                if shouldTurnOn {
+                    bestEffortTurnTorchOff(on: captureDevice)
+                }
+                return false
+            }
+
+            if shouldTurnOn {
+                let didEnableTorch = captureDevice.isTorchActive || captureDevice.torchMode == .on
+                if !didEnableTorch {
+                    bestEffortTurnTorchOff(on: captureDevice)
+                }
+                return didEnableTorch
+            }
+
+            return !captureDevice.isTorchActive && captureDevice.torchMode == .off
+        }
+
+        private func currentTorchAvailability(for device: AVCaptureDevice) -> Bool {
+            device.hasTorch && device.isTorchAvailable && device.isTorchModeSupported(.on)
+        }
+
+        private func bestEffortTurnTorchOff(on device: AVCaptureDevice) {
+            guard device.hasTorch else { return }
+
+            do {
+                try device.lockForConfiguration()
+                defer { device.unlockForConfiguration() }
+                if device.isTorchActive || device.torchMode != .off {
+                    device.torchMode = .off
+                }
+            } catch {
+                return
+            }
+        }
+
+        private func reportTorchAvailability(_ isAvailable: Bool) {
+            guard lastReportedTorchAvailability != isAvailable else { return }
+            lastReportedTorchAvailability = isAvailable
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.onTorchAvailabilityChanged(isAvailable)
+            }
+        }
+
+        private func requestTorchStateReset() {
+            guard desiredTorchOn else { return }
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.onTorchStateResetRequested()
+            }
         }
 
         private func reportSessionReadyIfNeeded() {
@@ -251,8 +418,8 @@ struct BarcodeScannerView: UIViewRepresentable {
 
             didCaptureCode = true
             sessionQueue.async { [weak self] in
-                guard let self, self.session.isRunning else { return }
-                self.session.stopRunning()
+                guard let self else { return }
+                self.forceTorchOffAndStopSessionIfNeeded(resetDesiredTorch: true)
             }
 
             // Feedback sonoro
@@ -278,6 +445,8 @@ struct ScannerView: View {
     @State private var screenState: ScannerScreenState = .authorizing
     @State private var didRunInitialEvaluation = false
     @State private var didRequestAccess = false
+    @State private var torchRequestedOn = false
+    @State private var isTorchAvailable = false
 
     init(
         title: String = L("scanner.default_title"),
@@ -299,6 +468,7 @@ struct ScannerView: View {
         .onAppear {
             guard !didRunInitialEvaluation else { return }
             didRunInitialEvaluation = true
+            resetTorchUIState()
             refreshScannerState(requestAccessIfNeeded: true)
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -311,9 +481,12 @@ struct ScannerView: View {
         if screenState.showsScannerView {
             BarcodeScannerView(
                 shouldRunSession: scenePhase == .active,
+                desiredTorchOn: desiredTorchOn,
                 onCodeScanned: handleCodeScanned,
                 onSessionReady: handleSessionReady,
-                onSessionSetupFailed: handleSessionSetupFailed
+                onSessionSetupFailed: handleSessionSetupFailed,
+                onTorchAvailabilityChanged: handleTorchAvailabilityChanged,
+                onTorchStateResetRequested: resetTorchUIState
             )
             .ignoresSafeArea()
 
@@ -365,13 +538,40 @@ struct ScannerView: View {
 
                 Spacer()
 
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.white.opacity(0.9))
-                        .shadow(radius: 4)
+                HStack(spacing: 8) {
+                    if showsTorchToggle {
+                        Button {
+                            torchRequestedOn.toggle()
+                        } label: {
+                            Image(systemName: torchIconName)
+                                .font(.title2)
+                                .foregroundStyle(.white.opacity(0.9))
+                                .shadow(radius: 4)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                        .accessibilityLabel(Text(L("scanner.torch.accessibility.label")))
+                        .accessibilityValue(Text(L(torchAccessibilityValueKey)))
+                        .accessibilityHint(Text(L("scanner.torch.accessibility.hint")))
+                    } else {
+                        Color.clear
+                            .frame(width: 44, height: 44)
+                            .accessibilityHidden(true)
+                    }
+
+                    Button {
+                        closeScannerAndResetTorch()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .shadow(radius: 4)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .accessibilityLabel(Text(L("common.close")))
                 }
             }
 
@@ -391,7 +591,7 @@ struct ScannerView: View {
 
     private func handleCodeScanned(_ code: String) {
         onCodeScanned(code)
-        dismiss()
+        closeScannerAndResetTorch()
     }
 
     private func handleSessionReady() {
@@ -402,6 +602,7 @@ struct ScannerView: View {
     private func handleSessionSetupFailed() {
         switch screenState {
         case .startingSession, .ready:
+            resetTorchUIState()
             screenState = .sessionSetupFailed
         default:
             break
@@ -419,8 +620,10 @@ struct ScannerView: View {
                 preserveOperationalState: shouldPreserveOperationalState
             )
         case .inactive, .background:
+            resetTorchUIState()
             break
         @unknown default:
+            resetTorchUIState()
             break
         }
     }
@@ -433,6 +636,7 @@ struct ScannerView: View {
 
         switch authorizationStatus {
         case .notDetermined:
+            resetTorchUIState()
             screenState = .authorizing
 
             guard requestAccessIfNeeded, !didRequestAccess else { return }
@@ -445,13 +649,16 @@ struct ScannerView: View {
             }
 
         case .restricted:
+            resetTorchUIState()
             screenState = .restricted
 
         case .denied:
+            resetTorchUIState()
             screenState = .permissionDenied
 
         case .authorized:
             guard AVCaptureDevice.default(for: .video) != nil else {
+                resetTorchUIState()
                 screenState = .cameraUnavailable
                 return
             }
@@ -465,7 +672,42 @@ struct ScannerView: View {
             }
 
         @unknown default:
+            resetTorchUIState()
             screenState = .sessionSetupFailed
+        }
+    }
+
+    private var desiredTorchOn: Bool {
+        screenState == .ready && scenePhase == .active && torchRequestedOn && isTorchAvailable
+    }
+
+    private var showsTorchToggle: Bool {
+        screenState == .ready && scenePhase == .active && isTorchAvailable
+    }
+
+    private var torchIconName: String {
+        torchRequestedOn ? "flashlight.on.fill" : "flashlight.off.fill"
+    }
+
+    private var torchAccessibilityValueKey: String {
+        torchRequestedOn ? "scanner.torch.accessibility.value.on" : "scanner.torch.accessibility.value.off"
+    }
+
+    private func resetTorchUIState() {
+        torchRequestedOn = false
+    }
+
+    private func closeScannerAndResetTorch() {
+        resetTorchUIState()
+        DispatchQueue.main.async {
+            dismiss()
+        }
+    }
+
+    private func handleTorchAvailabilityChanged(_ isAvailable: Bool) {
+        isTorchAvailable = isAvailable
+        if !isAvailable {
+            resetTorchUIState()
         }
     }
 

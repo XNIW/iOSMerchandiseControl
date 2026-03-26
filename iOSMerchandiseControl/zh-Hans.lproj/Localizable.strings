@@ -89,6 +89,10 @@
 "scanner.fallback.camera_unavailable.message" = "此设备没有可用的相机。请使用带相机的 iPhone 或 iPad 扫描条码。";
 "scanner.fallback.session_failed.message" = "当前无法启动相机。请关闭扫描器后重试。";
 "scanner.action.open_settings" = "打开设置";
+"scanner.torch.accessibility.label" = "手电筒";
+"scanner.torch.accessibility.value.on" = "已打开";
+"scanner.torch.accessibility.value.off" = "已关闭";
+"scanner.torch.accessibility.hint" = "打开或关闭手电筒，以便更清楚地扫描条码。";
 
 /* Product shared */
 "product.no_name" = "无名称";

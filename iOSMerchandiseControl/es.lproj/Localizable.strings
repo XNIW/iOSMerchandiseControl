@@ -89,6 +89,10 @@
 "scanner.fallback.camera_unavailable.message" = "No hay ninguna cámara disponible en este dispositivo. Usa un iPhone o iPad con cámara para escanear códigos de barras.";
 "scanner.fallback.session_failed.message" = "La cámara no puede iniciarse en este momento. Cierra y vuelve a abrir el escáner para intentarlo de nuevo.";
 "scanner.action.open_settings" = "Abrir ajustes";
+"scanner.torch.accessibility.label" = "Linterna";
+"scanner.torch.accessibility.value.on" = "Encendida";
+"scanner.torch.accessibility.value.off" = "Apagada";
+"scanner.torch.accessibility.hint" = "Activa o desactiva la linterna para leer mejor el código de barras.";
 
 /* Product shared */
 "product.no_name" = "Sin nombre";

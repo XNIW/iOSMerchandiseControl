@@ -89,6 +89,10 @@
 "scanner.fallback.camera_unavailable.message" = "No camera is available on this device. Use an iPhone or iPad with a camera to scan barcodes.";
 "scanner.fallback.session_failed.message" = "The camera cannot start right now. Close and reopen the scanner to try again.";
 "scanner.action.open_settings" = "Open settings";
+"scanner.torch.accessibility.label" = "Flashlight";
+"scanner.torch.accessibility.value.on" = "On";
+"scanner.torch.accessibility.value.off" = "Off";
+"scanner.torch.accessibility.hint" = "Turns the flashlight on or off to help scan the barcode.";
 
 /* Product shared */
 "product.no_name" = "No name";
