@@ -4,16 +4,25 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. **TASK-030** è **BLOCKED** dopo review tecnica: codice coerente dopo fix diretto, ma chiusura sospesa per runtime gap M-1…M-10 con workbook canonico.
+Nessun task attivo. **TASK-037** è **DONE** dopo review tecnica con fix diretti piccoli e test verde.
 
 ## Stato globale
 IDLE
+> **2026-04-27 (user override):** **TASK-031** promosso ad **ACTIVE / EXECUTION** con responsabile operativo **Cursor/Codex executor**. Planning approvato; perimetro limitato a import/header recognition in `ExcelAnalyzer`, senza Supabase, senza `RowDetailSheetView`, senza redesign PreGenerate.
+> **2026-04-27 (handoff):** execution TASK-031 completata da **Cursor/Codex** con build Debug Simulator PASS e fixture documentali A-F sotto `docs/fixtures/TASK-031/`; handoff a **CLAUDE / REVIEW**. Nessun Supabase / nessun `RowDetailSheetView` / nessun redesign PreGenerate.
+> **2026-04-27 (review/close):** **TASK-031** review tecnica completata da **Claude Code reviewer/fixer** con esito **APPROVED_FIXED_DIRECTLY**: fix diretto limitato a commento `ColumnStatus.normalized` e soglia più conservativa per header scoring; build Debug Simulator PASS; task chiuso **DONE** su autorizzazione utente esplicita.
+> **2026-04-27 (user override):** **TASK-036** promosso ad **ACTIVE / EXECUTION** con responsabile operativo **Cursor/Codex executor**. Nota: l'utente ha proposto `TASK-032`, ma `TASK-032` esiste gia' per un task GeneratedView; per coerenza ID/path viene usato il follow-up gia' presente `TASK-036`. TASK-031 resta DONE e non viene riaperta.
+> **2026-04-27 (handoff):** execution TASK-036 completata da **Cursor/Codex** con build Debug Simulator PASS e fixture documentali sotto `docs/fixtures/TASK-036/`; handoff a **CLAUDE / REVIEW**. Nessun Supabase / nessun `RowDetailSheetView` / nessun redesign PreGenerate.
+> **2026-04-27 (review/close):** **TASK-036** review tecnica completata da **Claude Code reviewer/fixer** con esito **APPROVED_FIXED_DIRECTLY**: fix diretto limitato a righe dirette table/section, scoring piu' conservativo decorative-only, fixture rafforzate e assegnazione per indice logico; build Debug Simulator PASS; task chiuso **DONE** su autorizzazione utente esplicita.
+> **2026-04-27 (user override):** **TASK-037** creato e promosso ad **ACTIVE / EXECUTION** con responsabile operativo **Cursor/Codex executor** per aggiungere un target XCTest minimale coerente col perimetro TASK-036. TASK-031 e TASK-036 restano DONE e non vengono riaperti.
+> **2026-04-27 (handoff):** execution TASK-037 completata da **Cursor/Codex**: target `iOSMerchandiseControlTests`, scheme condiviso, fixture TASK-036 nel bundle test e suite `ExcelAnalyzerHTMLParsingTests`; `xcodebuild test` PASS su iPhone 16e Simulator; handoff a **CLAUDE / REVIEW**.
+> **2026-04-27 (review/close):** **TASK-037** review tecnica completata da **Claude Code reviewer/fixer** con esito **APPROVED_FIXED_DIRECTLY**: fix diretto limitato a README fixture e rafforzamento multi-table con tabella decorativa post-dati; build Debug Simulator PASS; test XCTest PASS 5/5; task chiuso **DONE** su autorizzazione utente esplicita.
 > **2026-04-27 (user override):** **TASK-030** promosso ad **ACTIVE / EXECUTION** con responsabile operativo **CURSOR**. Obiettivo: finalizzare il flusso full-database import/export multi-sheet prima di Supabase, con validazione reimport idempotente, diff non-product e progress/cancellation UX.
 > **2026-04-27 (handoff):** execution reale TASK-030 eseguita da **CURSOR** con build verde, probe runtime parziale, fix minimo UX no-work e handoff a **CLAUDE / REVIEW**. Matrice runtime M-1…M-10 non chiusa per fixture temporanee non valide come evidenza deterministica.
 > **2026-04-27 (review):** **TASK-030** review tecnica completata da **CLAUDE CODE** con esito **CHANGES_REQUIRED_FIXED_DIRECTLY**: fix diretto limitato a guardia UX no-work; build PASS; task **non DONE** e **BLOCKED** in attesa di runtime validation canonica o accettazione esplicita del gap.
 > **2026-04-26 (review):** **TASK-029** completato come audit documentale/tracking-only. Matrice, tassonomia, test pack A–E e raccomandazione prossima **TASK-030** approvate. Nessun codice Swift/Supabase modificato.
 > **User override 2026-04-26 (invariato per TASK-028):** **TASK-028** sospeso in **BLOCKED** dopo validazione runtime/visiva read-only positiva ma incompleta. Build PASS, iPhone piccolo light/dark PASS, complete/incomplete PASS, campi secondari PASS sul caso completo. Nessuna regressione TASK-028 rilevata e nessun FIX richiesto. Test residui rinviati: iPhone grande row detail, prev/next multi-riga, scanner reopen dopo permesso camera, caso dati mancanti/ambigui.
-> **Nota corrente:** nessun task attivo; nessun lavoro Supabase incluso.
+> **Nota corrente:** nessun task attivo; TASK-031, TASK-036 e TASK-037 completati; nessun lavoro Supabase incluso.
 
 ## Workflow task attivo
 - **Task attivo:** —
@@ -22,7 +31,7 @@ IDLE
 - **Fase:** —
 - **Responsabile:** —
 - **Ultimo aggiornamento:** 2026-04-27
-- **Nota tracking:** TASK-030 bloccato dopo review tecnica; serve nuova execution runtime con workbook canonico o accettazione esplicita del gap residuo.
+- **Nota tracking:** TASK-037 chiusa DONE dopo review/fix diretto e test verde.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -70,7 +79,7 @@ Qualunque altra transizione è invalida.
 - Fase attuale: —
 - Responsabile attuale: —
 - Ultimo aggiornamento: 2026-04-27
-- Nota tracking: nessun task attivo; TASK-030 è BLOCKED dopo review tecnica per runtime gap canonico.
+- Nota tracking: nessun task attivo; TASK-037 completata.
 
 Task bloccati non attivi:
 - Task ID: TASK-030
@@ -197,7 +206,7 @@ Task bloccati non attivi:
 
 ## Backlog
 (Task futuri ordinati per priorità — aggiornabile solo da Claude o dall'utente, con motivazione esplicita)
-Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase.
+Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase. **TASK-036** aggiunto 2026-04-27 come follow-up documentale post-**TASK-031** (HTML avanzato: colspan/rowspan, multi-table, XCTest opzionale). **TASK-037** aggiunto 2026-04-27 da user override per creare il target XCTest minimale sulle fixture TASK-036.
 
 | ID | Titolo | Stato | Priorità |
 |----|--------|-------|----------|
@@ -230,11 +239,13 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-028 | GeneratedView: Row Detail UX Refinement vs Android | BLOCKED | HIGH |
 | TASK-029 | iOS Completion Tracking Cleanup + Manual Validation Matrix | DONE | HIGH |
 | TASK-030 | Full-database import/export finalization: reimport idempotency + non-product diff + progress UX | BLOCKED | HIGH |
-| TASK-031 | Import recognition hardening: canonical headers HTML/Excel | TODO | MEDIUM |
+| TASK-031 | Import recognition hardening: canonical headers HTML/Excel | DONE | MEDIUM |
 | TASK-032 | GeneratedView multi-row navigation validation + missing-data scenarios | TODO | MEDIUM |
 | TASK-033 | Supabase schema audit and iOS/Android model mapping | TODO | HIGH |
 | TASK-034 | Supabase iOS foundation: client config + DTO readonly | TODO | MEDIUM |
 | TASK-035 | Manual Supabase pull to SwiftData dry-run | TODO | MEDIUM |
+| TASK-036 | Import HTML advanced table parsing: colspan/rowspan/multi-table hardening | DONE | MEDIUM |
+| TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | DONE | MEDIUM |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -249,6 +260,9 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | 2026-03-23 |
 | TASK-010 | Localizzazione UI multilingua | 2026-03-25 |
 | TASK-029 | iOS Completion Tracking Cleanup + Manual Validation Matrix | 2026-04-26 |
+| TASK-031 | Import recognition hardening: canonical headers HTML/Excel | 2026-04-27 |
+| TASK-036 | Import HTML advanced table parsing: colspan/rowspan/multi-table hardening | 2026-04-27 |
+| TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | 2026-04-27 |
 
 ## Blocchi e dipendenze
 - TASK-028 bloccato.
@@ -305,6 +319,9 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - User override: se l'utente dà un'istruzione in conflitto col workflow, gli agent possono seguirla ma devono segnalare l'impatto
 - 2026-04-26: TASK-029 completato come audit documentale/tracking-only. Matrice, tassonomia, test pack e raccomandazione prossima TASK-030 approvate. Nessun codice Swift/Supabase modificato.
 - User override 2026-04-26: TASK-028 sospeso in BLOCKED dopo validazione runtime/visiva positiva ma incompleta. L'utente ha scelto di mettere in pausa i test residui e proseguire con i prossimi task di completamento iOS. Creati backlog TASK-029…TASK-035 per cleanup, completamento iOS, hardening import e preparazione Supabase.
+- Tracking 2026-04-27: **TASK-036** promosso ad **ACTIVE / EXECUTION** come follow-up separato post-**TASK-031** DONE: parsing HTML avanzato (`colspan`/`rowspan`, scelta tabella, rumore pre-header). Nota: non creato un nuovo `TASK-032` per evitare collisione con il `TASK-032` GeneratedView gia' esistente.
+- Handoff 2026-04-27: execution **TASK-036** completata da Cursor/Codex; build Debug Simulator PASS; fixture `docs/fixtures/TASK-036/` create; task passato a **REVIEW**.
+- Chiusura 2026-04-27: **TASK-036** chiusa **DONE** dopo review tecnica con fix diretti piccoli; build Debug Simulator PASS; nessun Supabase / nessun `RowDetailSheetView` / nessun redesign PreGenerate.
 - User override 2026-03-21: autorizzato riallineamento minimo del tracking da parte di Codex per evitare il blocco operativo tra file task e MASTER-PLAN durante l'avvio di TASK-008
 - User override 2026-03-23: autorizzata da utente la sospensione di TASK-011 e la creazione/attivazione di TASK-022; backlog e tracking riallineati di conseguenza
 - User override 2026-03-23: per TASK-022 il planning operativo viene svolto da Codex; il task resta in PLANNING fino all'avvio esplicito dell'execution

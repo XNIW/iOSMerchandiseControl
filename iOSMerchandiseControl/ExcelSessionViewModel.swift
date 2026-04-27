@@ -11,7 +11,7 @@ import SwiftSoup
 enum ColumnStatus {
     case exactMatch      // header = "barcode" → normalized = "barcode"
     case aliasMatch      // header = "codice a barre" → normalized = "barcode"
-    case normalized      // header = "Product name" → normalized = "productname"
+    case normalized      // header leggibile non canonico mantenuto come token normalizzato
     case generated       // normalized = "col1", "col2"...
     case emptyOriginal   // header originale vuoto
 }
@@ -1047,13 +1047,12 @@ nonisolated struct ExcelAnalyzer {
             "Existencias", "Stock Quantity", "cantid"
         ]),
         ("purchasePrice", [
-            "purchaseprice", "new purchase price", "purchase_price",
+            "purchaseprice", "purchase", "new purchase price", "purchase_price",
             "进价", "buy price", "prezzo acquisto", "cost",
-            "unit price", "prezzo", "precio de compra", "precio compra",
-            "costo", "precio unitario", "precio adquisición", "precio",
-            "v. unit. bruto", "单价", "价格", "原价", "售价",
+            "precio de compra", "precio compra",
+            "acquisto", "compra", "costo", "precio adquisición",
             "新进价", "nuovo prezzo acquisto", "nuevo precio de compra",
-            "折前单价(含税)", "pre/u"
+            "折前单价(含税)"
         ]),
         ("totalPrice", [
             "totalprice", "total_price", "总价", "totale", "importo",
@@ -1107,18 +1106,19 @@ nonisolated struct ExcelAnalyzer {
             "remise", "d%", "d.%", "dto%"
         ]),
         ("discountedPrice", [
-            "discountedprice", "prezzoscontato", "precio con descuento",
+            "discountedprice", "discounted", "prezzoscontato", "precio con descuento",
             "precio descontado", "折后价", "prezzo scontato",
             "precio rebajado", "rebate price", "after discount price",
-            "final price", "prezzo finale", "pre.-d%",
-            "折后单价(含税)"
+            "final price", "final", "scontato", "prezzo finale", "pre.-d%",
+            "折后单价(含税)", "折后"
         ]),
         ("retailPrice", [
-            "retailprice", "retail_price", "零售价", "prezzo vendita",
+            "retailprice", "retail", "retail_price", "零售价", "prezzo vendita",
             "prezzo retail", "sale price", "listino", "precio de venta",
-            "precio venta", "precio al público", "precio retail",
+            "vendita", "venta", "precio venta", "precio al público", "precio retail",
             "precio al por menor", "nuovo prezzo vendita",
-            "新零售价", "nuevo precio de venta", "new retail price"
+            "新零售价", "nuevo precio de venta", "new retail price",
+            "售价", "零售"
         ]),
         ("realQuantity", [
             "实点数量", "counted quantity", "quantità contata",
@@ -1144,6 +1144,38 @@ nonisolated struct ExcelAnalyzer {
             "old retail price"
         ])
     ]
+
+    /// Mappa stabile token normalizzato → ruolo interno usato dall'app.
+    /// Registra sia le chiavi canoniche (`productName`) sia gli alias localizzati.
+    private static let canonicalHeaderTokenMap: [String: String] = {
+        var map: [String: String] = [:]
+
+        func register(_ rawValue: String, as key: String) {
+            let token = normalizeToken(rawValue, debug: false)
+            guard !token.isEmpty else { return }
+            if map[token] == nil {
+                map[token] = key
+            }
+        }
+
+        for (key, patterns) in standardAliases {
+            register(key, as: key)
+            for pattern in patterns {
+                register(pattern, as: key)
+            }
+        }
+
+        return map
+    }()
+
+    private static func canonicalRole(forToken token: String) -> String? {
+        canonicalHeaderTokenMap[token]
+    }
+
+    private static func canonicalRole(forHeader rawHeader: String) -> String? {
+        let token = normalizeToken(rawHeader, debug: false)
+        return canonicalRole(forToken: token)
+    }
     
     /// Ritorna true se `original` è un alias conosciuto per la key `normalized`
     static func isAliasMatch(original: String, normalized: String) -> Bool {
@@ -1151,18 +1183,7 @@ nonisolated struct ExcelAnalyzer {
         if original == normalized { return false }
 
         let collapsed = normalizeToken(original)
-
-        // Cerchiamo solo tra gli alias della key corrispondente
-        for (key, patterns) in standardAliases where key == normalized {
-            for pattern in patterns {
-                let normPattern = normalizeToken(pattern)
-                if !normPattern.isEmpty && normPattern == collapsed {
-                    return true
-                }
-            }
-        }
-
-        return false
+        return canonicalRole(forToken: collapsed) == normalized
     }
 
     /// Token che identificano righe di riepilogo ("totale", "subtotal", ecc.)
@@ -1304,6 +1325,25 @@ nonisolated struct ExcelAnalyzer {
     // MARK: HTML → righe
 
     #if canImport(SwiftSoup)
+    private struct HTMLRowspanCell {
+        let value: String
+        var remainingRows: Int
+    }
+
+    private struct HTMLTableScore {
+        let score: Int
+        let canonicalMatches: Int
+        let compatibleDataRows: Int
+        let density: Double
+        let width: Int
+        let rowCount: Int
+    }
+
+    private struct HTMLTableCandidate {
+        let rows: [[String]]
+        let score: HTMLTableScore
+    }
+
     private static func rowsFromHTML(data: Data) throws -> [[String]] {
         guard let html =
                 String(data: data, encoding: .utf8) ??
@@ -1313,36 +1353,233 @@ nonisolated struct ExcelAnalyzer {
         }
 
         let doc = try SwiftSoup.parse(html)
-        let trs = try doc.select("tr")
+        let tables = try doc.select("table").array()
 
+        guard !tables.isEmpty else {
+            return try parseHTMLRows(from: try doc.select("tr").array())
+        }
+
+        let candidates = try tables
+            .map { table -> HTMLTableCandidate in
+                let rows = try parseHTMLRows(from: htmlRows(in: table))
+                return HTMLTableCandidate(
+                    rows: rows,
+                    score: scoreHTMLTable(rows)
+                )
+            }
+            .filter { !$0.rows.isEmpty }
+
+        guard let best = candidates.max(by: { lhs, rhs in
+            if lhs.score.score != rhs.score.score {
+                return lhs.score.score < rhs.score.score
+            }
+            if lhs.score.canonicalMatches != rhs.score.canonicalMatches {
+                return lhs.score.canonicalMatches < rhs.score.canonicalMatches
+            }
+            if lhs.score.compatibleDataRows != rhs.score.compatibleDataRows {
+                return lhs.score.compatibleDataRows < rhs.score.compatibleDataRows
+            }
+            return lhs.score.density < rhs.score.density
+        }) else {
+            return []
+        }
+
+        guard best.score.score > 0 else {
+            debugLog("HTML: nessuna tabella dati credibile trovata; ignoro tabelle decorative.", level: .warning)
+            return []
+        }
+
+        debugLog(
+            "HTML: selezionata tabella con \(best.score.rowCount) righe, width=\(best.score.width), match=\(best.score.canonicalMatches), dataRows=\(best.score.compatibleDataRows), score=\(best.score.score).",
+            level: .info
+        )
+
+        return best.rows
+    }
+
+    private static func parseHTMLRows(from trs: [Element]) throws -> [[String]] {
         var result: [[String]] = []
+        var pendingRowspans: [Int: HTMLRowspanCell] = [:]
+        var maxWidth = 0
 
-        for tr in trs.array() {
-            let cells = try tr.select("th,td")
-            var row: [String] = []
-
-            for cell in cells.array() {
-                let raw = try cell.text()
-                    .replacingOccurrences(of: "\u{00A0}", with: " ")
-                let text = raw
-                    .replacingOccurrences(of: "\\s*\\n\\s*",
-                                          with: " ",
-                                          options: .regularExpression)
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                row.append(text)
+        for tr in trs {
+            let directCells = tr.children().array().filter { child in
+                let tag = child.tagName().lowercased()
+                return tag == "th" || tag == "td"
             }
 
-            // togliamo eventuali celle vuote in coda
+            var row: [String] = []
+            var columnIndex = 0
+
+            func appendValue(_ value: String, at index: Int) {
+                while row.count <= index {
+                    row.append("")
+                }
+                row[index] = value
+            }
+
+            func consumePendingCell(at index: Int) -> Bool {
+                guard var pending = pendingRowspans[index] else { return false }
+                appendValue(pending.value, at: index)
+                pending.remainingRows -= 1
+                if pending.remainingRows > 0 {
+                    pendingRowspans[index] = pending
+                } else {
+                    pendingRowspans.removeValue(forKey: index)
+                }
+                return true
+            }
+
+            for cell in directCells {
+                while consumePendingCell(at: columnIndex) {
+                    columnIndex += 1
+                }
+
+                let text = try htmlCellText(cell)
+                let colspan = htmlSpanValue(cell, attribute: "colspan")
+                let rowspan = htmlSpanValue(cell, attribute: "rowspan")
+
+                for offset in 0..<colspan {
+                    let targetColumn = columnIndex + offset
+                    appendValue(text, at: targetColumn)
+
+                    if rowspan > 1 {
+                        pendingRowspans[targetColumn] = HTMLRowspanCell(
+                            value: text,
+                            remainingRows: rowspan - 1
+                        )
+                    }
+                }
+
+                columnIndex += colspan
+            }
+
+            if let lastPendingColumn = pendingRowspans.keys.max() {
+                while columnIndex <= lastPendingColumn {
+                    if consumePendingCell(at: columnIndex) {
+                        columnIndex += 1
+                    } else {
+                        appendValue("", at: columnIndex)
+                        columnIndex += 1
+                    }
+                }
+            }
+
             while let last = row.last, last.isEmpty {
                 row.removeLast()
             }
 
             if row.contains(where: { !$0.isEmpty }) {
+                maxWidth = max(maxWidth, row.count)
                 result.append(row)
             }
         }
 
-        return result
+        guard maxWidth > 0 else { return [] }
+        return result.map { row in
+            if row.count >= maxWidth { return row }
+            return row + Array(repeating: "", count: maxWidth - row.count)
+        }
+    }
+
+    private static func htmlRows(in table: Element) -> [Element] {
+        var rows: [Element] = []
+
+        for child in table.children().array() {
+            let tag = child.tagName().lowercased()
+            if tag == "tr" {
+                rows.append(child)
+            } else if tag == "thead" || tag == "tbody" || tag == "tfoot" {
+                rows.append(contentsOf: child.children().array().filter {
+                    $0.tagName().lowercased() == "tr"
+                })
+            }
+        }
+
+        return rows
+    }
+
+    private static func htmlCellText(_ cell: Element) throws -> String {
+        let raw = try cell.text()
+            .replacingOccurrences(of: "\u{00A0}", with: " ")
+        return raw
+            .replacingOccurrences(of: "\\s*\\n\\s*",
+                                  with: " ",
+                                  options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func htmlSpanValue(_ cell: Element, attribute: String) -> Int {
+        let raw = (try? cell.attr(attribute)) ?? ""
+        let value = Int(raw.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 1
+        return min(max(value, 1), 100)
+    }
+
+    private static func scoreHTMLTable(_ rows: [[String]]) -> HTMLTableScore {
+        guard !rows.isEmpty else {
+            return HTMLTableScore(
+                score: Int.min,
+                canonicalMatches: 0,
+                compatibleDataRows: 0,
+                density: 0,
+                width: 0,
+                rowCount: 0
+            )
+        }
+
+        let rowCount = rows.count
+        let width = rows.map(\.count).max() ?? 0
+        let totalCells = rows.reduce(0) { $0 + $1.count }
+        let nonEmptyCells = rows.reduce(0) { partial, row in
+            partial + row.count(where: {
+                !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            })
+        }
+        let density = totalCells > 0 ? Double(nonEmptyCells) / Double(totalCells) : 0
+        let candidate = bestCanonicalHeaderCandidate(in: rows)
+        let canonicalMatches = candidate?.canonicalMatches ?? 0
+        let dataStart = candidate.map { $0.index + 1 } ?? 0
+        let compatibleDataRows = rows.dropFirst(dataStart).count(where: isHTMLCompatibleDataRow)
+
+        var score = 0
+        score += canonicalMatches * 50
+        score += min(compatibleDataRows, 20) * 10
+        score += Int(density * 20)
+        score += min(width, 12) * 2
+
+        if rowCount < 2 { score -= 30 }
+        if width < 3 { score -= 25 }
+        if compatibleDataRows == 0 {
+            score -= canonicalMatches > 0 ? 300 : 60
+        }
+        if rowCount <= 2 && canonicalMatches == 0 { score -= 20 }
+
+        return HTMLTableScore(
+            score: score,
+            canonicalMatches: canonicalMatches,
+            compatibleDataRows: compatibleDataRows,
+            density: density,
+            width: width,
+            rowCount: rowCount
+        )
+    }
+
+    private static func isHTMLCompatibleDataRow(_ row: [String]) -> Bool {
+        var numericCount = 0
+        var textCount = 0
+
+        for cell in row {
+            let trimmed = cell.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty { continue }
+
+            if isNumericCell(trimmed) {
+                numericCount += 1
+            } else {
+                textCount += 1
+            }
+        }
+
+        return numericCount >= 3 && textCount >= 1
     }
     #else
     private static func rowsFromHTML(data: Data) throws -> [[String]] {
@@ -1586,12 +1823,17 @@ nonisolated struct ExcelAnalyzer {
             )
          }
 
-        // 6. Euristiche sui dati per colonne mancanti
-        headerMap = applyHeuristics(
-            headerMap: headerMap,
-            dataRows: filteredDataRows,
-            normalizedHeader: normalizedHeader
-        )
+        // 6. Euristiche sui dati per colonne mancanti.
+        // Se non esiste una riga header reale, non promuoviamo colonne solo dai valori.
+        if hasHeader {
+            headerMap = applyHeuristics(
+                headerMap: headerMap,
+                dataRows: filteredDataRows,
+                normalizedHeader: normalizedHeader
+            )
+        } else {
+            debugLog("Header sintetico: euristiche dati disabilitate per evitare falsi riconoscimenti.", level: .info)
+        }
 
         // 7. Assicura che le colonne obbligatorie (barcode, productName, purchasePrice)
         // esistano e siano in ordine logico
@@ -1647,7 +1889,7 @@ nonisolated struct ExcelAnalyzer {
     // MARK: - Normalizzazione Header (Compatibile con Android)
 
     /// Helper comune per header e alias (equivalente a normalizeHeader di Kotlin)
-    private static func normalizeToken(_ s: String) -> String {
+    private static func normalizeToken(_ s: String, debug: Bool = true) -> String {
         // 1. Rimuove accenti / normalizza (simile a NFD + remove diacritics)
         let folded = s.folding(options: .diacriticInsensitive, locale: .current)
 
@@ -1666,7 +1908,7 @@ nonisolated struct ExcelAnalyzer {
         let result = String(String.UnicodeScalarView(filteredScalars)).lowercased()
         
         #if DEBUG
-        if s != result && !result.isEmpty {
+        if debug && s != result && !result.isEmpty {
             debugLog("normalizeToken: '\(s)' → '\(result)'", level: .info)
         }
         #endif
@@ -1689,18 +1931,12 @@ nonisolated struct ExcelAnalyzer {
             return generated
         }
 
-        // Match ESATTO con gli alias (come in Kotlin: normCol == normalizeHeader(alias))
-        for (key, patterns) in standardAliases {
-            for pattern in patterns {
-                let normPattern = normalizeToken(pattern)
-
-                if !normPattern.isEmpty && collapsed == normPattern {
-                    #if DEBUG
-                    debugLog("→ Match trovato: '\(collapsed)' → '\(key)' (pattern: '\(pattern)')", level: .success)
-                    #endif
-                    return key
-                }
-            }
+        // Match canonico stabile: token normalizzato → ruolo interno esatto.
+        if let canonical = canonicalRole(forToken: collapsed) {
+            #if DEBUG
+            debugLog("→ Match canonico: '\(collapsed)' → '\(canonical)'", level: .success)
+            #endif
+            return canonical
         }
 
         // Nessun alias trovato → uso la versione normalizzata (può essere cinese tipo "条码")
@@ -1714,6 +1950,14 @@ nonisolated struct ExcelAnalyzer {
 
     /// Trova la riga di header e l'indice da cui iniziano i dati
     private static func findDataHeaderRow(in rows: [[String]]) -> (headerRow: [String], dataStartIndex: Int, hasHeader: Bool) {
+        if let candidate = bestCanonicalHeaderCandidate(in: rows) {
+            debugLog(
+                "Header canonico individuato alla riga \(candidate.index), dati da riga \(candidate.index + 1) (match=\(candidate.canonicalMatches), score=\(candidate.score)).",
+                level: .success
+            )
+            return (rows[candidate.index], candidate.index + 1, true)
+        }
+
         // Heuristica: prima riga che sembra "dati": >=3 numeri e >=1 testo
         var dataRowIdx = -1
         for (idx, row) in rows.enumerated() {
@@ -1749,6 +1993,107 @@ nonisolated struct ExcelAnalyzer {
             let generatedHeader = (0..<colCount).map { "col\($0 + 1)" }
             return (generatedHeader, 0, false)
         }
+    }
+
+    private struct HeaderCandidate {
+        let index: Int
+        let canonicalMatches: Int
+        let score: Int
+    }
+
+    private static func bestCanonicalHeaderCandidate(
+        in rows: [[String]],
+        maxRowsToInspect: Int = 20
+    ) -> HeaderCandidate? {
+        let limit = min(maxRowsToInspect, rows.count)
+        guard limit > 0 else { return nil }
+
+        var best: HeaderCandidate?
+
+        for index in 0..<limit {
+            guard index + 1 < rows.count else { continue }
+
+            let cells = rows[index].map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines)
+            }.filter { !$0.isEmpty }
+
+            guard cells.count >= 2 else { continue }
+
+            let canonicalRoles = cells.compactMap { canonicalRole(forHeader: $0) }
+            let uniqueCanonicalRoles = Set(canonicalRoles)
+            let essentialMatches = uniqueCanonicalRoles.intersection(["barcode", "productName", "purchasePrice"]).count
+            let canonicalMatches = canonicalRoles.count
+
+            guard canonicalMatches >= 2,
+                  uniqueCanonicalRoles.count >= 2,
+                  canonicalMatches >= 3 || essentialMatches > 0 else {
+                continue
+            }
+
+            let numericCount = cells.count(where: { isNumericCell($0) })
+            let textCount = cells.count - numericCount
+            let uniqueCount = Set(cells.map { normalizeToken($0, debug: false) }).count
+            let numericRatio = Double(numericCount) / Double(cells.count)
+
+            guard hasFollowingData(after: index, in: rows, expectedWidth: cells.count) else {
+                continue
+            }
+
+            var score = canonicalMatches * 12
+            score += min(textCount, 8) * 2
+            score += min(uniqueCount, 8)
+            score += essentialMatches * 4
+
+            if numericRatio > 0.5 { score -= 8 }
+            if numericRatio > 0.8 { score -= 12 }
+            if numericCount >= max(2, textCount) { score -= 4 }
+
+            let candidate = HeaderCandidate(
+                index: index,
+                canonicalMatches: canonicalMatches,
+                score: score
+            )
+
+            if let current = best {
+                if candidate.score > current.score ||
+                   (candidate.score == current.score && candidate.canonicalMatches > current.canonicalMatches) {
+                    best = candidate
+                }
+            } else {
+                best = candidate
+            }
+        }
+
+        return best
+    }
+
+    private static func hasFollowingData(
+        after headerIndex: Int,
+        in rows: [[String]],
+        expectedWidth: Int
+    ) -> Bool {
+        let start = headerIndex + 1
+        guard start < rows.count else { return false }
+
+        let end = min(rows.count, start + 5)
+        let minimumCells = max(2, min(expectedWidth, 3))
+
+        for row in rows[start..<end] {
+            let nonEmptyCount = row.count(where: {
+                !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            })
+            if nonEmptyCount >= minimumCells {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private static func isNumericCell(_ cell: String) -> Bool {
+        let trimmed = cell.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        return trimmed.replacingOccurrences(of: ",", with: ".").toDouble() != nil
     }
     
     /// Filtra le righe "valide", come in Android:
@@ -1862,6 +2207,34 @@ nonisolated struct ExcelAnalyzer {
             return (0..<colCount).filter { !result.values.contains($0) }
         }
 
+        func headerToken(at col: Int) -> String {
+            guard normalizedHeader.indices.contains(col) else { return "" }
+            return normalizeToken(normalizedHeader[col], debug: false)
+        }
+
+        func headerToken(at col: Int, containsAny signals: [String]) -> Bool {
+            let token = headerToken(at: col)
+            return signals.contains { token.contains($0) }
+        }
+
+        func hasPurchaseSignal(at col: Int) -> Bool {
+            headerToken(at: col, containsAny: [
+                "purchase", "acquisto", "compra", "costo", "cost", "进价"
+            ])
+        }
+
+        func hasDiscountedSignal(at col: Int) -> Bool {
+            headerToken(at: col, containsAny: [
+                "discounted", "scont", "descuento", "rebaj", "final", "折后"
+            ])
+        }
+
+        func hasRetailSignal(at col: Int) -> Bool {
+            headerToken(at: col, containsAny: [
+                "retail", "vendita", "venta", "零售", "售价"
+            ])
+        }
+
         // 1) Barcode: molte celle con 8/12/13 cifre
         if result["barcode"] == nil {
             for col in unusedColumns() {
@@ -1899,6 +2272,8 @@ nonisolated struct ExcelAnalyzer {
         // 3) purchasePrice: colonna numerica positiva simile a quantity
         if result["purchasePrice"] == nil {
             for col in unusedColumns() {
+                guard hasPurchaseSignal(at: col) else { continue }
+
                 let nums = dataRows.compactMap { row -> Double? in
                     guard col < row.count else { return nil }
                     return row[col].toDouble()
@@ -2003,28 +2378,16 @@ nonisolated struct ExcelAnalyzer {
                    Double(nums.count) >= 0.7 * Double(dataRows.count) &&
                    nums.allSatisfy({ $0 > 0 }) {
 
-                    let headerLower = normalizedHeader[col].lowercased()
-
                     // Priorità al nome della colonna
-                    if headerLower.contains("discount") ||
-                       headerLower.contains("scont") ||
-                       headerLower.contains("rebaj") ||
-                       headerLower.contains("折后") {
+                    if hasDiscountedSignal(at: col) {
                         result["discountedPrice"] = col
                         debugLog("Colonna \(col) identificata come discountedPrice (nome colonna + valori numerici).", level: .success)
-                    } else if headerLower.contains("retail") ||
-                              headerLower.contains("vendita") ||
-                              headerLower.contains("venta") ||
-                              headerLower.contains("售价") ||
-                              headerLower.contains("零售") {
+                        break
+                    } else if hasRetailSignal(at: col) {
                         result["retailPrice"] = col
                         debugLog("Colonna \(col) identificata come retailPrice (nome colonna + valori numerici).", level: .success)
-                    } else {
-                        // Default: retailPrice
-                        result["retailPrice"] = col
-                        debugLog("Colonna \(col) identificata come retailPrice (valori numerici, nome neutro).", level: .info)
+                        break
                     }
-                    break
                 }
             }
         }
@@ -2267,11 +2630,13 @@ nonisolated struct ExcelAnalyzer {
             normalizedHeader: &normalizedHeader,
             dataRows: dataRows
         )
-        headerMap = applyHeuristics(
-            headerMap: headerMap,
-            dataRows: dataRows,
-            normalizedHeader: normalizedHeader
-        )
+        if normalizedHeader.contains(where: { !isGeneratedColumnName($0) }) {
+            headerMap = applyHeuristics(
+                headerMap: headerMap,
+                dataRows: dataRows,
+                normalizedHeader: normalizedHeader
+            )
+        }
         
         let confidence = calculateAnalysisConfidence(
             header: header,
@@ -2384,6 +2749,13 @@ nonisolated struct ExcelAnalyzer {
     }
     
     // MARK: - Drop wrong header-based mappings (misaligned headers)
+    private static func isGeneratedColumnName(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard trimmed.hasPrefix("col") else { return false }
+        let suffix = trimmed.dropFirst(3)
+        return !suffix.isEmpty && suffix.allSatisfy { $0.isNumber }
+    }
+
     private static func pruneBadMappings(
         headerMap: inout [String: Int],
         normalizedHeader: inout [String],
@@ -2397,6 +2769,7 @@ nonisolated struct ExcelAnalyzer {
         let sample = dataRows.prefix(sampleLimit)
         let sampleCount = sample.count
         guard sampleCount > 0 else { return }
+        let requiredNonBlankCount = min(minNonBlankCount, sampleCount)
 
         // Cache: se per qualche motivo più chiavi puntano alla stessa colonna, non riscansioniamo.
         var nonBlankCountByCol: [Int: Int] = [:]
@@ -2421,7 +2794,7 @@ nonisolated struct ExcelAnalyzer {
             let nonBlank = nonBlankCount(for: col)
             let ratio = Double(nonBlank) / Double(sampleCount)
 
-            if nonBlank < minNonBlankCount || ratio < minNonBlankRatio {
+            if nonBlank < requiredNonBlankCount || ratio < minNonBlankRatio {
                 keysToRemove.append(key)
             }
         }

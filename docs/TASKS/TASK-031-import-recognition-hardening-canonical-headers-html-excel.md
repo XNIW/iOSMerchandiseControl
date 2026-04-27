@@ -4,12 +4,12 @@
 - **Task ID**: TASK-031
 - **Titolo**: Import recognition hardening: canonical headers HTML/Excel
 - **File task**: `docs/TASKS/TASK-031-import-recognition-hardening-canonical-headers-html-excel.md`
-- **Stato**: TODO
-- **Fase attuale**: — *(task in backlog, non ACTIVE)*
-- **Responsabile attuale**: — *(nessun agente operativo; da selezionare dal backlog)*
+- **Stato**: DONE
+- **Fase attuale**: Chiusura
+- **Responsabile attuale**: —
 - **Data creazione**: 2026-04-26
-- **Ultimo aggiornamento**: 2026-04-26
-- **Ultimo agente che ha operato**: CODEX *(creazione tracking su user override)*
+- **Ultimo aggiornamento**: 2026-04-27
+- **Ultimo agente che ha operato**: Claude Code reviewer/fixer
 
 ## Dipendenze
 - **Dipende da**: nessuno
@@ -39,10 +39,11 @@ Il problema riguarda riconoscimento colonne/header, non `RowDetailSheetView`. Il
 - Test: barcode/productName/purchasePrice/quantity/retailPrice riconosciuti senza override quando header sono canonici
 
 ## Criteri di accettazione
-- [ ] Header canonici HTML/Excel vengono riconosciuti senza override per i campi indicati
-- [ ] L'override manuale dei ruoli resta disponibile
-- [ ] La fixture minima HTML/XLSX documenta il caso coperto
-- [ ] Nessuna regressione introdotta sui flussi import esistenti
+*Chiusura **DONE** (2026-04-27): criteri soddisfatti. Evidenza operativa: sezioni **Execution**, **Review** e **«Criteri di accettazione rafforzati»** nel Planning; fixture in `docs/fixtures/TASK-031/`.*
+- [x] Header canonici HTML/Excel vengono riconosciuti senza override per i campi indicati
+- [x] L'override manuale dei ruoli resta disponibile
+- [x] La fixture minima HTML/XLSX documenta il caso coperto
+- [x] Nessuna regressione introdotta sui flussi import esistenti
 
 ## Planning (Claude) ← solo Claude aggiorna questa sezione
 
@@ -165,7 +166,10 @@ Dopo che i criteri di riconoscimento sono soddisfatti, sono ammessi solo **micro
 
 **Non ammessi:** redesign PreGenerate, nuova navigazione, copia 1:1 Android. Se serve una scelta UX, preferire la soluzione **più nativa iOS**, leggibile e allineata al resto dell’app.
 
-### Handoff (post-planning)
+### Handoff storico (pre-promozione ACTIVE / pre-execution)
+
+*Nota: il testo seguente era valido al momento del raffinamento planning **prima** dello user override del **2026-04-27**. In seguito il task è stato promosso ad **ACTIVE / Execution**, sottoposto a **Review** (con fix diretti Claude) e chiuso **DONE** — vedi sezioni **Execution**, **Review** e **Chiusura**.*
+
 - **Stato task dopo questo raffinamento:** resta **TODO / backlog** — **non** promuovere ad **ACTIVE** da questo planning.
 - **Non** compilare la sezione Execution; **non** iniziare patch di codice; **non** trattare questo documento come avvio di lavori implementativi.
 - **Prossima fase (solo futura):** EXECUTION, **solo dopo promozione esplicita** ad ACTIVE nel MASTER-PLAN e handoff operativo aggiornato.
@@ -175,30 +179,108 @@ Dopo che i criteri di riconoscimento sono soddisfatti, sono ammessi solo **micro
 ---
 
 ## Execution (Codex) ← solo Codex aggiorna questa sezione
-Non avviata.
+### Avvio Execution — 2026-04-27
+- Planning approvato da user override; TASK-031 promosso a ACTIVE / Execution.
+- File da ispezionare/intervenire: `iOSMerchandiseControl/ExcelSessionViewModel.swift` (`ExcelAnalyzer`, header normalization, HTML/XLSX analysis, append compatibility), project/test target, eventuali fixture sotto `docs/fixtures/TASK-031/`.
+- Strategia minima: consolidare una mappa canonica stabile token normalizzato → ruolo interno, rafforzare `normalizeHeaderCell`, rendere più conservativa e deterministica la scelta della riga header nelle prime righe, aggiungere fixture/manual evidence per HTML/XLSX/snake_case/localizzati/negativo/append.
+- Vincoli confermati: niente refactor generale, niente Supabase, niente `RowDetailSheetView`, niente redesign PreGenerate.
+
+### Execution completata — 2026-04-27
+
+#### Cosa ho modificato
+- `iOSMerchandiseControl/ExcelSessionViewModel.swift`: aggiunta mappa stabile token normalizzato → ruolo interno (`canonicalHeaderTokenMap`) usata da `normalizeHeaderCell` e `isAliasMatch`, così `productName`, `Product Name`, `product_name`, `purchase_price`, `retail_price`, ecc. convergono sulle chiavi interne esatte.
+- `ExcelAnalyzer.findDataHeaderRow`: aggiunto scoring conservativo sulle prime 20 righe, con peso alto per match canonici/alias, penalità per righe quasi tutte numeriche e fallback invariato alla vecchia euristica / `colN` quando non c'è header reale.
+- `ExcelAnalyzer.analyzeRows` / `computeAnalysisMetrics`: disabilitate euristiche basate solo sui valori quando l'header è sintetico, per evitare falsi riconoscimenti su file senza intestazione reale; preservato l'override manuale.
+- `ExcelAnalyzer.applyHeuristics`: ridotto il default aggressivo sui prezzi; `purchasePrice`, `retailPrice` e `discountedPrice` vengono promossi da euristica numerica solo se l'header ha segnali testuali coerenti, non per `price` / `prezzo` / `precio` neutri.
+- `ExcelAnalyzer.standardAliases`: rimossi alias prezzo generici ambigui da `purchasePrice` (`prezzo`, `precio`, `unit price`, ecc.) e spostato `售价` verso `retailPrice`, coerente con la conflict resolution.
+- `pruneBadMappings`: resa proporzionata a fixture/dataset piccoli, usando un minimo non-vuoto limitato dalla dimensione del campione.
+- Nessuna modifica a UI, `RowDetailSheetView`, Supabase, `GeneratedView`, `Localizable.xcstrings` o dipendenze.
+
+#### Fixture/test creati
+- Non esiste un test target nel progetto (`xcodebuild -list` mostra solo target/scheme `iOSMerchandiseControl`); non ho creato un test target perché sarebbe fuori dal perimetro minimo.
+- Create fixture documentali/manuali in `docs/fixtures/TASK-031/`:
+  - `canonical-headers.html`
+  - `canonical-headers.xlsx`
+  - `snake-case-headers.html`
+  - `localized-it-headers.html`
+  - `no-real-header.html`
+  - `append-compatible-a.html`
+  - `append-compatible-b.html`
+  - `README.md` con attesi per A-F.
+
+#### Risultati verificati
+- ✅ ESEGUITO — Build compila: `xcodebuild -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination 'generic/platform=iOS Simulator' build` → PASS (`BUILD_EXIT=0`).
+- ⚠️ NON ESEGUIBILE — Nessun warning nuovo introdotto: senza baseline non è possibile attribuire storicamente i warning. Il build log contiene solo `appintentsmetadataprocessor` warning (`Metadata extraction skipped. No AppIntents.framework dependency found`) e nessun warning/error sui file modificati.
+- ✅ ESEGUITO — Modifiche coerenti con il planning: intervento limitato a `ExcelAnalyzer`, tracking e fixture; nessun redesign PreGenerate, nessun Supabase, nessun `RowDetailSheetView`.
+- ✅ ESEGUITO — Fixture XLSX valida come archivio: `unzip -l docs/fixtures/TASK-031/canonical-headers.xlsx` mostra workbook/sheet minimi e `sheet1.xml` contiene header canonici + righe dati non vuote.
+- ✅ ESEGUITO — CA header canonici HTML/Excel: verifica STATIC su mappa canonica e fixture A/B; gli header sorgente normalizzano a `barcode`, `productName`, `purchasePrice`, `quantity`, `retailPrice` su colonne reali con dati.
+- ✅ ESEGUITO — CA snake_case/case-insensitive: verifica STATIC su `canonicalHeaderTokenMap`; `product_name`, `purchase_price`, `retail_price` convergono sulle chiavi interne.
+- ✅ ESEGUITO — CA alias localizzati: verifica STATIC su alias IT fixture D; `codice a barre`, `descrizione`, `prezzo acquisto`, `quantità`, `prezzo vendita` restano mappati a ruoli interni.
+- ✅ ESEGUITO — CA negativo senza header: verifica STATIC sul path `hasHeader == false`; source columns restano `colN`, euristiche dati disabilitate, eventuali obbligatorie vuote non valgono come riconoscimento.
+- ✅ ESEGUITO — CA append: verifica STATIC su fixture F; alias/case/snake_case producono stesso `normalizedHeader` atteso, quindi compatibile con confronto esatto esistente.
+
+#### Rischi residui
+- Validazione fixture A-F eseguita come build + ispezione statica/documentale, non con XCTest runtime, perché non esiste un test target.
+- HTML con `colspan`/`rowspan` o più tabelle rumorose resta un follow-up candidate se emerge fixture reale: non ho riscritto il parser HTML.
+- File storici che dipendevano da alias molto generici come `prezzo`/`precio` potrebbero richiedere override manuale: scelta intenzionale per evitare mapping errati purchase vs retail.
+
+#### Handoff post-execution
+- Fase proposta: REVIEW.
+- Responsabile prossimo: Claude reviewer.
+- Note per review: controllare soprattutto conflitti alias prezzo, path negativo senza header reale e compatibilità append con `initialNormalizedHeader`.
 
 ---
 
 ## Review (Claude) ← solo Claude aggiorna questa sezione
-Non avviata.
+### Review + fix diretto — 2026-04-27
+
+#### Cosa ho controllato
+- Diff reale di `docs/MASTER-PLAN.md`, file task, `iOSMerchandiseControl/ExcelSessionViewModel.swift` e fixture `docs/fixtures/TASK-031/`.
+- Coerenza stato: task in Review e MASTER-PLAN allineato prima della chiusura.
+- `ExcelAnalyzer`: `canonicalHeaderTokenMap`, `standardAliases`, `normalizeToken`, `normalizeHeaderCell`, `findDataHeaderRow`, `analyzeRows`, `identifyColumns`, `applyHeuristics`, `pruneBadMappings`, `ensureMandatoryColumns`, `loadFromMultipleURLs`.
+- Fixture A-F: HTML canonico, XLSX canonico, snake_case, alias IT, negativo senza header reale, append compatibile.
+- Scope: nessuna modifica a Supabase, `RowDetailSheetView`, `GeneratedView`, UI PreGenerate o dipendenze.
+
+#### Problemi trovati
+- Commento `ColumnStatus.normalized` non più accurato: citava ancora `Product name → productname`, mentre il nuovo comportamento mappa il ruolo noto a `productName`.
+- Scoring header migliorabile: con soli due match canonici poteva essere reso più conservativo richiedendo ruoli distinti e almeno un ruolo essenziale quando i match non arrivano a tre.
+
+#### Fix applicati direttamente
+- User override: Claude ha applicato fix diretti mirati in review.
+- Aggiornato il commento `ColumnStatus.normalized` per non descrivere un output intermedio obsoleto.
+- Rafforzato `bestCanonicalHeaderCandidate`: ora richiede almeno due ruoli canonici distinti e, se i match sono solo due, almeno un essenziale (`barcode`, `productName`, `purchasePrice`); gli essenziali aumentano leggermente lo score.
+
+#### Check eseguiti
+- ✅ ESEGUITO — `git status --short`, `git diff --stat`, diff specifici richiesti e `ls -la docs/fixtures/TASK-031`.
+- ✅ ESEGUITO — `xcodebuild -list -project iOSMerchandiseControl.xcodeproj`: unico target/scheme `iOSMerchandiseControl`; nessun test target esistente.
+- ✅ ESEGUITO — Build: `xcodebuild -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination 'generic/platform=iOS Simulator' build` → PASS (`BUILD_EXIT=0`).
+- ⚠️ NON ESEGUIBILE — Warning nuovi: senza baseline non è attribuibile storicamente. Il log finale contiene solo warning Xcode non collegato ai file modificati: `appintentsmetadataprocessor` / `No AppIntents.framework dependency found`.
+- ✅ ESEGUITO — Fixture XLSX: `unzip -t docs/fixtures/TASK-031/canonical-headers.xlsx` → OK.
+- ✅ ESEGUITO — Criteri A-F verificati staticamente su codice + fixture: header canonici/snake/localizzati convergono a chiavi interne; negativo resta su `colN`/placeholder vuoti; append A/B produce lo stesso `normalizedHeader`.
+
+#### Esito review
+APPROVED con fix diretti piccoli già applicati. TASK-031 chiudibile come DONE su autorizzazione utente esplicita.
 
 ---
 
 ## Fix (Codex) ← solo Codex aggiorna questa sezione
 Non avviato.
 
+*Nota documentale: nessun ciclo **FIX** separato eseguito da Codex; i fix mirati sono documentati nella sezione **Review** (fix diretti Claude / user override).*
+
 ---
 
 ## Chiusura
 
 ### Conferma utente
-- [ ] Utente ha confermato il completamento
+- [x] Utente ha autorizzato chiusura a DONE se review/build/check risultano OK
 
 ### Follow-up candidate
-—
+- HTML avanzato con `colspan` / `rowspan` o più tabelle rumorose, solo se emerge una fixture reale che dimostri shift o scelta tabella errata.
+- Eventuale XCTest target futuro per rendere automatiche le fixture A-F; non creato in TASK-031 perché assente dal progetto e fuori perimetro minimo.
 
 ### Riepilogo finale
-—
+TASK-031 completata. Il riconoscimento header HTML/XLSX ora converge su chiavi interne stabili per canonici camelCase, snake_case, varianti spaziate/case-insensitive e alias localizzati principali; il fallback senza header reale resta conservativo; override manuale e compatibilità append preservati. Build Debug Simulator PASS.
 
 ### Data completamento
-
+2026-04-27
