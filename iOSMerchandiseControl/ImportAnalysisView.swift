@@ -430,7 +430,43 @@ struct ImportAnalysisView: View {
                     value: nonProductSummary.priceHistoryUnresolved
                 )
             }
+
+            if shouldShowNoWorkNotice {
+                noWorkNotice
+            }
         }
+    }
+
+    private var shouldShowNoWorkNotice: Bool {
+        guard !isApplying, !hasWorkToApply(), session.errors.isEmpty else {
+            return false
+        }
+
+        if let nonProductSummary = session.nonProductSummary,
+           nonProductSummary.priceHistoryUnresolved > 0 {
+            return false
+        }
+
+        return true
+    }
+
+    private var noWorkNotice: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "checkmark.seal")
+                .foregroundStyle(.green)
+                .imageScale(.large)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L("import.analysis.no_work.title"))
+                    .font(.subheadline.weight(.semibold))
+                Text(L("import.analysis.no_work.body"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 6)
     }
 
     private var warningsSection: some View {

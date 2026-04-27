@@ -183,6 +183,8 @@
 "import.analysis.error.apply_title" = "Error al aplicar la importación";
 "import.analysis.processing.title" = "Importando...";
 "import.analysis.processing.body" = "Los cambios se están guardando. Mantén esta ventana abierta hasta que termine la operación.";
+"import.analysis.no_work.title" = "No hay cambios para importar";
+"import.analysis.no_work.body" = "El archivo se leyó correctamente y la base de datos ya está alineada con esta importación.";
 "import.analysis.summary" = "Resumen";
 "import.analysis.summary.new_products" = "Productos nuevos";
 "import.analysis.summary.updates" = "Actualizaciones";

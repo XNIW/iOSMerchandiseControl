@@ -4,12 +4,12 @@
 - **Task ID**: TASK-028
 - **Titolo**: GeneratedView: Row Detail UX Refinement vs Android
 - **File task**: `docs/TASKS/TASK-028-generatedview-row-detail-ux-refinement.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW (esito: APPROVED — in attesa conferma utente)
+- **Stato**: BLOCKED
+- **Fase attuale**: REVIEW sospesa / pending manual validation
 - **Responsabile attuale**: UTENTE
 - **Data creazione**: 2026-03-26
-- **Ultimo aggiornamento**: 2026-03-26
-- **Ultimo agente che ha operato**: CLAUDE
+- **Ultimo aggiornamento**: 2026-04-26
+- **Ultimo agente che ha operato**: CODEX *(solo tracking documentale su user override)*
 
 ## Dipendenze
 - **Dipende da**: nessuno
@@ -321,6 +321,50 @@ Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO
 
 ---
 
+## Validazione runtime/visiva parziale — Codex 2026-04-26
+
+### Obiettivo
+Validazione read-only di TASK-028, senza modificare codice, tracking o Supabase.
+
+### Modifiche fatte
+Nessuna. `git status --short` senza modifiche.
+
+### Check eseguiti
+| Check | Stato | Evidenza |
+|---|---|---|
+| Build Debug Simulator | PASS | `xcodebuild ... iPhone 16e,OS=26.2 ...` → BUILD SUCCEEDED; resta solo warning esterno AppIntents già noto |
+| App launch iPhone piccolo | PASS | `/tmp/task028_small_home_light.png` |
+| Import non-manuale + GeneratedView | PASS parziale | Fixture HTML temporanea fuori repo, generazione riuscita su iPhone 16e |
+| Row detail primo viewport light | PASS | `/tmp/task028_small_light_detail_incomplete.png` |
+| Stato complete/incomplete | PASS | shortcut “Usa quantità da file” porta a Completata + badge Coincide col file; toggle torna a Incompleta |
+| Campi secondari visibili | PASS sul caso completo | secondo nome, item number, purchase/total price visibili nello sheet |
+| Dark mode iPhone piccolo | PASS | `/tmp/task028_small_dark_detail.png` |
+| Autofocus/tastiera | PASS parziale | focus/cursore su campo operativo e accessory/bottom controls visibili; software keyboard non pienamente validata per input hardware/AX |
+| Prev/next | PARZIALE | dataset effettivo a 1 riga: 1/1, prev/next correttamente disabilitati; navigazione multi-riga non validata |
+| Scanner reopen | BLOCKED | richiesta permesso fotocamera non gestita senza conferma esplicita |
+| iPhone grande row detail | NOT RUN / BLOCKED | boot/install ok, ma entry non riaperta in modo affidabile |
+| Righe con dati mancanti | NOT RUN completo | seconda riga fixture filtrata dall’import analyzer |
+
+### Differenze / note operative
+- Nessuna regressione visibile rilevata nel RowDetailSheetView su iPhone piccolo.
+- Layout light/dark coerente.
+- Badge semantici funzionano nel caso validato.
+- CTA non occupano spazio morto.
+- Dati secondari reali mostrati correttamente.
+- Nota fuori perimetro: PreGenerate ha inizialmente mostrato header canonici HTML come `col1/col2/...`; corretto via UI assegnando ruoli. Questo riguarda import/riconoscimento colonne, non RowDetailSheetView.
+
+### Rischi rimasti
+- iPhone grande non validato.
+- Prev/next multi-riga non validato.
+- Scanner reopen dopo permesso camera non validato.
+- Caso dati mancanti/ambigui non validato completamente.
+- TASK-028 non è chiudibile come DONE solo con questa sessione.
+
+### Esito
+Validazione positiva ma incompleta. Nessun FIX richiesto. TASK-028 sospeso in BLOCKED per decisione utente, pending manual validation finale.
+
+---
+
 ## Chiusura
 
 ### Conferma utente
@@ -330,7 +374,6 @@ Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO
 [Eventuali follow-up emersi — non bloccano la chiusura salvo che siano criteri non soddisfatti]
 
 ### Riepilogo finale
-[Cosa è stato fatto, limiti noti, note per il futuro]
+Non completato / sospeso. TASK-028 resta non DONE: validazione runtime/visiva positiva ma incompleta, con test residui rinviati per decisione utente.
 
 ### Data completamento
-YYYY-MM-DD

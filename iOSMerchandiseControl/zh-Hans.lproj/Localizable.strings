@@ -183,6 +183,8 @@
 "import.analysis.error.apply_title" = "应用导入错误";
 "import.analysis.processing.title" = "导入中...";
 "import.analysis.processing.body" = "正在保存更改。请保持此界面打开直至操作完成。";
+"import.analysis.no_work.title" = "没有可导入的更改";
+"import.analysis.no_work.body" = "文件已正确读取，数据库已与此次导入保持一致。";
 "import.analysis.summary" = "摘要";
 "import.analysis.summary.new_products" = "新商品";
 "import.analysis.summary.updates" = "更新";

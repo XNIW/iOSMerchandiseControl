@@ -4,20 +4,25 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**TASK-028** — **GeneratedView: Row Detail UX Refinement vs Android** — **ACTIVE**, fase **REVIEW** (esito **APPROVED**), responsabile **UTENTE**. Review codice completata da Claude: implementazione coerente col planning, fix minimo applicato (`reloadInputViews` condizionale per stabilita' tastiera), build pulita, warning risolti. In attesa conferma utente e validazione visiva/runtime su device.
+Nessun task attivo. **TASK-030** è **BLOCKED** dopo review tecnica: codice coerente dopo fix diretto, ma chiusura sospesa per runtime gap M-1…M-10 con workbook canonico.
 
 ## Stato globale
-ACTIVE
-> **Tracking 2026-03-26 (allineamento ufficiale TASK-027):** **TASK-027** — implementation **completata**; review **completata** con esito **OK** / **APPROVED**; **test manuali T-1…T-13 non eseguiti**; task **non** **DONE**; stato **BLOCKED** / **on hold for manual verification**. **Motivo sospensione:** mancano i **test manuali**. **Pipeline attiva:** **TASK-028** è l’**unico** task **ACTIVE** (REVIEW **APPROVED**, responsabile **UTENTE**). Nel backlog non risultano voci **TODO** realmente sbloccate da promuovere ad **ACTIVE** al posto di TASK-028 senza superare blocchi o validazioni manuali su altri ID; **nessun** task **BLOCKED** è stato forzato. **TASK-026** resta **BLOCKED** (test T-1…T-9 pendenti). **User override 2026-03-25:** **TASK-025** messo in **BLOCKED** — review tecnica **APPROVED** acquisita; **test manuali utente** (T-0..T-15) **non eseguiti**; **non** DONE; task congelata in attesa validazione manuale futura. **User override 2026-03-25 (focus TASK-025):** **TASK-021** messo in **BLOCKED** — sospeso temporaneamente per spostare il focus operativo su **TASK-025**; review tecnica **APPROVED** gia' acquisita (post-fix F-1); **non** DONE; in attesa **conferma finale utente** alla ripresa. **User override 2026-03-25:** **TASK-020** e' **BLOCKED**: review **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** finale → conferma utente → DONE. **TASK-019** resta **BLOCKED** (test manuali pendenti). **User override 2026-03-24:** TASK-016..018 **BLOCKED** (review APPROVED / test manuali pendenti; non DONE). TASK-024 resta **BLOCKED** (review/fix UI non finalizzati). TASK-023 resta **BLOCKED** (test manuali residui). TASK-022 e' DONE (2026-03-23). **TASK-010 e' DONE (2026-03-25).** TASK-011 resta BLOCKED. TASK-014 completato; TASK-002 DONE parziale; TASK-015 WONT_DO; altri bloccati invariati salvo nota sotto.
+IDLE
+> **2026-04-27 (user override):** **TASK-030** promosso ad **ACTIVE / EXECUTION** con responsabile operativo **CURSOR**. Obiettivo: finalizzare il flusso full-database import/export multi-sheet prima di Supabase, con validazione reimport idempotente, diff non-product e progress/cancellation UX.
+> **2026-04-27 (handoff):** execution reale TASK-030 eseguita da **CURSOR** con build verde, probe runtime parziale, fix minimo UX no-work e handoff a **CLAUDE / REVIEW**. Matrice runtime M-1…M-10 non chiusa per fixture temporanee non valide come evidenza deterministica.
+> **2026-04-27 (review):** **TASK-030** review tecnica completata da **CLAUDE CODE** con esito **CHANGES_REQUIRED_FIXED_DIRECTLY**: fix diretto limitato a guardia UX no-work; build PASS; task **non DONE** e **BLOCKED** in attesa di runtime validation canonica o accettazione esplicita del gap.
+> **2026-04-26 (review):** **TASK-029** completato come audit documentale/tracking-only. Matrice, tassonomia, test pack A–E e raccomandazione prossima **TASK-030** approvate. Nessun codice Swift/Supabase modificato.
+> **User override 2026-04-26 (invariato per TASK-028):** **TASK-028** sospeso in **BLOCKED** dopo validazione runtime/visiva read-only positiva ma incompleta. Build PASS, iPhone piccolo light/dark PASS, complete/incomplete PASS, campi secondari PASS sul caso completo. Nessuna regressione TASK-028 rilevata e nessun FIX richiesto. Test residui rinviati: iPhone grande row detail, prev/next multi-riga, scanner reopen dopo permesso camera, caso dati mancanti/ambigui.
+> **Nota corrente:** nessun task attivo; nessun lavoro Supabase incluso.
 
 ## Workflow task attivo
-- **Task attivo:** TASK-028 — GeneratedView: Row Detail UX Refinement vs Android
-- **File task:** `docs/TASKS/TASK-028-generatedview-row-detail-ux-refinement.md`
-- **Stato:** ACTIVE
-- **Fase:** REVIEW (esito: APPROVED — in attesa conferma utente)
-- **Responsabile:** UTENTE
-- **Ultimo aggiornamento:** 2026-03-26
-- **Nota tracking:** review codice completata da Claude; fix minimo applicato (reloadInputViews condizionale); build pulita; in attesa conferma utente e validazione visiva/runtime su device
+- **Task attivo:** —
+- **File task:** —
+- **Stato task:** —
+- **Fase:** —
+- **Responsabile:** —
+- **Ultimo aggiornamento:** 2026-04-27
+- **Nota tracking:** TASK-030 bloccato dopo review tecnica; serve nuova execution runtime con workbook canonico o accettazione esplicita del gap residuo.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -58,16 +63,28 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
+- Task ID: —
+- Titolo: —
+- File task: —
+- Stato: —
+- Fase attuale: —
+- Responsabile attuale: —
+- Ultimo aggiornamento: 2026-04-27
+- Nota tracking: nessun task attivo; TASK-030 è BLOCKED dopo review tecnica per runtime gap canonico.
+
+Task bloccati non attivi:
+- Task ID: TASK-030
+- Titolo: Full-database import/export finalization: reimport idempotency + non-product diff + progress UX
+- File task: `docs/TASKS/TASK-030-full-database-import-export-finalization-reimport-idempotency-non-product-diff-progress-ux.md`
+- Stato: BLOCKED
+- Motivo: Review tecnica 2026-04-27 — esito **CHANGES_REQUIRED_FIXED_DIRECTLY**. Fix diretto applicato alla guardia UX no-work; build Debug Simulator PASS; localizzazioni OK; nessun Supabase / nessuna nuova dipendenza. Task non DONE perché mancano evidenze runtime canoniche M-1…M-10 con workbook generato dall'export reale dell'app o equivalente.
+- Ultimo aggiornamento: 2026-04-27
 - Task ID: TASK-028
 - Titolo: GeneratedView: Row Detail UX Refinement vs Android
 - File task: `docs/TASKS/TASK-028-generatedview-row-detail-ux-refinement.md`
-- Stato: ACTIVE
-- Fase attuale: REVIEW (esito: APPROVED — in attesa conferma utente)
-- Responsabile attuale: UTENTE
-- Ultimo aggiornamento: 2026-03-26
-- Nota tracking: review codice completata da Claude; fix minimo applicato (reloadInputViews condizionale); build pulita; in attesa conferma utente e validazione visiva/runtime su device
-
-Task bloccati non attivi:
+- Stato: BLOCKED
+- Motivo: User override 2026-04-26 — validazione runtime/visiva read-only eseguita da Codex con esito positivo ma incompleto. Build PASS, iPhone piccolo light/dark PASS, complete/incomplete PASS, campi secondari PASS sul caso completo. Nessuna regressione TASK-028 rilevata e nessun FIX richiesto. Test residui sospesi: iPhone grande row detail, prev/next multi-riga, scanner reopen dopo decisione permesso camera, caso dati mancanti/ambigui. Task non DONE; pending manual validation finale.
+- Ultimo aggiornamento: 2026-04-26
 - Task ID: TASK-027
 - Titolo: ManualEntrySheet: modalità «Aggiungi e continua» (rapid entry)
 - File task: `docs/TASKS/TASK-027-manualentrysheet-aggiungi-e-prossimo.md`
@@ -180,7 +197,7 @@ Task bloccati non attivi:
 
 ## Backlog
 (Task futuri ordinati per priorità — aggiornabile solo da Claude o dall'utente, con motivazione esplicita)
-Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25).
+Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase.
 
 | ID | Titolo | Stato | Priorità |
 |----|--------|-------|----------|
@@ -210,7 +227,14 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-025 | GeneratedView: ricalcolo dinamico paymentTotal + missingItems su History card | BLOCKED | MEDIUM |
 | TASK-026 | Scanner: toggle torcia (flashlight) | BLOCKED | LOW |
 | TASK-027 | ManualEntrySheet: modalità «Aggiungi e continua» (rapid entry) | BLOCKED | LOW |
-| TASK-028 | GeneratedView: Row Detail UX Refinement vs Android | ACTIVE | HIGH |
+| TASK-028 | GeneratedView: Row Detail UX Refinement vs Android | BLOCKED | HIGH |
+| TASK-029 | iOS Completion Tracking Cleanup + Manual Validation Matrix | DONE | HIGH |
+| TASK-030 | Full-database import/export finalization: reimport idempotency + non-product diff + progress UX | BLOCKED | HIGH |
+| TASK-031 | Import recognition hardening: canonical headers HTML/Excel | TODO | MEDIUM |
+| TASK-032 | GeneratedView multi-row navigation validation + missing-data scenarios | TODO | MEDIUM |
+| TASK-033 | Supabase schema audit and iOS/Android model mapping | TODO | HIGH |
+| TASK-034 | Supabase iOS foundation: client config + DTO readonly | TODO | MEDIUM |
+| TASK-035 | Manual Supabase pull to SwiftData dry-run | TODO | MEDIUM |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -224,14 +248,18 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-014 | Global Audit & Backlog Refresh | 2026-03-22 |
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | 2026-03-23 |
 | TASK-010 | Localizzazione UI multilingua | 2026-03-25 |
+| TASK-029 | iOS Completion Tracking Cleanup + Manual Validation Matrix | 2026-04-26 |
 
 ## Blocchi e dipendenze
+- TASK-028 bloccato.
+  Motivo: **User override 2026-04-26** — validazione runtime/visiva read-only positiva ma incompleta; build PASS; iPhone piccolo light/dark PASS; complete/incomplete PASS; campi secondari PASS sul caso completo; nessuna regressione TASK-028 rilevata; nessun FIX richiesto. Test residui sospesi: iPhone grande row detail, prev/next multi-riga, scanner reopen dopo decisione permesso camera, caso dati mancanti/ambigui. Task **non** DONE; pending manual validation finale.
+  Nota: sospensione esplicita dell'utente; **TASK-029** e' completato e **TASK-030** e' ora **BLOCKED** per runtime gap canonico.
 - TASK-027 bloccato.
   Motivo: implementation **completata**; review **completata** con esito **OK** / **APPROVED**; **test manuali T-1…T-13 non eseguiti** — **sospensione esplicita** perché mancano i test manuali; **non** **DONE**; **on hold for manual verification**. Alla ripresa: test manuali → eventuale FIX → REVIEW → conferma utente → DONE.
   Nota: planning tecnico invariato nel file task; nessun **DONE** finché mancano test manuali e conferma utente. *(Tracking allineato 2026-03-26.)*
 - TASK-026 bloccato.
   Motivo: review **APPROVED** acquisita; **nessun fix** aperto; **test manuali T-1…T-9 pendenti**; **non** DONE. **In sospensione / pending manual validation**. Alla ripresa: test manuali → eventuale FIX → REVIEW → conferma utente → DONE.
-  Nota: non invalida execution/review gia' documentati nel file task. *(Nota storica 2026-03-25: a quel punto non c’era task ACTIVE; oggi il task attivo è **TASK-028** — vedi **Obiettivo attuale**.)*
+  Nota: non invalida execution/review gia' documentati nel file task. *(Stato corrente: nessun task attivo — vedi **Obiettivo attuale**.)*
 - TASK-025 bloccato.
   Motivo: review tecnica **APPROVED** acquisita; **test manuali utente** (T-0..T-15) **pendenti**; **non** DONE. Task congelata in attesa validazione manuale. Alla ripresa: test → eventuale FIX → REVIEW finale → conferma utente → DONE.
   Nota: non invalida execution/review gia' documentati nel file task.
@@ -240,7 +268,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
   Nota: non invalida CA-1..CA-4 ne' l'execution/review gia' archiviati nel file task.
 - TASK-020 bloccato.
   Motivo: **user override 2026-03-25** — review **APPROVED**; **nessun fix richiesto**; **test manuali T-1..T-6 pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
-  Nota: sospensione storica per attivare **TASK-021** (ora **TASK-021** e' **BLOCKED**); **TASK-027** **BLOCKED**. *(Riferimento storico: non descrive lo stato attuale del progetto — vedi **TASK-028** come task **ACTIVE** in testa al piano.)*
+  Nota: sospensione storica per attivare **TASK-021** (ora **TASK-021** e' **BLOCKED**); **TASK-027** **BLOCKED**. *(Riferimento storico: non descrive lo stato attuale del progetto — vedi **Obiettivo attuale**.)*
 - TASK-019 bloccato.
   Motivo: **user override 2026-03-25** — review tecnica **APPROVED**; **nessun fix richiesto**; **test manuali pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
   Nota: sospensione per attivare **TASK-020**; non invalida execution/review documentati nel file task.
@@ -275,6 +303,8 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 - Task in stato DONE restano archiviati in `docs/TASKS/` — non vanno riusati né modificati (salvo note documentali minime)
 - Per nuovo lavoro collegato a un task DONE → creare un nuovo task con riferimento (campo "Dipende da"), non riaprire
 - User override: se l'utente dà un'istruzione in conflitto col workflow, gli agent possono seguirla ma devono segnalare l'impatto
+- 2026-04-26: TASK-029 completato come audit documentale/tracking-only. Matrice, tassonomia, test pack e raccomandazione prossima TASK-030 approvate. Nessun codice Swift/Supabase modificato.
+- User override 2026-04-26: TASK-028 sospeso in BLOCKED dopo validazione runtime/visiva positiva ma incompleta. L'utente ha scelto di mettere in pausa i test residui e proseguire con i prossimi task di completamento iOS. Creati backlog TASK-029…TASK-035 per cleanup, completamento iOS, hardening import e preparazione Supabase.
 - User override 2026-03-21: autorizzato riallineamento minimo del tracking da parte di Codex per evitare il blocco operativo tra file task e MASTER-PLAN durante l'avvio di TASK-008
 - User override 2026-03-23: autorizzata da utente la sospensione di TASK-011 e la creazione/attivazione di TASK-022; backlog e tracking riallineati di conseguenza
 - User override 2026-03-23: per TASK-022 il planning operativo viene svolto da Codex; il task resta in PLANNING fino all'avvio esplicito dell'execution
