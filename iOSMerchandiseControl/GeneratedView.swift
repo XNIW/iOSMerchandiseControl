@@ -97,6 +97,8 @@ struct GeneratedView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var showSearch: Bool = false
+    /// Filtro "solo righe errore": tentativo ricerca/dettaglio su riga senza SyncError (TASK-032 D2 UX).
+    @State private var showSearchDetailBlockedWhileErrorsOnlyAlert: Bool = false
     @State private var showingEntryInfo = false
     
     private struct ShareItem: Identifiable {
@@ -232,18 +234,7 @@ struct GeneratedView: View {
         .onChange(of: showScanner) { _, isShown in
             guard !isShown else { return }
 
-            if reopenRowDetailAfterScan,
-               let rowIndex = pendingReopenRowIndexAfterScannerDismiss,
-               rowDetail == nil
-            {
-                pendingReopenRowIndexAfterScannerDismiss = nil
-                reopenRowDetailAfterScan = false
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
-                    let header = data.first ?? []
-                    showRowDetail(for: rowIndex, headerRow: header)
-                }
-            }
+            reopenPendingRowDetailAfterScannerDismiss()
         }
         .id(entry.id)
         .navigationTitle(entryTitle)
@@ -405,12 +396,22 @@ struct GeneratedView: View {
                 }
             }
         }
+        .alert(
+            L("generated.inventory.search_detail_blocked_title"),
+            isPresented: $showSearchDetailBlockedWhileErrorsOnlyAlert
+        ) {
+            Button(L("common.ok"), role: .cancel) { }
+        } message: {
+            Text(L("generated.inventory.search_detail_blocked_message"))
+        }
         .sheet(item: $productToEdit) { product in
             NavigationStack {
                 EditProductView(product: product)
             }
         }
-        .sheet(isPresented: $showScanner) {
+        .sheet(isPresented: $showScanner, onDismiss: {
+            reopenPendingRowDetailAfterScannerDismiss()
+        }) {
             ScannerView(title: L("scanner.default_title")) { code in
                 let touchedRow = handleScannedBarcode(
                     code,
@@ -437,6 +438,9 @@ struct GeneratedView: View {
                         showRowDetail(for: touchedRow, headerRow: header)
                     }
                 }
+            }
+            .onDisappear {
+                reopenPendingRowDetailAfterScannerDismiss()
             }
         }
         .sheet(isPresented: $showManualEntrySheet) {
@@ -478,18 +482,25 @@ struct GeneratedView: View {
                 InventorySearchSheet(
                     data: data,
                     onJumpToRow: { rowIndex in
-                        if showOnlyErrorRows {
+                        let headerRow = data.first ?? []
+                        // Toolbar prev/next sulla lista risultati: se la riga non è nel subset errori mentre il filtro è attivo, serve la griglia completa per lo scroll affidabile (TASK-032 D2: non apre comunque detail da quel path).
+                        if showOnlyErrorRows && !rowHasError(rowIndex: rowIndex, headerRow: headerRow) {
                             withAnimation(.snappy) { showOnlyErrorRows = false }
                         }
                         scrollToRowIndex = rowIndex
                     },
                     onOpenDetail: { rowIndex in
-                        if showOnlyErrorRows {
-                            withAnimation(.snappy) { showOnlyErrorRows = false }
+                        let headerRow = data.first ?? []
+                        if showOnlyErrorRows && !rowHasError(rowIndex: rowIndex, headerRow: headerRow) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                showSearchDetailBlockedWhileErrorsOnlyAlert = true
+                            }
+                            return
                         }
+                        scrollToRowIndex = rowIndex
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                            let headerRow = data.first ?? []
-                            showRowDetail(for: rowIndex, headerRow: headerRow)
+                            let hdr = data.first ?? []
+                            showRowDetail(for: rowIndex, headerRow: hdr)
                         }
                     },
                     onApplyBarcode: { code in
@@ -837,19 +848,33 @@ struct GeneratedView: View {
         }
     }
     
-    private func requestScanFromRowDetail() {
+    private func requestScanFromRowDetail(rowIndex: Int) {
         // vogliamo tornare al dettaglio dopo lo scan (o dopo cancel)
         reopenRowDetailAfterScan = true
         focusCountedOnNextDetail = true
 
         // se l’utente cancella lo scanner, riapriamo la stessa riga
-        pendingReopenRowIndexAfterScannerDismiss = rowDetail?.rowIndex
+        pendingReopenRowIndexAfterScannerDismiss = rowIndex
 
         // chiudi prima il dettaglio (evita present-while-dismissing)
         rowDetail = nil
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             showScanner = true
+        }
+    }
+
+    private func reopenPendingRowDetailAfterScannerDismiss() {
+        guard reopenRowDetailAfterScan,
+              let rowIndex = pendingReopenRowIndexAfterScannerDismiss
+        else { return }
+
+        pendingReopenRowIndexAfterScannerDismiss = nil
+        reopenRowDetailAfterScan = false
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.60) {
+            let header = data.first ?? []
+            showRowDetail(for: rowIndex, headerRow: header)
         }
     }
 
@@ -2312,7 +2337,7 @@ struct GeneratedView: View {
             },
             editBindings: editBindings,
             editSnapshot: editSnapshot,
-            onScanNext: { requestScanFromRowDetail() },
+            onScanNext: { requestScanFromRowDetail(rowIndex: detail.rowIndex) },
             isComplete: bindingForComplete(detail.rowIndex),
             countedText: bindingForEditable(row: detail.rowIndex, slot: 0),
             newRetailText: bindingForEditable(row: detail.rowIndex, slot: 1),
@@ -4871,13 +4896,9 @@ private struct InventorySearchSheet: View {
             Button {
                 currentResultIndex = resultIndex
 
-                // 1) porta la griglia sulla riga (UX molto utile)
-                onJumpToRow(rowIndex)
-
-                // 2) apri dettagli (azione primaria attesa su iOS)
+                // TAP risultato: tutto tramite parent per mantenere `showOnlyErrorRows` quando il dettaglio è in contesto solo-errori (TASK-032 D2). Lo scroll sulla griglia filtrata resta affidato a `onOpenDetail`.
                 onOpenDetail(rowIndex)
 
-                // 3) chiudi sheet ricerca
                 dismiss()
             } label: {
                 HStack(spacing: 12) {

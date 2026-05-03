@@ -348,6 +348,8 @@
 "generated.inventory.completed_count" = "Completati %1$d/%2$d";
 "generated.inventory.no_error_rows" = "Nessuna riga con errore";
 "generated.inventory.no_error_rows_description" = "Tutte le righe risultano sincronizzabili.";
+"generated.inventory.search_detail_blocked_title" = "Riga senza errore di sincronizzazione";
+"generated.inventory.search_detail_blocked_message" = "Il filtro “solo righe con errore” è attivo. Per aprire questa riga disattiva il filtro dall’elenco.";
 "generated.action.mark_not_completed" = "Segna non completato";
 "generated.action.mark_completed" = "Segna completato";
 "generated.action.details" = "Dettagli";

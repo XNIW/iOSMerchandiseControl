@@ -1,0 +1,152 @@
+{
+  "id": "TASK-032-generatedview-fixture",
+  "isManualEntry": false,
+  "supplier": "TASK-032 Fixture",
+  "category": "Validation",
+  "data": [
+    [
+      "barcode",
+      "productName",
+      "secondProductName",
+      "quantity",
+      "purchasePrice",
+      "totalPrice",
+      "retailPrice",
+      "oldPurchasePrice",
+      "oldRetailPrice",
+      "realQuantity",
+      "RetailPrice",
+      "complete",
+      "SyncError"
+    ],
+    [
+      "100001",
+      "Prodotto completo",
+      "",
+      "10",
+      "800",
+      "8000",
+      "1300",
+      "800",
+      "1200",
+      "10",
+      "1300",
+      "",
+      ""
+    ],
+    [
+      "100002",
+      "Prodotto shortage",
+      "",
+      "12",
+      "800",
+      "9600",
+      "1600",
+      "800",
+      "1500",
+      "8",
+      "1600",
+      "",
+      "TASK-032 errore fixture R2"
+    ],
+    [
+      "100003",
+      "Senza storico prezzo",
+      "",
+      "5",
+      "900",
+      "4500",
+      "1200",
+      "",
+      "",
+      "5",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Senza barcode",
+      "",
+      "3",
+      "700",
+      "2100",
+      "1000",
+      "700",
+      "950",
+      "3",
+      "",
+      "",
+      ""
+    ],
+    [
+      "100005",
+      "",
+      "Nome secondario",
+      "4",
+      "600",
+      "2400",
+      "900",
+      "600",
+      "850",
+      "4",
+      "",
+      "",
+      "TASK-032 errore fixture R5"
+    ],
+    [
+      "100006",
+      "Valori non numerici",
+      "",
+      "abc",
+      "500",
+      "0",
+      "1100",
+      "500",
+      "1000",
+      "",
+      "",
+      "",
+      ""
+    ]
+  ],
+  "editable": [
+    [
+      "",
+      ""
+    ],
+    [
+      "10",
+      "1300"
+    ],
+    [
+      "8",
+      "1600"
+    ],
+    [
+      "5",
+      ""
+    ],
+    [
+      "3",
+      ""
+    ],
+    [
+      "4",
+      ""
+    ],
+    [
+      "",
+      ""
+    ]
+  ],
+  "complete": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+  ]
+}

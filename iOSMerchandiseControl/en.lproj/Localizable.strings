@@ -348,6 +348,8 @@
 "generated.inventory.completed_count" = "Completed %1$d/%2$d";
 "generated.inventory.no_error_rows" = "No rows with errors";
 "generated.inventory.no_error_rows_description" = "All rows can be synced.";
+"generated.inventory.search_detail_blocked_title" = "Row has no sync error";
+"generated.inventory.search_detail_blocked_message" = "\"Show only rows with errors\" is on. Turn off the filter in the inventory list to open this row.";
 "generated.action.mark_not_completed" = "Mark not completed";
 "generated.action.mark_completed" = "Mark completed";
 "generated.action.details" = "Details";

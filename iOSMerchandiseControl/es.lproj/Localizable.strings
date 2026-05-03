@@ -348,6 +348,8 @@
 "generated.inventory.completed_count" = "Completadas %1$d/%2$d";
 "generated.inventory.no_error_rows" = "No hay filas con error";
 "generated.inventory.no_error_rows_description" = "Todas las filas se pueden sincronizar.";
+"generated.inventory.search_detail_blocked_title" = "Fila sin error de sincronización";
+"generated.inventory.search_detail_blocked_message" = "El filtro «solo filas con error» está activo. Para abrir esta fila, desactiva el filtro en la lista.";
 "generated.action.mark_not_completed" = "Marcar no completada";
 "generated.action.mark_completed" = "Marcar completada";
 "generated.action.details" = "Detalles";

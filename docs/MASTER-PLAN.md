@@ -4,10 +4,10 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. **TASK-037** è **DONE** dopo review tecnica con fix diretti piccoli e test verde.
+**TASK-033** è **ACTIVE / PLANNING**: audit schema Supabase e mapping iOS/Android/Supabase. **TASK-032** è messo in pausa come **BLOCKED / on hold** su override utente 2026-05-03: D2 accepted, **P2–P4 PASS runtime**, ma **P5 scanner reopen NON accettato / senza evidenza PASS**. **`TASK-028` resta `BLOCKED`.**
 
 ## Stato globale
-IDLE
+ACTIVE
 > **2026-04-27 (user override):** **TASK-031** promosso ad **ACTIVE / EXECUTION** con responsabile operativo **Cursor/Codex executor**. Planning approvato; perimetro limitato a import/header recognition in `ExcelAnalyzer`, senza Supabase, senza `RowDetailSheetView`, senza redesign PreGenerate.
 > **2026-04-27 (handoff):** execution TASK-031 completata da **Cursor/Codex** con build Debug Simulator PASS e fixture documentali A-F sotto `docs/fixtures/TASK-031/`; handoff a **CLAUDE / REVIEW**. Nessun Supabase / nessun `RowDetailSheetView` / nessun redesign PreGenerate.
 > **2026-04-27 (review/close):** **TASK-031** review tecnica completata da **Claude Code reviewer/fixer** con esito **APPROVED_FIXED_DIRECTLY**: fix diretto limitato a commento `ColumnStatus.normalized` e soglia più conservativa per header scoring; build Debug Simulator PASS; task chiuso **DONE** su autorizzazione utente esplicita.
@@ -17,21 +17,28 @@ IDLE
 > **2026-04-27 (user override):** **TASK-037** creato e promosso ad **ACTIVE / EXECUTION** con responsabile operativo **Cursor/Codex executor** per aggiungere un target XCTest minimale coerente col perimetro TASK-036. TASK-031 e TASK-036 restano DONE e non vengono riaperti.
 > **2026-04-27 (handoff):** execution TASK-037 completata da **Cursor/Codex**: target `iOSMerchandiseControlTests`, scheme condiviso, fixture TASK-036 nel bundle test e suite `ExcelAnalyzerHTMLParsingTests`; `xcodebuild test` PASS su iPhone 16e Simulator; handoff a **CLAUDE / REVIEW**.
 > **2026-04-27 (review/close):** **TASK-037** review tecnica completata da **Claude Code reviewer/fixer** con esito **APPROVED_FIXED_DIRECTLY**: fix diretto limitato a README fixture e rafforzamento multi-table con tabella decorativa post-dati; build Debug Simulator PASS; test XCTest PASS 5/5; task chiuso **DONE** su autorizzazione utente esplicita.
+> **2026-04-27 (planning/tracking):** **TASK-032** promosso da backlog **TODO** ad **ACTIVE** in fase **PLANNING**; responsabile **planner (CLAUDE/Cursor planning)**; obiettivo: completare planning operativo per validazione residua **TASK-028** (multi-riga, iPhone grande, dati mancanti/ambigui) **senza** riaprire TASK-028 come task di implementazione. In quel momento l’Execution era rimandata a successivo OK utente. **TASK-031**, **TASK-036**, **TASK-037** restano **DONE**.
+> **2026-04-27 (execution/user override):** ~~**TASK-032** passa da **PLANNING** a **EXECUTION**~~ — **annullato per tracking**: restava documentazione inconsistente (evidenze EXECUTION senza fase reale concordata).
+> **2026-04-28 (planning/tracking):** **TASK-032** riallineato ad **ACTIVE / PLANNING**; responsabile **Planner**; fase pre-Execution in attesa di avvio formale; **TASK-028** resta **BLOCKED** (**non** DONE). Nessun altro task modificato.
+> **2026-04-28 (execution start/user override):** **TASK-032** passa formalmente ad **ACTIVE / EXECUTION**; responsabile **Cursor / Execution**. Avvio limitato a validazione controllata + preparazione evidenze **P0→P5**; **nessun** fix codice, redesign o refactor generale autorizzato da questa transizione; **TASK-028** resta **BLOCKED** (**non** DONE).
 > **2026-04-27 (user override):** **TASK-030** promosso ad **ACTIVE / EXECUTION** con responsabile operativo **CURSOR**. Obiettivo: finalizzare il flusso full-database import/export multi-sheet prima di Supabase, con validazione reimport idempotente, diff non-product e progress/cancellation UX.
 > **2026-04-27 (handoff):** execution reale TASK-030 eseguita da **CURSOR** con build verde, probe runtime parziale, fix minimo UX no-work e handoff a **CLAUDE / REVIEW**. Matrice runtime M-1…M-10 non chiusa per fixture temporanee non valide come evidenza deterministica.
 > **2026-04-27 (review):** **TASK-030** review tecnica completata da **CLAUDE CODE** con esito **CHANGES_REQUIRED_FIXED_DIRECTLY**: fix diretto limitato a guardia UX no-work; build PASS; task **non DONE** e **BLOCKED** in attesa di runtime validation canonica o accettazione esplicita del gap.
 > **2026-04-26 (review):** **TASK-029** completato come audit documentale/tracking-only. Matrice, tassonomia, test pack A–E e raccomandazione prossima **TASK-030** approvate. Nessun codice Swift/Supabase modificato.
 > **User override 2026-04-26 (invariato per TASK-028):** **TASK-028** sospeso in **BLOCKED** dopo validazione runtime/visiva read-only positiva ma incompleta. Build PASS, iPhone piccolo light/dark PASS, complete/incomplete PASS, campi secondari PASS sul caso completo. Nessuna regressione TASK-028 rilevata e nessun FIX richiesto. Test residui rinviati: iPhone grande row detail, prev/next multi-riga, scanner reopen dopo permesso camera, caso dati mancanti/ambigui.
-> **Nota corrente:** nessun task attivo; TASK-031, TASK-036 e TASK-037 completati; nessun lavoro Supabase incluso.
+> **2026-05-03 (review/user override):** **TASK-032** slice **FIX D2** review completata con esito **APPROVED D2 slice / accepted**. Nessun fix Swift in Review; build simulator PASS; runtime non ripetuto perche' il flow D2 non e' stato modificato dopo le evidenze Execution. **TASK-032 non DONE**: prossima slice **P2–P5/scanner** pending. **TASK-028 resta BLOCKED**.
+> **2026-05-03 (execution+fix/user override):** utente ha chiesto di “eseguire tutto per farlo in DONE”. Codex ha validato **P2–P4 PASS runtime**, trovato **P5 scanner reopen FAIL / non verificato PASS**, applicato micro-fix in `GeneratedView.swift` e ribuildato; runtime non ha prodotto evidenza stabile di reopen. **TASK-032 non DONE**; **TASK-028 resta BLOCKED**.
+> **2026-05-03 (tracking/user override):** utente ha chiesto di mettere **TASK-032** in pausa e attivare **TASK-033**. **TASK-032** passa a **BLOCKED / on hold**; non e' DONE perche' **P5 scanner reopen** resta senza PASS. **TASK-033** passa da **TODO** ad **ACTIVE / PLANNING**. **TASK-028 resta BLOCKED**.
+> **Nota corrente:** **TASK-033** (`ACTIVE`) in **PLANNING** — audit schema Supabase e mapping iOS/Android/Supabase. **TASK-032** e' in pausa **BLOCKED / on hold** con D2 accepted, **P2–P4 PASS**, **P5 scanner reopen bloccante**. **TASK-028** — **BLOCKED**.
 
 ## Workflow task attivo
-- **Task attivo:** —
-- **File task:** —
-- **Stato task:** —
-- **Fase:** —
-- **Responsabile:** —
-- **Ultimo aggiornamento:** 2026-04-27
-- **Nota tracking:** TASK-037 chiusa DONE dopo review/fix diretto e test verde.
+- **Task attivo:** TASK-033
+- **File task:** `docs/TASKS/TASK-033-supabase-schema-audit-ios-android-model-mapping.md`
+- **Stato task:** ACTIVE
+- **Fase:** PLANNING
+- **Responsabile:** Planner / Claude — compilare planning operativo prima di execution
+- **Ultimo aggiornamento:** 2026-05-03
+- **Nota tracking:** attivazione richiesta dall'utente. Scope TASK-033: audit/mapping Supabase documentale; nessun client Supabase e nessuna modifica codice iOS avviata. **TASK-032 in pausa BLOCKED / on hold; TASK-028 — BLOCKED**.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -72,16 +79,22 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- Task ID: —
-- Titolo: —
-- File task: —
-- Stato: —
-- Fase attuale: —
-- Responsabile attuale: —
-- Ultimo aggiornamento: 2026-04-27
-- Nota tracking: nessun task attivo; TASK-037 completata.
+- Task ID: TASK-033
+- Titolo: Supabase schema audit and iOS/Android model mapping
+- File task: `docs/TASKS/TASK-033-supabase-schema-audit-ios-android-model-mapping.md`
+- Stato: ACTIVE
+- Fase attuale: PLANNING
+- Responsabile attuale: Planner / Claude — compilare planning operativo prima di execution
+- Ultimo aggiornamento: 2026-05-03
+- Nota tracking: attivato su override utente; audit/mapping Supabase documentale da pianificare. Nessuna execution avviata in questo aggiornamento; **TASK-032 BLOCKED / on hold**; **TASK-028 BLOCKED**.
 
 Task bloccati non attivi:
+- Task ID: TASK-032
+- Titolo: GeneratedView multi-row navigation validation + missing-data scenarios
+- File task: `docs/TASKS/TASK-032-generatedview-multi-row-navigation-validation-missing-data-scenarios.md`
+- Stato: BLOCKED
+- Motivo: user override 2026-05-03 — task messo in pausa dopo D2 accepted e P2–P4 PASS runtime. **P5 scanner reopen** resta senza evidenza PASS dopo tentativi di micro-fix; TASK-032 non DONE. Alla ripresa: ripartire dal gate P5/scanner reopen o da decisione formale di scope, poi review finale.
+- Ultimo aggiornamento: 2026-05-03
 - Task ID: TASK-030
 - Titolo: Full-database import/export finalization: reimport idempotency + non-product diff + progress UX
 - File task: `docs/TASKS/TASK-030-full-database-import-export-finalization-reimport-idempotency-non-product-diff-progress-ux.md`
@@ -240,8 +253,8 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-029 | iOS Completion Tracking Cleanup + Manual Validation Matrix | DONE | HIGH |
 | TASK-030 | Full-database import/export finalization: reimport idempotency + non-product diff + progress UX | BLOCKED | HIGH |
 | TASK-031 | Import recognition hardening: canonical headers HTML/Excel | DONE | MEDIUM |
-| TASK-032 | GeneratedView multi-row navigation validation + missing-data scenarios | TODO | MEDIUM |
-| TASK-033 | Supabase schema audit and iOS/Android model mapping | TODO | HIGH |
+| TASK-032 | GeneratedView multi-row navigation validation + missing-data scenarios | BLOCKED | MEDIUM |
+| TASK-033 | Supabase schema audit and iOS/Android model mapping | ACTIVE | HIGH |
 | TASK-034 | Supabase iOS foundation: client config + DTO readonly | TODO | MEDIUM |
 | TASK-035 | Manual Supabase pull to SwiftData dry-run | TODO | MEDIUM |
 | TASK-036 | Import HTML advanced table parsing: colspan/rowspan/multi-table hardening | DONE | MEDIUM |
@@ -265,8 +278,11 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | 2026-04-27 |
 
 ## Blocchi e dipendenze
+- TASK-032 bloccato / in pausa.
+  Motivo: **User override 2026-05-03** — l'utente ha chiesto di mettere TASK-032 in pausa e attivare TASK-033. D2 e' accepted; **P2–P4 PASS runtime**; **P5 scanner reopen NON ha evidenza PASS** dopo tentativi di micro-fix. Task **non** DONE. Alla ripresa: chiudere o decidere formalmente P5 scanner reopen prima di qualunque raccomandazione finale su TASK-028.
 - TASK-028 bloccato.
   Motivo: **User override 2026-04-26** — validazione runtime/visiva read-only positiva ma incompleta; build PASS; iPhone piccolo light/dark PASS; complete/incomplete PASS; campi secondari PASS sul caso completo; nessuna regressione TASK-028 rilevata; nessun FIX richiesto. Test residui sospesi: iPhone grande row detail, prev/next multi-riga, scanner reopen dopo decisione permesso camera, caso dati mancanti/ambigui. Task **non** DONE; pending manual validation finale.
+  Nota (2026-05 TASK-032): slice **FIX D2** (`GeneratedView`/`InventorySearchSheet`) validata runtime con D2 PASS e D1 regression PASS. Override utente “Esegui tutto per farlo in DONE”: **P2–P4 PASS runtime** su iPhone 17 Pro Max, ma **P5 scanner reopen NON ha evidenza PASS** dopo tentativi di micro-fix; **TASK-032 ora BLOCKED / on hold** e **TASK-028 resta BLOCKED**. Non proporre DONE finché P5 scanner reopen non è validato o deciso formalmente con effetto esplicito.
   Nota: sospensione esplicita dell'utente; **TASK-029** e' completato e **TASK-030** e' ora **BLOCKED** per runtime gap canonico.
 - TASK-027 bloccato.
   Motivo: implementation **completata**; review **completata** con esito **OK** / **APPROVED**; **test manuali T-1…T-13 non eseguiti** — **sospensione esplicita** perché mancano i test manuali; **non** **DONE**; **on hold for manual verification**. Alla ripresa: test manuali → eventuale FIX → REVIEW → conferma utente → DONE.
