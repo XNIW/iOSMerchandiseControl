@@ -4,7 +4,7 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**TASK-033** è **ACTIVE / PLANNING**: audit schema Supabase e mapping iOS/Android/Supabase. **TASK-032** è messo in pausa come **BLOCKED / on hold** su override utente 2026-05-03: D2 accepted, **P2–P4 PASS runtime**, ma **P5 scanner reopen NON accettato / senza evidenza PASS**. **`TASK-028` resta `BLOCKED`.**
+**TASK-033** è **DONE / Chiusura** (audit schema Supabase e mapping approvato). **TASK-034** è **ACTIVE** in fase **PLANNING** (foundation Supabase iOS read-only: planning in corso nel file task; **Execution non avviata**). **TASK-032** resta in pausa **BLOCKED / on hold** (P5 scanner reopen); **`TASK-028` resta `BLOCKED`.**
 
 ## Stato globale
 ACTIVE
@@ -29,16 +29,17 @@ ACTIVE
 > **2026-05-03 (review/user override):** **TASK-032** slice **FIX D2** review completata con esito **APPROVED D2 slice / accepted**. Nessun fix Swift in Review; build simulator PASS; runtime non ripetuto perche' il flow D2 non e' stato modificato dopo le evidenze Execution. **TASK-032 non DONE**: prossima slice **P2–P5/scanner** pending. **TASK-028 resta BLOCKED**.
 > **2026-05-03 (execution+fix/user override):** utente ha chiesto di “eseguire tutto per farlo in DONE”. Codex ha validato **P2–P4 PASS runtime**, trovato **P5 scanner reopen FAIL / non verificato PASS**, applicato micro-fix in `GeneratedView.swift` e ribuildato; runtime non ha prodotto evidenza stabile di reopen. **TASK-032 non DONE**; **TASK-028 resta BLOCKED**.
 > **2026-05-03 (tracking/user override):** utente ha chiesto di mettere **TASK-032** in pausa e attivare **TASK-033**. **TASK-032** passa a **BLOCKED / on hold**; non e' DONE perche' **P5 scanner reopen** resta senza PASS. **TASK-033** passa da **TODO** ad **ACTIVE / PLANNING**. **TASK-028 resta BLOCKED**.
-> **Nota corrente:** **TASK-033** (`ACTIVE`) in **PLANNING** — audit schema Supabase e mapping iOS/Android/Supabase. **TASK-032** e' in pausa **BLOCKED / on hold** con D2 accepted, **P2–P4 PASS**, **P5 scanner reopen bloccante**. **TASK-028** — **BLOCKED**.
+> **2026-05-03 (review/close):** **TASK-033** review documentale completata con esito **APPROVED**: audit Supabase/iOS/Android verificato, micro-correzione follow-up per evitare collisione con **TASK-036/TASK-037** già assegnati, nessun codice Swift/Kotlin/SQL modificato, build iOS PASS. Task chiuso **DONE** su autorizzazione utente esplicita; **TASK-034** sbloccata come next candidate ma non attivata.
+> **Nota corrente:** **TASK-034** **ACTIVE / PLANNING** (solo documentazione planning aggiornata 2026-05-03; nessuna execution codice). **TASK-033** **DONE / Chiusura**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**.
 
 ## Workflow task attivo
-- **Task attivo:** TASK-033
-- **File task:** `docs/TASKS/TASK-033-supabase-schema-audit-ios-android-model-mapping.md`
+- **Task attivo:** TASK-034
+- **File task:** `docs/TASKS/TASK-034-supabase-ios-foundation-client-config-dto-readonly.md`
 - **Stato task:** ACTIVE
 - **Fase:** PLANNING
-- **Responsabile:** Planner / Claude — compilare planning operativo prima di execution
+- **Responsabile:** CLAUDE
 - **Ultimo aggiornamento:** 2026-05-03
-- **Nota tracking:** attivazione richiesta dall'utente. Scope TASK-033: audit/mapping Supabase documentale; nessun client Supabase e nessuna modifica codice iOS avviata. **TASK-032 in pausa BLOCKED / on hold; TASK-028 — BLOCKED**.
+- **Nota tracking:** Planning TASK-034 completo nel file task; handoff verso EXECUTION solo dopo OK utente. TASK-032 in pausa; TASK-028 BLOCKED.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -79,14 +80,14 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- Task ID: TASK-033
-- Titolo: Supabase schema audit and iOS/Android model mapping
-- File task: `docs/TASKS/TASK-033-supabase-schema-audit-ios-android-model-mapping.md`
-- Stato: ACTIVE
-- Fase attuale: PLANNING
-- Responsabile attuale: Planner / Claude — compilare planning operativo prima di execution
+- Task ID: —
+- Titolo: Nessun task attivo
+- File task: —
+- Stato: —
+- Fase attuale: —
+- Responsabile attuale: —
 - Ultimo aggiornamento: 2026-05-03
-- Nota tracking: attivato su override utente; audit/mapping Supabase documentale da pianificare. Nessuna execution avviata in questo aggiornamento; **TASK-032 BLOCKED / on hold**; **TASK-028 BLOCKED**.
+- Nota tracking: TASK-033 e' DONE / Chiusura; TASK-034 resta TODO / next candidate, non attiva; **TASK-032 BLOCKED / on hold**; **TASK-028 BLOCKED**.
 
 Task bloccati non attivi:
 - Task ID: TASK-032
@@ -254,7 +255,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-030 | Full-database import/export finalization: reimport idempotency + non-product diff + progress UX | BLOCKED | HIGH |
 | TASK-031 | Import recognition hardening: canonical headers HTML/Excel | DONE | MEDIUM |
 | TASK-032 | GeneratedView multi-row navigation validation + missing-data scenarios | BLOCKED | MEDIUM |
-| TASK-033 | Supabase schema audit and iOS/Android model mapping | ACTIVE | HIGH |
+| TASK-033 | Supabase schema audit and iOS/Android model mapping | DONE | HIGH |
 | TASK-034 | Supabase iOS foundation: client config + DTO readonly | TODO | MEDIUM |
 | TASK-035 | Manual Supabase pull to SwiftData dry-run | TODO | MEDIUM |
 | TASK-036 | Import HTML advanced table parsing: colspan/rowspan/multi-table hardening | DONE | MEDIUM |
@@ -276,6 +277,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-031 | Import recognition hardening: canonical headers HTML/Excel | 2026-04-27 |
 | TASK-036 | Import HTML advanced table parsing: colspan/rowspan/multi-table hardening | 2026-04-27 |
 | TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | 2026-04-27 |
+| TASK-033 | Supabase schema audit and iOS/Android model mapping | 2026-05-03 |
 
 ## Blocchi e dipendenze
 - TASK-032 bloccato / in pausa.
