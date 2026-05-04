@@ -4,10 +4,10 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**TASK-033** è **DONE / Chiusura** (audit schema Supabase e mapping approvato). **TASK-034** è **ACTIVE** in fase **PLANNING** (foundation Supabase iOS read-only: planning in corso nel file task; **Execution non avviata**). **TASK-032** resta in pausa **BLOCKED / on hold** (P5 scanner reopen); **`TASK-028` resta `BLOCKED`.**
+**TASK-034** è **DONE / Chiusura** (foundation Supabase iOS read-only approvata in Review). **TASK-035** è sbloccata come **next candidate** ma **non attiva**. **TASK-032** resta in pausa **BLOCKED / on hold** (P5 scanner reopen); **`TASK-028` resta `BLOCKED`.**
 
 ## Stato globale
-ACTIVE
+IDLE
 > **2026-04-27 (user override):** **TASK-031** promosso ad **ACTIVE / EXECUTION** con responsabile operativo **Cursor/Codex executor**. Planning approvato; perimetro limitato a import/header recognition in `ExcelAnalyzer`, senza Supabase, senza `RowDetailSheetView`, senza redesign PreGenerate.
 > **2026-04-27 (handoff):** execution TASK-031 completata da **Cursor/Codex** con build Debug Simulator PASS e fixture documentali A-F sotto `docs/fixtures/TASK-031/`; handoff a **CLAUDE / REVIEW**. Nessun Supabase / nessun `RowDetailSheetView` / nessun redesign PreGenerate.
 > **2026-04-27 (review/close):** **TASK-031** review tecnica completata da **Claude Code reviewer/fixer** con esito **APPROVED_FIXED_DIRECTLY**: fix diretto limitato a commento `ColumnStatus.normalized` e soglia più conservativa per header scoring; build Debug Simulator PASS; task chiuso **DONE** su autorizzazione utente esplicita.
@@ -30,16 +30,19 @@ ACTIVE
 > **2026-05-03 (execution+fix/user override):** utente ha chiesto di “eseguire tutto per farlo in DONE”. Codex ha validato **P2–P4 PASS runtime**, trovato **P5 scanner reopen FAIL / non verificato PASS**, applicato micro-fix in `GeneratedView.swift` e ribuildato; runtime non ha prodotto evidenza stabile di reopen. **TASK-032 non DONE**; **TASK-028 resta BLOCKED**.
 > **2026-05-03 (tracking/user override):** utente ha chiesto di mettere **TASK-032** in pausa e attivare **TASK-033**. **TASK-032** passa a **BLOCKED / on hold**; non e' DONE perche' **P5 scanner reopen** resta senza PASS. **TASK-033** passa da **TODO** ad **ACTIVE / PLANNING**. **TASK-028 resta BLOCKED**.
 > **2026-05-03 (review/close):** **TASK-033** review documentale completata con esito **APPROVED**: audit Supabase/iOS/Android verificato, micro-correzione follow-up per evitare collisione con **TASK-036/TASK-037** già assegnati, nessun codice Swift/Kotlin/SQL modificato, build iOS PASS. Task chiuso **DONE** su autorizzazione utente esplicita; **TASK-034** sbloccata come next candidate ma non attivata.
-> **Nota corrente:** **TASK-034** **ACTIVE / PLANNING** (solo documentazione planning aggiornata 2026-05-03; nessuna execution codice). **TASK-033** **DONE / Chiusura**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**.
+> **2026-05-03 (execution/user override):** utente ha autorizzato esplicitamente l'**EXECUTION** di **TASK-034**. Codex ha letto integralmente il task e aggiornato la metadata del task a **ACTIVE / EXECUTION** con responsabile **CODEX**; perimetro invariato: foundation Supabase iOS read-only, nessun push, nessun sync automatico, nessuna auth/login/JWT manuale.
+> **2026-05-03 (handoff):** execution TASK-034 completata da Codex: Supabase Swift SPM `2.46.0`, config plist sicura, DTO readonly, service read-only, diagnostica DEBUG localizzata; build Debug Simulator PASS; catalog probe live non eseguito per assenza di `SupabaseConfig.plist` reale (`configMissing` documentato). Handoff a **CLAUDE / REVIEW**.
+> **2026-05-04 (review/close/user override):** **TASK-034** review tecnica completata con esito **APPROVED** e micro-fix diretto di sicurezza/localizzazione diagnostica; build Simulator PASS, build quiet PASS, `git diff --check` PASS; nessun segreto, nessuna scrittura remota/locale, nessun auth/login/sync. Task chiuso **DONE** su override esplicito dell'utente. **TASK-035** sbloccata come **next candidate**, non attivata.
+> **Nota corrente:** nessun task attivo. **TASK-034** **DONE / Chiusura**. **TASK-035** **TODO / next candidate sbloccata**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**.
 
 ## Workflow task attivo
-- **Task attivo:** TASK-034
-- **File task:** `docs/TASKS/TASK-034-supabase-ios-foundation-client-config-dto-readonly.md`
-- **Stato task:** ACTIVE
-- **Fase:** PLANNING
-- **Responsabile:** CLAUDE
-- **Ultimo aggiornamento:** 2026-05-03
-- **Nota tracking:** Planning TASK-034 completo nel file task; handoff verso EXECUTION solo dopo OK utente. TASK-032 in pausa; TASK-028 BLOCKED.
+- **Task attivo:** nessuno
+- **File task:** —
+- **Stato task:** —
+- **Fase:** —
+- **Responsabile:** —
+- **Ultimo aggiornamento:** 2026-05-04
+- **Nota tracking:** TASK-034 chiusa DONE dopo Review APPROVED; TASK-035 è sbloccata come next candidate ma non attiva. TASK-032 in pausa; TASK-028 BLOCKED.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -83,11 +86,11 @@ Qualunque altra transizione è invalida.
 - Task ID: —
 - Titolo: Nessun task attivo
 - File task: —
-- Stato: —
+- Stato: IDLE
 - Fase attuale: —
 - Responsabile attuale: —
-- Ultimo aggiornamento: 2026-05-03
-- Nota tracking: TASK-033 e' DONE / Chiusura; TASK-034 resta TODO / next candidate, non attiva; **TASK-032 BLOCKED / on hold**; **TASK-028 BLOCKED**.
+- Ultimo aggiornamento: 2026-05-04
+- Nota tracking: TASK-034 e' DONE / Chiusura; **TASK-035 TODO / next candidate sbloccata ma non attiva**; **TASK-032 BLOCKED / on hold**; **TASK-028 BLOCKED**.
 
 Task bloccati non attivi:
 - Task ID: TASK-032
@@ -256,7 +259,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-031 | Import recognition hardening: canonical headers HTML/Excel | DONE | MEDIUM |
 | TASK-032 | GeneratedView multi-row navigation validation + missing-data scenarios | BLOCKED | MEDIUM |
 | TASK-033 | Supabase schema audit and iOS/Android model mapping | DONE | HIGH |
-| TASK-034 | Supabase iOS foundation: client config + DTO readonly | TODO | MEDIUM |
+| TASK-034 | Supabase iOS foundation: client config + DTO readonly | DONE | MEDIUM |
 | TASK-035 | Manual Supabase pull to SwiftData dry-run | TODO | MEDIUM |
 | TASK-036 | Import HTML advanced table parsing: colspan/rowspan/multi-table hardening | DONE | MEDIUM |
 | TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | DONE | MEDIUM |
@@ -278,6 +281,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-036 | Import HTML advanced table parsing: colspan/rowspan/multi-table hardening | 2026-04-27 |
 | TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | 2026-04-27 |
 | TASK-033 | Supabase schema audit and iOS/Android model mapping | 2026-05-03 |
+| TASK-034 | Supabase iOS foundation: client config + DTO readonly | 2026-05-04 |
 
 ## Blocchi e dipendenze
 - TASK-032 bloccato / in pausa.

@@ -1,0 +1,225 @@
+import Foundation
+import Supabase
+
+nonisolated enum SupabaseInventoryServiceError: Error, Sendable {
+    case configMissing
+    case invalidConfig
+    case networkError(statusCode: Int?, message: String?)
+    case permissionDeniedOrRLS(statusCode: Int?, code: String?, message: String?)
+    case decodingError(message: String?)
+    case schemaDrift(message: String?)
+    case unknown(message: String?)
+
+    var safeDiagnosticDetail: String? {
+        switch self {
+        case .configMissing, .invalidConfig:
+            return nil
+        case .networkError(let statusCode, let message):
+            return Self.detail(statusCode: statusCode, code: nil, message: message)
+        case .permissionDeniedOrRLS(let statusCode, let code, let message):
+            return Self.detail(statusCode: statusCode, code: code, message: message)
+        case .decodingError(let message), .schemaDrift(let message), .unknown(let message):
+            return Self.sanitized(message)
+        }
+    }
+
+    private static func detail(statusCode: Int?, code: String?, message: String?) -> String? {
+        let parts = [
+            statusCode.map { "HTTP \($0)" },
+            code.map { "code \($0)" },
+            sanitized(message)
+        ].compactMap { $0 }
+
+        return parts.isEmpty ? nil : parts.joined(separator: " - ")
+    }
+
+    private static func sanitized(_ message: String?) -> String? {
+        guard var text = message?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+            return nil
+        }
+
+        let lowercased = text.lowercased()
+        if lowercased.contains("authorization")
+            || lowercased.contains("bearer ")
+            || lowercased.contains("apikey")
+            || lowercased.contains("jwt") {
+            return nil
+        }
+
+        if text.count > 240 {
+            return String(text.prefix(240)) + "..."
+        }
+
+        return text
+    }
+}
+
+nonisolated enum SupabaseInventoryDiagnosticResult: Sendable {
+    case catalogProbeSucceeded(rowCount: Int)
+}
+
+actor SupabaseInventoryService {
+    private let urlSession: URLSession
+
+    init(urlSession: URLSession = .shared) {
+        self.urlSession = urlSession
+    }
+
+    func testConnection() async throws -> SupabaseInventoryDiagnosticResult {
+        let config = try loadConfig()
+        try await validateProjectReachability(config)
+        let products = try await fetchProducts(limit: 1)
+        return .catalogProbeSucceeded(rowCount: products.count)
+    }
+
+    func fetchProducts(limit: Int = 100) async throws -> [RemoteInventoryProductRow] {
+        try await fetchRows(
+            table: "inventory_products",
+            columns: "id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at",
+            limit: limit
+        )
+    }
+
+    func fetchSuppliers(limit: Int = 100) async throws -> [RemoteInventorySupplierRow] {
+        try await fetchRows(
+            table: "inventory_suppliers",
+            columns: "id,owner_user_id,name,updated_at,deleted_at",
+            limit: limit
+        )
+    }
+
+    func fetchCategories(limit: Int = 100) async throws -> [RemoteInventoryCategoryRow] {
+        try await fetchRows(
+            table: "inventory_categories",
+            columns: "id,owner_user_id,name,updated_at,deleted_at",
+            limit: limit
+        )
+    }
+
+    func fetchProductPrices(limit: Int = 100) async throws -> [RemoteInventoryProductPriceRow] {
+        try await fetchRows(
+            table: "inventory_product_prices",
+            columns: "id,owner_user_id,product_id,type,price,effective_at,source,note,created_at",
+            limit: limit
+        )
+    }
+
+    private func fetchRows<Row: Decodable & Sendable>(
+        table: String,
+        columns: String,
+        limit: Int
+    ) async throws -> [Row] {
+        let config = try loadConfig()
+        let client = config.makeClient()
+        let clampedLimit = max(1, min(limit, 1_000))
+
+        do {
+            let rows: [Row] = try await client
+                .from(table)
+                .select(columns)
+                .limit(clampedLimit)
+                .execute()
+                .value
+            return rows
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func loadConfig() throws -> SupabaseConfig {
+        do {
+            return try SupabaseConfig.load()
+        } catch SupabaseConfigError.configMissing {
+            throw SupabaseInventoryServiceError.configMissing
+        } catch SupabaseConfigError.invalidConfig {
+            throw SupabaseInventoryServiceError.invalidConfig
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func validateProjectReachability(_ config: SupabaseConfig) async throws {
+        guard let endpoint = URL(string: "/rest/v1/", relativeTo: config.projectURL) else {
+            throw SupabaseInventoryServiceError.invalidConfig
+        }
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.setValue(config.publishableKey, forHTTPHeaderField: "apikey")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        do {
+            let (_, response) = try await urlSession.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw SupabaseInventoryServiceError.networkError(
+                    statusCode: nil,
+                    message: "Missing HTTP response."
+                )
+            }
+
+            switch httpResponse.statusCode {
+            case 200..<400:
+                return
+            case 401, 403:
+                throw SupabaseInventoryServiceError.invalidConfig
+            default:
+                throw SupabaseInventoryServiceError.networkError(
+                    statusCode: httpResponse.statusCode,
+                    message: HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+                )
+            }
+        } catch let error as SupabaseInventoryServiceError {
+            throw error
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func mapPostgrestError(_ error: PostgrestError) -> SupabaseInventoryServiceError {
+        let code = error.code
+        let message = error.message
+        let normalized = [code, message, error.detail, error.hint]
+            .compactMap { $0?.lowercased() }
+            .joined(separator: " ")
+
+        if normalized.contains("permission denied")
+            || normalized.contains("row-level security")
+            || normalized.contains("rls")
+            || normalized.contains("unauthorized")
+            || normalized.contains("authenticated")
+            || code == "42501" {
+            return .permissionDeniedOrRLS(statusCode: nil, code: code, message: message)
+        }
+
+        if code == "42P01" || code == "42703" || code == "PGRST204" {
+            return .schemaDrift(message: message)
+        }
+
+        return .unknown(message: message)
+    }
+
+    private func mapDecodingError(_ error: DecodingError) -> SupabaseInventoryServiceError {
+        switch error {
+        case .keyNotFound(let key, _):
+            return .schemaDrift(message: "Missing key \(key.stringValue).")
+        case .typeMismatch, .valueNotFound, .dataCorrupted:
+            return .decodingError(message: String(describing: error))
+        @unknown default:
+            return .decodingError(message: String(describing: error))
+        }
+    }
+}

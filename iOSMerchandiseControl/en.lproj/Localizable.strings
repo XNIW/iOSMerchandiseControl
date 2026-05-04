@@ -63,6 +63,19 @@
 "options.tip.header" = "Tip";
 "options.tip.body" = "You can change theme and language at any time from the \"Options\" tab.";
 "options.option.current" = "Current";
+"options.supabase.diagnostic.header" = "Supabase Diagnostics";
+"options.supabase.diagnostic.footer" = "Development tool: checks only configuration and read-only catalog access.";
+"options.supabase.diagnostic.button" = "Run Supabase test";
+"options.supabase.diagnostic.running" = "Supabase test running...";
+"options.supabase.diagnostic.success" = "Connection succeeded. Catalog probe completed: %d rows read.";
+"options.supabase.diagnostic.configMissing" = "Supabase configuration is missing.";
+"options.supabase.diagnostic.invalidConfig" = "Supabase configuration is invalid.";
+"options.supabase.diagnostic.networkError" = "Network or Supabase project is not reachable.";
+"options.supabase.diagnostic.permissionDeniedOrRLS" = "Catalog is not readable with the public key only. Possible RLS/auth block.";
+"options.supabase.diagnostic.decodingError" = "Remote response could not be decoded.";
+"options.supabase.diagnostic.schemaDrift" = "Remote schema differs from the expected DTO.";
+"options.supabase.diagnostic.unknown" = "Unclassified Supabase error.";
+"options.supabase.diagnostic.messageWithDetail" = "%@\nDetail: %@";
 
 /* Inventory home */
 "inventory.home.title" = "Inventory";

@@ -63,6 +63,19 @@
 "options.tip.header" = "Sugerencia";
 "options.tip.body" = "Puedes cambiar el tema y el idioma en cualquier momento desde la pestaña \"Opciones\".";
 "options.option.current" = "Actual";
+"options.supabase.diagnostic.header" = "Diagnóstico Supabase";
+"options.supabase.diagnostic.footer" = "Herramienta de desarrollo: verifica solo configuración y acceso de solo lectura al catálogo.";
+"options.supabase.diagnostic.button" = "Ejecutar prueba Supabase";
+"options.supabase.diagnostic.running" = "Prueba Supabase en curso...";
+"options.supabase.diagnostic.success" = "Conexión correcta. Probe de catálogo completado: %d filas leídas.";
+"options.supabase.diagnostic.configMissing" = "Falta la configuración Supabase.";
+"options.supabase.diagnostic.invalidConfig" = "La configuración Supabase no es válida.";
+"options.supabase.diagnostic.networkError" = "La red o el proyecto Supabase no es alcanzable.";
+"options.supabase.diagnostic.permissionDeniedOrRLS" = "El catálogo no se puede leer solo con la clave pública. Posible bloqueo RLS/auth.";
+"options.supabase.diagnostic.decodingError" = "No se pudo decodificar la respuesta remota.";
+"options.supabase.diagnostic.schemaDrift" = "El esquema remoto difiere del DTO esperado.";
+"options.supabase.diagnostic.unknown" = "Error Supabase no clasificado.";
+"options.supabase.diagnostic.messageWithDetail" = "%@\nDetalle: %@";
 
 /* Inventory home */
 "inventory.home.title" = "Inventario";

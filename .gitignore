@@ -1,0 +1,4 @@
+# Local Supabase client config. Keep real project URL/key pairs out of git.
+iOSMerchandiseControl/SupabaseConfig.plist
+*.local.xcconfig
+*.secrets.xcconfig

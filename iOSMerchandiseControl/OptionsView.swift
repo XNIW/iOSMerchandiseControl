@@ -19,6 +19,11 @@ struct LanguageOption: Identifiable {
 struct OptionsView: View {
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
+#if DEBUG
+    @State private var isRunningSupabaseDiagnostic = false
+    @State private var supabaseDiagnosticMessage: String?
+    @State private var supabaseDiagnosticIsError = false
+#endif
 
     // Opzioni tema (equivalenti alle scelte Android)
     private var themeOptions: [ThemeOption] {
@@ -112,6 +117,42 @@ struct OptionsView: View {
                     .foregroundStyle(.secondary)
             }
 
+#if DEBUG
+            Section {
+                Button {
+                    runSupabaseDiagnostic()
+                } label: {
+                    Label(L("options.supabase.diagnostic.button"), systemImage: "network")
+                }
+                .disabled(isRunningSupabaseDiagnostic)
+
+                if isRunningSupabaseDiagnostic {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(L("options.supabase.diagnostic.running"))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let supabaseDiagnosticMessage {
+                    Label {
+                        Text(supabaseDiagnosticMessage)
+                            .font(.footnote)
+                            .foregroundStyle(supabaseDiagnosticIsError ? Color.red : Color.secondary)
+                    } icon: {
+                        Image(systemName: supabaseDiagnosticIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                            .foregroundStyle(supabaseDiagnosticIsError ? Color.orange : Color.green)
+                    }
+                }
+            } header: {
+                SectionHeader(title: L("options.supabase.diagnostic.header"), systemImage: "server.rack")
+            } footer: {
+                Text(L("options.supabase.diagnostic.footer"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+#endif
+
             // Piccola sezione di “aiuto” in fondo
             Section {
                 VStack(alignment: .leading, spacing: 4) {
@@ -127,6 +168,69 @@ struct OptionsView: View {
         }
         .navigationTitle(L("options.title"))
     }
+
+#if DEBUG
+    private func runSupabaseDiagnostic() {
+        guard !isRunningSupabaseDiagnostic else { return }
+
+        isRunningSupabaseDiagnostic = true
+        supabaseDiagnosticMessage = nil
+        supabaseDiagnosticIsError = false
+
+        Task {
+            let service = SupabaseInventoryService()
+
+            do {
+                let result = try await service.testConnection()
+                supabaseDiagnosticMessage = localizedSupabaseDiagnosticMessage(for: result)
+                supabaseDiagnosticIsError = false
+            } catch let error as SupabaseInventoryServiceError {
+                supabaseDiagnosticMessage = localizedSupabaseDiagnosticMessage(for: error)
+                supabaseDiagnosticIsError = true
+            } catch {
+                let serviceError = SupabaseInventoryServiceError.unknown(message: String(describing: error))
+                supabaseDiagnosticMessage = localizedSupabaseDiagnosticMessage(for: serviceError)
+                supabaseDiagnosticIsError = true
+            }
+
+            isRunningSupabaseDiagnostic = false
+        }
+    }
+
+    private func localizedSupabaseDiagnosticMessage(for result: SupabaseInventoryDiagnosticResult) -> String {
+        switch result {
+        case .catalogProbeSucceeded(let rowCount):
+            return L("options.supabase.diagnostic.success", rowCount)
+        }
+    }
+
+    private func localizedSupabaseDiagnosticMessage(for error: SupabaseInventoryServiceError) -> String {
+        let baseMessage: String
+
+        switch error {
+        case .configMissing:
+            baseMessage = L("options.supabase.diagnostic.configMissing")
+        case .invalidConfig:
+            baseMessage = L("options.supabase.diagnostic.invalidConfig")
+        case .networkError:
+            baseMessage = L("options.supabase.diagnostic.networkError")
+        case .permissionDeniedOrRLS:
+            baseMessage = L("options.supabase.diagnostic.permissionDeniedOrRLS")
+        case .decodingError:
+            baseMessage = L("options.supabase.diagnostic.decodingError")
+        case .schemaDrift:
+            baseMessage = L("options.supabase.diagnostic.schemaDrift")
+        case .unknown:
+            baseMessage = L("options.supabase.diagnostic.unknown")
+        }
+
+        guard let detail = error.safeDiagnosticDetail else {
+            return baseMessage
+        }
+
+        return L("options.supabase.diagnostic.messageWithDetail", baseMessage, detail)
+    }
+#endif
 }
 
 // MARK: - Header di sezione con icona rotonda

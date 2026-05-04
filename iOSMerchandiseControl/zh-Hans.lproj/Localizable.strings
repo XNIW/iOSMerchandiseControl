@@ -63,6 +63,19 @@
 "options.tip.header" = "提示";
 "options.tip.body" = "你可以随时在“选项”标签中更改主题和语言。";
 "options.option.current" = "当前";
+"options.supabase.diagnostic.header" = "Supabase 诊断";
+"options.supabase.diagnostic.footer" = "开发工具：仅检查配置和只读目录访问。";
+"options.supabase.diagnostic.button" = "运行 Supabase 测试";
+"options.supabase.diagnostic.running" = "Supabase 测试正在运行...";
+"options.supabase.diagnostic.success" = "连接成功。目录探测完成：已读取 %d 行。";
+"options.supabase.diagnostic.configMissing" = "缺少 Supabase 配置。";
+"options.supabase.diagnostic.invalidConfig" = "Supabase 配置无效。";
+"options.supabase.diagnostic.networkError" = "网络或 Supabase 项目不可达。";
+"options.supabase.diagnostic.permissionDeniedOrRLS" = "仅使用公共密钥无法读取目录。可能是 RLS/auth 阻止。";
+"options.supabase.diagnostic.decodingError" = "无法解码远程响应。";
+"options.supabase.diagnostic.schemaDrift" = "远程 schema 与预期 DTO 不一致。";
+"options.supabase.diagnostic.unknown" = "未分类的 Supabase 错误。";
+"options.supabase.diagnostic.messageWithDetail" = "%@\n详情：%@";
 
 /* Inventory home */
 "inventory.home.title" = "库存";
