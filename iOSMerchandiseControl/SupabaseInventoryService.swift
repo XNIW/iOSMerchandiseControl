@@ -23,6 +23,10 @@ nonisolated enum SupabaseInventoryServiceError: Error, Sendable {
         }
     }
 
+    static func sanitizedDiagnosticDetail(_ message: String?) -> String? {
+        sanitized(message)
+    }
+
     private static func detail(statusCode: Int?, code: String?, message: String?) -> String? {
         let parts = [
             statusCode.map { "HTTP \($0)" },
@@ -34,7 +38,7 @@ nonisolated enum SupabaseInventoryServiceError: Error, Sendable {
     }
 
     private static func sanitized(_ message: String?) -> String? {
-        guard var text = message?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+        guard let text = message?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
             return nil
         }
 
@@ -80,11 +84,29 @@ actor SupabaseInventoryService {
         )
     }
 
+    func fetchProductsPage(from: Int, to: Int) async throws -> [RemoteInventoryProductRow] {
+        try await fetchRowsPage(
+            table: "inventory_products",
+            columns: "id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at",
+            from: from,
+            to: to
+        )
+    }
+
     func fetchSuppliers(limit: Int = 100) async throws -> [RemoteInventorySupplierRow] {
         try await fetchRows(
             table: "inventory_suppliers",
             columns: "id,owner_user_id,name,updated_at,deleted_at",
             limit: limit
+        )
+    }
+
+    func fetchSuppliersPage(from: Int, to: Int) async throws -> [RemoteInventorySupplierRow] {
+        try await fetchRowsPage(
+            table: "inventory_suppliers",
+            columns: "id,owner_user_id,name,updated_at,deleted_at",
+            from: from,
+            to: to
         )
     }
 
@@ -96,11 +118,29 @@ actor SupabaseInventoryService {
         )
     }
 
+    func fetchCategoriesPage(from: Int, to: Int) async throws -> [RemoteInventoryCategoryRow] {
+        try await fetchRowsPage(
+            table: "inventory_categories",
+            columns: "id,owner_user_id,name,updated_at,deleted_at",
+            from: from,
+            to: to
+        )
+    }
+
     func fetchProductPrices(limit: Int = 100) async throws -> [RemoteInventoryProductPriceRow] {
         try await fetchRows(
             table: "inventory_product_prices",
             columns: "id,owner_user_id,product_id,type,price,effective_at,source,note,created_at",
             limit: limit
+        )
+    }
+
+    func fetchProductPricesPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {
+        try await fetchRowsPage(
+            table: "inventory_product_prices",
+            columns: "id,owner_user_id,product_id,type,price,effective_at,source,note,created_at",
+            from: from,
+            to: to
         )
     }
 
@@ -118,6 +158,40 @@ actor SupabaseInventoryService {
                 .from(table)
                 .select(columns)
                 .limit(clampedLimit)
+                .execute()
+                .value
+            return rows
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func fetchRowsPage<Row: Decodable & Sendable>(
+        table: String,
+        columns: String,
+        from: Int,
+        to: Int
+    ) async throws -> [Row] {
+        let config = try loadConfig()
+        let client = config.makeClient()
+        let start = max(0, from)
+        let end = max(start, min(to, start + 999))
+
+        do {
+            let rows: [Row] = try await client
+                .from(table)
+                .select(columns)
+                .order("id", ascending: true)
+                .range(from: start, to: end)
                 .execute()
                 .value
             return rows

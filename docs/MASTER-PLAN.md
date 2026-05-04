@@ -4,7 +4,7 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**TASK-034** è **DONE / Chiusura** (foundation Supabase iOS read-only approvata in Review). **TASK-035** è sbloccata come **next candidate** ma **non attiva**. **TASK-032** resta in pausa **BLOCKED / on hold** (P5 scanner reopen); **`TASK-028` resta `BLOCKED`.**
+**TASK-035** è **DONE / Chiusura**: review tecnica approvata, fix diretti piccoli applicati, build/test/check verdi. Nessun task attivo corrente. **TASK-032** resta in pausa **BLOCKED / on hold** (P5 scanner reopen); **`TASK-028` resta `BLOCKED`.**
 
 ## Stato globale
 IDLE
@@ -33,7 +33,10 @@ IDLE
 > **2026-05-03 (execution/user override):** utente ha autorizzato esplicitamente l'**EXECUTION** di **TASK-034**. Codex ha letto integralmente il task e aggiornato la metadata del task a **ACTIVE / EXECUTION** con responsabile **CODEX**; perimetro invariato: foundation Supabase iOS read-only, nessun push, nessun sync automatico, nessuna auth/login/JWT manuale.
 > **2026-05-03 (handoff):** execution TASK-034 completata da Codex: Supabase Swift SPM `2.46.0`, config plist sicura, DTO readonly, service read-only, diagnostica DEBUG localizzata; build Debug Simulator PASS; catalog probe live non eseguito per assenza di `SupabaseConfig.plist` reale (`configMissing` documentato). Handoff a **CLAUDE / REVIEW**.
 > **2026-05-04 (review/close/user override):** **TASK-034** review tecnica completata con esito **APPROVED** e micro-fix diretto di sicurezza/localizzazione diagnostica; build Simulator PASS, build quiet PASS, `git diff --check` PASS; nessun segreto, nessuna scrittura remota/locale, nessun auth/login/sync. Task chiuso **DONE** su override esplicito dell'utente. **TASK-035** sbloccata come **next candidate**, non attivata.
-> **Nota corrente:** nessun task attivo. **TASK-034** **DONE / Chiusura**. **TASK-035** **TODO / next candidate sbloccata**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**.
+> **2026-05-04 (execution/user override):** utente ha autorizzato esplicitamente l'**EXECUTION** di **TASK-035**. Codex ha letto task/planning/fonti richieste e aggiornato metadata a **ACTIVE / EXECUTION** con responsabile **Cursor/Codex**; perimetro invariato: preview dry-run Supabase → SwiftData, nessuna scrittura locale/remota, nessun apply/merge/backfill/sync reale.
+> **2026-05-04 (handoff):** execution TASK-035 completata da **Cursor/Codex**: modelli preview/snapshot Sendable, snapshot SwiftData read-only, fetch Supabase paginato read-only, diff engine conservativo, UI DEBUG localizzata, test XCTest puri PASS; build quiet PASS; nessuna scrittura locale/remota, nessun apply/merge/backfill/sync reale. Handoff a **CLAUDE / REVIEW**.
+> **2026-05-04 (review/close/user override):** **TASK-035** review tecnica completata con esito **APPROVED / DONE**. Fix diretti piccoli: budget paginazione rispettato sotto page size, test puri aggiunti per barcode remoto vuoto e ProductPrice preview-only, label preview localizzate rifinite. Build Debug PASS, Build Release PASS, XCTest PASS su iPhone 16e iOS 26.1; anti-scrittura locale/remota PASS; localizzazioni e `git diff --check` PASS; nessun segreto/config reale tracciato. Task chiuso **DONE** su override esplicito dell'utente.
+> **Nota corrente:** nessun task attivo. **TASK-035** **DONE / Chiusura**. **TASK-034** **DONE / Chiusura**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**.
 
 ## Workflow task attivo
 - **Task attivo:** nessuno
@@ -42,7 +45,7 @@ IDLE
 - **Fase:** —
 - **Responsabile:** —
 - **Ultimo aggiornamento:** 2026-05-04
-- **Nota tracking:** TASK-034 chiusa DONE dopo Review APPROVED; TASK-035 è sbloccata come next candidate ma non attiva. TASK-032 in pausa; TASK-028 BLOCKED.
+- **Nota tracking:** TASK-035 chiuso DONE dopo review approvata e check verdi. Prossimo lavoro da decidere esplicitamente; TASK-032 resta in pausa e TASK-028 resta BLOCKED.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -84,13 +87,20 @@ Qualunque altra transizione è invalida.
 
 ## Task attivo
 - Task ID: —
-- Titolo: Nessun task attivo
+- Titolo: —
 - File task: —
-- Stato: IDLE
+- Stato: —
 - Fase attuale: —
 - Responsabile attuale: —
 - Ultimo aggiornamento: 2026-05-04
-- Nota tracking: TASK-034 e' DONE / Chiusura; **TASK-035 TODO / next candidate sbloccata ma non attiva**; **TASK-032 BLOCKED / on hold**; **TASK-028 BLOCKED**.
+- Nota tracking: nessun task attivo. **TASK-035 DONE / Chiusura**; **TASK-034 DONE / Chiusura**; **TASK-032 BLOCKED / on hold**; **TASK-028 BLOCKED**.
+
+Follow-up candidate post TASK-035:
+- Apply locale controllato dopo conferma utente.
+- Bridge `remoteId` / refs SwiftData per mappare UUID Supabase e identità locali.
+- Auth reale Supabase se serve una sessione `authenticated` per RLS owner-scoped.
+- Push manuale tombstone-compliant.
+- Sync avanzata: resolver conflitti, background/realtime, watermark/eventi.
 
 Task bloccati non attivi:
 - Task ID: TASK-032
@@ -260,7 +270,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-032 | GeneratedView multi-row navigation validation + missing-data scenarios | BLOCKED | MEDIUM |
 | TASK-033 | Supabase schema audit and iOS/Android model mapping | DONE | HIGH |
 | TASK-034 | Supabase iOS foundation: client config + DTO readonly | DONE | MEDIUM |
-| TASK-035 | Manual Supabase pull to SwiftData dry-run | TODO | MEDIUM |
+| TASK-035 | Manual Supabase pull to SwiftData dry-run | DONE | MEDIUM |
 | TASK-036 | Import HTML advanced table parsing: colspan/rowspan/multi-table hardening | DONE | MEDIUM |
 | TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | DONE | MEDIUM |
 
@@ -282,6 +292,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | 2026-04-27 |
 | TASK-033 | Supabase schema audit and iOS/Android model mapping | 2026-05-03 |
 | TASK-034 | Supabase iOS foundation: client config + DTO readonly | 2026-05-04 |
+| TASK-035 | Manual Supabase pull to SwiftData dry-run | 2026-05-04 |
 
 ## Blocchi e dipendenze
 - TASK-032 bloccato / in pausa.

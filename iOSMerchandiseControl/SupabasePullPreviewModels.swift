@@ -1,0 +1,370 @@
+import Foundation
+
+nonisolated enum SyncPreviewClassification: String, Sendable {
+    case newProduct
+    case updateCandidate
+    case conflict
+    case unchanged
+    case remoteTombstone
+    case warning
+}
+
+nonisolated enum SyncPreviewOutcome: String, Sendable {
+    case success
+    case partial
+}
+
+nonisolated enum SyncPreviewFieldKey: String, Sendable {
+    case barcode
+    case itemNumber
+    case productName
+    case secondProductName
+    case purchasePrice
+    case retailPrice
+    case stockQuantity
+    case supplierName
+    case categoryName
+    case priceHistory
+}
+
+nonisolated enum SyncPreviewConflictKind: String, Sendable {
+    case remoteDuplicateBarcode
+    case remoteEmptyBarcode
+    case missingRemoteSupplier
+    case missingRemoteCategory
+    case localDuplicateBarcode
+}
+
+nonisolated enum SyncPreviewWarningCode: String, Sendable {
+    case sourceError
+    case remoteEmptyBarcode
+    case remoteDuplicateName
+    case localDuplicateName
+    case priceHistoryIncomplete
+    case priceHistoryUnmatchedProduct
+    case priceHistoryInvalidType
+    case priceHistoryInvalidEffectiveAt
+}
+
+nonisolated struct SyncPreview: Sendable {
+    let generatedAt: Date
+    let outcome: SyncPreviewOutcome
+    let remoteCounts: RemoteInventorySnapshotCounts
+    let localCounts: LocalInventorySnapshotCounts
+    let newProducts: [SyncPreviewProductSummary]
+    let updateCandidates: [SyncPreviewProductSummary]
+    let conflicts: [SyncPreviewConflict]
+    let unchangedProducts: [SyncPreviewProductSummary]
+    let remoteTombstones: [SyncPreviewProductSummary]
+    let supplierDiffs: [SyncPreviewFieldChange]
+    let categoryDiffs: [SyncPreviewFieldChange]
+    let priceHistoryDiffs: [SyncPreviewFieldChange]
+    let warnings: [SyncPreviewWarning]
+    let metrics: [SyncPreviewMetric]
+    let sourceErrors: [SyncPreviewWarning]
+}
+
+nonisolated struct SyncPreviewMetric: Identifiable, Sendable {
+    let id: String
+    let labelKey: String
+    let value: String
+}
+
+nonisolated struct SyncPreviewConflict: Identifiable, Sendable {
+    let id: UUID
+    let kind: SyncPreviewConflictKind
+    let barcodeOrKey: String?
+    let detail: String?
+    let relatedRemoteIDs: [UUID]
+    let hintKey: String?
+
+    init(
+        id: UUID = UUID(),
+        kind: SyncPreviewConflictKind,
+        barcodeOrKey: String?,
+        detail: String? = nil,
+        relatedRemoteIDs: [UUID] = [],
+        hintKey: String? = nil
+    ) {
+        self.id = id
+        self.kind = kind
+        self.barcodeOrKey = barcodeOrKey
+        self.detail = detail
+        self.relatedRemoteIDs = relatedRemoteIDs
+        self.hintKey = hintKey
+    }
+}
+
+nonisolated struct SyncPreviewFieldChange: Identifiable, Sendable {
+    let id: UUID
+    let fieldKey: SyncPreviewFieldKey
+    let barcodeOrKey: String?
+    let remoteDisplay: String?
+    let localDisplay: String?
+    let normalizedEqual: Bool
+
+    init(
+        id: UUID = UUID(),
+        fieldKey: SyncPreviewFieldKey,
+        barcodeOrKey: String?,
+        remoteDisplay: String?,
+        localDisplay: String?,
+        normalizedEqual: Bool = false
+    ) {
+        self.id = id
+        self.fieldKey = fieldKey
+        self.barcodeOrKey = barcodeOrKey
+        self.remoteDisplay = remoteDisplay
+        self.localDisplay = localDisplay
+        self.normalizedEqual = normalizedEqual
+    }
+}
+
+nonisolated struct SyncPreviewWarning: Identifiable, Sendable {
+    let id: UUID
+    let code: SyncPreviewWarningCode
+    let barcodeOrKey: String?
+    let detail: String?
+    let relatedKey: String?
+
+    init(
+        id: UUID = UUID(),
+        code: SyncPreviewWarningCode,
+        barcodeOrKey: String? = nil,
+        detail: String? = nil,
+        relatedKey: String? = nil
+    ) {
+        self.id = id
+        self.code = code
+        self.barcodeOrKey = barcodeOrKey
+        self.detail = detail
+        self.relatedKey = relatedKey
+    }
+
+    var messageKey: String {
+        "options.supabase.preview.warning.\(code.rawValue)"
+    }
+}
+
+nonisolated struct SyncPreviewProductSummary: Identifiable, Sendable {
+    let id: UUID
+    let classification: SyncPreviewClassification
+    let remoteID: UUID?
+    let barcode: String?
+    let productName: String?
+    let detail: String?
+    let fieldChanges: [SyncPreviewFieldChange]
+
+    init(
+        id: UUID = UUID(),
+        classification: SyncPreviewClassification,
+        remoteID: UUID?,
+        barcode: String?,
+        productName: String?,
+        detail: String? = nil,
+        fieldChanges: [SyncPreviewFieldChange] = []
+    ) {
+        self.id = id
+        self.classification = classification
+        self.remoteID = remoteID
+        self.barcode = barcode
+        self.productName = productName
+        self.detail = detail
+        self.fieldChanges = fieldChanges
+    }
+
+    var sortKey: String {
+        SupabasePullPreviewNormalizer.normalizedBarcode(barcode)
+            ?? SupabasePullPreviewNormalizer.normalizedLookupName(productName)
+            ?? remoteID?.uuidString.lowercased()
+            ?? id.uuidString.lowercased()
+    }
+}
+
+nonisolated struct RemoteInventorySnapshotCounts: Sendable {
+    let products: Int
+    let activeProducts: Int
+    let tombstonedProducts: Int
+    let suppliers: Int
+    let categories: Int
+    let productPrices: Int
+}
+
+nonisolated struct LocalInventorySnapshotCounts: Sendable {
+    let products: Int
+    let suppliers: Int
+    let categories: Int
+    let productPrices: Int
+}
+
+nonisolated struct RemoteInventorySnapshot: Sendable {
+    let products: [RemoteInventoryProductRow]
+    let suppliersByID: [UUID: RemoteInventorySupplierRow]
+    let categoriesByID: [UUID: RemoteInventoryCategoryRow]
+    let productPrices: [RemoteInventoryProductPriceRow]
+    let activeProducts: [RemoteInventoryProductRow]
+    let tombstonedProducts: [RemoteInventoryProductRow]
+    let duplicateBarcodeGroups: [String: [RemoteInventoryProductRow]]
+    let sourceErrors: [SyncPreviewWarning]
+    let counts: RemoteInventorySnapshotCounts
+
+    init(
+        products: [RemoteInventoryProductRow],
+        suppliers: [RemoteInventorySupplierRow],
+        categories: [RemoteInventoryCategoryRow],
+        productPrices: [RemoteInventoryProductPriceRow],
+        sourceErrors: [SyncPreviewWarning] = []
+    ) {
+        self.products = products
+        self.suppliersByID = Dictionary(uniqueKeysWithValues: suppliers.map { ($0.id, $0) })
+        self.categoriesByID = Dictionary(uniqueKeysWithValues: categories.map { ($0.id, $0) })
+        self.productPrices = productPrices
+        self.activeProducts = products.filter { SupabasePullPreviewNormalizer.semanticString($0.deletedAt) == nil }
+        self.tombstonedProducts = products.filter { SupabasePullPreviewNormalizer.semanticString($0.deletedAt) != nil }
+
+        var groups: [String: [RemoteInventoryProductRow]] = [:]
+        for product in activeProducts {
+            guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(product.barcode) else {
+                continue
+            }
+            groups[barcode, default: []].append(product)
+        }
+        self.duplicateBarcodeGroups = groups.filter { $0.value.count > 1 }
+        self.sourceErrors = sourceErrors
+        self.counts = RemoteInventorySnapshotCounts(
+            products: products.count,
+            activeProducts: activeProducts.count,
+            tombstonedProducts: tombstonedProducts.count,
+            suppliers: suppliers.count,
+            categories: categories.count,
+            productPrices: productPrices.count
+        )
+    }
+
+    func hasSourceError(for relatedKey: String) -> Bool {
+        sourceErrors.contains { $0.relatedKey == relatedKey }
+    }
+}
+
+nonisolated struct LocalInventorySnapshot: Sendable {
+    let productsByBarcode: [String: LocalProductSnapshot]
+    let suppliersByNormalizedName: [String: String]
+    let categoriesByNormalizedName: [String: String]
+    let priceHistoryByLogicalKey: [PriceHistoryLogicalKey: LocalPriceSnapshot]
+    let counts: LocalInventorySnapshotCounts
+    let duplicateProductBarcodes: [String]
+    let duplicateSupplierNames: [String]
+    let duplicateCategoryNames: [String]
+}
+
+nonisolated struct LocalProductSnapshot: Sendable {
+    let barcode: String
+    let itemNumber: String?
+    let productName: String?
+    let secondProductName: String?
+    let purchasePrice: Double?
+    let retailPrice: Double?
+    let stockQuantity: Double?
+    let supplierName: String?
+    let categoryName: String?
+}
+
+nonisolated struct LocalPriceSnapshot: Sendable {
+    let barcode: String
+    let type: String
+    let price: Double
+    let effectiveAt: String
+    let source: String?
+    let note: String?
+    let createdAt: String
+}
+
+nonisolated struct PriceHistoryLogicalKey: Hashable, Sendable {
+    let barcode: String
+    let type: String
+    let effectiveAt: String
+}
+
+nonisolated enum SupabasePullPreviewError: Error, Sendable {
+    case service(SupabaseInventoryServiceError)
+    case localSnapshot(message: String?)
+    case unknown(message: String?)
+
+    var safeDiagnosticDetail: String? {
+        switch self {
+        case .service(let error):
+            return error.safeDiagnosticDetail
+        case .localSnapshot(let message), .unknown(let message):
+            return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(message)
+        }
+    }
+}
+
+nonisolated enum SupabasePullPreviewViewState: Sendable {
+    case idle
+    case loading(progressMessage: String?)
+    case success(SyncPreview)
+    case partial(SyncPreview, warnings: [SyncPreviewWarning], sourceErrors: [SyncPreviewWarning])
+    case failed(SupabasePullPreviewError)
+}
+
+nonisolated enum SupabasePullPreviewNormalizer {
+    static let doubleTolerance = 0.001
+
+    static func semanticString(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
+    }
+
+    static func normalizedBarcode(_ value: String?) -> String? {
+        semanticString(value)
+    }
+
+    static func normalizedLookupName(_ value: String?) -> String? {
+        semanticString(value)?.lowercased()
+    }
+
+    static func stringsEqual(_ lhs: String?, _ rhs: String?) -> Bool {
+        semanticString(lhs) == semanticString(rhs)
+    }
+
+    static func lookupNamesEqual(_ lhs: String?, _ rhs: String?) -> Bool {
+        normalizedLookupName(lhs) == normalizedLookupName(rhs)
+    }
+
+    static func doublesEqual(_ lhs: Double?, _ rhs: Double?) -> Bool {
+        switch (lhs, rhs) {
+        case (.none, .none):
+            return true
+        case let (.some(left), .some(right)):
+            return abs(left - right) <= doubleTolerance
+        default:
+            return false
+        }
+    }
+
+    static func normalizedPriceType(_ value: String?) -> String? {
+        guard let normalized = semanticString(value)?.lowercased() else { return nil }
+
+        switch normalized {
+        case "purchase":
+            return "purchase"
+        case "retail":
+            return "retail"
+        default:
+            return nil
+        }
+    }
+
+    static func normalizedEffectiveAt(_ value: String?) -> String? {
+        semanticString(value)
+    }
+
+    static func decimalDisplay(_ value: Double?) -> String? {
+        guard let value else { return nil }
+        return String(format: "%.3f", value)
+    }
+}
