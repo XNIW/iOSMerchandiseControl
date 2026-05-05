@@ -70,6 +70,26 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
         XCTAssertTrue(preview.warnings.contains { $0.code == .remoteEmptyBarcode })
     }
 
+    func testNewProductWithMissingRemoteSupplierOrCategoryIsConflictAndNotNewProduct() {
+        let supplierID = UUID()
+        let categoryID = UUID()
+        let preview = makePreview(
+            remote: remoteSnapshot(products: [
+                remoteProduct(
+                    barcode: "12345",
+                    name: "Remote product",
+                    supplierID: supplierID,
+                    categoryID: categoryID
+                )
+            ]),
+            local: localSnapshot()
+        )
+
+        XCTAssertTrue(preview.newProducts.isEmpty)
+        XCTAssertTrue(preview.updateCandidates.isEmpty)
+        XCTAssertEqual(Set(preview.conflicts.map(\.kind)), [.missingRemoteSupplier, .missingRemoteCategory])
+    }
+
     func testRemoteDeletedAtCreatesTombstoneOnly() {
         let preview = makePreview(
             remote: remoteSnapshot(products: [

@@ -156,6 +156,29 @@
 "options.supabase.preview.field.supplierName" = "Supplier";
 "options.supabase.preview.field.categoryName" = "Category";
 "options.supabase.preview.field.priceHistory" = "Price history";
+"options.supabase.apply.header" = "Local Apply";
+"options.supabase.apply.button" = "Apply to local database";
+"options.supabase.apply.applying" = "Applying locally...";
+"options.supabase.apply.footer.ready" = "Ready to apply locally: %d new, %d updated. Does not write to Supabase.";
+"options.supabase.apply.confirm.title" = "Apply to local database";
+"options.supabase.apply.confirm.message" = "Updates only the local SwiftData database. Does not write to Supabase. Does not delete local products.";
+"options.supabase.apply.confirm.apply" = "Apply locally";
+"options.supabase.apply.success" = "Applied locally: %d new, %d updated.";
+"options.supabase.apply.error.generic" = "Local apply failed. Regenerate the preview or check the local database.";
+"options.supabase.apply.error.saveFailed" = "Local save failed. Regenerate the preview or check the local database.";
+"options.supabase.apply.error.withDetail" = "%@\nDetail: %@";
+"options.supabase.apply.disabled.sessionMissing" = "Sign in with Google before applying the preview.";
+"options.supabase.apply.disabled.partialPreview" = "Partial preview: regenerate a complete preview before applying.";
+"options.supabase.apply.disabled.sourceErrorsPresent" = "Source data is not fully available. Regenerate the preview.";
+"options.supabase.apply.disabled.priceHistoryIncomplete" = "Price history is not fully verified. Local apply is blocked.";
+"options.supabase.apply.disabled.conflictsPresent" = "Resolve preview conflicts before local apply.";
+"options.supabase.apply.disabled.localDuplicateBarcode" = "Duplicate local barcodes: check the local database before applying.";
+"options.supabase.apply.disabled.missingApplicablePayload" = "The preview does not include all applicable data. Regenerate the preview.";
+"options.supabase.apply.disabled.missingRequiredField" = "Required fields are missing for local apply.";
+"options.supabase.apply.disabled.invalidPrice" = "Invalid remote price. Local apply is blocked.";
+"options.supabase.apply.disabled.invalidStockQuantity" = "Invalid remote quantity. Local apply is blocked.";
+"options.supabase.apply.disabled.previewStale" = "The local database changed. Regenerate the preview.";
+"options.supabase.apply.disabled.noApplicableChanges" = "No applicable local changes.";
 
 /* Inventory home */
 "inventory.home.title" = "Inventory";

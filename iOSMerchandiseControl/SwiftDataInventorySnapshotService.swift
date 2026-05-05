@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @MainActor
-final class SwiftDataInventorySnapshotService {
+struct SwiftDataInventorySnapshotService {
     private let context: ModelContext
 
     init(context: ModelContext) {

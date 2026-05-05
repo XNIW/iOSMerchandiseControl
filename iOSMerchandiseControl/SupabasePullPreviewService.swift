@@ -288,6 +288,7 @@ nonisolated enum SupabasePullPreviewDiffEngine {
             tombstones.append(
                 productSummary(
                     product,
+                    remote: remote,
                     classification: .remoteTombstone,
                     detail: product.deletedAt
                 )
@@ -334,42 +335,20 @@ nonisolated enum SupabasePullPreviewDiffEngine {
                 continue
             }
 
-            guard let localProduct = local.productsByBarcode[barcode] else {
-                newProducts.append(productSummary(product, classification: .newProduct))
+            let productConflicts = unresolvedLookupConflicts(
+                product: product,
+                barcode: barcode,
+                remote: remote,
+                supplierFetchFailed: supplierFetchFailed,
+                categoryFetchFailed: categoryFetchFailed
+            )
+            if !productConflicts.isEmpty {
+                conflicts.append(contentsOf: productConflicts)
                 continue
             }
 
-            var productConflicts: [SyncPreviewConflict] = []
-            if product.supplierID != nil,
-               remote.supplierName(for: product) == nil,
-               !supplierFetchFailed {
-                productConflicts.append(
-                    SyncPreviewConflict(
-                        kind: .missingRemoteSupplier,
-                        barcodeOrKey: barcode,
-                        detail: product.supplierID?.uuidString,
-                        relatedRemoteIDs: [product.id],
-                        hintKey: "options.supabase.preview.conflict.hint.review"
-                    )
-                )
-            }
-
-            if product.categoryID != nil,
-               remote.categoryName(for: product) == nil,
-               !categoryFetchFailed {
-                productConflicts.append(
-                    SyncPreviewConflict(
-                        kind: .missingRemoteCategory,
-                        barcodeOrKey: barcode,
-                        detail: product.categoryID?.uuidString,
-                        relatedRemoteIDs: [product.id],
-                        hintKey: "options.supabase.preview.conflict.hint.review"
-                    )
-                )
-            }
-
-            if !productConflicts.isEmpty {
-                conflicts.append(contentsOf: productConflicts)
+            guard let localProduct = local.productsByBarcode[barcode] else {
+                newProducts.append(productSummary(product, remote: remote, classification: .newProduct))
                 continue
             }
 
@@ -387,12 +366,13 @@ nonisolated enum SupabasePullPreviewDiffEngine {
             categoryDiffs.append(contentsOf: productCategoryDiffs)
 
             if changes.isEmpty {
-                unchangedProducts.append(productSummary(product, classification: .unchanged))
+                unchangedProducts.append(productSummary(product, remote: remote, classification: .unchanged))
             } else {
                 changes.sort { ($0.fieldKey.rawValue, $0.remoteDisplay ?? "") < ($1.fieldKey.rawValue, $1.remoteDisplay ?? "") }
                 updateCandidates.append(
                     productSummary(
                         product,
+                        remote: remote,
                         classification: .updateCandidate,
                         fieldChanges: changes
                     )
@@ -508,6 +488,46 @@ nonisolated enum SupabasePullPreviewDiffEngine {
         }
 
         return changes
+    }
+
+    private static func unresolvedLookupConflicts(
+        product: RemoteInventoryProductRow,
+        barcode: String,
+        remote: RemoteInventorySnapshot,
+        supplierFetchFailed: Bool,
+        categoryFetchFailed: Bool
+    ) -> [SyncPreviewConflict] {
+        var conflicts: [SyncPreviewConflict] = []
+
+        if product.supplierID != nil,
+           remote.supplierName(for: product) == nil,
+           !supplierFetchFailed {
+            conflicts.append(
+                SyncPreviewConflict(
+                    kind: .missingRemoteSupplier,
+                    barcodeOrKey: barcode,
+                    detail: product.supplierID?.uuidString,
+                    relatedRemoteIDs: [product.id],
+                    hintKey: "options.supabase.preview.conflict.hint.review"
+                )
+            )
+        }
+
+        if product.categoryID != nil,
+           remote.categoryName(for: product) == nil,
+           !categoryFetchFailed {
+            conflicts.append(
+                SyncPreviewConflict(
+                    kind: .missingRemoteCategory,
+                    barcodeOrKey: barcode,
+                    detail: product.categoryID?.uuidString,
+                    relatedRemoteIDs: [product.id],
+                    hintKey: "options.supabase.preview.conflict.hint.review"
+                )
+            )
+        }
+
+        return conflicts
     }
 
     private static func duplicateRemoteSupplierNames(_ remote: RemoteInventorySnapshot) -> [String] {
@@ -673,6 +693,7 @@ nonisolated enum SupabasePullPreviewDiffEngine {
 
     private static func productSummary(
         _ product: RemoteInventoryProductRow,
+        remote: RemoteInventorySnapshot,
         classification: SyncPreviewClassification,
         detail: String? = nil,
         fieldChanges: [SyncPreviewFieldChange] = []
@@ -683,7 +704,19 @@ nonisolated enum SupabasePullPreviewDiffEngine {
             barcode: SupabasePullPreviewNormalizer.semanticString(product.barcode),
             productName: SupabasePullPreviewNormalizer.semanticString(product.productName),
             detail: detail,
-            fieldChanges: fieldChanges
+            fieldChanges: fieldChanges,
+            applyPayload: SyncPreviewProductApplyPayload(
+                remoteID: product.id,
+                barcode: SupabasePullPreviewNormalizer.semanticString(product.barcode),
+                itemNumber: product.itemNumber,
+                productName: product.productName,
+                secondProductName: product.secondProductName,
+                purchasePrice: product.purchasePrice,
+                retailPrice: product.retailPrice,
+                stockQuantity: product.stockQuantity,
+                supplierName: remote.supplierName(for: product),
+                categoryName: remote.categoryName(for: product)
+            )
         )
     }
 

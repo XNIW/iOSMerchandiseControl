@@ -154,6 +154,7 @@ nonisolated struct SyncPreviewProductSummary: Identifiable, Sendable {
     let productName: String?
     let detail: String?
     let fieldChanges: [SyncPreviewFieldChange]
+    let applyPayload: SyncPreviewProductApplyPayload?
 
     init(
         id: UUID = UUID(),
@@ -162,7 +163,8 @@ nonisolated struct SyncPreviewProductSummary: Identifiable, Sendable {
         barcode: String?,
         productName: String?,
         detail: String? = nil,
-        fieldChanges: [SyncPreviewFieldChange] = []
+        fieldChanges: [SyncPreviewFieldChange] = [],
+        applyPayload: SyncPreviewProductApplyPayload? = nil
     ) {
         self.id = id
         self.classification = classification
@@ -171,6 +173,7 @@ nonisolated struct SyncPreviewProductSummary: Identifiable, Sendable {
         self.productName = productName
         self.detail = detail
         self.fieldChanges = fieldChanges
+        self.applyPayload = applyPayload
     }
 
     var sortKey: String {
@@ -179,6 +182,19 @@ nonisolated struct SyncPreviewProductSummary: Identifiable, Sendable {
             ?? remoteID?.uuidString.lowercased()
             ?? id.uuidString.lowercased()
     }
+}
+
+nonisolated struct SyncPreviewProductApplyPayload: Sendable, Equatable {
+    let remoteID: UUID
+    let barcode: String?
+    let itemNumber: String?
+    let productName: String?
+    let secondProductName: String?
+    let purchasePrice: Double?
+    let retailPrice: Double?
+    let stockQuantity: Double?
+    let supplierName: String?
+    let categoryName: String?
 }
 
 nonisolated struct RemoteInventorySnapshotCounts: Sendable {

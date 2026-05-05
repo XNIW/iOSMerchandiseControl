@@ -156,6 +156,29 @@
 "options.supabase.preview.field.supplierName" = "供应商";
 "options.supabase.preview.field.categoryName" = "分类";
 "options.supabase.preview.field.priceHistory" = "价格历史";
+"options.supabase.apply.header" = "本地应用";
+"options.supabase.apply.button" = "应用到本地数据库";
+"options.supabase.apply.applying" = "正在本地应用...";
+"options.supabase.apply.footer.ready" = "可本地应用：%d 个新增，%d 个更新。不会写入 Supabase。";
+"options.supabase.apply.confirm.title" = "应用到本地数据库";
+"options.supabase.apply.confirm.message" = "只更新本地 SwiftData 数据库。不会写入 Supabase。不会删除本地商品。";
+"options.supabase.apply.confirm.apply" = "本地应用";
+"options.supabase.apply.success" = "已本地应用：%d 个新增，%d 个更新。";
+"options.supabase.apply.error.generic" = "本地应用失败。请重新生成预览，或检查本地数据库。";
+"options.supabase.apply.error.saveFailed" = "本地保存失败。请重新生成预览，或检查本地数据库。";
+"options.supabase.apply.error.withDetail" = "%@\n详情：%@";
+"options.supabase.apply.disabled.sessionMissing" = "请先使用 Google 登录，再应用预览。";
+"options.supabase.apply.disabled.partialPreview" = "预览不完整：请重新生成完整预览后再应用。";
+"options.supabase.apply.disabled.sourceErrorsPresent" = "数据源未完全可用。请重新生成预览。";
+"options.supabase.apply.disabled.priceHistoryIncomplete" = "价格历史未完全验证，已阻止本地应用。";
+"options.supabase.apply.disabled.conflictsPresent" = "请先解决预览冲突，再执行本地应用。";
+"options.supabase.apply.disabled.localDuplicateBarcode" = "本地条码重复：应用前请检查本地数据库。";
+"options.supabase.apply.disabled.missingApplicablePayload" = "预览缺少完整可应用数据。请重新生成预览。";
+"options.supabase.apply.disabled.missingRequiredField" = "本地应用缺少必填字段。";
+"options.supabase.apply.disabled.invalidPrice" = "远程价格无效，已阻止本地应用。";
+"options.supabase.apply.disabled.invalidStockQuantity" = "远程数量无效，已阻止本地应用。";
+"options.supabase.apply.disabled.previewStale" = "本地数据库已变化。请重新生成预览。";
+"options.supabase.apply.disabled.noApplicableChanges" = "没有可应用的本地更改。";
 
 /* Inventory home */
 "inventory.home.title" = "库存";

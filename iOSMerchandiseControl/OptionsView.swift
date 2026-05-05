@@ -247,7 +247,10 @@ struct OptionsView: View {
         .navigationTitle(L("options.title"))
 #if DEBUG
         .sheet(isPresented: $isShowingSupabasePullPreview) {
-            SupabasePullPreviewSheet(state: supabasePullPreviewState) {
+            SupabasePullPreviewSheet(
+                state: supabasePullPreviewState,
+                isAuthenticated: supabaseAuthViewModel.isSignedIn
+            ) {
                 isShowingSupabasePullPreview = false
             }
         }
@@ -527,7 +530,15 @@ struct OptionRow: View {
 private struct SupabasePullPreviewSheet: View {
     private let rowLimit = 100
 
+    @Environment(\.modelContext) private var modelContext
+    @State private var isApplyingLocalPreview = false
+    @State private var isShowingApplyConfirmation = false
+    @State private var pendingApplyPlan: SupabasePullApplyPlan?
+    @State private var applyStatusMessage: String?
+    @State private var applyErrorMessage: String?
+
     let state: SupabasePullPreviewViewState
+    let isAuthenticated: Bool
     let close: () -> Void
 
     var body: some View {
@@ -588,8 +599,11 @@ private struct SupabasePullPreviewSheet: View {
     }
 
     private func previewForm(_ preview: SyncPreview, isPartial: Bool) -> some View {
-        Form {
+        let readiness = applyReadiness(for: preview)
+
+        return Form {
             summarySection(preview, isPartial: isPartial)
+            applySection(preview: preview, readiness: readiness)
             conflictsSection(preview.conflicts)
             productSection(
                 titleKey: "options.supabase.preview.group.updateCandidates",
@@ -612,6 +626,18 @@ private struct SupabasePullPreviewSheet: View {
                 systemImage: "checkmark.circle",
                 products: preview.unchangedProducts
             )
+        }
+        .confirmationDialog(
+            L("options.supabase.apply.confirm.title"),
+            isPresented: $isShowingApplyConfirmation,
+            presenting: pendingApplyPlan
+        ) { plan in
+            Button(L("options.supabase.apply.confirm.apply")) {
+                applyLocalPreview(plan)
+            }
+            Button(L("options.supabase.preview.close"), role: .cancel) {}
+        } message: { _ in
+            Text(L("options.supabase.apply.confirm.message"))
         }
     }
 
@@ -645,6 +671,56 @@ private struct SupabasePullPreviewSheet: View {
             }
         } header: {
             SectionHeader(title: L("options.supabase.preview.summary.header"), systemImage: "chart.bar.doc.horizontal")
+        }
+    }
+
+    private func applySection(
+        preview: SyncPreview,
+        readiness: SupabasePullPreviewApplyReadiness
+    ) -> some View {
+        Section {
+            Button {
+                prepareLocalApplyConfirmation(for: preview)
+            } label: {
+                Label(L("options.supabase.apply.button"), systemImage: "tray.and.arrow.down")
+            }
+            .disabled(!readiness.canApply || isApplyingLocalPreview)
+
+            if isApplyingLocalPreview {
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text(L("options.supabase.apply.applying"))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let applyStatusMessage {
+                Label {
+                    Text(applyStatusMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.green)
+                }
+            }
+
+            if let applyErrorMessage {
+                Label {
+                    Text(applyErrorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Color.orange)
+                }
+            }
+        } header: {
+            SectionHeader(title: L("options.supabase.apply.header"), systemImage: "shippingbox.and.arrow.backward")
+        } footer: {
+            Text(applyFooter(readiness))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -793,6 +869,109 @@ private struct SupabasePullPreviewSheet: View {
         value ?? L("options.supabase.preview.valueMissing")
     }
 
+    private func applyReadiness(for preview: SyncPreview) -> SupabasePullPreviewApplyReadiness {
+        do {
+            let plan = try SupabasePullApplyService().prepareApplyPlan(
+                preview: preview,
+                context: modelContext,
+                options: SupabasePullApplyOptions(),
+                isAuthenticated: isAuthenticated
+            )
+            return SupabasePullPreviewApplyReadiness(plan: plan, disabledReason: nil)
+        } catch let error as SupabasePullApplyError {
+            return SupabasePullPreviewApplyReadiness(plan: nil, disabledReason: error.disabledReason)
+        } catch {
+            return SupabasePullPreviewApplyReadiness(plan: nil, disabledReason: .previewStale)
+        }
+    }
+
+    private func prepareLocalApplyConfirmation(for preview: SyncPreview) {
+        guard !isApplyingLocalPreview else { return }
+
+        do {
+            let plan = try SupabasePullApplyService().prepareApplyPlan(
+                preview: preview,
+                context: modelContext,
+                options: SupabasePullApplyOptions(),
+                isAuthenticated: isAuthenticated
+            )
+            pendingApplyPlan = plan
+            applyStatusMessage = nil
+            applyErrorMessage = nil
+            isShowingApplyConfirmation = true
+        } catch let error as SupabasePullApplyError {
+            applyStatusMessage = nil
+            applyErrorMessage = localizedApplyError(error)
+        } catch {
+            applyStatusMessage = nil
+            applyErrorMessage = L("options.supabase.apply.error.generic")
+        }
+    }
+
+    private func applyLocalPreview(_ plan: SupabasePullApplyPlan) {
+        guard !isApplyingLocalPreview else { return }
+
+        isApplyingLocalPreview = true
+        applyStatusMessage = nil
+        applyErrorMessage = nil
+
+        Task { @MainActor in
+            await Task.yield()
+
+            do {
+                let result = try SupabasePullApplyService().apply(plan: plan, context: modelContext)
+                applyStatusMessage = L("options.supabase.apply.success", result.inserted, result.updated)
+                applyErrorMessage = nil
+            } catch let error as SupabasePullApplyError {
+                applyStatusMessage = nil
+                applyErrorMessage = localizedApplyError(error)
+            } catch {
+                applyStatusMessage = nil
+                applyErrorMessage = L("options.supabase.apply.error.generic")
+            }
+
+            pendingApplyPlan = nil
+            isApplyingLocalPreview = false
+        }
+    }
+
+    private func applyFooter(_ readiness: SupabasePullPreviewApplyReadiness) -> String {
+        if let reason = readiness.disabledReason {
+            return L("options.supabase.apply.disabled.\(reason.rawValue)")
+        }
+
+        guard let plan = readiness.plan else {
+            return L("options.supabase.apply.disabled.noApplicableChanges")
+        }
+
+        return L(
+            "options.supabase.apply.footer.ready",
+            plan.plannedInsertedCount,
+            plan.plannedUpdatedCount
+        )
+    }
+
+    private func localizedApplyError(_ error: SupabasePullApplyError) -> String {
+        let baseMessage: String
+
+        switch error {
+        case .saveFailed:
+            baseMessage = L("options.supabase.apply.error.saveFailed")
+        default:
+            baseMessage = L("options.supabase.apply.disabled.\(error.disabledReason.rawValue)")
+        }
+
+        switch error {
+        case .saveFailed(let message), .localSnapshotFailed(let message):
+            guard let message, !message.isEmpty else {
+                return baseMessage
+            }
+            return L("options.supabase.apply.error.withDetail", baseMessage, message)
+        default:
+            return baseMessage
+        }
+    }
+
     private func localizedError(_ error: SupabasePullPreviewError) -> String {
         let baseMessage: String
 
@@ -839,6 +1018,15 @@ private struct SupabasePullPreviewSheet: View {
 
     private func fieldTitleKey(_ field: SyncPreviewFieldKey) -> String {
         "options.supabase.preview.field.\(field.rawValue)"
+    }
+}
+
+private struct SupabasePullPreviewApplyReadiness {
+    let plan: SupabasePullApplyPlan?
+    let disabledReason: SupabasePullApplyDisabledReason?
+
+    var canApply: Bool {
+        plan != nil && disabledReason == nil
     }
 }
 #endif

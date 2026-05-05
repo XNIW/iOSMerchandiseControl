@@ -156,6 +156,29 @@
 "options.supabase.preview.field.supplierName" = "Fornitore";
 "options.supabase.preview.field.categoryName" = "Categoria";
 "options.supabase.preview.field.priceHistory" = "Storico prezzi";
+"options.supabase.apply.header" = "Apply locale";
+"options.supabase.apply.button" = "Applica al database locale";
+"options.supabase.apply.applying" = "Applicazione locale in corso...";
+"options.supabase.apply.footer.ready" = "Pronto ad applicare localmente: %d nuovi, %d aggiornati. Non scrive su Supabase.";
+"options.supabase.apply.confirm.title" = "Applica al database locale";
+"options.supabase.apply.confirm.message" = "Aggiorna solo il database locale SwiftData. Non scrive su Supabase. Non elimina prodotti locali.";
+"options.supabase.apply.confirm.apply" = "Applica localmente";
+"options.supabase.apply.success" = "Applicato localmente: %d nuovi, %d aggiornati.";
+"options.supabase.apply.error.generic" = "Apply locale non riuscito. Rigenera la preview o verifica il database locale.";
+"options.supabase.apply.error.saveFailed" = "Salvataggio locale non riuscito. Rigenera la preview o verifica il database locale.";
+"options.supabase.apply.error.withDetail" = "%@\nDettaglio: %@";
+"options.supabase.apply.disabled.sessionMissing" = "Accedi con Google prima di applicare la preview.";
+"options.supabase.apply.disabled.partialPreview" = "Preview parziale: rigenera una preview completa prima di applicare.";
+"options.supabase.apply.disabled.sourceErrorsPresent" = "Origine dati non completamente disponibile: rigenera la preview.";
+"options.supabase.apply.disabled.priceHistoryIncomplete" = "Storico prezzi non completamente verificato: apply locale bloccato.";
+"options.supabase.apply.disabled.conflictsPresent" = "Sono presenti conflitti da risolvere prima dell'apply locale.";
+"options.supabase.apply.disabled.localDuplicateBarcode" = "Barcode locali duplicati: verifica il database locale prima dell'apply.";
+"options.supabase.apply.disabled.missingApplicablePayload" = "La preview non contiene tutti i dati applicabili. Rigenera la preview.";
+"options.supabase.apply.disabled.missingRequiredField" = "Mancano campi obbligatori per applicare la preview.";
+"options.supabase.apply.disabled.invalidPrice" = "Prezzo remoto non valido: apply locale bloccato.";
+"options.supabase.apply.disabled.invalidStockQuantity" = "Quantita remota non valida: apply locale bloccato.";
+"options.supabase.apply.disabled.previewStale" = "Il database locale e cambiato. Rigenera la preview.";
+"options.supabase.apply.disabled.noApplicableChanges" = "Nessuna modifica locale applicabile.";
 
 /* Inventory home */
 "inventory.home.title" = "Inventario";
