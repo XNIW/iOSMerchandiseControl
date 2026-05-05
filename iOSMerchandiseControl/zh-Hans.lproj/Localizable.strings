@@ -190,6 +190,42 @@
 "options.supabase.apply.disabled.previewStale" = "本地数据库已变化。请重新生成预览。";
 "options.supabase.apply.disabled.noApplicableChanges" = "没有可应用的本地更改。";
 
+"options.supabase.pushpreflight.header" = "本地预检校验";
+"options.supabase.pushpreflight.run" = "执行本地校验";
+"options.supabase.pushpreflight.running" = "正在进行本地分析...";
+"options.supabase.pushpreflight.accountRequired" = "Supabase 账号未绑定，或与上次本地绑定账号不一致。";
+"options.supabase.pushpreflight.state.idle" = "已准备好执行本地 dry-run 校验。";
+"options.supabase.pushpreflight.state.accountNotLinked" = "校验已阻止：账号未绑定";
+"options.supabase.pushpreflight.state.running" = "本地校验进行中";
+"options.supabase.pushpreflight.state.completedSafe" = "校验完成：状态安全";
+"options.supabase.pushpreflight.state.completedNoWork" = "校验完成：无可处理项";
+"options.supabase.pushpreflight.state.completedBlocked" = "校验完成：存在阻塞项";
+"options.supabase.pushpreflight.state.failedLocalError" = "本地校验失败，请重试。";
+"options.supabase.pushpreflight.copy.dryRun" = "本地 dry-run：不会向 Supabase 发送任何数据。";
+"options.supabase.pushpreflight.copy.noRemoteWrite" = "此校验不会执行任何远程写入。";
+"options.supabase.pushpreflight.copy.noLocalRemoteMutation" = "此校验不会修改本地或远程数据。";
+"options.supabase.pushpreflight.copy.futureTask" = "真实 push 将在后续任务中实现。";
+"options.supabase.pushpreflight.details" = "分类详情";
+"options.supabase.pushpreflight.metric.candidates" = "Create/Update 候选";
+"options.supabase.pushpreflight.metric.blockers" = "阻塞项";
+"options.supabase.pushpreflight.metric.warnings" = "警告";
+"options.supabase.pushpreflight.metric.futureOnly" = "仅未来项";
+"options.supabase.pushpreflight.category.dryRunCreateCandidate" = "Create 候选：%d";
+"options.supabase.pushpreflight.category.dryRunUpdateCandidate" = "Update 候选：%d";
+"options.supabase.pushpreflight.category.noOpAlreadySynced" = "已同步无变化：%d";
+"options.supabase.pushpreflight.category.blockedNoRemoteID" = "已阻塞：缺少 remoteID/条码冲突：%d";
+"options.supabase.pushpreflight.category.blockedAccountMismatch" = "已阻塞：账号不匹配：%d";
+"options.supabase.pushpreflight.category.blockedPartialPull" = "已阻塞：pull 不完整：%d";
+"options.supabase.pushpreflight.category.blockedMissingBaseline" = "已阻塞：缺少 baseline：%d";
+"options.supabase.pushpreflight.category.blockedRemoteConflict" = "已阻塞：远程冲突：%d";
+"options.supabase.pushpreflight.category.blockedTombstoneConflict" = "已阻塞：远程 tombstone：%d";
+"options.supabase.pushpreflight.category.blockedMissingSupplierCategoryRemoteID" = "已阻塞：supplier/category 缺少 remoteID：%d";
+"options.supabase.pushpreflight.category.warningLocalOnlySupplierCategory" = "警告：本地引用未解析：%d";
+"options.supabase.pushpreflight.category.warningStaleRemote" = "警告：远程数据可能过期：%d";
+"options.supabase.pushpreflight.category.futurePricePushCandidate" = "仅未来项：ProductPrice 已排除：%d";
+"options.supabase.pushpreflight.example" = "• %@";
+"options.supabase.pushpreflight.more" = "+ 其他 %d 项";
+
 /* Inventory home */
 "inventory.home.title" = "库存";
 "inventory.home.subtitle" = "选择一个或多个 Excel 或 HTML 导出文件以开始预处理。";

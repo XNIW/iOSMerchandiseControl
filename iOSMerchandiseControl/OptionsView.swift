@@ -26,11 +26,13 @@ struct OptionsView: View {
     @AppStorage("appLanguage") private var appLanguage: String = "system"
 #if DEBUG
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
+    @AppStorage("supabaseLastLinkedUserID") private var supabaseLastLinkedUserID: String = ""
     @State private var isRunningSupabaseDiagnostic = false
     @State private var supabaseDiagnosticMessage: String?
     @State private var supabaseDiagnosticIsError = false
     @State private var isShowingSupabasePullPreview = false
     @State private var supabasePullPreviewState: SupabasePullPreviewViewState = .idle
+    @StateObject private var pushPreflightViewModel = SupabasePushPreflightViewModel()
 #endif
 
     init(
@@ -229,6 +231,70 @@ struct OptionsView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                preflightStateRow
+
+                Button {
+                    runSupabasePushPreflight()
+                } label: {
+                    Label(L("options.supabase.pushpreflight.run"), systemImage: "checklist")
+                }
+                .disabled(pushPreflightViewModel.isRunning || !isPushPreflightAccountReady)
+
+                if pushPreflightViewModel.isRunning {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(L("options.supabase.pushpreflight.running"))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if isPushPreflightAccountReady {
+                    if case .completedSafe(let summary) = pushPreflightViewModel.state {
+                        preflightSummaryCard(
+                            titleKey: "options.supabase.pushpreflight.state.completedSafe",
+                            icon: "checkmark.shield.fill",
+                            color: .green,
+                            summary: summary
+                        )
+                    } else if case .completedNoWork(let summary) = pushPreflightViewModel.state {
+                        preflightSummaryCard(
+                            titleKey: "options.supabase.pushpreflight.state.completedNoWork",
+                            icon: "checkmark.circle.fill",
+                            color: .green,
+                            summary: summary
+                        )
+                    } else if case .completedBlocked(let summary) = pushPreflightViewModel.state {
+                        preflightSummaryCard(
+                            titleKey: "options.supabase.pushpreflight.state.completedBlocked",
+                            icon: "exclamationmark.triangle.fill",
+                            color: .orange,
+                            summary: summary
+                        )
+                    } else if case .failedLocalError = pushPreflightViewModel.state {
+                        Label {
+                            Text(L("options.supabase.pushpreflight.state.failedLocalError"))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } icon: {
+                            Image(systemName: "xmark.octagon.fill")
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+            } header: {
+                SectionHeader(title: L("options.supabase.pushpreflight.header"), systemImage: "shippingbox")
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L("options.supabase.pushpreflight.copy.dryRun"))
+                    Text(L("options.supabase.pushpreflight.copy.noRemoteWrite"))
+                    Text(L("options.supabase.pushpreflight.copy.noLocalRemoteMutation"))
+                    Text(L("options.supabase.pushpreflight.copy.futureTask"))
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            }
 #endif
 
             // Piccola sezione di “aiuto” in fondo
@@ -246,6 +312,9 @@ struct OptionsView: View {
         }
         .navigationTitle(L("options.title"))
 #if DEBUG
+        .onDisappear {
+            pushPreflightViewModel.cancel()
+        }
         .sheet(isPresented: $isShowingSupabasePullPreview) {
             SupabasePullPreviewSheet(
                 state: supabasePullPreviewState,
@@ -264,6 +333,20 @@ struct OptionsView: View {
             && !supabaseAuthViewModel.isTransitioning
             && supabaseInventoryService != nil
             && supabasePullPreviewService != nil
+    }
+
+    private var isPushPreflightAccountReady: Bool {
+        supabaseAuthViewModel.isSignedIn
+            && supabaseAuthViewModel.sessionInfo?.isExpired == false
+            && UUID(uuidString: supabaseLastLinkedUserID) != nil
+            && supabaseAuthViewModel.sessionInfo?.userID == UUID(uuidString: supabaseLastLinkedUserID)
+    }
+
+    private var displayedPushPreflightState: SupabasePushPreflightViewModel.ViewState {
+        if isPushPreflightAccountReady || pushPreflightViewModel.isRunning {
+            return pushPreflightViewModel.state
+        }
+        return .accountNotLinked
     }
 
     private var isSupabasePullPreviewLoading: Bool {
@@ -388,6 +471,164 @@ struct OptionsView: View {
 
         Task {
             supabasePullPreviewState = await service.generatePreview(context: modelContext)
+        }
+    }
+
+    private func runSupabasePushPreflight() {
+        pushPreflightViewModel.runLocalCheck(
+            context: modelContext,
+            isSignedIn: supabaseAuthViewModel.isSignedIn && !supabaseAuthViewModel.isTransitioning,
+            currentUserID: supabaseAuthViewModel.sessionInfo?.userID,
+            lastLinkedUserID: UUID(uuidString: supabaseLastLinkedUserID)
+        )
+    }
+
+    @ViewBuilder
+    private var preflightStateRow: some View {
+        let state = displayedPushPreflightState
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L(preflightStateTextKey(state)))
+                if case .accountNotLinked = state {
+                    Text(L("options.supabase.pushpreflight.accountRequired"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } icon: {
+            Image(systemName: preflightStateSymbol(state))
+                .foregroundStyle(preflightStateColor(state))
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func preflightSummaryCard(
+        titleKey: String,
+        icon: String,
+        color: Color,
+        summary: SupabasePushPreflightViewModel.Summary
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(L(titleKey))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            } icon: {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+            }
+
+            LabeledContent(L("options.supabase.pushpreflight.metric.candidates"), value: "\(summary.totalCandidates)")
+            LabeledContent(L("options.supabase.pushpreflight.metric.blockers"), value: "\(summary.totalBlockers)")
+            LabeledContent(L("options.supabase.pushpreflight.metric.warnings"), value: "\(summary.totalWarnings)")
+            LabeledContent(L("options.supabase.pushpreflight.metric.futureOnly"), value: "\(summary.totalFutureOnly)")
+
+            DisclosureGroup(L("options.supabase.pushpreflight.details")) {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(summary.groups) { group in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label {
+                                Text(L("options.supabase.pushpreflight.category.\(group.category.rawValue)", group.count))
+                                    .font(.footnote)
+                                    .fontWeight(.semibold)
+                            } icon: {
+                                Image(systemName: severitySymbol(group.severity))
+                                    .foregroundStyle(severityColor(group.severity))
+                            }
+
+                            ForEach(group.examples, id: \.self) { example in
+                                Text(L("options.supabase.pushpreflight.example", example))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if group.hiddenCount > 0 {
+                                Text(L("options.supabase.pushpreflight.more", group.hiddenCount))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func preflightStateTextKey(_ state: SupabasePushPreflightViewModel.ViewState) -> String {
+        switch state {
+        case .idle:
+            return "options.supabase.pushpreflight.state.idle"
+        case .accountNotLinked:
+            return "options.supabase.pushpreflight.state.accountNotLinked"
+        case .running:
+            return "options.supabase.pushpreflight.state.running"
+        case .completedSafe:
+            return "options.supabase.pushpreflight.state.completedSafe"
+        case .completedNoWork:
+            return "options.supabase.pushpreflight.state.completedNoWork"
+        case .completedBlocked:
+            return "options.supabase.pushpreflight.state.completedBlocked"
+        case .failedLocalError:
+            return "options.supabase.pushpreflight.state.failedLocalError"
+        }
+    }
+
+    private func preflightStateSymbol(_ state: SupabasePushPreflightViewModel.ViewState) -> String {
+        switch state {
+        case .idle:
+            return "checklist"
+        case .accountNotLinked:
+            return "lock.fill"
+        case .running:
+            return "hourglass"
+        case .completedSafe, .completedNoWork:
+            return "checkmark.circle.fill"
+        case .completedBlocked:
+            return "exclamationmark.triangle.fill"
+        case .failedLocalError:
+            return "xmark.octagon.fill"
+        }
+    }
+
+    private func preflightStateColor(_ state: SupabasePushPreflightViewModel.ViewState) -> Color {
+        switch state {
+        case .completedSafe, .completedNoWork:
+            return .green
+        case .completedBlocked, .accountNotLinked:
+            return .orange
+        case .failedLocalError:
+            return .red
+        case .idle, .running:
+            return .secondary
+        }
+    }
+
+    private func severitySymbol(_ severity: PushSeverity) -> String {
+        switch severity {
+        case .blocker:
+            return "xmark.shield.fill"
+        case .warning:
+            return "exclamationmark.triangle.fill"
+        case .futureOnly:
+            return "clock.badge.exclamationmark"
+        case .info:
+            return "info.circle.fill"
+        }
+    }
+
+    private func severityColor(_ severity: PushSeverity) -> Color {
+        switch severity {
+        case .blocker:
+            return .orange
+        case .warning:
+            return .yellow
+        case .futureOnly:
+            return .purple
+        case .info:
+            return .secondary
         }
     }
 

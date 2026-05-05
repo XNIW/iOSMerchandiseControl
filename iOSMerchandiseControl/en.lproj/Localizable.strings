@@ -190,6 +190,42 @@
 "options.supabase.apply.disabled.previewStale" = "The local database changed. Regenerate the preview.";
 "options.supabase.apply.disabled.noApplicableChanges" = "No applicable local changes.";
 
+"options.supabase.pushpreflight.header" = "Local preflight check";
+"options.supabase.pushpreflight.run" = "Run local check";
+"options.supabase.pushpreflight.running" = "Running local analysis...";
+"options.supabase.pushpreflight.accountRequired" = "Supabase account is not linked or does not match the last local account.";
+"options.supabase.pushpreflight.state.idle" = "Ready for a local dry-run check.";
+"options.supabase.pushpreflight.state.accountNotLinked" = "Check blocked: account not linked";
+"options.supabase.pushpreflight.state.running" = "Local check in progress";
+"options.supabase.pushpreflight.state.completedSafe" = "Check completed: safe state";
+"options.supabase.pushpreflight.state.completedNoWork" = "Check completed: no applicable work";
+"options.supabase.pushpreflight.state.completedBlocked" = "Check completed: blockers found";
+"options.supabase.pushpreflight.state.failedLocalError" = "Local check failed. Try again.";
+"options.supabase.pushpreflight.copy.dryRun" = "Local dry-run: no data is sent to Supabase.";
+"options.supabase.pushpreflight.copy.noRemoteWrite" = "This check performs no remote write.";
+"options.supabase.pushpreflight.copy.noLocalRemoteMutation" = "This check modifies neither local nor remote data.";
+"options.supabase.pushpreflight.copy.futureTask" = "Real push will be implemented in a future task.";
+"options.supabase.pushpreflight.details" = "Category details";
+"options.supabase.pushpreflight.metric.candidates" = "Create/update candidates";
+"options.supabase.pushpreflight.metric.blockers" = "Blockers";
+"options.supabase.pushpreflight.metric.warnings" = "Warnings";
+"options.supabase.pushpreflight.metric.futureOnly" = "Future-only";
+"options.supabase.pushpreflight.category.dryRunCreateCandidate" = "Create candidates: %d";
+"options.supabase.pushpreflight.category.dryRunUpdateCandidate" = "Update candidates: %d";
+"options.supabase.pushpreflight.category.noOpAlreadySynced" = "No-op already synced: %d";
+"options.supabase.pushpreflight.category.blockedNoRemoteID" = "Blocked: missing remoteID/barcode collision: %d";
+"options.supabase.pushpreflight.category.blockedAccountMismatch" = "Blocked: account mismatch: %d";
+"options.supabase.pushpreflight.category.blockedPartialPull" = "Blocked: partial pull: %d";
+"options.supabase.pushpreflight.category.blockedMissingBaseline" = "Blocked: missing baseline: %d";
+"options.supabase.pushpreflight.category.blockedRemoteConflict" = "Blocked: remote conflict: %d";
+"options.supabase.pushpreflight.category.blockedTombstoneConflict" = "Blocked: remote tombstone: %d";
+"options.supabase.pushpreflight.category.blockedMissingSupplierCategoryRemoteID" = "Blocked: supplier/category missing remoteID: %d";
+"options.supabase.pushpreflight.category.warningLocalOnlySupplierCategory" = "Warning: unresolved local references: %d";
+"options.supabase.pushpreflight.category.warningStaleRemote" = "Warning: potentially stale remote: %d";
+"options.supabase.pushpreflight.category.futurePricePushCandidate" = "Future-only: ProductPrice excluded: %d";
+"options.supabase.pushpreflight.example" = "• %@";
+"options.supabase.pushpreflight.more" = "+ %d more";
+
 /* Inventory home */
 "inventory.home.title" = "Inventory";
 "inventory.home.subtitle" = "Select one or more Excel or HTML export files to start pre-processing.";

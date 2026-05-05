@@ -4,7 +4,7 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. **TASK-041** *Supabase manual push preflight + dry-run tombstone-compliant iOS* è **DONE / Chiusura** con review **APPROVED_FIXED_DIRECTLY**: microfix account non collegato + normalizzazione barcode baseline, build Debug PASS, build Release PASS, XCTest completo PASS, `git diff --check` PASS, anti-scope PASS; nessuna UI, nessuna rete, nessuna scrittura Supabase, nessuna baseline persistence, nessuna modifica `Models.swift`/`OptionsView.swift`/`project.pbxproj`. **TASK-040** resta **DONE / Chiusura** (non riaperto). **TASK-039** resta **DONE / Chiusura** (non riaperto). **TASK-038** resta **DONE / Chiusura**. **TASK-034**, **TASK-035**, **TASK-037**, **TASK-036** restano **DONE**. **TASK-032** resta **BLOCKED / on hold**; **TASK-028** resta **BLOCKED**.
+Nessun task attivo. **TASK-042** e' **DONE / Chiusura**: sezione DEBUG `OptionsView` per preflight/dry-run manual push locale tombstone-compliant, no-write Supabase, review+fix PASS. **TASK-041**, **TASK-040**, **TASK-039**, **TASK-038**, **TASK-037**, **TASK-036**, **TASK-035**, **TASK-034** restano **DONE / Chiusura**. **TASK-032** e **TASK-028** restano **BLOCKED**. Prossimo task suggerito: **TASK-043** — baseline/fingerprint persistence affidabile da ultimo pull completo, propedeutica a un futuro push reale separato.
 
 ## Stato globale
 IDLE
@@ -56,7 +56,9 @@ IDLE
 > **2026-05-05 (execution/user override Slice A):** **TASK-041** portato ad **ACTIVE / EXECUTION** con responsabile **Cursor / Executor**. Nota tracking: “Execution Slice A only — pure preflight/dry-run models and tests; no UI; no network; no Supabase writes; no persistent SwiftData model changes; TASK-040 and TASK-039 remain DONE.”
 > **2026-05-05 (review/close/user override):** **TASK-041** review tecnica completa eseguita da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**: fix diretto limitato ad account non collegato come `blockedAccountMismatch` e normalizzazione barcode baseline per `blockedNoRemoteID`; build Debug PASS, build Release PASS, XCTest completo PASS, `git diff --check` PASS, anti-scope PASS. Nessuna UI, nessuna rete, nessuna scrittura Supabase, nessun `record_sync_event`, nessun outbox/dirty, nessun ProductPrice push, nessuna baseline persistence, nessuna modifica `Models.swift`/`OptionsView.swift`/`project.pbxproj`, nessuna modifica Android. **TASK-040** e **TASK-039** restano **DONE**.
 
-> **Nota corrente:** nessun task attivo; **TASK-041** **DONE / Chiusura** con esito **APPROVED_FIXED_DIRECTLY**. **TASK-040** **DONE / Chiusura** con esito **APPROVED_FIXED_DIRECTLY**. **TASK-039** **DONE / Chiusura** (non riaperto). **TASK-038** **DONE / Chiusura**. **TASK-037** **DONE / Chiusura** anche per slice 2. **TASK-035** **DONE / Chiusura**. **TASK-034** **DONE / Chiusura**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**.
+> **2026-05-05 (review/close/user override):** **TASK-042** review completa eseguita da **Claude Code (review/fix/done)** con esito **PASS con fix / DONE**: fix diretti limitati a state mapping `completedNoWork`, account gate UI, fetch SwiftData preflight mirato, detached capture hygiene, localizzazione ES/ZH-Hans e test ViewModel aggiuntivi. Build Debug PASS, Build Release PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-scope PASS. Nessuna scrittura Supabase, nessun `record_sync_event`, nessun outbox/dirty, nessuna baseline persistence, nessun ProductPrice push reale, nessuna modifica Android/SQL/migration. **TASK-041** resta **DONE**.
+
+> **Nota corrente:** nessun task attivo; **TASK-042** **DONE / Chiusura** con esito **PASS con fix**. **TASK-041** **DONE / Chiusura** con esito **APPROVED_FIXED_DIRECTLY**. **TASK-040** **DONE / Chiusura** con esito **APPROVED_FIXED_DIRECTLY**. **TASK-039** **DONE / Chiusura** (non riaperto). **TASK-038** **DONE / Chiusura**. **TASK-037** **DONE / Chiusura** anche per slice 2. **TASK-035** **DONE / Chiusura**. **TASK-034** **DONE / Chiusura**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**. Prossimo task suggerito: **TASK-043** baseline/fingerprint persistence affidabile prima di qualunque push reale.
 
 > **2026-05-05 (planning/tracking):** creato **TASK-040** *Supabase full pull + remote identity bridge SwiftData allineato Android/Supabase*; promosso ad **ACTIVE / PLANNING** con responsabile **Claude / Planner**; **solo** `docs/TASKS/TASK-040-supabase-full-pull-remote-identity-bridge-swiftdata-android-alignment.md` + **`MASTER-PLAN`** — **nessuna modifica Swift**, **nessun** `project.pbxproj` / `Info.plist` / `Package.resolved` / SQL. **TASK-039** resta **DONE** e **non** viene riaperto. Riferimenti Android: TASK-067 **DONE ACCEPTABLE**, TASK-068 **PARTIAL**, TASK-069/070/071 **DONE**.
 
@@ -67,13 +69,13 @@ IDLE
 
 ## Workflow task attivo
 - **Task attivo:** Nessuno
-- **Titolo:** N/A
-- **File task:** N/A
-- **Stato task:** N/A
-- **Fase:** N/A
-- **Responsabile:** N/A
+- **Titolo:** —
+- **File task:** —
+- **Stato task:** —
+- **Fase:** —
+- **Responsabile:** —
 - **Ultimo aggiornamento:** 2026-05-05
-- **Nota tracking:** TASK-041 chiuso DONE / Chiusura con esito APPROVED_FIXED_DIRECTLY; progetto IDLE; TASK-040 e TASK-039 restano DONE.
+- **Nota tracking:** TASK-042 chiuso DONE su override esplicito utente dopo review completa + fix piccoli; progetto tornato IDLE. Prossimo task suggerito non attivo: TASK-043 baseline/fingerprint persistence affidabile.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -114,13 +116,12 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Nessun task attivo** — progetto **IDLE** dopo chiusura **TASK-041 DONE / Chiusura**.
-- Ultimo task chiuso: **TASK-041** — `docs/TASKS/TASK-041-supabase-manual-push-preflight-dry-run-tombstone-compliant-ios.md`
+- Nessun task attivo.
+- Ultimo task chiuso: **TASK-042** — **DONE / Chiusura** su override esplicito utente dopo review completa + fix piccoli.
 - Ultimo aggiornamento: **2026-05-05**
-- Nota tracking: **APPROVED_FIXED_DIRECTLY / DONE**; Slice A pura/in-memory; nessuna UI, rete, Supabase write, baseline persistence o modifica SwiftData persistente; **TASK-040** e **TASK-039** restano **DONE**.
+- Prossimo task suggerito: **TASK-043** — baseline/fingerprint persistence affidabile da ultimo pull completo, propedeutica a un futuro push reale separato.
 
 Follow-up candidate post TASK-041 (**non attivi**):
-- **TASK-042 candidato**: UI `OptionsView` preflight.
 - Task futuro: baseline persistence.
 - Task futuro: push reale supplier/category/products.
 - Task futuro: ProductPrice push.
@@ -263,7 +264,7 @@ Task bloccati non attivi:
 
 ## Backlog
 (Task futuri ordinati per priorità — aggiornabile solo da Claude o dall'utente, con motivazione esplicita)
-Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase. **TASK-036** aggiunto 2026-04-27 come follow-up documentale post-**TASK-031** (HTML avanzato: colspan/rowspan, multi-table, XCTest opzionale). **TASK-037** aggiunto 2026-04-27 da user override per creare il target XCTest minimale sulle fixture TASK-036. **TASK-040** aggiunto 2026-05-05: post TASK-039 DONE — full pull/paginazione controllata + bridge `remoteId` SwiftData allineato a inventory Supabase/Android; dipendenze TASK-034/035/038/039 DONE; riferimento funzionale Android TASK-067/068/069/070/071 (**non** copia codice). **TASK-041** aggiunto 2026-05-05: post TASK-040 DONE — planning preflight/dry-run push manuale tombstone-compliant iOS; **nessuna** write Supabase in planning; push reale task successivo; Android TASK-068 PARTIAL / TASK-071 documentati nel file task (**non** contratto live iOS).
+Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase. **TASK-036** aggiunto 2026-04-27 come follow-up documentale post-**TASK-031** (HTML avanzato: colspan/rowspan, multi-table, XCTest opzionale). **TASK-037** aggiunto 2026-04-27 da user override per creare il target XCTest minimale sulle fixture TASK-036. **TASK-040** aggiunto 2026-05-05: post TASK-039 DONE — full pull/paginazione controllata + bridge `remoteId` SwiftData allineato a inventory Supabase/Android; dipendenze TASK-034/035/038/039 DONE; riferimento funzionale Android TASK-067/068/069/070/071 (**non** copia codice). **TASK-041** aggiunto 2026-05-05: post TASK-040 DONE — planning preflight/dry-run push manuale tombstone-compliant iOS; **nessuna** write Supabase in planning; push reale task successivo; Android TASK-068 PARTIAL / TASK-071 documentati nel file task (**non** contratto live iOS). **TASK-042** aggiunto 2026-05-05: UI DEBUG `OptionsView` per preflight/dry-run manual push locale, no-write Supabase, no outbox/dirty/baseline persistence, localizzazioni complete e test puri UI/viewmodel.
 
 | ID | Titolo | Stato | Priorità |
 |----|--------|-------|----------|
@@ -307,6 +308,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-039 | Supabase preview → apply locale controllato SwiftData | DONE | HIGH |
 | TASK-040 | Supabase full pull + remote identity bridge SwiftData allineato Android/Supabase | DONE | HIGH |
 | TASK-041 | Supabase manual push preflight + dry-run tombstone-compliant iOS | DONE | HIGH |
+| TASK-042 | Supabase manual push preflight UI in OptionsView, dry-run only, tombstone-compliant | DONE | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -331,6 +333,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-039 | Supabase preview → apply locale controllato SwiftData | 2026-05-05 |
 | TASK-040 | Supabase full pull + remote identity bridge SwiftData allineato Android/Supabase | 2026-05-05 |
 | TASK-041 | Supabase manual push preflight + dry-run tombstone-compliant iOS | 2026-05-05 |
+| TASK-042 | Supabase manual push preflight UI in OptionsView, dry-run only, tombstone-compliant | 2026-05-05 |
 
 ## Blocchi e dipendenze
 - TASK-032 bloccato / in pausa.
@@ -344,7 +347,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
   Nota: planning tecnico invariato nel file task; nessun **DONE** finché mancano test manuali e conferma utente. *(Tracking allineato 2026-03-26.)*
 - TASK-026 bloccato.
   Motivo: review **APPROVED** acquisita; **nessun fix** aperto; **test manuali T-1…T-9 pendenti**; **non** DONE. **In sospensione / pending manual validation**. Alla ripresa: test manuali → eventuale FIX → REVIEW → conferma utente → DONE.
-  Nota: non invalida execution/review gia' documentati nel file task. *(Riferimento storico TASK-026; **non** descrive lo stato corrente — vedi **Obiettivo attuale** e **Workflow task attivo**: progetto **IDLE** dopo **TASK-041 DONE / Chiusura**.)*
+  Nota: non invalida execution/review gia' documentati nel file task. *(Riferimento storico TASK-026; **non** descrive lo stato corrente — vedi **Obiettivo attuale** e **Workflow task attivo**.)*
 - TASK-025 bloccato.
   Motivo: review tecnica **APPROVED** acquisita; **test manuali utente** (T-0..T-15) **pendenti**; **non** DONE. Task congelata in attesa validazione manuale. Alla ripresa: test → eventuale FIX → REVIEW finale → conferma utente → DONE.
   Nota: non invalida execution/review gia' documentati nel file task.

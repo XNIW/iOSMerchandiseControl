@@ -134,6 +134,35 @@ struct SwiftDataInventorySnapshotService {
         )
     }
 
+    func makeManualPushPreflightProductStates() throws -> [ManualPushProductState] {
+        let products = try context.fetch(
+            FetchDescriptor<Product>(
+                sortBy: [SortDescriptor(\Product.barcode)]
+            )
+        )
+
+        return products.map { product in
+            ManualPushProductState(
+                localID: product.barcode,
+                remoteID: product.remoteID,
+                remoteUpdatedAt: product.remoteUpdatedAt,
+                remoteDeletedAt: product.remoteDeletedAt,
+                barcode: product.barcode,
+                itemNumber: product.itemNumber,
+                productName: product.productName,
+                secondProductName: product.secondProductName,
+                purchasePrice: product.purchasePrice,
+                retailPrice: product.retailPrice,
+                stockQuantity: product.stockQuantity,
+                hasSupplierReference: product.supplier != nil,
+                supplierRemoteID: product.supplier?.remoteID,
+                hasCategoryReference: product.category != nil,
+                categoryRemoteID: product.category?.remoteID,
+                hasLocalPriceChanges: false
+            )
+        }
+    }
+
     private func makeNameDictionary(_ names: [String]) -> (values: [String: String], duplicates: [String]) {
         var values: [String: String] = [:]
         var counts: [String: Int] = [:]
