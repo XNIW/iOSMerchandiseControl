@@ -186,7 +186,8 @@ struct OptionsView: View {
                     }
                 }
 
-                if let sessionInfo = supabaseAuthViewModel.sessionInfo {
+                if supabaseAuthViewModel.isSignedIn,
+                   let sessionInfo = supabaseAuthViewModel.sessionInfo {
                     DisclosureGroup(L("options.supabase.auth.debugDetails")) {
                         LabeledContent(
                             L("options.supabase.auth.debug.userId"),

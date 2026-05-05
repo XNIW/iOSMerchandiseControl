@@ -24,6 +24,7 @@ nonisolated struct SupabaseAuthSessionInfo: Equatable, Sendable {
     let userID: UUID
     let email: String?
     let provider: String?
+    let isExpired: Bool
 
     var displayEmail: String? {
         guard let trimmed = email?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -147,7 +148,8 @@ final class SupabaseAuthService: @unchecked Sendable {
         return SupabaseAuthSessionInfo(
             userID: session.user.id,
             email: session.user.email,
-            provider: identityProvider ?? Provider.google.rawValue
+            provider: identityProvider ?? Provider.google.rawValue,
+            isExpired: session.isExpired
         )
     }
 }

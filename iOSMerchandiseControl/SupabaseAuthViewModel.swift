@@ -28,7 +28,7 @@ final class SupabaseAuthViewModel: ObservableObject {
             self.state = .unconfigured
         } else if let initialError {
             self.state = .failed(initialError)
-        } else if initialSessionInfo != nil {
+        } else if let initialSessionInfo, !initialSessionInfo.isExpired {
             self.state = .signedIn
         } else {
             self.state = .signedOut
@@ -42,8 +42,9 @@ final class SupabaseAuthViewModel: ObservableObject {
     }
 
     var isSignedIn: Bool {
-        if case .signedIn = state {
-            return sessionInfo != nil
+        if case .signedIn = state,
+           let sessionInfo {
+            return !sessionInfo.isExpired
         }
         return false
     }
@@ -79,7 +80,7 @@ final class SupabaseAuthViewModel: ObservableObject {
             do {
                 let info = try await authService.signInWithGoogle()
                 sessionInfo = info
-                state = .signedIn
+                state = info.isExpired ? .signedOut : .signedIn
             } catch let error as SupabaseAuthServiceError {
                 sessionInfo = authService.currentSession
                 state = .failed(error)
@@ -128,14 +129,14 @@ final class SupabaseAuthViewModel: ObservableObject {
         switch event {
         case .initialSession(let info), .tokenRefreshed(let info), .other(let info):
             sessionInfo = info
-            if info != nil {
+            if let info, !info.isExpired {
                 state = .signedIn
             } else if !isTransitioning {
                 state = .signedOut
             }
         case .signedIn(let info):
             sessionInfo = info
-            state = .signedIn
+            state = info.isExpired ? .signedOut : .signedIn
         case .signedOut:
             sessionInfo = nil
             state = .signedOut

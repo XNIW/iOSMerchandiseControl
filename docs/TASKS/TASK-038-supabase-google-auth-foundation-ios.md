@@ -9,12 +9,12 @@
 - **Responsabile attuale**: Review / Codex — completed
 - **Data creazione**: 2026-05-04
 - **Ultimo aggiornamento**: 2026-05-05
-- **Ultimo agente che ha operato**: Codex review/fix TASK-038
+- **Ultimo agente che ha operato**: Codex review/fix post-live TASK-038
 - **Nota execution**: Execution avviata su override esplicito utente.
 
 ## Dipendenze
 - **Dipende da**: TASK-034, TASK-035
-- **Sblocca**: **TASK-039** — Supabase preview → apply locale controllato SwiftData (file task da creare al momento opportuno; dipende da sessione `authenticated` per RLS owner-scoped)
+- **Sblocca**: **TASK-039** — Supabase preview → apply locale controllato SwiftData (file task da creare al momento opportuno; dipende da sessione `authenticated` per RLS owner-scoped; deve gestire preview `partial` prima di apply)
 
 ## Scopo
 Pianificare e, in una fase **EXECUTION** successiva (non autorizzata in questo turno), implementare una **foundation di login Google tramite Supabase Auth** su iOS, ottenendo una **sessione authenticated** riusabile dalle query PostgREST sulle tabelle `inventory_*` soggette a **RLS owner-scoped** (`auth.uid()` ↔ `owner_user_id`). **Dopo TASK-038**, il **preview cloud** e le letture catalogo nel perimetro devono essere **auth-gated**: **nessun fallback** a client anonimo né a fetch «senza sessione» come comportamento TASK-035 pre-login. TASK-038 include anche **diagnostica read-only post-login** (es. probe connessione/catalogo) sul **medesimo** client session-aware. TASK-038 è **solo auth/session/UI minima dev** — **nessun** sync dati, **nessun** apply SwiftData.
@@ -442,7 +442,7 @@ Non applicabile.
 
 - ✅ **APPROVED_FIXED_DIRECTLY**: nessun segreto reale, `service_role`, access token, refresh token o JWT hardcoded introdotto. Le uniche occorrenze testuali sono guardrail di rifiuto/sanitizzazione e il test sintetico.
 - ✅ **APPROVED_FIXED_DIRECTLY**: `SupabaseConfig.swift` ora rifiuta anche chiavi legacy `service_role` in formato JWT decodificando il payload `role`, senza respingere un JWT con ruolo `anon`.
-- ✅ **APPROVED**: `SupabaseConfig.plist` reale non e' tracciato e non e' presente nel workspace; `.gitignore` lo esclude.
+- ✅ **APPROVED**: `SupabaseConfig.plist` reale non e' tracciato; nella review finale post-test live e' presente solo localmente e risulta ignorato da git (`!!`), con `.gitignore` dedicato.
 - ✅ **APPROVED**: nessuna scrittura remota (`insert/update/upsert/delete/rpc`), nessuna modifica schema Supabase, nessun apply SwiftData o `context.save/insert/delete` introdotto.
 - ✅ **APPROVED**: `Package.resolved` contiene `supabase-swift` e transitivi legittimi; nessun Google Sign-In SDK, Firebase Auth o dipendenza extra non autorizzata.
 - ✅ **APPROVED**: `project.pbxproj` collega solo il prodotto `Supabase` al target app; nessun refactor Xcode non necessario rilevato.
@@ -478,21 +478,73 @@ Non applicabile.
 | Scritture remote/locali | ✅ ESEGUITO | Nessun `.insert/.update/.upsert/.delete/.rpc` nei file Supabase/Options; nessun `context.insert/delete/save` nel perimetro TASK-038 |
 | Google/Firebase extra | ✅ ESEGUITO | Nessun match `GoogleSignIn`/`Firebase` in sorgenti, progetto o `Package.resolved` |
 | Release dev-only | ✅ ESEGUITO | Ispezione statica: Section auth/preview/diagnostica e sheet sotto `#if DEBUG`; Build Release PASS |
-| Criteri di accettazione | ✅ ESEGUITO / ⚠️ NON ESEGUIBILE LIVE | Criteri static/build/test soddisfatti; OAuth/RLS live richiedono configurazione esterna |
+| Criteri di accettazione | ✅ ESEGUITO | Criteri static/build/test soddisfatti; review finale post-test live registra OAuth Google, redirect app e dry-run auth-gated PASS su Simulator |
 
 #### Configurazione esterna richiesta
 
 - **Supabase Dashboard**: abilitare provider Google, registrare Redirect URL `com.niwcyber.iosmerchandisecontrol://login-callback`, verificare Site URL/redirect consentiti.
 - **Google Cloud Console**: configurare OAuth consent screen e client OAuth coerenti con Supabase Auth.
-- **Live blocker residuo**: smoke OAuth/RLS owner-scoped non eseguibile senza progetto/config/account/dataset reali; eventuale mismatch `owner_user_id` deve restare `permissionDeniedOrRLS`, non bug iOS.
+- **Live blocker residuo**: smoke OAuth/RLS owner-scoped eseguito dall'utente con config reale locale e account Google; eventuali mismatch futuri `owner_user_id` devono restare `permissionDeniedOrRLS`, non bug iOS.
 
 #### Rischi residui / follow-up candidate
 
-- Smoke reale login/relaunch/logout/preview/RLS da eseguire quando esistono Dashboard Supabase, Google OAuth e `SupabaseConfig.plist` locale non tracciato.
-- **TASK-039** resta candidate, non attivo: Supabase preview → apply locale controllato SwiftData.
+- Smoke reale login + redirect + preview/RLS dry-run eseguito dall'utente; rilancio app/logout restano smoke manuali utili ma non bloccanti per TASK-038.
+- **TASK-039** resta candidate, non attivo: Supabase preview → apply locale controllato SwiftData. Deve bloccare apply quando la preview e' `partial` oppure implementare fetch completo/paginazione controllata per apply.
 - Bridge `remoteId` / refs SwiftData, push manuale tombstone-compliant, Sign in with Apple e sync avanzata restano fuori scope.
 
 ---
+
+### Review finale post-test live — 2026-05-05
+
+#### Esito
+
+**APPROVED_FIXED_DIRECTLY**. TASK-038 resta **DONE / Chiusura**: l'evidenza live fornita dall'utente conferma che Google OAuth iOS funziona end-to-end, il redirect `com.niwcyber.iosmerchandisecontrol://login-callback` rientra nell'app, la UI localizzata ZH-Hans mostra l'account connesso e il dry-run Supabase parte solo dopo login usando il client condiviso autenticato.
+
+#### Evidenza live registrata
+
+- Login Google iOS PASS: apertura `accounts.google.com`, redirect all'app PASS.
+- Stato UI PASS: `OptionsView` mostra "已连接为 xniw97@gmail.com".
+- Preview Supabase dopo login PASS: `远程商品: 10000`, `本地商品: 16789`, `新增: 1455`, `更新候选: 4575`, `冲突: 0`, `远程墓碑: 0`, `警告: 1000`, `未变化: 3970`.
+- Preview parziale coerente con cap corrente: marcata "部分预览" e "价格历史未完全验证"; non corretta in TASK-038 perche' fuori scope apply.
+
+#### Problemi / rumori valutati
+
+- Supabase Swift 2.46.0 warning `Initial session emitted after attempting to refresh the local stored session...`: problema piccolo recuperabile. La sorgente SDK locale conferma che l'opt-in consigliato e' `emitLocalSessionAsInitialSession: true`, a patto di controllare `session.isExpired`.
+- CoreData/SwiftData Simulator warning `Persistence-1526` vs `Persistence-1522`: classificato come store locale del Simulator da cancellare, non regressione TASK-038; nessuna migration SwiftData introdotta.
+- Preview `partial` con remote products = `10000`: coerente col cap preview. TASK-039 dovra' bloccare apply quando preview e' `partial` oppure implementare fetch completo/paginazione controllata prima di qualunque apply.
+- `project.pbxproj`: rilevato solo rumore Xcode di riordinamento del file reference del target test; rimosso dal diff. Nessun riferimento a `SupabaseConfig.plist` reale nel progetto.
+
+#### Fix diretti aggiuntivi post-live
+
+- `iOSMerchandiseControl/SupabaseClientProvider.swift`: impostato `emitLocalSessionAsInitialSession: true` nelle opzioni auth Supabase.
+- `iOSMerchandiseControl/SupabaseAuthService.swift`: `SupabaseAuthSessionInfo` ora trasporta `isExpired` derivato da `Session.isExpired`, senza esporre token.
+- `iOSMerchandiseControl/SupabaseAuthViewModel.swift`: inizializzazione, `isSignedIn`, `signIn` e listener eventi non marcano piu' `signedIn` se la sessione locale e' scaduta; il successivo refresh SDK puo' riaprire lo stato con `tokenRefreshed`.
+- `iOSMerchandiseControl/OptionsView.swift`: `DisclosureGroup` debug sessione visibile solo con sessione effettivamente `signedIn`, sempre senza token.
+
+#### Check finale post-live
+
+| Check | Stato | Evidenza |
+|---|---|---|
+| Build Debug compila | ✅ ESEGUITO | `xcodebuild -quiet -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'generic/platform=iOS Simulator' build` → PASS |
+| Build Release compila | ✅ ESEGUITO | `xcodebuild -quiet -configuration Release -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'generic/platform=iOS Simulator' build` → PASS |
+| XCTest | ✅ ESEGUITO | `xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'platform=iOS Simulator,name=iPhone 16e,OS=26.1'` → **TEST SUCCEEDED**, 19 test PASS |
+| `plutil -lint` | ✅ ESEGUITO | `Info.plist` + `en/es/it/zh-Hans Localizable.strings` OK |
+| Localizzazioni | ✅ ESEGUITO | 580 chiavi per ciascun `Localizable.strings`; diff chiavi EN/ES/IT/ZH-Hans vuoto |
+| `git diff --check` | ✅ ESEGUITO | PASS |
+| Client condiviso | ✅ ESEGUITO | Unica creazione `SupabaseClient(` in `SupabaseClientProvider`; unico `SupabaseClientProvider(config:)` nel composition root |
+| `makeClient` residuo | ✅ ESEGUITO | Nessun match in sorgenti/progetto/SPM resolved |
+| Segreti/token | ✅ ESEGUITO | Match solo su guardrail `SupabaseConfig`, sanitizzazione e test sintetico; nessun token o segreto reale |
+| Scritture remote/locali | ✅ ESEGUITO | Nessun `.insert/.update/.upsert/.delete/.rpc` nei file Supabase/Options; nessun `context.insert/delete/save` nel perimetro TASK-038 |
+| Google/Firebase extra | ✅ ESEGUITO | Nessun `GoogleSignIn`/`Firebase` in sorgenti, progetto o `Package.resolved` |
+| `SupabaseConfig.plist` locale | ✅ ESEGUITO | `git ls-files` vuoto; `git status --ignored` → `!! iOSMerchandiseControl/SupabaseConfig.plist` |
+| `project.pbxproj` | ✅ ESEGUITO | Nessun diff finale; nessun riferimento a `SupabaseConfig.plist` reale |
+| Release dev-only | ✅ ESEGUITO | Section auth/preview/diagnostica e sheet sotto `#if DEBUG`; Build Release PASS |
+
+#### Configurazioni esterne residue
+
+- Supabase Dashboard e Google Cloud OAuth risultano configurati a sufficienza per il test live registrato.
+- Resta requisito operativo per ambienti futuri: mantenere Redirect URL Supabase `com.niwcyber.iosmerchandisecontrol://login-callback`, provider Google abilitato e client OAuth Google coerente.
+- RLS owner-scoped e dataset devono rimanere verificati per account reali; errori di policy devono continuare a essere classificati come `permissionDeniedOrRLS`.
 
 ## Chiusura
 
@@ -500,7 +552,7 @@ Non applicabile.
 - [x] Utente ha autorizzato esplicitamente la chiusura: se review OK dopo eventuali fix piccoli diretti, portare TASK-038 a `DONE` e riallineare MASTER-PLAN/backlog.
 
 ### Riepilogo finale
-TASK-038 chiuso con esito **APPROVED_FIXED_DIRECTLY**: foundation Google OAuth Supabase iOS approvata dopo fix diretto di hardening config e microcopy. Client condiviso session-aware, auth state machine, callback OAuth, listener, preview/diagnostica auth-gated, localizzazioni e URL scheme sono coerenti col planning. Nessun apply SwiftData, nessun push remoto, nessuna dipendenza Google/Firebase extra e nessun segreto reale introdotto.
+TASK-038 chiuso con esito **APPROVED_FIXED_DIRECTLY**: foundation Google OAuth Supabase iOS approvata dopo fix diretti di hardening config, microcopy e allineamento Supabase Swift 2.46.0 su `emitLocalSessionAsInitialSession` con guardia `session.isExpired`. Test live utente conferma login Google, redirect app, UI signed-in e dry-run Supabase auth-gated. Client condiviso session-aware, auth state machine, callback OAuth, listener, preview/diagnostica auth-gated, localizzazioni e URL scheme sono coerenti col planning. Nessun apply SwiftData, nessun push remoto, nessuna dipendenza Google/Firebase extra e nessun segreto reale introdotto.
 
 ### Data completamento
 2026-05-05

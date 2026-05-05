@@ -4,7 +4,7 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. **TASK-038** è **DONE / Chiusura**: review tecnica completata con esito **APPROVED_FIXED_DIRECTLY** su override esplicito utente; foundation auth Google Supabase iOS approvata dopo fix diretto minimo di hardening config e microcopy. **Nessun apply SwiftData, nessun push remoto.** **TASK-034** e **TASK-035** restano **DONE**. **TASK-037** resta **DONE** (slice 2). **TASK-036** resta **DONE**. **TASK-032** resta **BLOCKED / on hold**; **TASK-028** resta **BLOCKED**. Prossimo candidate backlog, non attivo: **TASK-039** — *Supabase preview → apply locale controllato SwiftData* (file task da creare).
+Nessun task attivo. **TASK-038** è **DONE / Chiusura**: review tecnica finale post-test live completata con esito **APPROVED_FIXED_DIRECTLY** su override esplicito utente; Google OAuth, redirect app, client Supabase condiviso session-aware e dry-run auth-gated risultano validati anche su Simulator reale. Fix diretto minimo applicato per allineare `supabase-swift` 2.46.0 alla nuova semantica `emitLocalSessionAsInitialSession` con guardia `session.isExpired`. **Nessun apply SwiftData, nessun push remoto.** **TASK-034** e **TASK-035** restano **DONE**. **TASK-037** resta **DONE** (slice 2). **TASK-036** resta **DONE**. **TASK-032** resta **BLOCKED / on hold**; **TASK-028** resta **BLOCKED**. Prossimo candidate backlog, non attivo: **TASK-039** — *Supabase preview → apply locale controllato SwiftData* (file task da creare).
 
 ## Stato globale
 IDLE
@@ -46,8 +46,9 @@ IDLE
 > **2026-05-05 (execution/user override):** **TASK-038** portato ad **ACTIVE / EXECUTION** con responsabile **Cursor/Codex executor**. Nota: implementazione auth Google Supabase foundation; nessun apply SwiftData, nessun push remoto.
 > **2026-05-05 (handoff):** execution **TASK-038** completata da **Cursor/Codex**: client Supabase condiviso session-aware, Google OAuth Supabase Auth via API ufficiali pinata, state machine auth, `OptionsView` DEBUG auth-gated, preview/diagnostica senza fallback anon, localizzazioni e URL scheme. Build Debug PASS, Build Release PASS, XCTest PASS 18/18. Handoff a **Claude / REVIEW**. Nessun apply SwiftData, nessun push remoto, nessun SDK Google/Firebase extra.
 > **2026-05-05 (review/close/user override):** **TASK-038** review tecnica completata da **Codex reviewer/fixer** con esito **APPROVED_FIXED_DIRECTLY**: fix diretto limitato a hardening `SupabaseConfig` per rifiutare legacy `service_role` JWT, test XCTest dedicato e microcopy header localizzato; build Debug PASS, build Release PASS, XCTest PASS 19/19, localizzazioni/plist/git diff check PASS, anti-segreti/anti-scrittura PASS. Task chiuso **DONE / Chiusura** su autorizzazione esplicita utente. **TASK-039** resta next candidate, non attivo.
+> **2026-05-05 (review finale post-test live/user override):** **TASK-038** confermato **DONE / Chiusura** con esito **APPROVED_FIXED_DIRECTLY** dopo evidenza live utente: Google login iOS PASS, redirect custom scheme PASS, UI ZH-Hans mostra account connesso, dry-run Supabase auth-gated PASS con preview parziale coerente col cap `10_000`. Fix diretto aggiuntivo: opt-in `emitLocalSessionAsInitialSession: true` per Supabase Swift 2.46.0 e guardia `session.isExpired` nello stato auth/UI. `SupabaseConfig.plist` reale presente solo localmente e ignorato da git; nessun riferimento a plist reale in `project.pbxproj`; build Debug/Release PASS, XCTest PASS 19/19, plutil/git diff/check sicurezza PASS. **TASK-039** resta candidate, non attivo; dovrà bloccare apply su preview partial o implementare fetch completo/paginazione controllata.
 
-> **Nota corrente:** nessun task attivo. **TASK-038** **DONE / Chiusura**. **TASK-039** next candidate, non attivo. **TASK-037** **DONE / Chiusura** anche per slice 2. **TASK-035** **DONE / Chiusura**. **TASK-034** **DONE / Chiusura**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**.
+> **Nota corrente:** nessun task attivo. **TASK-038** **DONE / Chiusura** dopo review finale post-test live. **TASK-039** next candidate, non attivo. **TASK-037** **DONE / Chiusura** anche per slice 2. **TASK-035** **DONE / Chiusura**. **TASK-034** **DONE / Chiusura**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**.
 
 ## Workflow task attivo
 - **Task attivo:** nessuno
@@ -56,7 +57,7 @@ IDLE
 - **Fase:** —
 - **Responsabile:** —
 - **Ultimo aggiornamento:** 2026-05-05
-- **Nota tracking:** TASK-038 chiuso DONE con review APPROVED_FIXED_DIRECTLY; TASK-039 resta next candidate non attivo. TASK-034/035 **DONE** invariati.
+- **Nota tracking:** TASK-038 chiuso DONE con review finale post-test live **APPROVED_FIXED_DIRECTLY**; TASK-039 resta next candidate non attivo e dovrà gestire preview `partial` prima di qualunque apply. TASK-034/035 **DONE** invariati.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -99,10 +100,10 @@ Qualunque altra transizione è invalida.
 ## Task attivo
 - Nessun task attivo.
 - Ultimo aggiornamento: 2026-05-05
-- Nota tracking: TASK-038 chiuso **DONE / Chiusura**; **TASK-039** resta next candidate backlog, non attivo.
+- Nota tracking: TASK-038 chiuso **DONE / Chiusura** dopo review finale post-test live; **TASK-039** resta next candidate backlog, non attivo.
 
 Follow-up candidate post TASK-038:
-- **TASK-039** (backlog TODO, file task da creare): *Supabase preview → apply locale controllato SwiftData* — dipende da sessione authenticated (RLS owner-scoped).
+- **TASK-039** (backlog TODO, file task da creare): *Supabase preview → apply locale controllato SwiftData* — dipende da sessione authenticated (RLS owner-scoped); deve bloccare apply quando la preview è `partial` oppure implementare fetch completo/paginazione controllata per apply.
 - Bridge `remoteId` / refs SwiftData per mappare UUID Supabase e identità locali (eventuale task dedicato).
 - Push manuale tombstone-compliant.
 - Sync avanzata: resolver conflitti, background/realtime, watermark/eventi.

@@ -18,7 +18,10 @@ final class SupabaseClientProvider: @unchecked Sendable {
             supabaseURL: config.projectURL,
             supabaseKey: config.publishableKey,
             options: SupabaseClientOptions(
-                auth: .init(redirectToURL: redirectURL)
+                auth: .init(
+                    redirectToURL: redirectURL,
+                    emitLocalSessionAsInitialSession: true
+                )
             )
         )
     }
