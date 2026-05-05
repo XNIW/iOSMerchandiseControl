@@ -191,7 +191,7 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
         XCTAssertFalse(plan.isSendable)
     }
 
-    func testManualPushPlanIsAlwaysDryRunAndNotSendable() {
+    func testManualPushPlanIsDryRunAndSendableWhenSafe() {
         let plan = makePlan(
             baseline: baseline(),
             products: [
@@ -201,9 +201,9 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
         let preview = ManualPushPreview(generatedAt: generatedAt, plan: plan)
 
         XCTAssertTrue(plan.isDryRun)
-        XCTAssertFalse(plan.isSendable)
+        XCTAssertTrue(plan.isSendable)
         XCTAssertTrue(preview.isDryRun)
-        XCTAssertFalse(preview.isSendable)
+        XCTAssertTrue(preview.isSendable)
     }
 
     func testLocalOnlyProductWithValidBaselineIsDryRunCreateCandidate() {
@@ -227,7 +227,7 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
         XCTAssertTrue(plan.blockedReasons.isEmpty)
     }
 
-    func testLocalOnlyProductWithRemoteBarcodeCollisionBlocksNoRemoteID() {
+    func testLocalOnlyProductWithUniqueRemoteBarcodeMatchBecomesControlledLink() {
         let remoteID = UUID()
         let plan = makePlan(
             baseline: baseline(remoteProductIDsByBarcode: ["100": remoteID]),
@@ -236,7 +236,8 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
             ]
         )
 
-        XCTAssertTrue(plan.blockedReasons.contains(.blockedNoRemoteID))
+        XCTAssertEqual(plan.candidates.first?.action, .dryRunLinkCandidate)
+        XCTAssertEqual(plan.candidates.first?.remoteID, remoteID)
         XCTAssertFalse(plan.candidates.contains { $0.action == .dryRunCreateCandidate })
     }
 
@@ -249,8 +250,57 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
             ]
         )
 
-        XCTAssertTrue(plan.blockedReasons.contains(.blockedNoRemoteID))
+        XCTAssertEqual(plan.candidates.first?.action, .dryRunLinkCandidate)
+        XCTAssertEqual(plan.candidates.first?.remoteID, remoteID)
+        XCTAssertFalse(plan.blockedReasons.contains(.blockedNoRemoteID))
+    }
+
+    func testAmbiguousRemoteBarcodeBlocksNaturalKeyLink() {
+        let plan = makePlan(
+            baseline: baseline(remoteProductAmbiguousBarcodes: ["100"]),
+            products: [
+                product(remoteID: nil, barcode: "100")
+            ]
+        )
+
+        XCTAssertTrue(plan.blockedReasons.contains(.blockedRemoteConflict))
         XCTAssertFalse(plan.candidates.contains { $0.action == .dryRunCreateCandidate })
+    }
+
+    func testSupplierAndCategoryCreateCandidatesAreIncluded() {
+        let plan = makePlan(
+            baseline: baseline(),
+            suppliers: [lookup(.supplier, name: "Acme")],
+            categories: [lookup(.productCategory, name: "Shelf")],
+            products: []
+        )
+
+        XCTAssertEqual(plan.count(entityKind: .supplier, action: .dryRunCreateCandidate), 1)
+        XCTAssertEqual(plan.count(entityKind: .productCategory, action: .dryRunCreateCandidate), 1)
+        XCTAssertTrue(plan.isSendable)
+    }
+
+    func testSupplierUniqueNaturalKeyMatchBecomesControlledLink() {
+        let remoteID = UUID()
+        let plan = makePlan(
+            baseline: baseline(remoteSupplierIDsByName: ["Acme": remoteID]),
+            suppliers: [lookup(.supplier, name: " acme ")],
+            products: []
+        )
+
+        XCTAssertEqual(plan.candidates.first?.action, .dryRunLinkCandidate)
+        XCTAssertEqual(plan.candidates.first?.remoteID, remoteID)
+    }
+
+    func testSupplierAmbiguousNaturalKeyBlocks() {
+        let plan = makePlan(
+            baseline: baseline(remoteSupplierAmbiguousNames: ["Acme"]),
+            suppliers: [lookup(.supplier, name: "Acme")],
+            products: []
+        )
+
+        XCTAssertTrue(plan.blockedReasons.contains(.blockedRemoteConflict))
+        XCTAssertFalse(plan.isSendable)
     }
 
     func testInvalidBaselineIsHandledAsStaleOrPartialBaseline() {
@@ -289,10 +339,52 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
         XCTAssertFalse(plan.candidates.contains { $0.action == .dryRunUpdateCandidate })
     }
 
+    func testLinkedProductMissingFromBaselineRequiresControlledVerifyLinkWhenRemoteMetadataExists() {
+        let remoteID = UUID()
+        let local = product(
+            remoteID: remoteID,
+            remoteUpdatedAt: Date(timeIntervalSince1970: 1_778_000_000),
+            barcode: "100"
+        )
+
+        let plan = makePlan(
+            baseline: baseline(),
+            products: [local]
+        )
+
+        XCTAssertEqual(plan.candidates.first?.action, .dryRunLinkCandidate)
+        XCTAssertEqual(plan.candidates.first?.remoteID, remoteID)
+        XCTAssertTrue(plan.warnings.contains(.warningStaleRemote))
+        XCTAssertTrue(plan.isSendable)
+    }
+
+    func testLinkedSupplierMissingFromBaselineRequiresControlledVerifyLinkWhenRemoteMetadataExists() {
+        let remoteID = UUID()
+        let plan = makePlan(
+            baseline: baseline(),
+            suppliers: [
+                lookup(
+                    .supplier,
+                    name: "Acme",
+                    remoteID: remoteID,
+                    remoteUpdatedAt: Date(timeIntervalSince1970: 1_778_000_000)
+                )
+            ],
+            products: []
+        )
+
+        XCTAssertEqual(plan.candidates.first?.action, .dryRunLinkCandidate)
+        XCTAssertEqual(plan.candidates.first?.remoteID, remoteID)
+        XCTAssertTrue(plan.warnings.contains(.warningStaleRemote))
+        XCTAssertTrue(plan.isSendable)
+    }
+
     private func makePlan(
         pullState: ManualPushPullState = ManualPushPullState(isComplete: true),
         accountState: ManualPushAccountState? = nil,
         baseline: ManualPushBaseline?,
+        suppliers: [ManualPushLookupState] = [],
+        categories: [ManualPushLookupState] = [],
         products: [ManualPushProductState],
         simulatedChangedCount: Int? = nil
     ) -> ManualPushPlan {
@@ -301,6 +393,8 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
             pullState: pullState,
             accountState: accountState ?? ManualPushAccountState(currentUserID: userID, lastLinkedUserID: userID),
             baseline: baseline,
+            suppliers: suppliers,
+            categories: categories,
             products: products,
             simulatedChangedCount: simulatedChangedCount
         ))
@@ -326,23 +420,58 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
             barcode: barcode,
             productName: productName,
             hasSupplierReference: hasSupplierReference,
+            supplierLocalID: hasSupplierReference && supplierRemoteID == nil ? "supplier" : nil,
+            supplierName: hasSupplierReference && supplierRemoteID == nil ? "supplier" : nil,
             supplierRemoteID: supplierRemoteID,
             hasCategoryReference: hasCategoryReference,
+            categoryLocalID: hasCategoryReference && categoryRemoteID == nil ? "category" : nil,
+            categoryName: hasCategoryReference && categoryRemoteID == nil ? "category" : nil,
             categoryRemoteID: categoryRemoteID,
             hasLocalPriceChanges: hasLocalPriceChanges
         )
     }
 
+    private func lookup(
+        _ kind: PushEntityKind,
+        name: String,
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil
+    ) -> ManualPushLookupState {
+        ManualPushLookupState(
+            entityKind: kind,
+            localID: name,
+            remoteID: remoteID,
+            remoteUpdatedAt: remoteUpdatedAt,
+            remoteDeletedAt: remoteDeletedAt,
+            name: name
+        )
+    }
+
     private func baseline(
         fingerprints: [UUID: ManualPushFingerprint] = [:],
+        supplierFingerprintsByRemoteID: [UUID: ManualPushFingerprint] = [:],
+        categoryFingerprintsByRemoteID: [UUID: ManualPushFingerprint] = [:],
+        remoteSupplierIDsByName: [String: UUID] = [:],
+        remoteCategoryIDsByName: [String: UUID] = [:],
         remoteProductIDsByBarcode: [String: UUID] = [:],
+        remoteSupplierAmbiguousNames: Set<String> = [],
+        remoteCategoryAmbiguousNames: Set<String> = [],
+        remoteProductAmbiguousBarcodes: Set<String> = [],
         remoteUpdatedAtByProductID: [UUID: Date] = [:],
         remoteDeletedAtByProductID: [UUID: Date] = [:],
         invalidationReasons: Set<ManualPushBaselineInvalidationReason> = []
     ) -> ManualPushBaseline {
         ManualPushBaseline(
+            supplierFingerprintsByRemoteID: supplierFingerprintsByRemoteID,
+            categoryFingerprintsByRemoteID: categoryFingerprintsByRemoteID,
             productFingerprintsByRemoteID: fingerprints,
+            remoteSupplierIDsByName: remoteSupplierIDsByName,
+            remoteCategoryIDsByName: remoteCategoryIDsByName,
             remoteProductIDsByBarcode: remoteProductIDsByBarcode,
+            remoteSupplierAmbiguousNames: remoteSupplierAmbiguousNames,
+            remoteCategoryAmbiguousNames: remoteCategoryAmbiguousNames,
+            remoteProductAmbiguousBarcodes: remoteProductAmbiguousBarcodes,
             remoteUpdatedAtByProductID: remoteUpdatedAtByProductID,
             remoteDeletedAtByProductID: remoteDeletedAtByProductID,
             invalidationReasons: invalidationReasons

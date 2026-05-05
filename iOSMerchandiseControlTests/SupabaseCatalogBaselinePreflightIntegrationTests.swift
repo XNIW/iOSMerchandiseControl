@@ -104,7 +104,7 @@ final class SupabaseCatalogBaselinePreflightIntegrationTests: XCTestCase {
         let plan = try makePlanFromReader(context: context, ownerID: ownerID)
 
         XCTAssertTrue(plan.candidates.contains { $0.localID == "local" && $0.action == .dryRunCreateCandidate })
-        XCTAssertFalse(plan.isSendable)
+        XCTAssertTrue(plan.isSendable)
     }
 
     func testProductWithRemoteIDButMissingBaselineRecordBlocksMissingBaseline() throws {

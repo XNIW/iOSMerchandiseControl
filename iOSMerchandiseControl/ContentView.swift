@@ -20,6 +20,7 @@ private actor PriceHistoryBackfillRunner {
 struct ContentView: View {
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
+    private let supabaseManualPushService: SupabaseManualPushService?
 
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
@@ -30,10 +31,12 @@ struct ContentView: View {
 
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
-        supabasePullPreviewService: SupabasePullPreviewService? = nil
+        supabasePullPreviewService: SupabasePullPreviewService? = nil,
+        supabaseManualPushService: SupabaseManualPushService? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
+        self.supabaseManualPushService = supabaseManualPushService
     }
 
     private var resolvedColorScheme: ColorScheme? {
@@ -81,7 +84,8 @@ struct ContentView: View {
             NavigationStack {
                 OptionsView(
                     supabaseInventoryService: supabaseInventoryService,
-                    supabasePullPreviewService: supabasePullPreviewService
+                    supabasePullPreviewService: supabasePullPreviewService,
+                    supabaseManualPushService: supabaseManualPushService
                 )
             }
             .tabItem {

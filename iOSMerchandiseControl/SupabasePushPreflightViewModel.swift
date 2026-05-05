@@ -11,6 +11,11 @@ final class SupabasePushPreflightViewModel: ObservableObject {
         case completedSafe(Summary)
         case completedNoWork(Summary)
         case completedBlocked(Summary)
+        case completed(ExecutionSummary)
+        case completedBaselineRefreshFailed(ExecutionSummary)
+        case partial(ExecutionSummary)
+        case failedBeforeWrite(ExecutionSummary)
+        case blockedBeforeWrite(ExecutionSummary)
         case failedLocalError
     }
 
@@ -28,26 +33,45 @@ final class SupabasePushPreflightViewModel: ObservableObject {
         let generatedAt: Date
         let categoryCounts: [ManualPushPreflightCategory: Int]
         let totalCandidates: Int
+        let supplierCreates: Int
+        let supplierUpdates: Int
+        let supplierLinks: Int
+        let categoryCreates: Int
+        let categoryUpdates: Int
+        let categoryLinks: Int
+        let productCreates: Int
+        let productUpdates: Int
+        let productLinks: Int
         let totalBlockers: Int
         let totalWarnings: Int
         let totalFutureOnly: Int
         let groups: [CategoryGroup]
     }
 
+    struct ExecutionSummary: Equatable {
+        let result: SupabaseManualPushResult
+        let planFingerprint: String
+    }
+
     @Published private(set) var state: ViewState = .idle
+    @Published private(set) var lastPreview: ManualPushPreview?
 
     private let service: SupabaseManualPushPreflightService
     private let baselineReader: SupabaseCatalogBaselineReader
+    private let manualPushService: SupabaseManualPushService?
     private var runningTask: Task<Void, Never>?
+    private var frozenConfirmationPlan: ManualPushPlan?
     private let examplesLimit: Int
 
     init(
         service: SupabaseManualPushPreflightService = SupabaseManualPushPreflightService(),
         baselineReader: SupabaseCatalogBaselineReader = SupabaseCatalogBaselineReader(),
+        manualPushService: SupabaseManualPushService? = nil,
         examplesLimit: Int = 3
     ) {
         self.service = service
         self.baselineReader = baselineReader
+        self.manualPushService = manualPushService
         self.examplesLimit = max(1, examplesLimit)
     }
 
@@ -58,6 +82,10 @@ final class SupabasePushPreflightViewModel: ObservableObject {
     func cancel() {
         runningTask?.cancel()
         runningTask = nil
+        frozenConfirmationPlan = nil
+        if case .running = state {
+            state = .idle
+        }
     }
 
     func runLocalCheck(
@@ -88,6 +116,7 @@ final class SupabasePushPreflightViewModel: ObservableObject {
                     service.makePreview(input: input)
                 }.value
                 if Task.isCancelled { return }
+                self.lastPreview = preview
                 self.state = Self.makeCompletedState(
                     preview: preview,
                     examplesLimit: examplesLimit
@@ -95,6 +124,104 @@ final class SupabasePushPreflightViewModel: ObservableObject {
             } catch {
                 if Task.isCancelled { return }
                 self.state = .failedLocalError
+            }
+
+            self.runningTask = nil
+        }
+    }
+
+    func freezeCurrentPlanForConfirmation() -> ManualPushPlan? {
+        guard !isRunning,
+              let plan = lastPreview?.plan,
+              plan.isSendable,
+              !plan.hasBlockers else {
+            frozenConfirmationPlan = nil
+            return nil
+        }
+        frozenConfirmationPlan = plan
+        return plan
+    }
+
+    func clearFrozenConfirmationPlan() {
+        frozenConfirmationPlan = nil
+    }
+
+    func runConfirmedPush(
+        context: ModelContext,
+        isSignedIn: Bool,
+        currentUserID: UUID?,
+        lastLinkedUserID: UUID?
+    ) {
+        guard !isRunning else { return }
+        guard isSignedIn, let currentUserID else {
+            state = .blockedBeforeWrite(
+                ExecutionSummary(result: .blocked(message: "Account not linked."), planFingerprint: "")
+            )
+            frozenConfirmationPlan = nil
+            return
+        }
+        guard let manualPushService else {
+            state = .failedBeforeWrite(
+                ExecutionSummary(result: .blocked(message: "Supabase push service unavailable."), planFingerprint: "")
+            )
+            frozenConfirmationPlan = nil
+            return
+        }
+        guard let frozenPlan = frozenConfirmationPlan else {
+            state = .blockedBeforeWrite(
+                ExecutionSummary(result: .blocked(message: "Missing confirmed preflight plan."), planFingerprint: "")
+            )
+            return
+        }
+
+        state = .running
+        runningTask = Task { [weak self] in
+            guard let self else { return }
+            let frozenFingerprint = frozenPlan.planFingerprint
+
+            do {
+                let preflightService = self.service
+                let input = try self.makeInput(
+                    context: context,
+                    currentUserID: currentUserID,
+                    lastLinkedUserID: lastLinkedUserID
+                )
+                let currentPlan = await Task.detached(priority: .userInitiated) {
+                    preflightService.makePlan(input: input)
+                }.value
+
+                guard currentPlan.planFingerprint == frozenFingerprint else {
+                    self.state = .blockedBeforeWrite(
+                        ExecutionSummary(
+                            result: .blocked(message: "Preflight plan changed before confirmation."),
+                            planFingerprint: frozenFingerprint
+                        )
+                    )
+                    self.frozenConfirmationPlan = nil
+                    self.runningTask = nil
+                    return
+                }
+
+                let result = await manualPushService.execute(
+                    plan: frozenPlan,
+                    context: context,
+                    ownerUserID: currentUserID
+                )
+                if Task.isCancelled { return }
+                self.state = Self.makeExecutionState(
+                    result: result,
+                    planFingerprint: frozenFingerprint
+                )
+                self.frozenConfirmationPlan = nil
+            } catch {
+                if Task.isCancelled { return }
+                self.state = .failedBeforeWrite(
+                    ExecutionSummary(
+                        result: .blocked(message: String(describing: error)),
+                        planFingerprint: frozenFingerprint
+                    )
+                )
+                self.frozenConfirmationPlan = nil
             }
 
             self.runningTask = nil
@@ -113,8 +240,10 @@ final class SupabasePushPreflightViewModel: ObservableObject {
         currentUserID: UUID?,
         lastLinkedUserID: UUID?
     ) throws -> ManualPushPreflightInput {
-        let productStates = try SwiftDataInventorySnapshotService(context: context)
-            .makeManualPushPreflightProductStates()
+        let snapshotService = SwiftDataInventorySnapshotService(context: context)
+        let supplierStates = try snapshotService.makeManualPushPreflightSupplierStates()
+        let categoryStates = try snapshotService.makeManualPushPreflightCategoryStates()
+        let productStates = try snapshotService.makeManualPushPreflightProductStates()
         let baselineResult = try baselineReader.readManualPushBaseline(
             context: context,
             ownerUserUUID: try requireUserID(currentUserID)
@@ -125,12 +254,15 @@ final class SupabasePushPreflightViewModel: ObservableObject {
         )
 
         return ManualPushPreflightInput(
+            baselineRunID: mappedBaseline.runID,
             pullState: ManualPushPullState(isComplete: true, hasSourceErrors: false),
             accountState: mappedBaseline.accountState ?? ManualPushAccountState(
                 currentUserID: currentUserID,
                 lastLinkedUserID: lastLinkedUserID ?? currentUserID
             ),
             baseline: mappedBaseline.baseline,
+            suppliers: supplierStates,
+            categories: categoryStates,
             products: productStates
         )
     }
@@ -145,22 +277,25 @@ final class SupabasePushPreflightViewModel: ObservableObject {
     private func mapBaselineResult(
         _ result: SupabaseCatalogBaselineReadResult,
         currentUserID: UUID?
-    ) -> (baseline: ManualPushBaseline?, accountState: ManualPushAccountState?) {
+    ) -> (runID: UUID?, baseline: ManualPushBaseline?, accountState: ManualPushAccountState?) {
         switch result {
         case .available(let snapshot):
             return (
+                runID: snapshot.runID,
                 baseline: snapshot.baseline,
                 accountState: ManualPushAccountState(currentUserID: currentUserID, lastLinkedUserID: snapshot.ownerUserUUID)
             )
         case .missing:
-            return (baseline: nil, accountState: nil)
+            return (runID: nil, baseline: nil, accountState: nil)
         case .accountMismatch:
             return (
+                runID: nil,
                 baseline: nil,
                 accountState: ManualPushAccountState(currentUserID: currentUserID, lastLinkedUserID: UUID())
             )
         case .staleSchema:
             return (
+                runID: nil,
                 baseline: ManualPushBaseline(
                     productFingerprintsByRemoteID: [:],
                     invalidationReasons: [.fingerprintVersionChanged]
@@ -169,6 +304,7 @@ final class SupabasePushPreflightViewModel: ObservableObject {
             )
         case .incomplete:
             return (
+                runID: nil,
                 baseline: ManualPushBaseline(
                     productFingerprintsByRemoteID: [:],
                     invalidationReasons: [.partialPull]
@@ -193,6 +329,25 @@ final class SupabasePushPreflightViewModel: ObservableObject {
             return .completedNoWork(summary)
         }
         return .completedSafe(summary)
+    }
+
+    static func makeExecutionState(
+        result: SupabaseManualPushResult,
+        planFingerprint: String
+    ) -> ViewState {
+        let summary = ExecutionSummary(result: result, planFingerprint: planFingerprint)
+        switch result.status {
+        case .completed:
+            return .completed(summary)
+        case .completedBaselineRefreshFailed:
+            return .completedBaselineRefreshFailed(summary)
+        case .partial:
+            return .partial(summary)
+        case .failedBeforeWrite:
+            return .failedBeforeWrite(summary)
+        case .blockedBeforeWrite:
+            return .blockedBeforeWrite(summary)
+        }
     }
 
     static func makeSummary(
@@ -236,8 +391,17 @@ final class SupabasePushPreflightViewModel: ObservableObject {
             generatedAt: preview.generatedAt,
             categoryCounts: preview.categoryCounts,
             totalCandidates: preview.plan.candidates.filter {
-                $0.action == .dryRunCreateCandidate || $0.action == .dryRunUpdateCandidate
+                $0.action == .dryRunCreateCandidate || $0.action == .dryRunUpdateCandidate || $0.action == .dryRunLinkCandidate
             }.count,
+            supplierCreates: preview.plan.count(entityKind: .supplier, action: .dryRunCreateCandidate),
+            supplierUpdates: preview.plan.count(entityKind: .supplier, action: .dryRunUpdateCandidate),
+            supplierLinks: preview.plan.count(entityKind: .supplier, action: .dryRunLinkCandidate),
+            categoryCreates: preview.plan.count(entityKind: .productCategory, action: .dryRunCreateCandidate),
+            categoryUpdates: preview.plan.count(entityKind: .productCategory, action: .dryRunUpdateCandidate),
+            categoryLinks: preview.plan.count(entityKind: .productCategory, action: .dryRunLinkCandidate),
+            productCreates: preview.plan.count(entityKind: .product, action: .dryRunCreateCandidate),
+            productUpdates: preview.plan.count(entityKind: .product, action: .dryRunUpdateCandidate),
+            productLinks: preview.plan.count(entityKind: .product, action: .dryRunLinkCandidate),
             totalBlockers: preview.plan.blockedReasons.count,
             totalWarnings: preview.plan.warnings.filter { $0.severity == .warning }.count,
             totalFutureOnly: preview.plan.candidates.filter { $0.severity == .futureOnly }.count

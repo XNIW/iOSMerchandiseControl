@@ -204,7 +204,7 @@
 "options.supabase.baseline.counts.categories" = "Categorie";
 "options.supabase.baseline.schemaVersion" = "Schema fingerprint";
 "options.supabase.baseline.tombstones" = "Tombstone";
-"options.supabase.baseline.footer" = "Push reale non ancora disponibile.";
+"options.supabase.baseline.footer" = "Il push manuale è disponibile solo con baseline valida e conferma esplicita.";
 "options.supabase.baseline.commit.success" = "Baseline salvata: %d prodotti, %d fornitori, %d categorie.";
 "options.supabase.baseline.commit.failed" = "Apply locale riuscito, ma la baseline non e' stata aggiornata. Ripeti un pull/apply completo prima del preflight.";
 "options.supabase.pushpreflight.header" = "Verifica locale preflight";
@@ -700,3 +700,36 @@
 "generated.search.apply_barcode" = "Applica barcode %@";
 "generated.search.clear_accessibility" = "Svuota ricerca";
 "generated.search.scanner_accessibility" = "Scanner";
+
+/* TASK-044 manual Supabase push */
+"options.supabase.pushpreflight.category.dryRunLinkCandidate" = "Link controllati candidati: %d";
+"options.supabase.manualpush.button" = "Esegui push su Supabase";
+"options.supabase.manualpush.accessibility" = "Esegui push manuale catalogo su Supabase";
+"options.supabase.manualpush.copy.remoteWriteOnlyAfterConfirm" = "Scrive su Supabase solo dopo conferma.";
+"options.supabase.manualpush.copy.noProductPrice" = "Non invia storico prezzi (ProductPrice).";
+"options.supabase.manualpush.copy.noRemoteDelete" = "Non elimina record remoti.";
+"options.supabase.manualpush.copy.noAutomaticSync" = "Non attiva sync automatico.";
+"options.supabase.manualpush.confirm.title" = "Conferma scrittura Supabase";
+"options.supabase.manualpush.confirm.write" = "Scrive su Supabase";
+"options.supabase.manualpush.confirm.suppliers" = "Fornitori: %d create, %d update, %d link";
+"options.supabase.manualpush.confirm.categories" = "Categorie: %d create, %d update, %d link";
+"options.supabase.manualpush.confirm.products" = "Prodotti: %d create, %d update, %d link";
+"options.supabase.manualpush.confirm.writes" = "Scrive su Supabase";
+"options.supabase.manualpush.confirm.noProductPrice" = "Non invia storico prezzi";
+"options.supabase.manualpush.confirm.noDelete" = "Non elimina record remoti";
+"options.supabase.manualpush.confirm.noAutoSync" = "Non attiva sync automatico";
+"options.supabase.manualpush.state.completed" = "Push completato";
+"options.supabase.manualpush.state.completedBaselineRefreshFailed" = "Push completato, refresh baseline fallito";
+"options.supabase.manualpush.state.partial" = "Push completato parzialmente";
+"options.supabase.manualpush.state.failedBeforeWrite" = "Push fallito prima della write remota";
+"options.supabase.manualpush.state.blockedBeforeWrite" = "Push bloccato prima della write remota";
+"options.supabase.manualpush.result.suppliers" = "Fornitori";
+"options.supabase.manualpush.result.categories" = "Categorie";
+"options.supabase.manualpush.result.products" = "Prodotti";
+"options.supabase.manualpush.result.counts" = "%d create / %d update / %d link";
+"options.supabase.manualpush.result.details" = "Dettagli tecnici";
+"options.supabase.manualpush.action.completed" = "Baseline aggiornata. Nessuna azione richiesta.";
+"options.supabase.manualpush.action.completedBaselineRefreshFailed" = "Esegui un pull completo prima di fidarti della baseline.";
+"options.supabase.manualpush.action.partial" = "Riprova dopo aver verificato il risultato parziale.";
+"options.supabase.manualpush.action.failedBeforeWrite" = "Nessuna write remota confermata. Riesegui il preflight.";
+"options.supabase.manualpush.action.blockedBeforeWrite" = "Riesegui il preflight e controlla i blocchi.";

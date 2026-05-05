@@ -4,6 +4,8 @@ import SwiftData
 
 @MainActor
 final class SupabasePushPreflightViewModelTests: XCTestCase {
+    private static var retainedContainers: [ModelContainer] = []
+
     func testRunLocalCheckWithoutLinkedAccountSetsAccountNotLinked() throws {
         let viewModel = SupabasePushPreflightViewModel()
         let context = try makeContext()
@@ -243,6 +245,106 @@ final class SupabasePushPreflightViewModelTests: XCTestCase {
         }
     }
 
+    func testConfirmedPushBlocksWhenPlanChangesAfterConfirmation() async throws {
+        let context = try makeContext()
+        let ownerID = UUID()
+        _ = try SupabaseCatalogBaselineWriter().commitLatestBaseline(
+            context: context,
+            ownerUserUUID: ownerID
+        )
+        context.insert(Supplier(name: "Acme"))
+        try context.save()
+
+        let gateway = CountingManualPushGateway()
+        let viewModel = SupabasePushPreflightViewModel(
+            manualPushService: SupabaseManualPushService(remote: gateway)
+        )
+        viewModel.runLocalCheck(
+            context: context,
+            isSignedIn: true,
+            currentUserID: ownerID,
+            lastLinkedUserID: ownerID
+        )
+        try await waitUntilNotRunning(viewModel)
+        XCTAssertNotNil(viewModel.freezeCurrentPlanForConfirmation())
+
+        context.insert(Supplier(name: "Changed"))
+        try context.save()
+
+        viewModel.runConfirmedPush(
+            context: context,
+            isSignedIn: true,
+            currentUserID: ownerID,
+            lastLinkedUserID: ownerID
+        )
+        try await waitUntilNotRunning(viewModel)
+
+        if case .blockedBeforeWrite = viewModel.state {
+            XCTAssertEqual(gateway.supplierCreateCallCount, 0)
+        } else {
+            XCTFail("Expected blockedBeforeWrite, got \(viewModel.state)")
+        }
+    }
+
+    func testSecondConfirmedPushWhileRunningIsIgnored() async throws {
+        let context = try makeContext()
+        let ownerID = UUID()
+        _ = try SupabaseCatalogBaselineWriter().commitLatestBaseline(
+            context: context,
+            ownerUserUUID: ownerID
+        )
+        context.insert(Supplier(name: "Acme"))
+        try context.save()
+
+        let gateway = CountingManualPushGateway(delayNanoseconds: 80_000_000)
+        let viewModel = SupabasePushPreflightViewModel(
+            manualPushService: SupabaseManualPushService(remote: gateway)
+        )
+        viewModel.runLocalCheck(
+            context: context,
+            isSignedIn: true,
+            currentUserID: ownerID,
+            lastLinkedUserID: ownerID
+        )
+        try await waitUntilNotRunning(viewModel)
+        XCTAssertNotNil(viewModel.freezeCurrentPlanForConfirmation())
+
+        viewModel.runConfirmedPush(
+            context: context,
+            isSignedIn: true,
+            currentUserID: ownerID,
+            lastLinkedUserID: ownerID
+        )
+        viewModel.runConfirmedPush(
+            context: context,
+            isSignedIn: true,
+            currentUserID: ownerID,
+            lastLinkedUserID: ownerID
+        )
+        try await waitUntilNotRunning(viewModel)
+
+        XCTAssertEqual(gateway.supplierCreateCallCount, 1)
+    }
+
+    func testCancelClearsRunningState() throws {
+        let context = try makeContext()
+        let ownerID = UUID()
+        let viewModel = SupabasePushPreflightViewModel()
+
+        viewModel.runLocalCheck(
+            context: context,
+            isSignedIn: true,
+            currentUserID: ownerID,
+            lastLinkedUserID: ownerID
+        )
+        XCTAssertTrue(viewModel.isRunning)
+
+        viewModel.cancel()
+
+        XCTAssertFalse(viewModel.isRunning)
+        XCTAssertEqual(viewModel.state, .idle)
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             Product.self,
@@ -255,6 +357,7 @@ final class SupabasePushPreflightViewModelTests: XCTestCase {
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: configuration)
+        Self.retainedContainers.append(container)
         return ModelContext(container)
     }
 
@@ -267,4 +370,55 @@ final class SupabasePushPreflightViewModelTests: XCTestCase {
         }
         XCTFail("Timed out waiting for preflight")
     }
+}
+
+private final class CountingManualPushGateway: SupabaseManualPushRemoteGateway {
+    var supplierCreateCallCount = 0
+    private let delayNanoseconds: UInt64
+
+    init(delayNanoseconds: UInt64 = 0) {
+        self.delayNanoseconds = delayNanoseconds
+    }
+
+    func createSuppliers(_ payloads: [SupabaseManualPushSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
+        supplierCreateCallCount += 1
+        if delayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: delayNanoseconds)
+        }
+        return payloads.map {
+            RemoteInventorySupplierRow(
+                id: UUID(),
+                ownerUserID: $0.ownerUserID,
+                name: $0.name,
+                updatedAt: "2026-05-05T10:00:00Z",
+                deletedAt: nil
+            )
+        }
+    }
+
+    func updateSupplier(id: UUID, payload: SupabaseManualPushSupplierUpdatePayload) async throws -> RemoteInventorySupplierRow {
+        RemoteInventorySupplierRow(id: id, ownerUserID: UUID(), name: payload.name, updatedAt: "2026-05-05T10:00:00Z", deletedAt: nil)
+    }
+
+    func verifySupplier(id: UUID, normalizedName: String) async throws -> RemoteInventorySupplierRow {
+        RemoteInventorySupplierRow(id: id, ownerUserID: UUID(), name: normalizedName, updatedAt: "2026-05-05T10:00:00Z", deletedAt: nil)
+    }
+
+    func createCategories(_ payloads: [SupabaseManualPushCategoryCreatePayload]) async throws -> [RemoteInventoryCategoryRow] { [] }
+    func updateCategory(id: UUID, payload: SupabaseManualPushCategoryUpdatePayload) async throws -> RemoteInventoryCategoryRow {
+        RemoteInventoryCategoryRow(id: id, ownerUserID: UUID(), name: payload.name, updatedAt: "2026-05-05T10:00:00Z", deletedAt: nil)
+    }
+    func verifyCategory(id: UUID, normalizedName: String) async throws -> RemoteInventoryCategoryRow {
+        RemoteInventoryCategoryRow(id: id, ownerUserID: UUID(), name: normalizedName, updatedAt: "2026-05-05T10:00:00Z", deletedAt: nil)
+    }
+
+    func createProducts(_ payloads: [SupabaseManualPushProductCreatePayload]) async throws -> [RemoteInventoryProductRow] { [] }
+    func updateProduct(id: UUID, payload: SupabaseManualPushProductUpdatePayload) async throws -> RemoteInventoryProductRow {
+        RemoteInventoryProductRow(id: id, ownerUserID: UUID(), barcode: payload.barcode ?? "100", itemNumber: nil, productName: nil, secondProductName: nil, purchasePrice: nil, retailPrice: nil, supplierID: nil, categoryID: nil, stockQuantity: nil, updatedAt: "2026-05-05T10:00:00Z", deletedAt: nil)
+    }
+    func verifyProduct(id: UUID, normalizedBarcode: String) async throws -> RemoteInventoryProductRow {
+        RemoteInventoryProductRow(id: id, ownerUserID: UUID(), barcode: normalizedBarcode, itemNumber: nil, productName: nil, secondProductName: nil, purchasePrice: nil, retailPrice: nil, supplierID: nil, categoryID: nil, stockQuantity: nil, updatedAt: "2026-05-05T10:00:00Z", deletedAt: nil)
+    }
+
+    func verifyReadBack(expectation: SupabaseManualPushReadBackExpectation) async throws {}
 }

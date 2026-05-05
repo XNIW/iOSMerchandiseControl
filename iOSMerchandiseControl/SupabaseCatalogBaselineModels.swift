@@ -85,6 +85,7 @@ final class SupabaseCatalogBaselineRecord {
     var createdAt: Date
     var updatedAt: Date
     var barcodeCanonical: String?
+    var lookupNameCanonical: String?
 
     init(
         baselineRunID: UUID,
@@ -99,7 +100,8 @@ final class SupabaseCatalogBaselineRecord {
         source: SupabaseCatalogBaselineSource = .fullPullApply,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
-        barcodeCanonical: String? = nil
+        barcodeCanonical: String? = nil,
+        lookupNameCanonical: String? = nil
     ) {
         self.baselineRunID = baselineRunID
         self.ownerUserUUID = ownerUserUUID
@@ -114,6 +116,7 @@ final class SupabaseCatalogBaselineRecord {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.barcodeCanonical = barcodeCanonical
+        self.lookupNameCanonical = lookupNameCanonical
         self.recordKey = Self.makeRecordKey(
             baselineRunID: baselineRunID,
             entityType: entityType,

@@ -33,15 +33,23 @@ struct OptionsView: View {
     @State private var supabaseBaselineSummary: SupabaseCatalogBaselineDebugSummary = .absent
     @State private var isShowingSupabasePullPreview = false
     @State private var supabasePullPreviewState: SupabasePullPreviewViewState = .idle
-    @StateObject private var pushPreflightViewModel = SupabasePushPreflightViewModel()
+    @StateObject private var pushPreflightViewModel: SupabasePushPreflightViewModel
+    @State private var pendingManualPushPlan: ManualPushPlan?
+    @State private var isShowingManualPushConfirmation = false
 #endif
 
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
-        supabasePullPreviewService: SupabasePullPreviewService? = nil
+        supabasePullPreviewService: SupabasePullPreviewService? = nil,
+        supabaseManualPushService: SupabaseManualPushService? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
+#if DEBUG
+        _pushPreflightViewModel = StateObject(
+            wrappedValue: SupabasePushPreflightViewModel(manualPushService: supabaseManualPushService)
+        )
+#endif
     }
 
     // Opzioni tema (equivalenti alle scelte Android)
@@ -285,6 +293,14 @@ struct OptionsView: View {
                 }
                 .disabled(pushPreflightViewModel.isRunning || !isPushPreflightAccountReady)
 
+                Button {
+                    prepareManualPushConfirmation()
+                } label: {
+                    Label(L("options.supabase.manualpush.button"), systemImage: "icloud.and.arrow.up")
+                }
+                .disabled(!canRunManualPush)
+                .accessibilityLabel(L("options.supabase.manualpush.accessibility"))
+
                 if pushPreflightViewModel.isRunning {
                     HStack(spacing: 12) {
                         ProgressView()
@@ -315,6 +331,8 @@ struct OptionsView: View {
                             color: .orange,
                             summary: summary
                         )
+                    } else if let execution = manualPushExecutionSummary {
+                        manualPushResultCard(execution)
                     } else if case .failedLocalError = pushPreflightViewModel.state {
                         Label {
                             Text(L("options.supabase.pushpreflight.state.failedLocalError"))
@@ -331,9 +349,10 @@ struct OptionsView: View {
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L("options.supabase.pushpreflight.copy.dryRun"))
-                    Text(L("options.supabase.pushpreflight.copy.noRemoteWrite"))
-                    Text(L("options.supabase.pushpreflight.copy.noLocalRemoteMutation"))
-                    Text(L("options.supabase.pushpreflight.copy.futureTask"))
+                    Text(L("options.supabase.manualpush.copy.remoteWriteOnlyAfterConfirm"))
+                    Text(L("options.supabase.manualpush.copy.noProductPrice"))
+                    Text(L("options.supabase.manualpush.copy.noRemoteDelete"))
+                    Text(L("options.supabase.manualpush.copy.noAutomaticSync"))
                 }
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -361,6 +380,22 @@ struct OptionsView: View {
         .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
             refreshSupabaseBaselineSummary()
         }
+        .onChange(of: pushPreflightViewModel.state) { _, state in
+            switch state {
+            case .completed, .completedBaselineRefreshFailed, .partial:
+                refreshSupabaseBaselineSummary()
+            case .idle,
+                 .accountNotLinked,
+                 .running,
+                 .completedSafe,
+                 .completedNoWork,
+                 .completedBlocked,
+                 .failedBeforeWrite,
+                 .blockedBeforeWrite,
+                 .failedLocalError:
+                break
+            }
+        }
         .sheet(isPresented: $isShowingSupabasePullPreview) {
             SupabasePullPreviewSheet(
                 state: supabasePullPreviewState,
@@ -373,6 +408,23 @@ struct OptionsView: View {
                     isShowingSupabasePullPreview = false
                 }
             )
+        }
+        .confirmationDialog(
+            L("options.supabase.manualpush.confirm.title"),
+            isPresented: $isShowingManualPushConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L("options.supabase.manualpush.confirm.write"), role: .destructive) {
+                runConfirmedManualPush()
+            }
+            Button(L("common.cancel"), role: .cancel) {
+                pushPreflightViewModel.clearFrozenConfirmationPlan()
+                pendingManualPushPlan = nil
+            }
+        } message: {
+            if let pendingManualPushPlan {
+                Text(manualPushConfirmationMessage(for: pendingManualPushPlan))
+            }
         }
 #endif
     }
@@ -389,6 +441,34 @@ struct OptionsView: View {
         supabaseAuthViewModel.isSignedIn
             && supabaseAuthViewModel.sessionInfo?.isExpired == false
             && supabaseAuthViewModel.sessionInfo?.userID != nil
+    }
+
+    private var canRunManualPush: Bool {
+        guard isPushPreflightAccountReady,
+              !pushPreflightViewModel.isRunning,
+              let plan = pushPreflightViewModel.lastPreview?.plan else {
+            return false
+        }
+        return plan.isSendable && !plan.hasBlockers
+    }
+
+    private var manualPushExecutionSummary: SupabasePushPreflightViewModel.ExecutionSummary? {
+        switch pushPreflightViewModel.state {
+        case .completed(let summary),
+             .completedBaselineRefreshFailed(let summary),
+             .partial(let summary),
+             .failedBeforeWrite(let summary),
+             .blockedBeforeWrite(let summary):
+            return summary
+        case .idle,
+             .accountNotLinked,
+             .running,
+             .completedSafe,
+             .completedNoWork,
+             .completedBlocked,
+             .failedLocalError:
+            return nil
+        }
     }
 
     private var displayedPushPreflightState: SupabasePushPreflightViewModel.ViewState {
@@ -547,6 +627,25 @@ struct OptionsView: View {
         )
     }
 
+    private func prepareManualPushConfirmation() {
+        guard let plan = pushPreflightViewModel.freezeCurrentPlanForConfirmation() else {
+            pendingManualPushPlan = nil
+            return
+        }
+        pendingManualPushPlan = plan
+        isShowingManualPushConfirmation = true
+    }
+
+    private func runConfirmedManualPush() {
+        pushPreflightViewModel.runConfirmedPush(
+            context: modelContext,
+            isSignedIn: supabaseAuthViewModel.isSignedIn && !supabaseAuthViewModel.isTransitioning,
+            currentUserID: supabaseAuthViewModel.sessionInfo?.userID,
+            lastLinkedUserID: UUID(uuidString: supabaseLastLinkedUserID)
+        )
+        pendingManualPushPlan = nil
+    }
+
     private func refreshSupabaseBaselineSummary() {
         do {
             supabaseBaselineSummary = try SupabaseCatalogBaselineReader().debugSummary(
@@ -598,6 +697,18 @@ struct OptionsView: View {
             LabeledContent(L("options.supabase.pushpreflight.metric.blockers"), value: "\(summary.totalBlockers)")
             LabeledContent(L("options.supabase.pushpreflight.metric.warnings"), value: "\(summary.totalWarnings)")
             LabeledContent(L("options.supabase.pushpreflight.metric.futureOnly"), value: "\(summary.totalFutureOnly)")
+            LabeledContent(
+                L("options.supabase.manualpush.result.suppliers"),
+                value: resultCounts(creates: summary.supplierCreates, updates: summary.supplierUpdates, links: summary.supplierLinks)
+            )
+            LabeledContent(
+                L("options.supabase.manualpush.result.categories"),
+                value: resultCounts(creates: summary.categoryCreates, updates: summary.categoryUpdates, links: summary.categoryLinks)
+            )
+            LabeledContent(
+                L("options.supabase.manualpush.result.products"),
+                value: resultCounts(creates: summary.productCreates, updates: summary.productUpdates, links: summary.productLinks)
+            )
 
             DisclosureGroup(L("options.supabase.pushpreflight.details")) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -646,6 +757,16 @@ struct OptionsView: View {
             return "options.supabase.pushpreflight.state.completedNoWork"
         case .completedBlocked:
             return "options.supabase.pushpreflight.state.completedBlocked"
+        case .completed:
+            return "options.supabase.manualpush.state.completed"
+        case .completedBaselineRefreshFailed:
+            return "options.supabase.manualpush.state.completedBaselineRefreshFailed"
+        case .partial:
+            return "options.supabase.manualpush.state.partial"
+        case .failedBeforeWrite:
+            return "options.supabase.manualpush.state.failedBeforeWrite"
+        case .blockedBeforeWrite:
+            return "options.supabase.manualpush.state.blockedBeforeWrite"
         case .failedLocalError:
             return "options.supabase.pushpreflight.state.failedLocalError"
         }
@@ -659,8 +780,16 @@ struct OptionsView: View {
             return "lock.fill"
         case .running:
             return "hourglass"
-        case .completedSafe, .completedNoWork:
+        case .completedSafe, .completedNoWork, .completed:
             return "checkmark.circle.fill"
+        case .completedBaselineRefreshFailed:
+            return "externaldrive.badge.exclamationmark"
+        case .partial:
+            return "exclamationmark.triangle.fill"
+        case .failedBeforeWrite:
+            return "xmark.octagon.fill"
+        case .blockedBeforeWrite:
+            return "lock.fill"
         case .completedBlocked:
             return "exclamationmark.triangle.fill"
         case .failedLocalError:
@@ -670,15 +799,89 @@ struct OptionsView: View {
 
     private func preflightStateColor(_ state: SupabasePushPreflightViewModel.ViewState) -> Color {
         switch state {
-        case .completedSafe, .completedNoWork:
+        case .completedSafe, .completedNoWork, .completed:
             return .green
-        case .completedBlocked, .accountNotLinked:
+        case .completedBaselineRefreshFailed, .partial, .completedBlocked, .accountNotLinked, .blockedBeforeWrite:
             return .orange
-        case .failedLocalError:
+        case .failedLocalError, .failedBeforeWrite:
             return .red
         case .idle, .running:
             return .secondary
         }
+    }
+
+    @ViewBuilder
+    private func manualPushResultCard(_ execution: SupabasePushPreflightViewModel.ExecutionSummary) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(L(preflightStateTextKey(pushPreflightViewModel.state)))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            } icon: {
+                Image(systemName: preflightStateSymbol(pushPreflightViewModel.state))
+                    .foregroundStyle(preflightStateColor(pushPreflightViewModel.state))
+            }
+
+            LabeledContent(L("options.supabase.manualpush.result.suppliers"), value: resultCounts(
+                creates: execution.result.supplierCreates,
+                updates: execution.result.supplierUpdates,
+                links: execution.result.supplierLinks
+            ))
+            LabeledContent(L("options.supabase.manualpush.result.categories"), value: resultCounts(
+                creates: execution.result.categoryCreates,
+                updates: execution.result.categoryUpdates,
+                links: execution.result.categoryLinks
+            ))
+            LabeledContent(L("options.supabase.manualpush.result.products"), value: resultCounts(
+                creates: execution.result.productCreates,
+                updates: execution.result.productUpdates,
+                links: execution.result.productLinks
+            ))
+            Text(L(actionKey(for: execution.result.status)))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            if let message = execution.result.message, !message.isEmpty {
+                DisclosureGroup(L("options.supabase.manualpush.result.details")) {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func resultCounts(creates: Int, updates: Int, links: Int) -> String {
+        L("options.supabase.manualpush.result.counts", creates, updates, links)
+    }
+
+    private func actionKey(for status: SupabaseManualPushTerminalStatus) -> String {
+        switch status {
+        case .completed:
+            return "options.supabase.manualpush.action.completed"
+        case .completedBaselineRefreshFailed:
+            return "options.supabase.manualpush.action.completedBaselineRefreshFailed"
+        case .partial:
+            return "options.supabase.manualpush.action.partial"
+        case .failedBeforeWrite:
+            return "options.supabase.manualpush.action.failedBeforeWrite"
+        case .blockedBeforeWrite:
+            return "options.supabase.manualpush.action.blockedBeforeWrite"
+        }
+    }
+
+    private func manualPushConfirmationMessage(for plan: ManualPushPlan) -> String {
+        let counts = [
+            L("options.supabase.manualpush.confirm.suppliers", plan.count(entityKind: .supplier, action: .dryRunCreateCandidate), plan.count(entityKind: .supplier, action: .dryRunUpdateCandidate), plan.count(entityKind: .supplier, action: .dryRunLinkCandidate)),
+            L("options.supabase.manualpush.confirm.categories", plan.count(entityKind: .productCategory, action: .dryRunCreateCandidate), plan.count(entityKind: .productCategory, action: .dryRunUpdateCandidate), plan.count(entityKind: .productCategory, action: .dryRunLinkCandidate)),
+            L("options.supabase.manualpush.confirm.products", plan.count(entityKind: .product, action: .dryRunCreateCandidate), plan.count(entityKind: .product, action: .dryRunUpdateCandidate), plan.count(entityKind: .product, action: .dryRunLinkCandidate)),
+            L("options.supabase.manualpush.confirm.writes"),
+            L("options.supabase.manualpush.confirm.noProductPrice"),
+            L("options.supabase.manualpush.confirm.noDelete"),
+            L("options.supabase.manualpush.confirm.noAutoSync")
+        ]
+        return counts.joined(separator: "\n")
     }
 
     private func severitySymbol(_ severity: PushSeverity) -> String {

@@ -6,19 +6,22 @@ struct iOSMerchandiseControlApp: App {
     @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
+    private let supabaseManualPushService: SupabaseManualPushService?
 
     init() {
         let dependencies = Self.makeSupabaseDependencies()
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
         supabaseInventoryService = dependencies.inventoryService
         supabasePullPreviewService = dependencies.pullPreviewService
+        supabaseManualPushService = dependencies.manualPushService
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView(
                 supabaseInventoryService: supabaseInventoryService,
-                supabasePullPreviewService: supabasePullPreviewService
+                supabasePullPreviewService: supabasePullPreviewService,
+                supabaseManualPushService: supabaseManualPushService
             )
             .environmentObject(supabaseAuthViewModel)
             .onOpenURL { url in
@@ -43,28 +46,33 @@ struct iOSMerchandiseControlApp: App {
             let authService = SupabaseAuthService(provider: provider)
             let inventoryService = SupabaseInventoryService(clientProvider: provider)
             let previewService = SupabasePullPreviewService(inventoryService: inventoryService)
+            let manualPushService = SupabaseManualPushService(clientProvider: provider)
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(authService: authService),
                 inventoryService: inventoryService,
-                pullPreviewService: previewService
+                pullPreviewService: previewService,
+                manualPushService: manualPushService
             )
         } catch SupabaseConfigError.configMissing {
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .configMissing),
                 inventoryService: nil,
-                pullPreviewService: nil
+                pullPreviewService: nil,
+                manualPushService: nil
             )
         } catch SupabaseConfigError.invalidConfig {
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .invalidConfig),
                 inventoryService: nil,
-                pullPreviewService: nil
+                pullPreviewService: nil,
+                manualPushService: nil
             )
         } catch {
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .unknown(message: String(describing: error))),
                 inventoryService: nil,
-                pullPreviewService: nil
+                pullPreviewService: nil,
+                manualPushService: nil
             )
         }
     }
@@ -74,4 +82,5 @@ private struct SupabaseAppDependencies {
     let authViewModel: SupabaseAuthViewModel
     let inventoryService: SupabaseInventoryService?
     let pullPreviewService: SupabasePullPreviewService?
+    let manualPushService: SupabaseManualPushService?
 }

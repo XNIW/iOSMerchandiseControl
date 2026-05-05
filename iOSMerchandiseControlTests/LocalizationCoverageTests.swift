@@ -55,6 +55,50 @@ final class LocalizationCoverageTests: XCTestCase {
         }
     }
 
+    func testTask044ManualPushLocalizationKeysExistInSupportedLanguages() throws {
+        let keys = [
+            "options.supabase.pushpreflight.category.dryRunLinkCandidate",
+            "options.supabase.manualpush.button",
+            "options.supabase.manualpush.accessibility",
+            "options.supabase.manualpush.copy.remoteWriteOnlyAfterConfirm",
+            "options.supabase.manualpush.copy.noProductPrice",
+            "options.supabase.manualpush.copy.noRemoteDelete",
+            "options.supabase.manualpush.copy.noAutomaticSync",
+            "options.supabase.manualpush.confirm.title",
+            "options.supabase.manualpush.confirm.write",
+            "options.supabase.manualpush.confirm.suppliers",
+            "options.supabase.manualpush.confirm.categories",
+            "options.supabase.manualpush.confirm.products",
+            "options.supabase.manualpush.confirm.writes",
+            "options.supabase.manualpush.confirm.noProductPrice",
+            "options.supabase.manualpush.confirm.noDelete",
+            "options.supabase.manualpush.confirm.noAutoSync",
+            "options.supabase.manualpush.state.completed",
+            "options.supabase.manualpush.state.completedBaselineRefreshFailed",
+            "options.supabase.manualpush.state.partial",
+            "options.supabase.manualpush.state.failedBeforeWrite",
+            "options.supabase.manualpush.state.blockedBeforeWrite",
+            "options.supabase.manualpush.result.suppliers",
+            "options.supabase.manualpush.result.categories",
+            "options.supabase.manualpush.result.products",
+            "options.supabase.manualpush.result.counts",
+            "options.supabase.manualpush.result.details",
+            "options.supabase.manualpush.action.completed",
+            "options.supabase.manualpush.action.completedBaselineRefreshFailed",
+            "options.supabase.manualpush.action.partial",
+            "options.supabase.manualpush.action.failedBeforeWrite",
+            "options.supabase.manualpush.action.blockedBeforeWrite"
+        ]
+
+        for language in ["it", "en", "es", "zh-Hans"] {
+            let strings = try loadStrings(language: language)
+            for key in keys {
+                XCTAssertNotNil(strings[key], "\(key) missing in \(language)")
+                XCTAssertFalse(strings[key]?.isEmpty ?? true, "\(key) empty in \(language)")
+            }
+        }
+    }
+
     private func loadStrings(language: String) throws -> [String: String] {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

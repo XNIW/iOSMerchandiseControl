@@ -17,6 +17,7 @@ nonisolated enum PushEntityKind: String, Sendable, Equatable, CaseIterable {
 nonisolated enum ManualPushPreflightCategory: String, Sendable, Equatable, Hashable, CaseIterable {
     case dryRunCreateCandidate
     case dryRunUpdateCandidate
+    case dryRunLinkCandidate
     case noOpAlreadySynced
     case blockedNoRemoteID
     case blockedAccountMismatch
@@ -49,7 +50,8 @@ nonisolated enum ManualPushPreflightCategory: String, Sendable, Equatable, Hasha
         case .futurePricePushCandidate:
             return .futureOnly
         case .dryRunCreateCandidate,
-             .dryRunUpdateCandidate:
+             .dryRunUpdateCandidate,
+             .dryRunLinkCandidate:
             return .info
         }
     }
@@ -58,6 +60,7 @@ nonisolated enum ManualPushPreflightCategory: String, Sendable, Equatable, Hasha
 nonisolated enum PushCandidateAction: String, Sendable, Equatable, CaseIterable {
     case dryRunCreateCandidate
     case dryRunUpdateCandidate
+    case dryRunLinkCandidate
     case noOpAlreadySynced
     case futurePricePushCandidate
 
@@ -67,6 +70,8 @@ nonisolated enum PushCandidateAction: String, Sendable, Equatable, CaseIterable 
             return .dryRunCreateCandidate
         case .dryRunUpdateCandidate:
             return .dryRunUpdateCandidate
+        case .dryRunLinkCandidate:
+            return .dryRunLinkCandidate
         case .noOpAlreadySynced:
             return .noOpAlreadySynced
         case .futurePricePushCandidate:
@@ -296,16 +301,94 @@ nonisolated struct ManualPushPlan: Sendable, Equatable {
     static let futureEventSplitThreshold = 1_000
 
     let generatedAt: Date
+    let baselineRunID: UUID?
+    let ownerUserID: UUID?
+    let fingerprintSchemaVersion: Int
     let candidates: [PushCandidate]
     let blockedReasons: [PushBlockedReason]
     let warnings: [PushWarning]
     let futureEventChangedCount: Int
 
+    init(
+        generatedAt: Date,
+        baselineRunID: UUID? = nil,
+        ownerUserID: UUID? = nil,
+        fingerprintSchemaVersion: Int = SupabaseCatalogFingerprintSchema.currentVersion,
+        candidates: [PushCandidate],
+        blockedReasons: [PushBlockedReason],
+        warnings: [PushWarning],
+        futureEventChangedCount: Int
+    ) {
+        self.generatedAt = generatedAt
+        self.baselineRunID = baselineRunID
+        self.ownerUserID = ownerUserID
+        self.fingerprintSchemaVersion = fingerprintSchemaVersion
+        self.candidates = candidates
+        self.blockedReasons = blockedReasons
+        self.warnings = warnings
+        self.futureEventChangedCount = futureEventChangedCount
+    }
+
     var isDryRun: Bool { true }
-    var isSendable: Bool { false }
+    var isSendable: Bool { !hasBlockers && hasWriteOrLinkCandidates }
 
     var hasBlockers: Bool {
         !blockedReasons.isEmpty
+    }
+
+    var hasWriteOrLinkCandidates: Bool {
+        candidates.contains {
+            $0.action == .dryRunCreateCandidate
+                || $0.action == .dryRunUpdateCandidate
+                || $0.action == .dryRunLinkCandidate
+        }
+    }
+
+    var writeCandidates: [PushCandidate] {
+        candidates.filter {
+            $0.action == .dryRunCreateCandidate
+                || $0.action == .dryRunUpdateCandidate
+                || $0.action == .dryRunLinkCandidate
+        }
+    }
+
+    var planFingerprint: String {
+        let candidateBody = candidates
+            .map {
+                [
+                    $0.entityKind.rawValue,
+                    $0.localID,
+                    $0.remoteID?.uuidString.lowercased() ?? "nil",
+                    $0.action.rawValue,
+                    $0.fingerprint?.canonicalString ?? "nil"
+                ].joined(separator: ":")
+            }
+            .sorted()
+            .joined(separator: "|")
+        let blockedBody = blockedReasons.map(\.rawValue).sorted().joined(separator: "|")
+        let warningBody = warnings.map(\.rawValue).sorted().joined(separator: "|")
+        return [
+            "schema=\(fingerprintSchemaVersion)",
+            "owner=\(ownerUserID?.uuidString.lowercased() ?? "nil")",
+            "baseline=\(baselineRunID?.uuidString.lowercased() ?? "nil")",
+            "candidates=\(candidateBody)",
+            "blocked=\(blockedBody)",
+            "warnings=\(warningBody)",
+            "future=\(futureEventChangedCount)"
+        ].joined(separator: "||")
+    }
+
+    func count(entityKind: PushEntityKind, action: PushCandidateAction) -> Int {
+        candidates.filter { $0.entityKind == entityKind && $0.action == action }.count
+    }
+
+    func changedCount(entityKind: PushEntityKind) -> Int {
+        candidates.filter {
+            $0.entityKind == entityKind
+                && ($0.action == .dryRunCreateCandidate
+                    || $0.action == .dryRunUpdateCandidate
+                    || $0.action == .dryRunLinkCandidate)
+        }.count
     }
 
     var categoryCounts: [ManualPushPreflightCategory: Int] {

@@ -135,19 +135,65 @@ struct SupabaseCatalogBaselineReader {
     }
 
     private func makeManualPushBaseline(from records: [SupabaseCatalogBaselineRecord]) -> ManualPushBaseline {
+        var supplierFingerprintsByRemoteID: [UUID: ManualPushFingerprint] = [:]
+        var categoryFingerprintsByRemoteID: [UUID: ManualPushFingerprint] = [:]
         var productFingerprintsByRemoteID: [UUID: ManualPushFingerprint] = [:]
+        var supplierIDsByNameAccumulator: [String: Set<UUID>] = [:]
+        var categoryIDsByNameAccumulator: [String: Set<UUID>] = [:]
+        var productIDsByBarcodeAccumulator: [String: Set<UUID>] = [:]
         var remoteProductIDsByBarcode: [String: UUID] = [:]
+        var remoteSupplierIDsByName: [String: UUID] = [:]
+        var remoteCategoryIDsByName: [String: UUID] = [:]
+        var remoteSupplierAmbiguousNames: Set<String> = []
+        var remoteCategoryAmbiguousNames: Set<String> = []
+        var remoteProductAmbiguousBarcodes: Set<String> = []
+        var remoteUpdatedAtBySupplierID: [UUID: Date] = [:]
+        var remoteUpdatedAtByCategoryID: [UUID: Date] = [:]
         var remoteUpdatedAtByProductID: [UUID: Date] = [:]
+        var remoteDeletedAtBySupplierID: [UUID: Date] = [:]
+        var remoteDeletedAtByCategoryID: [UUID: Date] = [:]
         var remoteDeletedAtByProductID: [UUID: Date] = [:]
 
-        for record in records where record.entityType == SupabaseCatalogBaselineEntityType.product.rawValue {
+        for record in records {
+            switch record.entityType {
+            case SupabaseCatalogBaselineEntityType.supplier.rawValue:
+                supplierFingerprintsByRemoteID[record.remoteID] = ManualPushFingerprint(
+                    entityKind: .supplier,
+                    version: record.fingerprintSchemaVersion,
+                    canonicalString: record.fingerprintCanonical
+                )
+                if let lookupName = record.lookupNameCanonical {
+                    supplierIDsByNameAccumulator[lookupName, default: []].insert(record.remoteID)
+                }
+                if let remoteUpdatedAt = record.remoteUpdatedAt {
+                    remoteUpdatedAtBySupplierID[record.remoteID] = remoteUpdatedAt
+                }
+                if let remoteDeletedAt = record.remoteDeletedAt {
+                    remoteDeletedAtBySupplierID[record.remoteID] = remoteDeletedAt
+                }
+            case SupabaseCatalogBaselineEntityType.productCategory.rawValue:
+                categoryFingerprintsByRemoteID[record.remoteID] = ManualPushFingerprint(
+                    entityKind: .productCategory,
+                    version: record.fingerprintSchemaVersion,
+                    canonicalString: record.fingerprintCanonical
+                )
+                if let lookupName = record.lookupNameCanonical {
+                    categoryIDsByNameAccumulator[lookupName, default: []].insert(record.remoteID)
+                }
+                if let remoteUpdatedAt = record.remoteUpdatedAt {
+                    remoteUpdatedAtByCategoryID[record.remoteID] = remoteUpdatedAt
+                }
+                if let remoteDeletedAt = record.remoteDeletedAt {
+                    remoteDeletedAtByCategoryID[record.remoteID] = remoteDeletedAt
+                }
+            case SupabaseCatalogBaselineEntityType.product.rawValue:
             productFingerprintsByRemoteID[record.remoteID] = ManualPushFingerprint(
                 entityKind: .product,
                 version: record.fingerprintSchemaVersion,
                 canonicalString: record.fingerprintCanonical
             )
             if let barcode = record.barcodeCanonical {
-                remoteProductIDsByBarcode[barcode] = record.remoteID
+                    productIDsByBarcodeAccumulator[barcode, default: []].insert(record.remoteID)
             }
             if let remoteUpdatedAt = record.remoteUpdatedAt {
                 remoteUpdatedAtByProductID[record.remoteID] = remoteUpdatedAt
@@ -155,12 +201,50 @@ struct SupabaseCatalogBaselineReader {
             if let remoteDeletedAt = record.remoteDeletedAt {
                 remoteDeletedAtByProductID[record.remoteID] = remoteDeletedAt
             }
+            default:
+                continue
+            }
+        }
+
+        for (name, remoteIDs) in supplierIDsByNameAccumulator {
+            if remoteIDs.count == 1, let remoteID = remoteIDs.first {
+                remoteSupplierIDsByName[name] = remoteID
+            } else {
+                remoteSupplierAmbiguousNames.insert(name)
+            }
+        }
+
+        for (name, remoteIDs) in categoryIDsByNameAccumulator {
+            if remoteIDs.count == 1, let remoteID = remoteIDs.first {
+                remoteCategoryIDsByName[name] = remoteID
+            } else {
+                remoteCategoryAmbiguousNames.insert(name)
+            }
+        }
+
+        for (barcode, remoteIDs) in productIDsByBarcodeAccumulator {
+            if remoteIDs.count == 1, let remoteID = remoteIDs.first {
+                remoteProductIDsByBarcode[barcode] = remoteID
+            } else {
+                remoteProductAmbiguousBarcodes.insert(barcode)
+            }
         }
 
         return ManualPushBaseline(
+            supplierFingerprintsByRemoteID: supplierFingerprintsByRemoteID,
+            categoryFingerprintsByRemoteID: categoryFingerprintsByRemoteID,
             productFingerprintsByRemoteID: productFingerprintsByRemoteID,
+            remoteSupplierIDsByName: remoteSupplierIDsByName,
+            remoteCategoryIDsByName: remoteCategoryIDsByName,
             remoteProductIDsByBarcode: remoteProductIDsByBarcode,
+            remoteSupplierAmbiguousNames: remoteSupplierAmbiguousNames,
+            remoteCategoryAmbiguousNames: remoteCategoryAmbiguousNames,
+            remoteProductAmbiguousBarcodes: remoteProductAmbiguousBarcodes,
+            remoteUpdatedAtBySupplierID: remoteUpdatedAtBySupplierID,
+            remoteUpdatedAtByCategoryID: remoteUpdatedAtByCategoryID,
             remoteUpdatedAtByProductID: remoteUpdatedAtByProductID,
+            remoteDeletedAtBySupplierID: remoteDeletedAtBySupplierID,
+            remoteDeletedAtByCategoryID: remoteDeletedAtByCategoryID,
             remoteDeletedAtByProductID: remoteDeletedAtByProductID
         )
     }

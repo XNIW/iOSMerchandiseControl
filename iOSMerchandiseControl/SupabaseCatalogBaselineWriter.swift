@@ -163,7 +163,8 @@ struct SupabaseCatalogBaselineWriter {
                     source: source,
                     createdAt: timestamp,
                     updatedAt: timestamp,
-                    barcodeCanonical: nil
+                    barcodeCanonical: nil,
+                    lookupNameCanonical: SupabasePullPreviewNormalizer.normalizedLookupName(supplier.name)
                 ),
                 logicalKeys: &logicalKeys,
                 seeds: &seeds
@@ -188,7 +189,8 @@ struct SupabaseCatalogBaselineWriter {
                     source: source,
                     createdAt: timestamp,
                     updatedAt: timestamp,
-                    barcodeCanonical: nil
+                    barcodeCanonical: nil,
+                    lookupNameCanonical: SupabasePullPreviewNormalizer.normalizedLookupName(category.name)
                 ),
                 logicalKeys: &logicalKeys,
                 seeds: &seeds
@@ -220,7 +222,8 @@ struct SupabaseCatalogBaselineWriter {
                     source: source,
                     createdAt: timestamp,
                     updatedAt: timestamp,
-                    barcodeCanonical: ManualPushFingerprintNormalizer.semanticString(product.barcode)
+                    barcodeCanonical: ManualPushFingerprintNormalizer.semanticString(product.barcode),
+                    lookupNameCanonical: nil
                 ),
                 logicalKeys: &logicalKeys,
                 seeds: &seeds
@@ -259,6 +262,7 @@ private struct BaselineRecordSeed {
     let createdAt: Date
     let updatedAt: Date
     let barcodeCanonical: String?
+    let lookupNameCanonical: String?
 
     func makeRecord() -> SupabaseCatalogBaselineRecord {
         SupabaseCatalogBaselineRecord(
@@ -273,7 +277,8 @@ private struct BaselineRecordSeed {
             source: source,
             createdAt: createdAt,
             updatedAt: updatedAt,
-            barcodeCanonical: barcodeCanonical
+            barcodeCanonical: barcodeCanonical,
+            lookupNameCanonical: lookupNameCanonical
         )
     }
 }

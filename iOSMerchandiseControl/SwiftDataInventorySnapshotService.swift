@@ -155,10 +155,52 @@ struct SwiftDataInventorySnapshotService {
                 retailPrice: product.retailPrice,
                 stockQuantity: product.stockQuantity,
                 hasSupplierReference: product.supplier != nil,
+                supplierLocalID: product.supplier?.name,
+                supplierName: product.supplier?.name,
                 supplierRemoteID: product.supplier?.remoteID,
                 hasCategoryReference: product.category != nil,
+                categoryLocalID: product.category?.name,
+                categoryName: product.category?.name,
                 categoryRemoteID: product.category?.remoteID,
                 hasLocalPriceChanges: false
+            )
+        }
+    }
+
+    func makeManualPushPreflightSupplierStates() throws -> [ManualPushLookupState] {
+        let suppliers = try context.fetch(
+            FetchDescriptor<Supplier>(
+                sortBy: [SortDescriptor(\Supplier.name)]
+            )
+        )
+
+        return suppliers.map { supplier in
+            ManualPushLookupState(
+                entityKind: .supplier,
+                localID: supplier.name,
+                remoteID: supplier.remoteID,
+                remoteUpdatedAt: supplier.remoteUpdatedAt,
+                remoteDeletedAt: supplier.remoteDeletedAt,
+                name: supplier.name
+            )
+        }
+    }
+
+    func makeManualPushPreflightCategoryStates() throws -> [ManualPushLookupState] {
+        let categories = try context.fetch(
+            FetchDescriptor<ProductCategory>(
+                sortBy: [SortDescriptor(\ProductCategory.name)]
+            )
+        )
+
+        return categories.map { category in
+            ManualPushLookupState(
+                entityKind: .productCategory,
+                localID: category.name,
+                remoteID: category.remoteID,
+                remoteUpdatedAt: category.remoteUpdatedAt,
+                remoteDeletedAt: category.remoteDeletedAt,
+                name: category.name
             )
         }
     }

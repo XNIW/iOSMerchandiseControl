@@ -204,7 +204,7 @@
 "options.supabase.baseline.counts.categories" = "分类";
 "options.supabase.baseline.schemaVersion" = "指纹架构";
 "options.supabase.baseline.tombstones" = "墓碑记录";
-"options.supabase.baseline.footer" = "真实推送暂不可用。";
+"options.supabase.baseline.footer" = "手动推送仅在 baseline 有效并明确确认后可用。";
 "options.supabase.baseline.commit.success" = "基线已保存：%d 个商品，%d 个供应商，%d 个分类。";
 "options.supabase.baseline.commit.failed" = "本地应用已完成，但基线未刷新。请在预检前重新执行完整拉取/应用。";
 
@@ -701,3 +701,36 @@
 "generated.search.apply_barcode" = "应用条码 %@";
 "generated.search.clear_accessibility" = "清空搜索";
 "generated.search.scanner_accessibility" = "扫描器";
+
+/* TASK-044 manual Supabase push */
+"options.supabase.pushpreflight.category.dryRunLinkCandidate" = "受控关联候选：%d";
+"options.supabase.manualpush.button" = "推送到 Supabase";
+"options.supabase.manualpush.accessibility" = "手动将目录推送到 Supabase";
+"options.supabase.manualpush.copy.remoteWriteOnlyAfterConfirm" = "仅在确认后写入 Supabase。";
+"options.supabase.manualpush.copy.noProductPrice" = "不发送价格历史（ProductPrice）。";
+"options.supabase.manualpush.copy.noRemoteDelete" = "不删除远端记录。";
+"options.supabase.manualpush.copy.noAutomaticSync" = "不启用自动同步。";
+"options.supabase.manualpush.confirm.title" = "确认写入 Supabase";
+"options.supabase.manualpush.confirm.write" = "写入 Supabase";
+"options.supabase.manualpush.confirm.suppliers" = "供应商：%d 新建，%d 更新，%d 关联";
+"options.supabase.manualpush.confirm.categories" = "分类：%d 新建，%d 更新，%d 关联";
+"options.supabase.manualpush.confirm.products" = "产品：%d 新建，%d 更新，%d 关联";
+"options.supabase.manualpush.confirm.writes" = "写入 Supabase";
+"options.supabase.manualpush.confirm.noProductPrice" = "不发送价格历史";
+"options.supabase.manualpush.confirm.noDelete" = "不删除远端记录";
+"options.supabase.manualpush.confirm.noAutoSync" = "不启用自动同步";
+"options.supabase.manualpush.state.completed" = "推送完成";
+"options.supabase.manualpush.state.completedBaselineRefreshFailed" = "推送完成，但 baseline 刷新失败";
+"options.supabase.manualpush.state.partial" = "推送部分完成";
+"options.supabase.manualpush.state.failedBeforeWrite" = "远端写入前推送失败";
+"options.supabase.manualpush.state.blockedBeforeWrite" = "远端写入前推送被阻止";
+"options.supabase.manualpush.result.suppliers" = "供应商";
+"options.supabase.manualpush.result.categories" = "分类";
+"options.supabase.manualpush.result.products" = "产品";
+"options.supabase.manualpush.result.counts" = "%d 新建 / %d 更新 / %d 关联";
+"options.supabase.manualpush.result.details" = "技术详情";
+"options.supabase.manualpush.action.completed" = "Baseline 已刷新。无需操作。";
+"options.supabase.manualpush.action.completedBaselineRefreshFailed" = "请先执行完整 pull，再信任 baseline。";
+"options.supabase.manualpush.action.partial" = "检查部分结果后重试。";
+"options.supabase.manualpush.action.failedBeforeWrite" = "未确认任何远端写入。请重新运行 preflight。";
+"options.supabase.manualpush.action.blockedBeforeWrite" = "请重新运行 preflight 并检查阻塞项。";
