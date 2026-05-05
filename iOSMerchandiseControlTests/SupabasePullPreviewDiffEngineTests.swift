@@ -87,7 +87,89 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
 
         XCTAssertTrue(preview.newProducts.isEmpty)
         XCTAssertTrue(preview.updateCandidates.isEmpty)
-        XCTAssertEqual(Set(preview.conflicts.map(\.kind)), [.missingRemoteSupplier, .missingRemoteCategory])
+        XCTAssertEqual(Set(preview.conflicts.map(\.kind)), [.missingRemoteReference])
+        XCTAssertEqual(preview.conflicts.count, 2)
+    }
+
+    func testMatchedLocalProductWithoutRemoteIDIsLinkOnlyWhenFieldsMatch() {
+        let remoteID = UUID()
+        let preview = makePreview(
+            remote: remoteSnapshot(products: [
+                remoteProduct(id: remoteID, barcode: "12345", name: "Same product")
+            ]),
+            local: localSnapshot(products: [
+                localProduct(barcode: "12345", name: "Same product")
+            ])
+        )
+
+        XCTAssertEqual(preview.updateCandidates.count, 1)
+        XCTAssertEqual(preview.updateCandidates.first?.classification, .linkOnly)
+        XCTAssertEqual(preview.updateCandidates.first?.remoteID, remoteID)
+        XCTAssertTrue(preview.conflicts.isEmpty)
+        XCTAssertTrue(preview.unchangedProducts.isEmpty)
+    }
+
+    func testRemoteIDConflictBlocksSameBarcodeSilentMerge() {
+        let localRemoteID = UUID()
+        let remoteID = UUID()
+        let preview = makePreview(
+            remote: remoteSnapshot(products: [
+                remoteProduct(id: remoteID, barcode: "12345", name: "Remote product")
+            ]),
+            local: localSnapshot(products: [
+                localProduct(barcode: "12345", remoteID: localRemoteID, name: "Remote product")
+            ])
+        )
+
+        XCTAssertTrue(preview.updateCandidates.isEmpty)
+        XCTAssertEqual(preview.conflicts.count, 1)
+        XCTAssertEqual(preview.conflicts.first?.kind, .remoteIDConflict)
+    }
+
+    func testSupplierSameNameDifferentRemoteIDIsConflict() {
+        let localSupplierID = UUID()
+        let remoteSupplierID = UUID()
+        let preview = makePreview(
+            remote: remoteSnapshot(
+                products: [
+                    remoteProduct(
+                        barcode: "12345",
+                        name: "Remote product",
+                        supplierID: remoteSupplierID
+                    )
+                ],
+                suppliers: [
+                    remoteSupplier(id: remoteSupplierID, name: "Acme")
+                ]
+            ),
+            local: localSnapshot(
+                supplierRemoteIDByNormalizedName: ["acme": localSupplierID],
+                suppliersByRemoteID: [
+                    localSupplierID: LocalLookupSnapshot(
+                        name: "Acme",
+                        remoteID: localSupplierID,
+                        remoteUpdatedAt: nil,
+                        remoteDeletedAt: nil
+                    )
+                ]
+            )
+        )
+
+        XCTAssertTrue(preview.newProducts.isEmpty)
+        XCTAssertEqual(preview.conflicts.count, 1)
+        XCTAssertEqual(preview.conflicts.first?.kind, .remoteIDConflict)
+    }
+
+    func testDuplicateLocalRemoteIDIsConflict() {
+        let duplicatedRemoteID = UUID()
+        let preview = makePreview(
+            remote: remoteSnapshot(products: []),
+            local: localSnapshot(duplicateProductRemoteIDs: [duplicatedRemoteID])
+        )
+
+        XCTAssertEqual(preview.conflicts.count, 1)
+        XCTAssertEqual(preview.conflicts.first?.kind, .remoteIDConflict)
+        XCTAssertEqual(preview.conflicts.first?.relatedRemoteIDs, [duplicatedRemoteID])
     }
 
     func testRemoteDeletedAtCreatesTombstoneOnly() {
@@ -110,11 +192,13 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
     }
 
     func testSupplierSourceErrorProducesPartialWithoutSupplierFieldConflict() {
+        let productID = UUID()
         let supplierID = UUID()
         let preview = makePreview(
             remote: remoteSnapshot(
                 products: [
                     remoteProduct(
+                        id: productID,
                         barcode: "12345",
                         name: "Remote product",
                         supplierID: supplierID
@@ -131,6 +215,8 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
             local: localSnapshot(products: [
                 localProduct(
                     barcode: "12345",
+                    remoteID: productID,
+                    remoteUpdatedAt: SupabaseRemoteDateParser.parse("2026-05-04T00:00:00Z"),
                     name: "Remote product",
                     supplierName: "Local supplier"
                 )
@@ -164,7 +250,12 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
                 ]
             ),
             local: localSnapshot(products: [
-                localProduct(barcode: "12345", name: "Remote product")
+                localProduct(
+                    barcode: "12345",
+                    remoteID: productID,
+                    remoteUpdatedAt: SupabaseRemoteDateParser.parse("2026-05-04T00:00:00Z"),
+                    name: "Remote product"
+                )
             ])
         )
 
@@ -186,7 +277,12 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
             ),
             local: localSnapshot(
                 products: [
-                    localProduct(barcode: "12345", name: "Remote product")
+                    localProduct(
+                        barcode: "12345",
+                        remoteID: productID,
+                        remoteUpdatedAt: SupabaseRemoteDateParser.parse("2026-05-04T00:00:00Z"),
+                        name: "Remote product"
+                    )
                 ],
                 prices: [
                     localPrice(barcode: "12345", type: "purchase", price: 2.50, effectiveAt: "2026-05-04 00:00:00")
@@ -201,12 +297,14 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
     }
 
     func testNormalizationForEmptyStringsLookupNamesAndDoubleTolerance() {
+        let productID = UUID()
         let supplierID = UUID()
         let categoryID = UUID()
         let preview = makePreview(
             remote: remoteSnapshot(
                 products: [
                     remoteProduct(
+                        id: productID,
                         barcode: " 12345 ",
                         itemNumber: "",
                         name: "Remote product",
@@ -225,6 +323,8 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
             local: localSnapshot(products: [
                 localProduct(
                     barcode: "12345",
+                    remoteID: productID,
+                    remoteUpdatedAt: SupabaseRemoteDateParser.parse("2026-05-04T00:00:00Z"),
                     itemNumber: nil,
                     name: "Remote product",
                     purchasePrice: 10.0,
@@ -269,7 +369,10 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
 
     private func localSnapshot(
         products: [LocalProductSnapshot] = [],
-        prices: [LocalPriceSnapshot] = []
+        prices: [LocalPriceSnapshot] = [],
+        supplierRemoteIDByNormalizedName: [String: UUID] = [:],
+        suppliersByRemoteID: [UUID: LocalLookupSnapshot] = [:],
+        duplicateProductRemoteIDs: [UUID] = []
     ) -> LocalInventorySnapshot {
         let productsByBarcode = Dictionary(
             uniqueKeysWithValues: products.compactMap { product in
@@ -296,7 +399,14 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
 
         return LocalInventorySnapshot(
             productsByBarcode: productsByBarcode,
+            productsByRemoteID: Dictionary(
+                uniqueKeysWithValues: products.compactMap { product in
+                    product.remoteID.map { ($0, product) }
+                }
+            ),
             suppliersByNormalizedName: [:],
+            supplierRemoteIDByNormalizedName: supplierRemoteIDByNormalizedName,
+            suppliersByRemoteID: suppliersByRemoteID,
             categoriesByNormalizedName: [:],
             priceHistoryByLogicalKey: pricesByKey,
             counts: LocalInventorySnapshotCounts(
@@ -306,6 +416,7 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
                 productPrices: prices.count
             ),
             duplicateProductBarcodes: [],
+            duplicateProductRemoteIDs: duplicateProductRemoteIDs,
             duplicateSupplierNames: [],
             duplicateCategoryNames: []
         )
@@ -382,6 +493,9 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
 
     private func localProduct(
         barcode: String,
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil,
         itemNumber: String? = nil,
         name: String?,
         purchasePrice: Double? = nil,
@@ -392,6 +506,9 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
     ) -> LocalProductSnapshot {
         LocalProductSnapshot(
             barcode: barcode,
+            remoteID: remoteID,
+            remoteUpdatedAt: remoteUpdatedAt,
+            remoteDeletedAt: remoteDeletedAt,
             itemNumber: itemNumber,
             productName: name,
             secondProductName: nil,

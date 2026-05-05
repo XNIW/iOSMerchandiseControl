@@ -110,6 +110,8 @@
 "options.supabase.preview.noChanges" = "Read-only preview";
 "options.supabase.preview.priceHistoryIncomplete" = "Price history not fully verified";
 "options.supabase.preview.summary.header" = "Dry-run";
+"options.supabase.preview.cloud.header" = "Cloud preview";
+"options.supabase.preview.identity.header" = "Remote identity";
 "options.supabase.preview.group.conflicts" = "Conflicts";
 "options.supabase.preview.group.updateCandidates" = "Update candidates";
 "options.supabase.preview.group.new" = "New";
@@ -125,7 +127,12 @@
 "options.supabase.preview.change.local" = "Local: %@";
 "options.supabase.preview.error.localSnapshot" = "Local snapshot unavailable.";
 "options.supabase.preview.metric.remoteProducts" = "Remote products";
+"options.supabase.preview.metric.remoteSuppliers" = "Remote suppliers";
+"options.supabase.preview.metric.remoteCategories" = "Remote categories";
 "options.supabase.preview.metric.localProducts" = "Local products";
+"options.supabase.preview.metric.linkedProducts" = "Linked products";
+"options.supabase.preview.metric.linkedSuppliers" = "Linked suppliers";
+"options.supabase.preview.metric.linkedCategories" = "Linked categories";
 "options.supabase.preview.metric.newProducts" = "New";
 "options.supabase.preview.metric.updateCandidates" = "Update candidates";
 "options.supabase.preview.metric.conflicts" = "Conflicts";
@@ -134,6 +141,8 @@
 "options.supabase.preview.metric.unchanged" = "Unchanged";
 "options.supabase.preview.conflict.remoteDuplicateBarcode" = "Duplicate remote barcode";
 "options.supabase.preview.conflict.remoteEmptyBarcode" = "Empty remote barcode";
+"options.supabase.preview.conflict.remoteIdConflict" = "Remote identity conflict";
+"options.supabase.preview.conflict.missingRemoteReference" = "Remote reference cannot be resolved";
 "options.supabase.preview.conflict.missingRemoteSupplier" = "Remote supplier cannot be resolved";
 "options.supabase.preview.conflict.missingRemoteCategory" = "Remote category cannot be resolved";
 "options.supabase.preview.conflict.localDuplicateBarcode" = "Duplicate local barcode";
@@ -168,6 +177,7 @@
 "options.supabase.apply.error.saveFailed" = "Local save failed. Regenerate the preview or check the local database.";
 "options.supabase.apply.error.withDetail" = "%@\nDetail: %@";
 "options.supabase.apply.disabled.sessionMissing" = "Sign in with Google before applying the preview.";
+"options.supabase.apply.disabled.accountMismatch" = "This preview belongs to a different account than the last local link. Apply is blocked.";
 "options.supabase.apply.disabled.partialPreview" = "Partial preview: regenerate a complete preview before applying.";
 "options.supabase.apply.disabled.sourceErrorsPresent" = "Source data is not fully available. Regenerate the preview.";
 "options.supabase.apply.disabled.priceHistoryIncomplete" = "Price history is not fully verified. Local apply is blocked.";

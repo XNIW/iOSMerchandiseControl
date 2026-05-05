@@ -110,6 +110,8 @@
 "options.supabase.preview.noChanges" = "Preview in sola lettura";
 "options.supabase.preview.priceHistoryIncomplete" = "Storico prezzi non completamente verificato";
 "options.supabase.preview.summary.header" = "Dry-run";
+"options.supabase.preview.cloud.header" = "Preview cloud";
+"options.supabase.preview.identity.header" = "Identita remota";
 "options.supabase.preview.group.conflicts" = "Conflitti";
 "options.supabase.preview.group.updateCandidates" = "Candidati aggiornamento";
 "options.supabase.preview.group.new" = "Nuovi";
@@ -125,7 +127,12 @@
 "options.supabase.preview.change.local" = "Locale: %@";
 "options.supabase.preview.error.localSnapshot" = "Snapshot locale non disponibile.";
 "options.supabase.preview.metric.remoteProducts" = "Prodotti remoti";
+"options.supabase.preview.metric.remoteSuppliers" = "Fornitori remoti";
+"options.supabase.preview.metric.remoteCategories" = "Categorie remote";
 "options.supabase.preview.metric.localProducts" = "Prodotti locali";
+"options.supabase.preview.metric.linkedProducts" = "Prodotti collegati";
+"options.supabase.preview.metric.linkedSuppliers" = "Fornitori collegati";
+"options.supabase.preview.metric.linkedCategories" = "Categorie collegate";
 "options.supabase.preview.metric.newProducts" = "Nuovi";
 "options.supabase.preview.metric.updateCandidates" = "Candidati aggiornamento";
 "options.supabase.preview.metric.conflicts" = "Conflitti";
@@ -134,6 +141,8 @@
 "options.supabase.preview.metric.unchanged" = "Invariati";
 "options.supabase.preview.conflict.remoteDuplicateBarcode" = "Barcode remoto duplicato";
 "options.supabase.preview.conflict.remoteEmptyBarcode" = "Barcode remoto vuoto";
+"options.supabase.preview.conflict.remoteIdConflict" = "Identita remota in conflitto";
+"options.supabase.preview.conflict.missingRemoteReference" = "Riferimento remoto non risolvibile";
 "options.supabase.preview.conflict.missingRemoteSupplier" = "Fornitore remoto non risolvibile";
 "options.supabase.preview.conflict.missingRemoteCategory" = "Categoria remota non risolvibile";
 "options.supabase.preview.conflict.localDuplicateBarcode" = "Barcode locale duplicato";
@@ -168,6 +177,7 @@
 "options.supabase.apply.error.saveFailed" = "Salvataggio locale non riuscito. Rigenera la preview o verifica il database locale.";
 "options.supabase.apply.error.withDetail" = "%@\nDettaglio: %@";
 "options.supabase.apply.disabled.sessionMissing" = "Accedi con Google prima di applicare la preview.";
+"options.supabase.apply.disabled.accountMismatch" = "La preview appartiene a un account diverso dall'ultimo collegamento locale. Apply bloccato.";
 "options.supabase.apply.disabled.partialPreview" = "Preview parziale: rigenera una preview completa prima di applicare.";
 "options.supabase.apply.disabled.sourceErrorsPresent" = "Origine dati non completamente disponibile: rigenera la preview.";
 "options.supabase.apply.disabled.priceHistoryIncomplete" = "Storico prezzi non completamente verificato: apply locale bloccato.";

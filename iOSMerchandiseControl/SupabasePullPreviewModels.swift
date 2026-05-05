@@ -2,6 +2,7 @@ import Foundation
 
 nonisolated enum SyncPreviewClassification: String, Sendable {
     case newProduct
+    case linkOnly
     case updateCandidate
     case conflict
     case unchanged
@@ -30,6 +31,8 @@ nonisolated enum SyncPreviewFieldKey: String, Sendable {
 nonisolated enum SyncPreviewConflictKind: String, Sendable {
     case remoteDuplicateBarcode
     case remoteEmptyBarcode
+    case remoteIDConflict = "remoteIdConflict"
+    case missingRemoteReference
     case missingRemoteSupplier
     case missingRemoteCategory
     case localDuplicateBarcode
@@ -186,6 +189,8 @@ nonisolated struct SyncPreviewProductSummary: Identifiable, Sendable {
 
 nonisolated struct SyncPreviewProductApplyPayload: Sendable, Equatable {
     let remoteID: UUID
+    let remoteUpdatedAt: Date?
+    let remoteDeletedAt: Date?
     let barcode: String?
     let itemNumber: String?
     let productName: String?
@@ -194,7 +199,53 @@ nonisolated struct SyncPreviewProductApplyPayload: Sendable, Equatable {
     let retailPrice: Double?
     let stockQuantity: Double?
     let supplierName: String?
+    let supplierRemoteID: UUID?
+    let supplierRemoteUpdatedAt: Date?
+    let supplierRemoteDeletedAt: Date?
     let categoryName: String?
+    let categoryRemoteID: UUID?
+    let categoryRemoteUpdatedAt: Date?
+    let categoryRemoteDeletedAt: Date?
+
+    init(
+        remoteID: UUID,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil,
+        barcode: String?,
+        itemNumber: String? = nil,
+        productName: String? = nil,
+        secondProductName: String? = nil,
+        purchasePrice: Double? = nil,
+        retailPrice: Double? = nil,
+        stockQuantity: Double? = nil,
+        supplierName: String? = nil,
+        supplierRemoteID: UUID? = nil,
+        supplierRemoteUpdatedAt: Date? = nil,
+        supplierRemoteDeletedAt: Date? = nil,
+        categoryName: String? = nil,
+        categoryRemoteID: UUID? = nil,
+        categoryRemoteUpdatedAt: Date? = nil,
+        categoryRemoteDeletedAt: Date? = nil
+    ) {
+        self.remoteID = remoteID
+        self.remoteUpdatedAt = remoteUpdatedAt
+        self.remoteDeletedAt = remoteDeletedAt
+        self.barcode = barcode
+        self.itemNumber = itemNumber
+        self.productName = productName
+        self.secondProductName = secondProductName
+        self.purchasePrice = purchasePrice
+        self.retailPrice = retailPrice
+        self.stockQuantity = stockQuantity
+        self.supplierName = supplierName
+        self.supplierRemoteID = supplierRemoteID
+        self.supplierRemoteUpdatedAt = supplierRemoteUpdatedAt
+        self.supplierRemoteDeletedAt = supplierRemoteDeletedAt
+        self.categoryName = categoryName
+        self.categoryRemoteID = categoryRemoteID
+        self.categoryRemoteUpdatedAt = categoryRemoteUpdatedAt
+        self.categoryRemoteDeletedAt = categoryRemoteDeletedAt
+    }
 }
 
 nonisolated struct RemoteInventorySnapshotCounts: Sendable {
@@ -211,6 +262,27 @@ nonisolated struct LocalInventorySnapshotCounts: Sendable {
     let suppliers: Int
     let categories: Int
     let productPrices: Int
+    let linkedProducts: Int
+    let linkedSuppliers: Int
+    let linkedCategories: Int
+
+    init(
+        products: Int,
+        suppliers: Int,
+        categories: Int,
+        productPrices: Int,
+        linkedProducts: Int = 0,
+        linkedSuppliers: Int = 0,
+        linkedCategories: Int = 0
+    ) {
+        self.products = products
+        self.suppliers = suppliers
+        self.categories = categories
+        self.productPrices = productPrices
+        self.linkedProducts = linkedProducts
+        self.linkedSuppliers = linkedSuppliers
+        self.linkedCategories = linkedCategories
+    }
 }
 
 nonisolated struct RemoteInventorySnapshot: Sendable {
@@ -264,17 +336,64 @@ nonisolated struct RemoteInventorySnapshot: Sendable {
 
 nonisolated struct LocalInventorySnapshot: Sendable {
     let productsByBarcode: [String: LocalProductSnapshot]
+    let productsByRemoteID: [UUID: LocalProductSnapshot]
     let suppliersByNormalizedName: [String: String]
+    let supplierRemoteIDByNormalizedName: [String: UUID]
+    let suppliersByRemoteID: [UUID: LocalLookupSnapshot]
     let categoriesByNormalizedName: [String: String]
+    let categoryRemoteIDByNormalizedName: [String: UUID]
+    let categoriesByRemoteID: [UUID: LocalLookupSnapshot]
     let priceHistoryByLogicalKey: [PriceHistoryLogicalKey: LocalPriceSnapshot]
     let counts: LocalInventorySnapshotCounts
     let duplicateProductBarcodes: [String]
+    let duplicateProductRemoteIDs: [UUID]
     let duplicateSupplierNames: [String]
+    let duplicateSupplierRemoteIDs: [UUID]
     let duplicateCategoryNames: [String]
+    let duplicateCategoryRemoteIDs: [UUID]
+
+    init(
+        productsByBarcode: [String: LocalProductSnapshot],
+        productsByRemoteID: [UUID: LocalProductSnapshot] = [:],
+        suppliersByNormalizedName: [String: String],
+        supplierRemoteIDByNormalizedName: [String: UUID] = [:],
+        suppliersByRemoteID: [UUID: LocalLookupSnapshot] = [:],
+        categoriesByNormalizedName: [String: String],
+        categoryRemoteIDByNormalizedName: [String: UUID] = [:],
+        categoriesByRemoteID: [UUID: LocalLookupSnapshot] = [:],
+        priceHistoryByLogicalKey: [PriceHistoryLogicalKey: LocalPriceSnapshot],
+        counts: LocalInventorySnapshotCounts,
+        duplicateProductBarcodes: [String],
+        duplicateProductRemoteIDs: [UUID] = [],
+        duplicateSupplierNames: [String],
+        duplicateSupplierRemoteIDs: [UUID] = [],
+        duplicateCategoryNames: [String],
+        duplicateCategoryRemoteIDs: [UUID] = []
+    ) {
+        self.productsByBarcode = productsByBarcode
+        self.productsByRemoteID = productsByRemoteID
+        self.suppliersByNormalizedName = suppliersByNormalizedName
+        self.supplierRemoteIDByNormalizedName = supplierRemoteIDByNormalizedName
+        self.suppliersByRemoteID = suppliersByRemoteID
+        self.categoriesByNormalizedName = categoriesByNormalizedName
+        self.categoryRemoteIDByNormalizedName = categoryRemoteIDByNormalizedName
+        self.categoriesByRemoteID = categoriesByRemoteID
+        self.priceHistoryByLogicalKey = priceHistoryByLogicalKey
+        self.counts = counts
+        self.duplicateProductBarcodes = duplicateProductBarcodes
+        self.duplicateProductRemoteIDs = duplicateProductRemoteIDs
+        self.duplicateSupplierNames = duplicateSupplierNames
+        self.duplicateSupplierRemoteIDs = duplicateSupplierRemoteIDs
+        self.duplicateCategoryNames = duplicateCategoryNames
+        self.duplicateCategoryRemoteIDs = duplicateCategoryRemoteIDs
+    }
 }
 
 nonisolated struct LocalProductSnapshot: Sendable {
     let barcode: String
+    let remoteID: UUID?
+    let remoteUpdatedAt: Date?
+    let remoteDeletedAt: Date?
     let itemNumber: String?
     let productName: String?
     let secondProductName: String?
@@ -283,6 +402,41 @@ nonisolated struct LocalProductSnapshot: Sendable {
     let stockQuantity: Double?
     let supplierName: String?
     let categoryName: String?
+
+    init(
+        barcode: String,
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil,
+        itemNumber: String? = nil,
+        productName: String? = nil,
+        secondProductName: String? = nil,
+        purchasePrice: Double? = nil,
+        retailPrice: Double? = nil,
+        stockQuantity: Double? = nil,
+        supplierName: String? = nil,
+        categoryName: String? = nil
+    ) {
+        self.barcode = barcode
+        self.remoteID = remoteID
+        self.remoteUpdatedAt = remoteUpdatedAt
+        self.remoteDeletedAt = remoteDeletedAt
+        self.itemNumber = itemNumber
+        self.productName = productName
+        self.secondProductName = secondProductName
+        self.purchasePrice = purchasePrice
+        self.retailPrice = retailPrice
+        self.stockQuantity = stockQuantity
+        self.supplierName = supplierName
+        self.categoryName = categoryName
+    }
+}
+
+nonisolated struct LocalLookupSnapshot: Sendable {
+    let name: String
+    let remoteID: UUID?
+    let remoteUpdatedAt: Date?
+    let remoteDeletedAt: Date?
 }
 
 nonisolated struct LocalPriceSnapshot: Sendable {

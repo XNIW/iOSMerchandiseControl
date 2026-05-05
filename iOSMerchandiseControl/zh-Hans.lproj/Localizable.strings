@@ -110,6 +110,8 @@
 "options.supabase.preview.noChanges" = "只读预览";
 "options.supabase.preview.priceHistoryIncomplete" = "价格历史未完全验证";
 "options.supabase.preview.summary.header" = "Dry-run";
+"options.supabase.preview.cloud.header" = "云端预览";
+"options.supabase.preview.identity.header" = "远程身份";
 "options.supabase.preview.group.conflicts" = "冲突";
 "options.supabase.preview.group.updateCandidates" = "更新候选";
 "options.supabase.preview.group.new" = "新增";
@@ -125,7 +127,12 @@
 "options.supabase.preview.change.local" = "本地：%@";
 "options.supabase.preview.error.localSnapshot" = "本地快照不可用。";
 "options.supabase.preview.metric.remoteProducts" = "远程商品";
+"options.supabase.preview.metric.remoteSuppliers" = "远程供应商";
+"options.supabase.preview.metric.remoteCategories" = "远程分类";
 "options.supabase.preview.metric.localProducts" = "本地商品";
+"options.supabase.preview.metric.linkedProducts" = "已连接商品";
+"options.supabase.preview.metric.linkedSuppliers" = "已连接供应商";
+"options.supabase.preview.metric.linkedCategories" = "已连接分类";
 "options.supabase.preview.metric.newProducts" = "新增";
 "options.supabase.preview.metric.updateCandidates" = "更新候选";
 "options.supabase.preview.metric.conflicts" = "冲突";
@@ -134,6 +141,8 @@
 "options.supabase.preview.metric.unchanged" = "未变化";
 "options.supabase.preview.conflict.remoteDuplicateBarcode" = "远程条码重复";
 "options.supabase.preview.conflict.remoteEmptyBarcode" = "远程条码为空";
+"options.supabase.preview.conflict.remoteIdConflict" = "远程身份冲突";
+"options.supabase.preview.conflict.missingRemoteReference" = "远程引用无法解析";
 "options.supabase.preview.conflict.missingRemoteSupplier" = "无法解析远程供应商";
 "options.supabase.preview.conflict.missingRemoteCategory" = "无法解析远程分类";
 "options.supabase.preview.conflict.localDuplicateBarcode" = "本地条码重复";
@@ -168,6 +177,7 @@
 "options.supabase.apply.error.saveFailed" = "本地保存失败。请重新生成预览，或检查本地数据库。";
 "options.supabase.apply.error.withDetail" = "%@\n详情：%@";
 "options.supabase.apply.disabled.sessionMissing" = "请先使用 Google 登录，再应用预览。";
+"options.supabase.apply.disabled.accountMismatch" = "此预览与上次本地连接的账号不同，已阻止应用。";
 "options.supabase.apply.disabled.partialPreview" = "预览不完整：请重新生成完整预览后再应用。";
 "options.supabase.apply.disabled.sourceErrorsPresent" = "数据源未完全可用。请重新生成预览。";
 "options.supabase.apply.disabled.priceHistoryIncomplete" = "价格历史未完全验证，已阻止本地应用。";

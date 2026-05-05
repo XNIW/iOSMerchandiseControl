@@ -249,7 +249,8 @@ struct OptionsView: View {
         .sheet(isPresented: $isShowingSupabasePullPreview) {
             SupabasePullPreviewSheet(
                 state: supabasePullPreviewState,
-                isAuthenticated: supabaseAuthViewModel.isSignedIn
+                isAuthenticated: supabaseAuthViewModel.isSignedIn,
+                currentUserID: supabaseAuthViewModel.sessionInfo?.userID
             ) {
                 isShowingSupabasePullPreview = false
             }
@@ -531,6 +532,7 @@ private struct SupabasePullPreviewSheet: View {
     private let rowLimit = 100
 
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("supabaseLastLinkedUserID") private var supabaseLastLinkedUserID: String = ""
     @State private var isApplyingLocalPreview = false
     @State private var isShowingApplyConfirmation = false
     @State private var pendingApplyPlan: SupabasePullApplyPlan?
@@ -539,6 +541,7 @@ private struct SupabasePullPreviewSheet: View {
 
     let state: SupabasePullPreviewViewState
     let isAuthenticated: Bool
+    let currentUserID: UUID?
     let close: () -> Void
 
     var body: some View {
@@ -603,6 +606,7 @@ private struct SupabasePullPreviewSheet: View {
 
         return Form {
             summarySection(preview, isPartial: isPartial)
+            remoteIdentitySection(preview)
             applySection(preview: preview, readiness: readiness)
             conflictsSection(preview.conflicts)
             productSection(
@@ -661,16 +665,43 @@ private struct SupabasePullPreviewSheet: View {
                     .foregroundStyle(.secondary)
             }
 
-            ForEach(preview.metrics) { metric in
-                HStack {
-                    Text(L(metric.labelKey))
-                    Spacer()
-                    Text(metric.value)
-                        .fontWeight(.semibold)
-                }
-            }
+            metricRow("options.supabase.preview.metric.remoteProducts", "\(preview.remoteCounts.products)")
+            metricRow("options.supabase.preview.metric.remoteSuppliers", "\(preview.remoteCounts.suppliers)")
+            metricRow("options.supabase.preview.metric.remoteCategories", "\(preview.remoteCounts.categories)")
+            metricRow("options.supabase.preview.metric.newProducts", "\(preview.newProducts.count)")
+            metricRow("options.supabase.preview.metric.updateCandidates", "\(preview.updateCandidates.count)")
+            metricRow("options.supabase.preview.metric.conflicts", "\(preview.conflicts.count)")
+            metricRow("options.supabase.preview.metric.tombstones", "\(preview.remoteTombstones.count)")
         } header: {
-            SectionHeader(title: L("options.supabase.preview.summary.header"), systemImage: "chart.bar.doc.horizontal")
+            SectionHeader(title: L("options.supabase.preview.cloud.header"), systemImage: "chart.bar.doc.horizontal")
+        }
+    }
+
+    private func remoteIdentitySection(_ preview: SyncPreview) -> some View {
+        Section {
+            metricRow(
+                "options.supabase.preview.metric.linkedProducts",
+                "\(preview.localCounts.linkedProducts) / \(preview.localCounts.products)"
+            )
+            metricRow(
+                "options.supabase.preview.metric.linkedSuppliers",
+                "\(preview.localCounts.linkedSuppliers) / \(preview.localCounts.suppliers)"
+            )
+            metricRow(
+                "options.supabase.preview.metric.linkedCategories",
+                "\(preview.localCounts.linkedCategories) / \(preview.localCounts.categories)"
+            )
+        } header: {
+            SectionHeader(title: L("options.supabase.preview.identity.header"), systemImage: "link")
+        }
+    }
+
+    private func metricRow(_ titleKey: String, _ value: String) -> some View {
+        HStack {
+            Text(L(titleKey))
+            Spacer()
+            Text(value)
+                .fontWeight(.semibold)
         }
     }
 
@@ -729,7 +760,7 @@ private struct SupabasePullPreviewSheet: View {
             if conflicts.isEmpty {
                 emptyRow()
             } else {
-                ForEach(Array(conflicts.prefix(rowLimit))) { conflict in
+                ForEach(Array(conflicts.prefix(5))) { conflict in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(L(conflictTitleKey(conflict.kind)))
                             .font(.subheadline)
@@ -751,7 +782,7 @@ private struct SupabasePullPreviewSheet: View {
                         }
                     }
                 }
-                hiddenRowsText(totalCount: conflicts.count)
+                hiddenRowsText(totalCount: conflicts.count, visibleLimit: 5)
             }
         } header: {
             SectionHeader(title: L("options.supabase.preview.group.conflicts"), systemImage: "exclamationmark.triangle")
@@ -848,8 +879,8 @@ private struct SupabasePullPreviewSheet: View {
         .padding(.vertical, 2)
     }
 
-    private func hiddenRowsText(totalCount: Int) -> some View {
-        let hiddenCount = max(0, totalCount - rowLimit)
+    private func hiddenRowsText(totalCount: Int, visibleLimit: Int? = nil) -> some View {
+        let hiddenCount = max(0, totalCount - (visibleLimit ?? rowLimit))
         return Group {
             if hiddenCount > 0 {
                 Text(L("options.supabase.preview.moreHidden", hiddenCount))
@@ -875,7 +906,8 @@ private struct SupabasePullPreviewSheet: View {
                 preview: preview,
                 context: modelContext,
                 options: SupabasePullApplyOptions(),
-                isAuthenticated: isAuthenticated
+                isAuthenticated: isAuthenticated,
+                accountGuard: accountGuard
             )
             return SupabasePullPreviewApplyReadiness(plan: plan, disabledReason: nil)
         } catch let error as SupabasePullApplyError {
@@ -893,7 +925,8 @@ private struct SupabasePullPreviewSheet: View {
                 preview: preview,
                 context: modelContext,
                 options: SupabasePullApplyOptions(),
-                isAuthenticated: isAuthenticated
+                isAuthenticated: isAuthenticated,
+                accountGuard: accountGuard
             )
             pendingApplyPlan = plan
             applyStatusMessage = nil
@@ -922,6 +955,9 @@ private struct SupabasePullPreviewSheet: View {
                 let result = try SupabasePullApplyService().apply(plan: plan, context: modelContext)
                 applyStatusMessage = L("options.supabase.apply.success", result.inserted, result.updated)
                 applyErrorMessage = nil
+                if let currentUserID {
+                    supabaseLastLinkedUserID = currentUserID.uuidString
+                }
             } catch let error as SupabasePullApplyError {
                 applyStatusMessage = nil
                 applyErrorMessage = localizedApplyError(error)
@@ -970,6 +1006,13 @@ private struct SupabasePullPreviewSheet: View {
         default:
             return baseMessage
         }
+    }
+
+    private var accountGuard: SupabasePullApplyAccountGuard {
+        SupabasePullApplyAccountGuard(
+            currentUserID: currentUserID,
+            lastLinkedUserID: UUID(uuidString: supabaseLastLinkedUserID)
+        )
     }
 
     private func localizedError(_ error: SupabasePullPreviewError) -> String {

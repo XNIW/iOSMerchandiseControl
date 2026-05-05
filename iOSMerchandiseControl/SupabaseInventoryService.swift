@@ -64,6 +64,8 @@ nonisolated enum SupabaseInventoryDiagnosticResult: Sendable {
 }
 
 actor SupabaseInventoryService {
+    nonisolated static let stablePageOrderColumn = "id"
+
     private let clientProvider: SupabaseClientProvider
 
     init(clientProvider: SupabaseClientProvider) {
@@ -157,6 +159,7 @@ actor SupabaseInventoryService {
             let rows: [Row] = try await client
                 .from(table)
                 .select(columns)
+                .order(Self.stablePageOrderColumn, ascending: true)
                 .limit(clampedLimit)
                 .execute()
                 .value
@@ -190,7 +193,7 @@ actor SupabaseInventoryService {
             let rows: [Row] = try await client
                 .from(table)
                 .select(columns)
-                .order("id", ascending: true)
+                .order(Self.stablePageOrderColumn, ascending: true)
                 .range(from: start, to: end)
                 .execute()
                 .value

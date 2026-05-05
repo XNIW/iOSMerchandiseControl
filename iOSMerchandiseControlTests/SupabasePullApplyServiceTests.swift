@@ -138,10 +138,18 @@ final class SupabasePullApplyServiceTests: XCTestCase {
     func testExistingProductBarcodeNeverChanges() throws {
         let context = try makeContext()
         let product = try insertProduct(context: context, barcode: "100", productName: "Local", retailPrice: 1)
+        let remoteID = UUID()
+        let remoteUpdatedAt = Date(timeIntervalSince1970: 1_777_500_001)
         let preview = makePreview(updateCandidates: [
             makeSummary(
                 classification: .updateCandidate,
-                payload: makePayload(barcode: "100", productName: "Remote", retailPrice: 2)
+                payload: makePayload(
+                    remoteID: remoteID,
+                    remoteUpdatedAt: remoteUpdatedAt,
+                    barcode: "100",
+                    productName: "Remote",
+                    retailPrice: 2
+                )
             )
         ])
 
@@ -150,6 +158,47 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         XCTAssertEqual(result.updated, 1)
         XCTAssertEqual(product.barcode, "100")
         XCTAssertEqual(product.productName, "Remote")
+        XCTAssertEqual(product.remoteID, remoteID)
+        XCTAssertEqual(product.remoteUpdatedAt, remoteUpdatedAt)
+    }
+
+    func testLinkOnlySetsRemoteIDWithoutDuplicatingProduct() throws {
+        let context = try makeContext()
+        let remoteID = UUID()
+        let product = try insertProduct(context: context, barcode: "100", productName: "Remote")
+        let preview = makePreview(updateCandidates: [
+            makeSummary(
+                classification: .linkOnly,
+                payload: makePayload(remoteID: remoteID, barcode: "100", productName: "Remote")
+            )
+        ])
+
+        let result = try service.apply(plan: try prepare(preview, context: context), context: context)
+
+        XCTAssertEqual(result.updated, 1)
+        XCTAssertEqual(product.remoteID, remoteID)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 1)
+    }
+
+    func testCreateLocalSetsRemoteIDMetadata() throws {
+        let context = try makeContext()
+        let remoteID = UUID()
+        let remoteUpdatedAt = Date(timeIntervalSince1970: 1_777_500_101)
+        let preview = makePreview(newProducts: [
+            makeSummary(payload: makePayload(
+                remoteID: remoteID,
+                remoteUpdatedAt: remoteUpdatedAt,
+                barcode: "100",
+                productName: "Remote"
+            ))
+        ])
+
+        let result = try service.apply(plan: try prepare(preview, context: context), context: context)
+        let product = try XCTUnwrap(try context.fetch(FetchDescriptor<Product>()).first)
+
+        XCTAssertEqual(result.inserted, 1)
+        XCTAssertEqual(product.remoteID, remoteID)
+        XCTAssertEqual(product.remoteUpdatedAt, remoteUpdatedAt)
     }
 
     func testNilOrEmptyRemoteValuesDoNotClearLocalFields() throws {
@@ -259,6 +308,27 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         XCTAssertEqual(products.first?.category?.name, "Shelf")
     }
 
+    func testApplyBlocksSupplierSameNameDifferentRemoteID() throws {
+        let context = try makeContext()
+        context.insert(Supplier(name: "Acme", remoteID: UUID()))
+        try context.save()
+
+        let preview = makePreview(newProducts: [
+            makeSummary(payload: makePayload(
+                barcode: "100",
+                productName: "Remote",
+                supplierName: "Acme",
+                supplierRemoteID: UUID()
+            ))
+        ])
+
+        XCTAssertThrowsError(try service.apply(plan: try prepare(preview, context: context), context: context)) { error in
+            XCTAssertEqual(error as? SupabasePullApplyError, .previewStale)
+        }
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Supplier>()).count, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 0)
+    }
+
     func testNoProductPriceRowsAreCreated() throws {
         let context = try makeContext()
         let preview = makePreview(newProducts: [
@@ -273,6 +343,61 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         _ = try service.apply(plan: try prepare(preview, context: context), context: context)
 
         XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 0)
+    }
+
+    func testTombstonePreviewOnlyDoesNotDeleteLocalProduct() throws {
+        let context = try makeContext()
+        try insertProduct(context: context, barcode: "100", productName: "Local")
+        let preview = makePreview()
+
+        XCTAssertThrowsError(try prepare(preview, context: context)) { error in
+            XCTAssertEqual(error as? SupabasePullApplyError, .noApplicableChanges)
+        }
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 1)
+    }
+
+    func testAccountMismatchBlocksApplyRelink() throws {
+        let context = try makeContext()
+        let preview = makePreview(newProducts: [
+            makeSummary(payload: makePayload(barcode: "100", productName: "Remote"))
+        ])
+
+        XCTAssertThrowsError(
+            try service.prepareApplyPlan(
+                preview: preview,
+                context: context,
+                isAuthenticated: true,
+                accountGuard: SupabasePullApplyAccountGuard(
+                    currentUserID: UUID(),
+                    lastLinkedUserID: UUID()
+                )
+            )
+        ) { error in
+            XCTAssertEqual(error as? SupabasePullApplyError, .accountMismatch)
+        }
+    }
+
+    func testPartialPreviewDoesNotOverwriteExistingRemoteID() throws {
+        let context = try makeContext()
+        let existingRemoteID = UUID()
+        let attemptedRemoteID = UUID()
+        let product = try insertProduct(
+            context: context,
+            barcode: "100",
+            productName: "Local",
+            remoteID: existingRemoteID
+        )
+        let preview = makePreview(outcome: .partial, updateCandidates: [
+            makeSummary(
+                classification: .updateCandidate,
+                payload: makePayload(remoteID: attemptedRemoteID, barcode: "100", productName: "Remote")
+            )
+        ])
+
+        XCTAssertThrowsError(try prepare(preview, context: context)) { error in
+            XCTAssertEqual(error as? SupabasePullApplyError, .partialPreview)
+        }
+        XCTAssertEqual(product.remoteID, existingRemoteID)
     }
 
     func testSamePlanSecondApplyDoesNotDuplicateAndDoesNotMutate() throws {
@@ -299,6 +424,42 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         let productsAfterSecondApply = try context.fetch(FetchDescriptor<Product>())
         XCTAssertEqual(productsAfterSecondApply.count, 1)
         XCTAssertEqual(productsAfterSecondApply.first?.productName, "Remote")
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Supplier>()).count, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductCategory>()).count, 1)
+    }
+
+    func testSameFullPullAfterApplyDoesNotCreateDuplicates() throws {
+        let context = try makeContext()
+        let remoteID = UUID()
+        let firstPreview = makePreview(newProducts: [
+            makeSummary(payload: makePayload(
+                remoteID: remoteID,
+                barcode: "100",
+                productName: "Remote",
+                supplierName: "Acme",
+                categoryName: "Shelf"
+            ))
+        ])
+
+        _ = try service.apply(plan: try prepare(firstPreview, context: context), context: context)
+
+        let secondPreview = makePreview(updateCandidates: [
+            makeSummary(
+                classification: .updateCandidate,
+                payload: makePayload(
+                    remoteID: remoteID,
+                    barcode: "100",
+                    productName: "Remote",
+                    supplierName: "Acme",
+                    categoryName: "Shelf"
+                )
+            )
+        ])
+
+        XCTAssertThrowsError(try prepare(secondPreview, context: context)) { error in
+            XCTAssertEqual(error as? SupabasePullApplyError, .noApplicableChanges)
+        }
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 1)
         XCTAssertEqual(try context.fetch(FetchDescriptor<Supplier>()).count, 1)
         XCTAssertEqual(try context.fetch(FetchDescriptor<ProductCategory>()).count, 1)
     }
@@ -401,6 +562,8 @@ final class SupabasePullApplyServiceTests: XCTestCase {
 
     private func makePayload(
         remoteID: UUID = UUID(),
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil,
         barcode: String?,
         itemNumber: String? = nil,
         productName: String? = "Remote",
@@ -409,10 +572,13 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         retailPrice: Double? = nil,
         stockQuantity: Double? = nil,
         supplierName: String? = nil,
+        supplierRemoteID: UUID? = nil,
         categoryName: String? = nil
     ) -> SyncPreviewProductApplyPayload {
         SyncPreviewProductApplyPayload(
             remoteID: remoteID,
+            remoteUpdatedAt: remoteUpdatedAt,
+            remoteDeletedAt: remoteDeletedAt,
             barcode: barcode,
             itemNumber: itemNumber,
             productName: productName,
@@ -421,6 +587,7 @@ final class SupabasePullApplyServiceTests: XCTestCase {
             retailPrice: retailPrice,
             stockQuantity: stockQuantity,
             supplierName: supplierName,
+            supplierRemoteID: supplierRemoteID,
             categoryName: categoryName
         )
     }
@@ -436,10 +603,13 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         retailPrice: Double? = nil,
         stockQuantity: Double? = nil,
         supplierName: String? = nil,
-        categoryName: String? = nil
+        categoryName: String? = nil,
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil
     ) throws -> Product {
-        let supplier = supplierName.map(Supplier.init(name:))
-        let category = categoryName.map(ProductCategory.init(name:))
+        let supplier = supplierName.map { Supplier(name: $0) }
+        let category = categoryName.map { ProductCategory(name: $0) }
         if let supplier {
             context.insert(supplier)
         }
@@ -448,6 +618,9 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         }
         let product = Product(
             barcode: barcode,
+            remoteID: remoteID,
+            remoteUpdatedAt: remoteUpdatedAt,
+            remoteDeletedAt: remoteDeletedAt,
             itemNumber: itemNumber,
             productName: productName,
             secondProductName: secondProductName,

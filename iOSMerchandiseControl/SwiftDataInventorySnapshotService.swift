@@ -32,17 +32,26 @@ struct SwiftDataInventorySnapshotService {
         )
 
         var productsByBarcode: [String: LocalProductSnapshot] = [:]
+        var productsByRemoteID: [UUID: LocalProductSnapshot] = [:]
         var productBarcodeCounts: [String: Int] = [:]
+        var productRemoteIDCounts: [UUID: Int] = [:]
 
         for product in products {
+            if let remoteID = product.remoteID {
+                productRemoteIDCounts[remoteID, default: 0] += 1
+            }
+
             guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(product.barcode) else {
                 continue
             }
 
             productBarcodeCounts[barcode, default: 0] += 1
             if productsByBarcode[barcode] == nil {
-                productsByBarcode[barcode] = LocalProductSnapshot(
+                let snapshot = LocalProductSnapshot(
                     barcode: product.barcode,
+                    remoteID: product.remoteID,
+                    remoteUpdatedAt: product.remoteUpdatedAt,
+                    remoteDeletedAt: product.remoteDeletedAt,
                     itemNumber: product.itemNumber,
                     productName: product.productName,
                     secondProductName: product.secondProductName,
@@ -52,11 +61,19 @@ struct SwiftDataInventorySnapshotService {
                     supplierName: product.supplier?.name,
                     categoryName: product.category?.name
                 )
+                productsByBarcode[barcode] = snapshot
+                if let remoteID = product.remoteID, productsByRemoteID[remoteID] == nil {
+                    productsByRemoteID[remoteID] = snapshot
+                }
             }
         }
 
         let supplierNames = makeNameDictionary(suppliers.map(\.name))
         let categoryNames = makeNameDictionary(categories.map(\.name))
+        let suppliersByRemoteID = makeLookupRemoteIDDictionary(suppliers)
+        let categoriesByRemoteID = makeLookupRemoteIDDictionary(categories)
+        let supplierRemoteIDByName = makeLookupRemoteIDByNormalizedName(suppliers)
+        let categoryRemoteIDByName = makeLookupRemoteIDByNormalizedName(categories)
 
         var priceHistoryByLogicalKey: [PriceHistoryLogicalKey: LocalPriceSnapshot] = [:]
         for price in prices {
@@ -88,21 +105,32 @@ struct SwiftDataInventorySnapshotService {
 
         return LocalInventorySnapshot(
             productsByBarcode: productsByBarcode,
+            productsByRemoteID: productsByRemoteID,
             suppliersByNormalizedName: supplierNames.values,
+            supplierRemoteIDByNormalizedName: supplierRemoteIDByName,
+            suppliersByRemoteID: suppliersByRemoteID,
             categoriesByNormalizedName: categoryNames.values,
+            categoryRemoteIDByNormalizedName: categoryRemoteIDByName,
+            categoriesByRemoteID: categoriesByRemoteID,
             priceHistoryByLogicalKey: priceHistoryByLogicalKey,
             counts: LocalInventorySnapshotCounts(
                 products: products.count,
                 suppliers: suppliers.count,
                 categories: categories.count,
-                productPrices: prices.count
+                productPrices: prices.count,
+                linkedProducts: products.filter { $0.remoteID != nil }.count,
+                linkedSuppliers: suppliers.filter { $0.remoteID != nil }.count,
+                linkedCategories: categories.filter { $0.remoteID != nil }.count
             ),
             duplicateProductBarcodes: productBarcodeCounts
                 .filter { $0.value > 1 }
                 .map(\.key)
                 .sorted(),
+            duplicateProductRemoteIDs: duplicateRemoteIDs(productRemoteIDCounts),
             duplicateSupplierNames: supplierNames.duplicates,
-            duplicateCategoryNames: categoryNames.duplicates
+            duplicateSupplierRemoteIDs: duplicateRemoteIDs(suppliers.compactMap(\.remoteID)),
+            duplicateCategoryNames: categoryNames.duplicates,
+            duplicateCategoryRemoteIDs: duplicateRemoteIDs(categories.compactMap(\.remoteID))
         )
     }
 
@@ -128,6 +156,79 @@ struct SwiftDataInventorySnapshotService {
                 .map(\.key)
                 .sorted()
         )
+    }
+
+    private func makeLookupRemoteIDDictionary(_ suppliers: [Supplier]) -> [UUID: LocalLookupSnapshot] {
+        var result: [UUID: LocalLookupSnapshot] = [:]
+        for supplier in suppliers {
+            guard let remoteID = supplier.remoteID, result[remoteID] == nil else {
+                continue
+            }
+            result[remoteID] = LocalLookupSnapshot(
+                name: supplier.name,
+                remoteID: remoteID,
+                remoteUpdatedAt: supplier.remoteUpdatedAt,
+                remoteDeletedAt: supplier.remoteDeletedAt
+            )
+        }
+        return result
+    }
+
+    private func makeLookupRemoteIDDictionary(_ categories: [ProductCategory]) -> [UUID: LocalLookupSnapshot] {
+        var result: [UUID: LocalLookupSnapshot] = [:]
+        for category in categories {
+            guard let remoteID = category.remoteID, result[remoteID] == nil else {
+                continue
+            }
+            result[remoteID] = LocalLookupSnapshot(
+                name: category.name,
+                remoteID: remoteID,
+                remoteUpdatedAt: category.remoteUpdatedAt,
+                remoteDeletedAt: category.remoteDeletedAt
+            )
+        }
+        return result
+    }
+
+    private func makeLookupRemoteIDByNormalizedName(_ suppliers: [Supplier]) -> [String: UUID] {
+        var result: [String: UUID] = [:]
+        for supplier in suppliers {
+            guard let remoteID = supplier.remoteID,
+                  let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(supplier.name),
+                  result[normalizedName] == nil else {
+                continue
+            }
+            result[normalizedName] = remoteID
+        }
+        return result
+    }
+
+    private func makeLookupRemoteIDByNormalizedName(_ categories: [ProductCategory]) -> [String: UUID] {
+        var result: [String: UUID] = [:]
+        for category in categories {
+            guard let remoteID = category.remoteID,
+                  let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(category.name),
+                  result[normalizedName] == nil else {
+                continue
+            }
+            result[normalizedName] = remoteID
+        }
+        return result
+    }
+
+    private func duplicateRemoteIDs(_ remoteIDs: [UUID]) -> [UUID] {
+        var counts: [UUID: Int] = [:]
+        for remoteID in remoteIDs {
+            counts[remoteID, default: 0] += 1
+        }
+        return duplicateRemoteIDs(counts)
+    }
+
+    private func duplicateRemoteIDs(_ counts: [UUID: Int]) -> [UUID] {
+        counts
+            .filter { $0.value > 1 }
+            .map(\.key)
+            .sorted { $0.uuidString < $1.uuidString }
     }
 
     private static func canonicalDateString(_ date: Date) -> String {

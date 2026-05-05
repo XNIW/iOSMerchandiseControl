@@ -11,6 +11,7 @@ nonisolated struct SupabasePullApplyOptions: Sendable, Equatable {
 
 nonisolated enum SupabasePullApplyDisabledReason: String, Sendable, Equatable {
     case sessionMissing
+    case accountMismatch
     case partialPreview
     case sourceErrorsPresent
     case priceHistoryIncomplete
@@ -26,6 +27,7 @@ nonisolated enum SupabasePullApplyDisabledReason: String, Sendable, Equatable {
 
 nonisolated enum SupabasePullApplyError: Error, Sendable, Equatable {
     case sessionMissing
+    case accountMismatch
     case partialPreview
     case sourceErrorsPresent
     case priceHistoryIncomplete
@@ -44,6 +46,8 @@ nonisolated enum SupabasePullApplyError: Error, Sendable, Equatable {
         switch self {
         case .sessionMissing:
             return .sessionMissing
+        case .accountMismatch:
+            return .accountMismatch
         case .partialPreview:
             return .partialPreview
         case .sourceErrorsPresent:
@@ -100,6 +104,23 @@ nonisolated struct SupabasePullApplyExpectedProductState: Sendable, Equatable {
 nonisolated struct SupabasePullApplyLookup: Sendable, Equatable {
     let normalizedName: String
     let displayName: String
+    let remoteID: UUID?
+    let remoteUpdatedAt: Date?
+    let remoteDeletedAt: Date?
+
+    init(
+        normalizedName: String,
+        displayName: String,
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil
+    ) {
+        self.normalizedName = normalizedName
+        self.displayName = displayName
+        self.remoteID = remoteID
+        self.remoteUpdatedAt = remoteUpdatedAt
+        self.remoteDeletedAt = remoteDeletedAt
+    }
 }
 
 nonisolated struct SupabasePullApplyProductInsert: Sendable, Equatable {
@@ -123,6 +144,9 @@ nonisolated struct SupabasePullApplyProductFingerprint: Sendable, Equatable {
     let stockQuantity: Double?
     let supplierLookupName: String?
     let categoryLookupName: String?
+    let remoteID: UUID?
+    let remoteUpdatedAt: Date?
+    let remoteDeletedAt: Date?
 
     init(snapshot: LocalProductSnapshot) {
         barcode = SupabasePullPreviewNormalizer.normalizedBarcode(snapshot.barcode) ?? snapshot.barcode
@@ -134,6 +158,9 @@ nonisolated struct SupabasePullApplyProductFingerprint: Sendable, Equatable {
         stockQuantity = snapshot.stockQuantity
         supplierLookupName = SupabasePullPreviewNormalizer.normalizedLookupName(snapshot.supplierName)
         categoryLookupName = SupabasePullPreviewNormalizer.normalizedLookupName(snapshot.categoryName)
+        remoteID = snapshot.remoteID
+        remoteUpdatedAt = snapshot.remoteUpdatedAt
+        remoteDeletedAt = snapshot.remoteDeletedAt
     }
 
     func matches(_ snapshot: LocalProductSnapshot) -> Bool {
@@ -149,6 +176,26 @@ nonisolated struct SupabasePullApplyProductFingerprint: Sendable, Equatable {
             && SupabasePullPreviewNormalizer.doublesEqual(snapshot.stockQuantity, stockQuantity)
             && SupabasePullPreviewNormalizer.normalizedLookupName(snapshot.supplierName) == supplierLookupName
             && SupabasePullPreviewNormalizer.normalizedLookupName(snapshot.categoryName) == categoryLookupName
+            && snapshot.remoteID == remoteID
+            && snapshot.remoteUpdatedAt == remoteUpdatedAt
+            && snapshot.remoteDeletedAt == remoteDeletedAt
+    }
+}
+
+nonisolated struct SupabasePullApplyAccountGuard: Sendable, Equatable {
+    let currentUserID: UUID?
+    let lastLinkedUserID: UUID?
+
+    init(currentUserID: UUID?, lastLinkedUserID: UUID?) {
+        self.currentUserID = currentUserID
+        self.lastLinkedUserID = lastLinkedUserID
+    }
+
+    var hasMismatch: Bool {
+        guard let currentUserID, let lastLinkedUserID else {
+            return false
+        }
+        return currentUserID != lastLinkedUserID
     }
 }
 
@@ -161,9 +208,14 @@ struct SupabasePullApplyService {
         preview: SyncPreview,
         context: ModelContext,
         options: SupabasePullApplyOptions = SupabasePullApplyOptions(),
-        isAuthenticated: Bool
+        isAuthenticated: Bool,
+        accountGuard: SupabasePullApplyAccountGuard? = nil
     ) throws -> SupabasePullApplyPlan {
-        try validateGlobalGuards(preview: preview, isAuthenticated: isAuthenticated)
+        try validateGlobalGuards(
+            preview: preview,
+            isAuthenticated: isAuthenticated,
+            accountGuard: accountGuard
+        )
 
         let snapshot: LocalInventorySnapshot
         do {
@@ -220,6 +272,11 @@ struct SupabasePullApplyService {
                 throw SupabasePullApplyError.previewStale
             }
 
+            if let localRemoteID = localProduct.remoteID,
+               localRemoteID != payload.remoteID {
+                throw SupabasePullApplyError.previewStale
+            }
+
             guard hasApplicableUpdate(payload: payload, local: localProduct, options: options) else {
                 continue
             }
@@ -242,12 +299,20 @@ struct SupabasePullApplyService {
         let suppliersToCreate = lookupsToCreate(
             from: inserts.map(\.payload) + updates.map(\.payload),
             existing: snapshot.suppliersByNormalizedName,
-            value: \.supplierName
+            existingRemoteIDs: Set(snapshot.suppliersByRemoteID.keys),
+            value: \.supplierName,
+            remoteID: \.supplierRemoteID,
+            remoteUpdatedAt: \.supplierRemoteUpdatedAt,
+            remoteDeletedAt: \.supplierRemoteDeletedAt
         )
         let categoriesToCreate = lookupsToCreate(
             from: inserts.map(\.payload) + updates.map(\.payload),
             existing: snapshot.categoriesByNormalizedName,
-            value: \.categoryName
+            existingRemoteIDs: Set(snapshot.categoriesByRemoteID.keys),
+            value: \.categoryName,
+            remoteID: \.categoryRemoteID,
+            remoteUpdatedAt: \.categoryRemoteUpdatedAt,
+            remoteDeletedAt: \.categoryRemoteDeletedAt
         )
 
         return SupabasePullApplyPlan(
@@ -280,6 +345,9 @@ struct SupabasePullApplyService {
         for supplier in plan.suppliersToCreate {
             _ = try resolveSupplier(
                 named: supplier.displayName,
+                remoteID: supplier.remoteID,
+                remoteUpdatedAt: supplier.remoteUpdatedAt,
+                remoteDeletedAt: supplier.remoteDeletedAt,
                 context: context,
                 cache: &suppliersByName,
                 createdCount: &suppliersCreated
@@ -289,6 +357,9 @@ struct SupabasePullApplyService {
         for category in plan.categoriesToCreate {
             _ = try resolveCategory(
                 named: category.displayName,
+                remoteID: category.remoteID,
+                remoteUpdatedAt: category.remoteUpdatedAt,
+                remoteDeletedAt: category.remoteDeletedAt,
                 context: context,
                 cache: &categoriesByName,
                 createdCount: &categoriesCreated
@@ -302,18 +373,27 @@ struct SupabasePullApplyService {
 
             let supplier = try resolveSupplier(
                 named: insert.payload.supplierName,
+                remoteID: insert.payload.supplierRemoteID,
+                remoteUpdatedAt: insert.payload.supplierRemoteUpdatedAt,
+                remoteDeletedAt: insert.payload.supplierRemoteDeletedAt,
                 context: context,
                 cache: &suppliersByName,
                 createdCount: &suppliersCreated
             )
             let category = try resolveCategory(
                 named: insert.payload.categoryName,
+                remoteID: insert.payload.categoryRemoteID,
+                remoteUpdatedAt: insert.payload.categoryRemoteUpdatedAt,
+                remoteDeletedAt: insert.payload.categoryRemoteDeletedAt,
                 context: context,
                 cache: &categoriesByName,
                 createdCount: &categoriesCreated
             )
             let product = Product(
                 barcode: insert.barcode,
+                remoteID: insert.payload.remoteID,
+                remoteUpdatedAt: insert.payload.remoteUpdatedAt,
+                remoteDeletedAt: insert.payload.remoteDeletedAt,
                 itemNumber: SupabasePullPreviewNormalizer.semanticString(insert.payload.itemNumber),
                 productName: SupabasePullPreviewNormalizer.semanticString(insert.payload.productName),
                 secondProductName: SupabasePullPreviewNormalizer.semanticString(insert.payload.secondProductName),
@@ -367,9 +447,17 @@ struct SupabasePullApplyService {
         )
     }
 
-    private func validateGlobalGuards(preview: SyncPreview, isAuthenticated: Bool) throws {
+    private func validateGlobalGuards(
+        preview: SyncPreview,
+        isAuthenticated: Bool,
+        accountGuard: SupabasePullApplyAccountGuard?
+    ) throws {
         guard isAuthenticated else {
             throw SupabasePullApplyError.sessionMissing
+        }
+
+        if accountGuard?.hasMismatch == true {
+            throw SupabasePullApplyError.accountMismatch
         }
 
         guard preview.outcome == .success else {
@@ -431,6 +519,11 @@ struct SupabasePullApplyService {
         local: LocalProductSnapshot,
         options: SupabasePullApplyOptions
     ) -> Bool {
+        if local.remoteID != payload.remoteID
+            || local.remoteUpdatedAt != payload.remoteUpdatedAt
+            || local.remoteDeletedAt != payload.remoteDeletedAt {
+            return true
+        }
         if let itemNumber = SupabasePullPreviewNormalizer.semanticString(payload.itemNumber),
            !SupabasePullPreviewNormalizer.stringsEqual(itemNumber, local.itemNumber) {
             return true
@@ -541,31 +634,57 @@ struct SupabasePullApplyService {
             didMutate = true
         }
 
-        if SupabasePullPreviewNormalizer.semanticString(payload.supplierName) != nil,
-           !SupabasePullPreviewNormalizer.lookupNamesEqual(payload.supplierName, product.supplier?.name) {
-            product.supplier = try resolveSupplier(
+        if SupabasePullPreviewNormalizer.semanticString(payload.supplierName) != nil {
+            let supplier = try resolveSupplier(
                 named: payload.supplierName,
+                remoteID: payload.supplierRemoteID,
+                remoteUpdatedAt: payload.supplierRemoteUpdatedAt,
+                remoteDeletedAt: payload.supplierRemoteDeletedAt,
                 context: context,
                 cache: &suppliersByName,
                 createdCount: &suppliersCreated
             )
-            didMutate = true
+            if !SupabasePullPreviewNormalizer.lookupNamesEqual(supplier?.name, product.supplier?.name) {
+                product.supplier = supplier
+                didMutate = true
+            }
         }
 
-        if SupabasePullPreviewNormalizer.semanticString(payload.categoryName) != nil,
-           !SupabasePullPreviewNormalizer.lookupNamesEqual(payload.categoryName, product.category?.name) {
-            product.category = try resolveCategory(
+        if SupabasePullPreviewNormalizer.semanticString(payload.categoryName) != nil {
+            let category = try resolveCategory(
                 named: payload.categoryName,
+                remoteID: payload.categoryRemoteID,
+                remoteUpdatedAt: payload.categoryRemoteUpdatedAt,
+                remoteDeletedAt: payload.categoryRemoteDeletedAt,
                 context: context,
                 cache: &categoriesByName,
                 createdCount: &categoriesCreated
             )
+            if !SupabasePullPreviewNormalizer.lookupNamesEqual(category?.name, product.category?.name) {
+                product.category = category
+                didMutate = true
+            }
+        }
+
+        if product.remoteID != payload.remoteID {
+            product.remoteID = payload.remoteID
+            didMutate = true
+        }
+        if product.remoteUpdatedAt != payload.remoteUpdatedAt {
+            product.remoteUpdatedAt = payload.remoteUpdatedAt
+            didMutate = true
+        }
+        if product.remoteDeletedAt != payload.remoteDeletedAt {
+            product.remoteDeletedAt = payload.remoteDeletedAt
             didMutate = true
         }
     }
 
     private func resolveSupplier(
         named name: String?,
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil,
         context: ModelContext,
         cache: inout [String: Supplier],
         createdCount: inout Int
@@ -575,16 +694,55 @@ struct SupabasePullApplyService {
             return nil
         }
 
+        if let remoteID,
+           let existing = cache.values.first(where: { $0.remoteID == remoteID }) {
+            try applyRemoteMetadata(
+                remoteID: remoteID,
+                remoteUpdatedAt: remoteUpdatedAt,
+                remoteDeletedAt: remoteDeletedAt,
+                to: existing
+            )
+            return existing
+        }
+
         if let existing = cache[normalizedName] {
+            try applyRemoteMetadata(
+                remoteID: remoteID,
+                remoteUpdatedAt: remoteUpdatedAt,
+                remoteDeletedAt: remoteDeletedAt,
+                to: existing
+            )
             return existing
         }
 
         cache = try fetchSuppliersByNormalizedName(context: context)
-        if let existing = cache[normalizedName] {
+        if let remoteID,
+           let existing = cache.values.first(where: { $0.remoteID == remoteID }) {
+            try applyRemoteMetadata(
+                remoteID: remoteID,
+                remoteUpdatedAt: remoteUpdatedAt,
+                remoteDeletedAt: remoteDeletedAt,
+                to: existing
+            )
             return existing
         }
 
-        let supplier = Supplier(name: displayName)
+        if let existing = cache[normalizedName] {
+            try applyRemoteMetadata(
+                remoteID: remoteID,
+                remoteUpdatedAt: remoteUpdatedAt,
+                remoteDeletedAt: remoteDeletedAt,
+                to: existing
+            )
+            return existing
+        }
+
+        let supplier = Supplier(
+            name: displayName,
+            remoteID: remoteID,
+            remoteUpdatedAt: remoteUpdatedAt,
+            remoteDeletedAt: remoteDeletedAt
+        )
         context.insert(supplier)
         cache[normalizedName] = supplier
         createdCount += 1
@@ -593,6 +751,9 @@ struct SupabasePullApplyService {
 
     private func resolveCategory(
         named name: String?,
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil,
         context: ModelContext,
         cache: inout [String: ProductCategory],
         createdCount: inout Int
@@ -602,20 +763,91 @@ struct SupabasePullApplyService {
             return nil
         }
 
+        if let remoteID,
+           let existing = cache.values.first(where: { $0.remoteID == remoteID }) {
+            try applyRemoteMetadata(
+                remoteID: remoteID,
+                remoteUpdatedAt: remoteUpdatedAt,
+                remoteDeletedAt: remoteDeletedAt,
+                to: existing
+            )
+            return existing
+        }
+
         if let existing = cache[normalizedName] {
+            try applyRemoteMetadata(
+                remoteID: remoteID,
+                remoteUpdatedAt: remoteUpdatedAt,
+                remoteDeletedAt: remoteDeletedAt,
+                to: existing
+            )
             return existing
         }
 
         cache = try fetchCategoriesByNormalizedName(context: context)
-        if let existing = cache[normalizedName] {
+        if let remoteID,
+           let existing = cache.values.first(where: { $0.remoteID == remoteID }) {
+            try applyRemoteMetadata(
+                remoteID: remoteID,
+                remoteUpdatedAt: remoteUpdatedAt,
+                remoteDeletedAt: remoteDeletedAt,
+                to: existing
+            )
             return existing
         }
 
-        let category = ProductCategory(name: displayName)
+        if let existing = cache[normalizedName] {
+            try applyRemoteMetadata(
+                remoteID: remoteID,
+                remoteUpdatedAt: remoteUpdatedAt,
+                remoteDeletedAt: remoteDeletedAt,
+                to: existing
+            )
+            return existing
+        }
+
+        let category = ProductCategory(
+            name: displayName,
+            remoteID: remoteID,
+            remoteUpdatedAt: remoteUpdatedAt,
+            remoteDeletedAt: remoteDeletedAt
+        )
         context.insert(category)
         cache[normalizedName] = category
         createdCount += 1
         return category
+    }
+
+    private func applyRemoteMetadata(
+        remoteID: UUID?,
+        remoteUpdatedAt: Date?,
+        remoteDeletedAt: Date?,
+        to supplier: Supplier
+    ) throws {
+        if let remoteID {
+            if let existingRemoteID = supplier.remoteID, existingRemoteID != remoteID {
+                throw SupabasePullApplyError.previewStale
+            }
+            supplier.remoteID = remoteID
+        }
+        supplier.remoteUpdatedAt = remoteUpdatedAt ?? supplier.remoteUpdatedAt
+        supplier.remoteDeletedAt = remoteDeletedAt
+    }
+
+    private func applyRemoteMetadata(
+        remoteID: UUID?,
+        remoteUpdatedAt: Date?,
+        remoteDeletedAt: Date?,
+        to category: ProductCategory
+    ) throws {
+        if let remoteID {
+            if let existingRemoteID = category.remoteID, existingRemoteID != remoteID {
+                throw SupabasePullApplyError.previewStale
+            }
+            category.remoteID = remoteID
+        }
+        category.remoteUpdatedAt = remoteUpdatedAt ?? category.remoteUpdatedAt
+        category.remoteDeletedAt = remoteDeletedAt
     }
 
     private func fetchProductsByBarcode(context: ModelContext) throws -> [String: Product] {
@@ -675,23 +907,34 @@ struct SupabasePullApplyService {
     private func lookupsToCreate(
         from payloads: [SyncPreviewProductApplyPayload],
         existing: [String: String],
-        value: KeyPath<SyncPreviewProductApplyPayload, String?>
+        existingRemoteIDs: Set<UUID>,
+        value: KeyPath<SyncPreviewProductApplyPayload, String?>,
+        remoteID: KeyPath<SyncPreviewProductApplyPayload, UUID?>,
+        remoteUpdatedAt: KeyPath<SyncPreviewProductApplyPayload, Date?>,
+        remoteDeletedAt: KeyPath<SyncPreviewProductApplyPayload, Date?>
     ) -> [SupabasePullApplyLookup] {
-        var pending: [String: String] = [:]
+        var pending: [String: SupabasePullApplyLookup] = [:]
 
         for payload in payloads {
             guard let displayName = SupabasePullPreviewNormalizer.semanticString(payload[keyPath: value]),
                   let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(displayName),
+                  payload[keyPath: remoteID].map({ !existingRemoteIDs.contains($0) }) ?? true,
                   existing[normalizedName] == nil,
                   pending[normalizedName] == nil else {
                 continue
             }
 
-            pending[normalizedName] = displayName
+            pending[normalizedName] = SupabasePullApplyLookup(
+                normalizedName: normalizedName,
+                displayName: displayName,
+                remoteID: payload[keyPath: remoteID],
+                remoteUpdatedAt: payload[keyPath: remoteUpdatedAt],
+                remoteDeletedAt: payload[keyPath: remoteDeletedAt]
+            )
         }
 
         return pending
-            .map { SupabasePullApplyLookup(normalizedName: $0.key, displayName: $0.value) }
+            .map(\.value)
             .sorted { $0.normalizedName < $1.normalizedName }
     }
 

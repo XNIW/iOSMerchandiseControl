@@ -1,22 +1,31 @@
 import Foundation
 import SwiftData
 
+protocol SupabaseInventoryFetching: Sendable {
+    func fetchProductsPage(from: Int, to: Int) async throws -> [RemoteInventoryProductRow]
+    func fetchSuppliersPage(from: Int, to: Int) async throws -> [RemoteInventorySupplierRow]
+    func fetchCategoriesPage(from: Int, to: Int) async throws -> [RemoteInventoryCategoryRow]
+    func fetchProductPricesPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow]
+}
+
+extension SupabaseInventoryService: SupabaseInventoryFetching {}
+
 nonisolated struct SupabasePullPreviewService: Sendable {
-    private let inventoryService: SupabaseInventoryService
+    private let inventoryService: any SupabaseInventoryFetching
     private let pageSize: Int
-    private let maxCatalogRows: Int
-    private let maxProductPriceRows: Int
+    private let catalogRowBudget: Int?
+    private let productPriceRowBudget: Int?
 
     init(
-        inventoryService: SupabaseInventoryService,
+        inventoryService: any SupabaseInventoryFetching,
         pageSize: Int = 500,
-        maxCatalogRows: Int = 10_000,
-        maxProductPriceRows: Int = 2_000
+        catalogRowBudget: Int? = nil,
+        productPriceRowBudget: Int? = nil
     ) {
         self.inventoryService = inventoryService
         self.pageSize = max(1, min(pageSize, 1_000))
-        self.maxCatalogRows = maxCatalogRows
-        self.maxProductPriceRows = maxProductPriceRows
+        self.catalogRowBudget = catalogRowBudget.map { max(0, $0) }
+        self.productPriceRowBudget = productPriceRowBudget.map { max(0, $0) }
     }
 
     @MainActor
@@ -57,32 +66,32 @@ nonisolated struct SupabasePullPreviewService: Sendable {
     }
 
     private func fetchRemoteSnapshot() async throws -> RemoteFetchOutcome {
-        let products = try await fetchPaged(
-            maxRows: maxCatalogRows
-        ) { from, to in
-            try await inventoryService.fetchProductsPage(from: from, to: to)
-        }
-
         var sourceErrors: [SyncPreviewWarning] = []
-        var partialCatalog = products.reachedCap
+        var partialCatalog = false
 
-        if products.reachedCap {
-            sourceErrors.append(
-                SyncPreviewWarning(
-                    code: .sourceError,
-                    detail: "inventory_products",
-                    relatedKey: "inventory_products"
-                )
-            )
+        let products: [RemoteInventoryProductRow]
+        do {
+            let result = try await fetchPaged(rowBudget: catalogRowBudget) { from, to in
+                try await inventoryService.fetchProductsPage(from: from, to: to)
+            }
+            products = result.rows
+            if result.isPartial {
+                partialCatalog = true
+                sourceErrors.append(partialBudgetWarning(for: "inventory_products"))
+            }
+        } catch {
+            products = []
+            partialCatalog = true
+            sourceErrors.append(sourceErrorWarning(for: "inventory_products", error: error))
         }
 
-        async let suppliersFetch = fetchPaged(maxRows: maxCatalogRows) { from, to in
+        async let suppliersFetch = fetchPaged(rowBudget: catalogRowBudget) { from, to in
             try await inventoryService.fetchSuppliersPage(from: from, to: to)
         }
-        async let categoriesFetch = fetchPaged(maxRows: maxCatalogRows) { from, to in
+        async let categoriesFetch = fetchPaged(rowBudget: catalogRowBudget) { from, to in
             try await inventoryService.fetchCategoriesPage(from: from, to: to)
         }
-        async let productPricesFetch = fetchPaged(maxRows: maxProductPriceRows) { from, to in
+        async let productPricesFetch = fetchPaged(rowBudget: productPriceRowBudget) { from, to in
             try await inventoryService.fetchProductPricesPage(from: from, to: to)
         }
 
@@ -90,15 +99,9 @@ nonisolated struct SupabasePullPreviewService: Sendable {
         do {
             let result = try await suppliersFetch
             suppliers = result.rows
-            if result.reachedCap {
+            if result.isPartial {
                 partialCatalog = true
-                sourceErrors.append(
-                    SyncPreviewWarning(
-                        code: .sourceError,
-                        detail: "inventory_suppliers",
-                        relatedKey: "inventory_suppliers"
-                    )
-                )
+                sourceErrors.append(partialBudgetWarning(for: "inventory_suppliers"))
             }
         } catch {
             suppliers = []
@@ -110,15 +113,9 @@ nonisolated struct SupabasePullPreviewService: Sendable {
         do {
             let result = try await categoriesFetch
             categories = result.rows
-            if result.reachedCap {
+            if result.isPartial {
                 partialCatalog = true
-                sourceErrors.append(
-                    SyncPreviewWarning(
-                        code: .sourceError,
-                        detail: "inventory_categories",
-                        relatedKey: "inventory_categories"
-                    )
-                )
+                sourceErrors.append(partialBudgetWarning(for: "inventory_categories"))
             }
         } catch {
             categories = []
@@ -130,7 +127,7 @@ nonisolated struct SupabasePullPreviewService: Sendable {
         do {
             let result = try await productPricesFetch
             productPrices = result.rows
-            if result.reachedCap {
+            if result.isPartial {
                 sourceErrors.append(
                     SyncPreviewWarning(
                         code: .priceHistoryIncomplete,
@@ -153,7 +150,7 @@ nonisolated struct SupabasePullPreviewService: Sendable {
 
         return RemoteFetchOutcome(
             snapshot: RemoteInventorySnapshot(
-                products: products.rows,
+                products: products,
                 suppliers: suppliers,
                 categories: categories,
                 productPrices: productPrices,
@@ -164,34 +161,101 @@ nonisolated struct SupabasePullPreviewService: Sendable {
     }
 
     private func fetchPaged<Row: Sendable>(
-        maxRows: Int,
+        rowBudget: Int?,
         fetchPage: (Int, Int) async throws -> [Row]
-    ) async throws -> PagedFetchResult<Row> {
+    ) async throws -> SupabasePagedFetchResult<Row> {
+        try await SupabasePullPreviewPager.fetchAll(
+            pageSize: pageSize,
+            rowBudget: rowBudget,
+            fetchPage: fetchPage
+        )
+    }
+
+    private func partialBudgetWarning(for table: String) -> SyncPreviewWarning {
+        SyncPreviewWarning(
+            code: .sourceError,
+            detail: table,
+            relatedKey: table
+        )
+    }
+
+    private struct RemoteFetchOutcome: Sendable {
+        let snapshot: RemoteInventorySnapshot
+        let partialCatalog: Bool
+    }
+}
+
+nonisolated struct SupabasePagedFetchResult<Row: Sendable>: Sendable {
+    let rows: [Row]
+    let isPartial: Bool
+}
+
+nonisolated enum SupabasePullPreviewPager {
+    static func fetchAll<Row: Sendable>(
+        pageSize: Int,
+        rowBudget: Int?,
+        fetchPage: (Int, Int) async throws -> [Row]
+    ) async throws -> SupabasePagedFetchResult<Row> {
         var rows: [Row] = []
         var offset = 0
-        let rowBudget = max(0, maxRows)
+        let clampedPageSize = max(1, min(pageSize, 1_000))
 
-        guard rowBudget > 0 else {
-            return PagedFetchResult(rows: [], reachedCap: true)
+        if let rowBudget, rowBudget <= 0 {
+            return SupabasePagedFetchResult(rows: [], isPartial: true)
         }
 
-        while rows.count < rowBudget {
-            let remaining = rowBudget - rows.count
-            let currentPageSize = min(pageSize, remaining)
+        while rowBudget.map({ rows.count < $0 }) ?? true {
+            let remainingBudget = rowBudget.map { max(0, $0 - rows.count) } ?? clampedPageSize
+            let currentPageSize = min(clampedPageSize, remainingBudget)
+            guard currentPageSize > 0 else {
+                return SupabasePagedFetchResult(rows: rows, isPartial: true)
+            }
+
             let page = try await fetchPage(offset, offset + currentPageSize - 1)
             rows.append(contentsOf: page)
 
             if page.count < currentPageSize {
-                return PagedFetchResult(rows: rows, reachedCap: false)
+                return SupabasePagedFetchResult(rows: rows, isPartial: false)
             }
 
             offset += currentPageSize
         }
 
-        return PagedFetchResult(rows: rows, reachedCap: true)
+        return SupabasePagedFetchResult(rows: rows, isPartial: true)
+    }
+}
+
+nonisolated enum SupabaseRemoteDateParser {
+    static func parse(_ value: String?) -> Date? {
+        guard let value = SupabasePullPreviewNormalizer.semanticString(value) else {
+            return nil
+        }
+
+        if let date = fractionalFormatter.date(from: value) {
+            return date
+        }
+        if let date = standardFormatter.date(from: value) {
+            return date
+        }
+
+        return nil
     }
 
-    private func sourceErrorWarning(for table: String, error: Error) -> SyncPreviewWarning {
+    private static let fractionalFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let standardFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+}
+
+extension SupabasePullPreviewService {
+    nonisolated private func sourceErrorWarning(for table: String, error: Error) -> SyncPreviewWarning {
         let detail: String?
         if let serviceError = error as? SupabaseInventoryServiceError,
            let safeDetail = serviceError.safeDiagnosticDetail {
@@ -205,16 +269,6 @@ nonisolated struct SupabasePullPreviewService: Sendable {
             detail: detail,
             relatedKey: table
         )
-    }
-
-    private struct PagedFetchResult<Row: Sendable>: Sendable {
-        let rows: [Row]
-        let reachedCap: Bool
-    }
-
-    private struct RemoteFetchOutcome: Sendable {
-        let snapshot: RemoteInventorySnapshot
-        let partialCatalog: Bool
     }
 }
 
@@ -243,6 +297,22 @@ nonisolated enum SupabasePullPreviewDiffEngine {
                 )
             )
         }
+
+        appendDuplicateRemoteIDConflicts(
+            local.duplicateProductRemoteIDs,
+            entityKey: "product",
+            to: &conflicts
+        )
+        appendDuplicateRemoteIDConflicts(
+            local.duplicateSupplierRemoteIDs,
+            entityKey: "supplier",
+            to: &conflicts
+        )
+        appendDuplicateRemoteIDConflicts(
+            local.duplicateCategoryRemoteIDs,
+            entityKey: "category",
+            to: &conflicts
+        )
 
         for duplicate in local.duplicateSupplierNames {
             warnings.append(
@@ -335,10 +405,25 @@ nonisolated enum SupabasePullPreviewDiffEngine {
                 continue
             }
 
+            if let productWithRemoteID = local.productsByRemoteID[product.id],
+               SupabasePullPreviewNormalizer.normalizedBarcode(productWithRemoteID.barcode) != barcode {
+                conflicts.append(
+                    SyncPreviewConflict(
+                        kind: .remoteIDConflict,
+                        barcodeOrKey: barcode,
+                        detail: product.id.uuidString,
+                        relatedRemoteIDs: [product.id],
+                        hintKey: "options.supabase.preview.conflict.hint.review"
+                    )
+                )
+                continue
+            }
+
             let productConflicts = unresolvedLookupConflicts(
                 product: product,
                 barcode: barcode,
                 remote: remote,
+                local: local,
                 supplierFetchFailed: supplierFetchFailed,
                 categoryFetchFailed: categoryFetchFailed
             )
@@ -349,6 +434,20 @@ nonisolated enum SupabasePullPreviewDiffEngine {
 
             guard let localProduct = local.productsByBarcode[barcode] else {
                 newProducts.append(productSummary(product, remote: remote, classification: .newProduct))
+                continue
+            }
+
+            if let localRemoteID = localProduct.remoteID,
+               localRemoteID != product.id {
+                conflicts.append(
+                    SyncPreviewConflict(
+                        kind: .remoteIDConflict,
+                        barcodeOrKey: barcode,
+                        detail: product.id.uuidString,
+                        relatedRemoteIDs: [localRemoteID, product.id],
+                        hintKey: "options.supabase.preview.conflict.hint.review"
+                    )
+                )
                 continue
             }
 
@@ -365,8 +464,15 @@ nonisolated enum SupabasePullPreviewDiffEngine {
             supplierDiffs.append(contentsOf: productSupplierDiffs)
             categoryDiffs.append(contentsOf: productCategoryDiffs)
 
-            if changes.isEmpty {
+            let metadataNeedsUpdate = productRemoteMetadataNeedsUpdate(
+                remoteProduct: product,
+                localProduct: localProduct
+            )
+
+            if changes.isEmpty && !metadataNeedsUpdate {
                 unchangedProducts.append(productSummary(product, remote: remote, classification: .unchanged))
+            } else if changes.isEmpty && localProduct.remoteID == nil {
+                updateCandidates.append(productSummary(product, remote: remote, classification: .linkOnly))
             } else {
                 changes.sort { ($0.fieldKey.rawValue, $0.remoteDisplay ?? "") < ($1.fieldKey.rawValue, $1.remoteDisplay ?? "") }
                 updateCandidates.append(
@@ -490,44 +596,137 @@ nonisolated enum SupabasePullPreviewDiffEngine {
         return changes
     }
 
+    private static func productRemoteMetadataNeedsUpdate(
+        remoteProduct: RemoteInventoryProductRow,
+        localProduct: LocalProductSnapshot
+    ) -> Bool {
+        localProduct.remoteID != remoteProduct.id
+            || localProduct.remoteUpdatedAt != SupabaseRemoteDateParser.parse(remoteProduct.updatedAt)
+            || localProduct.remoteDeletedAt != SupabaseRemoteDateParser.parse(remoteProduct.deletedAt)
+    }
+
     private static func unresolvedLookupConflicts(
         product: RemoteInventoryProductRow,
         barcode: String,
         remote: RemoteInventorySnapshot,
+        local: LocalInventorySnapshot,
         supplierFetchFailed: Bool,
         categoryFetchFailed: Bool
     ) -> [SyncPreviewConflict] {
         var conflicts: [SyncPreviewConflict] = []
 
-        if product.supplierID != nil,
+        if let supplierID = product.supplierID,
            remote.supplierName(for: product) == nil,
            !supplierFetchFailed {
             conflicts.append(
                 SyncPreviewConflict(
-                    kind: .missingRemoteSupplier,
+                    kind: .missingRemoteReference,
                     barcodeOrKey: barcode,
-                    detail: product.supplierID?.uuidString,
+                    detail: supplierID.uuidString,
                     relatedRemoteIDs: [product.id],
                     hintKey: "options.supabase.preview.conflict.hint.review"
                 )
             )
         }
 
-        if product.categoryID != nil,
+        if let supplierID = product.supplierID,
+           let remoteSupplier = remote.suppliersByID[supplierID],
+           let supplierConflict = lookupRemoteIDConflict(
+                entityKey: "supplier",
+                remoteID: supplierID,
+                remoteName: remoteSupplier.name,
+                localRemoteIDByNormalizedName: local.supplierRemoteIDByNormalizedName,
+                localByRemoteID: local.suppliersByRemoteID,
+                barcode: barcode,
+                productRemoteID: product.id
+           ) {
+            conflicts.append(supplierConflict)
+        }
+
+        if let categoryID = product.categoryID,
            remote.categoryName(for: product) == nil,
            !categoryFetchFailed {
             conflicts.append(
                 SyncPreviewConflict(
-                    kind: .missingRemoteCategory,
+                    kind: .missingRemoteReference,
                     barcodeOrKey: barcode,
-                    detail: product.categoryID?.uuidString,
+                    detail: categoryID.uuidString,
                     relatedRemoteIDs: [product.id],
                     hintKey: "options.supabase.preview.conflict.hint.review"
                 )
             )
         }
 
+        if let categoryID = product.categoryID,
+           let remoteCategory = remote.categoriesByID[categoryID],
+           let categoryConflict = lookupRemoteIDConflict(
+                entityKey: "category",
+                remoteID: categoryID,
+                remoteName: remoteCategory.name,
+                localRemoteIDByNormalizedName: local.categoryRemoteIDByNormalizedName,
+                localByRemoteID: local.categoriesByRemoteID,
+                barcode: barcode,
+                productRemoteID: product.id
+           ) {
+            conflicts.append(categoryConflict)
+        }
+
         return conflicts
+    }
+
+    private static func lookupRemoteIDConflict(
+        entityKey: String,
+        remoteID: UUID,
+        remoteName: String,
+        localRemoteIDByNormalizedName: [String: UUID],
+        localByRemoteID: [UUID: LocalLookupSnapshot],
+        barcode: String,
+        productRemoteID: UUID
+    ) -> SyncPreviewConflict? {
+        let normalizedRemoteName = SupabasePullPreviewNormalizer.normalizedLookupName(remoteName)
+
+        if let normalizedRemoteName,
+           let localRemoteID = localRemoteIDByNormalizedName[normalizedRemoteName],
+           localRemoteID != remoteID {
+            return SyncPreviewConflict(
+                kind: .remoteIDConflict,
+                barcodeOrKey: barcode,
+                detail: "\(entityKey):\(remoteID.uuidString)",
+                relatedRemoteIDs: [productRemoteID, localRemoteID, remoteID],
+                hintKey: "options.supabase.preview.conflict.hint.review"
+            )
+        }
+
+        if let localLookup = localByRemoteID[remoteID],
+           !SupabasePullPreviewNormalizer.lookupNamesEqual(localLookup.name, remoteName) {
+            return SyncPreviewConflict(
+                kind: .remoteIDConflict,
+                barcodeOrKey: barcode,
+                detail: "\(entityKey):\(remoteID.uuidString)",
+                relatedRemoteIDs: [productRemoteID, remoteID],
+                hintKey: "options.supabase.preview.conflict.hint.review"
+            )
+        }
+
+        return nil
+    }
+
+    private static func appendDuplicateRemoteIDConflicts(
+        _ remoteIDs: [UUID],
+        entityKey: String,
+        to conflicts: inout [SyncPreviewConflict]
+    ) {
+        for remoteID in remoteIDs {
+            conflicts.append(
+                SyncPreviewConflict(
+                    kind: .remoteIDConflict,
+                    barcodeOrKey: entityKey,
+                    detail: remoteID.uuidString,
+                    relatedRemoteIDs: [remoteID],
+                    hintKey: "options.supabase.preview.conflict.hint.review"
+                )
+            )
+        }
     }
 
     private static func duplicateRemoteSupplierNames(_ remote: RemoteInventorySnapshot) -> [String] {
@@ -707,6 +906,8 @@ nonisolated enum SupabasePullPreviewDiffEngine {
             fieldChanges: fieldChanges,
             applyPayload: SyncPreviewProductApplyPayload(
                 remoteID: product.id,
+                remoteUpdatedAt: SupabaseRemoteDateParser.parse(product.updatedAt),
+                remoteDeletedAt: SupabaseRemoteDateParser.parse(product.deletedAt),
                 barcode: SupabasePullPreviewNormalizer.semanticString(product.barcode),
                 itemNumber: product.itemNumber,
                 productName: product.productName,
@@ -715,7 +916,21 @@ nonisolated enum SupabasePullPreviewDiffEngine {
                 retailPrice: product.retailPrice,
                 stockQuantity: product.stockQuantity,
                 supplierName: remote.supplierName(for: product),
-                categoryName: remote.categoryName(for: product)
+                supplierRemoteID: product.supplierID,
+                supplierRemoteUpdatedAt: product.supplierID
+                    .flatMap { remote.suppliersByID[$0]?.updatedAt }
+                    .flatMap(SupabaseRemoteDateParser.parse),
+                supplierRemoteDeletedAt: product.supplierID
+                    .flatMap { remote.suppliersByID[$0]?.deletedAt }
+                    .flatMap(SupabaseRemoteDateParser.parse),
+                categoryName: remote.categoryName(for: product),
+                categoryRemoteID: product.categoryID,
+                categoryRemoteUpdatedAt: product.categoryID
+                    .flatMap { remote.categoriesByID[$0]?.updatedAt }
+                    .flatMap(SupabaseRemoteDateParser.parse),
+                categoryRemoteDeletedAt: product.categoryID
+                    .flatMap { remote.categoriesByID[$0]?.deletedAt }
+                    .flatMap(SupabaseRemoteDateParser.parse)
             )
         )
     }
@@ -732,7 +947,12 @@ nonisolated enum SupabasePullPreviewDiffEngine {
     ) -> [SyncPreviewMetric] {
         [
             SyncPreviewMetric(id: "remoteProducts", labelKey: "options.supabase.preview.metric.remoteProducts", value: "\(remote.counts.products)"),
+            SyncPreviewMetric(id: "remoteSuppliers", labelKey: "options.supabase.preview.metric.remoteSuppliers", value: "\(remote.counts.suppliers)"),
+            SyncPreviewMetric(id: "remoteCategories", labelKey: "options.supabase.preview.metric.remoteCategories", value: "\(remote.counts.categories)"),
             SyncPreviewMetric(id: "localProducts", labelKey: "options.supabase.preview.metric.localProducts", value: "\(local.counts.products)"),
+            SyncPreviewMetric(id: "linkedProducts", labelKey: "options.supabase.preview.metric.linkedProducts", value: "\(local.counts.linkedProducts)"),
+            SyncPreviewMetric(id: "linkedSuppliers", labelKey: "options.supabase.preview.metric.linkedSuppliers", value: "\(local.counts.linkedSuppliers)"),
+            SyncPreviewMetric(id: "linkedCategories", labelKey: "options.supabase.preview.metric.linkedCategories", value: "\(local.counts.linkedCategories)"),
             SyncPreviewMetric(id: "newProducts", labelKey: "options.supabase.preview.metric.newProducts", value: "\(newProducts)"),
             SyncPreviewMetric(id: "updateCandidates", labelKey: "options.supabase.preview.metric.updateCandidates", value: "\(updateCandidates)"),
             SyncPreviewMetric(id: "conflicts", labelKey: "options.supabase.preview.metric.conflicts", value: "\(conflicts)"),

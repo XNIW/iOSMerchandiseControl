@@ -22,8 +22,20 @@ enum PriceType: String, Codable, CaseIterable {
 final class Supplier {
     @Attribute(.unique) var name: String
 
-    init(name: String) {
+    var remoteID: UUID?
+    var remoteUpdatedAt: Date?
+    var remoteDeletedAt: Date?
+
+    init(
+        name: String,
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil
+    ) {
         self.name = name
+        self.remoteID = remoteID
+        self.remoteUpdatedAt = remoteUpdatedAt
+        self.remoteDeletedAt = remoteDeletedAt
     }
 }
 
@@ -33,8 +45,20 @@ final class Supplier {
 final class ProductCategory {
     @Attribute(.unique) var name: String
 
-    init(name: String) {
+    var remoteID: UUID?
+    var remoteUpdatedAt: Date?
+    var remoteDeletedAt: Date?
+
+    init(
+        name: String,
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil
+    ) {
         self.name = name
+        self.remoteID = remoteID
+        self.remoteUpdatedAt = remoteUpdatedAt
+        self.remoteDeletedAt = remoteDeletedAt
     }
 }
 
@@ -43,6 +67,10 @@ final class ProductCategory {
 @Model
 final class Product {
     @Attribute(.unique) var barcode: String
+
+    var remoteID: UUID?
+    var remoteUpdatedAt: Date?
+    var remoteDeletedAt: Date?
 
     var itemNumber: String?
     var productName: String?
@@ -60,6 +88,9 @@ final class Product {
 
     init(
         barcode: String,
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil,
         itemNumber: String? = nil,
         productName: String? = nil,
         secondProductName: String? = nil,
@@ -70,6 +101,9 @@ final class Product {
         category: ProductCategory? = nil
     ) {
         self.barcode = barcode
+        self.remoteID = remoteID
+        self.remoteUpdatedAt = remoteUpdatedAt
+        self.remoteDeletedAt = remoteDeletedAt
         self.itemNumber = itemNumber
         self.productName = productName
         self.secondProductName = secondProductName
