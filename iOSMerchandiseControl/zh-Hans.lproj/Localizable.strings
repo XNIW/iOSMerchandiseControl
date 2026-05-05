@@ -190,6 +190,24 @@
 "options.supabase.apply.disabled.previewStale" = "本地数据库已变化。请重新生成预览。";
 "options.supabase.apply.disabled.noApplicableChanges" = "没有可应用的本地更改。";
 
+"options.supabase.baseline.header" = "本地 Supabase 基线";
+"options.supabase.baseline.status.label" = "基线状态";
+"options.supabase.baseline.status.absent" = "未保存基线";
+"options.supabase.baseline.status.valid" = "基线有效";
+"options.supabase.baseline.status.stale" = "基线已过期（架构版本）";
+"options.supabase.baseline.status.accountMismatch" = "账户与基线不匹配";
+"options.supabase.baseline.status.incomplete" = "基线未完成";
+"options.supabase.baseline.lastPull" = "上次完整拉取";
+"options.supabase.baseline.account" = "账户";
+"options.supabase.baseline.counts.products" = "商品";
+"options.supabase.baseline.counts.suppliers" = "供应商";
+"options.supabase.baseline.counts.categories" = "分类";
+"options.supabase.baseline.schemaVersion" = "指纹架构";
+"options.supabase.baseline.tombstones" = "墓碑记录";
+"options.supabase.baseline.footer" = "真实推送暂不可用。";
+"options.supabase.baseline.commit.success" = "基线已保存：%d 个商品，%d 个供应商，%d 个分类。";
+"options.supabase.baseline.commit.failed" = "本地应用已完成，但基线未刷新。请在预检前重新执行完整拉取/应用。";
+
 "options.supabase.pushpreflight.header" = "本地预检校验";
 "options.supabase.pushpreflight.run" = "执行本地校验";
 "options.supabase.pushpreflight.running" = "正在进行本地分析...";
@@ -217,6 +235,7 @@
 "options.supabase.pushpreflight.category.blockedAccountMismatch" = "已阻塞：账号不匹配：%d";
 "options.supabase.pushpreflight.category.blockedPartialPull" = "已阻塞：pull 不完整：%d";
 "options.supabase.pushpreflight.category.blockedMissingBaseline" = "已阻塞：缺少 baseline：%d";
+"options.supabase.pushpreflight.category.blockedStaleOrPartialBaseline" = "已阻塞：基线过期或不完整：%d";
 "options.supabase.pushpreflight.category.blockedRemoteConflict" = "已阻塞：远程冲突：%d";
 "options.supabase.pushpreflight.category.blockedTombstoneConflict" = "已阻塞：远程 tombstone：%d";
 "options.supabase.pushpreflight.category.blockedMissingSupplierCategoryRemoteID" = "已阻塞：supplier/category 缺少 remoteID：%d";

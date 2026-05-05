@@ -22,6 +22,7 @@ nonisolated enum ManualPushPreflightCategory: String, Sendable, Equatable, Hasha
     case blockedAccountMismatch
     case blockedPartialPull
     case blockedMissingBaseline
+    case blockedStaleOrPartialBaseline
     case blockedRemoteConflict
     case blockedTombstoneConflict
     case blockedMissingSupplierCategoryRemoteID
@@ -35,6 +36,7 @@ nonisolated enum ManualPushPreflightCategory: String, Sendable, Equatable, Hasha
              .blockedAccountMismatch,
              .blockedPartialPull,
              .blockedMissingBaseline,
+             .blockedStaleOrPartialBaseline,
              .blockedRemoteConflict,
              .blockedTombstoneConflict,
              .blockedMissingSupplierCategoryRemoteID:
@@ -82,6 +84,7 @@ nonisolated enum PushBlockedReason: String, Sendable, Equatable, CaseIterable {
     case blockedAccountMismatch
     case blockedPartialPull
     case blockedMissingBaseline
+    case blockedStaleOrPartialBaseline
     case blockedRemoteConflict
     case blockedTombstoneConflict
     case blockedMissingSupplierCategoryRemoteID
@@ -96,6 +99,8 @@ nonisolated enum PushBlockedReason: String, Sendable, Equatable, CaseIterable {
             return .blockedPartialPull
         case .blockedMissingBaseline:
             return .blockedMissingBaseline
+        case .blockedStaleOrPartialBaseline:
+            return .blockedStaleOrPartialBaseline
         case .blockedRemoteConflict:
             return .blockedRemoteConflict
         case .blockedTombstoneConflict:
@@ -160,7 +165,7 @@ nonisolated enum ManualPushFingerprintValue: Sendable, Equatable {
 }
 
 nonisolated enum ManualPushFingerprintNormalizer {
-    static let version = 1
+    static let version = SupabaseCatalogFingerprintSchema.currentVersion
 
     static func product(
         barcode: String?,
@@ -173,38 +178,33 @@ nonisolated enum ManualPushFingerprintNormalizer {
         supplierRemoteID: UUID?,
         categoryRemoteID: UUID?
     ) -> ManualPushFingerprint {
-        fingerprint(
-            entityKind: .product,
-            fields: [
-                ManualPushFingerprintField("barcode", .string(barcode)),
-                ManualPushFingerprintField("itemNumber", .string(itemNumber)),
-                ManualPushFingerprintField("productName", .string(productName)),
-                ManualPushFingerprintField("secondProductName", .string(secondProductName)),
-                ManualPushFingerprintField("purchasePrice", .number(purchasePrice)),
-                ManualPushFingerprintField("retailPrice", .number(retailPrice)),
-                ManualPushFingerprintField("stockQuantity", .number(stockQuantity)),
-                ManualPushFingerprintField("supplierRemoteID", .uuid(supplierRemoteID)),
-                ManualPushFingerprintField("categoryRemoteID", .uuid(categoryRemoteID))
-            ]
+        SupabaseCatalogFingerprintNormalizer.product(
+            barcode: barcode,
+            itemNumber: itemNumber,
+            productName: productName,
+            secondProductName: secondProductName,
+            purchasePrice: purchasePrice,
+            retailPrice: retailPrice,
+            stockQuantity: stockQuantity,
+            supplierRemoteID: supplierRemoteID,
+            categoryRemoteID: categoryRemoteID
         )
     }
 
     static func supplier(name: String?) -> ManualPushFingerprint {
-        fingerprint(
-            entityKind: .supplier,
-            fields: [
-                ManualPushFingerprintField("name", .string(name))
-            ]
-        )
+        supplier(remoteID: nil, name: name)
+    }
+
+    static func supplier(remoteID: UUID?, name: String?) -> ManualPushFingerprint {
+        SupabaseCatalogFingerprintNormalizer.supplier(remoteID: remoteID, name: name)
     }
 
     static func category(name: String?) -> ManualPushFingerprint {
-        fingerprint(
-            entityKind: .productCategory,
-            fields: [
-                ManualPushFingerprintField("name", .string(name))
-            ]
-        )
+        category(remoteID: nil, name: name)
+    }
+
+    static func category(remoteID: UUID?, name: String?) -> ManualPushFingerprint {
+        SupabaseCatalogFingerprintNormalizer.category(remoteID: remoteID, name: name)
     }
 
     static func fingerprint(
@@ -238,25 +238,14 @@ nonisolated enum ManualPushFingerprintNormalizer {
             return "string:\(escaped(trimmed))"
         case .number(let number):
             guard let number else { return "number:nil" }
-            guard number.isFinite else { return "number:invalid" }
-            return "number:\(normalizedNumber(number))"
+            guard let normalized = SupabaseCatalogFingerprintNormalizer.canonicalNumberString(number) else {
+                return "number:nil"
+            }
+            return "number:\(normalized)"
         case .uuid(let uuid):
             guard let uuid else { return "uuid:nil" }
             return "uuid:\(uuid.uuidString.lowercased())"
         }
-    }
-
-    private static func normalizedNumber(_ value: Double) -> String {
-        let scaled = (abs(value) < 0.0000005 ? 0 : value)
-        let rounded = (scaled * 1_000_000).rounded() / 1_000_000
-        var text = String(format: "%.6f", locale: Locale(identifier: "en_US_POSIX"), rounded)
-        while text.last == "0" {
-            text.removeLast()
-        }
-        if text.last == "." {
-            text.removeLast()
-        }
-        return text.isEmpty ? "0" : text
     }
 
     private static func escaped(_ value: String) -> String {

@@ -188,7 +188,9 @@ nonisolated struct SupabaseManualPushPreflightService: Sendable {
         }
 
         let baseline = input.baseline
-        if baseline?.isValid != true {
+        if let baseline, !baseline.isValid {
+            blockedReasons.append(blockedReason(for: baseline))
+        } else if baseline == nil {
             blockedReasons.append(.blockedMissingBaseline)
         }
 
@@ -342,6 +344,15 @@ nonisolated struct SupabaseManualPushPreflightService: Sendable {
     private func productHasUnresolvedLookupReference(_ product: ManualPushProductState) -> Bool {
         (product.hasSupplierReference && product.supplierRemoteID == nil)
             || (product.hasCategoryReference && product.categoryRemoteID == nil)
+    }
+
+    private func blockedReason(for baseline: ManualPushBaseline) -> PushBlockedReason {
+        if baseline.invalidationReasons.contains(.fingerprintVersionChanged)
+            || baseline.invalidationReasons.contains(.partialPull)
+            || baseline.invalidationReasons.contains(.sourceErrors) {
+            return .blockedStaleOrPartialBaseline
+        }
+        return .blockedMissingBaseline
     }
 
     private func appendUnique(_ warning: PushWarning, to warnings: inout [PushWarning]) {

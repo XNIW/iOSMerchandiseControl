@@ -4,7 +4,7 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. **TASK-042** e' **DONE / Chiusura**: sezione DEBUG `OptionsView` per preflight/dry-run manual push locale tombstone-compliant, no-write Supabase, review+fix PASS. **TASK-041**, **TASK-040**, **TASK-039**, **TASK-038**, **TASK-037**, **TASK-036**, **TASK-035**, **TASK-034** restano **DONE / Chiusura**. **TASK-032** e **TASK-028** restano **BLOCKED**. Prossimo task suggerito: **TASK-043** — baseline/fingerprint persistence affidabile da ultimo pull completo, propedeutica a un futuro push reale separato.
+Nessun task attivo. **TASK-043** chiuso **DONE / Chiusura** con review **APPROVED_FIXED_DIRECTLY**: baseline/fingerprint locale persistente SwiftData da ultimo full pull/apply riuscito, senza push reale e senza scritture remote Supabase. **TASK-042**, **TASK-041**, **TASK-040**, **TASK-039**, **TASK-038**, **TASK-037**, **TASK-036**, **TASK-035**, **TASK-034** restano **DONE / Chiusura**. **TASK-032** e **TASK-028** restano **BLOCKED**. Prossimo candidato non attivo: **TASK-044** push reale Supabase manuale controllato.
 
 ## Stato globale
 IDLE
@@ -58,7 +58,15 @@ IDLE
 
 > **2026-05-05 (review/close/user override):** **TASK-042** review completa eseguita da **Claude Code (review/fix/done)** con esito **PASS con fix / DONE**: fix diretti limitati a state mapping `completedNoWork`, account gate UI, fetch SwiftData preflight mirato, detached capture hygiene, localizzazione ES/ZH-Hans e test ViewModel aggiuntivi. Build Debug PASS, Build Release PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-scope PASS. Nessuna scrittura Supabase, nessun `record_sync_event`, nessun outbox/dirty, nessuna baseline persistence, nessun ProductPrice push reale, nessuna modifica Android/SQL/migration. **TASK-041** resta **DONE**.
 
-> **Nota corrente:** nessun task attivo; **TASK-042** **DONE / Chiusura** con esito **PASS con fix**. **TASK-041** **DONE / Chiusura** con esito **APPROVED_FIXED_DIRECTLY**. **TASK-040** **DONE / Chiusura** con esito **APPROVED_FIXED_DIRECTLY**. **TASK-039** **DONE / Chiusura** (non riaperto). **TASK-038** **DONE / Chiusura**. **TASK-037** **DONE / Chiusura** anche per slice 2. **TASK-035** **DONE / Chiusura**. **TASK-034** **DONE / Chiusura**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**. Prossimo task suggerito: **TASK-043** baseline/fingerprint persistence affidabile prima di qualunque push reale.
+> **2026-05-05 (planning/tracking/user override):** creato **TASK-043** *Supabase baseline/fingerprint persistence affidabile da ultimo pull completo*; promosso ad **ACTIVE / PLANNING** con responsabile **Claude / Planner**; aggiornati solo `docs/TASKS/TASK-043-supabase-baseline-fingerprint-persistence-ios.md` + `docs/MASTER-PLAN.md`. **TASK-042**, **TASK-041**, **TASK-040**, **TASK-039** restano **DONE**; **TASK-032** e **TASK-028** restano **BLOCKED**. Nessun push reale, nessuna write Supabase.
+
+> **2026-05-05 (planning refinement):** **TASK-043** — pianificazione documentale ampliata (**SwiftData** `Run`/`Record` dedicati, policy baseline **atomica** senza aggiornamenti parziali silenziosi, fingerprint **Decimal**/remoteID FK, integrazione preflight **`blockedStaleOrPartialBaseline`** / `blockedMissingBaseline`, matrice test **T-b1..T-b15**, **CA-19..CA-25**). **Fase invariata PLANNING**; nessun codice Swift/iOS, nessun `project.pbxproj`, nessuna write Supabase; EXECUTION solo dopo review utente e **user override** esplicito.
+
+> **2026-05-05 (planning refinement 2 — TASK-043):** perfezionamento **execution-ready** sul file task: lifecycle **`building→valid`**, commit SwiftData **staged**/doppio `save`, chiavi sintetiche **`recordKey`** / `runKey`, reader **solo latest valid run** (account + schema fingerprint), fingerprint da **SwiftData post-apply**, tombstone ⇒ **`blockedTombstoneConflict`**, retention senza purge obbligatoria, microcopy UX DEBUG pianificato IT/EN/ES/ZH-Hans, confine **TASK-044**, **CA-26..CA-34**, **T-b16..T-b25**. **TASK-043** resta **ACTIVE / PLANNING**. **Solo markdown** nel turno — **nessuna EXECUTION**, nessun Swift, **`project.pbxproj`**, test sorgenti, Supabase modificati. **TASK-042**, **TASK-041**, **TASK-040**, **TASK-039** restano **DONE**. **TASK-032** e **TASK-028** restano **BLOCKED**.
+
+> **2026-05-05 (execution/user override — TASK-043):** utente ha autorizzato esplicitamente l'**EXECUTION** di **TASK-043**. Responsabile operativo **Cursor / Codex executor**; perimetro invariato: baseline/fingerprint persistente locale da ultimo full pull/apply riuscito, **nessun push reale**, **nessuna write Supabase**, nessun upsert/delete/RPC `record_sync_event`, nessuna outbox. **TASK-042**, **TASK-041**, **TASK-040**, **TASK-039** restano **DONE**; **TASK-032** e **TASK-028** restano **BLOCKED**.
+> **2026-05-05 (handoff — TASK-043):** execution completata da **Cursor / Codex executor**: fingerprint canonico Decimal/remoteID, SwiftData baseline Run/Record, writer staged due fasi, reader latest valid account/schema/source-scoped, integrazione preflight/dry-run conservativa, hook post full pull/apply sicuro e card DEBUG read-only `OptionsView` localizzata. Build Debug PASS, Build Release PASS, XCTest mirati PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-write Supabase PASS, no SQL/migration/config/segreti. Handoff a **Claude / Reviewer**. **TASK-043 ACTIVE / REVIEW**, non DONE. Nessun push reale, nessuna scrittura Supabase, nessun `record_sync_event`, nessuna outbox.
+> **2026-05-05 (review/close — TASK-043):** review tecnica completa eseguita da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**: fix diretti piccoli su gate preflight da baseline persistente invece di `supabaseLastLinkedUserID` volatile, guard writer `priceHistoryIncomplete`, e reader per status `stale`; `project.pbxproj` verificato senza diff per gruppi filesystem-synchronized. Build Debug PASS, Build Release PASS, XCTest mirati TASK-043 PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-write Supabase PASS, no segreti/config/SQL/migration/dipendenze. **TASK-043 DONE / Chiusura**. Nessun push reale, nessuna scrittura Supabase, nessun `record_sync_event`, nessuna outbox. **TASK-042/TASK-041/TASK-040/TASK-039 restano DONE**; **TASK-032** e **TASK-028** restano **BLOCKED**. Prossimo candidato: **TASK-044** push reale Supabase manuale controllato, **non attivo**.
 
 > **2026-05-05 (planning/tracking):** creato **TASK-040** *Supabase full pull + remote identity bridge SwiftData allineato Android/Supabase*; promosso ad **ACTIVE / PLANNING** con responsabile **Claude / Planner**; **solo** `docs/TASKS/TASK-040-supabase-full-pull-remote-identity-bridge-swiftdata-android-alignment.md` + **`MASTER-PLAN`** — **nessuna modifica Swift**, **nessun** `project.pbxproj` / `Info.plist` / `Package.resolved` / SQL. **TASK-039** resta **DONE** e **non** viene riaperto. Riferimenti Android: TASK-067 **DONE ACCEPTABLE**, TASK-068 **PARTIAL**, TASK-069/070/071 **DONE**.
 
@@ -71,11 +79,11 @@ IDLE
 - **Task attivo:** Nessuno
 - **Titolo:** —
 - **File task:** —
-- **Stato task:** —
+- **Stato task:** IDLE
 - **Fase:** —
 - **Responsabile:** —
 - **Ultimo aggiornamento:** 2026-05-05
-- **Nota tracking:** TASK-042 chiuso DONE su override esplicito utente dopo review completa + fix piccoli; progetto tornato IDLE. Prossimo task suggerito non attivo: TASK-043 baseline/fingerprint persistence affidabile.
+- **Nota tracking:** TASK-043 chiuso DONE / Chiusura con review APPROVED_FIXED_DIRECTLY; **no push reale**, **no write Supabase**, TASK-042/041/040/039 restano DONE; TASK-032/TASK-028 restano BLOCKED. Prossimo candidato non attivo: TASK-044.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -116,14 +124,18 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- Nessun task attivo.
-- Ultimo task chiuso: **TASK-042** — **DONE / Chiusura** su override esplicito utente dopo review completa + fix piccoli.
+- Task ID: **Nessuno**
+- Titolo: —
+- File task: —
+- Stato: **IDLE**
+- Fase: —
+- Responsabile: —
 - Ultimo aggiornamento: **2026-05-05**
-- Prossimo task suggerito: **TASK-043** — baseline/fingerprint persistence affidabile da ultimo pull completo, propedeutica a un futuro push reale separato.
+- Nota: nessun task attivo dopo chiusura TASK-043. Prossimo candidato: **TASK-044** push reale Supabase manuale controllato, **non attivo**.
 
 Follow-up candidate post TASK-041 (**non attivi**):
-- Task futuro: baseline persistence.
-- Task futuro: push reale supplier/category/products.
+- Baseline persistence SwiftData: coperta da **TASK-043** (**DONE / Chiusura**).
+- Task futuro: **TASK-044** push reale Supabase manuale controllato supplier/category/products.
 - Task futuro: ProductPrice push.
 - Task futuro: `record_sync_event` / outbox.
 - Task futuro: tombstone outbound / delete.
@@ -309,6 +321,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-040 | Supabase full pull + remote identity bridge SwiftData allineato Android/Supabase | DONE | HIGH |
 | TASK-041 | Supabase manual push preflight + dry-run tombstone-compliant iOS | DONE | HIGH |
 | TASK-042 | Supabase manual push preflight UI in OptionsView, dry-run only, tombstone-compliant | DONE | HIGH |
+| TASK-043 | Supabase baseline/fingerprint persistence affidabile da ultimo pull completo | DONE | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -334,6 +347,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-040 | Supabase full pull + remote identity bridge SwiftData allineato Android/Supabase | 2026-05-05 |
 | TASK-041 | Supabase manual push preflight + dry-run tombstone-compliant iOS | 2026-05-05 |
 | TASK-042 | Supabase manual push preflight UI in OptionsView, dry-run only, tombstone-compliant | 2026-05-05 |
+| TASK-043 | Supabase baseline/fingerprint persistence affidabile da ultimo pull completo | 2026-05-05 |
 
 ## Blocchi e dipendenze
 - TASK-032 bloccato / in pausa.

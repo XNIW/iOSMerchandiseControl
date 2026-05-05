@@ -18,6 +18,39 @@ final class SupabasePushPreflightViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.state, .accountNotLinked)
     }
 
+    func testRunLocalCheckUsesPersistentBaselineWhenLastLinkedUserIDIsMissing() async throws {
+        let viewModel = SupabasePushPreflightViewModel()
+        let context = try makeContext()
+        let ownerID = UUID()
+        let remoteID = UUID()
+        context.insert(Product(
+            barcode: "100",
+            remoteID: remoteID,
+            productName: "Baseline Product"
+        ))
+        try context.save()
+        _ = try SupabaseCatalogBaselineWriter().commitLatestBaseline(
+            context: context,
+            ownerUserUUID: ownerID
+        )
+
+        viewModel.runLocalCheck(
+            context: context,
+            isSignedIn: true,
+            currentUserID: ownerID,
+            lastLinkedUserID: nil
+        )
+
+        try await waitUntilNotRunning(viewModel)
+
+        if case .completedNoWork(let summary) = viewModel.state {
+            XCTAssertEqual(summary.totalBlockers, 0)
+            XCTAssertEqual(summary.categoryCounts[.noOpAlreadySynced], 1)
+        } else {
+            XCTFail("Expected completedNoWork from persistent baseline, got \(viewModel.state)")
+        }
+    }
+
     func testMakeCompletedStateNoWork() {
         let preview = ManualPushPreview(
             generatedAt: Date(),
@@ -216,10 +249,22 @@ final class SupabasePushPreflightViewModelTests: XCTestCase {
             Supplier.self,
             ProductCategory.self,
             ProductPrice.self,
-            HistoryEntry.self
+            HistoryEntry.self,
+            SupabaseCatalogBaselineRun.self,
+            SupabaseCatalogBaselineRecord.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: configuration)
         return ModelContext(container)
+    }
+
+    private func waitUntilNotRunning(_ viewModel: SupabasePushPreflightViewModel) async throws {
+        for _ in 0..<100 {
+            if !viewModel.isRunning {
+                return
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for preflight")
     }
 }

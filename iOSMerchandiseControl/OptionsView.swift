@@ -30,6 +30,7 @@ struct OptionsView: View {
     @State private var isRunningSupabaseDiagnostic = false
     @State private var supabaseDiagnosticMessage: String?
     @State private var supabaseDiagnosticIsError = false
+    @State private var supabaseBaselineSummary: SupabaseCatalogBaselineDebugSummary = .absent
     @State private var isShowingSupabasePullPreview = false
     @State private var supabasePullPreviewState: SupabasePullPreviewViewState = .idle
     @StateObject private var pushPreflightViewModel = SupabasePushPreflightViewModel()
@@ -233,6 +234,48 @@ struct OptionsView: View {
             }
 
             Section {
+                baselineStatusRow
+                if supabaseBaselineSummary.status != .absent {
+                    if let appliedAt = supabaseBaselineSummary.appliedAt {
+                        LabeledContent(
+                            L("options.supabase.baseline.lastPull"),
+                            value: appliedAt.formatted(date: .abbreviated, time: .shortened)
+                        )
+                    }
+                    LabeledContent(
+                        L("options.supabase.baseline.account"),
+                        value: supabaseBaselineSummary.accountAbbreviation ?? L("options.supabase.preview.valueMissing")
+                    )
+                    LabeledContent(
+                        L("options.supabase.baseline.counts.products"),
+                        value: "\(supabaseBaselineSummary.productCount ?? 0)"
+                    )
+                    LabeledContent(
+                        L("options.supabase.baseline.counts.suppliers"),
+                        value: "\(supabaseBaselineSummary.supplierCount ?? 0)"
+                    )
+                    LabeledContent(
+                        L("options.supabase.baseline.counts.categories"),
+                        value: "\(supabaseBaselineSummary.categoryCount ?? 0)"
+                    )
+                    LabeledContent(
+                        L("options.supabase.baseline.schemaVersion"),
+                        value: "\(supabaseBaselineSummary.fingerprintSchemaVersion ?? 0)"
+                    )
+                    LabeledContent(
+                        L("options.supabase.baseline.tombstones"),
+                        value: "\(supabaseBaselineSummary.tombstoneCount ?? 0)"
+                    )
+                }
+            } header: {
+                SectionHeader(title: L("options.supabase.baseline.header"), systemImage: "externaldrive.badge.checkmark")
+            } footer: {
+                Text(L("options.supabase.baseline.footer"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 preflightStateRow
 
                 Button {
@@ -315,14 +358,21 @@ struct OptionsView: View {
         .onDisappear {
             pushPreflightViewModel.cancel()
         }
+        .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
+            refreshSupabaseBaselineSummary()
+        }
         .sheet(isPresented: $isShowingSupabasePullPreview) {
             SupabasePullPreviewSheet(
                 state: supabasePullPreviewState,
                 isAuthenticated: supabaseAuthViewModel.isSignedIn,
-                currentUserID: supabaseAuthViewModel.sessionInfo?.userID
-            ) {
-                isShowingSupabasePullPreview = false
-            }
+                currentUserID: supabaseAuthViewModel.sessionInfo?.userID,
+                baselineDidChange: {
+                    refreshSupabaseBaselineSummary()
+                },
+                close: {
+                    isShowingSupabasePullPreview = false
+                }
+            )
         }
 #endif
     }
@@ -338,8 +388,7 @@ struct OptionsView: View {
     private var isPushPreflightAccountReady: Bool {
         supabaseAuthViewModel.isSignedIn
             && supabaseAuthViewModel.sessionInfo?.isExpired == false
-            && UUID(uuidString: supabaseLastLinkedUserID) != nil
-            && supabaseAuthViewModel.sessionInfo?.userID == UUID(uuidString: supabaseLastLinkedUserID)
+            && supabaseAuthViewModel.sessionInfo?.userID != nil
     }
 
     private var displayedPushPreflightState: SupabasePushPreflightViewModel.ViewState {
@@ -370,6 +419,21 @@ struct OptionsView: View {
             Image(systemName: supabaseAuthStatusSystemImage)
                 .foregroundStyle(supabaseAuthStatusColor)
         }
+    }
+
+    private var baselineStatusRow: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L("options.supabase.baseline.status.label"))
+                Text(L("options.supabase.baseline.status.\(supabaseBaselineSummary.status.rawValue)"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        } icon: {
+            Image(systemName: baselineStatusSymbol(supabaseBaselineSummary.status))
+                .foregroundStyle(baselineStatusColor(supabaseBaselineSummary.status))
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private var localizedSupabaseAuthStatus: String {
@@ -481,6 +545,17 @@ struct OptionsView: View {
             currentUserID: supabaseAuthViewModel.sessionInfo?.userID,
             lastLinkedUserID: UUID(uuidString: supabaseLastLinkedUserID)
         )
+    }
+
+    private func refreshSupabaseBaselineSummary() {
+        do {
+            supabaseBaselineSummary = try SupabaseCatalogBaselineReader().debugSummary(
+                context: modelContext,
+                currentUserUUID: supabaseAuthViewModel.sessionInfo?.userID
+            )
+        } catch {
+            supabaseBaselineSummary = .absent
+        }
     }
 
     @ViewBuilder
@@ -632,6 +707,32 @@ struct OptionsView: View {
         }
     }
 
+    private func baselineStatusSymbol(_ status: SupabaseCatalogBaselineDebugStatus) -> String {
+        switch status {
+        case .absent:
+            return "externaldrive.badge.questionmark"
+        case .valid:
+            return "checkmark.seal.fill"
+        case .stale:
+            return "clock.badge.exclamationmark"
+        case .accountMismatch:
+            return "person.crop.circle.badge.exclamationmark"
+        case .incomplete:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private func baselineStatusColor(_ status: SupabaseCatalogBaselineDebugStatus) -> Color {
+        switch status {
+        case .valid:
+            return .green
+        case .stale, .accountMismatch, .incomplete:
+            return .orange
+        case .absent:
+            return .secondary
+        }
+    }
+
     private func localizedSupabaseDiagnosticMessage(for result: SupabaseInventoryDiagnosticResult) -> String {
         switch result {
         case .catalogProbeSucceeded(let rowCount):
@@ -777,12 +878,14 @@ private struct SupabasePullPreviewSheet: View {
     @State private var isApplyingLocalPreview = false
     @State private var isShowingApplyConfirmation = false
     @State private var pendingApplyPlan: SupabasePullApplyPlan?
+    @State private var pendingApplyPreview: SyncPreview?
     @State private var applyStatusMessage: String?
     @State private var applyErrorMessage: String?
 
     let state: SupabasePullPreviewViewState
     let isAuthenticated: Bool
     let currentUserID: UUID?
+    let baselineDidChange: () -> Void
     let close: () -> Void
 
     var body: some View {
@@ -878,7 +981,7 @@ private struct SupabasePullPreviewSheet: View {
             presenting: pendingApplyPlan
         ) { plan in
             Button(L("options.supabase.apply.confirm.apply")) {
-                applyLocalPreview(plan)
+                applyLocalPreview(plan, preview: pendingApplyPreview)
             }
             Button(L("options.supabase.preview.close"), role: .cancel) {}
         } message: { _ in
@@ -1170,6 +1273,7 @@ private struct SupabasePullPreviewSheet: View {
                 accountGuard: accountGuard
             )
             pendingApplyPlan = plan
+            pendingApplyPreview = preview
             applyStatusMessage = nil
             applyErrorMessage = nil
             isShowingApplyConfirmation = true
@@ -1182,7 +1286,7 @@ private struct SupabasePullPreviewSheet: View {
         }
     }
 
-    private func applyLocalPreview(_ plan: SupabasePullApplyPlan) {
+    private func applyLocalPreview(_ plan: SupabasePullApplyPlan, preview: SyncPreview?) {
         guard !isApplyingLocalPreview else { return }
 
         isApplyingLocalPreview = true
@@ -1194,8 +1298,28 @@ private struct SupabasePullPreviewSheet: View {
 
             do {
                 let result = try SupabasePullApplyService().apply(plan: plan, context: modelContext)
-                applyStatusMessage = L("options.supabase.apply.success", result.inserted, result.updated)
+                var statusMessage = L("options.supabase.apply.success", result.inserted, result.updated)
+                if let currentUserID, let preview {
+                    do {
+                        let baselineResult = try SupabaseCatalogBaselineWriter()
+                            .commitAfterSuccessfulFullPullApply(
+                                preview: preview,
+                                context: modelContext,
+                                ownerUserUUID: currentUserID
+                            )
+                        statusMessage += "\n" + L(
+                            "options.supabase.baseline.commit.success",
+                            baselineResult.productCount,
+                            baselineResult.supplierCount,
+                            baselineResult.categoryCount
+                        )
+                    } catch {
+                        statusMessage += "\n" + L("options.supabase.baseline.commit.failed")
+                    }
+                }
+                applyStatusMessage = statusMessage
                 applyErrorMessage = nil
+                baselineDidChange()
                 if let currentUserID {
                     supabaseLastLinkedUserID = currentUserID.uuidString
                 }
@@ -1208,6 +1332,7 @@ private struct SupabasePullPreviewSheet: View {
             }
 
             pendingApplyPlan = nil
+            pendingApplyPreview = nil
             isApplyingLocalPreview = false
         }
     }

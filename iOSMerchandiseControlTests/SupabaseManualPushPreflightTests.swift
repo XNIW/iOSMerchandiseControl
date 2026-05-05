@@ -253,7 +253,7 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
         XCTAssertFalse(plan.candidates.contains { $0.action == .dryRunCreateCandidate })
     }
 
-    func testInvalidBaselineIsHandledAsMissingBaseline() {
+    func testInvalidBaselineIsHandledAsStaleOrPartialBaseline() {
         let remoteID = UUID()
         let local = product(remoteID: remoteID, barcode: "100")
         let plan = makePlan(
@@ -264,7 +264,7 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
             products: [local]
         )
 
-        XCTAssertTrue(plan.blockedReasons.contains(.blockedMissingBaseline))
+        XCTAssertTrue(plan.blockedReasons.contains(.blockedStaleOrPartialBaseline))
         XCTAssertTrue(plan.candidates.isEmpty)
     }
 

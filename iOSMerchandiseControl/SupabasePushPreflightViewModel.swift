@@ -37,14 +37,17 @@ final class SupabasePushPreflightViewModel: ObservableObject {
     @Published private(set) var state: ViewState = .idle
 
     private let service: SupabaseManualPushPreflightService
+    private let baselineReader: SupabaseCatalogBaselineReader
     private var runningTask: Task<Void, Never>?
     private let examplesLimit: Int
 
     init(
         service: SupabaseManualPushPreflightService = SupabaseManualPushPreflightService(),
+        baselineReader: SupabaseCatalogBaselineReader = SupabaseCatalogBaselineReader(),
         examplesLimit: Int = 3
     ) {
         self.service = service
+        self.baselineReader = baselineReader
         self.examplesLimit = max(1, examplesLimit)
     }
 
@@ -64,7 +67,7 @@ final class SupabasePushPreflightViewModel: ObservableObject {
         lastLinkedUserID: UUID?
     ) {
         guard !isRunning else { return }
-        guard isSignedIn, currentUserID != nil, lastLinkedUserID != nil else {
+        guard isSignedIn, currentUserID != nil else {
             state = .accountNotLinked
             return
         }
@@ -112,49 +115,67 @@ final class SupabasePushPreflightViewModel: ObservableObject {
     ) throws -> ManualPushPreflightInput {
         let productStates = try SwiftDataInventorySnapshotService(context: context)
             .makeManualPushPreflightProductStates()
-        let baseline = makeLocalBaseline(products: productStates)
+        let baselineResult = try baselineReader.readManualPushBaseline(
+            context: context,
+            ownerUserUUID: try requireUserID(currentUserID)
+        )
+        let mappedBaseline = mapBaselineResult(
+            baselineResult,
+            currentUserID: currentUserID
+        )
 
         return ManualPushPreflightInput(
             pullState: ManualPushPullState(isComplete: true, hasSourceErrors: false),
-            accountState: ManualPushAccountState(
+            accountState: mappedBaseline.accountState ?? ManualPushAccountState(
                 currentUserID: currentUserID,
-                lastLinkedUserID: lastLinkedUserID
+                lastLinkedUserID: lastLinkedUserID ?? currentUserID
             ),
-            baseline: baseline,
+            baseline: mappedBaseline.baseline,
             products: productStates
         )
     }
 
-    private func makeLocalBaseline(products: [ManualPushProductState]) -> ManualPushBaseline? {
-        var productFingerprintsByRemoteID: [UUID: ManualPushFingerprint] = [:]
-        var remoteProductIDsByBarcode: [String: UUID] = [:]
-        var remoteUpdatedAtByProductID: [UUID: Date] = [:]
-        var remoteDeletedAtByProductID: [UUID: Date] = [:]
-
-        for product in products {
-            guard let remoteID = product.remoteID else { continue }
-            productFingerprintsByRemoteID[remoteID] = product.catalogFingerprint
-            if let normalizedBarcode = ManualPushFingerprintNormalizer.semanticString(product.barcode) {
-                remoteProductIDsByBarcode[normalizedBarcode] = remoteID
-            }
-            if let remoteUpdatedAt = product.remoteUpdatedAt {
-                remoteUpdatedAtByProductID[remoteID] = remoteUpdatedAt
-            }
-            if let remoteDeletedAt = product.remoteDeletedAt {
-                remoteDeletedAtByProductID[remoteID] = remoteDeletedAt
-            }
+    private func requireUserID(_ currentUserID: UUID?) throws -> UUID {
+        guard let currentUserID else {
+            throw SupabasePushPreflightInputError.missingUserID
         }
+        return currentUserID
+    }
 
-        guard !productFingerprintsByRemoteID.isEmpty else {
-            return nil
+    private func mapBaselineResult(
+        _ result: SupabaseCatalogBaselineReadResult,
+        currentUserID: UUID?
+    ) -> (baseline: ManualPushBaseline?, accountState: ManualPushAccountState?) {
+        switch result {
+        case .available(let snapshot):
+            return (
+                baseline: snapshot.baseline,
+                accountState: ManualPushAccountState(currentUserID: currentUserID, lastLinkedUserID: snapshot.ownerUserUUID)
+            )
+        case .missing:
+            return (baseline: nil, accountState: nil)
+        case .accountMismatch:
+            return (
+                baseline: nil,
+                accountState: ManualPushAccountState(currentUserID: currentUserID, lastLinkedUserID: UUID())
+            )
+        case .staleSchema:
+            return (
+                baseline: ManualPushBaseline(
+                    productFingerprintsByRemoteID: [:],
+                    invalidationReasons: [.fingerprintVersionChanged]
+                ),
+                accountState: nil
+            )
+        case .incomplete:
+            return (
+                baseline: ManualPushBaseline(
+                    productFingerprintsByRemoteID: [:],
+                    invalidationReasons: [.partialPull]
+                ),
+                accountState: nil
+            )
         }
-
-        return ManualPushBaseline(
-            productFingerprintsByRemoteID: productFingerprintsByRemoteID,
-            remoteProductIDsByBarcode: remoteProductIDsByBarcode,
-            remoteUpdatedAtByProductID: remoteUpdatedAtByProductID,
-            remoteDeletedAtByProductID: remoteDeletedAtByProductID
-        )
     }
 
     static func makeCompletedState(
@@ -233,4 +254,8 @@ final class SupabasePushPreflightViewModel: ObservableObject {
         case .info: return 3
         }
     }
+}
+
+private enum SupabasePushPreflightInputError: Error {
+    case missingUserID
 }

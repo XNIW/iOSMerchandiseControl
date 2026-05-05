@@ -61,6 +61,35 @@ final class ManualPushFingerprintNormalizerTests: XCTestCase {
         )
     }
 
+    func testSameSemanticProductInputBuildsSameFingerprint() {
+        let supplierID = UUID(uuidString: "00000000-0000-0000-0000-0000000000AA")!
+        let categoryID = UUID(uuidString: "00000000-0000-0000-0000-0000000000BB")!
+        let first = ManualPushFingerprintNormalizer.product(
+            barcode: "\n123 ",
+            itemNumber: " SKU ",
+            productName: " Product ",
+            secondProductName: " ",
+            purchasePrice: 1,
+            retailPrice: 2.50,
+            stockQuantity: 3.0,
+            supplierRemoteID: supplierID,
+            categoryRemoteID: categoryID
+        )
+        let second = ManualPushFingerprintNormalizer.product(
+            barcode: "123",
+            itemNumber: "SKU",
+            productName: "Product",
+            secondProductName: "",
+            purchasePrice: 1.00,
+            retailPrice: 2.5,
+            stockQuantity: 3,
+            supplierRemoteID: supplierID,
+            categoryRemoteID: categoryID
+        )
+
+        XCTAssertEqual(first, second)
+    }
+
     func testUUIDUsesCanonicalLowercaseString() {
         let supplierID = UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!
         let fingerprint = ManualPushFingerprintNormalizer.product(
@@ -108,6 +137,19 @@ final class ManualPushFingerprintNormalizerTests: XCTestCase {
         XCTAssertNotEqual(first, second)
     }
 
+    func testSupplierSameNameDifferentRemoteIDDoesNotMerge() {
+        let first = ManualPushFingerprintNormalizer.supplier(
+            remoteID: UUID(uuidString: "00000000-0000-0000-0000-0000000000AA")!,
+            name: "Same Supplier"
+        )
+        let second = ManualPushFingerprintNormalizer.supplier(
+            remoteID: UUID(uuidString: "00000000-0000-0000-0000-0000000000BB")!,
+            name: "Same Supplier"
+        )
+
+        XCTAssertNotEqual(first, second)
+    }
+
     func testNumberNormalizationIsStable() {
         let first = ManualPushFingerprintNormalizer.product(
             barcode: "123",
@@ -136,5 +178,16 @@ final class ManualPushFingerprintNormalizerTests: XCTestCase {
         XCTAssertTrue(first.canonicalString.contains("purchasePrice=number:1.23"))
         XCTAssertTrue(first.canonicalString.contains("retailPrice=number:2"))
         XCTAssertTrue(first.canonicalString.contains("stockQuantity=number:0"))
+    }
+
+    func testDecimalCanonicalStringTreatsEquivalentScaleAsSame() {
+        XCTAssertEqual(
+            SupabaseCatalogFingerprintNormalizer.canonicalDecimalString(Decimal(string: "1")),
+            SupabaseCatalogFingerprintNormalizer.canonicalDecimalString(Decimal(string: "1.0"))
+        )
+        XCTAssertEqual(
+            SupabaseCatalogFingerprintNormalizer.canonicalDecimalString(Decimal(string: "1.00")),
+            "1"
+        )
     }
 }

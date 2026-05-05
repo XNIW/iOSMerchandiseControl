@@ -30,7 +30,9 @@ struct iOSMerchandiseControlApp: App {
             Supplier.self,
             ProductCategory.self,
             HistoryEntry.self,
-            ProductPrice.self
+            ProductPrice.self,
+            SupabaseCatalogBaselineRun.self,
+            SupabaseCatalogBaselineRecord.self
         ])
     }
 

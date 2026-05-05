@@ -189,6 +189,24 @@
 "options.supabase.apply.disabled.invalidStockQuantity" = "Quantita remota non valida: apply locale bloccato.";
 "options.supabase.apply.disabled.previewStale" = "Il database locale e cambiato. Rigenera la preview.";
 "options.supabase.apply.disabled.noApplicableChanges" = "Nessuna modifica locale applicabile.";
+
+"options.supabase.baseline.header" = "Baseline Supabase locale";
+"options.supabase.baseline.status.label" = "Stato baseline";
+"options.supabase.baseline.status.absent" = "Nessuna baseline salvata";
+"options.supabase.baseline.status.valid" = "Baseline attiva";
+"options.supabase.baseline.status.stale" = "Baseline obsoleta (schema)";
+"options.supabase.baseline.status.accountMismatch" = "Account diverso dalla baseline";
+"options.supabase.baseline.status.incomplete" = "Baseline incompleta";
+"options.supabase.baseline.lastPull" = "Ultimo pull completo";
+"options.supabase.baseline.account" = "Account";
+"options.supabase.baseline.counts.products" = "Prodotti";
+"options.supabase.baseline.counts.suppliers" = "Fornitori";
+"options.supabase.baseline.counts.categories" = "Categorie";
+"options.supabase.baseline.schemaVersion" = "Schema fingerprint";
+"options.supabase.baseline.tombstones" = "Tombstone";
+"options.supabase.baseline.footer" = "Push reale non ancora disponibile.";
+"options.supabase.baseline.commit.success" = "Baseline salvata: %d prodotti, %d fornitori, %d categorie.";
+"options.supabase.baseline.commit.failed" = "Apply locale riuscito, ma la baseline non e' stata aggiornata. Ripeti un pull/apply completo prima del preflight.";
 "options.supabase.pushpreflight.header" = "Verifica locale preflight";
 "options.supabase.pushpreflight.run" = "Esegui verifica locale";
 "options.supabase.pushpreflight.running" = "Analisi locale in corso...";
@@ -216,6 +234,7 @@
 "options.supabase.pushpreflight.category.blockedAccountMismatch" = "Bloccati: account mismatch: %d";
 "options.supabase.pushpreflight.category.blockedPartialPull" = "Bloccati: pull parziale: %d";
 "options.supabase.pushpreflight.category.blockedMissingBaseline" = "Bloccati: baseline mancante: %d";
+"options.supabase.pushpreflight.category.blockedStaleOrPartialBaseline" = "Bloccati: baseline obsoleta o incompleta: %d";
 "options.supabase.pushpreflight.category.blockedRemoteConflict" = "Bloccati: conflitto remoto: %d";
 "options.supabase.pushpreflight.category.blockedTombstoneConflict" = "Bloccati: tombstone remoto: %d";
 "options.supabase.pushpreflight.category.blockedMissingSupplierCategoryRemoteID" = "Bloccati: supplier/category senza remoteID: %d";

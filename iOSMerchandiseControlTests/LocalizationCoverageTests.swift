@@ -24,6 +24,37 @@ final class LocalizationCoverageTests: XCTestCase {
         }
     }
 
+    func testTask043BaselineLocalizationKeysExistInSupportedLanguages() throws {
+        let keys = [
+            "options.supabase.baseline.header",
+            "options.supabase.baseline.status.label",
+            "options.supabase.baseline.status.absent",
+            "options.supabase.baseline.status.valid",
+            "options.supabase.baseline.status.stale",
+            "options.supabase.baseline.status.accountMismatch",
+            "options.supabase.baseline.status.incomplete",
+            "options.supabase.baseline.lastPull",
+            "options.supabase.baseline.account",
+            "options.supabase.baseline.counts.products",
+            "options.supabase.baseline.counts.suppliers",
+            "options.supabase.baseline.counts.categories",
+            "options.supabase.baseline.schemaVersion",
+            "options.supabase.baseline.tombstones",
+            "options.supabase.baseline.footer",
+            "options.supabase.baseline.commit.success",
+            "options.supabase.baseline.commit.failed",
+            "options.supabase.pushpreflight.category.blockedStaleOrPartialBaseline"
+        ]
+
+        for language in ["it", "en", "es", "zh-Hans"] {
+            let strings = try loadStrings(language: language)
+            for key in keys {
+                XCTAssertNotNil(strings[key], "\(key) missing in \(language)")
+                XCTAssertFalse(strings[key]?.isEmpty ?? true, "\(key) empty in \(language)")
+            }
+        }
+    }
+
     private func loadStrings(language: String) throws -> [String: String] {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
