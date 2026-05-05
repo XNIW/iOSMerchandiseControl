@@ -18,12 +18,23 @@ private actor PriceHistoryBackfillRunner {
 }
 
 struct ContentView: View {
+    private let supabaseInventoryService: SupabaseInventoryService?
+    private let supabasePullPreviewService: SupabasePullPreviewService?
+
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     @Environment(\.modelContext) private var modelContext
     @StateObject private var excelSession = ExcelSessionViewModel()
     @State private var selectedTab = 0
     @State private var didSchedulePriceHistoryBackfillThisLaunch = false
+
+    init(
+        supabaseInventoryService: SupabaseInventoryService? = nil,
+        supabasePullPreviewService: SupabasePullPreviewService? = nil
+    ) {
+        self.supabaseInventoryService = supabaseInventoryService
+        self.supabasePullPreviewService = supabasePullPreviewService
+    }
 
     private var resolvedColorScheme: ColorScheme? {
         switch appTheme {
@@ -68,7 +79,10 @@ struct ContentView: View {
 
             // TAB 4: Opzioni
             NavigationStack {
-                OptionsView()
+                OptionsView(
+                    supabaseInventoryService: supabaseInventoryService,
+                    supabasePullPreviewService: supabasePullPreviewService
+                )
             }
             .tabItem {
                 Label(L("tab.options"), systemImage: "gearshape")
@@ -116,6 +130,7 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environmentObject(SupabaseAuthViewModel(authService: nil))
         .modelContainer(
             for: [
                 Product.self,

@@ -3,9 +3,27 @@ import SwiftData
 
 @main
 struct iOSMerchandiseControlApp: App {
+    @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
+    private let supabaseInventoryService: SupabaseInventoryService?
+    private let supabasePullPreviewService: SupabasePullPreviewService?
+
+    init() {
+        let dependencies = Self.makeSupabaseDependencies()
+        _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
+        supabaseInventoryService = dependencies.inventoryService
+        supabasePullPreviewService = dependencies.pullPreviewService
+    }
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(
+                supabaseInventoryService: supabaseInventoryService,
+                supabasePullPreviewService: supabasePullPreviewService
+            )
+            .environmentObject(supabaseAuthViewModel)
+            .onOpenURL { url in
+                _ = supabaseAuthViewModel.handleOpenURL(url)
+            }
         }
         .modelContainer(for: [
             Product.self,
@@ -15,4 +33,43 @@ struct iOSMerchandiseControlApp: App {
             ProductPrice.self
         ])
     }
+
+    private static func makeSupabaseDependencies() -> SupabaseAppDependencies {
+        do {
+            let config = try SupabaseConfig.load()
+            let provider = SupabaseClientProvider(config: config)
+            let authService = SupabaseAuthService(provider: provider)
+            let inventoryService = SupabaseInventoryService(clientProvider: provider)
+            let previewService = SupabasePullPreviewService(inventoryService: inventoryService)
+            return SupabaseAppDependencies(
+                authViewModel: SupabaseAuthViewModel(authService: authService),
+                inventoryService: inventoryService,
+                pullPreviewService: previewService
+            )
+        } catch SupabaseConfigError.configMissing {
+            return SupabaseAppDependencies(
+                authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .configMissing),
+                inventoryService: nil,
+                pullPreviewService: nil
+            )
+        } catch SupabaseConfigError.invalidConfig {
+            return SupabaseAppDependencies(
+                authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .invalidConfig),
+                inventoryService: nil,
+                pullPreviewService: nil
+            )
+        } catch {
+            return SupabaseAppDependencies(
+                authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .unknown(message: String(describing: error))),
+                inventoryService: nil,
+                pullPreviewService: nil
+            )
+        }
+    }
+}
+
+private struct SupabaseAppDependencies {
+    let authViewModel: SupabaseAuthViewModel
+    let inventoryService: SupabaseInventoryService?
+    let pullPreviewService: SupabasePullPreviewService?
 }

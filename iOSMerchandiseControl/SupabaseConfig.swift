@@ -1,5 +1,4 @@
 import Foundation
-import Supabase
 
 nonisolated enum SupabaseConfigError: Error, Sendable {
     case configMissing
@@ -48,10 +47,6 @@ nonisolated struct SupabaseConfig: Sendable {
         return SupabaseConfig(projectURL: projectURL, publishableKey: publishableKey)
     }
 
-    func makeClient() -> SupabaseClient {
-        SupabaseClient(supabaseURL: projectURL, supabaseKey: publishableKey)
-    }
-
     private static func normalizedString(_ value: Any?) -> String? {
         guard let text = value as? String else { return nil }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -64,8 +59,34 @@ nonisolated struct SupabaseConfig: Sendable {
 
     private static func isServerOnlyKey(_ value: String) -> Bool {
         let lowercased = value.lowercased()
-        return lowercased.hasPrefix("sb_secret_")
+        if lowercased.hasPrefix("sb_secret_")
             || lowercased.contains("service_role")
-            || lowercased.contains("secret_key")
+            || lowercased.contains("secret_key") {
+            return true
+        }
+
+        return decodedJWTRole(value) == "service_role"
+    }
+
+    private static func decodedJWTRole(_ value: String) -> String? {
+        let segments = value.split(separator: ".")
+        guard segments.count == 3 else { return nil }
+
+        var payload = String(segments[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+
+        let padding = payload.count % 4
+        if padding > 0 {
+            payload += String(repeating: "=", count: 4 - padding)
+        }
+
+        guard let data = Data(base64Encoded: payload),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let role = object["role"] as? String else {
+            return nil
+        }
+
+        return role.lowercased()
     }
 }

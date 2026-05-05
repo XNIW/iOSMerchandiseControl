@@ -8,7 +8,7 @@ nonisolated struct SupabasePullPreviewService: Sendable {
     private let maxProductPriceRows: Int
 
     init(
-        inventoryService: SupabaseInventoryService = SupabaseInventoryService(),
+        inventoryService: SupabaseInventoryService,
         pageSize: Int = 500,
         maxCatalogRows: Int = 10_000,
         maxProductPriceRows: Int = 2_000

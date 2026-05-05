@@ -4,6 +4,7 @@ import Supabase
 nonisolated enum SupabaseInventoryServiceError: Error, Sendable {
     case configMissing
     case invalidConfig
+    case sessionMissing
     case networkError(statusCode: Int?, message: String?)
     case permissionDeniedOrRLS(statusCode: Int?, code: String?, message: String?)
     case decodingError(message: String?)
@@ -12,7 +13,7 @@ nonisolated enum SupabaseInventoryServiceError: Error, Sendable {
 
     var safeDiagnosticDetail: String? {
         switch self {
-        case .configMissing, .invalidConfig:
+        case .configMissing, .invalidConfig, .sessionMissing:
             return nil
         case .networkError(let statusCode, let message):
             return Self.detail(statusCode: statusCode, code: nil, message: message)
@@ -63,15 +64,14 @@ nonisolated enum SupabaseInventoryDiagnosticResult: Sendable {
 }
 
 actor SupabaseInventoryService {
-    private let urlSession: URLSession
+    private let clientProvider: SupabaseClientProvider
 
-    init(urlSession: URLSession = .shared) {
-        self.urlSession = urlSession
+    init(clientProvider: SupabaseClientProvider) {
+        self.clientProvider = clientProvider
     }
 
     func testConnection() async throws -> SupabaseInventoryDiagnosticResult {
-        let config = try loadConfig()
-        try await validateProjectReachability(config)
+        try await requireAuthenticatedSession()
         let products = try await fetchProducts(limit: 1)
         return .catalogProbeSucceeded(rowCount: products.count)
     }
@@ -149,8 +149,8 @@ actor SupabaseInventoryService {
         columns: String,
         limit: Int
     ) async throws -> [Row] {
-        let config = try loadConfig()
-        let client = config.makeClient()
+        try await requireAuthenticatedSession()
+        let client = clientProvider.client
         let clampedLimit = max(1, min(limit, 1_000))
 
         do {
@@ -181,8 +181,8 @@ actor SupabaseInventoryService {
         from: Int,
         to: Int
     ) async throws -> [Row] {
-        let config = try loadConfig()
-        let client = config.makeClient()
+        try await requireAuthenticatedSession()
+        let client = clientProvider.client
         let start = max(0, from)
         let end = max(start, min(to, start + 999))
 
@@ -209,57 +209,11 @@ actor SupabaseInventoryService {
         }
     }
 
-    private func loadConfig() throws -> SupabaseConfig {
+    private func requireAuthenticatedSession() async throws {
         do {
-            return try SupabaseConfig.load()
-        } catch SupabaseConfigError.configMissing {
-            throw SupabaseInventoryServiceError.configMissing
-        } catch SupabaseConfigError.invalidConfig {
-            throw SupabaseInventoryServiceError.invalidConfig
+            _ = try await clientProvider.client.auth.session
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
-        }
-    }
-
-    private func validateProjectReachability(_ config: SupabaseConfig) async throws {
-        guard let endpoint = URL(string: "/rest/v1/", relativeTo: config.projectURL) else {
-            throw SupabaseInventoryServiceError.invalidConfig
-        }
-
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "GET"
-        request.setValue(config.publishableKey, forHTTPHeaderField: "apikey")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        do {
-            let (_, response) = try await urlSession.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw SupabaseInventoryServiceError.networkError(
-                    statusCode: nil,
-                    message: "Missing HTTP response."
-                )
-            }
-
-            switch httpResponse.statusCode {
-            case 200..<400:
-                return
-            case 401, 403:
-                throw SupabaseInventoryServiceError.invalidConfig
-            default:
-                throw SupabaseInventoryServiceError.networkError(
-                    statusCode: httpResponse.statusCode,
-                    message: HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
-                )
-            }
-        } catch let error as SupabaseInventoryServiceError {
-            throw error
-        } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
-                statusCode: nil,
-                message: error.localizedDescription
-            )
-        } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseInventoryServiceError.sessionMissing
         }
     }
 

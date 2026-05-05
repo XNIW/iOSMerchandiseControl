@@ -18,16 +18,28 @@ struct LanguageOption: Identifiable {
 // MARK: - View principale
 
 struct OptionsView: View {
+    private let supabaseInventoryService: SupabaseInventoryService?
+    private let supabasePullPreviewService: SupabasePullPreviewService?
+
     @Environment(\.modelContext) private var modelContext
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
 #if DEBUG
+    @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @State private var isRunningSupabaseDiagnostic = false
     @State private var supabaseDiagnosticMessage: String?
     @State private var supabaseDiagnosticIsError = false
     @State private var isShowingSupabasePullPreview = false
     @State private var supabasePullPreviewState: SupabasePullPreviewViewState = .idle
 #endif
+
+    init(
+        supabaseInventoryService: SupabaseInventoryService? = nil,
+        supabasePullPreviewService: SupabasePullPreviewService? = nil
+    ) {
+        self.supabaseInventoryService = supabaseInventoryService
+        self.supabasePullPreviewService = supabasePullPreviewService
+    }
 
     // Opzioni tema (equivalenti alle scelte Android)
     private var themeOptions: [ThemeOption] {
@@ -123,19 +135,73 @@ struct OptionsView: View {
 
 #if DEBUG
             Section {
+                supabaseAuthStatusRow
+
+                if supabaseAuthViewModel.isTransitioning {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(L("options.supabase.auth.transitioning"))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if supabaseAuthViewModel.isSignedIn {
+                    Button(role: .destructive) {
+                        supabaseAuthViewModel.signOut()
+                    } label: {
+                        Label(L("options.supabase.auth.signOut"), systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                    .disabled(!supabaseAuthViewModel.canSignOut)
+                } else {
+                    Button {
+                        supabaseAuthViewModel.signInWithGoogle()
+                    } label: {
+                        Label(L("options.supabase.auth.signInGoogle"), systemImage: "person.crop.circle.badge.plus")
+                    }
+                    .disabled(!supabaseAuthViewModel.canSignIn)
+                }
+
                 Button {
                     runSupabaseDiagnostic()
                 } label: {
                     Label(L("options.supabase.diagnostic.button"), systemImage: "network")
                 }
-                .disabled(isRunningSupabaseDiagnostic)
+                .disabled(!canRunAuthenticatedSupabaseActions || isRunningSupabaseDiagnostic)
 
                 Button {
                     runSupabasePullPreview()
                 } label: {
                     Label(L("options.supabase.preview.button"), systemImage: "doc.text.magnifyingglass")
                 }
-                .disabled(isSupabasePullPreviewLoading)
+                .disabled(!canRunAuthenticatedSupabaseActions || isSupabasePullPreviewLoading)
+
+                if !supabaseAuthViewModel.isSignedIn {
+                    Label {
+                        Text(L("options.supabase.auth.sessionRequired"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "lock.fill")
+                            .foregroundStyle(Color.orange)
+                    }
+                }
+
+                if let sessionInfo = supabaseAuthViewModel.sessionInfo {
+                    DisclosureGroup(L("options.supabase.auth.debugDetails")) {
+                        LabeledContent(
+                            L("options.supabase.auth.debug.userId"),
+                            value: sessionInfo.userID.uuidString
+                        )
+                        LabeledContent(
+                            L("options.supabase.auth.debug.provider"),
+                            value: sessionInfo.provider ?? L("options.supabase.auth.providerUnknown")
+                        )
+                        LabeledContent(
+                            L("options.supabase.auth.debug.email"),
+                            value: sessionInfo.displayEmail ?? L("options.supabase.preview.valueMissing")
+                        )
+                    }
+                }
 
                 if isRunningSupabaseDiagnostic {
                     HStack(spacing: 12) {
@@ -156,9 +222,9 @@ struct OptionsView: View {
                     }
                 }
             } header: {
-                SectionHeader(title: L("options.supabase.diagnostic.header"), systemImage: "server.rack")
+                SectionHeader(title: L("options.supabase.auth.header"), systemImage: "person.crop.circle.badge.checkmark")
             } footer: {
-                Text(L("options.supabase.diagnostic.footer"))
+                Text(L("options.supabase.auth.footer"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -188,6 +254,13 @@ struct OptionsView: View {
     }
 
 #if DEBUG
+    private var canRunAuthenticatedSupabaseActions: Bool {
+        supabaseAuthViewModel.isSignedIn
+            && !supabaseAuthViewModel.isTransitioning
+            && supabaseInventoryService != nil
+            && supabasePullPreviewService != nil
+    }
+
     private var isSupabasePullPreviewLoading: Bool {
         if case .loading = supabasePullPreviewState {
             return true
@@ -195,16 +268,86 @@ struct OptionsView: View {
         return false
     }
 
+    private var supabaseAuthStatusRow: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(localizedSupabaseAuthStatus)
+                if case .failed(let error) = supabaseAuthViewModel.state {
+                    Text(localizedSupabaseAuthError(error))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } icon: {
+            Image(systemName: supabaseAuthStatusSystemImage)
+                .foregroundStyle(supabaseAuthStatusColor)
+        }
+    }
+
+    private var localizedSupabaseAuthStatus: String {
+        switch supabaseAuthViewModel.state {
+        case .unconfigured:
+            return L("options.supabase.auth.status.unconfigured")
+        case .signedOut:
+            return L("options.supabase.auth.status.signedOut")
+        case .signingIn:
+            return L("options.supabase.auth.status.signingIn")
+        case .signedIn:
+            if let email = supabaseAuthViewModel.sessionInfo?.displayEmail {
+                return L("options.supabase.auth.status.signedInEmail", email)
+            }
+            return L("options.supabase.auth.status.signedIn")
+        case .signingOut:
+            return L("options.supabase.auth.status.signingOut")
+        case .failed:
+            return L("options.supabase.auth.status.failed")
+        }
+    }
+
+    private var supabaseAuthStatusSystemImage: String {
+        switch supabaseAuthViewModel.state {
+        case .unconfigured:
+            return "exclamationmark.triangle"
+        case .signedOut:
+            return "person.crop.circle.badge.xmark"
+        case .signingIn, .signingOut:
+            return "hourglass"
+        case .signedIn:
+            return "person.crop.circle.badge.checkmark"
+        case .failed:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var supabaseAuthStatusColor: Color {
+        switch supabaseAuthViewModel.state {
+        case .signedIn:
+            return .green
+        case .failed, .unconfigured:
+            return .orange
+        case .signedOut, .signingIn, .signingOut:
+            return .secondary
+        }
+    }
+
     private func runSupabaseDiagnostic() {
         guard !isRunningSupabaseDiagnostic else { return }
+        guard supabaseAuthViewModel.isSignedIn else {
+            supabaseDiagnosticMessage = localizedSupabaseDiagnosticMessage(for: .sessionMissing)
+            supabaseDiagnosticIsError = true
+            return
+        }
+        guard let service = supabaseInventoryService else {
+            supabaseDiagnosticMessage = localizedSupabaseDiagnosticMessage(for: .configMissing)
+            supabaseDiagnosticIsError = true
+            return
+        }
 
         isRunningSupabaseDiagnostic = true
         supabaseDiagnosticMessage = nil
         supabaseDiagnosticIsError = false
 
         Task {
-            let service = SupabaseInventoryService()
-
             do {
                 let result = try await service.testConnection()
                 supabaseDiagnosticMessage = localizedSupabaseDiagnosticMessage(for: result)
@@ -224,12 +367,21 @@ struct OptionsView: View {
 
     private func runSupabasePullPreview() {
         guard !isSupabasePullPreviewLoading else { return }
+        guard supabaseAuthViewModel.isSignedIn else {
+            supabasePullPreviewState = .failed(.service(.sessionMissing))
+            isShowingSupabasePullPreview = true
+            return
+        }
+        guard let service = supabasePullPreviewService else {
+            supabasePullPreviewState = .failed(.service(.configMissing))
+            isShowingSupabasePullPreview = true
+            return
+        }
 
         supabasePullPreviewState = .loading(progressMessage: L("options.supabase.preview.loading"))
         isShowingSupabasePullPreview = true
 
         Task {
-            let service = SupabasePullPreviewService()
             supabasePullPreviewState = await service.generatePreview(context: modelContext)
         }
     }
@@ -249,6 +401,8 @@ struct OptionsView: View {
             baseMessage = L("options.supabase.diagnostic.configMissing")
         case .invalidConfig:
             baseMessage = L("options.supabase.diagnostic.invalidConfig")
+        case .sessionMissing:
+            baseMessage = L("options.supabase.diagnostic.sessionMissing")
         case .networkError:
             baseMessage = L("options.supabase.diagnostic.networkError")
         case .permissionDeniedOrRLS:
@@ -259,6 +413,31 @@ struct OptionsView: View {
             baseMessage = L("options.supabase.diagnostic.schemaDrift")
         case .unknown:
             baseMessage = L("options.supabase.diagnostic.unknown")
+        }
+
+        guard let detail = error.safeDiagnosticDetail else {
+            return baseMessage
+        }
+
+        return L("options.supabase.diagnostic.messageWithDetail", baseMessage, detail)
+    }
+
+    private func localizedSupabaseAuthError(_ error: SupabaseAuthServiceError) -> String {
+        let baseMessage: String
+
+        switch error {
+        case .configMissing:
+            baseMessage = L("options.supabase.diagnostic.configMissing")
+        case .invalidConfig:
+            baseMessage = L("options.supabase.diagnostic.invalidConfig")
+        case .oauthCancelled:
+            baseMessage = L("options.supabase.auth.error.oauthCancelled")
+        case .callbackFailed:
+            baseMessage = L("options.supabase.auth.error.callbackFailed")
+        case .sessionMissing:
+            baseMessage = L("options.supabase.diagnostic.sessionMissing")
+        case .unknown:
+            baseMessage = L("options.supabase.auth.error.unknown")
         }
 
         guard let detail = error.safeDiagnosticDetail else {
@@ -638,6 +817,8 @@ private struct SupabasePullPreviewSheet: View {
             return L("options.supabase.diagnostic.configMissing")
         case .invalidConfig:
             return L("options.supabase.diagnostic.invalidConfig")
+        case .sessionMissing:
+            return L("options.supabase.diagnostic.sessionMissing")
         case .networkError:
             return L("options.supabase.diagnostic.networkError")
         case .permissionDeniedOrRLS:
