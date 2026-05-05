@@ -4,7 +4,7 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**TASK-035** è **DONE / Chiusura**: review tecnica approvata, fix diretti piccoli applicati, build/test/check verdi. Nessun task attivo corrente. **TASK-032** resta in pausa **BLOCKED / on hold** (P5 scanner reopen); **`TASK-028` resta `BLOCKED`.**
+**TASK-037** è **DONE / Chiusura** anche per la **slice 2**: review tecnica approvata, build/test verdi, fixture docs/test allineate e nessuna modifica fuori scope. La **slice 1** resta archiviata come DONE del **2026-04-27**. **TASK-036** resta **DONE** e non viene riaperto. Nessun task attivo corrente; **TASK-032** resta **BLOCKED / on hold**; **TASK-028** resta **BLOCKED**.
 
 ## Stato globale
 IDLE
@@ -14,6 +14,10 @@ IDLE
 > **2026-04-27 (user override):** **TASK-036** promosso ad **ACTIVE / EXECUTION** con responsabile operativo **Cursor/Codex executor**. Nota: l'utente ha proposto `TASK-032`, ma `TASK-032` esiste gia' per un task GeneratedView; per coerenza ID/path viene usato il follow-up gia' presente `TASK-036`. TASK-031 resta DONE e non viene riaperta.
 > **2026-04-27 (handoff):** execution TASK-036 completata da **Cursor/Codex** con build Debug Simulator PASS e fixture documentali sotto `docs/fixtures/TASK-036/`; handoff a **CLAUDE / REVIEW**. Nessun Supabase / nessun `RowDetailSheetView` / nessun redesign PreGenerate.
 > **2026-04-27 (review/close):** **TASK-036** review tecnica completata da **Claude Code reviewer/fixer** con esito **APPROVED_FIXED_DIRECTLY**: fix diretto limitato a righe dirette table/section, scoring piu' conservativo decorative-only, fixture rafforzate e assegnazione per indice logico; build Debug Simulator PASS; task chiuso **DONE** su autorizzazione utente esplicita.
+> **2026-05-04 (planning/tracking/user override):** **TASK-037** ripreso in **ACTIVE / PLANNING** per **slice 2** (solo perfezionamento planning: matrice XCTest estesa 1–8, fixture reali/minimali, append/multi-file, microcopy UX documentata, strategia execution futura). **Nessuna execution Swift** e nessuna modifica a `project.pbxproj` in questo turno. **TASK-036** resta **DONE**. La **slice 1** TASK-037 (target + 5 test, `2026-04-27`) resta archiviata nel file task come chiusura DONE storica. **Review documentale** piano slice 2: **APPROVED** (vedi file task); prossimo passo: **READY FOR REVIEW APPROVAL** / conferma utente → **EXECUTION** solo con **user override** esplicito; slice 2 **non** DONE automatico.
+> **2026-05-04 (execution/user override):** utente ha autorizzato esplicitamente il passaggio di **TASK-037 slice 2** da **PLANNING / READY FOR REVIEW APPROVAL** a **ACTIVE / EXECUTION**. Responsabile operativo **Cursor/Codex executor**; perimetro limitato a test XCTest parser-only, fixture TASK-036 docs/test, tracking, e solo eventuale micro-helper puro in `ExcelSessionViewModel.swift` se indispensabile. **TASK-036** resta **DONE** e non viene riaperto.
+> **2026-05-04 (handoff):** execution **TASK-037 slice 2** completata da **Cursor/Codex**: aggiunti test XCTest parser-only P0/P1/P2, fixture duplicate docs/bundle test allineate, README fixture aggiornato; build Debug Simulator PASS e `xcodebuild test` PASS su iPhone 16e iOS 26.2. Handoff a **Claude / REVIEW**. Nessun `project.pbxproj`, scheme, UI runtime, Supabase o Swift production modificato; **TASK-036** resta **DONE**.
+> **2026-05-04 (review/close/user override):** **TASK-037 slice 2** review tecnica completata da **Codex reviewer/fixer** su override esplicito: nessun problema bloccante, nessun fix test/fixture necessario, `project.pbxproj` senza diff, fixture docs/test allineate, build Debug Simulator PASS e `xcodebuild test` PASS su iPhone 16e iOS 26.2 con 9/9 test HTML parser passati. Task chiuso **DONE / Chiusura**; **TASK-036** resta **DONE** e non viene riaperto.
 > **2026-04-27 (user override):** **TASK-037** creato e promosso ad **ACTIVE / EXECUTION** con responsabile operativo **Cursor/Codex executor** per aggiungere un target XCTest minimale coerente col perimetro TASK-036. TASK-031 e TASK-036 restano DONE e non vengono riaperti.
 > **2026-04-27 (handoff):** execution TASK-037 completata da **Cursor/Codex**: target `iOSMerchandiseControlTests`, scheme condiviso, fixture TASK-036 nel bundle test e suite `ExcelAnalyzerHTMLParsingTests`; `xcodebuild test` PASS su iPhone 16e Simulator; handoff a **CLAUDE / REVIEW**.
 > **2026-04-27 (review/close):** **TASK-037** review tecnica completata da **Claude Code reviewer/fixer** con esito **APPROVED_FIXED_DIRECTLY**: fix diretto limitato a README fixture e rafforzamento multi-table con tabella decorativa post-dati; build Debug Simulator PASS; test XCTest PASS 5/5; task chiuso **DONE** su autorizzazione utente esplicita.
@@ -36,7 +40,7 @@ IDLE
 > **2026-05-04 (execution/user override):** utente ha autorizzato esplicitamente l'**EXECUTION** di **TASK-035**. Codex ha letto task/planning/fonti richieste e aggiornato metadata a **ACTIVE / EXECUTION** con responsabile **Cursor/Codex**; perimetro invariato: preview dry-run Supabase → SwiftData, nessuna scrittura locale/remota, nessun apply/merge/backfill/sync reale.
 > **2026-05-04 (handoff):** execution TASK-035 completata da **Cursor/Codex**: modelli preview/snapshot Sendable, snapshot SwiftData read-only, fetch Supabase paginato read-only, diff engine conservativo, UI DEBUG localizzata, test XCTest puri PASS; build quiet PASS; nessuna scrittura locale/remota, nessun apply/merge/backfill/sync reale. Handoff a **CLAUDE / REVIEW**.
 > **2026-05-04 (review/close/user override):** **TASK-035** review tecnica completata con esito **APPROVED / DONE**. Fix diretti piccoli: budget paginazione rispettato sotto page size, test puri aggiunti per barcode remoto vuoto e ProductPrice preview-only, label preview localizzate rifinite. Build Debug PASS, Build Release PASS, XCTest PASS su iPhone 16e iOS 26.1; anti-scrittura locale/remota PASS; localizzazioni e `git diff --check` PASS; nessun segreto/config reale tracciato. Task chiuso **DONE** su override esplicito dell'utente.
-> **Nota corrente:** nessun task attivo. **TASK-035** **DONE / Chiusura**. **TASK-034** **DONE / Chiusura**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**.
+> **Nota corrente:** nessun task attivo. **TASK-037** **DONE / Chiusura** anche per slice 2. **TASK-035** **DONE / Chiusura**. **TASK-034** **DONE / Chiusura**. **TASK-032** in pausa **BLOCKED / on hold**. **TASK-028** — **BLOCKED**.
 
 ## Workflow task attivo
 - **Task attivo:** nessuno
@@ -45,7 +49,7 @@ IDLE
 - **Fase:** —
 - **Responsabile:** —
 - **Ultimo aggiornamento:** 2026-05-04
-- **Nota tracking:** TASK-035 chiuso DONE dopo review approvata e check verdi. Prossimo lavoro da decidere esplicitamente; TASK-032 resta in pausa e TASK-028 resta BLOCKED.
+- **Nota tracking:** TASK-037 slice 2 chiuso DONE dopo review tecnica e check verdi. Nessun `project.pbxproj`/scheme/UI/Supabase. TASK-036 **DONE** invariato.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -93,7 +97,7 @@ Qualunque altra transizione è invalida.
 - Fase attuale: —
 - Responsabile attuale: —
 - Ultimo aggiornamento: 2026-05-04
-- Nota tracking: nessun task attivo. **TASK-035 DONE / Chiusura**; **TASK-034 DONE / Chiusura**; **TASK-032 BLOCKED / on hold**; **TASK-028 BLOCKED**.
+- Nota tracking: nessun task attivo. **TASK-037 DONE / Chiusura** anche per slice 2; **TASK-036 DONE** invariato; TASK-032 BLOCKED on hold; TASK-028 BLOCKED.
 
 Follow-up candidate post TASK-035:
 - Apply locale controllato dopo conferma utente.
@@ -289,7 +293,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-029 | iOS Completion Tracking Cleanup + Manual Validation Matrix | 2026-04-26 |
 | TASK-031 | Import recognition hardening: canonical headers HTML/Excel | 2026-04-27 |
 | TASK-036 | Import HTML advanced table parsing: colspan/rowspan/multi-table hardening | 2026-04-27 |
-| TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | 2026-04-27 |
+| TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | 2026-04-27 *(slice 1); 2026-05-04 slice 2* |
 | TASK-033 | Supabase schema audit and iOS/Android model mapping | 2026-05-03 |
 | TASK-034 | Supabase iOS foundation: client config + DTO readonly | 2026-05-04 |
 | TASK-035 | Manual Supabase pull to SwiftData dry-run | 2026-05-04 |
