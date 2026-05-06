@@ -316,12 +316,10 @@ final class SupabaseProductPricePreviewServiceTests: XCTestCase {
         XCTAssertFalse(previewSource.contains("ProductPrice("))
         XCTAssertFalse(previewSource.contains("ModelContext.insert"))
         XCTAssertNil(previewSource.range(of: #"upsert|\.insert\(|\.update\(|\.delete\("#, options: .regularExpression))
-        XCTAssertNil(
-            inventorySource.range(
-                of: #"inventory_product_prices"[\s\S]{0,300}(upsert|\.insert\(|\.update\(|\.delete\()"#,
-                options: .regularExpression
-            )
-        )
+        let previewFetchStart = try XCTUnwrap(inventorySource.range(of: "func fetchProductPricesPreviewPage"))
+        let previewFetchEnd = try XCTUnwrap(inventorySource.range(of: "func fetchProductPricesForPushDryRunDedupePage"))
+        let previewFetchSource = String(inventorySource[previewFetchStart.lowerBound..<previewFetchEnd.lowerBound])
+        XCTAssertNil(previewFetchSource.range(of: #"upsert|\.insert\(|\.update\(|\.delete\("#, options: .regularExpression))
     }
 
     private func makeSummary(

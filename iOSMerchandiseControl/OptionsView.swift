@@ -41,9 +41,8 @@ struct OptionsView: View {
     @State private var productPriceApplyRequestID: UUID?
     @State private var pendingProductPriceApplyPlan: ProductPriceApplyPlan?
     @State private var isShowingProductPriceApplyConfirmation = false
-    @State private var productPricePushDryRunState: ProductPricePushDryRunViewState = .idle
-    @State private var productPricePushDryRunTask: Task<Void, Never>?
-    @State private var productPricePushDryRunRequestID = 0
+    @StateObject private var productPriceManualPushViewModel: ProductPriceManualPushDebugViewModel
+    @State private var isShowingProductPriceManualPushConfirmation = false
     @StateObject private var pushPreflightViewModel: SupabasePushPreflightViewModel
     @State private var selectedPushPreflightScope: ManualPushPreflightScope = .global
     @State private var isRunningTask045RemoteCollisionCheck = false
@@ -62,6 +61,9 @@ struct OptionsView: View {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
 #if DEBUG
+        _productPriceManualPushViewModel = StateObject(
+            wrappedValue: ProductPriceManualPushDebugViewModel(remote: supabaseInventoryService)
+        )
         _pushPreflightViewModel = StateObject(
             wrappedValue: SupabasePushPreflightViewModel(manualPushService: supabaseManualPushService)
         )
@@ -252,11 +254,33 @@ struct OptionsView: View {
 
                 productPricePreviewCard
                 productPriceApplyCard
-                productPricePushDryRunCard
             } header: {
                 SectionHeader(title: L("options.supabase.auth.header"), systemImage: "person.crop.circle.badge.checkmark")
             } footer: {
                 Text(L("options.supabase.auth.footer"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                DisclosureGroup {
+                    productPriceManualPushCard
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(L("options.supabase.priceManualPush.title"))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Spacer()
+                        productPriceApplyBadge("options.supabase.priceManualPush.badge.manual", color: .blue)
+                            .accessibilityLabel(L("options.supabase.priceManualPush.accessibility.manual"))
+                        productPriceApplyBadge("options.supabase.priceManualPush.badge.debug", color: .orange)
+                            .accessibilityLabel(L("options.supabase.priceManualPush.accessibility.debug"))
+                    }
+                }
+            } header: {
+                SectionHeader(title: L("options.advanced.header"), systemImage: "wrench.and.screwdriver.fill")
+            } footer: {
+                Text(L("options.supabase.priceManualPush.footer"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -465,7 +489,7 @@ struct OptionsView: View {
         .onDisappear {
             resetProductPricePreview()
             resetProductPriceApply()
-            resetProductPricePushDryRun()
+            resetProductPriceManualPush()
             pushPreflightViewModel.cancel()
         }
         .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
@@ -495,13 +519,13 @@ struct OptionsView: View {
         .onChange(of: supabaseAuthViewModel.sessionInfo?.userID) { _, _ in
             resetProductPricePreview()
             resetProductPriceApply()
-            resetProductPricePushDryRun()
+            resetProductPriceManualPush()
         }
         .onChange(of: supabaseAuthViewModel.isSignedIn) { _, isSignedIn in
             if !isSignedIn {
                 resetProductPricePreview()
                 resetProductPriceApply()
-                resetProductPricePushDryRun()
+                resetProductPriceManualPush()
             }
         }
         .sheet(isPresented: $isShowingSupabasePullPreview) {
@@ -532,6 +556,18 @@ struct OptionsView: View {
             if let pendingProductPriceApplyPlan {
                 Text(productPriceApplyConfirmationMessage(for: pendingProductPriceApplyPlan))
             }
+        }
+        .confirmationDialog(
+            L("options.supabase.priceManualPush.confirm.title"),
+            isPresented: $isShowingProductPriceManualPushConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L("options.supabase.priceManualPush.confirm.push")) {
+                runConfirmedProductPriceManualPush()
+            }
+            Button(L("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(productPriceManualPushConfirmationMessage())
         }
         .confirmationDialog(
             L("options.supabase.manualpush.confirm.title"),
@@ -687,23 +723,26 @@ struct OptionsView: View {
     }
 
     private var isProductPricePushDryRunLoading: Bool {
-        if case .loading = productPricePushDryRunState {
-            return true
-        }
-        return false
+        productPriceManualPushViewModel.state.kind == .dryRunRunning
     }
 
     private var productPricePushDryRunPlan: ProductPricePushDryRunPlan? {
-        if case .ready(let plan) = productPricePushDryRunState {
-            return plan
-        }
-        return nil
+        productPriceManualPushViewModel.state.plan
     }
 
     private var canRunProductPricePushDryRun: Bool {
         isPushPreflightAccountReady
             && supabaseInventoryService != nil
-            && !isProductPricePushDryRunLoading
+            && productPriceManualPushViewModel.canCalculatePreview
+    }
+
+    private var canRunProductPriceManualPush: Bool {
+        isPushPreflightAccountReady
+            && productPriceManualPushViewModel.canPush
+    }
+
+    private var productPriceManualPushSnapshot: ProductPriceManualPushSnapshot? {
+        productPriceManualPushViewModel.state.snapshot
     }
 
     private var pushPreflightRunButtonKey: String {
@@ -1098,56 +1137,25 @@ struct OptionsView: View {
         }
     }
 
-    private var productPricePushDryRunCard: some View {
+    private var productPriceManualPushCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Label {
-                    Text(L("options.supabase.pricePushPreview.title"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                } icon: {
-                    Image(systemName: "chart.line.uptrend.xyaxis.circle")
-                        .foregroundStyle(Color.accentColor)
-                }
-
-                Spacer()
-
-                productPriceApplyBadge("options.supabase.pricePushPreview.badge.previewOnly", color: .purple)
-                    .accessibilityLabel(L("options.supabase.pricePushPreview.accessibility.previewOnly"))
-            }
-
-            Text(L("options.supabase.pricePushPreview.copy.noWrite"))
+            Text(L("options.supabase.priceManualPush.subtitle"))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 8) {
-                Button {
-                    runProductPricePushDryRun()
-                } label: {
-                    Label(L("options.supabase.pricePushPreview.button.calculate"), systemImage: "doc.text.magnifyingglass")
-                }
-                .disabled(!canRunProductPricePushDryRun)
-                .accessibilityHint(L("options.supabase.pricePushPreview.accessibility.calculateHint"))
+            productPriceManualPushActionButtons
 
-                if productPricePushDryRunPlan != nil {
-                    Button {
-                        runProductPricePushDryRun()
-                    } label: {
-                        Label(L("options.supabase.pricePushPreview.button.refresh"), systemImage: "arrow.clockwise")
-                    }
-                    .disabled(!canRunProductPricePushDryRun)
-                }
+            productPriceManualPushStatusRow
 
-                if isProductPricePushDryRunLoading {
-                    Button(L("common.cancel")) {
-                        cancelProductPricePushDryRun()
-                    }
-                    .buttonStyle(.borderless)
-                }
+            if let snapshot = productPriceManualPushSnapshot {
+                LabeledContent(
+                    L("options.supabase.priceManualPush.fingerprint"),
+                    value: snapshot.abbreviatedFingerprint
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
-
-            productPricePushDryRunStatusRow
 
             if let plan = productPricePushDryRunPlan {
                 productPricePushDryRunSummaryRows(plan)
@@ -1157,21 +1165,83 @@ struct OptionsView: View {
         .accessibilityElement(children: .contain)
     }
 
+    private var productPriceManualPushActionButtons: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                productPriceManualPushPreviewButton
+                productPriceManualPushCommitButton
+                productPriceManualPushCancelButton
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                productPriceManualPushPreviewButton
+                productPriceManualPushCommitButton
+                productPriceManualPushCancelButton
+            }
+        }
+    }
+
+    private var productPriceManualPushPreviewButton: some View {
+        Button {
+            runProductPriceManualPushPreview()
+        } label: {
+            Label(L("options.supabase.priceManualPush.button.calculate"), systemImage: "doc.text.magnifyingglass")
+        }
+        .disabled(!canRunProductPricePushDryRun)
+        .buttonStyle(.borderedProminent)
+        .accessibilityHint(L("options.supabase.priceManualPush.accessibility.calculateHint"))
+    }
+
+    private var productPriceManualPushCommitButton: some View {
+        Button {
+            isShowingProductPriceManualPushConfirmation = true
+        } label: {
+            Label(L("options.supabase.priceManualPush.button.push"), systemImage: "paperplane")
+        }
+        .disabled(!canRunProductPriceManualPush)
+        .buttonStyle(.bordered)
+        .accessibilityHint(productPriceManualPushDisabledHint)
+    }
+
     @ViewBuilder
-    private var productPricePushDryRunStatusRow: some View {
-        switch productPricePushDryRunState {
+    private var productPriceManualPushCancelButton: some View {
+        if productPriceManualPushViewModel.state.isBusy {
+            Button(L("common.cancel")) {
+                cancelProductPriceManualPush()
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
+    @ViewBuilder
+    private var productPriceManualPushStatusRow: some View {
+        switch productPriceManualPushViewModel.state {
         case .idle:
-            Text(L("options.supabase.pricePushPreview.status.idle"))
+            Text(L("options.supabase.priceManualPush.status.idle"))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-        case .loading:
+        case .dryRunRunning:
             HStack(spacing: 12) {
                 ProgressView()
-                Text(L("options.supabase.pricePushPreview.status.loading"))
+                Text(L("options.supabase.priceManualPush.status.dryRunRunning"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-        case .ready(let plan):
+        case .pushRunning:
+            HStack(spacing: 12) {
+                ProgressView()
+                Text(L("options.supabase.priceManualPush.status.pushRunning"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .readBackRunning:
+            HStack(spacing: 12) {
+                ProgressView()
+                Text(L("options.supabase.priceManualPush.status.readBackRunning"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .previewSafe(let plan, _), .pushReady(let plan, _):
             Label {
                 Text(productPricePushDryRunStatusMessage(for: plan))
                     .font(.footnote)
@@ -1180,15 +1250,85 @@ struct OptionsView: View {
                 Image(systemName: productPricePushDryRunStatusSymbol(for: plan))
                     .foregroundStyle(productPricePushDryRunStatusColor(for: plan))
             }
-        case .failed(let message):
+        case .previewUnsafe(let plan, let reason):
             Label {
-                Text(message)
+                Text(productPriceManualPushPreviewUnsafeMessage(plan: plan, reason: reason))
+                    .font(.footnote)
+                    .foregroundStyle(Color.orange)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.orange)
+            }
+        case .snapshotStale:
+            Label {
+                Text(L("options.supabase.priceManualPush.status.snapshotStale"))
+                    .font(.footnote)
+                    .foregroundStyle(Color.orange)
+            } icon: {
+                Image(systemName: "clock.badge.exclamationmark")
+                    .foregroundStyle(Color.orange)
+            }
+        case .overBatchLimit(_, let limit, let actual):
+            Label {
+                Text(L("options.supabase.priceManualPush.status.overBatchLimit", actual, limit))
+                    .font(.footnote)
+                    .foregroundStyle(Color.orange)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.orange)
+            }
+        case .verifiedSuccess:
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L("options.supabase.priceManualPush.status.verifiedSuccess"))
+                    Text(L("options.supabase.priceManualPush.status.successHint"))
+                        .foregroundStyle(.secondary)
+                }
+                .font(.footnote)
+            } icon: {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(Color.green)
+            }
+        case .verificationUnknown:
+            Label {
+                Text(L("options.supabase.priceManualPush.status.verificationUnknown"))
+                    .font(.footnote)
+                    .foregroundStyle(Color.orange)
+            } icon: {
+                Image(systemName: "questionmark.diamond.fill")
+                    .foregroundStyle(Color.orange)
+            }
+        case .failedConflict:
+            Label {
+                Text(L("options.supabase.priceManualPush.status.failedConflict"))
+                    .font(.footnote)
+                    .foregroundStyle(Color.orange)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.orange)
+            }
+        case .failedValidation:
+            Label {
+                Text(L("options.supabase.priceManualPush.status.failedValidation"))
+                    .font(.footnote)
+                    .foregroundStyle(Color.red)
+            } icon: {
+                Image(systemName: "xmark.octagon.fill")
+                    .foregroundStyle(Color.red)
+            }
+        case .failedNetwork:
+            Label {
+                Text(L("options.supabase.priceManualPush.status.failedNetwork"))
                     .font(.footnote)
                     .foregroundStyle(Color.red)
             } icon: {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(Color.orange)
             }
+        case .cancelled:
+            Text(L("options.supabase.priceManualPush.status.cancelled"))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -1659,62 +1799,28 @@ struct OptionsView: View {
         cancelProductPriceApply()
     }
 
-    private func runProductPricePushDryRun() {
+    private func runProductPriceManualPushPreview() {
         guard canRunProductPricePushDryRun else { return }
-        guard let expectedUserID = supabaseAuthViewModel.sessionInfo?.userID else {
-            productPricePushDryRunState = .failed(L("options.supabase.pricePushPreview.error.sessionMissing"))
-            return
-        }
-        guard let inventoryService = supabaseInventoryService else {
-            productPricePushDryRunState = .failed(L("options.supabase.pricePushPreview.error.serviceMissing"))
-            return
-        }
-
-        productPricePushDryRunTask?.cancel()
-        productPricePushDryRunRequestID += 1
-        let requestID = productPricePushDryRunRequestID
         let lastLinkedUserID = UUID(uuidString: supabaseLastLinkedUserID)
-        productPricePushDryRunState = .loading
-
-        productPricePushDryRunTask = Task { @MainActor in
-            do {
-                let service = SupabaseProductPricePushDryRunService(fetcher: inventoryService)
-                let plan = try await service.loadDryRun(
-                    context: modelContext,
-                    sessionSnapshot: ProductPricePushDryRunSessionSnapshot(
-                        userID: expectedUserID,
-                        lastLinkedUserID: lastLinkedUserID
-                    )
-                )
-                guard productPricePushDryRunRequestID == requestID,
-                      supabaseAuthViewModel.sessionInfo?.userID == expectedUserID,
-                      supabaseAuthViewModel.isSignedIn else {
-                    return
-                }
-
-                productPricePushDryRunState = .ready(plan)
-                productPricePushDryRunTask = nil
-            } catch let error as ProductPricePushDryRunError {
-                guard productPricePushDryRunRequestID == requestID else { return }
-                productPricePushDryRunState = .failed(localizedProductPricePushDryRunError(error))
-                productPricePushDryRunTask = nil
-            } catch {
-                guard productPricePushDryRunRequestID == requestID else { return }
-                productPricePushDryRunState = .failed(L("options.supabase.pricePushPreview.error.generic"))
-                productPricePushDryRunTask = nil
-            }
-        }
+        productPriceManualPushViewModel.calculatePreview(
+            context: modelContext,
+            sessionSnapshot: ProductPricePushDryRunSessionSnapshot(
+                userID: supabaseAuthViewModel.sessionInfo?.userID,
+                lastLinkedUserID: lastLinkedUserID
+            )
+        )
     }
 
-    private func cancelProductPricePushDryRun() {
-        productPricePushDryRunTask?.cancel()
-        productPricePushDryRunTask = nil
-        productPricePushDryRunRequestID += 1
-        productPricePushDryRunState = .idle
+    private func cancelProductPriceManualPush() {
+        productPriceManualPushViewModel.cancel()
     }
 
-    private func resetProductPricePushDryRun() {
-        cancelProductPricePushDryRun()
+    private func resetProductPriceManualPush() {
+        productPriceManualPushViewModel.reset()
+    }
+
+    private func runConfirmedProductPriceManualPush() {
+        productPriceManualPushViewModel.confirmPush()
     }
 
     private func runSupabasePushPreflight() {
@@ -2274,6 +2380,44 @@ struct OptionsView: View {
         ].joined(separator: "\n")
     }
 
+    private var productPriceManualPushDisabledHint: String {
+        switch productPriceManualPushViewModel.state.kind {
+        case .previewSafe, .pushReady:
+            return L("options.supabase.priceManualPush.accessibility.pushHint")
+        case .snapshotStale:
+            return L("options.supabase.priceManualPush.disabled.snapshotStale")
+        case .overBatchLimit:
+            return L("options.supabase.priceManualPush.disabled.overBatchLimit")
+        case .dryRunRunning, .pushRunning, .readBackRunning:
+            return L("options.supabase.priceManualPush.disabled.running")
+        case .verifiedSuccess:
+            return L("options.supabase.priceManualPush.disabled.verifiedSuccess")
+        case .idle,
+             .previewUnsafe,
+             .verificationUnknown,
+             .failedConflict,
+             .failedValidation,
+             .failedNetwork,
+             .cancelled:
+            return L("options.supabase.priceManualPush.disabled.needsPreview")
+        }
+    }
+
+    private func productPriceManualPushPreviewUnsafeMessage(
+        plan: ProductPricePushDryRunPlan?,
+        reason: ProductPriceManualPushDisabledReason
+    ) -> String {
+        if let plan {
+            return productPricePushDryRunStatusMessage(for: plan)
+        }
+        return L("options.supabase.priceManualPush.disabled.\(reason.rawValue)")
+    }
+
+    private func productPriceManualPushConfirmationMessage() -> String {
+        let count = productPriceManualPushSnapshot?.candidateCount ?? 0
+        return L("options.supabase.priceManualPush.confirm.message", count)
+    }
+
     private func productPricePushDryRunStatusMessage(for plan: ProductPricePushDryRunPlan) -> String {
         if !plan.isRemoteDedupeSafe {
             return L("options.supabase.pricePushPreview.status.unsafe")
@@ -2326,16 +2470,6 @@ struct OptionsView: View {
             return L(
                 "options.supabase.pricePushPreview.dedupe.unsafe",
                 L("options.supabase.pricePushPreview.dedupe.reason.\(reason.rawValue)")
-            )
-        }
-    }
-
-    private func localizedProductPricePushDryRunError(_ error: ProductPricePushDryRunError) -> String {
-        switch error {
-        case .localSnapshotFailed(let message):
-            return detailMessage(
-                baseKey: "options.supabase.pricePushPreview.error.localSnapshot",
-                detail: message
             )
         }
     }
@@ -3019,12 +3153,6 @@ private enum ProductPriceApplyViewState {
     case failed(String)
 }
 
-private enum ProductPricePushDryRunViewState {
-    case idle
-    case loading
-    case ready(ProductPricePushDryRunPlan)
-    case failed(String)
-}
 #endif
 
 // MARK: - Preview

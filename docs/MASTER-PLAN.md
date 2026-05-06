@@ -4,10 +4,13 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. **TASK-050** — *Supabase ProductPrice manual push — preflight + dry-run iOS, no sync_events* — chiuso **DONE / Chiusura** il **2026-05-06** su override esplicito utente dopo review severa **APPROVED_FIXED_DIRECTLY**: engine/test/orchestratore read-only/UI DEBUG **solo anteprima** verificati, fix diretti piccoli applicati, build/test/audit PASS. **Non eseguiti né autorizzati**: write Supabase, push live, migration/SQL/RLS/RPC, Android, `sync_events`/outbox, `service_role`, CTA live. **TASK-049/TASK-048 DONE / Chiusura**, non riaperti. Progetto **IDLE**.
+Nessun task attivo. **Ultimo completato: TASK-051** — *Supabase ProductPrice push live manuale controllato iOS* — **DONE / Chiusura** dopo review severa su override esplicito utente. Implementazione approvata con fix piccoli: push manuale controllato `inventory_product_prices`, dry-run TASK-050 safe obbligatorio, snapshot volatile, insert-only, batch max 100, read-back exact-match, UI Avanzata/DEBUG, localizzazioni e XCTest mock. Smoke live reale con write Supabase resta follow-up manuale separato e non blocca DONE. **TASK-052 / `record_sync_event` / `sync_events` / outbox / realtime / background sync non sono attivati automaticamente.**
 
 ## Stato globale
 IDLE
+> **2026-05-06 (review/close — TASK-051, user override):** review severa completata da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**. Fix diretti piccoli: hardening owner/session su dedupe dry-run, insert e read-back; UI `ViewThatFits` per CTA manual push; test aggiunti per owner/product read-back, mismatch `type`/`effective_at` e UUID deterministico. Check PASS: build Debug, build Release, XCTest TASK-051 16 test, regressioni TASK-048/049/050 + TASK-051 70 test, `git diff --check`, `plutil`, grep anti-scope. Warning residui non introdotti da TASK-051: Swift 6 preesistente in `SupabaseProductPriceApplyService.swift:771` e AppIntents metadata Xcode. **Smoke live reale resta follow-up manuale separato**. **Nessun** TASK-052, `sync_events`, outbox, realtime/background sync, migration/Android attivati. Progetto **IDLE**; task attivo **nessuno**.
+> **2026-05-06 (handoff execution — TASK-051):** execution completata da **Codex / Executor** e TASK-051 passa ad **ACTIVE / REVIEW** con responsabile **Claude / Reviewer**. Implementati push manuale controllato `inventory_product_prices`, snapshot volatile/fingerprint, insert-only single-batch max 100, read-back exact-match, UI Avanzata/DEBUG in `OptionsView`, localizzazioni IT/EN/ES/zh-Hans e XCTest mock. Check PASS documentati nel task: build Debug, build Release, XCTest TASK-051, regressioni TASK-048/049/050, `git diff --check`, `plutil`, grep anti-scope. Warning residui non introdotti da TASK-051: Swift 6 preesistente in `SupabaseProductPriceApplyService.swift:771` e AppIntents metadata Xcode. **Nessun** `sync_events`/outbox/RPC/migration/Android; nessun write live nei test.
+> **2026-05-06 (EXECUTION controllata / pre-code gate — TASK-051, user override):** **TASK-051** passa ad **ACTIVE / EXECUTION** con responsabile **Codex / Executor**. Prima attività **§8.3** / checklist **E0** nel file task: documentare DDL **`inventory_product_prices`**, **D51-03**, **D51-12**, **D51-13**, limite batch **D51-04**, fingerprint/snapshot TASK-050. **Vietato** fino a **E0** completo: patch Swift, `SupabaseProductPriceManualPushService`, modifiche **`OptionsView`**, nuovi test, write remoto, build/XCTest obbligatori. **EXECUTION controllata:** nessuna patch Swift finché i gate non sono chiusi nel task. **TASK-050 / TASK-049 / TASK-048** restano **DONE / Chiusura**.
 > **2026-04-27 (user override):** **TASK-031** promosso ad **ACTIVE / EXECUTION** con responsabile operativo **Cursor/Codex executor**. Planning approvato; perimetro limitato a import/header recognition in `ExcelAnalyzer`, senza Supabase, senza `RowDetailSheetView`, senza redesign PreGenerate.
 > **2026-04-27 (handoff):** execution TASK-031 completata da **Cursor/Codex** con build Debug Simulator PASS e fixture documentali A-F sotto `docs/fixtures/TASK-031/`; handoff a **CLAUDE / REVIEW**. Nessun Supabase / nessun `RowDetailSheetView` / nessun redesign PreGenerate.
 > **2026-04-27 (review/close):** **TASK-031** review tecnica completata da **Claude Code reviewer/fixer** con esito **APPROVED_FIXED_DIRECTLY**: fix diretto limitato a commento `ColumnStatus.normalized` e soglia più conservativa per header scoring; build Debug Simulator PASS; task chiuso **DONE** su autorizzazione utente esplicita.
@@ -136,6 +139,8 @@ IDLE
 > **2026-05-06 (execution start — TASK-050, user override):** **TASK-050** da **ACTIVE / PLANNING** → **ACTIVE / EXECUTION**; responsabile **Cursor / Executor**. Execution avviata in **modalità controllata/progressiva**: prima audit schema/codice TASK-048/TASK-049 e migration `inventory_product_prices`, poi eventuale engine/test, orchestratore read-only e UI DEBUG solo alla fine. **Non autorizzati**: write Supabase, push live, migration SQL/RLS/RPC, Android, `sync_events`/outbox, `service_role`, CTA live “Push / Sync / Upload / Invia / Carica”. **TASK-049/TASK-048** restano **DONE / Chiusura**.
 > **2026-05-06 (execution slice controllata — TASK-050):** audit schema/codice completato e documentato nel file task; implementata prima slice minima: engine puro dry-run, XCTest, orchestratore read-only, SELECT dedupe owner-scoped/paginato/budget, UI DEBUG **solo anteprima** in `OptionsView`. Verifiche PASS: build Debug, XCTest engine + regressione TASK-048/TASK-049, `plutil`, `git diff --check`, grep zero-write sui diff aggiunti. **Nessuna** write Supabase, nessun push live, nessun `sync_events`/outbox/RPC, nessuna migration/SQL/RLS, nessun Android, nessuna mutazione `Product.purchasePrice`/`retailPrice`, `ProductPrice`, `HistoryEntry`, `syncStatus` o baseline. TASK-050 resta **ACTIVE / EXECUTION**; non DONE.
 > **2026-05-06 (review/close — TASK-050, user override):** review tecnica severa completata da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**. Fix diretti: correzione paginazione/budget dry-run sull'ultima pagina consentita, SELECT dedupe senza `source`/`note`, motivi globali nei bucket bloccati UI, accessibilità stato dedupe remoto, suite test rinominata `SupabaseProductPricePushDryRunServiceTests`, regressioni budget/paginazione aggiunte. Check PASS: `git diff --check`, nuovi file `--no-index --check`, `plutil`, build Debug, build Release extra, XCTest TASK-050 + regressioni TASK-048/TASK-049. Audit zero-write PASS: nessuna write Supabase, nessun push live, nessun `record_sync_event`/`sync_events`/outbox/RPC, nessuna migration/SQL/RLS, nessun Android, nessuna mutazione `Product.purchasePrice`/`retailPrice`, `ProductPrice`, `HistoryEntry`, `syncStatus` o baseline. Warning Release Swift 6 preesistente in TASK-049 documentato come fuori perimetro. **TASK-050 DONE / Chiusura**. Progetto **IDLE**, nessun task attivo.
+> **2026-05-06 (planning/tracking — TASK-051):** creato **TASK-051** `docs/TASKS/TASK-051-supabase-productprice-push-live-manuale-controllato-ios.md` — *Supabase ProductPrice push live manuale controllato iOS*; promosso ad **ACTIVE / PLANNING** con responsabile **Claude / Planner**. **Solo** markdown + **`MASTER-PLAN`**: push **live** limitato a **`inventory_product_prices`** *(insert + read-back + idempotenza)* con **dry-run TASK-050 obbligatorio** prima di ogni scrittura; **vietati** `record_sync_event`, `sync_events`, outbox, realtime, background, migration/SQL/RLS, Android, mutazione `Product` current price / storico SwiftData non prevista. Verifica repo: `HEAD` = `origin/main` = `17315a7`. **TASK-050 / TASK-049 / TASK-048** restano **DONE / Chiusura**. **Nessuna** EXECUTION Swift, **nessun** build/test, **nessun** push live in questo turno. Progetto **ACTIVE**; task attivo **TASK-051**.
+> **2026-05-06 (planning refinement — TASK-051, solo documentale):** perfezionato il planning nel file task: **snapshot dry-run vincolante (D51-10)** in RAM, invalidazione push su cambio auth/baseline/dati/candidate/dedupe; **D51-03** agganciata a DDL reale su `id` *(default server → no `id` in body + returning/read-back; obbligatorio senza default → UUID deterministico; DDL ambiguo → STOP)*; **insert + returning + read-back exact-match**; **batch v1 max 100** (max 200 solo se documentato), oltre → fail-closed senza multi-lotto auto; **unique violation → no retry/upsert**; **UI Avanzata/DEBUG** Form/List, flow a 9 stati, copy no-sync IT/EN/ES/zh-Hans; **§7 bis** nessuna mutazione locale post-success; **D51-11** async/MainActor/anti double-tap; test T51-06…T51-12 e checklist ampliate. **Fase invariata ACTIVE / PLANNING**; **nessun** Swift/build/test/push live.
 > **2026-05-06 (planning refinement 3 — TASK-048):** micro-refinement **solo documentale**: preview **volatile** / **session-scoped** (reset su logout/cambio account/session invalid; **no riuso** tra utenti); **zero persistenza** TASK-048 *(SwiftData/UserDefaults/file/baseline)*; **metriche card** elencate + divieti label «totale cloud»/sync/diff definitivo; fetch **0 righe** = success non errore; **partial** dopo errore post-pagine *(non success pieno)*; **localizzazioni** rafforzate § task; **D48-11**, **CA48-P15**, **CA48-E13**. **ACTIVE / PLANNING**, **Slice A read-only**, **EXECUTION non autorizzata**. Nessun Swift/test/SQL/Android.
 > **2026-05-06 (planning refinement 2 — TASK-048):** ulteriore **solo documentale**: ordinamento remoto **deterministico** obbligatorio prima di `range`; vietato paginare senza `order`; CTA secondaria **unica** «Aggiorna preview» *(no «Carica altra pagina»)*; **Debug gate** (solo sezione DEBUG esistente, no nuovi feature flag); copy UX esplicito + privacy **anche UI sample** (troncamento, no note); **Concorrenza** (async cancellabile, MainActor, leave OptionsView safe); rafforzamento **preview campione** vs **diff/apply completo TASK-049+**; **Gate schema DDL** migration reale pre-EXECUTION; handoff **condizionale** verso EXECUTION; test **T48-17**; CA48-P10…P14 / E11-E12. **ACTIVE / PLANNING**, **Slice A read-only**, **EXECUTION non autorizzata**. **Nessun** Swift/test/SQL/Android.
 > **2026-05-06 (planning refinement — TASK-048):** perfezionamento **solo documentale** in `TASK-048-supabase-productprice-foundation-ios.md`: cap **`pageSize=200`**, **`maxRows=1000`**, **`maxPages=5`**, regole **`truncated`** e stop immediato; UX DEBUG concreta (**OptionsView**, card «Storico prezzi cloud», badge sola lettura, CTA, stati incluso **cancelled**, sample ≤20 righe); privacy/logging; riuso codice **senza** dipendenza da `SupabasePullApplyService`; matrice errori; test **T48-01…T48-16**; comandi **grep** anti-scope pianificati *(non eseguiti in PLANNING)*. **Fase invariata ACTIVE / PLANNING**; **EXECUTION non autorizzata**. **Nessun** Swift/test/build/SQL/Android. **TASK-048** resta task attivo.
@@ -148,14 +153,14 @@ IDLE
 > **2026-05-05 (review/close/user override):** **TASK-040** review tecnica completa eseguita da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**: fix diretto limitato a conflitti `remoteID` per duplicati locali e supplier/category omonimi con UUID remoto diverso, piu' hardening apply anti-merge silenzioso. Build Debug PASS, build Release PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-scope PASS. Nessuna scrittura Supabase, nessun push, nessun `record_sync_event`, nessun outbox/dirty, nessun ProductPrice apply remoto, nessun SQL/migration. **TASK-039 resta DONE**. Follow-up futuri registrati ma non attivati.
 
 ## Workflow task attivo
-- **Task attivo:** Nessuno
-- **Titolo:** —
-- **File task:** —
-- **Stato task:** —
-- **Fase:** —
-- **Responsabile:** —
-- **Ultimo aggiornamento:** 2026-05-06 *(TASK-050 chiuso DONE / Chiusura dopo review severa APPROVED_FIXED_DIRECTLY; progetto IDLE).*
-- **Nota tracking:** progetto **IDLE**. TASK-050 è **DONE / Chiusura**; **TASK-049** / **TASK-048** **non riaperti**. Push live ProductPrice resta task futuro separato.
+- **Task attivo:** nessuno
+- **Titolo:** N/A
+- **File task:** N/A
+- **Stato task:** IDLE
+- **Fase:** N/A
+- **Responsabile:** N/A
+- **Ultimo aggiornamento:** 2026-05-06 *(TASK-051 chiuso DONE / Chiusura; ultimo completato TASK-051.)*
+- **Nota tracking:** progetto **IDLE**. **TASK-051** è **DONE / Chiusura**; **TASK-050** / **TASK-049** / **TASK-048** restano **DONE / Chiusura** (**non riaperti**). Smoke live reale resta follow-up manuale separato. **TASK-052** / `record_sync_event` / `sync_events` / outbox / realtime / background sync **non** sono attivati automaticamente.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -196,9 +201,10 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo:** Nessuno. **TASK-050** è chiuso **DONE / Chiusura** dopo review severa e fix diretti su override utente.
+- **Task attivo corrente:** nessuno — progetto **IDLE**. **Ultimo completato:** **TASK-051** — `docs/TASKS/TASK-051-supabase-productprice-push-live-manuale-controllato-ios.md` — **DONE / Chiusura**.
+- **TASK-050 (DONE / Chiusura):** preflight + dry-run ProductPrice iOS; **non riaperto**.
 - **TASK-049 (DONE / Chiusura):** non riaperto; pull→apply locale insert-only completato e chiuso.
-- **Ultimo task chiuso prima di TASK-050:** **TASK-049** — `docs/TASKS/TASK-049-supabase-productprice-apply-locale-swiftdata-ios.md` — **DONE / Chiusura**.
+- **TASK-048 (DONE / Chiusura):** non riaperto; preview read-only foundation ProductPrice.
 
 Follow-up candidate post TASK-041 (**non attivi**):
 - Baseline persistence SwiftData: coperta da **TASK-043** (**DONE / Chiusura**); **operatività baseline su device** — **TASK-046** (**DONE / Chiusura**, baseline ottenuta e reviewata).
@@ -207,8 +213,8 @@ Follow-up candidate post TASK-041 (**non attivi**):
 - **TASK-045** (**DONE / Chiusura**) — validazione live manuale su dataset piccolo scoped `TASK045_*` completata con push live, read-back, idempotenza e review positiva.
 - **TASK-048** (**DONE / Chiusura**) — ProductPrice cloud **read-only** foundation iOS (`inventory_product_prices`) chiusa in Slice A; push/apply/sync_events fuori scope nel task.
 - **TASK-049** (**DONE / Chiusura**) — ProductPrice **pull** controllato → **apply locale** SwiftData da `inventory_product_prices`, dry-run DEBUG, idempotenza, **zero write** Supabase.
-- **TASK-050** (**DONE / Chiusura**) — ProductPrice push **preflight + dry-run** iOS (`docs/TASKS/TASK-050-supabase-productprice-manual-push-preflight-dry-run-ios.md`), zero-write verificato e review APPROVED_FIXED_DIRECTLY; **nessuna** write Supabase / migration / Android / `sync_events`/outbox/RPC; push **live** = task futuro separato.
-- Task futuro: ProductPrice **push live manuale** controllato *(separato)*.
+- **TASK-050** (**DONE / Chiusura**) — ProductPrice push **preflight + dry-run** iOS (`docs/TASKS/TASK-050-supabase-productprice-manual-push-preflight-dry-run-ios.md`), zero-write verificato e review APPROVED_FIXED_DIRECTLY; **nessuna** write Supabase / migration / Android / `sync_events`/outbox/RPC; push live tracciato come **TASK-051**.
+- **TASK-051** (**DONE / Chiusura**) — ProductPrice **push live manuale controllato** iOS verso **`inventory_product_prices`** *(dry-run obbligatorio, snapshot volatile, insert-only, read-back exact-match, idempotenza)*; review APPROVED_FIXED_DIRECTLY su override utente, build/test/check PASS; smoke live reale resta follow-up manuale separato; **nessun** `sync_events` / outbox / migration / Android / TASK-052 attivato.
 - Task futuro: `record_sync_event` / outbox.
 - Task futuro: tombstone outbound / delete.
 - Task futuro: realtime/background sync.
@@ -400,6 +406,8 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-047 | Supabase manual push scoped debug dataset iOS — filtro `TASK045_*`, dry-run/preflight DEBUG *(live solo TASK-045)* | DONE | HIGH |
 | TASK-048 | Supabase ProductPrice foundation iOS — preview read-only + mapping SwiftData, no push, no apply locale *(Slice A)* | DONE | HIGH |
 | TASK-049 | Supabase ProductPrice pull → apply locale controllato SwiftData iOS, no push remoto | DONE | HIGH |
+| TASK-050 | Supabase ProductPrice manual push — preflight + dry-run iOS, no sync_events | DONE | HIGH |
+| TASK-051 | Supabase ProductPrice push live manuale controllato iOS (`inventory_product_prices`, dry-run obbligatorio, read-back, idempotenza) | DONE | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -432,6 +440,8 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-047 | Supabase manual push scoped debug dataset iOS — filtro `TASK045_*`, dry-run/preflight DEBUG *(live solo TASK-045)* | 2026-05-06 |
 | TASK-048 | Supabase ProductPrice foundation iOS — preview read-only + mapping SwiftData, no push, no apply locale *(Slice A)* | 2026-05-06 |
 | TASK-049 | Supabase ProductPrice pull → apply locale controllato SwiftData iOS, no push remoto | 2026-05-06 |
+| TASK-050 | Supabase ProductPrice manual push — preflight + dry-run iOS, no sync_events | 2026-05-06 |
+| TASK-051 | Supabase ProductPrice push live manuale controllato iOS (`inventory_product_prices`, dry-run obbligatorio, read-back, idempotenza) | 2026-05-06 |
 
 ## Blocchi e dipendenze
 - TASK-032 bloccato / in pausa.

@@ -221,7 +221,14 @@ actor SupabaseInventoryService {
         from: Int,
         to: Int
     ) async throws -> [RemoteInventoryProductPriceRow] {
-        try await requireAuthenticatedSession()
+        let authenticatedUserID = try await requireAuthenticatedSession()
+        guard ownerUserID == authenticatedUserID else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+                statusCode: nil,
+                code: nil,
+                message: "owner mismatch"
+            )
+        }
         let client = clientProvider.client
         let start = max(0, from)
         let end = max(start, min(to, start + 999))
@@ -237,6 +244,86 @@ actor SupabaseInventoryService {
             let rows: [RemoteInventoryProductPriceRow] = try await client
                 .from("inventory_product_prices")
                 .select("id,owner_user_id,product_id,type,price,effective_at,created_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .in("product_id", values: sortedProductIDs)
+                .order("product_id", ascending: true)
+                .order("type", ascending: true)
+                .order("effective_at", ascending: true)
+                .order("id", ascending: true)
+                .range(from: start, to: end)
+                .execute()
+                .value
+            return rows
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    func insertProductPriceManualPushPayloads(_ payloads: [ProductPriceManualPushPayload]) async throws -> [RemoteInventoryProductPriceRow] {
+        let authenticatedUserID = try await requireAuthenticatedSession()
+        guard !payloads.isEmpty else {
+            return []
+        }
+        guard payloads.allSatisfy({ $0.ownerUserID == authenticatedUserID }) else {
+            throw ProductPriceManualPushError.invalidPayload
+        }
+
+        do {
+            let rows: [RemoteInventoryProductPriceRow] = try await clientProvider.client
+                .from("inventory_product_prices")
+                .insert(payloads)
+                .select("id,owner_user_id,product_id,type,price,effective_at,source,note,created_at")
+                .execute()
+                .value
+            return rows
+        } catch let error as PostgrestError {
+            throw mapProductPriceManualPushPostgrestError(error)
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    func fetchProductPricesForManualPushVerificationPage(
+        ownerUserID: UUID,
+        productIDs: [UUID],
+        from: Int,
+        to: Int
+    ) async throws -> [RemoteInventoryProductPriceRow] {
+        let authenticatedUserID = try await requireAuthenticatedSession()
+        guard ownerUserID == authenticatedUserID else {
+            throw ProductPriceManualPushError.invalidPayload
+        }
+        let client = clientProvider.client
+        let start = max(0, from)
+        let end = max(start, min(to, start + 999))
+        let sortedProductIDs = productIDs
+            .sorted { $0.uuidString < $1.uuidString }
+            .map(\.uuidString)
+
+        guard !sortedProductIDs.isEmpty else {
+            return []
+        }
+
+        do {
+            let rows: [RemoteInventoryProductPriceRow] = try await client
+                .from("inventory_product_prices")
+                .select("id,owner_user_id,product_id,type,price,effective_at,source,note,created_at")
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .in("product_id", values: sortedProductIDs)
                 .order("product_id", ascending: true)
@@ -414,9 +501,11 @@ actor SupabaseInventoryService {
     }
 #endif
 
-    private func requireAuthenticatedSession() async throws {
+    @discardableResult
+    private func requireAuthenticatedSession() async throws -> UUID {
         do {
-            _ = try await clientProvider.client.auth.session
+            let session = try await clientProvider.client.auth.session
+            return session.user.id
         } catch {
             throw SupabaseInventoryServiceError.sessionMissing
         }
@@ -443,6 +532,37 @@ actor SupabaseInventoryService {
         }
 
         return .unknown(message: message)
+    }
+
+    private func mapProductPriceManualPushPostgrestError(_ error: PostgrestError) -> Error {
+        let code = error.code
+        let message = error.message
+        let normalized = [code, message, error.detail, error.hint]
+            .compactMap { $0?.lowercased() }
+            .joined(separator: " ")
+
+        if code == "23505"
+            || normalized.contains("duplicate key")
+            || normalized.contains("unique constraint") {
+            return ProductPriceManualPushError.uniqueConflict(
+                message: SupabaseInventoryServiceError.sanitizedDiagnosticDetail(message)
+            )
+        }
+
+        if normalized.contains("permission denied")
+            || normalized.contains("row-level security")
+            || normalized.contains("rls")
+            || normalized.contains("unauthorized")
+            || normalized.contains("authenticated")
+            || code == "42501" {
+            return SupabaseInventoryServiceError.permissionDeniedOrRLS(statusCode: nil, code: code, message: message)
+        }
+
+        if code == "42P01" || code == "42703" || code == "PGRST204" {
+            return SupabaseInventoryServiceError.schemaDrift(message: message)
+        }
+
+        return SupabaseInventoryServiceError.unknown(message: message)
     }
 
     private func mapDecodingError(_ error: DecodingError) -> SupabaseInventoryServiceError {

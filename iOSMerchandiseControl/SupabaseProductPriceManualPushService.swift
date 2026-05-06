@@ -1,0 +1,413 @@
+import CryptoKit
+import Foundation
+
+protocol SupabaseProductPriceManualPushRemoteAccessing: Sendable {
+    func insertProductPriceManualPushPayloads(_ payloads: [ProductPriceManualPushPayload]) async throws -> [RemoteInventoryProductPriceRow]
+    func fetchProductPricesForManualPushVerificationPage(
+        ownerUserID: UUID,
+        productIDs: [UUID],
+        from: Int,
+        to: Int
+    ) async throws -> [RemoteInventoryProductPriceRow]
+}
+
+extension SupabaseInventoryService: SupabaseProductPriceManualPushRemoteAccessing {}
+
+nonisolated struct ProductPriceManualPushPayload: Encodable, Sendable, Equatable, Identifiable {
+    let id: UUID
+    let ownerUserID: UUID
+    let productID: UUID
+    let type: String
+    let price: Double
+    let priceCanonical: String
+    let effectiveAt: String
+    let source: String?
+    let note: String?
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case ownerUserID = "owner_user_id"
+        case productID = "product_id"
+        case type
+        case price
+        case effectiveAt = "effective_at"
+        case source
+        case note
+        case createdAt = "created_at"
+    }
+}
+
+nonisolated struct ProductPriceManualPushSnapshot: Sendable, Equatable {
+    let ownerUserID: UUID
+    let dryRunGeneratedAt: Date
+    let candidateCount: Int
+    let fingerprint: String
+    let payloads: [ProductPriceManualPushPayload]
+
+    var abbreviatedFingerprint: String {
+        guard fingerprint.count > 12 else {
+            return fingerprint
+        }
+        return "\(fingerprint.prefix(6))...\(fingerprint.suffix(6))"
+    }
+}
+
+nonisolated struct ProductPriceManualPushResult: Sendable, Equatable {
+    let insertedCount: Int
+    let verification: ProductPriceManualPushVerificationResult
+    let fingerprint: String
+
+    var isVerifiedSuccess: Bool {
+        if case .exactMatch = verification {
+            return true
+        }
+        return false
+    }
+}
+
+nonisolated enum ProductPriceManualPushVerificationResult: Sendable, Equatable {
+    case exactMatch(verifiedCount: Int)
+    case missingRows([UUID])
+    case mismatchedRows([ProductPriceManualPushMismatch])
+    case unknown(message: String?)
+}
+
+nonisolated struct ProductPriceManualPushMismatch: Sendable, Equatable {
+    let id: UUID
+    let reason: String
+}
+
+nonisolated enum ProductPriceManualPushError: Error, Sendable, Equatable {
+    case unsafeDryRun
+    case noCandidates
+    case overBatchLimit(limit: Int, actual: Int)
+    case staleSnapshot
+    case invalidPayload
+    case uniqueConflict(message: String?)
+    case network(message: String?)
+    case cancelled
+}
+
+nonisolated struct ProductPriceManualPushOptions: Sendable, Equatable {
+    static let defaultBatchLimit = 100
+    static let defaultReadBackPageSize = 1_000
+    static let defaultReadBackMaxPages = 20
+
+    let batchLimit: Int
+    let readBackPageSize: Int
+    let readBackMaxPages: Int
+
+    init(
+        batchLimit: Int = Self.defaultBatchLimit,
+        readBackPageSize: Int = Self.defaultReadBackPageSize,
+        readBackMaxPages: Int = Self.defaultReadBackMaxPages
+    ) {
+        self.batchLimit = max(1, min(batchLimit, 100))
+        self.readBackPageSize = max(1, min(readBackPageSize, 1_000))
+        self.readBackMaxPages = max(1, readBackMaxPages)
+    }
+}
+
+nonisolated enum ProductPriceManualPushSnapshotFactory {
+    private static let namespace = UUID(uuidString: "51000000-0000-4000-8000-000000000051")!
+
+    static func makeSnapshot(
+        from plan: ProductPricePushDryRunPlan,
+        options: ProductPriceManualPushOptions = ProductPriceManualPushOptions()
+    ) throws -> ProductPriceManualPushSnapshot {
+        guard plan.isRemoteDedupeSafe,
+              plan.summary.blockedTotal == 0,
+              plan.summary.conflictSameKeyDifferentPrice == 0,
+              plan.summary.localConflictSameKeyDifferentPrice == 0,
+              plan.summary.excludedInvalidLocal == 0 else {
+            throw ProductPriceManualPushError.unsafeDryRun
+        }
+
+        guard !plan.candidates.isEmpty else {
+            throw ProductPriceManualPushError.noCandidates
+        }
+
+        guard plan.candidates.count <= options.batchLimit else {
+            throw ProductPriceManualPushError.overBatchLimit(
+                limit: options.batchLimit,
+                actual: plan.candidates.count
+            )
+        }
+
+        let payloads = try plan.candidates.map(makePayload)
+            .sorted { lhs, rhs in
+                (lhs.productID.uuidString, lhs.type, lhs.effectiveAt, lhs.priceCanonical, lhs.id.uuidString)
+                    < (rhs.productID.uuidString, rhs.type, rhs.effectiveAt, rhs.priceCanonical, rhs.id.uuidString)
+            }
+        let ownerIDs = Set(payloads.map(\.ownerUserID))
+        guard ownerIDs.count == 1, let ownerUserID = ownerIDs.first else {
+            throw ProductPriceManualPushError.invalidPayload
+        }
+
+        return ProductPriceManualPushSnapshot(
+            ownerUserID: ownerUserID,
+            dryRunGeneratedAt: plan.generatedAt,
+            candidateCount: payloads.count,
+            fingerprint: fingerprint(payloads: payloads),
+            payloads: payloads
+        )
+    }
+
+    static func isSnapshot(_ snapshot: ProductPriceManualPushSnapshot, currentFor plan: ProductPricePushDryRunPlan) -> Bool {
+        guard let current = try? makeSnapshot(from: plan) else {
+            return false
+        }
+        return snapshot.ownerUserID == current.ownerUserID
+            && snapshot.dryRunGeneratedAt == current.dryRunGeneratedAt
+            && snapshot.candidateCount == current.candidateCount
+            && snapshot.fingerprint == current.fingerprint
+            && snapshot.payloads == current.payloads
+    }
+
+    static func fingerprint(payloads: [ProductPriceManualPushPayload]) -> String {
+        let canonical = payloads
+            .sorted {
+                ($0.productID.uuidString, $0.type, $0.effectiveAt, $0.priceCanonical)
+                    < ($1.productID.uuidString, $1.type, $1.effectiveAt, $1.priceCanonical)
+            }
+            .map {
+                [
+                    $0.productID.uuidString.lowercased(),
+                    $0.type,
+                    $0.effectiveAt,
+                    $0.priceCanonical
+                ].joined(separator: "|")
+            }
+            .joined(separator: "\n")
+
+        let digest = SHA256.hash(data: Data(canonical.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func makePayload(from line: ProductPricePushDryRunLine) throws -> ProductPriceManualPushPayload {
+        guard line.reason == .candidate,
+              let payload = line.payload,
+              let key = line.key else {
+            throw ProductPriceManualPushError.invalidPayload
+        }
+
+        let remoteType = payload.remoteType.uppercased()
+        guard remoteType == "PURCHASE" || remoteType == "RETAIL" else {
+            throw ProductPriceManualPushError.invalidPayload
+        }
+
+        let id = deterministicID(
+            ownerUserID: payload.ownerUserID,
+            productID: payload.productID,
+            type: remoteType,
+            effectiveAt: payload.effectiveAt
+        )
+        guard key.ownerUserID == payload.ownerUserID,
+              key.productID == payload.productID,
+              key.effectiveAt == payload.effectiveAt else {
+            throw ProductPriceManualPushError.invalidPayload
+        }
+
+        return ProductPriceManualPushPayload(
+            id: id,
+            ownerUserID: payload.ownerUserID,
+            productID: payload.productID,
+            type: remoteType,
+            price: payload.canonicalPrice.doubleValue,
+            priceCanonical: payload.canonicalPrice.value,
+            effectiveAt: payload.effectiveAt,
+            source: payload.source,
+            note: payload.note,
+            createdAt: payload.createdAt
+        )
+    }
+
+    private static func deterministicID(ownerUserID: UUID, productID: UUID, type: String, effectiveAt: String) -> UUID {
+        let name = [
+            "TASK-051",
+            ownerUserID.uuidString.lowercased(),
+            productID.uuidString.lowercased(),
+            type,
+            effectiveAt
+        ].joined(separator: "|")
+        let namespaceBytes = withUnsafeBytes(of: namespace.uuid) { Array($0) }
+        var source = Data(namespaceBytes)
+        source.append(Data(name.utf8))
+        let digest = Insecure.SHA1.hash(data: source)
+        var bytes = Array(digest.prefix(16))
+        bytes[6] = (bytes[6] & 0x0f) | 0x50
+        bytes[8] = (bytes[8] & 0x3f) | 0x80
+
+        return UUID(uuid: (
+            bytes[0],
+            bytes[1],
+            bytes[2],
+            bytes[3],
+            bytes[4],
+            bytes[5],
+            bytes[6],
+            bytes[7],
+            bytes[8],
+            bytes[9],
+            bytes[10],
+            bytes[11],
+            bytes[12],
+            bytes[13],
+            bytes[14],
+            bytes[15]
+        ))
+    }
+}
+
+struct SupabaseProductPriceManualPushService: Sendable {
+    private let remote: any SupabaseProductPriceManualPushRemoteAccessing
+    private let options: ProductPriceManualPushOptions
+
+    nonisolated init(
+        remote: any SupabaseProductPriceManualPushRemoteAccessing,
+        options: ProductPriceManualPushOptions = ProductPriceManualPushOptions()
+    ) {
+        self.remote = remote
+        self.options = options
+    }
+
+    func push(snapshot: ProductPriceManualPushSnapshot) async throws -> ProductPriceManualPushResult {
+        let insertedCount = try await insert(snapshot: snapshot)
+        let verification = try await verify(snapshot: snapshot)
+        return ProductPriceManualPushResult(
+            insertedCount: insertedCount,
+            verification: verification,
+            fingerprint: snapshot.fingerprint
+        )
+    }
+
+    func insert(snapshot: ProductPriceManualPushSnapshot) async throws -> Int {
+        try Task.checkCancellation()
+        guard snapshot.candidateCount > 0 else {
+            throw ProductPriceManualPushError.noCandidates
+        }
+        guard snapshot.candidateCount <= options.batchLimit else {
+            throw ProductPriceManualPushError.overBatchLimit(
+                limit: options.batchLimit,
+                actual: snapshot.candidateCount
+            )
+        }
+
+        do {
+            _ = try await remote.insertProductPriceManualPushPayloads(snapshot.payloads)
+        } catch is CancellationError {
+            throw ProductPriceManualPushError.cancelled
+        } catch let error as ProductPriceManualPushError {
+            throw error
+        } catch {
+            throw ProductPriceManualPushError.network(message: safeDiagnosticDetail(for: error))
+        }
+
+        try Task.checkCancellation()
+        return snapshot.payloads.count
+    }
+
+    func verify(snapshot: ProductPriceManualPushSnapshot) async throws -> ProductPriceManualPushVerificationResult {
+        let productIDs = Array(Set(snapshot.payloads.map(\.productID))).sorted { $0.uuidString < $1.uuidString }
+        let expectedIDs = Set(snapshot.payloads.map(\.id))
+        var rows: [RemoteInventoryProductPriceRow] = []
+        var offset = 0
+
+        do {
+            for _ in 0..<options.readBackMaxPages {
+                try Task.checkCancellation()
+                let page = try await remote.fetchProductPricesForManualPushVerificationPage(
+                    ownerUserID: snapshot.ownerUserID,
+                    productIDs: productIDs,
+                    from: offset,
+                    to: offset + options.readBackPageSize - 1
+                )
+                try Task.checkCancellation()
+                rows.append(contentsOf: page)
+
+                if page.count < options.readBackPageSize {
+                    return exactMatch(snapshot: snapshot, rows: rows)
+                }
+                if expectedIDs.isSubset(of: Set(rows.map(\.id))) {
+                    return exactMatch(snapshot: snapshot, rows: rows)
+                }
+                offset += options.readBackPageSize
+            }
+
+            return .unknown(message: "read-back page budget exceeded")
+        } catch is CancellationError {
+            throw ProductPriceManualPushError.cancelled
+        } catch {
+            return .unknown(message: safeDiagnosticDetail(for: error))
+        }
+    }
+
+    private func exactMatch(
+        snapshot: ProductPriceManualPushSnapshot,
+        rows: [RemoteInventoryProductPriceRow]
+    ) -> ProductPriceManualPushVerificationResult {
+        let rowsByID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var missing: [UUID] = []
+        var mismatches: [ProductPriceManualPushMismatch] = []
+
+        for payload in snapshot.payloads {
+            guard let row = rowsByID[payload.id] else {
+                missing.append(payload.id)
+                continue
+            }
+
+            mismatches.append(contentsOf: mismatchesFor(payload: payload, row: row))
+        }
+
+        if !missing.isEmpty {
+            return .missingRows(missing.sorted { $0.uuidString < $1.uuidString })
+        }
+        if !mismatches.isEmpty {
+            return .mismatchedRows(mismatches)
+        }
+        return .exactMatch(verifiedCount: snapshot.payloads.count)
+    }
+
+    private func mismatchesFor(
+        payload: ProductPriceManualPushPayload,
+        row: RemoteInventoryProductPriceRow
+    ) -> [ProductPriceManualPushMismatch] {
+        var mismatches: [ProductPriceManualPushMismatch] = []
+        let normalizedRemoteType = SupabasePullPreviewNormalizer.normalizedPriceType(row.type)?.uppercased()
+        let remotePrice = PriceCanonicalizer.canonicalAmount(from: row.price)
+        let remoteEffectiveAt = ProductPriceEffectiveAtCanonicalizer
+            .canonicalDate(from: row.effectiveAt)
+            .map(ProductPriceEffectiveAtCanonicalizer.canonicalString)
+        let remoteCreatedAt = ProductPriceEffectiveAtCanonicalizer
+            .canonicalDate(from: row.createdAt)
+            .map(ProductPriceEffectiveAtCanonicalizer.canonicalString)
+        let remoteSource = SupabasePullPreviewNormalizer.semanticString(row.source)
+        let remoteNote = SupabasePullPreviewNormalizer.semanticString(row.note)
+
+        func append(_ condition: Bool, _ reason: String) {
+            if !condition {
+                mismatches.append(ProductPriceManualPushMismatch(id: payload.id, reason: reason))
+            }
+        }
+
+        append(row.ownerUserID == payload.ownerUserID, "owner_user_id")
+        append(row.productID == payload.productID, "product_id")
+        append(normalizedRemoteType == payload.type, "type")
+        append(remotePrice?.value == payload.priceCanonical, "price")
+        append(remoteEffectiveAt == payload.effectiveAt, "effective_at")
+        append(remoteCreatedAt == payload.createdAt, "created_at")
+        append(remoteSource == payload.source, "source")
+        append(remoteNote == payload.note, "note")
+
+        return mismatches
+    }
+
+    private func safeDiagnosticDetail(for error: Error) -> String? {
+        if let serviceError = error as? SupabaseInventoryServiceError {
+            return serviceError.safeDiagnosticDetail
+        }
+        return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(String(describing: error))
+            ?? "inventory_product_prices"
+    }
+}
