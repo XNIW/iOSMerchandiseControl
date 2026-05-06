@@ -63,10 +63,30 @@ nonisolated enum SupabaseInventoryDiagnosticResult: Sendable {
     case catalogProbeSucceeded(rowCount: Int)
 }
 
+#if DEBUG
+nonisolated struct SupabaseTask045RemoteCollisionSummary: Sendable, Equatable {
+    let supplierCount: Int
+    let categoryCount: Int
+    let productCount: Int
+
+    var totalCount: Int {
+        supplierCount + categoryCount + productCount
+    }
+
+    var isClear: Bool {
+        totalCount == 0
+    }
+}
+#endif
+
 actor SupabaseInventoryService {
     nonisolated static let stablePageOrderColumn = "id"
 
     private let clientProvider: SupabaseClientProvider
+#if DEBUG
+    private static let task045Prefix = "TASK045_"
+    private static let task045UpperBound = "TASK045`"
+#endif
 
     init(clientProvider: SupabaseClientProvider) {
         self.clientProvider = clientProvider
@@ -77,6 +97,22 @@ actor SupabaseInventoryService {
         let products = try await fetchProducts(limit: 1)
         return .catalogProbeSucceeded(rowCount: products.count)
     }
+
+#if DEBUG
+    func fetchTask045RemoteCollisionSummary(limit: Int = 50) async throws -> SupabaseTask045RemoteCollisionSummary {
+        try await requireAuthenticatedSession()
+        let clampedLimit = max(1, min(limit, 50))
+        let suppliers = try await fetchTask045Suppliers(limit: clampedLimit)
+        let categories = try await fetchTask045Categories(limit: clampedLimit)
+        let products = try await fetchTask045Products(limit: clampedLimit)
+
+        return SupabaseTask045RemoteCollisionSummary(
+            supplierCount: suppliers.count,
+            categoryCount: categories.count,
+            productCount: products.count
+        )
+    }
+#endif
 
     func fetchProducts(limit: Int = 100) async throws -> [RemoteInventoryProductRow] {
         try await fetchRows(
@@ -211,6 +247,93 @@ actor SupabaseInventoryService {
             throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
         }
     }
+
+#if DEBUG
+    private func fetchTask045Suppliers(limit: Int) async throws -> [RemoteInventorySupplierRow] {
+        do {
+            return try await clientProvider.client
+                .from("inventory_suppliers")
+                .select("id,owner_user_id,name,updated_at,deleted_at")
+                .gte("name", value: Self.task045Prefix)
+                .lt("name", value: Self.task045UpperBound)
+                .order(Self.stablePageOrderColumn, ascending: true)
+                .limit(limit)
+                .execute()
+                .value
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func fetchTask045Categories(limit: Int) async throws -> [RemoteInventoryCategoryRow] {
+        do {
+            return try await clientProvider.client
+                .from("inventory_categories")
+                .select("id,owner_user_id,name,updated_at,deleted_at")
+                .gte("name", value: Self.task045Prefix)
+                .lt("name", value: Self.task045UpperBound)
+                .order(Self.stablePageOrderColumn, ascending: true)
+                .limit(limit)
+                .execute()
+                .value
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func fetchTask045Products(limit: Int) async throws -> [RemoteInventoryProductRow] {
+        let barcodeMatches = try await fetchTask045Products(column: "barcode", limit: limit)
+        let nameMatches = try await fetchTask045Products(column: "product_name", limit: limit)
+        var seenIDs = Set<UUID>()
+
+        return (barcodeMatches + nameMatches).filter { row in
+            seenIDs.insert(row.id).inserted
+        }
+    }
+
+    private func fetchTask045Products(column: String, limit: Int) async throws -> [RemoteInventoryProductRow] {
+        do {
+            return try await clientProvider.client
+                .from("inventory_products")
+                .select("id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at")
+                .gte(column, value: Self.task045Prefix)
+                .lt(column, value: Self.task045UpperBound)
+                .order(Self.stablePageOrderColumn, ascending: true)
+                .limit(limit)
+                .execute()
+                .value
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+#endif
 
     private func requireAuthenticatedSession() async throws {
         do {

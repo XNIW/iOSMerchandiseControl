@@ -35,6 +35,10 @@ struct OptionsView: View {
     @State private var supabasePullPreviewState: SupabasePullPreviewViewState = .idle
     @StateObject private var pushPreflightViewModel: SupabasePushPreflightViewModel
     @State private var selectedPushPreflightScope: ManualPushPreflightScope = .global
+    @State private var isRunningTask045RemoteCollisionCheck = false
+    @State private var task045RemoteCollisionMessage: String?
+    @State private var task045RemoteCollisionIsError = false
+    @State private var task045RemoteCollisionGatePassed = false
     @State private var pendingManualPushPlan: ManualPushPlan?
     @State private var isShowingManualPushConfirmation = false
 #endif
@@ -299,6 +303,42 @@ struct OptionsView: View {
                 .pickerStyle(.segmented)
                 .disabled(pushPreflightViewModel.isRunning)
 
+                if selectedPushPreflightScope == .scopedTask045 {
+                    Button {
+                        runTask045RemoteCollisionCheck()
+                    } label: {
+                        Label(
+                            L("options.supabase.pushpreflight.collision.task045.button"),
+                            systemImage: "magnifyingglass.circle"
+                        )
+                    }
+                    .disabled(
+                        isRunningTask045RemoteCollisionCheck
+                            || pushPreflightViewModel.isRunning
+                            || !isPushPreflightAccountReady
+                            || supabaseInventoryService == nil
+                    )
+                }
+
+                if isRunningTask045RemoteCollisionCheck {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(L("options.supabase.pushpreflight.collision.task045.running"))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let task045RemoteCollisionMessage {
+                    Label {
+                        Text(task045RemoteCollisionMessage)
+                            .font(.footnote)
+                            .foregroundStyle(task045RemoteCollisionIsError ? Color.red : Color.secondary)
+                    } icon: {
+                        Image(systemName: task045RemoteCollisionIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                            .foregroundStyle(task045RemoteCollisionIsError ? Color.orange : Color.green)
+                    }
+                }
+
                 Button {
                     runSupabasePushPreflight()
                 } label: {
@@ -309,7 +349,16 @@ struct OptionsView: View {
                             : "checklist"
                     )
                 }
-                .disabled(pushPreflightViewModel.isRunning || !isPushPreflightAccountReady)
+                .disabled(pushPreflightViewModel.isRunning || !canRunSelectedPushPreflight)
+
+                if canRunManualPush {
+                    Button(role: .destructive) {
+                        prepareManualPushConfirmation()
+                    } label: {
+                        Label(L("options.supabase.manualpush.button"), systemImage: "arrow.up.circle.fill")
+                    }
+                    .accessibilityLabel(L("options.supabase.manualpush.accessibility"))
+                }
 
                 if pushPreflightViewModel.isRunning {
                     HStack(spacing: 12) {
@@ -422,6 +471,9 @@ struct OptionsView: View {
                 break
             }
         }
+        .onChange(of: selectedPushPreflightScope) { _, _ in
+            resetTask045RemoteCollisionGate()
+        }
         .sheet(isPresented: $isShowingSupabasePullPreview) {
             SupabasePullPreviewSheet(
                 state: supabasePullPreviewState,
@@ -469,13 +521,31 @@ struct OptionsView: View {
             && supabaseAuthViewModel.sessionInfo?.userID != nil
     }
 
+    private var canRunSelectedPushPreflight: Bool {
+        guard isPushPreflightAccountReady else { return false }
+        guard selectedPushPreflightScope.isScopedTask045 else { return true }
+        return task045RemoteCollisionGatePassed
+    }
+
     private var canRunManualPush: Bool {
         guard isPushPreflightAccountReady,
               !pushPreflightViewModel.isRunning,
+              task045RemoteCollisionGatePassed,
+              hasCompletedScopedSafePreflight,
               let plan = pushPreflightViewModel.lastPreview?.plan else {
             return false
         }
-        return plan.isSendable && !plan.hasBlockers && !plan.scopeSummary.hasScopedBlocker
+        return plan.scope.isScopedTask045
+            && plan.isSendable
+            && !plan.hasBlockers
+            && !plan.scopeSummary.hasScopedBlocker
+    }
+
+    private var hasCompletedScopedSafePreflight: Bool {
+        if case .completedScopedSafe = pushPreflightViewModel.state {
+            return true
+        }
+        return false
     }
 
     private var manualPushExecutionSummary: SupabasePushPreflightViewModel.ExecutionSummary? {
@@ -653,6 +723,7 @@ struct OptionsView: View {
     }
 
     private func runSupabasePushPreflight() {
+        guard canRunSelectedPushPreflight else { return }
         pushPreflightViewModel.runLocalCheck(
             context: modelContext,
             isSignedIn: supabaseAuthViewModel.isSignedIn && !supabaseAuthViewModel.isTransitioning,
@@ -660,6 +731,62 @@ struct OptionsView: View {
             lastLinkedUserID: UUID(uuidString: supabaseLastLinkedUserID),
             scope: selectedPushPreflightScope
         )
+    }
+
+    private func runTask045RemoteCollisionCheck() {
+        guard selectedPushPreflightScope == .scopedTask045 else { return }
+        guard !isRunningTask045RemoteCollisionCheck else { return }
+        guard supabaseAuthViewModel.isSignedIn else {
+            task045RemoteCollisionMessage = localizedSupabaseDiagnosticMessage(for: .sessionMissing)
+            task045RemoteCollisionIsError = true
+            task045RemoteCollisionGatePassed = false
+            return
+        }
+        guard let service = supabaseInventoryService else {
+            task045RemoteCollisionMessage = localizedSupabaseDiagnosticMessage(for: .configMissing)
+            task045RemoteCollisionIsError = true
+            task045RemoteCollisionGatePassed = false
+            return
+        }
+
+        isRunningTask045RemoteCollisionCheck = true
+        task045RemoteCollisionMessage = nil
+        task045RemoteCollisionIsError = false
+        task045RemoteCollisionGatePassed = false
+
+        Task {
+            do {
+                let summary = try await service.fetchTask045RemoteCollisionSummary()
+                task045RemoteCollisionMessage = L(
+                    summary.isClear
+                        ? "options.supabase.pushpreflight.collision.task045.clear"
+                        : "options.supabase.pushpreflight.collision.task045.found",
+                    summary.supplierCount,
+                    summary.categoryCount,
+                    summary.productCount
+                )
+                task045RemoteCollisionIsError = !summary.isClear
+                task045RemoteCollisionGatePassed = summary.isClear
+            } catch let error as SupabaseInventoryServiceError {
+                task045RemoteCollisionMessage = localizedSupabaseDiagnosticMessage(for: error)
+                task045RemoteCollisionIsError = true
+                task045RemoteCollisionGatePassed = false
+            } catch {
+                let serviceError = SupabaseInventoryServiceError.unknown(message: String(describing: error))
+                task045RemoteCollisionMessage = localizedSupabaseDiagnosticMessage(for: serviceError)
+                task045RemoteCollisionIsError = true
+                task045RemoteCollisionGatePassed = false
+            }
+
+            isRunningTask045RemoteCollisionCheck = false
+        }
+    }
+
+    private func resetTask045RemoteCollisionGate() {
+        isRunningTask045RemoteCollisionCheck = false
+        task045RemoteCollisionMessage = nil
+        task045RemoteCollisionIsError = false
+        task045RemoteCollisionGatePassed = false
     }
 
     private func prepareManualPushConfirmation() {

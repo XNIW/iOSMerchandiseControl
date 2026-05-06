@@ -213,6 +213,10 @@
 "options.supabase.pushpreflight.scope.label" = "Scope preflight";
 "options.supabase.pushpreflight.scope.global" = "Globale";
 "options.supabase.pushpreflight.scope.task045" = "TASK045";
+"options.supabase.pushpreflight.collision.task045.button" = "Verifica collisioni remote TASK045";
+"options.supabase.pushpreflight.collision.task045.running" = "Verifica collisioni remote TASK045 in corso...";
+"options.supabase.pushpreflight.collision.task045.clear" = "Remoto TASK045 libero: %d fornitori, %d categorie, %d prodotti.";
+"options.supabase.pushpreflight.collision.task045.found" = "STOP: remoto TASK045 non libero (%d fornitori, %d categorie, %d prodotti).";
 "options.supabase.pushpreflight.running" = "Analisi locale in corso...";
 "options.supabase.pushpreflight.accountRequired" = "Account Supabase non collegato o non allineato con l'ultimo account locale.";
 "options.supabase.pushpreflight.state.idle" = "Pronto per una verifica locale dry-run.";

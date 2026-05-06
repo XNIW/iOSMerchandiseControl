@@ -214,6 +214,10 @@
 "options.supabase.pushpreflight.scope.label" = "Preflight scope";
 "options.supabase.pushpreflight.scope.global" = "Global";
 "options.supabase.pushpreflight.scope.task045" = "TASK045";
+"options.supabase.pushpreflight.collision.task045.button" = "Check TASK045 remote collisions";
+"options.supabase.pushpreflight.collision.task045.running" = "Checking TASK045 remote collisions...";
+"options.supabase.pushpreflight.collision.task045.clear" = "Remote TASK045 clear: %d suppliers, %d categories, %d products.";
+"options.supabase.pushpreflight.collision.task045.found" = "STOP: remote TASK045 is not clear (%d suppliers, %d categories, %d products).";
 "options.supabase.pushpreflight.running" = "Running local analysis...";
 "options.supabase.pushpreflight.accountRequired" = "Supabase account is not linked or does not match the last local account.";
 "options.supabase.pushpreflight.state.idle" = "Ready for a local dry-run check.";

@@ -214,6 +214,10 @@
 "options.supabase.pushpreflight.scope.label" = "预检范围";
 "options.supabase.pushpreflight.scope.global" = "全局";
 "options.supabase.pushpreflight.scope.task045" = "TASK045";
+"options.supabase.pushpreflight.collision.task045.button" = "检查 TASK045 远程冲突";
+"options.supabase.pushpreflight.collision.task045.running" = "正在检查 TASK045 远程冲突...";
+"options.supabase.pushpreflight.collision.task045.clear" = "远程 TASK045 为空：%d 个供应商，%d 个分类，%d 个商品。";
+"options.supabase.pushpreflight.collision.task045.found" = "停止：远程 TASK045 不为空（%d 个供应商，%d 个分类，%d 个商品）。";
 "options.supabase.pushpreflight.running" = "正在进行本地分析...";
 "options.supabase.pushpreflight.accountRequired" = "Supabase 账号未绑定，或与上次本地绑定账号不一致。";
 "options.supabase.pushpreflight.state.idle" = "已准备好执行本地 dry-run 校验。";
