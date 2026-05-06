@@ -215,6 +215,52 @@ actor SupabaseInventoryService {
         }
     }
 
+    func fetchProductPricesForPushDryRunDedupePage(
+        ownerUserID: UUID,
+        productIDs: [UUID],
+        from: Int,
+        to: Int
+    ) async throws -> [RemoteInventoryProductPriceRow] {
+        try await requireAuthenticatedSession()
+        let client = clientProvider.client
+        let start = max(0, from)
+        let end = max(start, min(to, start + 999))
+        let sortedProductIDs = productIDs
+            .sorted { $0.uuidString < $1.uuidString }
+            .map(\.uuidString)
+
+        guard !sortedProductIDs.isEmpty else {
+            return []
+        }
+
+        do {
+            let rows: [RemoteInventoryProductPriceRow] = try await client
+                .from("inventory_product_prices")
+                .select("id,owner_user_id,product_id,type,price,effective_at,created_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .in("product_id", values: sortedProductIDs)
+                .order("product_id", ascending: true)
+                .order("type", ascending: true)
+                .order("effective_at", ascending: true)
+                .order("id", ascending: true)
+                .range(from: start, to: end)
+                .execute()
+                .value
+            return rows
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
     private func fetchRows<Row: Decodable & Sendable>(
         table: String,
         columns: String,
