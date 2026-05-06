@@ -210,16 +210,23 @@
 
 "options.supabase.pushpreflight.header" = "Verificación local preflight";
 "options.supabase.pushpreflight.run" = "Ejecutar verificación local";
+"options.supabase.pushpreflight.run.scopedTask045" = "Ejecutar dry-run acotado";
+"options.supabase.pushpreflight.scope.label" = "Alcance preflight";
+"options.supabase.pushpreflight.scope.global" = "Global";
+"options.supabase.pushpreflight.scope.task045" = "TASK045";
 "options.supabase.pushpreflight.running" = "Análisis local en curso...";
 "options.supabase.pushpreflight.accountRequired" = "La cuenta Supabase no está vinculada o no coincide con la última cuenta local.";
 "options.supabase.pushpreflight.state.idle" = "Listo para una verificación local dry-run.";
 "options.supabase.pushpreflight.state.accountNotLinked" = "Verificación bloqueada: cuenta no vinculada";
 "options.supabase.pushpreflight.state.running" = "Verificación local en ejecución";
 "options.supabase.pushpreflight.state.completedSafe" = "Verificación completada: estado seguro";
+"options.supabase.pushpreflight.state.completedScopedSafe" = "Dry-run acotado completado: seguro";
+"options.supabase.pushpreflight.state.completedScopedBlocked" = "Dry-run acotado bloqueado: guardrail de alcance";
 "options.supabase.pushpreflight.state.completedNoWork" = "Verificación completada: sin trabajo aplicable";
 "options.supabase.pushpreflight.state.completedBlocked" = "Verificación completada: hay bloqueos";
 "options.supabase.pushpreflight.state.failedLocalError" = "Error local durante la verificación. Inténtalo de nuevo.";
 "options.supabase.pushpreflight.copy.dryRun" = "Dry-run local: no se envía ningún dato a Supabase.";
+"options.supabase.pushpreflight.copy.scopedTask045" = "El modo acotado aisla registros TASK045_* y bloquea escrituras fuera de alcance.";
 "options.supabase.pushpreflight.copy.noRemoteWrite" = "Esta verificación no realiza escrituras remotas.";
 "options.supabase.pushpreflight.copy.noLocalRemoteMutation" = "Esta verificación no modifica datos locales ni remotos.";
 "options.supabase.pushpreflight.copy.futureTask" = "El push real se implementará en una tarea futura.";
@@ -228,6 +235,9 @@
 "options.supabase.pushpreflight.metric.blockers" = "Bloqueos";
 "options.supabase.pushpreflight.metric.warnings" = "Avisos";
 "options.supabase.pushpreflight.metric.futureOnly" = "Solo-futuro";
+"options.supabase.pushpreflight.metric.scopeIncluded" = "Incluidos en alcance";
+"options.supabase.pushpreflight.metric.scopeExcluded" = "Fuera de alcance";
+"options.supabase.pushpreflight.metric.scopeBlockedDependencies" = "Dependencias bloqueadas";
 "options.supabase.pushpreflight.category.dryRunCreateCandidate" = "Candidatos create: %d";
 "options.supabase.pushpreflight.category.dryRunUpdateCandidate" = "Candidatos update: %d";
 "options.supabase.pushpreflight.category.noOpAlreadySynced" = "No-op ya alineados: %d";
@@ -239,6 +249,8 @@
 "options.supabase.pushpreflight.category.blockedRemoteConflict" = "Bloqueados: conflicto remoto: %d";
 "options.supabase.pushpreflight.category.blockedTombstoneConflict" = "Bloqueados: tombstone remoto: %d";
 "options.supabase.pushpreflight.category.blockedMissingSupplierCategoryRemoteID" = "Bloqueados: supplier/category sin remoteID: %d";
+"options.supabase.pushpreflight.category.blockedOutsideScope" = "Bloqueados: registros fuera de alcance: %d";
+"options.supabase.pushpreflight.category.blockedScopedDependency" = "Bloqueados: dependencia scoped: %d";
 "options.supabase.pushpreflight.category.warningLocalOnlySupplierCategory" = "Aviso: referencias locales no resueltas: %d";
 "options.supabase.pushpreflight.category.warningStaleRemote" = "Aviso: remoto potencialmente desactualizado: %d";
 "options.supabase.pushpreflight.category.futurePricePushCandidate" = "Solo-futuro: ProductPrice excluido: %d";

@@ -9,6 +9,8 @@ final class SupabasePushPreflightViewModel: ObservableObject {
         case accountNotLinked
         case running
         case completedSafe(Summary)
+        case completedScopedSafe(Summary)
+        case completedScopedBlocked(Summary)
         case completedNoWork(Summary)
         case completedBlocked(Summary)
         case completed(ExecutionSummary)
@@ -32,6 +34,7 @@ final class SupabasePushPreflightViewModel: ObservableObject {
 
         let generatedAt: Date
         let categoryCounts: [ManualPushPreflightCategory: Int]
+        let scopeSummary: ManualPushScopeSummary
         let totalCandidates: Int
         let supplierCreates: Int
         let supplierUpdates: Int
@@ -92,7 +95,8 @@ final class SupabasePushPreflightViewModel: ObservableObject {
         context: ModelContext,
         isSignedIn: Bool,
         currentUserID: UUID?,
-        lastLinkedUserID: UUID?
+        lastLinkedUserID: UUID?,
+        scope: ManualPushPreflightScope = .global
     ) {
         guard !isRunning else { return }
         guard isSignedIn, currentUserID != nil else {
@@ -110,7 +114,8 @@ final class SupabasePushPreflightViewModel: ObservableObject {
                 let input = try self.makeInput(
                     context: context,
                     currentUserID: currentUserID,
-                    lastLinkedUserID: lastLinkedUserID
+                    lastLinkedUserID: lastLinkedUserID,
+                    scope: scope
                 )
                 let preview = await Task.detached(priority: .userInitiated) {
                     service.makePreview(input: input)
@@ -134,7 +139,8 @@ final class SupabasePushPreflightViewModel: ObservableObject {
         guard !isRunning,
               let plan = lastPreview?.plan,
               plan.isSendable,
-              !plan.hasBlockers else {
+              !plan.hasBlockers,
+              !plan.scopeSummary.hasScopedBlocker else {
             frozenConfirmationPlan = nil
             return nil
         }
@@ -184,7 +190,8 @@ final class SupabasePushPreflightViewModel: ObservableObject {
                 let input = try self.makeInput(
                     context: context,
                     currentUserID: currentUserID,
-                    lastLinkedUserID: lastLinkedUserID
+                    lastLinkedUserID: lastLinkedUserID,
+                    scope: frozenPlan.scope
                 )
                 let currentPlan = await Task.detached(priority: .userInitiated) {
                     preflightService.makePlan(input: input)
@@ -238,7 +245,8 @@ final class SupabasePushPreflightViewModel: ObservableObject {
     private func makeInput(
         context: ModelContext,
         currentUserID: UUID?,
-        lastLinkedUserID: UUID?
+        lastLinkedUserID: UUID?,
+        scope: ManualPushPreflightScope = .global
     ) throws -> ManualPushPreflightInput {
         let snapshotService = SwiftDataInventorySnapshotService(context: context)
         let supplierStates = try snapshotService.makeManualPushPreflightSupplierStates()
@@ -255,6 +263,7 @@ final class SupabasePushPreflightViewModel: ObservableObject {
 
         return ManualPushPreflightInput(
             baselineRunID: mappedBaseline.runID,
+            scope: scope,
             pullState: ManualPushPullState(isComplete: true, hasSourceErrors: false),
             accountState: mappedBaseline.accountState ?? ManualPushAccountState(
                 currentUserID: currentUserID,
@@ -323,7 +332,13 @@ final class SupabasePushPreflightViewModel: ObservableObject {
             examplesLimit: max(1, examplesLimit)
         )
         if summary.totalBlockers > 0 {
+            if summary.scopeSummary.mode.isScopedTask045 {
+                return .completedScopedBlocked(summary)
+            }
             return .completedBlocked(summary)
+        }
+        if summary.scopeSummary.mode.isScopedTask045 {
+            return .completedScopedSafe(summary)
         }
         if summary.totalCandidates == 0 {
             return .completedNoWork(summary)
@@ -390,6 +405,7 @@ final class SupabasePushPreflightViewModel: ObservableObject {
         return Summary(
             generatedAt: preview.generatedAt,
             categoryCounts: preview.categoryCounts,
+            scopeSummary: preview.plan.scopeSummary,
             totalCandidates: preview.plan.candidates.filter {
                 $0.action == .dryRunCreateCandidate || $0.action == .dryRunUpdateCandidate || $0.action == .dryRunLinkCandidate
             }.count,

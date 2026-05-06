@@ -99,6 +99,31 @@ final class LocalizationCoverageTests: XCTestCase {
         }
     }
 
+    func testTask047ScopedPushPreflightLocalizationKeysExistInSupportedLanguages() throws {
+        let keys = [
+            "options.supabase.pushpreflight.run.scopedTask045",
+            "options.supabase.pushpreflight.scope.label",
+            "options.supabase.pushpreflight.scope.global",
+            "options.supabase.pushpreflight.scope.task045",
+            "options.supabase.pushpreflight.state.completedScopedSafe",
+            "options.supabase.pushpreflight.state.completedScopedBlocked",
+            "options.supabase.pushpreflight.copy.scopedTask045",
+            "options.supabase.pushpreflight.metric.scopeIncluded",
+            "options.supabase.pushpreflight.metric.scopeExcluded",
+            "options.supabase.pushpreflight.metric.scopeBlockedDependencies",
+            "options.supabase.pushpreflight.category.blockedOutsideScope",
+            "options.supabase.pushpreflight.category.blockedScopedDependency"
+        ]
+
+        for language in ["it", "en", "es", "zh-Hans"] {
+            let strings = try loadStrings(language: language)
+            for key in keys {
+                XCTAssertNotNil(strings[key], "\(key) missing in \(language)")
+                XCTAssertFalse(strings[key]?.isEmpty ?? true, "\(key) empty in \(language)")
+            }
+        }
+    }
+
     private func loadStrings(language: String) throws -> [String: String] {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

@@ -152,6 +152,91 @@ final class SupabasePushPreflightViewModelTests: XCTestCase {
         }
     }
 
+    func testMakeCompletedStateScopedBlockedUsesTypedStateAndSummary() {
+        let plan = ManualPushPlan(
+            generatedAt: Date(),
+            scope: .scopedTask045,
+            scopeSummary: ManualPushScopeSummary(
+                mode: .scopedTask045,
+                included: 3,
+                excludedOutsideScope: 2,
+                blockedDependencies: 1
+            ),
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "TASK045_PRODUCT", action: .dryRunCreateCandidate)
+            ],
+            blockedReasons: [.blockedOutsideScope, .blockedOutsideScope, .blockedScopedDependency],
+            warnings: [],
+            futureEventChangedCount: 1
+        )
+        let preview = ManualPushPreview(generatedAt: Date(), plan: plan)
+
+        let state = SupabasePushPreflightViewModel.makeCompletedState(preview: preview, examplesLimit: 3)
+
+        if case .completedScopedBlocked(let summary) = state {
+            XCTAssertEqual(summary.scopeSummary.included, 3)
+            XCTAssertEqual(summary.scopeSummary.excludedOutsideScope, 2)
+            XCTAssertEqual(summary.scopeSummary.blockedDependencies, 1)
+            XCTAssertEqual(summary.categoryCounts[.blockedOutsideScope], 2)
+            XCTAssertEqual(summary.categoryCounts[.blockedScopedDependency], 1)
+        } else {
+            XCTFail("Expected completedScopedBlocked")
+        }
+    }
+
+    func testMakeCompletedStateScopedSafeUsesTypedState() {
+        let plan = ManualPushPlan(
+            generatedAt: Date(),
+            scope: .scopedTask045,
+            scopeSummary: ManualPushScopeSummary(mode: .scopedTask045, included: 1),
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "TASK045_PRODUCT", action: .dryRunCreateCandidate)
+            ],
+            blockedReasons: [],
+            warnings: [],
+            futureEventChangedCount: 1
+        )
+        let preview = ManualPushPreview(generatedAt: Date(), plan: plan)
+
+        let state = SupabasePushPreflightViewModel.makeCompletedState(preview: preview, examplesLimit: 3)
+
+        if case .completedScopedSafe(let summary) = state {
+            XCTAssertEqual(summary.scopeSummary.mode, .scopedTask045)
+            XCTAssertEqual(summary.totalCandidates, 1)
+        } else {
+            XCTFail("Expected completedScopedSafe")
+        }
+    }
+
+    func testMakeCompletedStateScopedSafeCanReportExcludedNoiseWithoutBlocking() {
+        let plan = ManualPushPlan(
+            generatedAt: Date(),
+            scope: .scopedTask045,
+            scopeSummary: ManualPushScopeSummary(
+                mode: .scopedTask045,
+                included: 1,
+                excludedOutsideScope: 2,
+                blockedDependencies: 0
+            ),
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "TASK045_PRODUCT", action: .dryRunCreateCandidate)
+            ],
+            blockedReasons: [],
+            warnings: [],
+            futureEventChangedCount: 1
+        )
+        let preview = ManualPushPreview(generatedAt: Date(), plan: plan)
+
+        let state = SupabasePushPreflightViewModel.makeCompletedState(preview: preview, examplesLimit: 3)
+
+        if case .completedScopedSafe(let summary) = state {
+            XCTAssertEqual(summary.scopeSummary.excludedOutsideScope, 2)
+            XCTAssertEqual(summary.totalBlockers, 0)
+        } else {
+            XCTFail("Expected completedScopedSafe")
+        }
+    }
+
     func testSummaryAggregationForMissingRemoteIDAndExamplesLimit() {
         let plan = ManualPushPlan(
             generatedAt: Date(),

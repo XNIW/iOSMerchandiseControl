@@ -27,6 +27,8 @@ nonisolated enum ManualPushPreflightCategory: String, Sendable, Equatable, Hasha
     case blockedRemoteConflict
     case blockedTombstoneConflict
     case blockedMissingSupplierCategoryRemoteID
+    case blockedOutsideScope
+    case blockedScopedDependency
     case warningLocalOnlySupplierCategory
     case warningStaleRemote
     case futurePricePushCandidate
@@ -40,7 +42,9 @@ nonisolated enum ManualPushPreflightCategory: String, Sendable, Equatable, Hasha
              .blockedStaleOrPartialBaseline,
              .blockedRemoteConflict,
              .blockedTombstoneConflict,
-             .blockedMissingSupplierCategoryRemoteID:
+             .blockedMissingSupplierCategoryRemoteID,
+             .blockedOutsideScope,
+             .blockedScopedDependency:
             return .blocker
         case .warningLocalOnlySupplierCategory,
              .warningStaleRemote:
@@ -93,6 +97,8 @@ nonisolated enum PushBlockedReason: String, Sendable, Equatable, CaseIterable {
     case blockedRemoteConflict
     case blockedTombstoneConflict
     case blockedMissingSupplierCategoryRemoteID
+    case blockedOutsideScope
+    case blockedScopedDependency
 
     var category: ManualPushPreflightCategory {
         switch self {
@@ -112,6 +118,10 @@ nonisolated enum PushBlockedReason: String, Sendable, Equatable, CaseIterable {
             return .blockedTombstoneConflict
         case .blockedMissingSupplierCategoryRemoteID:
             return .blockedMissingSupplierCategoryRemoteID
+        case .blockedOutsideScope:
+            return .blockedOutsideScope
+        case .blockedScopedDependency:
+            return .blockedScopedDependency
         }
     }
 
@@ -262,6 +272,87 @@ nonisolated enum ManualPushFingerprintNormalizer {
     }
 }
 
+nonisolated enum ManualPushPreflightScope: String, Sendable, Equatable, Hashable, CaseIterable {
+    case global
+    case scopedTask045
+
+    var isScopedTask045: Bool {
+        self == .scopedTask045
+    }
+}
+
+nonisolated struct ManualPushScopeSummary: Sendable, Equatable {
+    let mode: ManualPushPreflightScope
+    let included: Int
+    let excludedOutsideScope: Int
+    let blockedDependencies: Int
+
+    init(
+        mode: ManualPushPreflightScope = .global,
+        included: Int = 0,
+        excludedOutsideScope: Int = 0,
+        blockedDependencies: Int = 0
+    ) {
+        self.mode = mode
+        self.included = included
+        self.excludedOutsideScope = excludedOutsideScope
+        self.blockedDependencies = blockedDependencies
+    }
+
+    var hasScopedBlocker: Bool {
+        mode.isScopedTask045 && blockedDependencies > 0
+    }
+}
+
+nonisolated enum ManualPushTask045Scope {
+    static let rawPrefix = "TASK045_"
+
+    private static var lookupPrefix: String {
+        SupabasePullPreviewNormalizer.normalizedLookupName(rawPrefix) ?? rawPrefix.lowercased()
+    }
+
+    static func contains(_ lookup: ManualPushLookupState) -> Bool {
+        switch lookup.entityKind {
+        case .supplier:
+            return containsSupplierName(lookup.name)
+        case .productCategory:
+            return containsCategoryName(lookup.name)
+        case .product, .productPrice:
+            return false
+        }
+    }
+
+    static func containsSupplierName(_ name: String?) -> Bool {
+        SupabasePullPreviewNormalizer.normalizedLookupName(name)?.hasPrefix(lookupPrefix) == true
+    }
+
+    static func containsCategoryName(_ name: String?) -> Bool {
+        SupabasePullPreviewNormalizer.normalizedLookupName(name)?.hasPrefix(lookupPrefix) == true
+    }
+
+    static func contains(_ product: ManualPushProductState) -> Bool {
+        if let barcode = ManualPushFingerprintNormalizer.semanticString(product.barcode) {
+            return barcode.hasPrefix(rawPrefix)
+        }
+        return ManualPushFingerprintNormalizer.semanticString(product.productName)?.hasPrefix(rawPrefix) == true
+    }
+
+    static func contains(_ supplier: Supplier) -> Bool {
+        containsSupplierName(supplier.name)
+    }
+
+    static func contains(_ category: ProductCategory) -> Bool {
+        containsCategoryName(category.name)
+    }
+
+    static func contains(_ product: Product) -> Bool {
+        if let barcode = ManualPushFingerprintNormalizer.semanticString(product.barcode) {
+            return barcode.hasPrefix(rawPrefix)
+        }
+        return ManualPushFingerprintNormalizer.semanticString(product.productName)?.hasPrefix(rawPrefix) == true
+    }
+}
+
 nonisolated struct PushCandidate: Identifiable, Sendable, Equatable {
     let id: String
     let entityKind: PushEntityKind
@@ -304,6 +395,8 @@ nonisolated struct ManualPushPlan: Sendable, Equatable {
     let baselineRunID: UUID?
     let ownerUserID: UUID?
     let fingerprintSchemaVersion: Int
+    let scope: ManualPushPreflightScope
+    let scopeSummary: ManualPushScopeSummary
     let candidates: [PushCandidate]
     let blockedReasons: [PushBlockedReason]
     let warnings: [PushWarning]
@@ -314,6 +407,8 @@ nonisolated struct ManualPushPlan: Sendable, Equatable {
         baselineRunID: UUID? = nil,
         ownerUserID: UUID? = nil,
         fingerprintSchemaVersion: Int = SupabaseCatalogFingerprintSchema.currentVersion,
+        scope: ManualPushPreflightScope = .global,
+        scopeSummary: ManualPushScopeSummary = ManualPushScopeSummary(),
         candidates: [PushCandidate],
         blockedReasons: [PushBlockedReason],
         warnings: [PushWarning],
@@ -323,6 +418,8 @@ nonisolated struct ManualPushPlan: Sendable, Equatable {
         self.baselineRunID = baselineRunID
         self.ownerUserID = ownerUserID
         self.fingerprintSchemaVersion = fingerprintSchemaVersion
+        self.scope = scope
+        self.scopeSummary = scopeSummary
         self.candidates = candidates
         self.blockedReasons = blockedReasons
         self.warnings = warnings
@@ -369,6 +466,7 @@ nonisolated struct ManualPushPlan: Sendable, Equatable {
         let warningBody = warnings.map(\.rawValue).sorted().joined(separator: "|")
         return [
             "schema=\(fingerprintSchemaVersion)",
+            "scope=\(scope.rawValue)",
             "owner=\(ownerUserID?.uuidString.lowercased() ?? "nil")",
             "baseline=\(baselineRunID?.uuidString.lowercased() ?? "nil")",
             "candidates=\(candidateBody)",
@@ -402,6 +500,12 @@ nonisolated struct ManualPushPlan: Sendable, Equatable {
         for warning in warnings {
             guard let category = warning.category else { continue }
             counts[category, default: 0] += 1
+        }
+        if scope.isScopedTask045 && scopeSummary.blockedDependencies > 0 {
+            counts[.blockedScopedDependency] = max(
+                counts[.blockedScopedDependency, default: 0],
+                scopeSummary.blockedDependencies
+            )
         }
         return counts
     }

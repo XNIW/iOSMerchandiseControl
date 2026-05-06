@@ -379,7 +379,173 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
         XCTAssertTrue(plan.isSendable)
     }
 
+    func testTask045ScopeRecognizesSupplierCategoryAndProduct() {
+        XCTAssertTrue(ManualPushTask045Scope.contains(lookup(.supplier, name: " task045_supplier_test ")))
+        XCTAssertTrue(ManualPushTask045Scope.contains(lookup(.productCategory, name: "TASK045_CATEGORY_TEST")))
+        XCTAssertTrue(ManualPushTask045Scope.contains(product(remoteID: nil, barcode: " TASK045_BARCODE_TEST ")))
+        XCTAssertTrue(ManualPushTask045Scope.contains(product(remoteID: nil, barcode: nil, productName: "TASK045_PRODUCT_NAME")))
+    }
+
+    func testTask045ScopeRejectsSimilarButInvalidStrings() {
+        XCTAssertFalse(ManualPushTask045Scope.contains(lookup(.supplier, name: "PRE_TASK045_SUPPLIER")))
+        XCTAssertFalse(ManualPushTask045Scope.contains(lookup(.productCategory, name: "TASK044_CATEGORY")))
+        XCTAssertFalse(ManualPushTask045Scope.contains(product(remoteID: nil, barcode: "task045_lowercase_barcode")))
+        XCTAssertFalse(ManualPushTask045Scope.contains(product(remoteID: nil, barcode: "NOISE_BARCODE", productName: "TASK045_PRODUCT_NAME")))
+    }
+
+    func testScopedTask045MixedDatasetIncludesOnlyTask045RecordsAndCountsOutsideScope() {
+        let plan = makePlan(
+            scope: .scopedTask045,
+            baseline: baseline(),
+            suppliers: [
+                lookup(.supplier, name: "TASK045_SUPPLIER_TEST"),
+                lookup(.supplier, name: "Noise Supplier")
+            ],
+            categories: [
+                lookup(.productCategory, name: "TASK045_CATEGORY_TEST"),
+                lookup(.productCategory, name: "Noise Category")
+            ],
+            products: [
+                product(
+                    remoteID: nil,
+                    barcode: "TASK045_PRODUCT_BARCODE",
+                    hasSupplierReference: true,
+                    supplierName: "TASK045_SUPPLIER_TEST",
+                    hasCategoryReference: true,
+                    categoryName: "TASK045_CATEGORY_TEST"
+                ),
+                product(remoteID: nil, barcode: "NOISE_PRODUCT")
+            ]
+        )
+
+        XCTAssertEqual(plan.scopeSummary.mode, .scopedTask045)
+        XCTAssertEqual(plan.scopeSummary.included, 3)
+        XCTAssertEqual(plan.scopeSummary.excludedOutsideScope, 3)
+        XCTAssertEqual(plan.count(entityKind: .supplier, action: .dryRunCreateCandidate), 1)
+        XCTAssertEqual(plan.count(entityKind: .productCategory, action: .dryRunCreateCandidate), 1)
+        XCTAssertEqual(plan.count(entityKind: .product, action: .dryRunCreateCandidate), 1)
+        XCTAssertFalse(plan.candidates.contains { $0.localID == "NOISE_PRODUCT" })
+        XCTAssertFalse(plan.blockedReasons.contains(.blockedOutsideScope))
+        XCTAssertTrue(plan.isSendable)
+    }
+
+    func testScopedTask045ProductWithOutsideLookupWithoutRemoteIDBlocksDependency() {
+        let plan = makePlan(
+            scope: .scopedTask045,
+            baseline: baseline(),
+            suppliers: [lookup(.supplier, name: "Outside Supplier")],
+            products: [
+                product(
+                    remoteID: nil,
+                    barcode: "TASK045_PRODUCT_BARCODE",
+                    hasSupplierReference: true,
+                    supplierName: "Outside Supplier"
+                )
+            ]
+        )
+
+        XCTAssertEqual(plan.scopeSummary.blockedDependencies, 1)
+        XCTAssertTrue(plan.blockedReasons.contains(.blockedScopedDependency))
+        XCTAssertFalse(plan.candidates.contains { $0.entityKind == .product && $0.action == .dryRunCreateCandidate })
+    }
+
+    func testScopedTask045ProductWithOutsideLookupRemoteIDDoesNotWriteLookup() {
+        let supplierRemoteID = UUID()
+        let plan = makePlan(
+            scope: .scopedTask045,
+            baseline: baseline(),
+            suppliers: [
+                lookup(
+                    .supplier,
+                    name: "Outside Supplier",
+                    remoteID: supplierRemoteID,
+                    remoteUpdatedAt: Date(timeIntervalSince1970: 1_778_000_000)
+                )
+            ],
+            products: [
+                product(
+                    remoteID: nil,
+                    barcode: "TASK045_PRODUCT_BARCODE",
+                    hasSupplierReference: true,
+                    supplierRemoteID: supplierRemoteID,
+                    supplierName: "Outside Supplier"
+                )
+            ]
+        )
+
+        XCTAssertEqual(plan.scopeSummary.blockedDependencies, 0)
+        XCTAssertEqual(plan.count(entityKind: .product, action: .dryRunCreateCandidate), 1)
+        XCTAssertFalse(plan.candidates.contains { $0.entityKind == .supplier })
+        XCTAssertFalse(plan.blockedReasons.contains(.blockedOutsideScope))
+        XCTAssertTrue(plan.isSendable)
+    }
+
+    func testScopedTask045ProductWithOutsideLookupNameAndTask045LocalIDStillBlocksDependency() {
+        let product = ManualPushProductState(
+            localID: "TASK045_PRODUCT_BARCODE",
+            barcode: "TASK045_PRODUCT_BARCODE",
+            productName: "Scoped",
+            hasSupplierReference: true,
+            supplierLocalID: "TASK045_FAKE_LOCAL_ID",
+            supplierName: "Outside Supplier",
+            supplierRemoteID: nil
+        )
+        let plan = makePlan(
+            scope: .scopedTask045,
+            baseline: baseline(),
+            products: [product]
+        )
+
+        XCTAssertEqual(plan.scopeSummary.blockedDependencies, 1)
+        XCTAssertTrue(plan.blockedReasons.contains(.blockedScopedDependency))
+        XCTAssertFalse(plan.isSendable)
+    }
+
+    func testGlobalModeStillIncludesMixedDataset() {
+        let plan = makePlan(
+            scope: .global,
+            baseline: baseline(),
+            suppliers: [
+                lookup(.supplier, name: "TASK045_SUPPLIER_TEST"),
+                lookup(.supplier, name: "Noise Supplier")
+            ],
+            categories: [
+                lookup(.productCategory, name: "TASK045_CATEGORY_TEST"),
+                lookup(.productCategory, name: "Noise Category")
+            ],
+            products: [
+                product(remoteID: nil, barcode: "TASK045_PRODUCT_BARCODE"),
+                product(remoteID: nil, barcode: "NOISE_PRODUCT")
+            ]
+        )
+
+        XCTAssertEqual(plan.scopeSummary.mode, .global)
+        XCTAssertEqual(plan.scopeSummary.excludedOutsideScope, 0)
+        XCTAssertEqual(plan.count(entityKind: .supplier, action: .dryRunCreateCandidate), 2)
+        XCTAssertEqual(plan.count(entityKind: .productCategory, action: .dryRunCreateCandidate), 2)
+        XCTAssertEqual(plan.count(entityKind: .product, action: .dryRunCreateCandidate), 2)
+        XCTAssertFalse(plan.blockedReasons.contains(.blockedOutsideScope))
+    }
+
+    func testScopedTask045DoesNotAddProductPriceFutureOnlyCandidate() {
+        let plan = makePlan(
+            scope: .scopedTask045,
+            baseline: baseline(),
+            products: [
+                product(
+                    remoteID: nil,
+                    barcode: "TASK045_PRODUCT_BARCODE",
+                    hasLocalPriceChanges: true
+                )
+            ]
+        )
+
+        XCTAssertFalse(plan.candidates.contains { $0.entityKind == .productPrice })
+        XCTAssertEqual(plan.count(entityKind: .product, action: .dryRunCreateCandidate), 1)
+    }
+
     private func makePlan(
+        scope: ManualPushPreflightScope = .global,
         pullState: ManualPushPullState = ManualPushPullState(isComplete: true),
         accountState: ManualPushAccountState? = nil,
         baseline: ManualPushBaseline?,
@@ -390,6 +556,7 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
     ) -> ManualPushPlan {
         service.makePlan(input: ManualPushPreflightInput(
             generatedAt: generatedAt,
+            scope: scope,
             pullState: pullState,
             accountState: accountState ?? ManualPushAccountState(currentUserID: userID, lastLinkedUserID: userID),
             baseline: baseline,
@@ -408,8 +575,10 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
         productName: String? = "Product",
         hasSupplierReference: Bool = false,
         supplierRemoteID: UUID? = nil,
+        supplierName: String = "supplier",
         hasCategoryReference: Bool = false,
         categoryRemoteID: UUID? = nil,
+        categoryName: String = "category",
         hasLocalPriceChanges: Bool = false
     ) -> ManualPushProductState {
         ManualPushProductState(
@@ -420,12 +589,12 @@ final class SupabaseManualPushPreflightTests: XCTestCase {
             barcode: barcode,
             productName: productName,
             hasSupplierReference: hasSupplierReference,
-            supplierLocalID: hasSupplierReference && supplierRemoteID == nil ? "supplier" : nil,
-            supplierName: hasSupplierReference && supplierRemoteID == nil ? "supplier" : nil,
+            supplierLocalID: hasSupplierReference && supplierRemoteID == nil ? supplierName : nil,
+            supplierName: hasSupplierReference ? supplierName : nil,
             supplierRemoteID: supplierRemoteID,
             hasCategoryReference: hasCategoryReference,
-            categoryLocalID: hasCategoryReference && categoryRemoteID == nil ? "category" : nil,
-            categoryName: hasCategoryReference && categoryRemoteID == nil ? "category" : nil,
+            categoryLocalID: hasCategoryReference && categoryRemoteID == nil ? categoryName : nil,
+            categoryName: hasCategoryReference ? categoryName : nil,
             categoryRemoteID: categoryRemoteID,
             hasLocalPriceChanges: hasLocalPriceChanges
         )

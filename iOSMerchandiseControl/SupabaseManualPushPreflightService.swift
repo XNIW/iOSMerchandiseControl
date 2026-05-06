@@ -241,6 +241,7 @@ nonisolated struct ManualPushProductState: Sendable, Equatable {
 nonisolated struct ManualPushPreflightInput: Sendable, Equatable {
     let generatedAt: Date
     let baselineRunID: UUID?
+    let scope: ManualPushPreflightScope
     let pullState: ManualPushPullState
     let accountState: ManualPushAccountState
     let baseline: ManualPushBaseline?
@@ -252,6 +253,7 @@ nonisolated struct ManualPushPreflightInput: Sendable, Equatable {
     init(
         generatedAt: Date = Date(),
         baselineRunID: UUID? = nil,
+        scope: ManualPushPreflightScope = .global,
         pullState: ManualPushPullState,
         accountState: ManualPushAccountState,
         baseline: ManualPushBaseline?,
@@ -262,6 +264,7 @@ nonisolated struct ManualPushPreflightInput: Sendable, Equatable {
     ) {
         self.generatedAt = generatedAt
         self.baselineRunID = baselineRunID
+        self.scope = scope
         self.pullState = pullState
         self.accountState = accountState
         self.baseline = baseline
@@ -287,6 +290,11 @@ nonisolated struct SupabaseManualPushPreflightService: Sendable {
         var candidates: [PushCandidate] = []
         var blockedReasons: [PushBlockedReason] = []
         var warnings: [PushWarning] = []
+        var scopedBlockedDependencies = 0
+
+        let scopedSuppliers = scopedLookups(input.suppliers, scope: input.scope)
+        let scopedCategories = scopedLookups(input.categories, scope: input.scope)
+        let scopedProducts = scopedProducts(input.products, scope: input.scope)
 
         if input.accountState.hasMismatch {
             blockedReasons.append(.blockedAccountMismatch)
@@ -305,7 +313,7 @@ nonisolated struct SupabaseManualPushPreflightService: Sendable {
 
         let hasGlobalBlocker = !blockedReasons.isEmpty
 
-        for supplier in input.suppliers.sorted(by: { $0.localID < $1.localID }) {
+        for supplier in scopedSuppliers.sorted(by: { $0.localID < $1.localID }) {
             guard !hasGlobalBlocker else { continue }
             guard let baseline else {
                 blockedReasons.append(.blockedMissingBaseline)
@@ -320,7 +328,7 @@ nonisolated struct SupabaseManualPushPreflightService: Sendable {
             )
         }
 
-        for category in input.categories.sorted(by: { $0.localID < $1.localID }) {
+        for category in scopedCategories.sorted(by: { $0.localID < $1.localID }) {
             guard !hasGlobalBlocker else { continue }
             guard let baseline else {
                 blockedReasons.append(.blockedMissingBaseline)
@@ -337,11 +345,11 @@ nonisolated struct SupabaseManualPushPreflightService: Sendable {
 
         let plannedSupplierLocalIDs = plannedLookupLocalIDs(entityKind: .supplier, candidates: candidates)
         let plannedCategoryLocalIDs = plannedLookupLocalIDs(entityKind: .productCategory, candidates: candidates)
-        let plannedSupplierNames = plannedLookupNames(states: input.suppliers, localIDs: plannedSupplierLocalIDs)
-        let plannedCategoryNames = plannedLookupNames(states: input.categories, localIDs: plannedCategoryLocalIDs)
+        let plannedSupplierNames = plannedLookupNames(states: scopedSuppliers, localIDs: plannedSupplierLocalIDs)
+        let plannedCategoryNames = plannedLookupNames(states: scopedCategories, localIDs: plannedCategoryLocalIDs)
 
-        for product in input.products.sorted(by: { $0.localID < $1.localID }) {
-            if product.hasLocalPriceChanges {
+        for product in scopedProducts.sorted(by: { $0.localID < $1.localID }) {
+            if product.hasLocalPriceChanges && input.scope == .global {
                 candidates.append(
                     PushCandidate(
                         entityKind: .productPrice,
@@ -354,6 +362,13 @@ nonisolated struct SupabaseManualPushPreflightService: Sendable {
             }
 
             guard !hasGlobalBlocker else {
+                continue
+            }
+
+            let blockedDependencies = scopedDependencyBlockCount(product)
+            if input.scope.isScopedTask045 && blockedDependencies > 0 {
+                scopedBlockedDependencies += blockedDependencies
+                append(.blockedScopedDependency, count: blockedDependencies, to: &blockedReasons)
                 continue
             }
 
@@ -407,15 +422,100 @@ nonisolated struct SupabaseManualPushPreflightService: Sendable {
             appendUnique(.futureEventSplitRequired, to: &warnings)
         }
 
+        let scopeSummary = makeScopeSummary(
+            input: input,
+            includedSuppliers: scopedSuppliers.count,
+            includedCategories: scopedCategories.count,
+            includedProducts: scopedProducts.count,
+            blockedDependencies: scopedBlockedDependencies
+        )
         return ManualPushPlan(
             generatedAt: input.generatedAt,
             baselineRunID: input.baselineRunID,
             ownerUserID: input.accountState.currentUserID,
+            scope: input.scope,
+            scopeSummary: scopeSummary,
             candidates: candidates,
             blockedReasons: blockedReasons,
             warnings: warnings,
             futureEventChangedCount: futureEventChangedCount
         )
+    }
+
+    private func scopedLookups(
+        _ states: [ManualPushLookupState],
+        scope: ManualPushPreflightScope
+    ) -> [ManualPushLookupState] {
+        guard scope.isScopedTask045 else { return states }
+        return states.filter(ManualPushTask045Scope.contains)
+    }
+
+    private func scopedProducts(
+        _ states: [ManualPushProductState],
+        scope: ManualPushPreflightScope
+    ) -> [ManualPushProductState] {
+        guard scope.isScopedTask045 else { return states }
+        return states.filter(ManualPushTask045Scope.contains)
+    }
+
+    private func makeScopeSummary(
+        input: ManualPushPreflightInput,
+        includedSuppliers: Int,
+        includedCategories: Int,
+        includedProducts: Int,
+        blockedDependencies: Int
+    ) -> ManualPushScopeSummary {
+        guard input.scope.isScopedTask045 else {
+            return ManualPushScopeSummary(
+                mode: .global,
+                included: input.suppliers.count + input.categories.count + input.products.count,
+                excludedOutsideScope: 0,
+                blockedDependencies: 0
+            )
+        }
+        let included = includedSuppliers + includedCategories + includedProducts
+        let total = input.suppliers.count + input.categories.count + input.products.count
+        return ManualPushScopeSummary(
+            mode: input.scope,
+            included: included,
+            excludedOutsideScope: max(0, total - included),
+            blockedDependencies: blockedDependencies
+        )
+    }
+
+    private func scopedDependencyBlockCount(_ product: ManualPushProductState) -> Int {
+        var count = 0
+        if product.hasSupplierReference,
+           product.supplierRemoteID == nil,
+           !lookupReferenceIsTask045(
+                name: product.supplierName,
+                entityKind: .supplier
+           ) {
+            count += 1
+        }
+        if product.hasCategoryReference,
+           product.categoryRemoteID == nil,
+           !lookupReferenceIsTask045(
+                name: product.categoryName,
+                entityKind: .productCategory
+           ) {
+            count += 1
+        }
+        return count
+    }
+
+    private func lookupReferenceIsTask045(
+        name: String?,
+        entityKind: PushEntityKind
+    ) -> Bool {
+        switch entityKind {
+        case .supplier:
+            return ManualPushTask045Scope.containsSupplierName(name)
+        case .productCategory:
+            return ManualPushTask045Scope.containsCategoryName(name)
+        case .product, .productPrice:
+            return false
+        }
     }
 
     private func classifyLinkedProduct(
@@ -729,6 +829,22 @@ nonisolated struct SupabaseManualPushPreflightService: Sendable {
             return
         }
         warnings.append(warning)
+    }
+
+    private func appendUnique(_ reason: PushBlockedReason, to blockedReasons: inout [PushBlockedReason]) {
+        guard !blockedReasons.contains(reason) else {
+            return
+        }
+        blockedReasons.append(reason)
+    }
+
+    private func append(
+        _ reason: PushBlockedReason,
+        count: Int,
+        to blockedReasons: inout [PushBlockedReason]
+    ) {
+        guard count > 0 else { return }
+        blockedReasons += Array(repeating: reason, count: count)
     }
 
     private func plannedLookupLocalIDs(

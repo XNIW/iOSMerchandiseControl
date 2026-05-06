@@ -476,6 +476,12 @@ final class SupabaseManualPushService {
             return .blocked(message: "Plan is not safe to send.")
         }
 
+        do {
+            try validateScopedPlanIfNeeded(plan: plan, context: context)
+        } catch {
+            return .blocked(message: sanitized(error))
+        }
+
         var counters = Counters()
         var touchedIDs = SupabaseManualPushTouchedIDs()
         var didConfirmAnyRemoteWrite = false
@@ -543,6 +549,59 @@ final class SupabaseManualPushService {
                 message: sanitized(error)
             )
         }
+    }
+
+    private func validateScopedPlanIfNeeded(
+        plan: ManualPushPlan,
+        context: ModelContext
+    ) throws {
+        guard plan.scope.isScopedTask045 else {
+            return
+        }
+        guard !plan.scopeSummary.hasScopedBlocker else {
+            throw SupabaseInventoryServiceError.schemaDrift(message: "Scoped TASK045 plan is blocked before remote write.")
+        }
+
+        let suppliersByName = try fetchSuppliersByName(context: context)
+        let categoriesByName = try fetchCategoriesByName(context: context)
+        let productsByBarcode = try fetchProductsByBarcode(context: context)
+
+        for candidate in plan.writeCandidates {
+            switch candidate.entityKind {
+            case .supplier:
+                guard let supplier = suppliersByName[candidate.localID],
+                      ManualPushTask045Scope.contains(supplier) else {
+                    throw SupabaseInventoryServiceError.schemaDrift(message: "Scoped TASK045 supplier payload contains an outside-scope record.")
+                }
+            case .productCategory:
+                guard let category = categoriesByName[candidate.localID],
+                      ManualPushTask045Scope.contains(category) else {
+                    throw SupabaseInventoryServiceError.schemaDrift(message: "Scoped TASK045 category payload contains an outside-scope record.")
+                }
+            case .product:
+                guard let product = productsByBarcode[candidate.localID],
+                      ManualPushTask045Scope.contains(product),
+                      scopedProductDependenciesAreRemoteSafe(product) else {
+                    throw SupabaseInventoryServiceError.schemaDrift(message: "Scoped TASK045 product payload contains an outside-scope record or dependency.")
+                }
+            case .productPrice:
+                throw SupabaseInventoryServiceError.schemaDrift(message: "Scoped TASK045 payload cannot contain ProductPrice.")
+            }
+        }
+    }
+
+    private func scopedProductDependenciesAreRemoteSafe(_ product: Product) -> Bool {
+        if let supplier = product.supplier,
+           !ManualPushTask045Scope.contains(supplier),
+           supplier.remoteID == nil {
+            return false
+        }
+        if let category = product.category,
+           !ManualPushTask045Scope.contains(category),
+           category.remoteID == nil {
+            return false
+        }
+        return true
     }
 
     private func pushSuppliers(

@@ -210,16 +210,23 @@
 
 "options.supabase.pushpreflight.header" = "Local preflight check";
 "options.supabase.pushpreflight.run" = "Run local check";
+"options.supabase.pushpreflight.run.scopedTask045" = "Run scoped dry-run";
+"options.supabase.pushpreflight.scope.label" = "Preflight scope";
+"options.supabase.pushpreflight.scope.global" = "Global";
+"options.supabase.pushpreflight.scope.task045" = "TASK045";
 "options.supabase.pushpreflight.running" = "Running local analysis...";
 "options.supabase.pushpreflight.accountRequired" = "Supabase account is not linked or does not match the last local account.";
 "options.supabase.pushpreflight.state.idle" = "Ready for a local dry-run check.";
 "options.supabase.pushpreflight.state.accountNotLinked" = "Check blocked: account not linked";
 "options.supabase.pushpreflight.state.running" = "Local check in progress";
 "options.supabase.pushpreflight.state.completedSafe" = "Check completed: safe state";
+"options.supabase.pushpreflight.state.completedScopedSafe" = "Scoped dry-run completed: safe";
+"options.supabase.pushpreflight.state.completedScopedBlocked" = "Scoped dry-run blocked: scope guardrail";
 "options.supabase.pushpreflight.state.completedNoWork" = "Check completed: no applicable work";
 "options.supabase.pushpreflight.state.completedBlocked" = "Check completed: blockers found";
 "options.supabase.pushpreflight.state.failedLocalError" = "Local check failed. Try again.";
 "options.supabase.pushpreflight.copy.dryRun" = "Local dry-run: no data is sent to Supabase.";
+"options.supabase.pushpreflight.copy.scopedTask045" = "Scoped mode isolates TASK045_* records and blocks outside-scope writes.";
 "options.supabase.pushpreflight.copy.noRemoteWrite" = "This check performs no remote write.";
 "options.supabase.pushpreflight.copy.noLocalRemoteMutation" = "This check modifies neither local nor remote data.";
 "options.supabase.pushpreflight.copy.futureTask" = "Real push will be implemented in a future task.";
@@ -228,6 +235,9 @@
 "options.supabase.pushpreflight.metric.blockers" = "Blockers";
 "options.supabase.pushpreflight.metric.warnings" = "Warnings";
 "options.supabase.pushpreflight.metric.futureOnly" = "Future-only";
+"options.supabase.pushpreflight.metric.scopeIncluded" = "Scoped included";
+"options.supabase.pushpreflight.metric.scopeExcluded" = "Outside scope";
+"options.supabase.pushpreflight.metric.scopeBlockedDependencies" = "Blocked dependencies";
 "options.supabase.pushpreflight.category.dryRunCreateCandidate" = "Create candidates: %d";
 "options.supabase.pushpreflight.category.dryRunUpdateCandidate" = "Update candidates: %d";
 "options.supabase.pushpreflight.category.noOpAlreadySynced" = "No-op already synced: %d";
@@ -239,6 +249,8 @@
 "options.supabase.pushpreflight.category.blockedRemoteConflict" = "Blocked: remote conflict: %d";
 "options.supabase.pushpreflight.category.blockedTombstoneConflict" = "Blocked: remote tombstone: %d";
 "options.supabase.pushpreflight.category.blockedMissingSupplierCategoryRemoteID" = "Blocked: supplier/category missing remoteID: %d";
+"options.supabase.pushpreflight.category.blockedOutsideScope" = "Blocked: outside-scope records: %d";
+"options.supabase.pushpreflight.category.blockedScopedDependency" = "Blocked: scoped dependency: %d";
 "options.supabase.pushpreflight.category.warningLocalOnlySupplierCategory" = "Warning: unresolved local references: %d";
 "options.supabase.pushpreflight.category.warningStaleRemote" = "Warning: potentially stale remote: %d";
 "options.supabase.pushpreflight.category.futurePricePushCandidate" = "Future-only: ProductPrice excluded: %d";

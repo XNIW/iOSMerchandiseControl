@@ -34,6 +34,7 @@ struct OptionsView: View {
     @State private var isShowingSupabasePullPreview = false
     @State private var supabasePullPreviewState: SupabasePullPreviewViewState = .idle
     @StateObject private var pushPreflightViewModel: SupabasePushPreflightViewModel
+    @State private var selectedPushPreflightScope: ManualPushPreflightScope = .global
     @State private var pendingManualPushPlan: ManualPushPlan?
     @State private var isShowingManualPushConfirmation = false
 #endif
@@ -286,20 +287,29 @@ struct OptionsView: View {
             Section {
                 preflightStateRow
 
+                Picker(
+                    L("options.supabase.pushpreflight.scope.label"),
+                    selection: $selectedPushPreflightScope
+                ) {
+                    Text(L("options.supabase.pushpreflight.scope.global"))
+                        .tag(ManualPushPreflightScope.global)
+                    Text(L("options.supabase.pushpreflight.scope.task045"))
+                        .tag(ManualPushPreflightScope.scopedTask045)
+                }
+                .pickerStyle(.segmented)
+                .disabled(pushPreflightViewModel.isRunning)
+
                 Button {
                     runSupabasePushPreflight()
                 } label: {
-                    Label(L("options.supabase.pushpreflight.run"), systemImage: "checklist")
+                    Label(
+                        L(pushPreflightRunButtonKey),
+                        systemImage: selectedPushPreflightScope == .scopedTask045
+                            ? "line.3.horizontal.decrease.circle"
+                            : "checklist"
+                    )
                 }
                 .disabled(pushPreflightViewModel.isRunning || !isPushPreflightAccountReady)
-
-                Button {
-                    prepareManualPushConfirmation()
-                } label: {
-                    Label(L("options.supabase.manualpush.button"), systemImage: "icloud.and.arrow.up")
-                }
-                .disabled(!canRunManualPush)
-                .accessibilityLabel(L("options.supabase.manualpush.accessibility"))
 
                 if pushPreflightViewModel.isRunning {
                     HStack(spacing: 12) {
@@ -315,6 +325,20 @@ struct OptionsView: View {
                             titleKey: "options.supabase.pushpreflight.state.completedSafe",
                             icon: "checkmark.shield.fill",
                             color: .green,
+                            summary: summary
+                        )
+                    } else if case .completedScopedSafe(let summary) = pushPreflightViewModel.state {
+                        preflightSummaryCard(
+                            titleKey: "options.supabase.pushpreflight.state.completedScopedSafe",
+                            icon: "checkmark.shield.fill",
+                            color: .green,
+                            summary: summary
+                        )
+                    } else if case .completedScopedBlocked(let summary) = pushPreflightViewModel.state {
+                        preflightSummaryCard(
+                            titleKey: "options.supabase.pushpreflight.state.completedScopedBlocked",
+                            icon: "xmark.shield.fill",
+                            color: .orange,
                             summary: summary
                         )
                     } else if case .completedNoWork(let summary) = pushPreflightViewModel.state {
@@ -349,7 +373,7 @@ struct OptionsView: View {
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L("options.supabase.pushpreflight.copy.dryRun"))
-                    Text(L("options.supabase.manualpush.copy.remoteWriteOnlyAfterConfirm"))
+                    Text(L("options.supabase.pushpreflight.copy.scopedTask045"))
                     Text(L("options.supabase.manualpush.copy.noProductPrice"))
                     Text(L("options.supabase.manualpush.copy.noRemoteDelete"))
                     Text(L("options.supabase.manualpush.copy.noAutomaticSync"))
@@ -388,6 +412,8 @@ struct OptionsView: View {
                  .accountNotLinked,
                  .running,
                  .completedSafe,
+                 .completedScopedSafe,
+                 .completedScopedBlocked,
                  .completedNoWork,
                  .completedBlocked,
                  .failedBeforeWrite,
@@ -449,7 +475,7 @@ struct OptionsView: View {
               let plan = pushPreflightViewModel.lastPreview?.plan else {
             return false
         }
-        return plan.isSendable && !plan.hasBlockers
+        return plan.isSendable && !plan.hasBlockers && !plan.scopeSummary.hasScopedBlocker
     }
 
     private var manualPushExecutionSummary: SupabasePushPreflightViewModel.ExecutionSummary? {
@@ -464,6 +490,8 @@ struct OptionsView: View {
              .accountNotLinked,
              .running,
              .completedSafe,
+             .completedScopedSafe,
+             .completedScopedBlocked,
              .completedNoWork,
              .completedBlocked,
              .failedLocalError:
@@ -483,6 +511,12 @@ struct OptionsView: View {
             return true
         }
         return false
+    }
+
+    private var pushPreflightRunButtonKey: String {
+        selectedPushPreflightScope == .scopedTask045
+            ? "options.supabase.pushpreflight.run.scopedTask045"
+            : "options.supabase.pushpreflight.run"
     }
 
     private var supabaseAuthStatusRow: some View {
@@ -623,7 +657,8 @@ struct OptionsView: View {
             context: modelContext,
             isSignedIn: supabaseAuthViewModel.isSignedIn && !supabaseAuthViewModel.isTransitioning,
             currentUserID: supabaseAuthViewModel.sessionInfo?.userID,
-            lastLinkedUserID: UUID(uuidString: supabaseLastLinkedUserID)
+            lastLinkedUserID: UUID(uuidString: supabaseLastLinkedUserID),
+            scope: selectedPushPreflightScope
         )
     }
 
@@ -697,6 +732,11 @@ struct OptionsView: View {
             LabeledContent(L("options.supabase.pushpreflight.metric.blockers"), value: "\(summary.totalBlockers)")
             LabeledContent(L("options.supabase.pushpreflight.metric.warnings"), value: "\(summary.totalWarnings)")
             LabeledContent(L("options.supabase.pushpreflight.metric.futureOnly"), value: "\(summary.totalFutureOnly)")
+            if summary.scopeSummary.mode.isScopedTask045 {
+                LabeledContent(L("options.supabase.pushpreflight.metric.scopeIncluded"), value: "\(summary.scopeSummary.included)")
+                LabeledContent(L("options.supabase.pushpreflight.metric.scopeExcluded"), value: "\(summary.scopeSummary.excludedOutsideScope)")
+                LabeledContent(L("options.supabase.pushpreflight.metric.scopeBlockedDependencies"), value: "\(summary.scopeSummary.blockedDependencies)")
+            }
             LabeledContent(
                 L("options.supabase.manualpush.result.suppliers"),
                 value: resultCounts(creates: summary.supplierCreates, updates: summary.supplierUpdates, links: summary.supplierLinks)
@@ -753,6 +793,10 @@ struct OptionsView: View {
             return "options.supabase.pushpreflight.state.running"
         case .completedSafe:
             return "options.supabase.pushpreflight.state.completedSafe"
+        case .completedScopedSafe:
+            return "options.supabase.pushpreflight.state.completedScopedSafe"
+        case .completedScopedBlocked:
+            return "options.supabase.pushpreflight.state.completedScopedBlocked"
         case .completedNoWork:
             return "options.supabase.pushpreflight.state.completedNoWork"
         case .completedBlocked:
@@ -780,8 +824,10 @@ struct OptionsView: View {
             return "lock.fill"
         case .running:
             return "hourglass"
-        case .completedSafe, .completedNoWork, .completed:
+        case .completedSafe, .completedScopedSafe, .completedNoWork, .completed:
             return "checkmark.circle.fill"
+        case .completedScopedBlocked:
+            return "xmark.shield.fill"
         case .completedBaselineRefreshFailed:
             return "externaldrive.badge.exclamationmark"
         case .partial:
@@ -799,9 +845,9 @@ struct OptionsView: View {
 
     private func preflightStateColor(_ state: SupabasePushPreflightViewModel.ViewState) -> Color {
         switch state {
-        case .completedSafe, .completedNoWork, .completed:
+        case .completedSafe, .completedScopedSafe, .completedNoWork, .completed:
             return .green
-        case .completedBaselineRefreshFailed, .partial, .completedBlocked, .accountNotLinked, .blockedBeforeWrite:
+        case .completedBaselineRefreshFailed, .partial, .completedBlocked, .completedScopedBlocked, .accountNotLinked, .blockedBeforeWrite:
             return .orange
         case .failedLocalError, .failedBeforeWrite:
             return .red

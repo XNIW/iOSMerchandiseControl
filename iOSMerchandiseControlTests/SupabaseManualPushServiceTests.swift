@@ -233,6 +233,113 @@ final class SupabaseManualPushServiceTests: XCTestCase {
         XCTAssertEqual(retryGateway.supplierCreatePayloads.count, 0)
     }
 
+    func testScopedTask045GuardBlocksOutsideSupplierBeforeRemoteCall() async throws {
+        let context = try makeContext()
+        let ownerID = UUID()
+        context.insert(Supplier(name: "Outside Supplier"))
+        try context.save()
+
+        let plan = ManualPushPlan(
+            generatedAt: Date(),
+            ownerUserID: ownerID,
+            scope: .scopedTask045,
+            scopeSummary: ManualPushScopeSummary(mode: .scopedTask045, included: 1),
+            candidates: [
+                PushCandidate(entityKind: .supplier, localID: "Outside Supplier", action: .dryRunCreateCandidate)
+            ],
+            blockedReasons: [],
+            warnings: [],
+            futureEventChangedCount: 1
+        )
+        let gateway = FakeManualPushRemoteGateway()
+
+        let result = await makeService(gateway: gateway).execute(
+            plan: plan,
+            context: context,
+            ownerUserID: ownerID
+        )
+
+        XCTAssertEqual(result.status, .blockedBeforeWrite)
+        XCTAssertEqual(gateway.supplierCreatePayloads.count, 0)
+    }
+
+    func testScopedTask045GuardBlocksOutsideLocalDependencyBeforeRemoteCall() async throws {
+        let context = try makeContext()
+        let ownerID = UUID()
+        let supplier = Supplier(name: "Outside Supplier")
+        context.insert(supplier)
+        context.insert(Product(barcode: "TASK045_PRODUCT_BARCODE", productName: "Scoped", supplier: supplier))
+        try context.save()
+
+        let plan = ManualPushPlan(
+            generatedAt: Date(),
+            ownerUserID: ownerID,
+            scope: .scopedTask045,
+            scopeSummary: ManualPushScopeSummary(mode: .scopedTask045, included: 1),
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "TASK045_PRODUCT_BARCODE", action: .dryRunCreateCandidate)
+            ],
+            blockedReasons: [],
+            warnings: [],
+            futureEventChangedCount: 1
+        )
+        let gateway = FakeManualPushRemoteGateway()
+
+        let result = await makeService(gateway: gateway).execute(
+            plan: plan,
+            context: context,
+            ownerUserID: ownerID
+        )
+
+        XCTAssertEqual(result.status, .blockedBeforeWrite)
+        XCTAssertEqual(gateway.productCreatePayloads.count, 0)
+    }
+
+    func testScopedTask045GuardAllowsOutsideRemoteDependencyWithoutWritingLookup() async throws {
+        let context = try makeContext()
+        let ownerID = UUID()
+        let supplierRemoteID = UUID()
+        let supplier = Supplier(
+            name: "Outside Supplier",
+            remoteID: supplierRemoteID,
+            remoteUpdatedAt: Date(timeIntervalSince1970: 1_778_300_000)
+        )
+        let product = Product(barcode: "TASK045_PRODUCT_BARCODE", productName: "Scoped", supplier: supplier)
+        context.insert(supplier)
+        context.insert(product)
+        try context.save()
+
+        let plan = ManualPushPlan(
+            generatedAt: Date(),
+            ownerUserID: ownerID,
+            scope: .scopedTask045,
+            scopeSummary: ManualPushScopeSummary(
+                mode: .scopedTask045,
+                included: 1,
+                excludedOutsideScope: 1,
+                blockedDependencies: 0
+            ),
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "TASK045_PRODUCT_BARCODE", action: .dryRunCreateCandidate)
+            ],
+            blockedReasons: [],
+            warnings: [],
+            futureEventChangedCount: 1
+        )
+        let gateway = FakeManualPushRemoteGateway()
+
+        let result = await makeService(gateway: gateway).execute(
+            plan: plan,
+            context: context,
+            ownerUserID: ownerID
+        )
+
+        XCTAssertEqual(result.status, .completed)
+        XCTAssertEqual(gateway.supplierCreatePayloads.count, 0)
+        XCTAssertEqual(gateway.productCreatePayloads.first?.supplierID, supplierRemoteID)
+        XCTAssertNotNil(product.remoteID)
+    }
+
     private func makeService(
         gateway: FakeManualPushRemoteGateway,
         maxBatchSize: Int = 50
