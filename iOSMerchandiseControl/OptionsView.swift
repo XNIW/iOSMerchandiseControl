@@ -33,6 +33,9 @@ struct OptionsView: View {
     @State private var supabaseBaselineSummary: SupabaseCatalogBaselineDebugSummary = .absent
     @State private var isShowingSupabasePullPreview = false
     @State private var supabasePullPreviewState: SupabasePullPreviewViewState = .idle
+    @State private var productPricePreviewState: ProductPricePreviewViewState = .idle
+    @State private var productPricePreviewTask: Task<Void, Never>?
+    @State private var productPricePreviewRequestID: UUID?
     @StateObject private var pushPreflightViewModel: SupabasePushPreflightViewModel
     @State private var selectedPushPreflightScope: ManualPushPreflightScope = .global
     @State private var isRunningTask045RemoteCollisionCheck = false
@@ -238,6 +241,8 @@ struct OptionsView: View {
                             .foregroundStyle(supabaseDiagnosticIsError ? Color.orange : Color.green)
                     }
                 }
+
+                productPricePreviewCard
             } header: {
                 SectionHeader(title: L("options.supabase.auth.header"), systemImage: "person.crop.circle.badge.checkmark")
             } footer: {
@@ -448,6 +453,7 @@ struct OptionsView: View {
         .navigationTitle(L("options.title"))
 #if DEBUG
         .onDisappear {
+            resetProductPricePreview()
             pushPreflightViewModel.cancel()
         }
         .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
@@ -473,6 +479,14 @@ struct OptionsView: View {
         }
         .onChange(of: selectedPushPreflightScope) { _, _ in
             resetTask045RemoteCollisionGate()
+        }
+        .onChange(of: supabaseAuthViewModel.sessionInfo?.userID) { _, _ in
+            resetProductPricePreview()
+        }
+        .onChange(of: supabaseAuthViewModel.isSignedIn) { _, isSignedIn in
+            if !isSignedIn {
+                resetProductPricePreview()
+            }
         }
         .sheet(isPresented: $isShowingSupabasePullPreview) {
             SupabasePullPreviewSheet(
@@ -583,6 +597,32 @@ struct OptionsView: View {
         return false
     }
 
+    private var isProductPricePreviewLoading: Bool {
+        if case .loading = productPricePreviewState {
+            return true
+        }
+        return false
+    }
+
+    private var productPricePreviewSummary: ProductPricePreviewSummary? {
+        if case .loaded(let summary) = productPricePreviewState {
+            return summary
+        }
+        return nil
+    }
+
+    private var canRunProductPricePreview: Bool {
+        isPushPreflightAccountReady
+            && supabaseInventoryService != nil
+            && !isProductPricePreviewLoading
+    }
+
+    private var productPricePreviewButtonKey: String {
+        productPricePreviewSummary == nil
+            ? "options.supabase.pricePreview.button.load"
+            : "options.supabase.pricePreview.button.refresh"
+    }
+
     private var pushPreflightRunButtonKey: String {
         selectedPushPreflightScope == .scopedTask045
             ? "options.supabase.pushpreflight.run.scopedTask045"
@@ -618,6 +658,169 @@ struct OptionsView: View {
                 .foregroundStyle(baselineStatusColor(supabaseBaselineSummary.status))
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private var productPricePreviewCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Label {
+                    Text(L("options.supabase.pricePreview.title"))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                } icon: {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .foregroundStyle(Color.accentColor)
+                }
+
+                Spacer()
+
+                Text(L("options.supabase.pricePreview.badge.readOnly"))
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule()
+                            .fill(Color.accentColor.opacity(0.14))
+                    )
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            Text(L("options.supabase.pricePreview.subtitle"))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 8) {
+                Button {
+                    runProductPricePreview()
+                } label: {
+                    Label(L(productPricePreviewButtonKey), systemImage: "doc.text.magnifyingglass")
+                }
+                .disabled(!canRunProductPricePreview)
+
+                if isProductPricePreviewLoading {
+                    Button(L("common.cancel")) {
+                        cancelProductPricePreviewFetch()
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+
+            productPricePreviewStatusRow
+
+            if let summary = productPricePreviewSummary {
+                productPricePreviewSummaryRows(summary)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var productPricePreviewStatusRow: some View {
+        switch productPricePreviewState {
+        case .idle:
+            EmptyView()
+        case .loading:
+            HStack(spacing: 12) {
+                ProgressView()
+                Text(L("options.supabase.pricePreview.loading"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .loaded(let summary):
+            Label {
+                Text(productPricePreviewStatusMessage(summary))
+                    .font(.footnote)
+                    .foregroundStyle(productPricePreviewStatusColor(summary))
+            } icon: {
+                Image(systemName: productPricePreviewStatusSymbol(summary))
+                    .foregroundStyle(productPricePreviewStatusColor(summary))
+            }
+        case .failed(let error):
+            Label {
+                Text(localizedSupabaseDiagnosticMessage(for: error))
+                    .font(.footnote)
+                    .foregroundStyle(Color.red)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.orange)
+            }
+        }
+    }
+
+    private func productPricePreviewSummaryRows(_ summary: ProductPricePreviewSummary) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LabeledContent(L("options.supabase.pricePreview.metric.rowsFetched"), value: "\(summary.totalFetched)")
+            LabeledContent(L("options.supabase.pricePreview.metric.pagesFetched"), value: "\(summary.pagesFetched)")
+            LabeledContent(L("options.supabase.pricePreview.metric.samplesShown"), value: "\(summary.samples.count)")
+            LabeledContent(L("options.supabase.pricePreview.metric.orphans"), value: "\(summary.orphanCount)")
+            LabeledContent(L("options.supabase.pricePreview.metric.invalidTypes"), value: "\(summary.invalidTypeCount)")
+            LabeledContent(L("options.supabase.pricePreview.metric.invalidDates"), value: "\(summary.invalidEffectiveAtCount)")
+            LabeledContent(
+                L("options.supabase.pricePreview.metric.capped"),
+                value: summary.truncated ? L("common.yes") : L("common.no")
+            )
+
+            DisclosureGroup(L("options.supabase.pricePreview.details")) {
+                VStack(alignment: .leading, spacing: 8) {
+                    LabeledContent(
+                        L("options.supabase.pricePreview.metric.stopReason"),
+                        value: L("options.supabase.pricePreview.stop.\(summary.stoppedReason.rawValue)")
+                    )
+
+                    if let diagnosticDetail = summary.diagnosticDetail {
+                        Text(diagnosticDetail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if summary.samples.isEmpty {
+                        Text(L("options.supabase.pricePreview.samples.empty"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(summary.samples) { sample in
+                            productPricePreviewSampleRow(sample)
+                        }
+                    }
+                }
+                .padding(.top, 4)
+            }
+        }
+    }
+
+    private func productPricePreviewSampleRow(_ sample: ProductPricePreviewSampleRow) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(L("options.supabase.pricePreview.type.\(sample.normalizedType)"))
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+                Text(SupabasePullPreviewNormalizer.decimalDisplay(sample.price) ?? "\(sample.price)")
+                    .font(.footnote)
+                if sample.isOrphan {
+                    Text(L("options.supabase.pricePreview.badge.orphan"))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color.orange.opacity(0.14))
+                        )
+                        .foregroundStyle(Color.orange)
+                }
+            }
+
+            Text(sample.productDisplayName ?? L("options.supabase.pricePreview.product.orphan", sample.abbreviatedProductID))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Text(productPricePreviewEffectiveAtText(sample))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
     }
 
     private var localizedSupabaseAuthStatus: String {
@@ -720,6 +923,66 @@ struct OptionsView: View {
         Task {
             supabasePullPreviewState = await service.generatePreview(context: modelContext)
         }
+    }
+
+    private func runProductPricePreview() {
+        guard !isProductPricePreviewLoading else { return }
+        guard isPushPreflightAccountReady,
+              let expectedUserID = supabaseAuthViewModel.sessionInfo?.userID else {
+            productPricePreviewState = .failed(.sessionMissing)
+            return
+        }
+        guard let inventoryService = supabaseInventoryService else {
+            productPricePreviewState = .failed(.configMissing)
+            return
+        }
+
+        productPricePreviewTask?.cancel()
+        let requestID = UUID()
+        productPricePreviewRequestID = requestID
+        productPricePreviewState = .loading
+
+        productPricePreviewTask = Task { @MainActor in
+            do {
+                let lookup = try ProductPricePreviewLocalLookupBuilder.makeLookup(context: modelContext)
+                let service = SupabaseProductPricePreviewService(fetcher: inventoryService)
+                let summary = try await service.loadPreview(productLookup: lookup)
+                guard productPricePreviewRequestID == requestID,
+                      supabaseAuthViewModel.sessionInfo?.userID == expectedUserID,
+                      supabaseAuthViewModel.isSignedIn else {
+                    return
+                }
+
+                productPricePreviewState = .loaded(summary)
+                productPricePreviewTask = nil
+                productPricePreviewRequestID = nil
+            } catch let error as SupabaseInventoryServiceError {
+                guard productPricePreviewRequestID == requestID else { return }
+                productPricePreviewState = .failed(error)
+                productPricePreviewTask = nil
+                productPricePreviewRequestID = nil
+            } catch {
+                guard productPricePreviewRequestID == requestID else { return }
+                productPricePreviewState = .failed(.unknown(message: String(describing: error)))
+                productPricePreviewTask = nil
+                productPricePreviewRequestID = nil
+            }
+        }
+    }
+
+    private func cancelProductPricePreviewFetch() {
+        productPricePreviewTask?.cancel()
+    }
+
+    private func ignoreProductPricePreviewResults() {
+        productPricePreviewTask?.cancel()
+        productPricePreviewTask = nil
+        productPricePreviewRequestID = nil
+    }
+
+    private func resetProductPricePreview() {
+        ignoreProductPricePreviewResults()
+        productPricePreviewState = .idle
     }
 
     private func runSupabasePushPreflight() {
@@ -1143,6 +1406,56 @@ struct OptionsView: View {
         }
 
         return L("options.supabase.diagnostic.messageWithDetail", baseMessage, detail)
+    }
+
+    private func productPricePreviewStatusMessage(_ summary: ProductPricePreviewSummary) -> String {
+        switch summary.stoppedReason {
+        case .cancelled:
+            return L("options.supabase.pricePreview.cancelled")
+        case .error:
+            return L("options.supabase.pricePreview.incomplete")
+        case .maxRows, .maxPages:
+            return L("options.supabase.pricePreview.capped")
+        case .pageEmpty, .partialPage:
+            if summary.totalFetched == 0 {
+                return L("options.supabase.pricePreview.empty")
+            }
+            return L("options.supabase.pricePreview.success")
+        }
+    }
+
+    private func productPricePreviewStatusSymbol(_ summary: ProductPricePreviewSummary) -> String {
+        switch summary.stoppedReason {
+        case .cancelled:
+            return "xmark.circle.fill"
+        case .error, .maxRows, .maxPages:
+            return "exclamationmark.triangle.fill"
+        case .pageEmpty, .partialPage:
+            return summary.totalFetched == 0 ? "tray" : "checkmark.circle.fill"
+        }
+    }
+
+    private func productPricePreviewStatusColor(_ summary: ProductPricePreviewSummary) -> Color {
+        switch summary.stoppedReason {
+        case .cancelled:
+            return .secondary
+        case .error, .maxRows, .maxPages:
+            return .orange
+        case .pageEmpty, .partialPage:
+            return summary.totalFetched == 0 ? .secondary : .green
+        }
+    }
+
+    private func productPricePreviewEffectiveAtText(_ sample: ProductPricePreviewSampleRow) -> String {
+        if sample.effectiveAtRaw == sample.effectiveAtCanonical {
+            return L("options.supabase.pricePreview.effectiveAt", sample.effectiveAtRaw)
+        }
+
+        return L(
+            "options.supabase.pricePreview.effectiveAtWithCanonical",
+            sample.effectiveAtRaw,
+            sample.effectiveAtCanonical
+        )
     }
 
     private func localizedSupabaseAuthError(_ error: SupabaseAuthServiceError) -> String {

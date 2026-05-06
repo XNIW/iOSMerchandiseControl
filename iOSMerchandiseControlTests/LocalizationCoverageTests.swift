@@ -124,6 +124,80 @@ final class LocalizationCoverageTests: XCTestCase {
         }
     }
 
+    func testTask048ProductPricePreviewLocalizationKeysExistInSupportedLanguages() throws {
+        let keys = [
+            "common.yes",
+            "common.no",
+            "options.supabase.pricePreview.title",
+            "options.supabase.pricePreview.badge.readOnly",
+            "options.supabase.pricePreview.subtitle",
+            "options.supabase.pricePreview.button.load",
+            "options.supabase.pricePreview.button.refresh",
+            "options.supabase.pricePreview.loading",
+            "options.supabase.pricePreview.success",
+            "options.supabase.pricePreview.capped",
+            "options.supabase.pricePreview.empty",
+            "options.supabase.pricePreview.incomplete",
+            "options.supabase.pricePreview.cancelled",
+            "options.supabase.pricePreview.metric.rowsFetched",
+            "options.supabase.pricePreview.metric.pagesFetched",
+            "options.supabase.pricePreview.metric.samplesShown",
+            "options.supabase.pricePreview.metric.orphans",
+            "options.supabase.pricePreview.metric.invalidTypes",
+            "options.supabase.pricePreview.metric.invalidDates",
+            "options.supabase.pricePreview.metric.capped",
+            "options.supabase.pricePreview.metric.stopReason",
+            "options.supabase.pricePreview.details",
+            "options.supabase.pricePreview.stop.pageEmpty",
+            "options.supabase.pricePreview.stop.partialPage",
+            "options.supabase.pricePreview.stop.maxRows",
+            "options.supabase.pricePreview.stop.maxPages",
+            "options.supabase.pricePreview.stop.error",
+            "options.supabase.pricePreview.stop.cancelled",
+            "options.supabase.pricePreview.samples.empty",
+            "options.supabase.pricePreview.type.purchase",
+            "options.supabase.pricePreview.type.retail",
+            "options.supabase.pricePreview.badge.orphan",
+            "options.supabase.pricePreview.product.orphan",
+            "options.supabase.pricePreview.effectiveAt",
+            "options.supabase.pricePreview.effectiveAtWithCanonical"
+        ]
+
+        for language in ["it", "en", "es", "zh-Hans"] {
+            let strings = try loadStrings(language: language)
+            for key in keys {
+                XCTAssertNotNil(strings[key], "\(key) missing in \(language)")
+                XCTAssertFalse(strings[key]?.isEmpty ?? true, "\(key) empty in \(language)")
+            }
+        }
+    }
+
+    func testTask048ProductPricePreviewCopyAvoidsWriteLanguage() throws {
+        let forbiddenByLanguage = [
+            "it": ["sincron", "applica", "salva", "push", "merge", "import"],
+            "en": ["sync", "apply", "save", "push", "merge", "import"],
+            "es": ["sincron", "aplicar", "guardar", "push", "merge", "import"],
+            "zh-Hans": ["同步", "应用", "保存", "推送", "合并", "导入"]
+        ]
+
+        for (language, forbiddenTerms) in forbiddenByLanguage {
+            let strings = try loadStrings(language: language)
+            let previewValues = strings
+                .filter { $0.key.hasPrefix("options.supabase.pricePreview.") }
+                .map(\.value)
+
+            for value in previewValues {
+                let normalized = value.lowercased()
+                for term in forbiddenTerms {
+                    XCTAssertFalse(
+                        normalized.contains(term),
+                        "\(language) price preview copy contains forbidden term \(term): \(value)"
+                    )
+                }
+            }
+        }
+    }
+
     private func loadStrings(language: String) throws -> [String: String] {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
