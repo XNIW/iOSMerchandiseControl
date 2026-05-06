@@ -5,11 +5,12 @@
 - **Titolo**: Supabase live manual validation iOS: push reale controllato supplier/category/products su dataset piccolo
 - **File task**: `docs/TASKS/TASK-045-supabase-live-manual-validation-ios-small-dataset.md`
 - **Stato**: BLOCKED
-- **Fase attuale**: — *(interrotta durante EXECUTION / Pre-run safety gate)*
-- **Responsabile attuale**: Utente / Claude *(serve baseline valida/pull completo prima di riprendere)*
+- **Fase attuale**: — *(interrotta durante EXECUTION / dry-run scope gate)*
+- **Responsabile attuale**: Utente / Claude *(serve decisione su candidati local-only non `TASK045_*` prima di qualsiasi push live)*
 - **Data creazione**: 2026-05-05
-- **Ultimo aggiornamento**: 2026-05-05 *(review documentale su override utente: esito **APPROVED_FIXED_DIRECTLY_BLOCKED**; blocco baseline assente confermato corretto; **nessun** dry-run/preflight, **nessun** push live, **nessun** read-back/retry/pull post-push)*
-- **Ultimo agente che ha operato**: Codex reviewer *(user override per compilare la sezione Review)*
+- **Ultimo aggiornamento**: 2026-05-05 23:57 -04 *(execution post-TASK-046 fermata al **dry-run scope gate**: baseline valida, dataset `TASK045_*` locale creato, collision check locale/baseline OK, ma il dry-run include anche candidati local-only non `TASK045_*`; **push live non eseguito**)*
+- **Ultimo agente che ha operato**: Cursor / Codex executor
+- **Nota ripresa**: Ripresa da **T45-02** dopo **TASK-046 DONE**; baseline valida disponibile. La ripresa e' stata eseguita gate-by-gate e si e' fermata prima del push perché il dry-run non era limitato al solo dataset `TASK045_*`.
 
 ## Dipendenze
 - **Dipende da**:
@@ -27,7 +28,7 @@
 Validare **live**, in modo **manuale** e **controllato**, il push reale iOS già implementato in **TASK-044**, limitato a **supplier / category / product**, su **dataset piccolo**, **reversibile** e **documentato**, senza toccare backend SQL/RPC/RLS né validare su cataloghi grandi o dati non reversibili.
 
 ## Contesto obbligatorio
-- Dopo **TASK-044** **DONE / Chiusura** il progetto era **IDLE**; con **TASK-045** il progetto è stato portato in **ACTIVE / EXECUTION** su user override, poi è tornato **IDLE** perché TASK-045 è ora **BLOCKED** al Pre-run safety gate per baseline assente.
+- Dopo **TASK-044** **DONE / Chiusura** il progetto era **IDLE**; con **TASK-045** il progetto è stato portato in **ACTIVE / EXECUTION** su user override, poi bloccato una prima volta per baseline assente. Dopo **TASK-046 DONE / Chiusura** la baseline è valida, ma la ripresa TASK-045 è ora **BLOCKED** al **dry-run scope gate** perché il piano include candidati local-only non `TASK045_*`.
 - **TASK-039 / TASK-040 / TASK-041 / TASK-042 / TASK-043 / TASK-044** sono **DONE**.
 - **TASK-044** ha implementato il push reale controllato, ma in sviluppo/review **non** è stato eseguito alcun **push Supabase live reale**.
 - **TASK-045** è il **primo** task dedicato a **validazione live manuale controllata** del flusso iOS.
@@ -299,9 +300,11 @@ La sequenza **operativa** per EXECUTION (ordine dei passi, safety gate, live run
 
 ## Execution (Codex) ← solo Codex aggiorna questa sezione
 
+> Nota: le prime sottosezioni Execution documentano i blocchi storici Auth/baseline. L’esito corrente dopo TASK-046 e' nella sottosezione **“Execution post-TASK-046 — BLOCKED al dry-run scope gate”**.
+
 ### Obiettivo compreso
 Avviare la vera **EXECUTION controllata** di **TASK-045** in sequenza: safety gate → dry-run/preflight → push live manuale solo se tutti i gate sono verdi → read-back → retry/no-op → pull post-push → check finali → documentazione.
-Il run si è fermato nel **Pre-run safety gate**. Il primo blocco Auth/passkey è stato risolto dall’utente; alla ripresa, la UI DEBUG ha confermato la sessione Google/Supabase, ma la baseline locale risultava assente (**"Nessuna baseline salvata"**). Per policy TASK-045 baseline assente = **STOP** prima di dataset/collision check/dry-run/push. Il task resta **BLOCKED**, non **DONE**.
+Il primo run si è fermato nel **Pre-run safety gate**. Il primo blocco Auth/passkey è stato risolto dall’utente; alla ripresa, la UI DEBUG ha confermato la sessione Google/Supabase, ma la baseline locale risultava assente (**"Nessuna baseline salvata"**). Per policy TASK-045 baseline assente = **STOP** prima di dataset/collision check/dry-run/push. Dopo TASK-046 la baseline e' stata ripristinata; il blocco corrente è documentato più sotto.
 
 ### File controllati
 - `docs/TASKS/TASK-045-supabase-live-manual-validation-ios-small-dataset.md`
@@ -418,6 +421,138 @@ Il run si è fermato nel **Pre-run safety gate**. Il primo blocco Auth/passkey �
 
 **Prossimo passo sicuro:** ottenere una baseline valida da pull/apply completo nel workflow previsto o ricevere istruzione esplicita di pianificazione/override che chiarisca come creare la baseline senza violare il gate. Poi riprendere TASK-045 da T45-02, non dal push.
 
+### Ripresa execution post-TASK-046
+**2026-05-05 23:30 -04** — Nuovo user override esplicito: **TASK-045** ripreso da **BLOCKED** a **ACTIVE / EXECUTION** con responsabile **Cursor / Codex executor**.
+
+**Nota operativa:** TASK-046 e' **DONE / Chiusura**; la baseline Supabase locale valida e persistente e' ora disponibile. La ripresa parte da **T45-02** e dai gate corretti, non dal push live.
+
+**Sequenza minima autorizzata:** safety gate aggiornato post-TASK-046 → verifica baseline valida → dataset piccolo `TASK045_*` → collision check remoto → dry-run/preflight → push live manuale controllato solo se tutti i gate sono verdi → read-back remoto filtrato → retry/no-op → pull post-push → build/test/check anti-scope → tracking.
+
+**File previsti per modifica tracking:** `docs/TASKS/TASK-045-supabase-live-manual-validation-ios-small-dataset.md`, `docs/MASTER-PLAN.md`.
+
+### Execution post-TASK-046 — BLOCKED al dry-run scope gate
+**2026-05-05 23:57 -04** — Run ripreso dai gate corretti dopo **TASK-046 DONE / Chiusura**. La baseline e' valida, il dataset piccolo e' stato preparato localmente, ma il dry-run non e' accettabile per TASK-045 perché include candidati local-only non `TASK045_*`. Per istruzione utente: **STOP** prima del push live.
+
+#### Obiettivo compreso
+Validare live TASK-045 solo su dataset piccolo `TASK045_*`, in ordine: safety post-TASK-046 → baseline valida → dataset test → collision check → dry-run → push live solo se tutti i gate sono verdi → read-back → retry/no-op → pull post-push → build/test/anti-scope. Il gate fallito e' **T45-03 dry-run/preflight** per scope non limitato al dataset test.
+
+#### File controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-045-supabase-live-manual-validation-ios-small-dataset.md`
+- `iOSMerchandiseControl/SupabaseManualPushPreflightService.swift`
+- `iOSMerchandiseControl/SupabaseManualPushService.swift`
+- `iOSMerchandiseControl/SupabaseInventoryService.swift`
+- `iOSMerchandiseControl/SupabasePushPreflightViewModel.swift`
+- `iOSMerchandiseControl/OptionsView.swift`
+- `iOSMerchandiseControl/SupabaseCatalogBaselineReader.swift`
+- `iOSMerchandiseControl/SupabaseCatalogBaselineWriter.swift`
+- `iOSMerchandiseControl/SupabaseConfig.swift`
+- `iOSMerchandiseControl/SupabaseClientProvider.swift`
+- `iOSMerchandiseControl/SupabaseAuthService.swift`
+- `iOSMerchandiseControl/Models.swift`
+
+#### Piano minimo
+1. Verificare safety/config/sessione/baseline senza scrivere su Supabase.
+2. Creare un solo dataset locale `TASK045_*`.
+3. Verificare collisioni locali e contro baseline remota persistente.
+4. Eseguire dry-run/preflight.
+5. Eseguire push live solo se il dry-run resta nel perimetro `TASK045_*` e supplier/category/products.
+6. Fermarsi e tracciare BLOCKED se un gate non e' verde.
+
+#### Modifiche fatte
+- Aggiornato tracking di TASK-045 a **BLOCKED** per dry-run scope gate fallito.
+- Aggiornato `docs/MASTER-PLAN.md` coerentemente: progetto **IDLE**, nessun task attivo, TASK-045 **BLOCKED**.
+- Creato nel Simulator un dataset locale minimo `TASK045_*` per alimentare il dry-run; **nessuna scrittura remota**.
+- **Nessun** file Swift modificato.
+- **Nessun** micro-fix UI/UX applicato.
+- **Nessun** push live eseguito.
+
+#### Dataset usato
+- Timestamp/suffisso: `20260506T034111Z`
+- Supplier: `TASK045_SUPPLIER_TEST_20260506T034111Z`
+- Category: `TASK045_CATEGORY_TEST_20260506T034111Z`
+- Product barcode: `TASK045_20260506T034111Z`
+- Product name: `TASK045_PRODUCT_TEST_20260506T034111Z`
+- ProductPrice locale per dataset: `0` righe.
+
+#### Evidenze live / T45
+| Caso | Stato | Tipo verifica | Evidenza sicura |
+|------|-------|---------------|-----------------|
+| T45-01 | PASS | STATIC / UI | `SupabaseConfig.plist` reale presente solo locale, plist valido, ignorato e non tracciato; UI DEBUG mostra sessione Google/Supabase connessa con account mascherato. |
+| Pre push | PASS | STATIC / UI | Collision check locale: supplier/category/barcode test assenti (`0/0/0`). Collision check su baseline remota persistente: supplier/category/barcode test assenti (`0/0/0`). Nessun merge silenzioso. |
+| T45-02 | PASS | UI | Baseline post-TASK-046 valida e persistente visibile in UI DEBUG: ultimo pull completo `5 mag 2026, 23:06`, account coerente, prodotti `19697`, fornitori `59`, categorie `27`, schema fingerprint `1`, tombstone `0`. Non stale, non partial, non account mismatch. |
+| T45-03 | FAIL | UI | Dry-run eseguito senza scrittura remota: scenario safe, blocchi `0`, warning `0`, future-only `0`; conteggi `2` supplier create, `3` category create, `1` product create. FAIL perché oltre al dataset TASK045 include candidati local-only non `TASK045_*`. |
+| T45-04 | BLOCKED | UI / PROCESS | Push live **non eseguito**: gate T45-03 non verde. Nessuna conferma manuale di scrittura inviata. |
+| T45-05 | BLOCKED | PROCESS | Read-back remoto non eseguito perché non c'e' stato push. |
+| T45-06 | BLOCKED | PROCESS | Retry/no-op non eseguito perché il primo push e' stato bloccato. |
+| T45-07 | PASS | PROCESS | Guardrail applicato: dry-run fuori perimetro dataset-only → stop sicuro prima del push. |
+| T45-08 | BLOCKED | PROCESS | Pull post-push non eseguito perché non c'e' stato push. |
+| T45-09 | PASS | STATIC | Anti-scope PASS: nessun diff Swift/Supabase/Android/SQL; nessuna introduzione operativa di ProductPrice push, `record_sync_event`, `sync_events`, outbox, delete remota, tombstone outbound, SQL/RPC/RLS/migration, `service_role`. |
+
+#### CA-01…CA-18
+| CA | Stato | Tipo verifica | Evidenza sicura |
+|----|-------|---------------|-----------------|
+| CA-01 | PASS | BUILD | Build Debug PASS su iPhone 16e iOS 26.2. Warning noto/toolchain AppIntents, non nuovo da diff codice. |
+| CA-02 | PASS | BUILD | Build Release PASS su iPhone 16e iOS 26.2. Warning noto/toolchain AppIntents, non nuovo da diff codice. |
+| CA-03 | PASS | BUILD | XCTest completo PASS (`** TEST SUCCEEDED **`) su iPhone 16e iOS 26.2. |
+| CA-04 | PASS | STATIC | Nessun file UI/localizzazione modificato. |
+| CA-05 | PASS | STATIC | `git diff --check` PASS. |
+| CA-06 | PASS | STATIC | Scan mirato documenti modificati senza URL Supabase reale, JWT/token/Bearer o email completa. |
+| CA-07 | PASS | STATIC | `SupabaseConfig.plist` reale ignorato da git e non tracciato. |
+| CA-08 | BLOCKED | PROCESS | Push live non eseguito perché T45-03 e' fallito. |
+| CA-09 | BLOCKED | PROCESS | Nessuna scrittura remota eseguita; dry-run avrebbe scritto solo supplier/category/product, ma non solo record TASK045. |
+| CA-10 | PASS | STATIC / PROCESS | Nessun ProductPrice remoto creato/aggiornato; dataset locale senza righe ProductPrice. |
+| CA-11 | PASS | STATIC / PROCESS | Nessun `record_sync_event`, `sync_events` o outbox usato o introdotto. |
+| CA-12 | PASS | STATIC / PROCESS | Nessuna delete remota o tombstone outbound eseguita o introdotta. |
+| CA-13 | PASS | STATIC | Nessun SQL/RPC/RLS/migration modificato o richiesto. |
+| CA-14 | BLOCKED | PROCESS | Read-back remoto non eseguito perché push bloccato. |
+| CA-15 | BLOCKED | PROCESS | Baseline/fingerprint post-read-back non aggiornati/confermati perché read-back non eseguito. |
+| CA-16 | BLOCKED | PROCESS | Retry/no-op non eseguito perché push bloccato. |
+| CA-17 | PASS | PROCESS | Blocco sicuro applicato su dry-run fuori perimetro: nessuna baseline finta, nessun workaround. |
+| CA-18 | PASS | DOC | Evidenze documentate senza segreti/token/JWT/email completa/URL Supabase reale. |
+
+#### Check eseguiti
+- ✅ ESEGUITO — `git status --short`: worktree comprensibile; modifiche documentali attese su `docs/MASTER-PLAN.md`, `docs/TASKS/TASK-045...md`, più `docs/TASKS/TASK-046...md` già modificato prima di questo run.
+- ✅ ESEGUITO — `SupabaseConfig.plist`: plist valido, ignorato da `.gitignore`, non tracciato da git.
+- ✅ ESEGUITO — Sessione Google/Supabase: UI DEBUG connessa, account mascherato nel task.
+- ✅ ESEGUITO — Baseline post-TASK-046: valida/persistente in UI DEBUG, non partial/stale/account mismatch.
+- ✅ ESEGUITO — Dataset `TASK045_*`: creato solo nello store locale Simulator con 1 supplier, 1 category, 1 product; ProductPrice locale `0`.
+- ✅ ESEGUITO — Collision check locale: supplier/category/barcode test assenti prima della creazione.
+- ✅ ESEGUITO — Collision check baseline remota persistente: supplier/category/barcode test assenti. Nota: una probe REST anonima corrente non e' stata usata come fonte perché non autenticata; nessun push e' stato eseguito.
+- ✅ ESEGUITO — Dry-run/preflight: eseguito; esito **FAIL** per scope dataset-only, con conteggi documentati sopra.
+- ❌ NON ESEGUITO — Push live manuale: bloccato dal dry-run scope gate.
+- ❌ NON ESEGUITO — Read-back remoto: non eseguito perché nessun push.
+- ❌ NON ESEGUITO — Retry/no-op: non eseguito perché nessun push.
+- ❌ NON ESEGUITO — Pull post-push: non eseguito perché nessun push.
+- ✅ ESEGUITO — Build Debug: PASS.
+- ✅ ESEGUITO — Build Release: PASS.
+- ✅ ESEGUITO — XCTest completo: PASS.
+- ✅ ESEGUITO — Localizzazioni: nessuna stringa/UI modificata.
+- ✅ ESEGUITO — `git diff --check`: PASS.
+- ✅ ESEGUITO — Scan segreti documentale: PASS.
+- ✅ ESEGUITO — Anti-scope: PASS; nessuna nuova introduzione operativa di ProductPrice push, `record_sync_event`, `sync_events`, outbox, delete remota, tombstone outbound, SQL/RPC/RLS/migration, `service_role`.
+
+#### Rischi rimasti
+- Esistono candidati local-only preesistenti non `TASK045_*` nel dataset locale; il push manuale generico li includerebbe insieme al dataset test.
+- Il dataset `TASK045_*` resta nello store locale Simulator; non e' stato scritto su Supabase.
+- Il collision check corrente remoto autenticato non e' stato completato come query live separata; il check contro baseline remota persistente era pulito e il run si e' fermato comunque prima del push.
+- Per procedere serve una decisione: pulire/gestire i candidati local-only preesistenti fuori TASK-045, oppure pianificare un filtro/debug flow scoped a `TASK045_*`. Non fare push silenzioso dell'intero piano.
+
+#### Handoff post-execution *(BLOCKED — dry-run scope gate)*
+**TASK-045** torna **BLOCKED**, non **DONE** e non passa a REVIEW di completamento live.
+
+**Motivo blocco:** il dry-run/preflight e' no-write e tecnicamente senza blocker, ma il piano contiene `2` supplier create e `3` category create mentre il dataset TASK-045 autorizzato prevede `1` supplier, `1` category, `1` product. Procedere avrebbe scritto anche dati local-only non `TASK045_*`, violando la matrice dataset piccolo.
+
+**Azioni non eseguite per safety:**
+- nessun push live;
+- nessun read-back remoto;
+- nessun retry/no-op;
+- nessun pull post-push;
+- nessuna baseline/fingerprint post-read-back aggiornata;
+- nessuna scrittura remota.
+
+**Prossimo passo sicuro:** Claude/utente deve decidere come eliminare o isolare i candidati local-only non `TASK045_*`. Alla ripresa, ripartire da collision check e dry-run; non saltare direttamente al push.
+
 ---
 
 ## Review (Claude) ← solo Claude aggiorna questa sezione
@@ -500,7 +635,7 @@ Preparare un task separato per creare/ottenere una baseline valida in modo sicur
 ---
 
 ## Output atteso (riepilogo)
-- File task **TASK-045** aggiornato con evidenze reali del Pre-run safety gate: Auth/sessione PASS, baseline assente → **BLOCKED**.
-- `docs/MASTER-PLAN.md`: **TASK-045 BLOCKED**; **TASK-044** e **039–043** **DONE**; **TASK-032 / TASK-028** **BLOCKED**; progetto **IDLE** senza task attivo.
-- **Nessuna** modifica Swift / Supabase / Android; **nessun** dry-run/preflight, push live, read-back, retry/no-op o pull post-push.
-- Alla ripresa: ottenere una baseline valida/pull completo sicuro, poi ripartire da T45-02; non procedere direttamente al push.
+- File task **TASK-045** aggiornato con evidenze reali post-TASK-046: Auth/sessione PASS, baseline valida PASS, dataset `TASK045_*` locale creato, collision check locale/baseline PASS, dry-run eseguito ma fuori scope dataset-only → **BLOCKED**.
+- `docs/MASTER-PLAN.md`: **TASK-045 BLOCKED**; **TASK-046 DONE / Chiusura**; **TASK-044** e **039–043** **DONE**; **TASK-032 / TASK-028** **BLOCKED**; progetto **IDLE** senza task attivo.
+- **Nessuna** modifica Swift / Supabase / Android; dry-run/preflight eseguito no-write; **nessun** push live, read-back, retry/no-op o pull post-push.
+- Alla ripresa: decidere come isolare o rimuovere i candidati local-only non `TASK045_*`, poi ripartire da collision check/dry-run; non procedere direttamente al push.

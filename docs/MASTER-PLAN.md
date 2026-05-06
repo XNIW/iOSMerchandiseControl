@@ -4,7 +4,7 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**TASK-044** resta **DONE / Chiusura** (2026-05-05). **TASK-045** *Supabase live manual validation iOS — push reale controllato su dataset piccolo* è **BLOCKED** dopo review documentale **APPROVED_FIXED_DIRECTLY_BLOCKED**: login Google/sessione UI DEBUG verificati, ma baseline/pull completo assente (**"Nessuna baseline salvata"**), quindi stop prima di dataset/collision check/dry-run/preflight/push live/read-back/retry/pull post-push. **TASK-039/040/041/042/043** restano **DONE**. **TASK-032** e **TASK-028** restano **BLOCKED**. Progetto **IDLE**; nessun task attivo corrente.
+**TASK-045** *Supabase live manual validation iOS — dataset piccolo* è **BLOCKED** (2026-05-05 23:57 -04) dopo ripresa post-**TASK-046 DONE / Chiusura**: safety/sessione/baseline OK, dataset locale `TASK045_*` creato, collision check locale/baseline OK, ma il dry-run/preflight include anche candidati local-only non `TASK045_*`. Per policy: **STOP**, nessun push live, nessuna scrittura remota, nessun read-back/retry/pull post-push. **TASK-046** resta **DONE / Chiusura**; **TASK-044** e **TASK-039/040/041/042/043** restano **DONE**. **TASK-032** e **TASK-028** restano **BLOCKED**. Progetto **IDLE**; nessun task attivo.
 
 ## Stato globale
 IDLE
@@ -92,6 +92,22 @@ IDLE
 
 > **2026-05-05 (review docs-only — TASK-045, user override):** review tecnica severa compilata da **Codex reviewer** su override esplicito nella sezione `Review (Claude)` con esito **APPROVED_FIXED_DIRECTLY_BLOCKED**. Fix diretto solo documentale: sezione Review completata e tracking allineato. Stato finale confermato: **TASK-045 BLOCKED**, **non DONE**, progetto **IDLE**, nessun task attivo. Baseline assente dopo login Google valido = blocco corretto; **nessun** dataset `TASK045_*`, collision check remoto, dry-run/preflight, push live, read-back, retry/no-op o pull post-push eseguito. Nessuna modifica Swift/Supabase/Android/SQL/RPC/RLS/migration, nessun `service_role`, nessun `ProductPrice`, `record_sync_event`, `sync_events`, outbox, delete remota o tombstone outbound.
 
+> **2026-05-05 (planning/tracking — TASK-046):** creato **TASK-046** *Supabase baseline recovery / full pull baseline iOS* (`docs/TASKS/TASK-046-supabase-baseline-recovery-full-pull-ios.md`); promosso ad **ACTIVE / PLANNING** con responsabile **Claude / Planner**. **Solo planning** — **nessuna** EXECUTION Swift, **nessun** pull/apply reale, **nessun** push live, **nessuna** modifica Supabase/Android/`project.pbxproj`/`Package.resolved`. **TASK-045** resta **BLOCKED** (baseline assente; **non** DONE). **TASK-044** e **TASK-039/040/041/042/043** restano **DONE**. **TASK-032** e **TASK-028** restano **BLOCKED**. Progetto **ACTIVE**; task attivo corrente **TASK-046**. Obiettivo TASK-046: baseline locale valida read-only/solo locale per sbloccare prerequisito **T45-02** in seguito.
+
+> **2026-05-06 (planning refinement — TASK-046):** perfezionamento **solo documentale** nel file task: decisione **full pull only vs apply locale**, template evidenze **B46**, mappa **B46→CA46**, policy **partial/cap/pagination**, UI DEBUG più concreta (stati, CTA, disabilitazioni), sezione **comandi/check pianificati non eseguiti in PLANNING**. **TASK-046** resta **ACTIVE / PLANNING** (**non** EXECUTION; **non** DONE). **Nessun** Swift, **nessun** pull/apply/push reale, **nessuna** modifica Supabase/Android. **TASK-045** resta **BLOCKED**. **TASK-044** e **TASK-039/040/041/042/043** restano **DONE**. **TASK-032** e **TASK-028** restano **BLOCKED**.
+
+> **2026-05-05 (execution start / transition-only — TASK-046, user override):** **TASK-046** passa da **ACTIVE / PLANNING** a **ACTIVE / EXECUTION**; responsabile **Cursor / Codex executor**. **Solo** metadata + sezione **Execution** nel file task + **MASTER-PLAN**; **nessun** full pull reale, **nessun** apply SwiftData locale, **nessun** push live, **nessuna** build/XCTest/grep anti-scope, **nessun** Swift/Supabase/Android/`project.pbxproj`/`Package.resolved` modificato. **TASK-046** **non** DONE. **TASK-045** resta **BLOCKED**. **TASK-044** e **TASK-039/040/041/042/043** restano **DONE**. **TASK-032** e **TASK-028** restano **BLOCKED**. Progetto **ACTIVE**; task attivo **TASK-046** (run reale baseline *pending*).
+
+> **2026-05-05 (handoff — TASK-046):** execution reale completata da **Cursor / Codex executor**: pre-run safety gate OK; call path letti; full pull Supabase **read-only** completato (preview non partial; 19698 prodotti remoti, 80 fornitori, 43 categorie; 19697 nuovi, 0 update, 0 conflitti, 1 tombstone remoto); scelto **Path B** perché il writer baseline fingerprinta SwiftData locale; apply locale confermato via UI e completato (19697 prodotti locali applicati); baseline salvata con `SupabaseCatalogBaselineWriter` e letta da UI/reader (19697 prodotti, 59 fornitori, 27 categorie, schema fingerprint 1); cold start terminate/launch PASS; Build Debug PASS, Build Release PASS, XCTest completo PASS, `git diff --check` PASS. **Nessuna scrittura remota**, **nessun push live**, nessun ProductPrice push, `record_sync_event`, `sync_events`, outbox, delete remota, tombstone outbound, SQL/RPC/RLS/migration, `service_role`, Android o dataset `TASK045_*`. **TASK-046 ACTIVE / REVIEW**, responsabile **Claude / Reviewer**. **TASK-045 resta BLOCKED** fino a review positiva e futura ripresa da **T45-02**.
+
+> **2026-05-05 (micro-refinement — TASK-046):** ritocchi documentali nel file task: *Ultimo aggiornamento* **TASK-046** riallineato a **2026-05-05**; **prossimo passo = review planning Claude** prima di EXECUTION; **nessuna** EXECUTION senza **user override**; Local data safety rafforzata (no wipe rapido; wipe = task separato o istruzione esplicita); UI solo planning. **Fase ACTIVE / PLANNING** invariata *in quel momento*; nessun Swift/pull/push; **TASK-045 BLOCKED**; **TASK-044** e **039–043 DONE**; **TASK-032** / **TASK-028 BLOCKED**. *(Successiva transizione **EXECUTION** transition-only → voce **«execution start / transition-only — TASK-046»** sopra.)*
+
+> **2026-05-06 (review/close — TASK-046, user override):** review tecnica severa completata da **Codex / Reviewer** con esito **APPROVED_FIXED_DIRECTLY / DONE**. Fix diretto solo documentale/tracking: sezione `Review (Claude)` compilata e **MASTER-PLAN** riallineato. Path **B** confermato corretto: il writer baseline valida il preview ma fingerprinta SwiftData locale, quindi apply locale era necessario e non costituisce scrittura remota. Baseline valida e persistente confermata (19697 prodotti, 59 fornitori, 27 categorie; schema fingerprint 1); mismatch con lookup remoti 80/43 e 1 tombstone remoto documentato come follow-up non bloccante perché la baseline copre il catalogo locale applicato. Nessuna modifica Swift/progetto/Supabase runtime/Android/SQL/RPC/RLS/migration/`Package.resolved`/plist; nessun segreto; nessun push live, ProductPrice push, `record_sync_event`, `sync_events`, outbox, delete remota, tombstone outbound o `service_role`. **TASK-046 DONE / Chiusura**. **TASK-045 resta BLOCKED**, non DONE e non riaperto; prossimo candidato riattivabile da **T45-02** solo con nuovo override utente esplicito. Progetto **IDLE**, nessun task attivo.
+
+> **2026-05-05 23:30 -04 (execution/user override — TASK-045):** **TASK-045** ripreso da **BLOCKED** a **ACTIVE / EXECUTION** con responsabile **Cursor / Codex executor**. Nota: ripresa da **T45-02** dopo **TASK-046 DONE / Chiusura**; baseline valida disponibile. Non saltare al push live: procedere con safety gate post-TASK-046, verifica baseline, dataset piccolo `TASK045_*`, collision check, dry-run/preflight e push live manuale solo se tutti i gate sono verdi. **TASK-046** resta **DONE / Chiusura**; **TASK-044** e **TASK-039/040/041/042/043** restano **DONE**; **TASK-032** e **TASK-028** restano **BLOCKED**. Progetto **ACTIVE**; task attivo **TASK-045**.
+
+> **2026-05-05 23:57 -04 (execution blocked — TASK-045, dry-run scope gate):** Codex ha eseguito la ripresa post-**TASK-046** gate-by-gate: `SupabaseConfig.plist` reale valido/ignorato/non tracciato, sessione Google/Supabase valida, baseline locale valida e persistente (19697 prodotti, 59 fornitori, 27 categorie, schema fingerprint 1), dataset locale `TASK045_*` creato, collision check locale e baseline remota persistente senza match. Il dry-run/preflight e' stato eseguito senza scrittura remota e ha prodotto scenario safe, blocchi `0`, warning `0`, future-only `0`, ma conteggi `2` supplier create, `3` category create, `1` product create: include candidati local-only non `TASK045_*`. Per policy dataset piccolo: **STOP**, **TASK-045 BLOCKED**, **nessun push live**, **nessuna scrittura remota**, **nessun read-back/retry/pull post-push**. Build Debug PASS, Build Release PASS, XCTest completo PASS, `git diff --check` PASS, scan segreti PASS, anti-scope PASS. **TASK-046** resta **DONE / Chiusura**; **TASK-044** e **TASK-039/040/041/042/043** restano **DONE**; **TASK-032** e **TASK-028** restano **BLOCKED**. Progetto **IDLE**, nessun task attivo.
+
 > **2026-05-05 (planning/tracking):** creato **TASK-040** *Supabase full pull + remote identity bridge SwiftData allineato Android/Supabase*; promosso ad **ACTIVE / PLANNING** con responsabile **Claude / Planner**; **solo** `docs/TASKS/TASK-040-supabase-full-pull-remote-identity-bridge-swiftdata-android-alignment.md` + **`MASTER-PLAN`** — **nessuna modifica Swift**, **nessun** `project.pbxproj` / `Info.plist` / `Package.resolved` / SQL. **TASK-039** resta **DONE** e **non** viene riaperto. Riferimenti Android: TASK-067 **DONE ACCEPTABLE**, TASK-068 **PARTIAL**, TASK-069/070/071 **DONE**.
 
 > **Planning refinement (TASK-040):** pre-execution gates; embedded metadata vs ref tables; policy `remoteID`; idempotenza; performance ~20k; date/TZ + privacy log; struttura Sezioni Options; CA-18–CA-25; fase **PLANNING** invariata; **nessuna** execution Swift; **nessuna** scrittura Supabase; **TASK-039** **DONE**.
@@ -100,14 +116,14 @@ IDLE
 > **2026-05-05 (review/close/user override):** **TASK-040** review tecnica completa eseguita da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**: fix diretto limitato a conflitti `remoteID` per duplicati locali e supplier/category omonimi con UUID remoto diverso, piu' hardening apply anti-merge silenzioso. Build Debug PASS, build Release PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-scope PASS. Nessuna scrittura Supabase, nessun push, nessun `record_sync_event`, nessun outbox/dirty, nessun ProductPrice apply remoto, nessun SQL/migration. **TASK-039 resta DONE**. Follow-up futuri registrati ma non attivati.
 
 ## Workflow task attivo
-- **Task attivo:** Nessuno
+- **Task attivo:** nessuno
 - **Titolo:** —
 - **File task:** —
 - **Stato task:** —
 - **Fase:** —
-- **Responsabile:** Utente / Claude *(serve baseline valida/pull completo prima di riprendere TASK-045)*
-- **Ultimo aggiornamento:** 2026-05-05 *(TASK-045 review docs-only APPROVED_FIXED_DIRECTLY_BLOCKED: baseline assente confermata come blocco corretto)*
-- **Nota tracking:** progetto **IDLE**. TASK-045 resta **BLOCKED**; nessun dry-run/preflight, push live, read-back, retry/no-op o pull post-push eseguito.
+- **Responsabile:** —
+- **Ultimo aggiornamento:** 2026-05-05 23:57 -04 *(TASK-045 bloccato al dry-run scope gate post-TASK-046; nessun push live eseguito)*
+- **Nota tracking:** progetto **IDLE**. **TASK-045** e' **BLOCKED**; alla ripresa serve decisione su candidati local-only non `TASK045_*` prima di ripartire da collision check/dry-run.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -148,17 +164,17 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- Nessun task attivo.
-- Ultimo task interrotto: **TASK-045** — `docs/TASKS/TASK-045-supabase-live-manual-validation-ios-small-dataset.md`
-- Stato: **BLOCKED**
-- Motivo: Pre-run safety gate bloccato da baseline/pull completo assente dopo login Google valido; UI DEBUG mostra **"Nessuna baseline salvata"**.
-- Ultimo aggiornamento: **2026-05-05** *(review docs-only: APPROVED_FIXED_DIRECTLY_BLOCKED; TASK-045 resta BLOCKED)*.
-- Nota: per riprendere TASK-045 serve baseline valida/pull completo sicuro, poi ripartenza da T45-02; non procedere direttamente a dry-run o push.
+- **Task attivo:** nessuno
+- **Ultimo task interrotto:** **TASK-045** — `docs/TASKS/TASK-045-supabase-live-manual-validation-ios-small-dataset.md`
+- **Stato:** **BLOCKED**
+- **Motivo blocco:** dry-run/preflight post-TASK-046 include candidati local-only non `TASK045_*` insieme al dataset test; push live bloccato per evitare scritture fuori matrice dataset piccolo.
+- **Ripartenza obbligatoria:** dopo decisione Claude/utente su isolamento/pulizia candidati local-only, ripartire da collision check e dry-run; non dal push live.
+- **Ultimo task chiuso:** **TASK-046** — `docs/TASKS/TASK-046-supabase-baseline-recovery-full-pull-ios.md` — **DONE / Chiusura**.
 
 Follow-up candidate post TASK-041 (**non attivi**):
-- Baseline persistence SwiftData: coperta da **TASK-043** (**DONE / Chiusura**).
+- Baseline persistence SwiftData: coperta da **TASK-043** (**DONE / Chiusura**); **operatività baseline su device** — **TASK-046** (**DONE / Chiusura**, baseline ottenuta e reviewata).
 - **TASK-044** push reale Supabase manuale controllato supplier/category/products — **DONE / Chiusura**.
-- **TASK-045** *bloccato* — validazione live manuale su dataset piccolo (**BLOCKED**; login Google verificato, baseline assente).
+- **TASK-045** *bloccato / prossimo candidato riattivabile* — validazione live manuale su dataset piccolo (**BLOCKED**; login Google verificato; baseline ora ottenuta e reviewata in TASK-046; ripresa solo con nuovo override da T45-02).
 - Task futuro: ProductPrice push.
 - Task futuro: `record_sync_event` / outbox.
 - Task futuro: tombstone outbound / delete.
@@ -347,6 +363,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-043 | Supabase baseline/fingerprint persistence affidabile da ultimo pull completo | DONE | HIGH |
 | TASK-044 | Supabase manual push reale controllato iOS (supplier / category / products baseline-gated) | DONE | HIGH |
 | TASK-045 | Supabase live manual validation iOS — dataset piccolo (auth, pull/baseline, preflight, push live, read-back, idempotenza) | BLOCKED | HIGH |
+| TASK-046 | Supabase baseline recovery / full pull baseline iOS | DONE | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -374,6 +391,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-042 | Supabase manual push preflight UI in OptionsView, dry-run only, tombstone-compliant | 2026-05-05 |
 | TASK-043 | Supabase baseline/fingerprint persistence affidabile da ultimo pull completo | 2026-05-05 |
 | TASK-044 | Supabase manual push reale controllato iOS (supplier / category / products baseline-gated) | 2026-05-05 |
+| TASK-046 | Supabase baseline recovery / full pull baseline iOS | 2026-05-06 |
 
 ## Blocchi e dipendenze
 - TASK-032 bloccato / in pausa.
