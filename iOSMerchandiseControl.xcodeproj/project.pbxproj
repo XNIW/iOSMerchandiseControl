@@ -42,7 +42,6 @@
 
 /* Begin PBXFileReference section */
 		415227B32EE0B07D008233E0 /* iOSMerchandiseControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iOSMerchandiseControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		42C0DE112F2A000100000001 /* iOSMerchandiseControlTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iOSMerchandiseControlTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		41B18CAC2EE7A90100FE61E2 /* build.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = build.yml; sourceTree = "<group>"; };
 		41B18CAD2EE7A90100FE61E2 /* fuzz.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = fuzz.yml; sourceTree = "<group>"; };
 		41B18CB52EE7A90100FE61E2 /* xlsformula.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xlsformula.h; sourceTree = "<group>"; };
@@ -73,6 +72,7 @@
 		41B18CFC2EE7A90100FE61E2 /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
 		41B18CFD2EE7A90100FE61E2 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		41B18D3B2EE7B0B400FE61E2 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		42C0DE112F2A000100000001 /* iOSMerchandiseControlTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iOSMerchandiseControlTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -295,7 +295,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2610;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					415227B22EE0B07D008233E0 = {
 						CreatedOnToolsVersion = 26.1.1;
@@ -400,6 +400,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -465,6 +466,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
