@@ -198,6 +198,74 @@ final class LocalizationCoverageTests: XCTestCase {
         }
     }
 
+    func testTask049ProductPriceApplyLocalizationKeysExistInSupportedLanguages() throws {
+        let keys = [
+            "options.supabase.priceApply.title",
+            "options.supabase.priceApply.badge.debug",
+            "options.supabase.priceApply.badge.localOnly",
+            "options.supabase.priceApply.badge.noCloudWrite",
+            "options.supabase.priceApply.subtitle",
+            "options.supabase.priceApply.copy.insertOnly",
+            "options.supabase.priceApply.copy.noCurrentPriceUpdate",
+            "options.supabase.priceApply.button.apply",
+            "options.supabase.priceApply.button.dryRun",
+            "options.supabase.priceApply.status.idle",
+            "options.supabase.priceApply.loading",
+            "options.supabase.priceApply.applying",
+            "options.supabase.priceApply.status.ready",
+            "options.supabase.priceApply.status.blocked",
+            "options.supabase.priceApply.status.noApplicableRows",
+            "options.supabase.priceApply.status.applied",
+            "options.supabase.priceApply.metric.remoteRead",
+            "options.supabase.priceApply.metric.toInsert",
+            "options.supabase.priceApply.metric.skippedExisting",
+            "options.supabase.priceApply.metric.unmapped",
+            "options.supabase.priceApply.metric.invalid",
+            "options.supabase.priceApply.metric.conflicts",
+            "options.supabase.priceApply.metric.mappingConflicts",
+            "options.supabase.priceApply.metric.partial",
+            "options.supabase.priceApply.metric.truncated",
+            "options.supabase.priceApply.metric.blockReasons",
+            "options.supabase.priceApply.metric.issues",
+            "options.supabase.priceApply.block.partial",
+            "options.supabase.priceApply.block.truncated",
+            "options.supabase.priceApply.block.sourceError",
+            "options.supabase.priceApply.block.unmappedProducts",
+            "options.supabase.priceApply.block.invalidRows",
+            "options.supabase.priceApply.block.conflicts",
+            "options.supabase.priceApply.block.sessionMismatch",
+            "options.supabase.priceApply.block.noApplicableRows",
+            "options.supabase.priceApply.issue.unmappedProduct",
+            "options.supabase.priceApply.issue.invalidType",
+            "options.supabase.priceApply.issue.invalidPrice",
+            "options.supabase.priceApply.issue.invalidEffectiveAt",
+            "options.supabase.priceApply.issue.mappingConflict",
+            "options.supabase.priceApply.issue.priceConflict",
+            "options.supabase.priceApply.issue.duplicateRemoteLogicalRow",
+            "options.supabase.priceApply.issue.sourceError",
+            "options.supabase.priceApply.error.fetcherMissing",
+            "options.supabase.priceApply.error.sessionMissing",
+            "options.supabase.priceApply.error.sessionMismatch",
+            "options.supabase.priceApply.error.policyBlocked",
+            "options.supabase.priceApply.error.localSnapshot",
+            "options.supabase.priceApply.error.saveFailed",
+            "options.supabase.priceApply.error.verificationFailed",
+            "options.supabase.priceApply.error.unknown",
+            "options.supabase.priceApply.confirm.title",
+            "options.supabase.priceApply.confirm.apply",
+            "options.supabase.priceApply.confirm.message",
+            "options.supabase.priceApply.result.counts"
+        ]
+
+        for language in ["it", "en", "es", "zh-Hans"] {
+            let strings = try loadStrings(language: language)
+            for key in keys {
+                XCTAssertNotNil(strings[key], "\(key) missing in \(language)")
+                XCTAssertFalse(strings[key]?.isEmpty ?? true, "\(key) empty in \(language)")
+            }
+        }
+    }
+
     private func loadStrings(language: String) throws -> [String: String] {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

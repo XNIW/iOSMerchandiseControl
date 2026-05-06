@@ -36,6 +36,11 @@ struct OptionsView: View {
     @State private var productPricePreviewState: ProductPricePreviewViewState = .idle
     @State private var productPricePreviewTask: Task<Void, Never>?
     @State private var productPricePreviewRequestID: UUID?
+    @State private var productPriceApplyState: ProductPriceApplyViewState = .idle
+    @State private var productPriceApplyTask: Task<Void, Never>?
+    @State private var productPriceApplyRequestID: UUID?
+    @State private var pendingProductPriceApplyPlan: ProductPriceApplyPlan?
+    @State private var isShowingProductPriceApplyConfirmation = false
     @StateObject private var pushPreflightViewModel: SupabasePushPreflightViewModel
     @State private var selectedPushPreflightScope: ManualPushPreflightScope = .global
     @State private var isRunningTask045RemoteCollisionCheck = false
@@ -243,6 +248,7 @@ struct OptionsView: View {
                 }
 
                 productPricePreviewCard
+                productPriceApplyCard
             } header: {
                 SectionHeader(title: L("options.supabase.auth.header"), systemImage: "person.crop.circle.badge.checkmark")
             } footer: {
@@ -454,6 +460,7 @@ struct OptionsView: View {
 #if DEBUG
         .onDisappear {
             resetProductPricePreview()
+            resetProductPriceApply()
             pushPreflightViewModel.cancel()
         }
         .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
@@ -482,10 +489,12 @@ struct OptionsView: View {
         }
         .onChange(of: supabaseAuthViewModel.sessionInfo?.userID) { _, _ in
             resetProductPricePreview()
+            resetProductPriceApply()
         }
         .onChange(of: supabaseAuthViewModel.isSignedIn) { _, isSignedIn in
             if !isSignedIn {
                 resetProductPricePreview()
+                resetProductPriceApply()
             }
         }
         .sheet(isPresented: $isShowingSupabasePullPreview) {
@@ -500,6 +509,22 @@ struct OptionsView: View {
                     isShowingSupabasePullPreview = false
                 }
             )
+        }
+        .confirmationDialog(
+            L("options.supabase.priceApply.confirm.title"),
+            isPresented: $isShowingProductPriceApplyConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L("options.supabase.priceApply.confirm.apply")) {
+                runConfirmedProductPriceApply()
+            }
+            Button(L("common.cancel"), role: .cancel) {
+                pendingProductPriceApplyPlan = nil
+            }
+        } message: {
+            if let pendingProductPriceApplyPlan {
+                Text(productPriceApplyConfirmationMessage(for: pendingProductPriceApplyPlan))
+            }
         }
         .confirmationDialog(
             L("options.supabase.manualpush.confirm.title"),
@@ -621,6 +646,37 @@ struct OptionsView: View {
         productPricePreviewSummary == nil
             ? "options.supabase.pricePreview.button.load"
             : "options.supabase.pricePreview.button.refresh"
+    }
+
+    private var isProductPriceApplyRunning: Bool {
+        switch productPriceApplyState {
+        case .loading, .applying(_):
+            return true
+        case .idle, .ready(_), .applied(_), .failed(_):
+            return false
+        }
+    }
+
+    private var productPriceApplyPlan: ProductPriceApplyPlan? {
+        switch productPriceApplyState {
+        case .ready(let plan), .applying(let plan):
+            return plan
+        case .idle, .loading, .applied(_), .failed(_):
+            return nil
+        }
+    }
+
+    private var canRunProductPriceApplyDryRun: Bool {
+        isPushPreflightAccountReady
+            && supabaseInventoryService != nil
+            && !isProductPriceApplyRunning
+    }
+
+    private var canConfirmProductPriceApply: Bool {
+        guard case .ready(let plan) = productPriceApplyState else {
+            return false
+        }
+        return plan.isApplyAllowed && !isProductPriceApplyRunning
     }
 
     private var pushPreflightRunButtonKey: String {
@@ -823,6 +879,198 @@ struct OptionsView: View {
         .padding(.vertical, 2)
     }
 
+    private var productPriceApplyCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Label {
+                    Text(L("options.supabase.priceApply.title"))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                } icon: {
+                    Image(systemName: "tray.and.arrow.down")
+                        .foregroundStyle(Color.accentColor)
+                }
+
+                Spacer()
+
+                productPriceApplyBadge("options.supabase.priceApply.badge.debug", color: .orange)
+            }
+
+            HStack(spacing: 6) {
+                productPriceApplyBadge("options.supabase.priceApply.badge.localOnly", color: .green)
+                productPriceApplyBadge("options.supabase.priceApply.badge.noCloudWrite", color: .blue)
+            }
+
+            Text(L("options.supabase.priceApply.subtitle"))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Label(L("options.supabase.priceApply.copy.insertOnly"), systemImage: "plus.circle")
+                Label(L("options.supabase.priceApply.copy.noCurrentPriceUpdate"), systemImage: "lock.circle")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Button {
+                    prepareProductPriceApplyConfirmation()
+                } label: {
+                    Label(L("options.supabase.priceApply.button.apply"), systemImage: "tray.and.arrow.down.fill")
+                }
+                .disabled(!canConfirmProductPriceApply)
+
+                HStack(spacing: 8) {
+                    Button {
+                        runProductPriceApplyDryRun()
+                    } label: {
+                        Label(L("options.supabase.priceApply.button.dryRun"), systemImage: "arrow.clockwise")
+                    }
+                    .disabled(!canRunProductPriceApplyDryRun)
+
+                    if isProductPriceApplyRunning {
+                        Button(L("common.cancel")) {
+                            cancelProductPriceApply()
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+
+            productPriceApplyStatusRow
+
+            if let plan = productPriceApplyPlan {
+                productPriceApplyPlanRows(plan)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func productPriceApplyBadge(_ key: String, color: Color) -> some View {
+        Text(L(key))
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(color.opacity(0.14))
+            )
+            .foregroundStyle(color)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    @ViewBuilder
+    private var productPriceApplyStatusRow: some View {
+        switch productPriceApplyState {
+        case .idle:
+            Text(L("options.supabase.priceApply.status.idle"))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        case .loading:
+            HStack(spacing: 12) {
+                ProgressView()
+                Text(L("options.supabase.priceApply.loading"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .ready(let plan):
+            Label {
+                Text(productPriceApplyStatusMessage(for: plan))
+                    .font(.footnote)
+                    .foregroundStyle(productPriceApplyStatusColor(for: plan))
+            } icon: {
+                Image(systemName: productPriceApplyStatusSymbol(for: plan))
+                    .foregroundStyle(productPriceApplyStatusColor(for: plan))
+            }
+        case .applying(_):
+            HStack(spacing: 12) {
+                ProgressView()
+                Text(L("options.supabase.priceApply.applying"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .applied(let result):
+            Label {
+                Text(L("options.supabase.priceApply.status.applied"))
+                    .font(.footnote)
+                    .foregroundStyle(Color.green)
+            } icon: {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color.green)
+            }
+            Text(L(
+                "options.supabase.priceApply.result.counts",
+                result.inserted,
+                result.skippedExisting,
+                result.totalConsidered
+            ))
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+        case .failed(let message):
+            Label {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(Color.red)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.orange)
+            }
+        }
+    }
+
+    private func productPriceApplyPlanRows(_ plan: ProductPriceApplyPlan) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LabeledContent(L("options.supabase.priceApply.metric.remoteRead"), value: "\(plan.summary.remoteRead)")
+            LabeledContent(L("options.supabase.priceApply.metric.toInsert"), value: "\(plan.summary.included)")
+            LabeledContent(L("options.supabase.priceApply.metric.skippedExisting"), value: "\(plan.summary.skippedExisting)")
+            LabeledContent(L("options.supabase.priceApply.metric.unmapped"), value: "\(plan.summary.unmapped)")
+            LabeledContent(L("options.supabase.priceApply.metric.invalid"), value: "\(plan.summary.invalid)")
+            LabeledContent(L("options.supabase.priceApply.metric.conflicts"), value: "\(plan.summary.conflicts)")
+            LabeledContent(L("options.supabase.priceApply.metric.mappingConflicts"), value: "\(plan.summary.mappingConflicts)")
+            LabeledContent(
+                L("options.supabase.priceApply.metric.partial"),
+                value: plan.summary.partial ? L("common.yes") : L("common.no")
+            )
+            LabeledContent(
+                L("options.supabase.priceApply.metric.truncated"),
+                value: plan.summary.truncated ? L("common.yes") : L("common.no")
+            )
+
+            if !plan.blockReasons.isEmpty {
+                DisclosureGroup(L("options.supabase.priceApply.metric.blockReasons")) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(plan.blockReasons, id: \.rawValue) { reason in
+                            Text(localizedProductPriceApplyBlockReason(reason))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+            }
+
+            if !plan.issues.isEmpty {
+                DisclosureGroup(L("options.supabase.priceApply.metric.issues")) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(plan.issues) { issue in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(localizedProductPriceApplyIssueReason(issue.reason))
+                                    .font(.footnote)
+                                    .fontWeight(.semibold)
+                                Text(issue.detail)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+            }
+        }
+    }
+
     private var localizedSupabaseAuthStatus: String {
         switch supabaseAuthViewModel.state {
         case .unconfigured:
@@ -983,6 +1231,133 @@ struct OptionsView: View {
     private func resetProductPricePreview() {
         ignoreProductPricePreviewResults()
         productPricePreviewState = .idle
+    }
+
+    private func runProductPriceApplyDryRun() {
+        guard canRunProductPriceApplyDryRun else { return }
+        guard let expectedUserID = supabaseAuthViewModel.sessionInfo?.userID else {
+            productPriceApplyState = .failed(L("options.supabase.priceApply.error.sessionMissing"))
+            return
+        }
+        guard let inventoryService = supabaseInventoryService else {
+            productPriceApplyState = .failed(L("options.supabase.priceApply.error.fetcherMissing"))
+            return
+        }
+
+        pendingProductPriceApplyPlan = nil
+        isShowingProductPriceApplyConfirmation = false
+        productPriceApplyTask?.cancel()
+
+        let requestID = UUID()
+        productPriceApplyRequestID = requestID
+        productPriceApplyState = .loading
+
+        productPriceApplyTask = Task { @MainActor in
+            do {
+                let service = SupabaseProductPriceApplyService(fetcher: inventoryService)
+                let plan = try await service.loadDryRun(
+                    context: modelContext,
+                    sessionSnapshot: ProductPriceApplySessionSnapshot(userID: expectedUserID)
+                )
+                guard productPriceApplyRequestID == requestID,
+                      supabaseAuthViewModel.sessionInfo?.userID == expectedUserID,
+                      supabaseAuthViewModel.isSignedIn else {
+                    return
+                }
+
+                productPriceApplyState = .ready(plan)
+                productPriceApplyTask = nil
+                productPriceApplyRequestID = nil
+            } catch let error as ProductPriceApplyError {
+                guard productPriceApplyRequestID == requestID else { return }
+                productPriceApplyState = .failed(localizedProductPriceApplyError(error))
+                productPriceApplyTask = nil
+                productPriceApplyRequestID = nil
+            } catch {
+                guard productPriceApplyRequestID == requestID else { return }
+                productPriceApplyState = .failed(L(
+                    "options.supabase.priceApply.error.unknown",
+                    String(describing: error)
+                ))
+                productPriceApplyTask = nil
+                productPriceApplyRequestID = nil
+            }
+        }
+    }
+
+    private func prepareProductPriceApplyConfirmation() {
+        guard case .ready(let plan) = productPriceApplyState,
+              plan.isApplyAllowed else {
+            return
+        }
+
+        pendingProductPriceApplyPlan = plan
+        isShowingProductPriceApplyConfirmation = true
+    }
+
+    private func runConfirmedProductPriceApply() {
+        guard let plan = pendingProductPriceApplyPlan,
+              plan.isApplyAllowed,
+              !isProductPriceApplyRunning else {
+            pendingProductPriceApplyPlan = nil
+            return
+        }
+        guard let currentUserID = supabaseAuthViewModel.sessionInfo?.userID,
+              supabaseAuthViewModel.isSignedIn else {
+            productPriceApplyState = .failed(L("options.supabase.priceApply.error.sessionMissing"))
+            pendingProductPriceApplyPlan = nil
+            return
+        }
+
+        let requestID = UUID()
+        productPriceApplyRequestID = requestID
+        productPriceApplyState = .applying(plan)
+        pendingProductPriceApplyPlan = nil
+
+        productPriceApplyTask = Task { @MainActor in
+            do {
+                let service = SupabaseProductPriceApplyService()
+                let result = try service.apply(
+                    plan: plan,
+                    context: modelContext,
+                    currentSessionSnapshot: ProductPriceApplySessionSnapshot(userID: currentUserID)
+                )
+                guard productPriceApplyRequestID == requestID,
+                      supabaseAuthViewModel.sessionInfo?.userID == currentUserID,
+                      supabaseAuthViewModel.isSignedIn else {
+                    return
+                }
+
+                productPriceApplyState = .applied(result)
+                productPriceApplyTask = nil
+                productPriceApplyRequestID = nil
+            } catch let error as ProductPriceApplyError {
+                guard productPriceApplyRequestID == requestID else { return }
+                productPriceApplyState = .failed(localizedProductPriceApplyError(error))
+                productPriceApplyTask = nil
+                productPriceApplyRequestID = nil
+            } catch {
+                guard productPriceApplyRequestID == requestID else { return }
+                productPriceApplyState = .failed(L(
+                    "options.supabase.priceApply.error.unknown",
+                    String(describing: error)
+                ))
+                productPriceApplyTask = nil
+                productPriceApplyRequestID = nil
+            }
+        }
+    }
+
+    private func cancelProductPriceApply() {
+        productPriceApplyTask?.cancel()
+        productPriceApplyTask = nil
+        productPriceApplyRequestID = nil
+        pendingProductPriceApplyPlan = nil
+        productPriceApplyState = .idle
+    }
+
+    private func resetProductPriceApply() {
+        cancelProductPriceApply()
     }
 
     private func runSupabasePushPreflight() {
@@ -1456,6 +1831,90 @@ struct OptionsView: View {
             sample.effectiveAtRaw,
             sample.effectiveAtCanonical
         )
+    }
+
+    private func productPriceApplyStatusMessage(for plan: ProductPriceApplyPlan) -> String {
+        if plan.isApplyAllowed {
+            return L("options.supabase.priceApply.status.ready")
+        }
+        if plan.blockReasons == [.noApplicableRows] {
+            return L("options.supabase.priceApply.status.noApplicableRows")
+        }
+        return L("options.supabase.priceApply.status.blocked")
+    }
+
+    private func productPriceApplyStatusSymbol(for plan: ProductPriceApplyPlan) -> String {
+        if plan.isApplyAllowed {
+            return "checkmark.shield.fill"
+        }
+        if plan.blockReasons == [.noApplicableRows] {
+            return "tray"
+        }
+        return "xmark.shield.fill"
+    }
+
+    private func productPriceApplyStatusColor(for plan: ProductPriceApplyPlan) -> Color {
+        if plan.isApplyAllowed {
+            return .green
+        }
+        if plan.blockReasons == [.noApplicableRows] {
+            return .secondary
+        }
+        return .orange
+    }
+
+    private func localizedProductPriceApplyBlockReason(_ reason: ProductPriceApplyBlockReason) -> String {
+        L("options.supabase.priceApply.block.\(reason.rawValue)")
+    }
+
+    private func localizedProductPriceApplyIssueReason(_ reason: ProductPriceApplyIssueReason) -> String {
+        L("options.supabase.priceApply.issue.\(reason.rawValue)")
+    }
+
+    private func localizedProductPriceApplyError(_ error: ProductPriceApplyError) -> String {
+        switch error {
+        case .fetcherMissing:
+            return L("options.supabase.priceApply.error.fetcherMissing")
+        case .sessionMismatch:
+            return L("options.supabase.priceApply.error.sessionMismatch")
+        case .policyBlocked(let reasons):
+            let detail = reasons
+                .map(localizedProductPriceApplyBlockReason)
+                .joined(separator: ", ")
+            return L("options.supabase.priceApply.error.policyBlocked", detail)
+        case .localSnapshotFailed(let message):
+            return detailMessage(
+                baseKey: "options.supabase.priceApply.error.localSnapshot",
+                detail: message
+            )
+        case .saveFailed(let message):
+            return detailMessage(
+                baseKey: "options.supabase.priceApply.error.saveFailed",
+                detail: message
+            )
+        case .verificationFailed:
+            return L("options.supabase.priceApply.error.verificationFailed")
+        }
+    }
+
+    private func detailMessage(baseKey: String, detail: String?) -> String {
+        let baseMessage = L(baseKey)
+        guard let detail, !detail.isEmpty else {
+            return baseMessage
+        }
+        return L("options.supabase.diagnostic.messageWithDetail", baseMessage, detail)
+    }
+
+    private func productPriceApplyConfirmationMessage(for plan: ProductPriceApplyPlan) -> String {
+        [
+            L("options.supabase.priceApply.confirm.message"),
+            L(
+                "options.supabase.priceApply.result.counts",
+                plan.summary.included,
+                plan.summary.skippedExisting,
+                plan.summary.remoteRead
+            )
+        ].joined(separator: "\n")
     }
 
     private func localizedSupabaseAuthError(_ error: SupabaseAuthServiceError) -> String {
@@ -2126,6 +2585,15 @@ private struct SupabasePullPreviewApplyReadiness {
     var canApply: Bool {
         plan != nil && disabledReason == nil
     }
+}
+
+private enum ProductPriceApplyViewState {
+    case idle
+    case loading
+    case ready(ProductPriceApplyPlan)
+    case applying(ProductPriceApplyPlan)
+    case applied(ProductPriceApplyResult)
+    case failed(String)
 }
 #endif
 
