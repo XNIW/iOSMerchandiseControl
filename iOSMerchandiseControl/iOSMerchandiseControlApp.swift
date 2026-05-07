@@ -38,7 +38,8 @@ struct iOSMerchandiseControlApp: App {
             HistoryEntry.self,
             ProductPrice.self,
             SupabaseCatalogBaselineRun.self,
-            SupabaseCatalogBaselineRecord.self
+            SupabaseCatalogBaselineRecord.self,
+            SyncEventOutboxEntry.self
         ])
     }
 
