@@ -929,3 +929,37 @@
 "options.supabase.manualpush.action.partial" = "Riprova dopo aver verificato il risultato parziale.";
 "options.supabase.manualpush.action.failedBeforeWrite" = "Nessuna write remota confermata. Riesegui il preflight.";
 "options.supabase.manualpush.action.blockedBeforeWrite" = "Riesegui il preflight e controlla i blocchi.";
+
+/* TASK-054 Supabase sync_events DEBUG read-only */
+"options.supabase.syncEvents.header" = "Eventi sync recenti";
+"options.supabase.syncEvents.footer" = "DEBUG: legge un campione recente da sync_events. Non scrive su Supabase e non mostra payload raw.";
+"options.supabase.syncEvents.badge.readOnly" = "DEBUG · Solo lettura";
+"options.supabase.syncEvents.button.load" = "Carica eventi";
+"options.supabase.syncEvents.button.refresh" = "Aggiorna eventi";
+"options.supabase.syncEvents.button.hint" = "Carica gli ultimi eventi sync in sola lettura.";
+"options.supabase.syncEvents.state.idle" = "Campione diagnostico read-only degli ultimi eventi sync.";
+"options.supabase.syncEvents.state.loading" = "Caricamento eventi sync...";
+"options.supabase.syncEvents.state.empty" = "Nessun evento sync trovato.";
+"options.supabase.syncEvents.state.noSession" = "Accedi per vedere gli eventi sync.";
+"options.supabase.syncEvents.state.notConfigured" = "Servizio debug sync_events non configurato in questa build.";
+"options.supabase.syncEvents.summary.loadedCount" = "Eventi caricati";
+"options.supabase.syncEvents.summary.latestEvent" = "Ultimo evento";
+"options.supabase.syncEvents.summary.effectiveLimit" = "Limite effettivo";
+"options.supabase.syncEvents.summary.effectiveLimitClamped" = "%d (clamp)";
+"options.supabase.syncEvents.summary.displayedCount.label" = "Righe mostrate";
+"options.supabase.syncEvents.summary.displayedCount" = "Mostrate %d di %d";
+"options.supabase.syncEvents.list.title" = "Righe evento";
+"options.supabase.syncEvents.field.id" = "ID";
+"options.supabase.syncEvents.field.changedCount" = "Conteggio modifiche";
+"options.supabase.syncEvents.field.createdAt" = "Creato";
+"options.supabase.syncEvents.field.source" = "Sorgente";
+"options.supabase.syncEvents.field.entitiesSummary" = "Entità";
+"options.supabase.syncEvents.field.payloadSummary" = "Payload";
+"options.supabase.syncEvents.field.preview" = "Anteprima";
+"options.supabase.syncEvents.shape.object" = "oggetto";
+"options.supabase.syncEvents.shape.array" = "array";
+"options.supabase.syncEvents.shape.string" = "stringa";
+"options.supabase.syncEvents.shape.number" = "numero";
+"options.supabase.syncEvents.shape.boolean" = "boolean";
+"options.supabase.syncEvents.shape.empty" = "vuoto";
+"options.supabase.syncEvents.shape.notAvailable" = "non disponibile";

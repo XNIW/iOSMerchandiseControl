@@ -20,6 +20,7 @@ private actor PriceHistoryBackfillRunner {
 struct ContentView: View {
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
+    private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
     private let supabaseManualPushService: SupabaseManualPushService?
 
     @AppStorage("appTheme") private var appTheme: String = "system"
@@ -32,10 +33,12 @@ struct ContentView: View {
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
+        supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService? = nil,
         supabaseManualPushService: SupabaseManualPushService? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
+        self.supabaseSyncEventPreviewService = supabaseSyncEventPreviewService
         self.supabaseManualPushService = supabaseManualPushService
     }
 
@@ -85,6 +88,7 @@ struct ContentView: View {
                 OptionsView(
                     supabaseInventoryService: supabaseInventoryService,
                     supabasePullPreviewService: supabasePullPreviewService,
+                    supabaseSyncEventPreviewService: supabaseSyncEventPreviewService,
                     supabaseManualPushService: supabaseManualPushService
                 )
             }

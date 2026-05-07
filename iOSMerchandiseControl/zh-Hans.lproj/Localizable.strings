@@ -930,3 +930,37 @@
 "options.supabase.manualpush.action.partial" = "检查部分结果后重试。";
 "options.supabase.manualpush.action.failedBeforeWrite" = "未确认任何远端写入。请重新运行 preflight。";
 "options.supabase.manualpush.action.blockedBeforeWrite" = "请重新运行 preflight 并检查阻塞项。";
+
+/* TASK-054 Supabase sync_events DEBUG read-only */
+"options.supabase.syncEvents.header" = "最近 sync 事件";
+"options.supabase.syncEvents.footer" = "DEBUG：只读取 sync_events 的近期样本。不写入 Supabase，也不显示原始 payload。";
+"options.supabase.syncEvents.badge.readOnly" = "DEBUG · 只读";
+"options.supabase.syncEvents.button.load" = "加载事件";
+"options.supabase.syncEvents.button.refresh" = "刷新事件";
+"options.supabase.syncEvents.button.hint" = "以只读方式加载最新 sync 事件。";
+"options.supabase.syncEvents.state.idle" = "近期 sync 事件的只读诊断样本。";
+"options.supabase.syncEvents.state.loading" = "正在加载 sync 事件...";
+"options.supabase.syncEvents.state.empty" = "未找到 sync 事件。";
+"options.supabase.syncEvents.state.noSession" = "请登录后查看 sync 事件。";
+"options.supabase.syncEvents.state.notConfigured" = "此 build 未配置 sync_events debug 服务。";
+"options.supabase.syncEvents.summary.loadedCount" = "已加载事件";
+"options.supabase.syncEvents.summary.latestEvent" = "最新事件";
+"options.supabase.syncEvents.summary.effectiveLimit" = "实际限制";
+"options.supabase.syncEvents.summary.effectiveLimitClamped" = "%d（已 clamp）";
+"options.supabase.syncEvents.summary.displayedCount.label" = "显示行数";
+"options.supabase.syncEvents.summary.displayedCount" = "显示 %d / %d";
+"options.supabase.syncEvents.list.title" = "事件行";
+"options.supabase.syncEvents.field.id" = "ID";
+"options.supabase.syncEvents.field.changedCount" = "变更数";
+"options.supabase.syncEvents.field.createdAt" = "创建时间";
+"options.supabase.syncEvents.field.source" = "来源";
+"options.supabase.syncEvents.field.entitiesSummary" = "实体";
+"options.supabase.syncEvents.field.payloadSummary" = "Payload";
+"options.supabase.syncEvents.field.preview" = "预览";
+"options.supabase.syncEvents.shape.object" = "对象";
+"options.supabase.syncEvents.shape.array" = "数组";
+"options.supabase.syncEvents.shape.string" = "字符串";
+"options.supabase.syncEvents.shape.number" = "数字";
+"options.supabase.syncEvents.shape.boolean" = "布尔";
+"options.supabase.syncEvents.shape.empty" = "空";
+"options.supabase.syncEvents.shape.notAvailable" = "不可用";

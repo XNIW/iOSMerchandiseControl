@@ -930,3 +930,37 @@
 "options.supabase.manualpush.action.partial" = "Retry after reviewing the partial result.";
 "options.supabase.manualpush.action.failedBeforeWrite" = "No remote write was confirmed. Run preflight again.";
 "options.supabase.manualpush.action.blockedBeforeWrite" = "Run preflight again and review blockers.";
+
+/* TASK-054 Supabase sync_events DEBUG read-only */
+"options.supabase.syncEvents.header" = "Recent sync events";
+"options.supabase.syncEvents.footer" = "DEBUG: reads a recent sample from sync_events. It does not write to Supabase or show raw payloads.";
+"options.supabase.syncEvents.badge.readOnly" = "DEBUG · Read-only";
+"options.supabase.syncEvents.button.load" = "Load events";
+"options.supabase.syncEvents.button.refresh" = "Refresh events";
+"options.supabase.syncEvents.button.hint" = "Loads the latest sync events in read-only mode.";
+"options.supabase.syncEvents.state.idle" = "Read-only diagnostic sample of recent sync events.";
+"options.supabase.syncEvents.state.loading" = "Loading sync events...";
+"options.supabase.syncEvents.state.empty" = "No sync events found.";
+"options.supabase.syncEvents.state.noSession" = "Sign in to view sync events.";
+"options.supabase.syncEvents.state.notConfigured" = "sync_events debug service is not configured in this build.";
+"options.supabase.syncEvents.summary.loadedCount" = "Events loaded";
+"options.supabase.syncEvents.summary.latestEvent" = "Latest event";
+"options.supabase.syncEvents.summary.effectiveLimit" = "Effective limit";
+"options.supabase.syncEvents.summary.effectiveLimitClamped" = "%d (clamped)";
+"options.supabase.syncEvents.summary.displayedCount.label" = "Rows shown";
+"options.supabase.syncEvents.summary.displayedCount" = "Showing %d of %d";
+"options.supabase.syncEvents.list.title" = "Event rows";
+"options.supabase.syncEvents.field.id" = "ID";
+"options.supabase.syncEvents.field.changedCount" = "Changed count";
+"options.supabase.syncEvents.field.createdAt" = "Created";
+"options.supabase.syncEvents.field.source" = "Source";
+"options.supabase.syncEvents.field.entitiesSummary" = "Entities";
+"options.supabase.syncEvents.field.payloadSummary" = "Payload";
+"options.supabase.syncEvents.field.preview" = "Preview";
+"options.supabase.syncEvents.shape.object" = "object";
+"options.supabase.syncEvents.shape.array" = "array";
+"options.supabase.syncEvents.shape.string" = "string";
+"options.supabase.syncEvents.shape.number" = "number";
+"options.supabase.syncEvents.shape.boolean" = "boolean";
+"options.supabase.syncEvents.shape.empty" = "empty";
+"options.supabase.syncEvents.shape.notAvailable" = "not available";

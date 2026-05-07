@@ -6,6 +6,7 @@ struct iOSMerchandiseControlApp: App {
     @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
+    private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
     private let supabaseManualPushService: SupabaseManualPushService?
 
     init() {
@@ -13,6 +14,7 @@ struct iOSMerchandiseControlApp: App {
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
         supabaseInventoryService = dependencies.inventoryService
         supabasePullPreviewService = dependencies.pullPreviewService
+        supabaseSyncEventPreviewService = dependencies.syncEventPreviewService
         supabaseManualPushService = dependencies.manualPushService
     }
 
@@ -21,6 +23,7 @@ struct iOSMerchandiseControlApp: App {
             ContentView(
                 supabaseInventoryService: supabaseInventoryService,
                 supabasePullPreviewService: supabasePullPreviewService,
+                supabaseSyncEventPreviewService: supabaseSyncEventPreviewService,
                 supabaseManualPushService: supabaseManualPushService
             )
             .environmentObject(supabaseAuthViewModel)
@@ -46,11 +49,14 @@ struct iOSMerchandiseControlApp: App {
             let authService = SupabaseAuthService(provider: provider)
             let inventoryService = SupabaseInventoryService(clientProvider: provider)
             let previewService = SupabasePullPreviewService(inventoryService: inventoryService)
+            let syncEventReader = SupabaseSyncEventRemoteReader(clientProvider: provider)
+            let syncEventPreviewService = SupabaseSyncEventPreviewService(fetcher: syncEventReader)
             let manualPushService = SupabaseManualPushService(clientProvider: provider)
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(authService: authService),
                 inventoryService: inventoryService,
                 pullPreviewService: previewService,
+                syncEventPreviewService: syncEventPreviewService,
                 manualPushService: manualPushService
             )
         } catch SupabaseConfigError.configMissing {
@@ -58,6 +64,7 @@ struct iOSMerchandiseControlApp: App {
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .configMissing),
                 inventoryService: nil,
                 pullPreviewService: nil,
+                syncEventPreviewService: nil,
                 manualPushService: nil
             )
         } catch SupabaseConfigError.invalidConfig {
@@ -65,6 +72,7 @@ struct iOSMerchandiseControlApp: App {
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .invalidConfig),
                 inventoryService: nil,
                 pullPreviewService: nil,
+                syncEventPreviewService: nil,
                 manualPushService: nil
             )
         } catch {
@@ -72,6 +80,7 @@ struct iOSMerchandiseControlApp: App {
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .unknown(message: String(describing: error))),
                 inventoryService: nil,
                 pullPreviewService: nil,
+                syncEventPreviewService: nil,
                 manualPushService: nil
             )
         }
@@ -82,5 +91,6 @@ private struct SupabaseAppDependencies {
     let authViewModel: SupabaseAuthViewModel
     let inventoryService: SupabaseInventoryService?
     let pullPreviewService: SupabasePullPreviewService?
+    let syncEventPreviewService: SupabaseSyncEventPreviewService?
     let manualPushService: SupabaseManualPushService?
 }

@@ -20,6 +20,7 @@ struct LanguageOption: Identifiable {
 struct OptionsView: View {
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
+    private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
 
     @Environment(\.modelContext) private var modelContext
     @AppStorage("appTheme") private var appTheme: String = "system"
@@ -42,6 +43,7 @@ struct OptionsView: View {
     @State private var pendingProductPriceApplyPlan: ProductPriceApplyPlan?
     @State private var isShowingProductPriceApplyConfirmation = false
     @StateObject private var productPriceManualPushViewModel: ProductPriceManualPushDebugViewModel
+    @StateObject private var syncEventDebugViewModel: SupabaseSyncEventDebugViewModel
     @State private var isShowingProductPriceManualPushConfirmation = false
     @StateObject private var pushPreflightViewModel: SupabasePushPreflightViewModel
     @State private var selectedPushPreflightScope: ManualPushPreflightScope = .global
@@ -56,13 +58,18 @@ struct OptionsView: View {
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
+        supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService? = nil,
         supabaseManualPushService: SupabaseManualPushService? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
+        self.supabaseSyncEventPreviewService = supabaseSyncEventPreviewService
 #if DEBUG
         _productPriceManualPushViewModel = StateObject(
             wrappedValue: ProductPriceManualPushDebugViewModel(remote: supabaseInventoryService)
+        )
+        _syncEventDebugViewModel = StateObject(
+            wrappedValue: SupabaseSyncEventDebugViewModel(service: supabaseSyncEventPreviewService)
         )
         _pushPreflightViewModel = StateObject(
             wrappedValue: SupabasePushPreflightViewModel(manualPushService: supabaseManualPushService)
@@ -327,6 +334,8 @@ struct OptionsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            syncEventsSection
+
             Section {
                 preflightStateRow
 
@@ -490,6 +499,7 @@ struct OptionsView: View {
             resetProductPricePreview()
             resetProductPriceApply()
             resetProductPriceManualPush()
+            syncEventDebugViewModel.cancel()
             pushPreflightViewModel.cancel()
         }
         .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
@@ -520,12 +530,14 @@ struct OptionsView: View {
             resetProductPricePreview()
             resetProductPriceApply()
             resetProductPriceManualPush()
+            syncEventDebugViewModel.reset()
         }
         .onChange(of: supabaseAuthViewModel.isSignedIn) { _, isSignedIn in
             if !isSignedIn {
                 resetProductPricePreview()
                 resetProductPriceApply()
                 resetProductPriceManualPush()
+                syncEventDebugViewModel.reset()
             }
         }
         .sheet(isPresented: $isShowingSupabasePullPreview) {
@@ -595,6 +607,31 @@ struct OptionsView: View {
             && !supabaseAuthViewModel.isTransitioning
             && supabaseInventoryService != nil
             && supabasePullPreviewService != nil
+    }
+
+    private var hasSyncEventsSession: Bool {
+        supabaseAuthViewModel.isSignedIn
+            && supabaseAuthViewModel.sessionInfo?.isExpired == false
+            && supabaseAuthViewModel.sessionInfo?.userID != nil
+    }
+
+    private var canRunSyncEventsDebugActions: Bool {
+        hasSyncEventsSession
+            && !supabaseAuthViewModel.isTransitioning
+            && supabaseSyncEventPreviewService != nil
+            && !syncEventDebugViewModel.isLoading
+    }
+
+    private var displayedSyncEventsState: SupabaseSyncEventDebugViewModel.ViewState {
+        guard supabaseSyncEventPreviewService != nil else { return .notConfigured }
+        guard hasSyncEventsSession else { return .noSession }
+        return syncEventDebugViewModel.state
+    }
+
+    private var syncEventsButtonKey: String {
+        syncEventDebugViewModel.state.canRefresh
+            ? "options.supabase.syncEvents.button.refresh"
+            : "options.supabase.syncEvents.button.load"
     }
 
     private var isPushPreflightAccountReady: Bool {
@@ -780,6 +817,205 @@ struct OptionsView: View {
                 .foregroundStyle(baselineStatusColor(supabaseBaselineSummary.status))
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private var syncEventsSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    productPriceApplyBadge("options.supabase.syncEvents.badge.readOnly", color: .orange)
+                    Spacer()
+                }
+
+                if displayedSyncEventsState == .idle {
+                    Text(L("options.supabase.syncEvents.state.idle"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Button {
+                    Task {
+                        await syncEventDebugViewModel.loadLatestEvents()
+                    }
+                } label: {
+                    Label(L(syncEventsButtonKey), systemImage: "arrow.clockwise.circle")
+                }
+                .disabled(!canRunSyncEventsDebugActions)
+                .accessibilityLabel(L(syncEventsButtonKey))
+                .accessibilityHint(L("options.supabase.syncEvents.button.hint"))
+
+                syncEventsStatusRow
+
+                if let summary = syncEventDebugViewModel.summary,
+                   displayedSyncEventsState == .successEmpty || displayedSyncEventsState == .successWithEvents {
+                    syncEventsSummaryRows(summary)
+                }
+
+                if displayedSyncEventsState == .successWithEvents {
+                    DisclosureGroup {
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(syncEventDebugViewModel.displayRows) { row in
+                                syncEventDisplayRow(row)
+                            }
+                            Text(L(
+                                "options.supabase.syncEvents.summary.displayedCount",
+                                syncEventDebugViewModel.summary?.displayedCount ?? 0,
+                                syncEventDebugViewModel.summary?.loadedCount ?? 0
+                            ))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                        .padding(.top, 4)
+                    } label: {
+                        Label(L("options.supabase.syncEvents.list.title"), systemImage: "list.bullet.rectangle")
+                    }
+                    .accessibilityLabel(L("options.supabase.syncEvents.list.title"))
+                }
+            }
+            .padding(.vertical, 4)
+            .accessibilityElement(children: .contain)
+        } header: {
+            SectionHeader(title: L("options.supabase.syncEvents.header"), systemImage: "clock.arrow.circlepath")
+        } footer: {
+            Text(L("options.supabase.syncEvents.footer"))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var syncEventsStatusRow: some View {
+        switch displayedSyncEventsState {
+        case .idle:
+            EmptyView()
+        case .loading:
+            HStack(spacing: 12) {
+                ProgressView()
+                Text(L("options.supabase.syncEvents.state.loading"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .successEmpty:
+            Label {
+                Text(L("options.supabase.syncEvents.state.empty"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: "tray")
+                    .foregroundStyle(.secondary)
+            }
+        case .successWithEvents:
+            EmptyView()
+        case .error(let message):
+            Label {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(Color.red)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.orange)
+            }
+        case .noSession:
+            Label {
+                Text(L("options.supabase.syncEvents.state.noSession"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: "lock.fill")
+                    .foregroundStyle(Color.orange)
+            }
+        case .notConfigured:
+            Label {
+                Text(L("options.supabase.syncEvents.state.notConfigured"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: "wrench.and.screwdriver")
+                    .foregroundStyle(Color.orange)
+            }
+        }
+    }
+
+    private func syncEventsSummaryRows(_ summary: SyncEventDebugDisplaySummary) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LabeledContent(
+                L("options.supabase.syncEvents.summary.loadedCount"),
+                value: "\(summary.loadedCount)"
+            )
+
+            if let latestEventDescription = summary.latestEventDescription {
+                LabeledContent(
+                    L("options.supabase.syncEvents.summary.latestEvent"),
+                    value: latestEventDescription
+                )
+            }
+
+            if let latestCreatedAtFormatted = summary.latestCreatedAtFormatted {
+                LabeledContent(
+                    L("options.supabase.syncEvents.field.createdAt"),
+                    value: latestCreatedAtFormatted
+                )
+            }
+
+            LabeledContent(
+                L("options.supabase.syncEvents.summary.effectiveLimit"),
+                value: summary.isLimitClamped
+                    ? L("options.supabase.syncEvents.summary.effectiveLimitClamped", summary.effectiveLimit)
+                    : "\(summary.effectiveLimit)"
+            )
+
+            LabeledContent(
+                L("options.supabase.syncEvents.summary.displayedCount.label"),
+                value: L(
+                    "options.supabase.syncEvents.summary.displayedCount",
+                    summary.displayedCount,
+                    summary.loadedCount
+                )
+            )
+        }
+    }
+
+    private func syncEventDisplayRow(_ row: SyncEventDebugDisplayRow) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(row.domain)
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+                Text(row.eventType)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(row.changedCount)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let source = row.source {
+                LabeledContent(L("options.supabase.syncEvents.field.source"), value: source)
+                    .font(.caption)
+            }
+
+            LabeledContent(L("options.supabase.syncEvents.field.id"), value: "\(row.id)")
+                .font(.caption)
+            LabeledContent(L("options.supabase.syncEvents.field.changedCount"), value: "\(row.changedCount)")
+                .font(.caption)
+            LabeledContent(L("options.supabase.syncEvents.field.createdAt"), value: row.createdAtFormatted)
+                .font(.caption)
+            LabeledContent(L("options.supabase.syncEvents.field.entitiesSummary"), value: syncEventValueText(row.entities))
+                .font(.caption)
+            LabeledContent(L("options.supabase.syncEvents.field.payloadSummary"), value: syncEventValueText(row.payload))
+                .font(.caption)
+
+            if let sanitizedPreview = row.sanitizedPreview {
+                LabeledContent(L("options.supabase.syncEvents.field.preview"), value: sanitizedPreview)
+                    .font(.caption)
+            }
+        }
+        .padding(.vertical, 3)
+    }
+
+    private func syncEventValueText(_ summary: SyncEventDebugValueSummary) -> String {
+        "\(L(summary.shape.localizationKey)) · \(summary.countText)"
     }
 
     private var productPricePreviewCard: some View {
