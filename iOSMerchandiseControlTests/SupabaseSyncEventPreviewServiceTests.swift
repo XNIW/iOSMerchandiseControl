@@ -148,6 +148,27 @@ final class SupabaseSyncEventPreviewServiceTests: XCTestCase {
         XCTAssertEqual(limits, [200])
     }
 
+    func testCustomMaximumLimitIsClampedToGlobalMaximum200() async throws {
+        let rows = (0..<250).map { index in
+            syncEvent(id: Int64(index + 1))
+        }
+        let fetcher = MockSyncEventPreviewFetching(rows: rows)
+        let service = SupabaseSyncEventPreviewService(
+            fetcher: fetcher,
+            options: SyncEventPreviewOptions(defaultLimit: 50, maximumLimit: 500)
+        )
+
+        let summary = try await service.loadLatestEvents(limit: 999)
+        let limits = await fetcher.recordedLimits()
+
+        XCTAssertEqual(service.options.maximumLimit, 200)
+        XCTAssertEqual(summary.requestedLimit, 999)
+        XCTAssertEqual(summary.effectiveLimit, 200)
+        XCTAssertTrue(summary.isLimitClamped)
+        XCTAssertEqual(summary.events.count, 200)
+        XCTAssertEqual(limits, [200])
+    }
+
     func testServiceCanUseFakeWithoutLiveSupabase() async throws {
         let rows = [syncEvent(id: 1), syncEvent(id: 2)]
         let service = SupabaseSyncEventPreviewService(

@@ -1,15 +1,18 @@
-# TASK-052: Supabase `sync_events` / `record_sync_event` / outbox — **foundation audit & roadmap iOS** *(etichetta storica **solo PLANNING** = perimetro originale senza codice; **planning completato**; **EXECUTION attuale: solo documentazione** — nessuna implementazione tecnica)*
+# TASK-052: Supabase `sync_events` / `record_sync_event` / outbox — **foundation audit & roadmap iOS** *(planning documentale completato; **BLOCKED / superseded by TASK-053** — nessuna implementazione tecnica)*
 
 ## Informazioni generali *(metadata tracking)*
 - **Task ID**: TASK-052
-- **Titolo**: Supabase sync_events / record_sync_event / outbox foundation audit iOS — gap analysis vs Android/Supabase, roadmap a slice; **EXECUTION documentale** (zero runtime)
+- **Titolo**: Supabase sync_events / record_sync_event / outbox foundation audit iOS — gap analysis vs Android/Supabase, roadmap a slice; superseded by TASK-053 (zero runtime)
 - **File task**: `docs/TASKS/TASK-052-supabase-sync-events-outbox-foundation-ios.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: EXECUTION *(documentale — vedere § Execution (Cursor))*
-- **Responsabile attuale**: Cursor / Documentation-only Executor
+- **Stato**: BLOCKED
+- **Fase attuale**: N/A *(non attiva — superseded by TASK-053)*
+- **Responsabile attuale**: N/A *(tracking archiviato; task attivo corrente = TASK-053)*
 - **Data creazione**: 2026-05-06
-- **Ultimo aggiornamento**: 2026-05-06 *(Transizione documentale a EXECUTION; nessuna patch Swift/Supabase; TASK-052 resta audit/roadmap.)*
-- **Ultimo agente che ha operato**: Cursor / Documentation-only Executor
+- **Ultimo aggiornamento**: 2026-05-06 *(Riallineamento lifecycle post-review TASK-053: TASK-052 non attiva, non DONE, superseded by TASK-053 Slice A.)*
+- **Ultimo agente che ha operato**: Codex / Fixer
+
+### Nota lifecycle
+TASK-052 ha completato il planning documentale e non richiede execution tecnica propria. Per evitare task ACTIVE concorrenti, l'esecuzione tecnica Slice A e' tracciata solo da **TASK-053**. TASK-052 resta **non DONE** e **non attiva**.
 
 ## Dipendenze
 - **Dipende da**:
@@ -20,7 +23,7 @@
   - Slice future **A–G** sotto; nessuna attivazione automatica di sync, realtime o background.
 
 ## Scopo
-Definire, **solo a livello di documento operativo**, la foundation iOS per **`sync_events`** (lettura), **`record_sync_event`** (contratto RPC lato client futuro) e **outbox locale**, allineata semanticamente ad **Android + Supabase** documentati nel progetto, **senza** introdurre sync automatico, write remota o outbox attivo. Il **perimetro “solo PLANNING”** resta lo **storico vincolo** (mai codice in quella fase). **Planning: completato.** L’**EXECUTION corrente** è **solo documentale**: consolida il testo (audit, roadmap, handoff) e lo prepara alla **REVIEW**; **nessun** codice Swift, servizio, DTO o UI.
+Definire, **solo a livello di documento operativo**, la foundation iOS per **`sync_events`** (lettura), **`record_sync_event`** (contratto RPC lato client futuro) e **outbox locale**, allineata semanticamente ad **Android + Supabase** documentati nel progetto, **senza** introdurre sync automatico, write remota o outbox attivo. Il **perimetro “solo PLANNING”** resta lo **storico vincolo** (mai codice in quella fase). **Planning: completato.** TASK-052 e' ora **BLOCKED / superseded by TASK-053** per il lifecycle operativo; **nessun** codice Swift, servizio, DTO o UI e' stato implementato in TASK-052.
 
 ## Contesto
 - iOS ha coperto progressivamente pull/apply, baseline, push manuale catalogo e pipeline ProductPrice fino al push live controllato (**TASK-051**), sempre con divieto esplicito di **`sync_events`**, **`record_sync_event`** e **outbox**.
@@ -175,13 +178,13 @@ Le future slice read-only devono essere progettate per dataset grandi e per non 
 ---
 
 ## Criteri di accettazione *(contratto TASK-052 — lifecycle documentale)*
-- [ ] File task **TASK-052** **ACTIVE** con **planning completato** e **EXECUTION documentale** registrata *(nessuna implementazione tecnica)*; tracciamento responsabile coerente.
-- [ ] **`docs/MASTER-PLAN.md`** aggiornato: progetto **ACTIVE**, task attivo **TASK-052**, workflow allineato.
+- [ ] File task **TASK-052** **BLOCKED / superseded by TASK-053** con planning completato *(nessuna implementazione tecnica)*; non task attivo concorrente.
+- [ ] **`docs/MASTER-PLAN.md`** aggiornato: progetto **ACTIVE**, task attivo unico **TASK-053**, TASK-052 non attivo e non DONE.
 - [ ] Riferimenti **Android** (TASK-045/046/061/063/065/068/070/071) e **Supabase** (migrazioni/RPC/RLS) **espliciti** nel documento *(come indirizzi di lettura, non come assunzione di stato live)*.
 - [ ] Rischi **TASK-071** (`p_changed_count`) e **TASK-068 PARTIAL** documentati nella gap analysis.
 - [ ] Roadmap **A–G** dichiarata con confini **no-write** / **no-outbox-active** per le slice in-scope del planning.
 - [ ] Divieti §**Non incluso** e §**Scope lock documentale** coerenti con il turno *(nessuna execution Swift)*.
-- [ ] **Handoff** chiaro: **READY FOR REVIEW APPROVAL**; **EXECUTION** (Codex) **solo** dopo **user override** esplicito.
+- [ ] **Handoff** storico chiaro: execution tecnica separata trasformata in **TASK-053 / Slice A** dopo user override esplicito.
 - [ ] Checklist schema/RPC aggiunta e marcata come **da compilare in REVIEW/EXECUTION futura**, non come stato verificato.
 - [ ] Matrice permessi operativi A–E+ presente e coerente con il divieto di write in PLANNING.
 - [ ] Decisioni UI/UX per futura Slice B DEBUG definite senza obbligare una patch UI immediata.
@@ -201,12 +204,12 @@ La REVIEW di TASK-052 deve controllare solo qualità del planning, non compilazi
 ## Controllo coerenza MASTER-PLAN
 
 - [ ] Stato globale progetto: **ACTIVE**.
-- [ ] Task attivo: **TASK-052**.
-- [ ] Fase: **EXECUTION** *(documentale; nessun codice)* oppure aggiornamento esplicito nel **MASTER-PLAN** se richiesto dal reviewer.
-- [ ] Responsabile: **Cursor / Documentation-only Executor** *(turno EXECUTION documentale)* o **Claude / Planner** *(planning pregresso)* / reviewer indicato in **REVIEW**.
+- [ ] Task attivo unico: **TASK-053**.
+- [ ] TASK-052: **BLOCKED / superseded by TASK-053**, non DONE, non attivo.
+- [ ] Responsabile task attivo: **Cursor / Codex** su TASK-053.
 - [ ] Ultimo task completato precedente: **TASK-051 DONE / Chiusura**.
 - [ ] Nessuna frase nel MASTER-PLAN indica execution Swift, Supabase write, outbox attivo, realtime o background sync per TASK-052.
-- [ ] Prossimo passo: **REVIEW del planning**, non EXECUTION automatica.
+- [ ] Prossimo passo: **REVIEW post-fix di TASK-053**, non execution automatica di TASK-052.
 
 ---
 
@@ -274,15 +277,15 @@ Dopo **TASK-051**, iOS ha parità funzionale “dati prezzi” fino al push **ma
 
 ### Handoff *(post-EXECUTION documentale — questo turno)*
 
-**READY FOR REVIEW** — Documento consolidato (audit, roadmap, divieti, slice **A–G**). **TASK-052 non è DONE.**
+**ARCHIVIATO / SUPERSEDED BY TASK-053** — Documento consolidato (audit, roadmap, divieti, slice **A–G**). **TASK-052 non è DONE** e non e' task attivo.
 
 - **Nessuna execution Swift** e **nessuna execution Supabase** in questo task. **Nessuna Slice A** (né B/C/D) **implementata** qui.
-- **Prossima fase**: **REVIEW** *(qualità e coerenza del documento + criteri di accettazione)*.  
-- **Prossimo agente**: **Claude / Reviewer** o **Utente**.  
-- **Output atteso della review**: uno tra **APPROVED**, **CHANGES_REQUIRED** o **REJECTED**; in nessun caso la review deve applicare patch Swift o promuovere TASK-052 a **DONE** senza conferma utente.
-- **Dopo REVIEW**: eventuale **EXECUTION tecnica** (**Codex** / implementazione) solo in **task separato** con **user override** esplicito — scelta consigliata **TASK-053 / Slice A** (DTO + service read-only + test decode/fake, senza UI e senza write); UI DEBUG eventuale in slice successiva. **Nessun** sync automatico, **`record_sync_event` live**, **outbox attivo**, **realtime** o **background sync** finché non definito in quel task.
+- **Prossima fase**: nessuna fase attiva su TASK-052; il prossimo passo operativo e' **REVIEW post-fix di TASK-053**.
+- **Prossimo agente**: **Claude / Reviewer** o **Utente** su TASK-053.
+- **Output atteso**: TASK-052 non va promosso a **DONE** senza conferma utente.
+- **Dopo TASK-052**: l'eventuale execution tecnica separata e' stata avviata come **TASK-053 / Slice A** (DTO + service read-only + test decode/fake, senza UI e senza write). UI DEBUG eventuale solo in task successiva separata. **Nessun** sync automatico, **`record_sync_event` live**, **outbox attivo**, **realtime** o **background sync** finché non definito in quel task.
 
-**Nota di perfezionamento**: prima di avviare **EXECUTION tecnica** (**TASK-053** o successivo), completare o marcare “non verificabile in locale” la checklist schema/RPC, poi **una sola slice**. Per dubbi UX: sezione DEBUG in `OptionsView`, read-only, collassabile, stati chiari, senza azioni cloud mutanti.
+**Nota di perfezionamento**: per slice successive a **TASK-053**, completare o marcare “non verificabile in locale” la checklist schema/RPC, poi **una sola slice**. Per dubbi UX futuri: sezione DEBUG in `OptionsView`, read-only, collassabile, stati chiari, senza azioni cloud mutanti.
 
 ---
 
@@ -309,12 +312,12 @@ Transizione **documentale** **PLANNING → EXECUTION** per consentire **REVIEW o
 - Nessun uso di `record_sync_event`.
 
 ### Esito
-**READY FOR REVIEW.**
+**SUPERSEDED BY TASK-053 / non DONE.**
 
 ### Handoff → Review
-- **Prossima fase**: REVIEW  
-- **Prossimo agente**: Claude / Reviewer o Utente  
-- **Azione consigliata**: Emettere **APPROVED** / **CHANGES_REQUIRED** / **REJECTED** sul documento; **non** dichiarare TASK-052 **DONE** senza conferma utente.
+- **Prossima fase**: nessuna fase attiva su TASK-052
+- **Prossimo agente**: Claude / Reviewer o Utente su **TASK-053**
+- **Azione consigliata**: review post-fix di **TASK-053**; **non** dichiarare TASK-052 **DONE** senza conferma utente.
 
 ---
 

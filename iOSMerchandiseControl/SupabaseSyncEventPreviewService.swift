@@ -16,7 +16,7 @@ nonisolated struct SyncEventPreviewOptions: Sendable, Equatable {
         defaultLimit: Int = Self.standardLimit,
         maximumLimit: Int = Self.maximumLimit
     ) {
-        let safeMaximum = max(1, maximumLimit)
+        let safeMaximum = max(1, min(maximumLimit, Self.maximumLimit))
         self.maximumLimit = safeMaximum
         self.defaultLimit = max(1, min(defaultLimit, safeMaximum))
     }

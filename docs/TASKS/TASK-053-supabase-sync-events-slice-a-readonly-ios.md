@@ -4,16 +4,16 @@
 - **Task ID**: TASK-053
 - **Titolo**: Supabase sync_events Slice A iOS: DTO + service read-only + test decode/fake
 - **File task**: `docs/TASKS/TASK-053-supabase-sync-events-slice-a-readonly-ios.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: EXECUTION
-- **Responsabile attuale**: Cursor / Codex
+- **Stato**: DONE
+- **Fase attuale**: Chiusura / DONE
+- **Responsabile attuale**: N/A
 - **Data creazione**: 2026-05-06
-- **Ultimo aggiornamento**: 2026-05-06 *(Execution tecnica Slice A read-only completata; handoff pronto per REVIEW. Per check utente, tracking lasciato ACTIVE / EXECUTION.)*
-- **Ultimo agente che ha operato**: Codex / Executor
+- **Ultimo aggiornamento**: 2026-05-06 *(Review post-fix APPROVED; task chiuso DONE su conferma utente.)*
+- **Ultimo agente che ha operato**: Cursor / Documentation Closer
 
 ## Dipendenze
 - **Dipende da**:
-  - **TASK-052** — ACTIVE / READY FOR REVIEW documentale; non DONE e non chiuso da questa execution.
+  - **TASK-052** — BLOCKED / superseded by TASK-053; non DONE e non task attivo concorrente.
   - **TASK-048 -> TASK-051** — catena ProductPrice completata; pattern read-only, fake/mock, guard anti-scope.
   - Supabase locale: `/Users/minxiang/Desktop/MerchandiseControlSupabase/supabase/migrations/20260424021936_task045_sync_events.sql`.
   - Android / Supabase come riferimento funzionale: TASK-065 object/array/extra fields, TASK-068 PARTIAL, TASK-070 retry outbox, TASK-071 `p_changed_count > 1000`.
@@ -161,15 +161,15 @@ Avviare una nuova execution tecnica separata da TASK-052: implementare Slice A r
 - ✅ ESEGUITO — **Grep no-write production Swift**: `rg -n "record_sync_event|\\.insert\\(|\\.upsert\\(|\\.update\\(|\\.delete\\(|\\.rpc\\(|\\.channel\\(|\\.subscribe\\(|BGTask" iOSMerchandiseControl/SupabaseSyncEventDTOs.swift iOSMerchandiseControl/SupabaseSyncEventPreviewService.swift` → nessun match.
 - ✅ ESEGUITO — **Static source scan test**: `testProductionSyncEventSourcesExposeReadOnlySurfaceOnly` passa sui file production.
 - ✅ ESEGUITO — **Whitespace**: `git diff --check` PASS; `git diff --no-index --check /dev/null` sui nuovi file Swift/test/task non riporta errori.
-- ✅ ESEGUITO — **Tracking**: `MASTER-PLAN` indica TASK-053 come task attivo `ACTIVE / EXECUTION`; TASK-052 resta non DONE / ready for review documentale separata.
+- ✅ ESEGUITO — **Tracking execution pre-review**: `MASTER-PLAN` indicava TASK-053 come task attivo `ACTIVE / EXECUTION`; vedi sezione **Fix** per riallineamento post-review a `ACTIVE / FIX` e TASK-052 `BLOCKED / superseded by TASK-053`.
 - ✅ ESEGUITO — **Nessuna UI modificata**: `git status --short iOSMerchandiseControl/OptionsView.swift` senza output.
 - ✅ ESEGUITO — **Nessuna API mutante Supabase introdotta nei file production TASK-053**: grep no-write production Swift senza match; unica query production nuova e' read-only `select` su `sync_events`.
 
 ### Rischi residui
 - Stato live Supabase non verificato: questa execution usa schema locale e non assume locale = live.
 - `record_sync_event` resta fuori perimetro: il decoder object/array e' preparatorio/testabile, non una chiamata RPC.
-- TASK-052 resta da review separata e non viene marcata DONE.
-- Per istruzione utente, TASK-053 resta formalmente `ACTIVE / EXECUTION` nel tracking; prossimo passo operativo consigliato e' REVIEW.
+- TASK-052 resta non DONE; post-review viene riallineata a non attiva / `BLOCKED / superseded by TASK-053`.
+- TASK-053 e' passato a `ACTIVE / FIX` dopo review CHANGES_REQUIRED; prossimo passo operativo consigliato e' REVIEW post-fix.
 
 ### Handoff post-execution
 **READY FOR REVIEW — TASK-053 Slice A read-only.**
@@ -187,10 +187,61 @@ Avviare una nuova execution tecnica separata da TASK-052: implementare Slice A r
 - **Prossimo passo consigliato**: REVIEW di TASK-053. Eventuale TASK-054 / Slice B solo dopo approvazione separata, eventualmente UI DEBUG read-only in `OptionsView`.
 
 ## Review (Claude)
-*(Da compilare in REVIEW.)*
+**Verdict: CHANGES_REQUIRED.**
+
+Problemi richiesti in fix:
+- **P2 lifecycle TASK-052/TASK-053 ambiguo**: `MASTER-PLAN` dichiarava TASK-053 come task attivo ma backlog/file task lasciavano anche TASK-052 ACTIVE/EXECUTION.
+- **P2 limite massimo configurabile oltre 200**: `SyncEventPreviewOptions(maximumLimit:)` accettava valori arbitrari, permettendo un effective limit superiore al contratto TASK-053.
+
+**Verdict post-fix: APPROVED.**
+
+Evidenze approvate:
+- Lifecycle risolto: TASK-053 unico task operativo fino alla chiusura; TASK-052 **BLOCKED / superseded by TASK-053**, non DONE.
+- `maximumLimit` risolto: clamp effettivo a **200** anche con override superiore.
+- Build Debug Simulator → **PASS**.
+- XCTest mirati `SupabaseSyncEventPreviewServiceTests` → **PASS 10/10**.
+- Grep no-write production Swift → **PASS**.
+- Nessuna UI / `OptionsView`, nessuna write Supabase, nessun `record_sync_event`, nessun outbox, nessun realtime, nessun background sync.
+- Nessuna modifica Android o schema Supabase.
 
 ## Fix (Codex)
-*(N/A finché non esiste review con CHANGES_REQUIRED.)*
+### Obiettivo fix
+Applicare solo i due fix richiesti dalla review CHANGES_REQUIRED, senza aprire TASK-054 e senza ampliare il perimetro read-only di TASK-053.
+
+### Fix applicati
+- Riallineato lifecycle/tracking:
+  - TASK-053 resta **ACTIVE / FIX**.
+  - TASK-052 passa a **BLOCKED / superseded by TASK-053**, non DONE e non task attivo concorrente.
+  - `MASTER-PLAN` indica un solo task attivo: **TASK-053 / FIX**.
+- Clamp reale limite massimo:
+  - `SyncEventPreviewOptions` clampa `maximumLimit` a `Self.maximumLimit` (**200**) anche se il chiamante passa un valore superiore.
+  - Il default resta **50**.
+- Aggiunto test regressivo:
+  - `testCustomMaximumLimitIsClampedToGlobalMaximum200`.
+
+### Check post-fix
+- ✅ ESEGUITO — **Build compila (Debug Simulator)**: `xcodebuild build -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 16e,OS=26.2'` → **BUILD SUCCEEDED**.
+- ✅ ESEGUITO — **XCTest mirati TASK-053**: `xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'platform=iOS Simulator,name=iPhone 16e,OS=26.2' -only-testing:iOSMerchandiseControlTests/SupabaseSyncEventPreviewServiceTests` → **TEST SUCCEEDED**, 10/10 test passati incluso `testCustomMaximumLimitIsClampedToGlobalMaximum200`.
+- ✅ ESEGUITO — **Grep no-write production Swift**: `rg -n "record_sync_event|\\.insert\\(|\\.upsert\\(|\\.update\\(|\\.delete\\(|\\.rpc\\(|\\.channel\\(|\\.subscribe\\(|BGTask" iOSMerchandiseControl/SupabaseSyncEventDTOs.swift iOSMerchandiseControl/SupabaseSyncEventPreviewService.swift` → nessun match.
+- ✅ ESEGUITO — **Whitespace**: `git diff --check` → PASS.
+- ✅ ESEGUITO — **Nessuna UI modificata**: `git status --short iOSMerchandiseControl/OptionsView.swift` senza output.
+- ✅ ESEGUITO — **`project.pbxproj` non modificato**: `git status --short iOSMerchandiseControl.xcodeproj/project.pbxproj` senza output.
+- ✅ ESEGUITO — **Un solo task attivo nel tracking corrente**: `MASTER-PLAN` indica **TASK-053 ACTIVE / FIX**; TASK-052 indica **BLOCKED / superseded by TASK-053**, non DONE.
+- ✅ ESEGUITO — **Nessuna API mutante Supabase introdotta nei file production TASK-053**: unica query production nuova resta read-only `select` su `sync_events`.
+- ✅ ESEGUITO — **Warning nuovi (se verificabile)**: build/test PASS; unico warning osservato = AppIntents metadata extraction skipped, gia' noto/preesistente.
+
+### Handoff post-fix
+**READY FOR REVIEW — TASK-053 post-fix CHANGES_REQUIRED.**
+
+- **Fix implementati**:
+  - lifecycle TASK-052/TASK-053 riallineato: un solo task attivo (**TASK-053 / FIX**), TASK-052 **BLOCKED / superseded by TASK-053**, non DONE.
+  - `maximumLimit` effettivo clampato a **200** anche con override superiore.
+  - test regressivo aggiunto per `maximumLimit: 500` + requested limit alto.
+- **Non implementato**: UI DEBUG, write Supabase, `record_sync_event`, outbox, realtime, background sync, Android, schema Supabase, TASK-054.
+- **Prossimo passo consigliato**: REVIEW post-fix di TASK-053.
+- **Chiusura**: TASK-053 non e' DONE; TASK-052 non e' DONE.
 
 ## Chiusura
-- [ ] Utente ha confermato il completamento dopo REVIEW.
+- [x] Utente ha confermato il completamento dopo REVIEW.
+- **Data completamento**: 2026-05-06
+- **Nota chiusura**: TASK-053 chiuso DONE; Slice A read-only completata. TASK-052 resta BLOCKED / superseded by TASK-053, non DONE.

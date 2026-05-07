@@ -4,11 +4,14 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**Task attivo: TASK-053** — *Supabase sync_events Slice A iOS: DTO + service read-only + test decode/fake* — **ACTIVE / EXECUTION** su override esplicito utente; responsabile **Cursor / Codex**. **TASK-052** resta **non DONE** e **READY FOR REVIEW** documentale separata: non viene chiusa né trasformata in execution tecnica. Per TASK-053 sono vietati: write Supabase, `record_sync_event`, outbox attivo, realtime, background sync, UI DEBUG e modifiche Android/Supabase schema.
+**Task attivo: TASK-054** — *Supabase sync_events Slice B iOS — UI DEBUG read-only in OptionsView* — **`ACTIVE / PLANNING`**, solo documentazione questo turno; **nessuna EXECUTION Swift** senza successiva review/override utente. **Ultimo completato:** **TASK-053** — *Supabase sync_events Slice A iOS: DTO + service read-only + test decode/fake* — **DONE / Chiusura**. **TASK-052** resta **BLOCKED / superseded by TASK-053**, **non DONE** e non task attivo. File TASK-054: `docs/TASKS/TASK-054-supabase-sync-events-debug-ui-readonly-ios.md`.
 
 ## Stato globale
 ACTIVE
-> **2026-05-06 (handoff execution — TASK-053 / Slice A):** execution tecnica completata da **Codex / Executor**. Implementati DTO `sync_events`, parser date, decoder object/array/extra fields, service read-only ultimi N eventi (default 50, max 200, ordine `created_at` + `id`) e XCTest fake/mock. Check PASS: build Debug Simulator, XCTest mirati 9/9, `git diff --check`, no-write grep production Swift, no UI modified. **Nessuna** UI, **nessuna** write Supabase, **nessuna** chiamata `record_sync_event`, **nessun** outbox/realtime/background sync, **nessuna** modifica Android/schema Supabase. Per check utente, TASK-053 resta **ACTIVE / EXECUTION**; prossimo passo: **REVIEW**. **TASK-052 resta non DONE / READY FOR REVIEW** separata.
+> **2026-05-06 — PLANNING TASK-054 (solo markdown):** creato **`docs/TASKS/TASK-054-supabase-sync-events-debug-ui-readonly-ios.md`** — Slice B progettazione UI DEBUG **read-only** `sync_events` in `OptionsView` riusando `SupabaseSyncEventPreviewService` TASK-053; vietati questo turno: Swift, test, build, XCTest live, Supabase write/RPC/outbox/realtime/background, Android, schema/TASK-055; **TASK-054 ACTIVE / PLANNING**, responsabile **Cursor / Planner**; progetto **ACTIVE**. **Ultimo DONE:** TASK-053. **TASK-052 BLOCKED/superseded, non DONE.**
+> **2026-05-06 — TASK-053 DONE / Chiusura dopo REVIEW post-fix APPROVED.** Slice A `sync_events` read-only completata: DTO, service read-only, test fake/mock 10/10, build PASS, grep no-write PASS. Nessuna UI, write Supabase, `record_sync_event`, outbox, realtime/background, Android o schema Supabase. *(Stato sopra aggiornato a **ACTIVE** con TASK-054 planning.)*
+> **2026-05-06 (handoff post-fix — TASK-053 / Slice A):** review severa TASK-053 ha dato **CHANGES_REQUIRED** e il fix mirato e' completato. Unico task attivo **TASK-053 ACTIVE / FIX**; **TASK-052** riallineato a **BLOCKED / superseded by TASK-053**, non DONE e senza execution tecnica propria. Fix: clamp reale limite `sync_events` a 200 + test regressivo; check PASS build Debug, XCTest mirati 10/10, `git diff --check`, grep no-write, OptionsView/project file non modificati. Nessuna UI/write/RPC/outbox/realtime/background/Android/schema. Prossimo passo: **REVIEW post-fix di TASK-053**.
+> **2026-05-06 (handoff execution — TASK-053 / Slice A):** execution tecnica completata da **Codex / Executor**. Implementati DTO `sync_events`, parser date, decoder object/array/extra fields, service read-only ultimi N eventi (default 50, max 200, ordine `created_at` + `id`) e XCTest fake/mock. Check PASS: build Debug Simulator, XCTest mirati 9/9, `git diff --check`, no-write grep production Swift, no UI modified. **Nessuna** UI, **nessuna** write Supabase, **nessuna** chiamata `record_sync_event`, **nessun** outbox/realtime/background sync, **nessuna** modifica Android/schema Supabase. Post-review, TASK-053 passa a **ACTIVE / FIX** per CHANGES_REQUIRED. **TASK-052 resta non DONE / BLOCKED / superseded by TASK-053**.
 > **2026-05-06 (execution tecnica — TASK-053 / Slice A, user override):** creato **`docs/TASKS/TASK-053-supabase-sync-events-slice-a-readonly-ios.md`** e avviato come **ACTIVE / EXECUTION** con responsabile **Cursor / Codex**. Perimetro: DTO `sync_events`, service read-only ultimi N eventi, decoder object/array/extra fields dove applicabile, test fixture/fake/mock. **Nessuna** UI, **nessuna** write Supabase, **nessuna** chiamata `record_sync_event`, **nessun** outbox/realtime/background sync, **nessuna** modifica Android o schema Supabase. **TASK-052 resta non DONE / READY FOR REVIEW** e non viene chiusa in questa execution.
 > **2026-05-06 (execution documentale / transition-only — TASK-052, user override):** **TASK-052** passa da **ACTIVE / PLANNING** ad **ACTIVE / EXECUTION** *(**documentale**)* con responsabile **Cursor / Documentation-only Executor**. **Solo** aggiornamento file task (`docs/TASKS/TASK-052-*.md`) + **MASTER-PLAN**: consolidamento handoff, § **Execution (Cursor)**, conferma divieti (nessun Swift, nessuna write Supabase, nessun outbox attivo, nessun realtime/background, nessuna Slice A/B/C/D implementata). **Prossima fase:** **REVIEW**. **EXECUTION tecnica** (**Codex**) = **TASK-053 / Slice A** (o equivalente) solo dopo review documentale e override. TASK-052 **non** DONE.
 > **2026-05-06 (planning/tracking — TASK-052):** creato **`docs/TASKS/TASK-052-supabase-sync-events-outbox-foundation-ios.md`**; promosso ad **ACTIVE / PLANNING** con responsabile **Claude / Planner**. Solo markdown + aggiornamento **MASTER-PLAN**: gap analysis iOS vs Android (**TASK-065/070/071**, **TASK-068 PARTIAL**, **TASK-072** follow-up backend documentato) e Supabase locale; roadmap slice **A–G**; **nessuna** patch Swift, **nessun** test eseguito, **nessuna** write remota/RPC live, **nessun** outbox attivo, **nessun** realtime/background, **nessuna** modifica Android/SQL. Progetto **ACTIVE**; task attivo **TASK-052**. **EXECUTION** (**Codex**) **solo** dopo review/approvazione planning e **user override** esplicito.
@@ -157,14 +160,14 @@ ACTIVE
 > **2026-05-05 (review/close/user override):** **TASK-040** review tecnica completa eseguita da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**: fix diretto limitato a conflitti `remoteID` per duplicati locali e supplier/category omonimi con UUID remoto diverso, piu' hardening apply anti-merge silenzioso. Build Debug PASS, build Release PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-scope PASS. Nessuna scrittura Supabase, nessun push, nessun `record_sync_event`, nessun outbox/dirty, nessun ProductPrice apply remoto, nessun SQL/migration. **TASK-039 resta DONE**. Follow-up futuri registrati ma non attivati.
 
 ## Workflow task attivo
-- **Task attivo:** TASK-053
-- **Titolo:** Supabase sync_events Slice A iOS: DTO + service read-only + test decode/fake
-- **File task:** `docs/TASKS/TASK-053-supabase-sync-events-slice-a-readonly-ios.md`
-- **Stato task:** ACTIVE
-- **Fase:** EXECUTION
-- **Responsabile:** Cursor / Codex
-- **Ultimo aggiornamento:** 2026-05-06 *(Execution tecnica TASK-053 / Slice A read-only completata; handoff pronto per REVIEW, tracking lasciato ACTIVE / EXECUTION per check utente.)*
-- **Nota tracking:** progetto **ACTIVE**. **TASK-053** implementa solo Slice A read-only: DTO `sync_events`, service ultimi N eventi, decoder tollerante e test fake/mock. **TASK-052 resta non DONE / READY FOR REVIEW** documentale separata. **TASK-051** e catena **048–051** restano **DONE**. Vietati in TASK-053: write Supabase, `record_sync_event`, outbox, realtime/background sync, UI DEBUG, Android e schema Supabase.
+- **Task attivo:** TASK-054
+- **Titolo:** Supabase sync_events Slice B iOS — UI DEBUG read-only in OptionsView
+- **File task:** `docs/TASKS/TASK-054-supabase-sync-events-debug-ui-readonly-ios.md`
+- **Stato task:** ACTIVE *(PLANNING — solo markdown questo turno)*
+- **Fase:** PLANNING
+- **Responsabile:** Cursor / Planner
+- **Ultimo aggiornamento:** 2026-05-06 *(Creazione TASK-054 planning-only; progetto ACTIVE.)*
+- **Nota tracking:** progetto **ACTIVE**; TASK-054 **solo planning** — vietata EXECUTION Swift in questo ciclo senza REVIEW piano + **user override** esplicito. **TASK-053 DONE / Chiusura** (Slice A ultima chiusura). **TASK-052 resta BLOCKED / superseded by TASK-053**, **non DONE**, nessuna execution tecnica propria TASK-052. TASK-054 perimetro Slice B UI read-only futura: vietati nei vincoli di progetto (fino ad override execution) qualunque write Supabase, `record_sync_event`, outbox, realtime/background, polling automatico sync, modifiche Android/schema Supabase/`service_role`, **TASK-055**. **TASK-054 non DONE.**
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -205,7 +208,7 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** **TASK-053** — `docs/TASKS/TASK-053-supabase-sync-events-slice-a-readonly-ios.md` — **ACTIVE / EXECUTION**. **Ultimo completato:** **TASK-051** — `docs/TASKS/TASK-051-supabase-productprice-push-live-manuale-controllato-ios.md` — **DONE / Chiusura**. **TASK-052** resta non DONE e ready for review documentale separata.
+- **Task attivo corrente:** **TASK-054** — `docs/TASKS/TASK-054-supabase-sync-events-debug-ui-readonly-ios.md` — **ACTIVE / PLANNING**. **Ultimo completato:** **TASK-053** — `docs/TASKS/TASK-053-supabase-sync-events-slice-a-readonly-ios.md` — **DONE / Chiusura**.
 - **TASK-050 (DONE / Chiusura):** preflight + dry-run ProductPrice iOS; **non riaperto**.
 - **TASK-049 (DONE / Chiusura):** non riaperto; pull→apply locale insert-only completato e chiuso.
 - **TASK-048 (DONE / Chiusura):** non riaperto; preview read-only foundation ProductPrice.
@@ -219,7 +222,7 @@ Follow-up candidate post TASK-041 (**non attivi**):
 - **TASK-049** (**DONE / Chiusura**) — ProductPrice **pull** controllato → **apply locale** SwiftData da `inventory_product_prices`, dry-run DEBUG, idempotenza, **zero write** Supabase.
 - **TASK-050** (**DONE / Chiusura**) — ProductPrice push **preflight + dry-run** iOS (`docs/TASKS/TASK-050-supabase-productprice-manual-push-preflight-dry-run-ios.md`), zero-write verificato e review APPROVED_FIXED_DIRECTLY; **nessuna** write Supabase / migration / Android / `sync_events`/outbox/RPC; push live tracciato come **TASK-051**.
 - **TASK-051** (**DONE / Chiusura**) — ProductPrice **push live manuale controllato** iOS verso **`inventory_product_prices`** *(dry-run obbligatorio, snapshot volatile, insert-only, read-back exact-match, idempotenza)*; review APPROVED_FIXED_DIRECTLY su override utente, build/test/check PASS; smoke live reale resta follow-up manuale separato; **nessun** `sync_events` / outbox / migration / Android / TASK-052 attivato.
-- **TASK-052** (**non DONE / READY FOR REVIEW documentale separata**) — audit/roadmap `sync_events` / `record_sync_event` / outbox; non chiuso da TASK-053.
+- **TASK-052** (**non DONE / BLOCKED / superseded by TASK-053**) — audit/roadmap `sync_events` / `record_sync_event` / outbox; non task attivo e nessuna execution tecnica propria.
 - Task futuro: `record_sync_event` / outbox.
 - Task futuro: tombstone outbound / delete.
 - Task futuro: realtime/background sync.
@@ -359,7 +362,7 @@ Task bloccati non attivi:
 
 ## Backlog
 (Task futuri ordinati per priorità — aggiornabile solo da Claude o dall'utente, con motivazione esplicita)
-Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase. **TASK-036** aggiunto 2026-04-27 come follow-up documentale post-**TASK-031** (HTML avanzato: colspan/rowspan, multi-table, XCTest opzionale). **TASK-037** aggiunto 2026-04-27 da user override per creare il target XCTest minimale sulle fixture TASK-036. **TASK-040** aggiunto 2026-05-05: post TASK-039 DONE — full pull/paginazione controllata + bridge `remoteId` SwiftData allineato a inventory Supabase/Android; dipendenze TASK-034/035/038/039 DONE; riferimento funzionale Android TASK-067/068/069/070/071 (**non** copia codice). **TASK-041** aggiunto 2026-05-05: post TASK-040 DONE — planning preflight/dry-run push manuale tombstone-compliant iOS; **nessuna** write Supabase in planning; push reale task successivo; Android TASK-068 PARTIAL / TASK-071 documentati nel file task (**non** contratto live iOS). **TASK-042** aggiunto 2026-05-05: UI DEBUG `OptionsView` per preflight/dry-run manual push locale, no-write Supabase, no outbox/dirty/baseline persistence, localizzazioni complete e test puri UI/viewmodel. **TASK-052** aggiunto 2026-05-06: post TASK-051 DONE — foundation `sync_events` / `record_sync_event` / outbox iOS (audit + roadmap slice A–G; non DONE / ready for review documentale). **TASK-053** aggiunto 2026-05-06 su override utente: Slice A tecnica read-only `sync_events` iOS, senza UI/write/outbox/realtime/background.
+Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase. **TASK-036** aggiunto 2026-04-27 come follow-up documentale post-**TASK-031** (HTML avanzato: colspan/rowspan, multi-table, XCTest opzionale). **TASK-037** aggiunto 2026-04-27 da user override per creare il target XCTest minimale sulle fixture TASK-036. **TASK-040** aggiunto 2026-05-05: post TASK-039 DONE — full pull/paginazione controllata + bridge `remoteId` SwiftData allineato a inventory Supabase/Android; dipendenze TASK-034/035/038/039 DONE; riferimento funzionale Android TASK-067/068/069/070/071 (**non** copia codice). **TASK-041** aggiunto 2026-05-05: post TASK-040 DONE — planning preflight/dry-run push manuale tombstone-compliant iOS; **nessuna** write Supabase in planning; push reale task successivo; Android TASK-068 PARTIAL / TASK-071 documentati nel file task (**non** contratto live iOS). **TASK-042** aggiunto 2026-05-05: UI DEBUG `OptionsView` per preflight/dry-run manual push locale, no-write Supabase, no outbox/dirty/baseline persistence, localizzazioni complete e test puri UI/viewmodel. **TASK-052** aggiunto 2026-05-06: post TASK-051 DONE — foundation `sync_events` / `record_sync_event` / outbox iOS (audit + roadmap slice A–G; non DONE / BLOCKED / superseded by TASK-053). **TASK-053** aggiunto 2026-05-06 su override utente: Slice A tecnica read-only `sync_events` iOS, senza UI/write/outbox/realtime/background.
 
 | ID | Titolo | Stato | Priorità |
 |----|--------|-------|----------|
@@ -413,8 +416,9 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-049 | Supabase ProductPrice pull → apply locale controllato SwiftData iOS, no push remoto | DONE | HIGH |
 | TASK-050 | Supabase ProductPrice manual push — preflight + dry-run iOS, no sync_events | DONE | HIGH |
 | TASK-051 | Supabase ProductPrice push live manuale controllato iOS (`inventory_product_prices`, dry-run obbligatorio, read-back, idempotenza) | DONE | HIGH |
-| TASK-052 | Supabase sync_events / record_sync_event / outbox foundation audit iOS (audit/roadmap; READY FOR REVIEW documentale; non DONE) | ACTIVE | HIGH |
-| TASK-053 | Supabase sync_events Slice A iOS: DTO + service read-only + test decode/fake | ACTIVE | HIGH |
+| TASK-052 | Supabase sync_events / record_sync_event / outbox foundation audit iOS (audit/roadmap; superseded by TASK-053; non DONE) | BLOCKED | HIGH |
+| TASK-053 | Supabase sync_events Slice A iOS: DTO + service read-only + test decode/fake | DONE | HIGH |
+| TASK-054 | Supabase sync_events Slice B — UI DEBUG read-only `sync_events` in OptionsView *(PLANNING; dipende TASK-053; no Swift questo turno)* | ACTIVE | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -449,6 +453,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-049 | Supabase ProductPrice pull → apply locale controllato SwiftData iOS, no push remoto | 2026-05-06 |
 | TASK-050 | Supabase ProductPrice manual push — preflight + dry-run iOS, no sync_events | 2026-05-06 |
 | TASK-051 | Supabase ProductPrice push live manuale controllato iOS (`inventory_product_prices`, dry-run obbligatorio, read-back, idempotenza) | 2026-05-06 |
+| TASK-053 | Supabase sync_events Slice A iOS: DTO + service read-only + test decode/fake | 2026-05-06 |
 
 ## Blocchi e dipendenze
 - TASK-032 bloccato / in pausa.
