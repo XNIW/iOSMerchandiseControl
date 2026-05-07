@@ -2895,6 +2895,7 @@ private struct SyncEventOutboxDrainDebugCard: View {
                     }
                 } label: {
                     Label(L("options.supabase.syncEventsOutbox.refresh"), systemImage: "arrow.clockwise.circle")
+                        .foregroundStyle(canRefresh ? Color.accentColor : Color.secondary)
                 }
                 .disabled(!canRefresh)
                 .accessibilityLabel(L("options.supabase.syncEventsOutbox.accessibility.refresh"))
@@ -2906,6 +2907,7 @@ private struct SyncEventOutboxDrainDebugCard: View {
                 viewModel.requestDrainConfirmation(isAuthenticated: isAuthenticated, ownerUserID: ownerUserID)
             } label: {
                 Label(L("options.supabase.syncEventsOutbox.drain"), systemImage: "paperplane.circle.fill")
+                    .foregroundStyle(canRequestDrain ? Color.accentColor : Color.secondary)
             }
             .disabled(!canRequestDrain)
             .accessibilityLabel(L("options.supabase.syncEventsOutbox.accessibility.drain"))
