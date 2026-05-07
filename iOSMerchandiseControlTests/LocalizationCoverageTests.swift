@@ -266,6 +266,52 @@ final class LocalizationCoverageTests: XCTestCase {
         }
     }
 
+    func testTask061SyncEventsOutboxLocalizationKeysExistInSupportedLanguages() throws {
+        let keys = [
+            "options.supabase.syncEventsOutbox.title",
+            "options.supabase.syncEventsOutbox.subtitle",
+            "options.supabase.syncEventsOutbox.refresh",
+            "options.supabase.syncEventsOutbox.drain",
+            "options.supabase.syncEventsOutbox.empty",
+            "options.supabase.syncEventsOutbox.limit",
+            "options.supabase.syncEventsOutbox.confirm.title",
+            "options.supabase.syncEventsOutbox.confirm.message",
+            "options.supabase.syncEventsOutbox.result.noWork",
+            "options.supabase.syncEventsOutbox.result.drained",
+            "options.supabase.syncEventsOutbox.result.partial",
+            "options.supabase.syncEventsOutbox.result.alreadyRunning",
+            "options.supabase.syncEventsOutbox.result.cancelled",
+            "options.supabase.syncEventsOutbox.result.network",
+            "options.supabase.syncEventsOutbox.result.blocked",
+            "options.supabase.syncEventsOutbox.result.localSaveFailed",
+            "options.supabase.syncEventsOutbox.result.invalidOwner",
+            "options.supabase.syncEventsOutbox.auth.missing",
+            "options.supabase.syncEventsOutbox.owner.invalid",
+            "options.supabase.syncEventsOutbox.count.pending",
+            "options.supabase.syncEventsOutbox.count.retryable",
+            "options.supabase.syncEventsOutbox.count.blocked",
+            "options.supabase.syncEventsOutbox.count.dead",
+            "options.supabase.syncEventsOutbox.count.sent",
+            "options.supabase.syncEventsOutbox.count.localOnly",
+            "options.supabase.syncEventsOutbox.loadingCounts",
+            "options.supabase.syncEventsOutbox.draining",
+            "options.supabase.syncEventsOutbox.accessibility.refresh",
+            "options.supabase.syncEventsOutbox.accessibility.drain",
+            "options.supabase.syncEventsOutbox.accessibility.counts",
+            "options.supabase.syncEventsOutbox.counts.notLoaded",
+            "options.supabase.syncEventsOutbox.counts.lastUpdated",
+            "options.supabase.syncEventsOutbox.counts.refreshFailed"
+        ]
+
+        for language in ["it", "en", "es", "zh-Hans"] {
+            let strings = try loadStrings(language: language)
+            for key in keys {
+                XCTAssertNotNil(strings[key], "\(key) missing in \(language)")
+                XCTAssertFalse(strings[key]?.isEmpty ?? true, "\(key) empty in \(language)")
+            }
+        }
+    }
+
     private func loadStrings(language: String) throws -> [String: String] {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

@@ -51,9 +51,9 @@ nonisolated enum SyncEventOutboxDrainError: Error, Sendable, Equatable {
 struct SyncEventOutboxDrainService {
     typealias Clock = () -> Date
 
-    static let hardLimit = 50
-    static let hardFetchScanLimit = 200
-    static let defaultRetryDelay: TimeInterval = 60
+    nonisolated static let hardLimit = 50
+    nonisolated static let hardFetchScanLimit = 200
+    nonisolated static let defaultRetryDelay: TimeInterval = 60
 
     private let validator: SyncEventRecordValidator
     private let recorder: any SyncEventRecording

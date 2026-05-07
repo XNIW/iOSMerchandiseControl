@@ -22,6 +22,7 @@ struct ContentView: View {
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
     private let supabaseManualPushService: SupabaseManualPushService?
+    private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
 
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
@@ -34,12 +35,14 @@ struct ContentView: View {
         supabaseInventoryService: SupabaseInventoryService? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService? = nil,
-        supabaseManualPushService: SupabaseManualPushService? = nil
+        supabaseManualPushService: SupabaseManualPushService? = nil,
+        syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
         self.supabaseSyncEventPreviewService = supabaseSyncEventPreviewService
         self.supabaseManualPushService = supabaseManualPushService
+        self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
     }
 
     private var resolvedColorScheme: ColorScheme? {
@@ -89,7 +92,8 @@ struct ContentView: View {
                     supabaseInventoryService: supabaseInventoryService,
                     supabasePullPreviewService: supabasePullPreviewService,
                     supabaseSyncEventPreviewService: supabaseSyncEventPreviewService,
-                    supabaseManualPushService: supabaseManualPushService
+                    supabaseManualPushService: supabaseManualPushService,
+                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder
                 )
             }
             .tabItem {

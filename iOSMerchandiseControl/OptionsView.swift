@@ -21,6 +21,9 @@ struct OptionsView: View {
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
+#if DEBUG
+    private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
+#endif
 
     @Environment(\.modelContext) private var modelContext
     @AppStorage("appTheme") private var appTheme: String = "system"
@@ -59,12 +62,14 @@ struct OptionsView: View {
         supabaseInventoryService: SupabaseInventoryService? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService? = nil,
-        supabaseManualPushService: SupabaseManualPushService? = nil
+        supabaseManualPushService: SupabaseManualPushService? = nil,
+        syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
         self.supabaseSyncEventPreviewService = supabaseSyncEventPreviewService
 #if DEBUG
+        self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         _productPriceManualPushViewModel = StateObject(
             wrappedValue: ProductPriceManualPushDebugViewModel(remote: supabaseInventoryService)
         )
@@ -284,6 +289,13 @@ struct OptionsView: View {
                             .accessibilityLabel(L("options.supabase.priceManualPush.accessibility.debug"))
                     }
                 }
+
+                SyncEventOutboxDrainDebugCard(
+                    context: modelContext,
+                    recorder: syncEventOutboxDrainRecorder,
+                    isAuthenticated: hasSyncEventsSession,
+                    ownerUserID: supabaseAuthViewModel.sessionInfo?.userID.uuidString
+                )
             } header: {
                 SectionHeader(title: L("options.advanced.header"), systemImage: "wrench.and.screwdriver.fill")
             } footer: {
@@ -2811,6 +2823,315 @@ struct OptionRow: View {
 }
 
 #if DEBUG
+private struct SyncEventOutboxDrainDebugCard: View {
+    @StateObject private var viewModel: SyncEventOutboxDrainDebugViewModel
+
+    let isAuthenticated: Bool
+    let ownerUserID: String?
+
+    init(
+        context: ModelContext,
+        recorder: (any SyncEventRecording)?,
+        isAuthenticated: Bool,
+        ownerUserID: String?
+    ) {
+        _viewModel = StateObject(
+            wrappedValue: SyncEventOutboxDrainDebugViewModel(context: context, recorder: recorder)
+        )
+        self.isAuthenticated = isAuthenticated
+        self.ownerUserID = ownerUserID
+    }
+
+    private var accessIssue: SyncEventOutboxDrainDebugViewModel.AccessIssue? {
+        viewModel.accessIssue(isAuthenticated: isAuthenticated, ownerUserID: ownerUserID)
+    }
+
+    private var canRefresh: Bool {
+        accessIssue == nil && !viewModel.isBusy
+    }
+
+    private var canRequestDrain: Bool {
+        accessIssue == nil && viewModel.canDrain
+    }
+
+    private var confirmationLimit: Int {
+        let retryable = viewModel.retryableCount
+        guard retryable > 0 else { return viewModel.selectedLimit }
+        return min(viewModel.selectedLimit, retryable)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header
+
+            Text(L("options.supabase.syncEventsOutbox.subtitle"))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            if let accessIssue {
+                accessIssueRow(accessIssue)
+            }
+
+            countsDisclosure
+
+            Picker(
+                L("options.supabase.syncEventsOutbox.limit"),
+                selection: Binding(
+                    get: { viewModel.selectedLimit },
+                    set: { viewModel.selectLimit($0) }
+                )
+            ) {
+                ForEach(SyncEventOutboxDrainDebugViewModel.allowedLimits, id: \.self) { limit in
+                    Text("\(limit)").tag(limit)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(viewModel.isBusy)
+
+            HStack {
+                Button {
+                    Task {
+                        await viewModel.refreshCounts(isAuthenticated: isAuthenticated, ownerUserID: ownerUserID)
+                    }
+                } label: {
+                    Label(L("options.supabase.syncEventsOutbox.refresh"), systemImage: "arrow.clockwise.circle")
+                }
+                .disabled(!canRefresh)
+                .accessibilityLabel(L("options.supabase.syncEventsOutbox.accessibility.refresh"))
+
+                Spacer(minLength: 8)
+            }
+
+            Button {
+                viewModel.requestDrainConfirmation(isAuthenticated: isAuthenticated, ownerUserID: ownerUserID)
+            } label: {
+                Label(L("options.supabase.syncEventsOutbox.drain"), systemImage: "paperplane.circle.fill")
+            }
+            .disabled(!canRequestDrain)
+            .accessibilityLabel(L("options.supabase.syncEventsOutbox.accessibility.drain"))
+
+            statusRows
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+        .onAppear {
+            viewModel.updateSession(isAuthenticated: isAuthenticated, ownerUserID: ownerUserID)
+            Task {
+                await viewModel.refreshCountsIfNeeded(isAuthenticated: isAuthenticated, ownerUserID: ownerUserID)
+            }
+        }
+        .onChange(of: isAuthenticated) { _, _ in
+            handleSessionChange()
+        }
+        .onChange(of: ownerUserID) { _, _ in
+            handleSessionChange()
+        }
+        .onDisappear {
+            viewModel.cancelInFlight()
+        }
+        .confirmationDialog(
+            L("options.supabase.syncEventsOutbox.confirm.title"),
+            isPresented: Binding(
+                get: { viewModel.isShowingDrainConfirmation },
+                set: { isPresented in
+                    if !isPresented {
+                        viewModel.dismissDrainConfirmation()
+                    }
+                }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(L("options.supabase.syncEventsOutbox.drain")) {
+                Task {
+                    await viewModel.confirmDrain(isAuthenticated: isAuthenticated, ownerUserID: ownerUserID)
+                }
+            }
+            Button(L("common.cancel"), role: .cancel) {
+                viewModel.dismissDrainConfirmation()
+            }
+        } message: {
+            Text(L("options.supabase.syncEventsOutbox.confirm.message", confirmationLimit))
+        }
+    }
+
+    private var header: some View {
+        Label {
+            Text(L("options.supabase.syncEventsOutbox.title"))
+                .font(.subheadline)
+                .fontWeight(.semibold)
+        } icon: {
+            Image(systemName: "tray.full")
+                .foregroundStyle(Color.accentColor)
+        }
+    }
+
+    private var countsDisclosure: some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 6) {
+                if let counts = viewModel.counts {
+                    ForEach(localizedCountRows(counts), id: \.self) { row in
+                        Text(row)
+                    }
+                    if let lastCountsRefreshAt = viewModel.lastCountsRefreshAt {
+                        Text(L(
+                            "options.supabase.syncEventsOutbox.counts.lastUpdated",
+                            lastCountsRefreshAt.formatted(date: .omitted, time: .shortened)
+                        ))
+                        .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Text(L("options.supabase.syncEventsOutbox.counts.notLoaded"))
+                        .foregroundStyle(.secondary)
+                }
+
+                if viewModel.didFailRefreshingCounts {
+                    Label {
+                        Text(L("options.supabase.syncEventsOutbox.counts.refreshFailed"))
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Color.orange)
+                    }
+                }
+            }
+            .font(.footnote)
+            .padding(.top, 4)
+        } label: {
+            Label(
+                viewModel.counts == nil
+                    ? L("options.supabase.syncEventsOutbox.counts.notLoaded")
+                    : L("options.supabase.syncEventsOutbox.accessibility.counts"),
+                systemImage: "number.circle"
+            )
+        }
+        .accessibilityLabel(L("options.supabase.syncEventsOutbox.accessibility.counts"))
+    }
+
+    @ViewBuilder
+    private var statusRows: some View {
+        switch viewModel.state {
+        case .loadingCounts:
+            HStack(spacing: 12) {
+                ProgressView()
+                Text(L("options.supabase.syncEventsOutbox.loadingCounts"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .draining:
+            HStack(spacing: 12) {
+                ProgressView()
+                Text(L("options.supabase.syncEventsOutbox.draining"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .idle, .result, .error:
+            EmptyView()
+        }
+
+        if let counts = viewModel.counts, counts.retryable == 0 {
+            Label {
+                Text(L("options.supabase.syncEventsOutbox.empty"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color.green)
+            }
+        }
+
+        if let message = viewModel.lastDrainMessage {
+            Label {
+                Text(localizedDrainMessage(message))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: drainMessageIcon(message))
+                    .foregroundStyle(drainMessageColor(message))
+            }
+        }
+    }
+
+    private func accessIssueRow(_ issue: SyncEventOutboxDrainDebugViewModel.AccessIssue) -> some View {
+        Label {
+            Text(accessIssueMessage(issue))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        } icon: {
+            Image(systemName: "lock.fill")
+                .foregroundStyle(Color.orange)
+        }
+    }
+
+    private func handleSessionChange() {
+        viewModel.updateSession(isAuthenticated: isAuthenticated, ownerUserID: ownerUserID)
+        Task {
+            await viewModel.refreshCountsIfNeeded(isAuthenticated: isAuthenticated, ownerUserID: ownerUserID)
+        }
+    }
+
+    private func localizedCountRows(_ counts: SyncEventOutboxCounts) -> [String] {
+        [
+            L("options.supabase.syncEventsOutbox.count.pending", counts.pending),
+            L("options.supabase.syncEventsOutbox.count.retryable", counts.retryable),
+            L("options.supabase.syncEventsOutbox.count.blocked", counts.blocked),
+            L("options.supabase.syncEventsOutbox.count.dead", counts.dead),
+            L("options.supabase.syncEventsOutbox.count.sent", counts.sent),
+            L("options.supabase.syncEventsOutbox.count.localOnly", counts.localOnly)
+        ]
+    }
+
+    private func accessIssueMessage(_ issue: SyncEventOutboxDrainDebugViewModel.AccessIssue) -> String {
+        switch issue {
+        case .missingSession:
+            return L("options.supabase.syncEventsOutbox.auth.missing")
+        case .invalidOwner:
+            return L("options.supabase.syncEventsOutbox.owner.invalid")
+        }
+    }
+
+    private func localizedDrainMessage(_ message: SyncEventOutboxDrainDebugViewModel.DrainMessage) -> String {
+        switch message {
+        case .noWork:
+            return L("options.supabase.syncEventsOutbox.result.noWork")
+        case .drained(let sent):
+            return L("options.supabase.syncEventsOutbox.result.drained", sent)
+        case .partial(let sent, let retryScheduled, let blocked, let dead):
+            return L("options.supabase.syncEventsOutbox.result.partial", sent, retryScheduled, blocked, dead)
+        case .blocked:
+            return L("options.supabase.syncEventsOutbox.result.blocked")
+        case .alreadyRunning:
+            return L("options.supabase.syncEventsOutbox.result.alreadyRunning")
+        case .network:
+            return L("options.supabase.syncEventsOutbox.result.network")
+        case .cancelled:
+            return L("options.supabase.syncEventsOutbox.result.cancelled")
+        case .invalidOwner:
+            return L("options.supabase.syncEventsOutbox.result.invalidOwner")
+        case .localSaveFailed:
+            return L("options.supabase.syncEventsOutbox.result.localSaveFailed")
+        }
+    }
+
+    private func drainMessageIcon(_ message: SyncEventOutboxDrainDebugViewModel.DrainMessage) -> String {
+        switch message {
+        case .drained, .noWork:
+            return "checkmark.circle.fill"
+        case .partial, .alreadyRunning, .cancelled:
+            return "exclamationmark.circle.fill"
+        case .blocked, .network, .invalidOwner, .localSaveFailed:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private func drainMessageColor(_ message: SyncEventOutboxDrainDebugViewModel.DrainMessage) -> Color {
+        switch message {
+        case .drained, .noWork:
+            return .green
+        case .partial, .alreadyRunning, .cancelled, .blocked, .network, .invalidOwner, .localSaveFailed:
+            return .orange
+        }
+    }
+}
+
 private struct SupabasePullPreviewSheet: View {
     private let rowLimit = 100
 
