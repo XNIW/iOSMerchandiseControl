@@ -18,6 +18,149 @@ nonisolated struct SyncEventOutboxCounts: Sendable, Equatable {
     var localOnly: Int = 0
 }
 
+nonisolated enum SyncEventOutboxPayloadField: String, Sendable, Equatable {
+    case entityIDs = "entity_ids"
+    case metadata
+}
+
+nonisolated struct SyncEventOutboxStoredPayloadJSON: Sendable, Equatable {
+    let entityIDsPayloadJSON: String
+    let metadataPayloadJSON: String
+}
+
+nonisolated enum SyncEventOutboxPayloadError: Error, Sendable, Equatable {
+    case missingPayload(SyncEventOutboxPayloadField)
+    case invalidPayloadJSON(SyncEventOutboxPayloadField)
+    case encodingFailed(SyncEventOutboxPayloadField)
+    case invalidBatchID
+    case invalidEntryField(String)
+    case validationFailed(SyncEventRecordError)
+}
+
+nonisolated enum SyncEventOutboxPayloadCodec {
+    static func makePayloadJSON(
+        for request: SyncEventRecordRequest,
+        validator: SyncEventRecordValidator = SyncEventRecordValidator()
+    ) throws -> SyncEventOutboxStoredPayloadJSON {
+        do {
+            try validator.validate(request)
+        } catch let error as SyncEventRecordError {
+            throw SyncEventOutboxPayloadError.validationFailed(error)
+        } catch {
+            throw SyncEventOutboxPayloadError.validationFailed(
+                .unknown(SyncEventRecordFailure(code: "validator_unknown", message: String(describing: error)))
+            )
+        }
+
+        return SyncEventOutboxStoredPayloadJSON(
+            entityIDsPayloadJSON: try encode(request.entityIDs, field: .entityIDs),
+            metadataPayloadJSON: try encode(request.metadata, field: .metadata)
+        )
+    }
+
+    static func makeRecordRequestForReplay(
+        from entry: SyncEventOutboxEntry,
+        validator: SyncEventRecordValidator = SyncEventRecordValidator()
+    ) throws -> SyncEventRecordRequest {
+        guard !trimmed(entry.ownerUserID).isEmpty else {
+            throw SyncEventOutboxPayloadError.invalidEntryField("owner_user_id")
+        }
+
+        let entityIDs = try decodeRequired(entry.entityIDsPayloadJSON, field: .entityIDs)
+        let metadata = try decodeRequired(entry.metadataPayloadJSON, field: .metadata)
+        let request = SyncEventRecordRequest(
+            domain: entry.domain,
+            eventType: entry.eventType,
+            changedCount: entry.changedCount,
+            entityIDs: entityIDs,
+            metadata: metadata,
+            source: source(from: metadata),
+            sourceDeviceID: entry.sourceDeviceID,
+            batchID: try batchID(from: entry.batchID),
+            clientEventID: entry.clientEventID
+        )
+
+        do {
+            try validator.validate(request)
+        } catch let error as SyncEventRecordError {
+            throw SyncEventOutboxPayloadError.validationFailed(error)
+        } catch {
+            throw SyncEventOutboxPayloadError.validationFailed(
+                .unknown(SyncEventRecordFailure(code: "validator_unknown", message: String(describing: error)))
+            )
+        }
+
+        return request
+    }
+
+    private static func encode(
+        _ value: SyncEventJSONValue,
+        field: SyncEventOutboxPayloadField
+    ) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+
+        let data: Data
+        do {
+            data = try encoder.encode(value)
+        } catch {
+            throw SyncEventOutboxPayloadError.encodingFailed(field)
+        }
+
+        guard let json = String(data: data, encoding: .utf8) else {
+            throw SyncEventOutboxPayloadError.encodingFailed(field)
+        }
+        return json
+    }
+
+    private static func decodeRequired(
+        _ json: String?,
+        field: SyncEventOutboxPayloadField
+    ) throws -> SyncEventJSONValue {
+        guard let json = trimmedOptional(json) else {
+            throw SyncEventOutboxPayloadError.missingPayload(field)
+        }
+
+        guard let data = json.data(using: .utf8) else {
+            throw SyncEventOutboxPayloadError.invalidPayloadJSON(field)
+        }
+
+        do {
+            return try JSONDecoder().decode(SyncEventJSONValue.self, from: data)
+        } catch {
+            throw SyncEventOutboxPayloadError.invalidPayloadJSON(field)
+        }
+    }
+
+    private static func source(from metadata: SyncEventJSONValue) -> String? {
+        guard case .object(let object) = metadata,
+              case .string(let source)? = object["source"] else {
+            return nil
+        }
+        return trimmedOptional(source)
+    }
+
+    private static func batchID(from value: String?) throws -> UUID? {
+        guard let value = trimmedOptional(value) else {
+            return nil
+        }
+        guard let uuid = UUID(uuidString: value) else {
+            throw SyncEventOutboxPayloadError.invalidBatchID
+        }
+        return uuid
+    }
+
+    private static func trimmed(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func trimmedOptional(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = trimmed(value)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
 @Model
 final class SyncEventOutboxEntry {
     var id: String
@@ -29,6 +172,8 @@ final class SyncEventOutboxEntry {
     var changedCount: Int
     var entityIDsShape: String
     var metadataShape: String
+    var entityIDsPayloadJSON: String?
+    var metadataPayloadJSON: String?
     var statusRaw: String
     var attemptCount: Int
     var maxAttempts: Int
@@ -52,6 +197,8 @@ final class SyncEventOutboxEntry {
         changedCount: Int,
         entityIDsShape: String,
         metadataShape: String,
+        entityIDsPayloadJSON: String? = nil,
+        metadataPayloadJSON: String? = nil,
         status: SyncEventOutboxStatus = .pending,
         attemptCount: Int = 0,
         maxAttempts: Int = 3,
@@ -74,6 +221,8 @@ final class SyncEventOutboxEntry {
         self.changedCount = changedCount
         self.entityIDsShape = entityIDsShape
         self.metadataShape = metadataShape
+        self.entityIDsPayloadJSON = Self.trimmedOptional(entityIDsPayloadJSON)
+        self.metadataPayloadJSON = Self.trimmedOptional(metadataPayloadJSON)
         self.statusRaw = status.rawValue
         self.attemptCount = attemptCount
         self.maxAttempts = max(1, maxAttempts)
@@ -134,6 +283,22 @@ final class SyncEventOutboxEntry {
             now: now
         )
     }
+
+    func makeRecordRequestForReplay(
+        validator: SyncEventRecordValidator = SyncEventRecordValidator()
+    ) throws -> SyncEventRecordRequest {
+        try SyncEventOutboxPayloadCodec.makeRecordRequestForReplay(from: self, validator: validator)
+    }
+
+    private static func trimmed(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func trimmedOptional(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = trimmed(value)
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }
 
 nonisolated enum SyncEventOutboxFactory {
@@ -146,6 +311,8 @@ nonisolated enum SyncEventOutboxFactory {
         changedCount: Int,
         entityIDsShape: String,
         metadataShape: String,
+        entityIDsPayloadJSON: String? = nil,
+        metadataPayloadJSON: String? = nil,
         sourceDeviceID: String? = nil,
         batchID: String? = nil,
         maxAttempts: Int = 3,
@@ -196,6 +363,7 @@ nonisolated enum SyncEventOutboxFactory {
                 "Outbox payload shape looked like raw business data and was redacted."
             )
         }
+        let canPersistPayload = status == .pending
 
         return SyncEventOutboxEntry(
             id: trimmed(id),
@@ -207,6 +375,8 @@ nonisolated enum SyncEventOutboxFactory {
             changedCount: changedCount,
             entityIDsShape: safeEntityShape.shape,
             metadataShape: safeMetadataShape.shape,
+            entityIDsPayloadJSON: canPersistPayload ? entityIDsPayloadJSON : nil,
+            metadataPayloadJSON: canPersistPayload ? metadataPayloadJSON : nil,
             status: status,
             attemptCount: 0,
             maxAttempts: maxAttempts,

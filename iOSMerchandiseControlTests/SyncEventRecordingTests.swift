@@ -9,6 +9,24 @@ final class SyncEventRecordingTests: XCTestCase {
         XCTAssertNoThrow(try validator.validate(validRequest()))
     }
 
+    func testJSONValueCodableRoundTripsAllKindsWithSortedKeys() throws {
+        let value = SyncEventJSONValue.object([
+            "z": .array([
+                .string("text"),
+                .number(1.25),
+                .bool(true),
+                .null
+            ]),
+            "a": .object(["b": .number(2)])
+        ])
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+
+        let data = try encoder.encode(value)
+        XCTAssertEqual(String(data: data, encoding: .utf8), #"{"a":{"b":2},"z":["text",1.25,true,null]}"#)
+        XCTAssertEqual(try JSONDecoder().decode(SyncEventJSONValue.self, from: data), value)
+    }
+
     func testChangedCountThousandIsAccepted() throws {
         XCTAssertNoThrow(try validator.validate(validRequest(changedCount: 1_000)))
     }
@@ -34,6 +52,19 @@ final class SyncEventRecordingTests: XCTestCase {
             try validator.validate(validRequest(clientEventID: "   ")),
             kind: .contract,
             code: "missing_client_event_id"
+        )
+    }
+
+    func testRPCTextLengthLimitsAreContractErrors() {
+        assertRecordError(
+            try validator.validate(validRequest(clientEventID: String(repeating: "c", count: 161))),
+            kind: .contract,
+            code: "client_event_id_length"
+        )
+        assertRecordError(
+            try validator.validate(validRequest(sourceDeviceID: String(repeating: "d", count: 161))),
+            kind: .contract,
+            code: "source_device_id_length"
         )
     }
 
@@ -71,14 +102,57 @@ final class SyncEventRecordingTests: XCTestCase {
         }
     }
 
-    func testEntityIDsMassiveIdentifierListIsContractError() {
-        let values = (0..<20).map { index in
-            SyncEventJSONValue.string("00000000-0000-0000-0000-\(String(format: "%012d", index))")
+    func testMetadataForbiddenRPCKeysAreContractError() {
+        for key in [
+            "barcode",
+            "email",
+            "excel",
+            "path",
+            "price",
+            "product_name",
+            "supplier_name",
+            "category_name",
+            "token"
+        ] {
+            assertRecordError(
+                try validator.validate(validRequest(metadata: .object([key: .string("sensitive")]))),
+                kind: .contract,
+                code: "metadata_forbidden_key"
+            )
         }
+    }
+
+    func testEntityIDsMustMatchRPCObjectContract() {
         assertRecordError(
-            try validator.validate(validRequest(entityIDs: .object(["product_ids": .array(values)]))),
+            try validator.validate(validRequest(entityIDs: .array([]))),
             kind: .contract,
-            code: "entity_ids_identifier_list"
+            code: "entity_ids_shape"
+        )
+        assertRecordError(
+            try validator.validate(validRequest(entityIDs: .object(["products": .array([])]))),
+            kind: .contract,
+            code: "entity_ids_key"
+        )
+        assertRecordError(
+            try validator.validate(validRequest(entityIDs: .object(["product_ids": .object(["count": .number(1)])]))),
+            kind: .contract,
+            code: "entity_ids_shape"
+        )
+        assertRecordError(
+            try validator.validate(validRequest(entityIDs: .object(["product_ids": .array([.string("1234567890123")])]))),
+            kind: .contract,
+            code: "entity_ids_uuid"
+        )
+    }
+
+    func testEntityIDsAllowRPCUUIDListsUpToTwoHundredFifty() throws {
+        XCTAssertNoThrow(
+            try validator.validate(validRequest(entityIDs: .object(["product_ids": .array(rpcUUIDValues(count: 250))])))
+        )
+        assertRecordError(
+            try validator.validate(validRequest(entityIDs: .object(["product_ids": .array(rpcUUIDValues(count: 251))]))),
+            kind: .contract,
+            code: "entity_ids_array_budget"
         )
     }
 
@@ -119,8 +193,8 @@ final class SyncEventRecordingTests: XCTestCase {
         )
     }
 
-    func testEstimatedByteBudgetAboveEightKBIsContractError() {
-        let metadata = SyncEventJSONValue.object(["note": .string(String(repeating: "a", count: 8_300))])
+    func testMetadataEstimatedByteBudgetAboveFourKBIsContractError() {
+        let metadata = SyncEventJSONValue.object(["note": .string(String(repeating: "a", count: 4_200))])
 
         assertRecordError(
             try validator.validate(validRequest(metadata: metadata)),
@@ -129,20 +203,37 @@ final class SyncEventRecordingTests: XCTestCase {
         )
     }
 
-    func testEntityIDsUseSeparateByteAndTopLevelBudgets() {
-        let oversizedEntityIDs = SyncEventJSONValue.object(["ids": .string(String(repeating: "b", count: 8_300))])
+    func testEntityIDsUseRPCContractAndArrayBudget() {
+        let unsupportedEntityIDs = SyncEventJSONValue.object(["ids": .array([])])
         assertRecordError(
-            try validator.validate(validRequest(entityIDs: oversizedEntityIDs)),
+            try validator.validate(validRequest(entityIDs: unsupportedEntityIDs)),
             kind: .contract,
-            code: "entity_ids_byte_budget"
+            code: "entity_ids_key"
         )
 
-        let pairs = (0..<21).map { ("key_\($0)", SyncEventJSONValue.number(Double($0))) }
-        let manyEntityIDKeys = SyncEventJSONValue.object(Dictionary(uniqueKeysWithValues: pairs))
         assertRecordError(
-            try validator.validate(validRequest(entityIDs: manyEntityIDKeys)),
+            try validator.validate(validRequest(entityIDs: .object(["product_ids": .array(rpcUUIDValues(count: 251))]))),
             kind: .contract,
-            code: "entity_ids_top_level_keys"
+            code: "entity_ids_array_budget"
+        )
+    }
+
+    func testEntityIDsEstimatedByteBudgetUsesRPCSixteenKBLimit() throws {
+        let underBudget = SyncEventJSONValue.object([
+            "product_ids": .array(rpcUUIDValues(count: 250))
+        ])
+        XCTAssertNoThrow(try validator.validate(validRequest(entityIDs: underBudget)))
+
+        let overBudget = SyncEventJSONValue.object([
+            "supplier_ids": .array(rpcUUIDValues(count: 125, start: 0)),
+            "category_ids": .array(rpcUUIDValues(count: 125, start: 125)),
+            "product_ids": .array(rpcUUIDValues(count: 125, start: 250)),
+            "price_ids": .array(rpcUUIDValues(count: 125, start: 375))
+        ])
+        assertRecordError(
+            try validator.validate(validRequest(entityIDs: overBudget)),
+            kind: .contract,
+            code: "entity_ids_byte_budget"
         )
     }
 
@@ -386,8 +477,11 @@ final class SyncEventRecordingTests: XCTestCase {
         domain: String = "catalog",
         eventType: String = "catalog_changed",
         changedCount: Int = 1,
-        entityIDs: SyncEventJSONValue = .object(["product_ids": .object(["count": .number(1)])]),
+        entityIDs: SyncEventJSONValue = .object([
+            "product_ids": .array([.string("00000000-0000-4000-8000-000000000056")])
+        ]),
         metadata: SyncEventJSONValue = .object(["source": .string("manual_push")]),
+        sourceDeviceID: String? = "device-hash",
         clientEventID: String? = nil
     ) -> SyncEventRecordRequest {
         SyncEventRecordRequest(
@@ -397,10 +491,16 @@ final class SyncEventRecordingTests: XCTestCase {
             entityIDs: entityIDs,
             metadata: metadata,
             source: "ios",
-            sourceDeviceID: "device-hash",
+            sourceDeviceID: sourceDeviceID,
             batchID: UUID(uuidString: "00000000-0000-0000-0000-000000000056"),
             clientEventID: clientEventID ?? self.clientEventID
         )
+    }
+
+    private func rpcUUIDValues(count: Int, start: Int = 0) -> [SyncEventJSONValue] {
+        (start..<(start + count)).map { index in
+            SyncEventJSONValue.string("00000000-0000-4000-8000-\(String(format: "%012d", index))")
+        }
     }
 
     private func assertRecordError(

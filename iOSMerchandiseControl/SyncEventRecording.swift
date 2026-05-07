@@ -201,25 +201,34 @@ nonisolated struct SyncEventRecordValidationPolicy: Sendable, Equatable {
     let maxJSONDepth: Int
     let maxTopLevelKeys: Int
     let maxEstimatedBytes: Int
+    let maxEntityIDsEstimatedBytes: Int
     let maxArrayElements: Int
+    let maxEntityIDsArrayElements: Int
     let massiveIdentifierListThreshold: Int
 
     init(
         maxJSONDepth: Int = 3,
         maxTopLevelKeys: Int = 20,
-        maxEstimatedBytes: Int = 8 * 1_024,
+        maxEstimatedBytes: Int = 4 * 1_024,
+        maxEntityIDsEstimatedBytes: Int = 16 * 1_024,
         maxArrayElements: Int = 100,
+        maxEntityIDsArrayElements: Int = 250,
         massiveIdentifierListThreshold: Int = 20
     ) {
         self.maxJSONDepth = max(1, maxJSONDepth)
         self.maxTopLevelKeys = max(1, maxTopLevelKeys)
         self.maxEstimatedBytes = max(1, maxEstimatedBytes)
+        self.maxEntityIDsEstimatedBytes = max(1, maxEntityIDsEstimatedBytes)
         self.maxArrayElements = max(0, maxArrayElements)
+        self.maxEntityIDsArrayElements = max(0, maxEntityIDsArrayElements)
         self.massiveIdentifierListThreshold = max(2, massiveIdentifierListThreshold)
     }
 }
 
 nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
+    private static let maxClientEventIDLength = 160
+    private static let maxSourceDeviceIDLength = 160
+
     let policy: SyncEventRecordValidationPolicy
 
     init(policy: SyncEventRecordValidationPolicy = .standard) {
@@ -243,8 +252,54 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
             throw contract("missing_client_event_id", "clientEventID is required.")
         }
 
+        guard trimmed(request.clientEventID).count <= Self.maxClientEventIDLength else {
+            throw contract("client_event_id_length", "clientEventID must be at most 160 characters.")
+        }
+
+        if let sourceDeviceID = trimmedOptional(request.sourceDeviceID),
+           sourceDeviceID.count > Self.maxSourceDeviceIDLength {
+            throw contract("source_device_id_length", "sourceDeviceID must be at most 160 characters.")
+        }
+
+        try validateEntityIDsContract(request.entityIDs)
+        try validateMetadataContract(request.metadata)
         try validateJSON(request.entityIDs, fieldName: "entity_ids")
         try validateJSON(request.metadata, fieldName: "metadata")
+    }
+
+    private func validateEntityIDsContract(_ value: SyncEventJSONValue) throws {
+        switch value {
+        case .null:
+            return
+        case .object(let object):
+            for (key, child) in object {
+                guard isAllowedEntityIDsKey(key) else {
+                    throw contract("entity_ids_key", "entity_ids contains an unsupported key.")
+                }
+
+                guard case .array(let array) = child else {
+                    throw contract("entity_ids_shape", "entity_ids values must be arrays.")
+                }
+
+                guard array.count <= policy.maxEntityIDsArrayElements else {
+                    throw contract("entity_ids_array_budget", "entity_ids exceeds array element budget.")
+                }
+
+                for value in array {
+                    guard case .string(let id) = value, isRPCUUID(id) else {
+                        throw contract("entity_ids_uuid", "entity_ids values must be UUID strings.")
+                    }
+                }
+            }
+        case .array, .string, .number, .bool:
+            throw contract("entity_ids_shape", "entity_ids must be a JSON object or null.")
+        }
+    }
+
+    private func validateMetadataContract(_ value: SyncEventJSONValue) throws {
+        guard case .object = value else {
+            throw contract("metadata_shape", "metadata must be a JSON object.")
+        }
     }
 
     private func validateJSON(_ value: SyncEventJSONValue, fieldName: String) throws {
@@ -256,7 +311,10 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
         }
 
         let estimatedBytes = estimatedByteCount(value)
-        guard estimatedBytes <= policy.maxEstimatedBytes else {
+        let byteBudget = fieldName == "entity_ids"
+            ? policy.maxEntityIDsEstimatedBytes
+            : policy.maxEstimatedBytes
+        guard estimatedBytes <= byteBudget else {
             throw contract(
                 "\(fieldName)_byte_budget",
                 "\(fieldName) exceeds local byte budget."
@@ -281,6 +339,12 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
         switch value {
         case .object(let object):
             for (key, child) in object {
+                if fieldName == "metadata", isForbiddenMetadataKey(key) {
+                    throw contract(
+                        "metadata_forbidden_key",
+                        "metadata contains a forbidden key."
+                    )
+                }
                 if containsSensitiveToken(key) {
                     throw contract(
                         "\(fieldName)_sensitive_key",
@@ -290,13 +354,16 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
                 try walk(child, fieldName: fieldName, depth: depth + 1)
             }
         case .array(let array):
-            guard array.count <= policy.maxArrayElements else {
+            let arrayBudget = fieldName == "entity_ids"
+                ? policy.maxEntityIDsArrayElements
+                : policy.maxArrayElements
+            guard array.count <= arrayBudget else {
                 throw contract(
                     "\(fieldName)_array_budget",
                     "\(fieldName) exceeds array element budget."
                 )
             }
-            if isMassiveIdentifierList(array) {
+            if fieldName != "entity_ids", isMassiveIdentifierList(array) {
                 throw contract(
                     "\(fieldName)_identifier_list",
                     "\(fieldName) contains a massive business identifier list."
@@ -314,6 +381,32 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
             }
         case .number, .bool, .null:
             break
+        }
+    }
+
+    private func isAllowedEntityIDsKey(_ value: String) -> Bool {
+        switch value {
+        case "supplier_ids", "category_ids", "product_ids", "price_ids":
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func isForbiddenMetadataKey(_ value: String) -> Bool {
+        switch value.lowercased() {
+        case "barcode",
+             "email",
+             "excel",
+             "path",
+             "price",
+             "product_name",
+             "supplier_name",
+             "category_name",
+             "token":
+            return true
+        default:
+            return false
         }
     }
 
@@ -400,12 +493,25 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
         ) != nil
     }
 
+    private func isRPCUUID(_ value: String) -> Bool {
+        value.range(
+            of: #"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"#,
+            options: .regularExpression
+        ) != nil
+    }
+
     private func isBarcodeLike(_ value: String) -> Bool {
         value.range(of: #"^\d{8,}$"#, options: .regularExpression) != nil
     }
 
     private func trimmed(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func trimmedOptional(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = trimmed(value)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private func contract(_ code: String, _ message: String) -> SyncEventRecordError {

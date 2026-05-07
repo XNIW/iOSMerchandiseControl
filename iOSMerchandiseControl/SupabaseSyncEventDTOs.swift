@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated indirect enum SyncEventJSONValue: Decodable, Sendable, Equatable {
+nonisolated indirect enum SyncEventJSONValue: Codable, Sendable, Equatable {
     case object([String: SyncEventJSONValue])
     case array([SyncEventJSONValue])
     case string(String)
@@ -28,6 +28,25 @@ nonisolated indirect enum SyncEventJSONValue: Decodable, Sendable, Equatable {
                 in: container,
                 debugDescription: "Unsupported JSON value in sync event payload."
             )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+
+        switch self {
+        case .object(let object):
+            try container.encode(object)
+        case .array(let array):
+            try container.encode(array)
+        case .string(let string):
+            try container.encode(string)
+        case .number(let number):
+            try container.encode(number)
+        case .bool(let bool):
+            try container.encode(bool)
+        case .null:
+            try container.encodeNil()
         }
     }
 }

@@ -42,8 +42,33 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertEqual(entry.eventType, "catalog_changed")
         XCTAssertEqual(entry.changedCount, 6)
         XCTAssertEqual(entry.entityIDsShape, "suppliers:count=2;categories:count=2;products:count=2")
+        XCTAssertEqual(entry.entityIDsPayloadJSON, "null")
+        XCTAssertEqual(
+            entry.metadataPayloadJSON,
+            #"{"baseline_refresh_failed":false,"failed_count":0,"partial":false,"skipped_count":0,"source":"ios_catalog_manual_push"}"#
+        )
         XCTAssertEqual(entry.clientEventID, "catalog-manual-push:catalog-fingerprint")
         XCTAssertEqual(entry.sourceDeviceID, "device-1")
+
+        let replayRequest = try entry.makeRecordRequestForReplay()
+        XCTAssertEqual(replayRequest.domain, entry.domain)
+        XCTAssertEqual(replayRequest.eventType, entry.eventType)
+        XCTAssertEqual(replayRequest.changedCount, entry.changedCount)
+        XCTAssertEqual(replayRequest.entityIDs, .null)
+        XCTAssertEqual(
+            replayRequest.metadata,
+            .object([
+                "source": .string("ios_catalog_manual_push"),
+                "partial": .bool(false),
+                "baseline_refresh_failed": .bool(false),
+                "skipped_count": .number(0),
+                "failed_count": .number(0)
+            ])
+        )
+        XCTAssertEqual(replayRequest.source, "ios_catalog_manual_push")
+        XCTAssertEqual(replayRequest.sourceDeviceID, "device-1")
+        XCTAssertNil(replayRequest.batchID)
+        XCTAssertEqual(replayRequest.clientEventID, entry.clientEventID)
     }
 
     func testProductPricePushSuccessEnqueuesPendingPricesEntry() throws {
@@ -69,6 +94,11 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertEqual(entry.eventType, "prices_changed")
         XCTAssertEqual(entry.changedCount, 7)
         XCTAssertEqual(entry.entityIDsShape, "price_rows:count=7")
+        XCTAssertEqual(entry.entityIDsPayloadJSON, "null")
+        XCTAssertEqual(
+            entry.metadataPayloadJSON,
+            #"{"failed_count":0,"partial":false,"skipped_count":0,"source":"ios_prices_manual_push"}"#
+        )
         XCTAssertEqual(entry.clientEventID, "prices-manual-push:prices-fingerprint")
     }
 
@@ -93,6 +123,28 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertTrue(entry.metadataShape.contains("partial=true"))
         XCTAssertTrue(entry.metadataShape.contains("skipped=9"))
         XCTAssertTrue(entry.metadataShape.contains("failed=4"))
+    }
+
+    func testValidEntityIDPayloadPersistsAndReplaysWithoutChangingShape() throws {
+        let context = try makeContext()
+        let service = makeService(context: context)
+        let productID = "00000000-0000-4000-8000-000000000101"
+
+        let result = service.enqueue(
+            catalogOutcome(
+                products: 1,
+                clientEventID: "client-product-id-payload",
+                validationEntityIDs: .object(["product_ids": .array([.string(productID)])])
+            )
+        )
+
+        let entry = try onlyEntry(in: context)
+        XCTAssertEqual(result.kind, .enqueued)
+        XCTAssertEqual(entry.entityIDsShape, "suppliers:count=0;categories:count=0;products:count=1")
+        XCTAssertEqual(entry.entityIDsPayloadJSON, #"{"product_ids":["00000000-0000-4000-8000-000000000101"]}"#)
+
+        let replayRequest = try entry.makeRecordRequestForReplay()
+        XCTAssertEqual(replayRequest.entityIDs, .object(["product_ids": .array([.string(productID)])]))
     }
 
     func testNoOpSkipsWithoutEntry() throws {
@@ -208,6 +260,8 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertEqual(result.kind, .blockedContract)
         XCTAssertEqual(entry.status, .blockedContract)
         XCTAssertEqual(entry.changedCount, 1_001)
+        XCTAssertNil(entry.entityIDsPayloadJSON)
+        XCTAssertNil(entry.metadataPayloadJSON)
         XCTAssertEqual(entry.lastErrorKind, .contract)
         XCTAssertFalse(entry.isRetryable(now: now, currentOwnerUserID: ownerID))
     }
@@ -219,7 +273,7 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
             catalogOutcome(
                 suppliers: 1,
                 clientEventID: "client-huge-metadata",
-                validationMetadata: .object(["note": .string(String(repeating: "a", count: 8_300))])
+                validationMetadata: .object(["note": .string(String(repeating: "a", count: 4_200))])
             )
         )
 
@@ -228,27 +282,147 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertEqual(result.errorCode, "metadata_byte_budget")
         XCTAssertEqual(entry.status, .blockedContract)
         XCTAssertEqual(entry.lastErrorCode, "metadata_byte_budget")
+        XCTAssertNil(entry.entityIDsPayloadJSON)
+        XCTAssertNil(entry.metadataPayloadJSON)
     }
 
-    func testEntityIDsRawMassiveIdentifiersAreNotPersistedInShape() throws {
+    func testEntityIDsRawBusinessIdentifiersAreNotPersistedAsPayload() throws {
         let context = try makeContext()
         let service = makeService(context: context)
-        let rawIDs = (0..<20).map { index in
-            SyncEventJSONValue.string("00000000-0000-0000-0000-\(String(format: "%012d", index))")
-        }
         let result = service.enqueue(
             catalogOutcome(
-                products: 20,
-                clientEventID: "client-raw-ids",
-                validationEntityIDs: .object(["products": .array(rawIDs)])
+                products: 1,
+                clientEventID: "client-raw-business-id",
+                validationEntityIDs: .object(["product_ids": .array([.string("1234567890123")])])
             )
         )
 
         let entry = try onlyEntry(in: context)
         XCTAssertEqual(result.kind, .blockedContract)
         XCTAssertEqual(entry.status, .blockedContract)
-        XCTAssertEqual(entry.entityIDsShape, "suppliers:count=0;categories:count=0;products:count=20")
-        XCTAssertFalse(entry.entityIDsShape.contains("00000000-0000-0000-0000-000000000001"))
+        XCTAssertEqual(result.errorCode, "entity_ids_uuid")
+        XCTAssertEqual(entry.entityIDsShape, "suppliers:count=0;categories:count=0;products:count=1")
+        XCTAssertNil(entry.entityIDsPayloadJSON)
+        XCTAssertNil(entry.metadataPayloadJSON)
+        XCTAssertFalse(entry.entityIDsShape.contains("1234567890123"))
+    }
+
+    func testReplayHelperRejectsLegacyEntryWithoutPayloadJSON() throws {
+        let legacyEntry = try SyncEventOutboxFactory.makeEntry(
+            ownerUserID: ownerID,
+            domain: "catalog",
+            eventType: "catalog_changed",
+            changedCount: 1,
+            entityIDsShape: "product_ids:count=1",
+            metadataShape: "source=ios_catalog_manual_push",
+            now: now,
+            id: "legacy-entry",
+            clientEventID: "client-legacy"
+        )
+
+        XCTAssertThrowsError(try legacyEntry.makeRecordRequestForReplay()) { error in
+            XCTAssertEqual(error as? SyncEventOutboxPayloadError, .missingPayload(.entityIDs))
+        }
+    }
+
+    func testReplayHelperRejectsCorruptedPayloadJSON() throws {
+        let entry = try SyncEventOutboxFactory.makeEntry(
+            ownerUserID: ownerID,
+            domain: "catalog",
+            eventType: "catalog_changed",
+            changedCount: 1,
+            entityIDsShape: "product_ids:count=1",
+            metadataShape: "source=ios_catalog_manual_push",
+            entityIDsPayloadJSON: "null",
+            metadataPayloadJSON: #"{"source":"ios_catalog_manual_push""#,
+            now: now,
+            id: "corrupt-entry",
+            clientEventID: "client-corrupt"
+        )
+
+        XCTAssertThrowsError(try entry.makeRecordRequestForReplay()) { error in
+            XCTAssertEqual(error as? SyncEventOutboxPayloadError, .invalidPayloadJSON(.metadata))
+        }
+    }
+
+    func testReplayHelperRejectsInvalidBatchID() throws {
+        let entry = try SyncEventOutboxFactory.makeEntry(
+            ownerUserID: ownerID,
+            domain: "catalog",
+            eventType: "catalog_changed",
+            changedCount: 1,
+            entityIDsShape: "product_ids:count=1",
+            metadataShape: "source=ios_catalog_manual_push",
+            entityIDsPayloadJSON: #"{"product_ids":["00000000-0000-4000-8000-000000000101"]}"#,
+            metadataPayloadJSON: #"{"source":"ios_catalog_manual_push"}"#,
+            batchID: "not-a-uuid",
+            now: now,
+            id: "invalid-batch-entry",
+            clientEventID: "client-invalid-batch"
+        )
+
+        XCTAssertThrowsError(try entry.makeRecordRequestForReplay()) { error in
+            XCTAssertEqual(error as? SyncEventOutboxPayloadError, .invalidBatchID)
+        }
+    }
+
+    func testForbiddenMetadataKeyBlocksWithoutPersistingPayload() throws {
+        let context = try makeContext()
+        let service = makeService(context: context)
+
+        let result = service.enqueue(
+            catalogOutcome(
+                suppliers: 1,
+                clientEventID: "client-forbidden-metadata",
+                validationMetadata: .object([
+                    "source": .string("ios_catalog_manual_push"),
+                    "product_name": .string("sensitive-name")
+                ])
+            )
+        )
+
+        let entry = try onlyEntry(in: context)
+        XCTAssertEqual(result.kind, .blockedContract)
+        XCTAssertEqual(result.errorCode, "metadata_forbidden_key")
+        XCTAssertEqual(entry.status, .blockedContract)
+        XCTAssertNil(entry.entityIDsPayloadJSON)
+        XCTAssertNil(entry.metadataPayloadJSON)
+        XCTAssertFalse(entry.metadataShape.contains("sensitive-name"))
+    }
+
+    func testChangedCountThousandPersistsPayloadForReplay() throws {
+        let context = try makeContext()
+        let service = makeService(context: context)
+
+        let result = service.enqueue(pricesOutcome(rows: 1_000, clientEventID: "client-thousand-prices"))
+
+        let entry = try onlyEntry(in: context)
+        XCTAssertEqual(result.kind, .enqueued)
+        XCTAssertEqual(entry.status, .pending)
+        XCTAssertEqual(entry.changedCount, 1_000)
+        XCTAssertEqual(entry.entityIDsPayloadJSON, "null")
+        XCTAssertNotNil(entry.metadataPayloadJSON)
+        XCTAssertNoThrow(try entry.makeRecordRequestForReplay())
+    }
+
+    func testFactoryBlockedChangedCountDropsPayloadJSON() throws {
+        let entry = try SyncEventOutboxFactory.makeEntry(
+            ownerUserID: ownerID,
+            domain: "prices",
+            eventType: "prices_changed",
+            changedCount: 1_001,
+            entityIDsShape: "price_rows:count=1001",
+            metadataShape: "source=ios_prices_manual_push",
+            entityIDsPayloadJSON: "null",
+            metadataPayloadJSON: #"{"source":"ios_prices_manual_push"}"#,
+            now: now,
+            id: "factory-blocked",
+            clientEventID: "client-factory-blocked"
+        )
+
+        XCTAssertEqual(entry.status, .blockedContract)
+        XCTAssertNil(entry.entityIDsPayloadJSON)
+        XCTAssertNil(entry.metadataPayloadJSON)
     }
 
     func testSameOutcomeTwiceCreatesOneEntryThenDuplicateNoOp() throws {

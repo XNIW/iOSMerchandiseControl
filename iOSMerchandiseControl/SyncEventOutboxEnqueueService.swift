@@ -324,7 +324,17 @@ struct SyncEventOutboxEnqueueService {
             return SyncEventOutboxProducerResult(kind: .enqueueFailedLocal, errorCode: "dedupe_fetch_failed")
         }
 
-        let validationFailure = validate(mapped.request(clientEventID: clientEventID))
+        let request = mapped.request(clientEventID: clientEventID)
+        var validationFailure: SyncEventRecordError?
+        var payloadJSON: SyncEventOutboxStoredPayloadJSON?
+        do {
+            payloadJSON = try SyncEventOutboxPayloadCodec.makePayloadJSON(
+                for: request,
+                validator: validator
+            )
+        } catch {
+            validationFailure = payloadValidationFailure(from: error)
+        }
 
         do {
             let now = clock()
@@ -335,6 +345,8 @@ struct SyncEventOutboxEnqueueService {
                 changedCount: mapped.changedCount,
                 entityIDsShape: mapped.entityIDsShape,
                 metadataShape: mapped.metadataShape,
+                entityIDsPayloadJSON: payloadJSON?.entityIDsPayloadJSON,
+                metadataPayloadJSON: payloadJSON?.metadataPayloadJSON,
                 sourceDeviceID: mapped.sourceDeviceID,
                 batchID: mapped.batchID?.uuidString.lowercased(),
                 now: now,
@@ -355,15 +367,33 @@ struct SyncEventOutboxEnqueueService {
         }
     }
 
-    private func validate(_ request: SyncEventRecordRequest) -> SyncEventRecordError? {
-        do {
-            try validator.validate(request)
-            return nil
-        } catch let error as SyncEventRecordError {
-            return error
-        } catch {
-            return .unknown(SyncEventRecordFailure(code: "validator_unknown", message: String(describing: error)))
+    private func payloadValidationFailure(from error: Error) -> SyncEventRecordError {
+        if let payloadError = error as? SyncEventOutboxPayloadError {
+            switch payloadError {
+            case .validationFailed(let recordError):
+                return recordError
+            case .encodingFailed(let field):
+                return .contract(
+                    SyncEventRecordFailure(
+                        code: "\(field.rawValue)_encoding_failed",
+                        message: "Outbox payload could not be encoded for replay."
+                    )
+                )
+            case .missingPayload, .invalidPayloadJSON, .invalidBatchID, .invalidEntryField:
+                return .contract(
+                    SyncEventRecordFailure(
+                        code: "payload_persistence_failed",
+                        message: "Outbox payload could not be prepared for replay."
+                    )
+                )
+            }
         }
+
+        if let recordError = error as? SyncEventRecordError {
+            return recordError
+        }
+
+        return .unknown(SyncEventRecordFailure(code: "payload_unknown", message: String(describing: error)))
     }
 
     private func applyValidationFailure(
@@ -458,11 +488,7 @@ private enum SyncEventOutboxProducerMapper {
         let changedCount = outcome.suppliersConfirmed + outcome.categoriesConfirmed + outcome.productsConfirmed
         let isPartial = outcome.terminalStatus == .partial
         let baselineRefreshFailed = outcome.terminalStatus == .completedBaselineRefreshFailed
-        let entityIDs = outcome.validationEntityIDs ?? .object([
-            "suppliers": .object(["count": .number(Double(outcome.suppliersConfirmed))]),
-            "categories": .object(["count": .number(Double(outcome.categoriesConfirmed))]),
-            "products": .object(["count": .number(Double(outcome.productsConfirmed))])
-        ])
+        let entityIDs = outcome.validationEntityIDs ?? .null
         let metadata = outcome.validationMetadata ?? .object([
             "source": .string(catalogSource),
             "partial": .bool(isPartial),
@@ -491,9 +517,7 @@ private enum SyncEventOutboxProducerMapper {
 
     private static func mapPrices(_ outcome: SyncEventOutboxProducerOutcome.ProductPriceManualPush) -> MappedEvent {
         let isPartial = outcome.terminalStatus == .partial
-        let entityIDs = outcome.validationEntityIDs ?? .object([
-            "price_rows": .object(["count": .number(Double(outcome.confirmedPriceRows))])
-        ])
+        let entityIDs = outcome.validationEntityIDs ?? .null
         let metadata = outcome.validationMetadata ?? .object([
             "source": .string(pricesSource),
             "partial": .bool(isPartial),
