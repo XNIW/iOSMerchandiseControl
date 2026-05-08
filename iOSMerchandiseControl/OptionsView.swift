@@ -180,6 +180,7 @@ struct OptionsView: View {
                 SupabaseManualSyncReleaseCard(
                     context: modelContext,
                     authViewModel: supabaseAuthViewModel,
+                    inventoryService: supabaseInventoryService,
                     pullPreviewService: supabasePullPreviewService,
                     manualPushService: supabaseManualPushService
                 )
@@ -2781,6 +2782,7 @@ private struct SupabaseManualSyncReleaseCard: View {
     init(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
+        inventoryService: SupabaseInventoryService?,
         pullPreviewService: SupabasePullPreviewService?,
         manualPushService: SupabaseManualPushService?
     ) {
@@ -2789,6 +2791,7 @@ private struct SupabaseManualSyncReleaseCard: View {
             wrappedValue: SupabaseManualSyncReleaseFactory.makeViewModel(
                 context: context,
                 authViewModel: authViewModel,
+                inventoryService: inventoryService,
                 pullPreviewService: pullPreviewService,
                 manualPushService: manualPushService
             )

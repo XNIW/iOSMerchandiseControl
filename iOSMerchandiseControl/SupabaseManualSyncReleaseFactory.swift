@@ -6,6 +6,7 @@ enum SupabaseManualSyncReleaseFactory {
     static func makeViewModel(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
+        inventoryService: SupabaseInventoryService? = nil,
         pullPreviewService: SupabasePullPreviewService? = nil,
         manualPushService: SupabaseManualPushService? = nil
     ) -> SupabaseManualSyncViewModel {
@@ -17,6 +18,12 @@ enum SupabaseManualSyncReleaseFactory {
             SupabaseManualSyncReleasePushAdapter(
                 context: context,
                 manualPushService: $0
+            )
+        }
+        let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = inventoryService.map {
+            SupabaseManualSyncReleaseProductPriceAdapter(
+                context: context,
+                remote: $0
             )
         }
 
@@ -36,7 +43,8 @@ enum SupabaseManualSyncReleaseFactory {
             coordinator: SupabaseManualSyncCoordinator(dependencies: dependencies),
             capabilities: .releaseCurrent(
                 remotePreviewProvider: remotePreviewProvider,
-                catalogPushProvider: catalogPushProvider
+                catalogPushProvider: catalogPushProvider,
+                productPriceProvider: productPriceProvider
             ),
             initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext(
                 isSignedIn: authViewModel.isSignedIn,
@@ -48,8 +56,57 @@ enum SupabaseManualSyncReleaseFactory {
             localApplyContext: context,
             isLocalApplyAuthenticated: { authViewModel.isSignedIn },
             catalogPushProvider: catalogPushProvider,
-            currentCatalogPushOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil }
+            currentCatalogPushOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
+            productPriceProvider: productPriceProvider,
+            currentProductPriceOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil }
         )
+    }
+}
+
+@MainActor
+private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding {
+    private let context: ModelContext
+    private let remote: SupabaseInventoryService
+
+    init(
+        context: ModelContext,
+        remote: SupabaseInventoryService
+    ) {
+        self.context = context
+        self.remote = remote
+    }
+
+    func makeApplyPlan(ownerUserID: UUID) async throws -> ProductPriceApplyPlan {
+        try await SupabaseProductPriceApplyService(fetcher: remote).loadDryRun(
+            context: context,
+            sessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerUserID)
+        )
+    }
+
+    func apply(plan: ProductPriceApplyPlan, ownerUserID: UUID) async throws -> ProductPriceApplyResult {
+        try SupabaseProductPriceApplyService().apply(
+            plan: plan,
+            context: context,
+            currentSessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerUserID)
+        )
+    }
+
+    func makePushPlan(ownerUserID: UUID) async throws -> ProductPricePushDryRunPlan {
+        try await SupabaseProductPricePushDryRunService(fetcher: remote).loadDryRun(
+            context: context,
+            sessionSnapshot: ProductPricePushDryRunSessionSnapshot(
+                userID: ownerUserID,
+                lastLinkedUserID: ownerUserID
+            )
+        )
+    }
+
+    func push(plan: ProductPricePushDryRunPlan, ownerUserID: UUID) async throws -> ProductPriceManualPushResult {
+        let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: plan)
+        guard snapshot.ownerUserID == ownerUserID else {
+            throw ProductPriceManualPushError.invalidPayload
+        }
+        return try await SupabaseProductPriceManualPushService(remote: remote).push(snapshot: snapshot)
     }
 }
 

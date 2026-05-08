@@ -105,6 +105,135 @@ private final class ManualSyncCatalogPushProviderFake: SupabaseManualSyncCatalog
 }
 
 @MainActor
+private final class ManualSyncProductPriceProviderFake: SupabaseManualSyncProductPriceSyncProviding {
+    var applyPlans: [ProductPriceApplyPlan]
+    var pushPlans: [ProductPricePushDryRunPlan]
+    var applyResult: ProductPriceApplyResult
+    var pushResult: ProductPriceManualPushResult?
+    var makeApplyPlanError: Error?
+    var makePushPlanError: Error?
+    var applyError: Error?
+    var pushError: Error?
+    private(set) var makeApplyPlanCallCount = 0
+    private(set) var applyCallCount = 0
+    private(set) var makePushPlanCallCount = 0
+    private(set) var pushCallCount = 0
+
+    init(
+        applyPlans: [ProductPriceApplyPlan] = [],
+        pushPlans: [ProductPricePushDryRunPlan] = [],
+        applyResult: ProductPriceApplyResult = ProductPriceApplyResult(inserted: 0, skippedExisting: 0, totalConsidered: 0),
+        pushResult: ProductPriceManualPushResult? = nil
+    ) {
+        self.applyPlans = applyPlans
+        self.pushPlans = pushPlans
+        self.applyResult = applyResult
+        self.pushResult = pushResult
+    }
+
+    func makeApplyPlan(ownerUserID: UUID) async throws -> ProductPriceApplyPlan {
+        makeApplyPlanCallCount += 1
+        if let makeApplyPlanError {
+            throw makeApplyPlanError
+        }
+        if applyPlans.count > 1 {
+            return applyPlans.removeFirst()
+        }
+        return applyPlans.first ?? Self.emptyApplyPlan(ownerID: ownerUserID)
+    }
+
+    func apply(plan: ProductPriceApplyPlan, ownerUserID: UUID) async throws -> ProductPriceApplyResult {
+        applyCallCount += 1
+        if let applyError {
+            throw applyError
+        }
+        return applyResult
+    }
+
+    func makePushPlan(ownerUserID: UUID) async throws -> ProductPricePushDryRunPlan {
+        makePushPlanCallCount += 1
+        if let makePushPlanError {
+            throw makePushPlanError
+        }
+        if pushPlans.count > 1 {
+            return pushPlans.removeFirst()
+        }
+        return pushPlans.first ?? Self.emptyPushPlan(ownerID: ownerUserID)
+    }
+
+    func push(plan: ProductPricePushDryRunPlan, ownerUserID: UUID) async throws -> ProductPriceManualPushResult {
+        pushCallCount += 1
+        if let pushError {
+            throw pushError
+        }
+        if let pushResult {
+            return pushResult
+        }
+        return ProductPriceManualPushResult(
+            insertedCount: plan.summary.readyCandidates,
+            verification: .exactMatch(verifiedCount: plan.summary.readyCandidates),
+            fingerprint: "test-price-push"
+        )
+    }
+
+    private static func emptyApplyPlan(ownerID: UUID) -> ProductPriceApplyPlan {
+        ProductPriceApplyPlan(
+            generatedAt: Date(timeIntervalSince1970: 1_778_500_000),
+            sessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerID),
+            sourceState: ProductPriceApplySourceState(),
+            summary: ProductPriceApplySummary(
+                remoteRead: 0,
+                included: 0,
+                skippedExisting: 0,
+                unmapped: 0,
+                invalid: 0,
+                conflicts: 0,
+                mappingConflicts: 0,
+                partial: false,
+                truncated: false,
+                sourceError: nil
+            ),
+            blockReasons: [.noApplicableRows],
+            linesToInsert: [],
+            issues: [],
+            remoteRows: []
+        )
+    }
+
+    private static func emptyPushPlan(ownerID: UUID) -> ProductPricePushDryRunPlan {
+        ProductPricePushDryRunPlan(
+            generatedAt: Date(timeIntervalSince1970: 1_778_500_000),
+            sessionSnapshot: ProductPricePushDryRunSessionSnapshot(userID: ownerID, lastLinkedUserID: ownerID),
+            remoteDedupeStatus: .notNeeded,
+            summary: ProductPricePushDryRunSummary(
+                localPriceCount: 0,
+                remoteRowsRead: 0,
+                remotePagesRead: 0,
+                readyCandidates: 0,
+                alreadyPresentRemote: 0,
+                conflictSameKeyDifferentPrice: 0,
+                localDuplicateSameKey: 0,
+                localConflictSameKeyDifferentPrice: 0,
+                blockedNoRemoteID: 0,
+                blockedNoAuth: 0,
+                blockedAccountMismatch: 0,
+                blockedBaselineMissing: 0,
+                blockedBaselineStale: 0,
+                blockedBaselinePartial: 0,
+                excludedInvalidLocal: 0
+            ),
+            candidates: [],
+            alreadyPresentRemote: [],
+            conflictSameKeyDifferentPrice: [],
+            localDuplicateSameKey: [],
+            localConflictSameKeyDifferentPrice: [],
+            blockedNoRemoteID: [],
+            excludedInvalidLocal: []
+        )
+    }
+}
+
+@MainActor
 final class SupabaseManualSyncViewModelTests: XCTestCase {
     private static var retainedContainers: [ModelContainer] = []
 
@@ -1692,6 +1821,172 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testTask080RemoteProductPricesEnableUpdateDeviceAndApplyAfterRecheck() async throws {
+        let ownerID = UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")!
+        let applyPlan = makeProductPriceApplyPlan(ownerID: ownerID, lineCount: 2, skippedExisting: 1)
+        let provider = ManualSyncProductPriceProviderFake(
+            applyPlans: [applyPlan, applyPlan],
+            applyResult: ProductPriceApplyResult(inserted: 2, skippedExisting: 1, totalConsidered: 3)
+        )
+        let vm = makeProductPriceReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                    remoteProductPriceCount: 3,
+                    priceHistorySignalCount: 2
+                ),
+                key: .cloudDataNeedsReview
+            )
+        ))
+        await vm.prepareProductPricePlansForReview()
+
+        let review = try XCTUnwrap(vm.presentationState.reviewSheet)
+        let priceSection = try XCTUnwrap(review.sections.first { $0.id == .prices })
+        XCTAssertEqual(review.primaryActionID, .updateDevice)
+        XCTAssertTrue(review.primaryActionIsEnabled)
+        XCTAssertTrue(priceSection.title.contains("Prezzi da aggiornare"))
+        XCTAssertTrue(priceSection.message.contains("Nuovi prezzi trovati: 2"))
+        XCTAssertTrue(priceSection.message.contains("Prezzi già presenti: 1"))
+
+        await vm.applyStagedLocalChanges()
+
+        XCTAssertEqual(provider.makeApplyPlanCallCount, 2)
+        XCTAssertEqual(provider.applyCallCount, 1)
+        XCTAssertEqual(vm.productPriceSummary.applied, 2)
+        XCTAssertEqual(vm.lastLocalApplySummary?.priceSummary.applied, 2)
+        XCTAssertTrue(vm.presentationState.userFacingSummary?.message.contains("Prezzi aggiornati su questo dispositivo: 2") ?? false)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask080LocalProductPricesEnableCloudSendWithoutCatalogCandidates() async throws {
+        let ownerID = UUID(uuidString: "CCCCCCCC-CCCC-4CCC-8CCC-CCCCCCCCCCCC")!
+        let pushPlan = makeProductPricePushPlan(ownerID: ownerID, candidateCount: 2, alreadyPresent: 1)
+        let provider = ManualSyncProductPriceProviderFake(
+            pushPlans: [pushPlan, pushPlan]
+        )
+        let vm = makeProductPriceReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareProductPricePlansForReview()
+
+        let state = vm.presentationState
+        let review = try XCTUnwrap(state.reviewSheet)
+        let priceSection = try XCTUnwrap(review.sections.first { $0.id == .prices })
+        XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
+        XCTAssertEqual(review.primaryActionID, .sendCloudChanges)
+        XCTAssertTrue(review.primaryActionIsEnabled)
+        XCTAssertTrue(priceSection.message.contains("Prezzi pronti da inviare: 2"))
+        XCTAssertTrue(priceSection.message.contains("Prezzi già presenti: 1"))
+
+        await vm.sendConfirmedCatalogChanges()
+
+        XCTAssertEqual(provider.makePushPlanCallCount, 2)
+        XCTAssertEqual(provider.pushCallCount, 1)
+        XCTAssertEqual(vm.productPriceSummary.pushed, 2)
+        XCTAssertEqual(vm.presentationState.userFacingSummary?.kind, .catalogPushSucceeded)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask080ProductPricePushStalePlanDoesNotWrite() async throws {
+        let ownerID = UUID(uuidString: "DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD")!
+        let firstPlan = makeProductPricePushPlan(ownerID: ownerID, candidateCount: 1, seed: 10)
+        let changedPlan = makeProductPricePushPlan(ownerID: ownerID, candidateCount: 1, seed: 20)
+        let provider = ManualSyncProductPriceProviderFake(
+            pushPlans: [firstPlan, changedPlan]
+        )
+        let vm = makeProductPriceReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareProductPricePlansForReview()
+        await vm.sendConfirmedCatalogChanges()
+
+        XCTAssertEqual(provider.makePushPlanCallCount, 2)
+        XCTAssertEqual(provider.pushCallCount, 0)
+        XCTAssertEqual(vm.presentationState.userFacingSummary?.kind, .catalogPushStale)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask080ProductPriceApplyStalePlanDoesNotWrite() async throws {
+        let ownerID = UUID(uuidString: "EEEEEEEE-EEEE-4EEE-8EEE-EEEEEEEEEEEE")!
+        let firstPlan = makeProductPriceApplyPlan(ownerID: ownerID, lineCount: 1, seed: 30)
+        let changedPlan = makeProductPriceApplyPlan(ownerID: ownerID, lineCount: 1, seed: 40)
+        let provider = ManualSyncProductPriceProviderFake(
+            applyPlans: [firstPlan, changedPlan],
+            applyResult: ProductPriceApplyResult(inserted: 1, skippedExisting: 0, totalConsidered: 1)
+        )
+        let vm = makeProductPriceReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                    remoteProductPriceCount: 1,
+                    priceHistorySignalCount: 1
+                ),
+                key: .cloudDataNeedsReview
+            )
+        ))
+        await vm.prepareProductPricePlansForReview()
+        await vm.applyStagedLocalChanges()
+
+        XCTAssertEqual(provider.makeApplyPlanCallCount, 2)
+        XCTAssertEqual(provider.applyCallCount, 0)
+        XCTAssertEqual(vm.lastLocalApplySummary?.priceSummary.applied, 0)
+        XCTAssertEqual(vm.lastLocalApplySummary?.priceSummary.blocked, 1)
+        XCTAssertTrue(vm.presentationState.userFacingSummary?.message.contains("Prezzi saltati: servono verifiche: 1") ?? false)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask080ProductPriceReviewCombinesSkippedAndBlockedCountsOnce() async throws {
+        let ownerID = UUID(uuidString: "FFFFFFFF-FFFF-4FFF-8FFF-FFFFFFFFFFFF")!
+        let applyPlan = makeProductPriceApplyPlan(ownerID: ownerID, lineCount: 0, skippedExisting: 1)
+        let pushPlan = makeProductPricePushPlan(
+            ownerID: ownerID,
+            candidateCount: 0,
+            alreadyPresent: 2,
+            conflicts: 1,
+            blocked: 2
+        )
+        let provider = ManualSyncProductPriceProviderFake(
+            applyPlans: [applyPlan],
+            pushPlans: [pushPlan]
+        )
+        let vm = makeProductPriceReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                    remoteProductPriceCount: 1,
+                    priceHistorySignalCount: 1
+                ),
+                key: .cloudDataNeedsReview
+            )
+        ))
+        await vm.prepareProductPricePlansForReview()
+
+        let review = try XCTUnwrap(vm.presentationState.reviewSheet)
+        let priceSection = try XCTUnwrap(review.sections.first { $0.id == .prices })
+        XCTAssertTrue(priceSection.message.contains("Prezzi già presenti: 3"))
+        XCTAssertTrue(priceSection.message.contains("Prezzi saltati: servono verifiche: 3"))
+        XCTAssertFalse(priceSection.message.contains("Prezzi saltati: servono verifiche: 5"))
+        XCTAssertEqual(vm.productPriceSummary.skippedDuplicate, 3)
+        XCTAssertEqual(vm.productPriceSummary.skippedConflict, 1)
+        XCTAssertEqual(vm.productPriceSummary.blocked, 2)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
     func testTask078NoFinalManualSyncCopyUsesOldApplyChangesLabel() throws {
         let root = repoRootURL()
         let supportedLanguages = ["it", "en", "es", "zh-Hans"]
@@ -1785,6 +2080,30 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         )
     }
 
+    private func makeProductPriceReadyViewModel(
+        provider: ManualSyncProductPriceProviderFake,
+        ownerID: UUID?,
+        isSignedIn: Bool = true
+    ) -> SupabaseManualSyncViewModel {
+        SupabaseManualSyncViewModel(
+            coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsCatalogPush: false,
+                supportsProductPriceSync: true
+            ),
+            initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext(
+                isSignedIn: isSignedIn,
+                canSignIn: true,
+                isTransitioning: false
+            ),
+            currentCatalogPushOwnerID: { ownerID },
+            productPriceProvider: provider,
+            currentProductPriceOwnerID: { ownerID }
+        )
+    }
+
     private func makeCatalogPushPlan(
         ownerID: UUID,
         candidates: [PushCandidate] = [],
@@ -1799,6 +2118,181 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             warnings: warnings,
             futureEventChangedCount: candidates.count
         )
+    }
+
+    private func makeProductPriceApplyPlan(
+        ownerID: UUID,
+        lineCount: Int,
+        skippedExisting: Int = 0,
+        conflicts: Int = 0,
+        blocked: Int = 0,
+        seed: Int = 0
+    ) -> ProductPriceApplyPlan {
+        var lines: [ProductPriceApplyLine] = []
+        for index in 0..<lineCount {
+            let remoteRowID = uuid(30_000 + seed + index)
+            let productID = uuid(40_000 + seed + index)
+            let canonicalPrice = PriceCanonicalizer.canonicalAmount(from: Double(index + 1))!
+            let effectiveAt = Date(timeIntervalSince1970: TimeInterval(1_778_500_000 + index))
+            lines.append(
+                ProductPriceApplyLine(
+                    remoteRowID: remoteRowID,
+                    productID: productID,
+                    productBarcode: "P\(index)",
+                    type: PriceType.purchase.rawValue,
+                    canonicalPrice: canonicalPrice,
+                    effectiveAt: effectiveAt,
+                    effectiveAtCanonical: "2026-05-0\(index + 1) 10:30:00",
+                    createdAt: nil
+                )
+            )
+        }
+        let summary = ProductPriceApplySummary(
+            remoteRead: lineCount + skippedExisting + conflicts + blocked,
+            included: lineCount,
+            skippedExisting: skippedExisting,
+            unmapped: blocked,
+            invalid: 0,
+            conflicts: conflicts,
+            mappingConflicts: 0,
+            partial: false,
+            truncated: false,
+            sourceError: nil
+        )
+        let blockReasons: [ProductPriceApplyBlockReason] = {
+            if lineCount == 0 {
+                return [.noApplicableRows]
+            }
+            if conflicts > 0 {
+                return [.conflicts]
+            }
+            if blocked > 0 {
+                return [.unmappedProducts]
+            }
+            return []
+        }()
+
+        return ProductPriceApplyPlan(
+            generatedAt: Date(timeIntervalSince1970: 1_778_500_000),
+            sessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerID),
+            sourceState: ProductPriceApplySourceState(),
+            summary: summary,
+            blockReasons: blockReasons,
+            linesToInsert: lines,
+            issues: [],
+            remoteRows: []
+        )
+    }
+
+    private func makeProductPricePushPlan(
+        ownerID: UUID,
+        candidateCount: Int,
+        alreadyPresent: Int = 0,
+        conflicts: Int = 0,
+        blocked: Int = 0,
+        seed: Int = 0
+    ) -> ProductPricePushDryRunPlan {
+        let candidates = (0..<candidateCount).map { index in
+            makeProductPricePushLine(ownerID: ownerID, index: seed + index, reason: .candidate)
+        }
+        let present = (0..<alreadyPresent).map { index in
+            makeProductPricePushLine(ownerID: ownerID, index: seed + 1_000 + index, reason: .alreadyPresentRemote)
+        }
+        let conflictLines = (0..<conflicts).map { index in
+            makeProductPricePushLine(ownerID: ownerID, index: seed + 2_000 + index, reason: .conflictSameKeyDifferentPrice)
+        }
+        let blockedLines = (0..<blocked).map { index in
+            ProductPricePushDryRunLine(
+                id: "blocked-\(seed)-\(index)",
+                reason: .blockedNoRemoteID,
+                key: nil,
+                productBarcode: "P\(seed)-blocked-\(index)",
+                productDisplayName: "Price row",
+                type: PriceType.purchase.rawValue,
+                canonicalPrice: PriceCanonicalizer.canonicalAmount(from: Double(index + 1)),
+                effectiveAtCanonical: "2026-05-01 10:30:00",
+                createdAtCanonical: "2026-05-01 10:31:00",
+                source: nil,
+                note: nil,
+                detail: nil,
+                payload: nil
+            )
+        }
+
+        return ProductPricePushDryRunPlan(
+            generatedAt: Date(timeIntervalSince1970: 1_778_500_000),
+            sessionSnapshot: ProductPricePushDryRunSessionSnapshot(userID: ownerID, lastLinkedUserID: ownerID),
+            remoteDedupeStatus: .complete,
+            summary: ProductPricePushDryRunSummary(
+                localPriceCount: candidateCount + alreadyPresent + conflicts + blocked,
+                remoteRowsRead: alreadyPresent + conflicts,
+                remotePagesRead: alreadyPresent + conflicts > 0 ? 1 : 0,
+                readyCandidates: candidateCount,
+                alreadyPresentRemote: alreadyPresent,
+                conflictSameKeyDifferentPrice: conflicts,
+                localDuplicateSameKey: 0,
+                localConflictSameKeyDifferentPrice: 0,
+                blockedNoRemoteID: blocked,
+                blockedNoAuth: 0,
+                blockedAccountMismatch: 0,
+                blockedBaselineMissing: 0,
+                blockedBaselineStale: 0,
+                blockedBaselinePartial: 0,
+                excludedInvalidLocal: 0
+            ),
+            candidates: candidates,
+            alreadyPresentRemote: present,
+            conflictSameKeyDifferentPrice: conflictLines,
+            localDuplicateSameKey: [],
+            localConflictSameKeyDifferentPrice: [],
+            blockedNoRemoteID: blockedLines,
+            excludedInvalidLocal: []
+        )
+    }
+
+    private func makeProductPricePushLine(
+        ownerID: UUID,
+        index: Int,
+        reason: ProductPricePushDryRunLineReason
+    ) -> ProductPricePushDryRunLine {
+        let productID = uuid(50_000 + index)
+        let effectiveAt = "2026-05-01 10:\(String(format: "%02d", index % 60)):00"
+        let key = ProductPricePushDryRunLogicalKey(
+            ownerUserID: ownerID,
+            productID: productID,
+            type: PriceType.purchase.rawValue,
+            effectiveAt: effectiveAt
+        )
+        let canonicalPrice = PriceCanonicalizer.canonicalAmount(from: Double(index + 1))!
+        let payload = ProductPricePushDryRunCandidatePayload(
+            ownerUserID: ownerID,
+            productID: productID,
+            remoteType: "PURCHASE",
+            canonicalPrice: canonicalPrice,
+            effectiveAt: effectiveAt,
+            createdAt: "2026-05-01 10:31:00",
+            source: nil,
+            note: nil
+        )
+        return ProductPricePushDryRunLine(
+            id: "\(reason.rawValue)-\(index)",
+            reason: reason,
+            key: key,
+            productBarcode: "P\(index)",
+            productDisplayName: "Price row",
+            type: PriceType.purchase.rawValue,
+            canonicalPrice: canonicalPrice,
+            effectiveAtCanonical: effectiveAt,
+            createdAtCanonical: "2026-05-01 10:31:00",
+            source: nil,
+            note: nil,
+            detail: nil,
+            payload: payload
+        )
+    }
+
+    private func uuid(_ value: Int) -> UUID {
+        UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", value))")!
     }
 
     private func makeApplicablePreview(
