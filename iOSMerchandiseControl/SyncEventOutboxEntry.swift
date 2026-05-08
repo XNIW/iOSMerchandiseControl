@@ -12,6 +12,7 @@ nonisolated enum SyncEventOutboxFactoryError: Error, Sendable, Equatable {
 nonisolated struct SyncEventOutboxCounts: Sendable, Equatable {
     var pending: Int = 0
     var retryable: Int = 0
+    var failedRetryable: Int = 0
     var blocked: Int = 0
     var dead: Int = 0
     var sent: Int = 0
@@ -524,7 +525,7 @@ struct SyncEventOutboxLocalStore {
             case .pending:
                 counts.pending += 1
             case .failedRetryable:
-                break
+                counts.failedRetryable += 1
             case .blockedContract, .blockedAuth, .blockedSchema:
                 counts.blocked += 1
             case .dead:

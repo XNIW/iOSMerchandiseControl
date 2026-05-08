@@ -375,6 +375,7 @@ final class SyncEventOutboxLocalStoreTests: XCTestCase {
 
         XCTAssertEqual(counts.pending, 1)
         XCTAssertEqual(counts.retryable, 2)
+        XCTAssertEqual(counts.failedRetryable, 1)
         XCTAssertEqual(counts.blocked, 2)
         XCTAssertEqual(counts.dead, 1)
         XCTAssertEqual(counts.sent, 1)

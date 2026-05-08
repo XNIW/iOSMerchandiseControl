@@ -1007,9 +1007,9 @@
 "options.supabase.manualSync.state.running.subtitle" = "正在检查同步状态。";
 "options.supabase.manualSync.state.running.inline" = "正在检查...";
 "options.supabase.manualSync.state.success.title" = "全部已更新";
-"options.supabase.manualSync.state.success.subtitle" = "数据看起来已对齐。";
-"options.supabase.manualSync.state.partial.title" = "部分同步";
-"options.supabase.manualSync.state.partial.subtitle" = "部分更改已完成，但仍有内容需要处理。你可以重试。";
+"options.supabase.manualSync.state.success.subtitle" = "没有需要检查的本地更改。";
+"options.supabase.manualSync.state.partial.title" = "有更改需要检查";
+"options.supabase.manualSync.state.partial.subtitle" = "不会自动发送。";
 "options.supabase.manualSync.state.auth.title" = "需要登录";
 "options.supabase.manualSync.state.auth.subtitle" = "请重新登录后继续。";
 "options.supabase.manualSync.state.realign.title" = "需要重新对齐数据";

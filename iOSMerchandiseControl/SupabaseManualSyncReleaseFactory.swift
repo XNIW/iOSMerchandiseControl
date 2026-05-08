@@ -10,7 +10,11 @@ enum SupabaseManualSyncReleaseFactory {
         let dependencies = SupabaseManualSyncCoordinator.Dependencies(
             authGate: SupabaseManualSyncReleaseAuthGate(authViewModel: authViewModel),
             baselineGate: SupabaseManualSyncReleaseBaselineGate(context: context, authViewModel: authViewModel),
-            pendingSnapshot: SupabaseManualSyncReleasePendingSnapshotProvider(),
+            pendingSnapshot: SupabaseManualSyncLocalPendingSnapshotProvider(
+                sessionProvider: authViewModel,
+                catalogPendingCounter: SupabaseManualSyncCatalogPendingAdapter(context: context),
+                outboxPendingCounter: SupabaseManualSyncOutboxPendingAdapter(context: context)
+            ),
             phaseSimulation: SupabaseManualSyncReleaseDryRunPhaseSimulator()
         )
 
@@ -58,13 +62,6 @@ private final class SupabaseManualSyncReleaseBaselineGate: SupabaseManualSyncBas
         case .missing, .accountMismatch, .staleSchema, .incomplete:
             return .missingOrInvalid
         }
-    }
-}
-
-@MainActor
-private final class SupabaseManualSyncReleasePendingSnapshotProvider: SupabaseManualSyncLocalPendingProviding {
-    func loadLocalPendingSnapshot() async throws -> SupabaseManualSyncPrivacyCounts {
-        SupabaseManualSyncPrivacyCounts()
     }
 }
 

@@ -101,6 +101,53 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         }
     }
 
+    func testTask069ReleaseFactoryUsesLocalPendingSnapshotProvider() throws {
+        let factorySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift")
+
+        XCTAssertTrue(factorySource.contains("SupabaseManualSyncLocalPendingSnapshotProvider"))
+        XCTAssertTrue(factorySource.contains("SupabaseManualSyncCatalogPendingAdapter"))
+        XCTAssertTrue(factorySource.contains("SupabaseManualSyncOutboxPendingAdapter"))
+        XCTAssertFalse(factorySource.contains("SupabaseManualSyncReleasePendingSnapshotProvider"))
+    }
+
+    func testTask069ReadOnlyReleaseSourcesAvoidForbiddenLiveCalls() throws {
+        let optionsViewSource = try readSource("iOSMerchandiseControl/OptionsView.swift")
+        let releaseCardSource = try extractReleaseCardSource(from: optionsViewSource)
+        let paths = [
+            "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+            "iOSMerchandiseControl/SupabaseManualSyncCoordinator.swift",
+            "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+        ]
+        let combined = try ([releaseCardSource] + paths.map(readSource))
+            .joined(separator: "\n")
+
+        for forbidden in [
+            "SupabaseClient",
+            ".rpc",
+            ".from",
+            ".upsert",
+            ".insert",
+            ".update",
+            ".delete",
+            "record_sync_event",
+            "drainOnce",
+            "SyncEventOutboxDrainService",
+            "SyncEventOutboxEnqueueService",
+            "SupabaseManualPushService",
+            "SupabaseProductPriceManualPushService",
+            "SupabasePullApplyService",
+            "SupabaseCatalogBaselineWriter",
+            "confirmationDialog",
+            "BGTask",
+            "Timer",
+            "Realtime",
+            "worker",
+        ] {
+            XCTAssertFalse(combined.contains(forbidden), "Forbidden TASK-069 source term found: \(forbidden)")
+        }
+    }
+
     func testTask067ReleaseCardSourceAvoidsDeveloperJargon() throws {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: source)

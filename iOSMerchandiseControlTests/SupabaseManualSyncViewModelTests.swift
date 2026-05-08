@@ -102,14 +102,14 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         await fulfillment(of: [finished], timeout: 15)
 
         XCTAssertEqual(counter.runInvocationCount, 1)
-        XCTAssertEqual(vm.presentationKind, .successFullyUpToDate)
-        XCTAssertEqual(vm.title, SupabaseManualSyncUserFacingCopy.allUpToDate)
-        XCTAssertEqual(vm.subtitle, SupabaseManualSyncUserFacingCopy.syncFinishedSuccessfully)
+        XCTAssertEqual(vm.presentationKind, .partialSync)
+        XCTAssertEqual(vm.title, "Ci sono modifiche da controllare")
+        XCTAssertEqual(vm.subtitle, "Nessun invio automatico.")
         XCTAssertTrue(vm.canStart)
         assertNoForbiddenUserFacingJargon(vm)
     }
 
-    func testDryRunCompletesShowsAllUpToDateHeadlineIncludingCompletedSuccessfullySubtitle() async {
+    func testDryRunWithPendingShowsNeedsReviewInsteadOfAllUpToDate() async {
         let fake = SupabaseManualSyncCoordinatorDryRunFake()
         fake.snapshot = SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 2, pendingPriceChangeCount: 0, pendingQueuedCloudOperationCount: 0)
 
@@ -125,10 +125,11 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let vm = SupabaseManualSyncViewModel(coordinator: coordinator)
         await vm.startDryRunVerification()
 
-        XCTAssertEqual(vm.presentationKind, .successFullyUpToDate)
-        XCTAssertEqual(vm.title, SupabaseManualSyncUserFacingCopy.allUpToDate)
+        XCTAssertEqual(vm.presentationKind, .partialSync)
+        XCTAssertEqual(vm.title, "Ci sono modifiche da controllare")
+        XCTAssertEqual(vm.subtitle, "Nessun invio automatico.")
         XCTAssertEqual(vm.lastSummary?.finalState, .completedSuccessfully)
-        XCTAssertEqual(vm.subtitle, SupabaseManualSyncUserFacingCopy.syncFinishedSuccessfully)
+        XCTAssertNotEqual(vm.title, SupabaseManualSyncUserFacingCopy.allUpToDate)
         XCTAssertFalse(vm.presentationKind == .cancelledRun)
         assertNoForbiddenUserFacingJargon(vm)
     }

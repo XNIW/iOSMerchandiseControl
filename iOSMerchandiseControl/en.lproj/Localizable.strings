@@ -1007,9 +1007,9 @@
 "options.supabase.manualSync.state.running.subtitle" = "Checking the synchronization status.";
 "options.supabase.manualSync.state.running.inline" = "Check in progress...";
 "options.supabase.manualSync.state.success.title" = "Everything is up to date";
-"options.supabase.manualSync.state.success.subtitle" = "Your data appears aligned.";
-"options.supabase.manualSync.state.partial.title" = "Partial synchronization";
-"options.supabase.manualSync.state.partial.subtitle" = "Some changes were completed, but something still needs attention. You can try again.";
+"options.supabase.manualSync.state.success.subtitle" = "No local changes need review.";
+"options.supabase.manualSync.state.partial.title" = "There are changes to review";
+"options.supabase.manualSync.state.partial.subtitle" = "No automatic sending.";
 "options.supabase.manualSync.state.auth.title" = "Sign in required";
 "options.supabase.manualSync.state.auth.subtitle" = "Sign in again to continue.";
 "options.supabase.manualSync.state.realign.title" = "Data realignment required";

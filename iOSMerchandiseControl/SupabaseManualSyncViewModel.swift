@@ -30,6 +30,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         static let signInSubtitle = "Accedi di nuovo per continuare."
         static let realignSubtitle = "Prima aggiorna i dati dal cloud, poi riprova."
         static let busySubtitle = "Attendi che termini prima di riprovare."
+        static let localPendingNeedsReviewTitle = "Ci sono modifiche da controllare"
+        static let localPendingNeedsReviewSubtitle = "Nessun invio automatico."
     }
 
     private let coordinator: any SupabaseManualSyncCoordinating
@@ -116,6 +118,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         lastSummary = summary
 
         switch summary.finalState {
+        case .completedSuccessfully where summary.countsSnapshot.hasAnyPendingWork:
+            presentationKind = .partialSync
+            title = Copy.localPendingNeedsReviewTitle
+            subtitle = Copy.localPendingNeedsReviewSubtitle
+            primaryActionTitle = Copy.startAction
+
         case .allUpToDate, .completedSuccessfully:
             presentationKind = .successFullyUpToDate
             title = SupabaseManualSyncUserFacingCopy.allUpToDate

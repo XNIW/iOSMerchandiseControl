@@ -1006,9 +1006,9 @@
 "options.supabase.manualSync.state.running.subtitle" = "Stiamo verificando lo stato della sincronizzazione.";
 "options.supabase.manualSync.state.running.inline" = "Controllo in corso...";
 "options.supabase.manualSync.state.success.title" = "Tutto aggiornato";
-"options.supabase.manualSync.state.success.subtitle" = "I dati risultano allineati.";
-"options.supabase.manualSync.state.partial.title" = "Sincronizzazione parziale";
-"options.supabase.manualSync.state.partial.subtitle" = "Alcune modifiche sono state completate, ma resta qualcosa da sistemare. Puoi riprovare.";
+"options.supabase.manualSync.state.success.subtitle" = "Non risultano modifiche locali da controllare.";
+"options.supabase.manualSync.state.partial.title" = "Ci sono modifiche da controllare";
+"options.supabase.manualSync.state.partial.subtitle" = "Nessun invio automatico.";
 "options.supabase.manualSync.state.auth.title" = "Serve accedere";
 "options.supabase.manualSync.state.auth.subtitle" = "Accedi di nuovo per continuare.";
 "options.supabase.manualSync.state.realign.title" = "Serve riallineare i dati";
