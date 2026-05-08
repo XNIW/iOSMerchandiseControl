@@ -4,10 +4,12 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-Nessun task attivo. **Ultimo completato: TASK-064** — *Supabase sync_events outbox sending stale recovery iOS* — **DONE / Chiusura** (`docs/TASKS/TASK-064-supabase-sync-events-outbox-sending-stale-recovery-ios.md`): review tecnica severa chiusa con **APPROVED_FIXED_DIRECTLY**, recovery locale bounded/owner-scoped delle entry outbox `sending` stale implementata, corretta e verificata. **TASK-063** resta planning precedente usato come base architetturale e non viene riaperto/eseguito. **Prossimo task consigliato:** TASK-065 coordinator dry-run/mock, **non creato**. **TASK-052** resta **BLOCKED / superseded**, **non DONE**.
+**Progetto IDLE** — nessun task attivo. **Ultimo completato:** **TASK-065 DONE / Chiusura** — *Supabase manual sync coordinator dry-run/mock iOS* — (`docs/TASKS/TASK-065-supabase-manual-sync-coordinator-dryrun-ios.md`): state machine dry-run `SupabaseManualSyncCoordinator` + XCTest mirati, review tecnica severa con fix piccoli solo su test/documentazione, chiusa **APPROVED_FIXED_DIRECTLY** su override utente. **TASK-064** resta **DONE / Chiusura**. **TASK-063** resta planning architetturale precedente/base e non viene riaperto/eseguito. **TASK-052** resta **BLOCKED / superseded**, **non DONE**. **Prossimo task consigliato:** **TASK-066** ViewModel/stati non-DEBUG per sync guidata, **non creato**; UI Release finale resta **TASK-067**.
 
 ## Stato globale
-IDLE *(nessun task attivo; ultimo completato: **TASK-064 DONE / Chiusura**; TASK-063 resta planning base precedente)*
+IDLE *(nessun task attivo; ultimo completato **TASK-065 DONE / Chiusura**; TASK-064 resta DONE; TASK-063 resta planning base precedente)*
+> **2026-05-07 20:48 -04 — REVIEW+FIX TASK-065 APPROVED_FIXED_DIRECTLY / DONE (user override):** review tecnica severa completata. Coordinator dry-run approvato senza modifiche di comportamento; fix piccoli mirati solo su XCTest/documentazione: coperti call-order auth/baseline/preflight, baseline/pending una sola volta, `guidedManual`/`debugDiagnostics`/`automatic` senza chiamate dipendenze, preview failure senza downstream, flush failure senza successo precedente → connectivity, hard failure tecnico-soft, privacy/jargon/static anti-scope. Check PASS: build Debug iPhone 16e OS 26.2; XCTest `SupabaseManualSyncCoordinatorTests`; regressioni `SyncEventOutboxStateTests`, `SyncEventOutboxLocalStoreTests`, `SyncEventOutboxDrainServiceTests`, `SyncEventOutboxEnqueueServiceTests`, `SyncEventRecordingTests`, `SyncEventLiveRecorderTests`; `git diff --check`; grep anti-scope coordinator; nessun TASK-066. Confermati: no UI Release, no OptionsView/Localizable, no coordinator live, no Supabase live/RPC/SQL/migration/RLS, no Timer/BGTask/Realtime/channel/worker/sync automatica, no cleanup outbox, no Product/ProductPrice full sync, no Android. **TASK-065 DONE / Chiusura**; workspace **IDLE**. Prossimo consigliato: **TASK-066** ViewModel/stati non-DEBUG; UI Release finale resta **TASK-067**.
+> **2026-05-07 — EXECUTION TASK-065 completata / handoff REVIEW:** creato **`docs/TASKS/TASK-065-supabase-manual-sync-coordinator-dryrun-ios.md`**; implementati `SupabaseManualSyncCoordinator` dry-run (`@MainActor`, DI protocolli + fake test), tipi `SupabaseManualSyncRunMode` / `Phase` / `PhaseOutcome` / `RunSummary` / copy UX italiano non tecnico; lock anti-run concorrente; cancellation → stato `cancelled`; aggregazione partial/connectivity/blocked. Nuovi test **`SupabaseManualSyncCoordinatorTests`**. Check PASS: `xcodebuild test` coordinator-only + regressioni `SyncEventOutboxStateTests`, `SyncEventOutboxLocalStoreTests`, `SyncEventOutboxDrainServiceTests`, `SyncEventOutboxEnqueueServiceTests`, `SyncEventRecordingTests`, `SyncEventLiveRecorderTests` su Simulator **iPhone 16e**; `git diff --check`; grep anti-scope file coordinator (`BGTask`/`Timer`/`Realtime`/`SupabaseClient`/`.rpc`/`OptionsView`/`TASK-066`) assenti. Vietati confermati: UI Release, live Supabase nel coordinator, SQL/migration, Timer/BGTask/Realtime/worker, cleanup outbox, TASK-066. **TASK-065 ACTIVE / REVIEW**, responsabile **Claude / Reviewer**.
 > **2026-05-07 20:26 -04 — REVIEW+FIX TASK-064 APPROVED_FIXED_DIRECTLY / DONE (user override):** review tecnica severa completata. Fix diretti mirati: `SyncEventOutboxDrainService` ora controlla cancellation prima di recovery/fetch/loop e prima di mutare candidati; outcome non maschera recovery exhausted come successo (`exhaustedCount` pesa su `networkFailed`/`partiallyDrained`); test aggiunti per hard cap recovery, cancellation pre-drain, exhausted+sent partial, `clientEventID`/`sourceDeviceID` invariati. Check PASS: test mirati state/store/drain; regressioni enqueue/recording/live recorder/ViewModel DEBUG; build Debug iPhone 16e; `git diff --check`; whitespace no-index TASK-064; grep anti-scope produzione/diff; nessun `TASK-065*` creato. Confermati: **no UI Release**, **no coordinator**, **no auto-sync**, **no Timer/BGTask/Realtime/worker**, **no Supabase live**, **no SQL/migration/RPC/RLS**, **no cleanup outbox**, **no Android**, **no TASK-065**. **TASK-064 DONE / Chiusura**; workspace **IDLE**.
 > **2026-05-07 20:13 -04 — EXECUTION TASK-064 completata / handoff REVIEW:** implementata recovery locale `sending` stale outbox `sync_events`: state machine senza nuovi stati, store owner-scoped bounded (default 50, hard cap 200), soglia default 10 minuti overrideable nei test, integrazione prima del drain manuale, outcome con `recoveredCount`/`exhaustedCount`/`skippedFreshSendingCount`. Test PASS: state/store/drain TASK-064, regressioni enqueue/recording/live recorder e ViewModel DEBUG TASK-061; build Debug iPhone 16e PASS; `git diff --check` PASS; grep anti-scope produzione PASS. Confermati: no UI, no coordinator, no auto-sync, no Timer/BGTask/Realtime/worker, no Supabase live, no SQL/migration/RPC/RLS, no cleanup outbox, no Android, no TASK-065. **TASK-064 ACTIVE / REVIEW**, responsabile **Claude / Reviewer**, **non DONE**.
 
@@ -221,13 +223,13 @@ IDLE *(nessun task attivo; ultimo completato: **TASK-064 DONE / Chiusura**; TASK
 
 ## Workflow task attivo
 - **Task attivo:** Nessuno
-- **Titolo:** —
-- **File task:** —
-- **Stato task:** —
-- **Fase:** —
-- **Responsabile:** —
-- **Ultimo aggiornamento:** 2026-05-07 20:26 -04 — review+fix TASK-064 completata con APPROVED_FIXED_DIRECTLY; build/test/check finali PASS; TASK-064 DONE / Chiusura; workspace IDLE.
-- **Nota tracking:** ultimo completato **TASK-064 DONE / Chiusura**. **TASK-063** resta planning precedente usato come base architetturale, non riaperto/eseguito. Prossimo task consigliato **TASK-065 coordinator dry-run/mock**, **non creato**. **TASK-062/TASK-061/TASK-060** restano DONE. **TASK-052 BLOCKED/superseded non DONE**.
+- **Titolo:** N/A
+- **File task:** N/A
+- **Stato task:** N/A
+- **Fase:** N/A
+- **Responsabile:** Nessuno / Workspace IDLE
+- **Ultimo aggiornamento:** 2026-05-07 20:48 -04 — TASK-065 chiuso **DONE / Chiusura** dopo review tecnica severa **APPROVED_FIXED_DIRECTLY**; **TASK-066 non creato**.
+- **Nota tracking:** **Nessun task attivo**. **Ultimo completato TASK-065 DONE / Chiusura**. **TASK-064 DONE / Chiusura** invariato. **TASK-063** resta planning precedente/base, non riaperto. Prossimo consigliato: **TASK-066** ViewModel/stati non-DEBUG per sync guidata; UI Release finale resta **TASK-067**. **TASK-052 BLOCKED/superseded non DONE**.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -269,8 +271,9 @@ Qualunque altra transizione è invalida.
 
 ## Task attivo
 - **Task attivo corrente:** Nessuno — progetto **IDLE**.
-- **Ultimo completato:** **TASK-064** (`docs/TASKS/TASK-064-supabase-sync-events-outbox-sending-stale-recovery-ios.md`) — **DONE / Chiusura** (review tecnica severa **APPROVED_FIXED_DIRECTLY**; recovery locale bounded/owner-scoped delle entry outbox `sending` stale implementata, corretta e verificata).
-- **TASK-063:** planning precedente usato come base architetturale per le slice successive; non riaperto né eseguito durante la chiusura TASK-064.
+- **Ultimo completato:** **TASK-065** (`docs/TASKS/TASK-065-supabase-manual-sync-coordinator-dryrun-ios.md`) — **DONE / Chiusura** (review tecnica severa **APPROVED_FIXED_DIRECTLY**; coordinator dry-run/mock testabile implementato, test rafforzati e verifiche finali PASS).
+- **TASK-064:** resta **DONE / Chiusura**; recovery locale bounded/owner-scoped delle entry outbox `sending` stale implementata, corretta e verificata.
+- **TASK-063:** planning precedente usato come base architetturale per le slice successive; non riaperto né eseguito durante la chiusura TASK-065.
 - **TASK-061 (precedente DONE / Chiusura):** `docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md` — UI DEBUG drain manuale outbox `sync_events` in `OptionsView`.
 - **TASK-060 (precedente DONE / Chiusura):** `docs/TASKS/TASK-060-supabase-sync-events-outbox-drain-g2-ios.md` — Slice G2 drain manuale controllato via `SyncEventRecording`; **no** UI/timer/BG/Realtime/worker/Supabase diretto/nuovo schema SwiftData.
 - **TASK-059 (precedente DONE / Chiusura):** `docs/TASKS/TASK-059-supabase-sync-events-outbox-drain-ios.md` — solo Slice G1 Payload Fidelity outbox replay.
@@ -301,7 +304,8 @@ Follow-up candidate post TASK-041 (**non attivi**):
 - **TASK-062** (**DONE / Chiusura**) — smoke/validazione runtime controllata UI DEBUG TASK-061 in Modalità A / no-live-drain — `docs/TASKS/TASK-062-supabase-sync-events-manual-drain-operational-validation-ios.md`; review **APPROVED_FIXED_DIRECTLY**.
 - **TASK-063** (planning precedente/base roadmap, non task attivo) — roadmap orchestratore **production-safe** (**solo markdown**): coordinator preferito **`SupabaseManualSyncCoordinator`**, decisioni **D63-01…08**, run modes (**§4.a** boundary **§4.b** UX **§4.c**), backlog ordinato **TASK-064…TASK-070+** in **§5**; non riaperto né eseguito durante TASK-064.
 - **TASK-064** (**DONE / Chiusura**) — outbox `sync_events` `sending` stale / recovery locale iOS; file `docs/TASKS/TASK-064-supabase-sync-events-outbox-sending-stale-recovery-ios.md`.
-- **Prossimo task consigliato (non creato):** **TASK-065** coordinator dry-run state machine / fake (**D63‑06**). Follow-up candidati backlog estratti da TASK-063: **TASK-066** ViewModel non‑DEBUG sync guidata (no UI ricca) — **TASK-067** UI Release SwiftUI — **TASK-068** validazione live piccolo staging — **TASK-069** delete/tombstone outbound planning — **TASK-070+** Realtime/BGTask solo dopo **TASK‑068**, mai assunti obbligatori senza decisione prodotto esplicita. Dataset grande resta follow-up storico **TASK‑062**.
+- **TASK-065** (**DONE / Chiusura**) — coordinator sync manuale **dry-run/mock**: `SupabaseManualSyncCoordinator` + tipi `SupabaseManualSync*` + XCTest `SupabaseManualSyncCoordinatorTests`; file `docs/TASKS/TASK-065-supabase-manual-sync-coordinator-dryrun-ios.md`; review **APPROVED_FIXED_DIRECTLY** e check finali PASS.
+- Follow-up candidati backlog estratti da TASK-063 (**non attivati**; **nessun file TASK-066 creato in questo turno**): **TASK-066** ViewModel/stati non‑DEBUG per sync guidata (no UI Release finale) — **TASK-067** UI Release SwiftUI finale — **TASK-068** validazione live piccolo staging — **TASK-069** delete/tombstone outbound planning — **TASK-070+** Realtime/BGTask solo dopo **TASK‑068**, mai assunti obbligatori senza decisione prodotto esplicita. Dataset grande resta follow-up storico **TASK‑062**.
 - Task futuro: tombstone outbound / delete.
 - Task futuro: realtime/background sync.
 - Task futuro: validazione live su catalogo Supabase grande.
@@ -507,6 +511,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-062 | Supabase sync_events manual drain — operational validation iOS | DONE | HIGH |
 | TASK-063 | Supabase production-safe sync orchestrator planning iOS (planning base precedente, solo markdown) | DONE | HIGH |
 | TASK-064 | Supabase sync_events outbox sending stale recovery iOS | DONE | HIGH |
+| TASK-065 | Supabase manual sync coordinator dry-run/mock iOS | DONE | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
@@ -553,6 +558,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-062 | Supabase sync_events manual drain — operational validation iOS | 2026-05-07 |
 | TASK-063 | Supabase production-safe sync orchestrator planning iOS — planning base precedente | 2026-05-07 |
 | TASK-064 | Supabase sync_events outbox sending stale recovery iOS | 2026-05-07 |
+| TASK-065 | Supabase manual sync coordinator dry-run/mock iOS | 2026-05-07 |
 
 ## Blocchi e dipendenze
 - TASK-032 bloccato / in pausa.
