@@ -26,10 +26,10 @@ struct OptionsView: View {
 #endif
 
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
 #if DEBUG
-    @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @AppStorage("supabaseLastLinkedUserID") private var supabaseLastLinkedUserID: String = ""
     @State private var isRunningSupabaseDiagnostic = false
     @State private var supabaseDiagnosticMessage: String?
@@ -170,6 +170,19 @@ struct OptionsView: View {
                 SectionHeader(title: L("options.language.header"), systemImage: "globe")
             } footer: {
                 Text(L("options.language.footer"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                SupabaseManualSyncReleaseCard(
+                    context: modelContext,
+                    authViewModel: supabaseAuthViewModel
+                )
+            } header: {
+                SectionHeader(title: L("options.supabase.manualSync.header"), systemImage: "icloud")
+            } footer: {
+                Text(L("options.supabase.manualSync.footer"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -2749,6 +2762,236 @@ struct OptionsView: View {
 #endif
 }
 
+// MARK: - Release manual sync surface
+
+private struct SupabaseManualSyncReleaseCard: View {
+    @ObservedObject private var authViewModel: SupabaseAuthViewModel
+    @StateObject private var viewModel: SupabaseManualSyncViewModel
+    @State private var activeRunTask: Task<Void, Never>?
+
+    init(context: ModelContext, authViewModel: SupabaseAuthViewModel) {
+        self.authViewModel = authViewModel
+        _viewModel = StateObject(
+            wrappedValue: SupabaseManualSyncReleaseFactory.makeViewModel(
+                context: context,
+                authViewModel: authViewModel
+            )
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(localizedStatusTitle)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text(localizedStatusSubtitle)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } icon: {
+                Image(systemName: statusSystemImage)
+                    .foregroundStyle(statusColor)
+            }
+            .accessibilityElement(children: .combine)
+
+            if viewModel.isRunning {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text(L("options.supabase.manualSync.state.running.inline"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Button {
+                handlePrimaryAction()
+            } label: {
+                Label(localizedPrimaryActionTitle, systemImage: primaryActionSystemImage)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!canRunPrimaryAction)
+            .accessibilityLabel(localizedPrimaryActionTitle)
+
+            if let disabledReason {
+                Text(disabledReason)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 4)
+        .onChange(of: authViewModel.sessionInfo?.userID) { _, _ in
+            resetAfterAccountChange()
+        }
+        .onChange(of: authViewModel.isSignedIn) { _, _ in
+            resetAfterAccountChange()
+        }
+        .onDisappear {
+            activeRunTask?.cancel()
+            activeRunTask = nil
+        }
+    }
+
+    private var localizedStatusTitle: String {
+        L("options.supabase.manualSync.state.\(stateKey).title")
+    }
+
+    private var localizedStatusSubtitle: String {
+        L("options.supabase.manualSync.state.\(stateKey).subtitle")
+    }
+
+    private var localizedPrimaryActionTitle: String {
+        L("options.supabase.manualSync.action.\(actionKey)")
+    }
+
+    private var disabledReason: String? {
+        if authViewModel.isTransitioning {
+            return L("options.supabase.manualSync.disabled.authChanging")
+        }
+        if displayPresentationKind == .blockedNeedsSignIn, !authViewModel.canSignIn {
+            return L("options.supabase.manualSync.disabled.accessUnavailable")
+        }
+        return nil
+    }
+
+    private var canRunPrimaryAction: Bool {
+        guard !viewModel.isRunning, !authViewModel.isTransitioning else {
+            return false
+        }
+        if displayPresentationKind == .blockedNeedsSignIn {
+            return authViewModel.canSignIn
+        }
+        return viewModel.canStart
+    }
+
+    private var displayPresentationKind: SupabaseManualSyncUserPresentationKind {
+        guard !viewModel.isRunning else {
+            return .running
+        }
+        if !authViewModel.isSignedIn {
+            return .blockedNeedsSignIn
+        }
+        return viewModel.presentationKind
+    }
+
+    private var stateKey: String {
+        switch displayPresentationKind {
+        case .idleReady:
+            return "idle"
+        case .running:
+            return "running"
+        case .successFullyUpToDate:
+            return "success"
+        case .partialSync:
+            return "partial"
+        case .blockedNeedsSignIn:
+            return "auth"
+        case .blockedNeedsCloudRealignment:
+            return "realign"
+        case .connectivityIssue:
+            return "connectivity"
+        case .cancelledRun:
+            return "cancelled"
+        case .technicalFollowUpNeeded:
+            return "technical"
+        case .auxiliaryBusyConcurrent:
+            return "busy"
+        case .auxiliaryModeUnavailable:
+            return "unavailable"
+        }
+    }
+
+    private var actionKey: String {
+        switch displayPresentationKind {
+        case .running:
+            return "running"
+        case .blockedNeedsSignIn:
+            return "signIn"
+        case .blockedNeedsCloudRealignment, .cancelledRun:
+            return "checkAgain"
+        case .partialSync, .connectivityIssue, .technicalFollowUpNeeded, .auxiliaryBusyConcurrent:
+            return "tryAgain"
+        case .idleReady, .successFullyUpToDate, .auxiliaryModeUnavailable:
+            return "check"
+        }
+    }
+
+    private var primaryActionSystemImage: String {
+        displayPresentationKind == .blockedNeedsSignIn
+            ? "person.crop.circle.badge.plus"
+            : "arrow.clockwise.circle.fill"
+    }
+
+    private var statusSystemImage: String {
+        switch displayPresentationKind {
+        case .idleReady:
+            return "icloud"
+        case .running:
+            return "arrow.triangle.2.circlepath"
+        case .successFullyUpToDate:
+            return "checkmark.circle.fill"
+        case .partialSync:
+            return "exclamationmark.circle.fill"
+        case .blockedNeedsSignIn:
+            return "lock.fill"
+        case .blockedNeedsCloudRealignment:
+            return "arrow.down.circle.fill"
+        case .connectivityIssue:
+            return "wifi.exclamationmark"
+        case .cancelledRun:
+            return "xmark.circle.fill"
+        case .technicalFollowUpNeeded, .auxiliaryBusyConcurrent, .auxiliaryModeUnavailable:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var statusColor: Color {
+        switch displayPresentationKind {
+        case .successFullyUpToDate:
+            return .green
+        case .partialSync,
+             .blockedNeedsSignIn,
+             .blockedNeedsCloudRealignment,
+             .cancelledRun,
+             .auxiliaryBusyConcurrent,
+             .auxiliaryModeUnavailable:
+            return .orange
+        case .connectivityIssue, .technicalFollowUpNeeded:
+            return .red
+        case .idleReady, .running:
+            return .accentColor
+        }
+    }
+
+    private func handlePrimaryAction() {
+        if displayPresentationKind == .blockedNeedsSignIn {
+            authViewModel.signInWithGoogle()
+            return
+        }
+        startManualCheck()
+    }
+
+    private func startManualCheck() {
+        guard viewModel.canStart else { return }
+
+        activeRunTask?.cancel()
+        activeRunTask = Task { @MainActor in
+            await viewModel.startDryRunVerification()
+            activeRunTask = nil
+        }
+    }
+
+    private func resetAfterAccountChange() {
+        activeRunTask?.cancel()
+        activeRunTask = nil
+        viewModel.resetPresentationToIdleReady()
+    }
+}
+
 // MARK: - Header di sezione con icona rotonda
 
 struct SectionHeader: View {
@@ -3720,4 +3963,18 @@ private enum ProductPriceApplyViewState {
     NavigationStack {
         OptionsView()
     }
+    .environmentObject(SupabaseAuthViewModel(authService: nil))
+    .modelContainer(
+        for: [
+            Product.self,
+            Supplier.self,
+            ProductCategory.self,
+            HistoryEntry.self,
+            ProductPrice.self,
+            SupabaseCatalogBaselineRun.self,
+            SupabaseCatalogBaselineRecord.self,
+            SyncEventOutboxEntry.self
+        ],
+        inMemory: true
+    )
 }
