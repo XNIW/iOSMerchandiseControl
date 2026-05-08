@@ -6,12 +6,19 @@ enum SupabaseManualSyncReleaseFactory {
     static func makeViewModel(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
-        pullPreviewService: SupabasePullPreviewService? = nil
+        pullPreviewService: SupabasePullPreviewService? = nil,
+        manualPushService: SupabaseManualPushService? = nil
     ) -> SupabaseManualSyncViewModel {
         let remotePreviewAdapter = pullPreviewService.map {
             SupabaseManualSyncPullPreviewAdapter(service: $0, context: context)
         }
         let remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)? = remotePreviewAdapter.map { $0 }
+        let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = manualPushService.map {
+            SupabaseManualSyncReleasePushAdapter(
+                context: context,
+                manualPushService: $0
+            )
+        }
 
         let dependencies = SupabaseManualSyncCoordinator.Dependencies(
             authGate: SupabaseManualSyncReleaseAuthGate(authViewModel: authViewModel),
@@ -27,7 +34,10 @@ enum SupabaseManualSyncReleaseFactory {
 
         return SupabaseManualSyncViewModel(
             coordinator: SupabaseManualSyncCoordinator(dependencies: dependencies),
-            capabilities: .releaseCurrent(remotePreviewProvider: remotePreviewProvider),
+            capabilities: .releaseCurrent(
+                remotePreviewProvider: remotePreviewProvider,
+                catalogPushProvider: catalogPushProvider
+            ),
             initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext(
                 isSignedIn: authViewModel.isSignedIn,
                 canSignIn: authViewModel.canSignIn,
@@ -36,8 +46,105 @@ enum SupabaseManualSyncReleaseFactory {
             remotePreviewStaging: remotePreviewAdapter,
             localApplyService: SupabasePullApplyService(),
             localApplyContext: context,
-            isLocalApplyAuthenticated: { authViewModel.isSignedIn }
+            isLocalApplyAuthenticated: { authViewModel.isSignedIn },
+            catalogPushProvider: catalogPushProvider,
+            currentCatalogPushOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil }
         )
+    }
+}
+
+@MainActor
+private final class SupabaseManualSyncReleasePushAdapter: SupabaseManualSyncCatalogPushProviding {
+    private let context: ModelContext
+    private let manualPushService: SupabaseManualPushService
+    private let preflightService: SupabaseManualPushPreflightService
+    private let baselineReader: SupabaseCatalogBaselineReader
+
+    init(
+        context: ModelContext,
+        manualPushService: SupabaseManualPushService,
+        preflightService: SupabaseManualPushPreflightService = SupabaseManualPushPreflightService(),
+        baselineReader: SupabaseCatalogBaselineReader = SupabaseCatalogBaselineReader()
+    ) {
+        self.context = context
+        self.manualPushService = manualPushService
+        self.preflightService = preflightService
+        self.baselineReader = baselineReader
+    }
+
+    func makePushPlan(ownerUserID: UUID) async throws -> ManualPushPlan {
+        try Task.checkCancellation()
+        let snapshotService = SwiftDataInventorySnapshotService(context: context)
+        let baselineResult = try baselineReader.readManualPushBaseline(
+            context: context,
+            ownerUserUUID: ownerUserID
+        )
+        let mappedBaseline = mapBaselineResult(baselineResult, ownerUserID: ownerUserID)
+        try Task.checkCancellation()
+        return preflightService.makePlan(input: ManualPushPreflightInput(
+            baselineRunID: mappedBaseline.runID,
+            pullState: ManualPushPullState(isComplete: true, hasSourceErrors: false),
+            accountState: mappedBaseline.accountState,
+            baseline: mappedBaseline.baseline,
+            suppliers: try snapshotService.makeManualPushPreflightSupplierStates(),
+            categories: try snapshotService.makeManualPushPreflightCategoryStates(),
+            products: try snapshotService.makeManualPushPreflightProductStates()
+        ))
+    }
+
+    func execute(plan: ManualPushPlan, ownerUserID: UUID) async -> SupabaseManualPushResult {
+        await manualPushService.execute(
+            plan: plan,
+            context: context,
+            ownerUserID: ownerUserID
+        )
+    }
+
+    private func mapBaselineResult(
+        _ result: SupabaseCatalogBaselineReadResult,
+        ownerUserID: UUID
+    ) -> (runID: UUID?, baseline: ManualPushBaseline?, accountState: ManualPushAccountState) {
+        switch result {
+        case .available(let snapshot):
+            return (
+                snapshot.runID,
+                snapshot.baseline,
+                ManualPushAccountState(
+                    currentUserID: ownerUserID,
+                    lastLinkedUserID: snapshot.ownerUserUUID
+                )
+            )
+        case .missing:
+            return (
+                nil,
+                nil,
+                ManualPushAccountState(currentUserID: ownerUserID, lastLinkedUserID: ownerUserID)
+            )
+        case .accountMismatch:
+            return (
+                nil,
+                nil,
+                ManualPushAccountState(currentUserID: ownerUserID, lastLinkedUserID: UUID())
+            )
+        case .staleSchema:
+            return (
+                nil,
+                ManualPushBaseline(
+                    productFingerprintsByRemoteID: [:],
+                    invalidationReasons: [.fingerprintVersionChanged]
+                ),
+                ManualPushAccountState(currentUserID: ownerUserID, lastLinkedUserID: ownerUserID)
+            )
+        case .incomplete:
+            return (
+                nil,
+                ManualPushBaseline(
+                    productFingerprintsByRemoteID: [:],
+                    invalidationReasons: [.partialPull]
+                ),
+                ManualPushAccountState(currentUserID: ownerUserID, lastLinkedUserID: ownerUserID)
+            )
+        }
     }
 }
 

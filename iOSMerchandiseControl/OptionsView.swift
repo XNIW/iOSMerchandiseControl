@@ -21,6 +21,7 @@ struct OptionsView: View {
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
+    private let supabaseManualPushService: SupabaseManualPushService?
 #if DEBUG
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
 #endif
@@ -68,6 +69,7 @@ struct OptionsView: View {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
         self.supabaseSyncEventPreviewService = supabaseSyncEventPreviewService
+        self.supabaseManualPushService = supabaseManualPushService
 #if DEBUG
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         _productPriceManualPushViewModel = StateObject(
@@ -178,7 +180,8 @@ struct OptionsView: View {
                 SupabaseManualSyncReleaseCard(
                     context: modelContext,
                     authViewModel: supabaseAuthViewModel,
-                    pullPreviewService: supabasePullPreviewService
+                    pullPreviewService: supabasePullPreviewService,
+                    manualPushService: supabaseManualPushService
                 )
             } header: {
                 SectionHeader(title: L("options.supabase.manualSync.header"), systemImage: "icloud")
@@ -2771,19 +2774,23 @@ private struct SupabaseManualSyncReleaseCard: View {
     @State private var activeRunTask: Task<Void, Never>?
     @State private var isReviewSheetPresented = false
     @State private var isApplyConfirmationPresented = false
+    @State private var isSendConfirmationPresented = false
     @State private var activeApplyTask: Task<Void, Never>?
+    @State private var activeSendTask: Task<Void, Never>?
 
     init(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
-        pullPreviewService: SupabasePullPreviewService?
+        pullPreviewService: SupabasePullPreviewService?,
+        manualPushService: SupabaseManualPushService?
     ) {
         self.authViewModel = authViewModel
         _viewModel = StateObject(
             wrappedValue: SupabaseManualSyncReleaseFactory.makeViewModel(
                 context: context,
                 authViewModel: authViewModel,
-                pullPreviewService: pullPreviewService
+                pullPreviewService: pullPreviewService,
+                manualPushService: manualPushService
             )
         )
     }
@@ -2880,23 +2887,27 @@ private struct SupabaseManualSyncReleaseCard: View {
             activeRunTask = nil
             activeApplyTask?.cancel()
             activeApplyTask = nil
+            activeSendTask?.cancel()
+            activeSendTask = nil
             isApplyConfirmationPresented = false
+            isSendConfirmationPresented = false
         }
         .sheet(
             isPresented: $isReviewSheetPresented,
-            onDismiss: { viewModel.cancelLocalApplyReview() }
+            onDismiss: { viewModel.cancelReviewFlow() }
         ) {
             if let review = viewModel.presentationState.reviewSheet {
                 SupabaseManualSyncReviewSheet(
                     review: review,
                     primaryAction: {
-                        isApplyConfirmationPresented = true
+                        handle(reviewPrimaryAction: review.primaryActionID)
                     },
                     dismiss: {
-                        viewModel.cancelLocalApplyReview()
+                        viewModel.cancelReviewFlow()
                         isReviewSheetPresented = false
                     }
                 )
+                .interactiveDismissDisabled(viewModel.isApplyingLocalChanges || viewModel.isSendingCatalogChanges)
             }
         }
         .alert(
@@ -2910,6 +2921,28 @@ private struct SupabaseManualSyncReleaseCard: View {
         } message: {
             Text(L("options.supabase.manualSync.confirm.updateDevice.message"))
         }
+        .alert(
+            L("options.supabase.manualSync.confirm.send.title"),
+            isPresented: $isSendConfirmationPresented
+        ) {
+            Button(L("options.supabase.manualSync.confirm.send.cancel"), role: .cancel) {}
+            Button(L("options.supabase.manualSync.confirm.send.send")) {
+                startCatalogSend()
+            }
+        } message: {
+            Text(L("options.supabase.manualSync.confirm.send.message"))
+        }
+    }
+
+    private func handle(reviewPrimaryAction actionID: SupabaseManualSyncReviewPrimaryActionID) {
+        switch actionID {
+        case .updateDevice:
+            isApplyConfirmationPresented = true
+        case .sendCloudChanges:
+            isSendConfirmationPresented = true
+        case .none:
+            break
+        }
     }
 
     private func startLocalApply() {
@@ -2921,6 +2954,15 @@ private struct SupabaseManualSyncReleaseCard: View {
             if !viewModel.isApplyingLocalChanges {
                 isReviewSheetPresented = false
             }
+        }
+    }
+
+    private func startCatalogSend() {
+        guard activeSendTask == nil else { return }
+
+        activeSendTask = Task { @MainActor in
+            await viewModel.sendConfirmedCatalogChanges()
+            activeSendTask = nil
         }
     }
 
@@ -2997,7 +3039,10 @@ private struct SupabaseManualSyncReleaseCard: View {
         activeRunTask = nil
         activeApplyTask?.cancel()
         activeApplyTask = nil
+        activeSendTask?.cancel()
+        activeSendTask = nil
         isApplyConfirmationPresented = false
+        isSendConfirmationPresented = false
         isReviewSheetPresented = false
         viewModel.resetPresentationToIdleReady()
         syncAuthPresentationContext()
@@ -3052,22 +3097,24 @@ private struct SupabaseManualSyncReviewSheet: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Button {
-                    primaryAction()
-                } label: {
-                    HStack(spacing: 8) {
-                        if review.primaryActionIsLoading {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: review.primaryActionSystemImage)
+                if review.primaryActionID != .none {
+                    Button {
+                        primaryAction()
+                    } label: {
+                        HStack(spacing: 8) {
+                            if review.primaryActionIsLoading {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Image(systemName: review.primaryActionSystemImage)
+                            }
+                            Text(review.primaryActionTitle)
                         }
-                        Text(review.primaryActionTitle)
+                            .frame(maxWidth: .infinity)
                     }
-                        .frame(maxWidth: .infinity)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!review.primaryActionIsEnabled)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!review.primaryActionIsEnabled)
 
                 Button(review.secondaryActionTitle) {
                     dismiss()
@@ -3109,8 +3156,12 @@ private struct SupabaseManualSyncReviewSheet: View {
         switch tone {
         case .neutral:
             return .accentColor
+        case .success:
+            return .green
         case .attention:
             return .orange
+        case .blocked:
+            return .red
         }
     }
 }

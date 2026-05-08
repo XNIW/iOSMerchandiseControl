@@ -55,6 +55,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.action.syncNow",
             "options.supabase.manualSync.action.signIn",
             "options.supabase.manualSync.action.realign",
+            "options.supabase.manualSync.action.sendToCloud",
             "options.supabase.manualSync.action.retry",
             "options.supabase.manualSync.action.cancel",
             "options.supabase.manualSync.review.title",
@@ -97,6 +98,59 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.badge.cancelled",
             "options.supabase.manualSync.badge.unavailable",
             "options.supabase.manualSync.badge.localUpdated",
+            "options.supabase.manualSync.badge.readyToSend",
+            "options.supabase.manualSync.badge.sent",
+            "options.supabase.manualSync.badge.needsFix",
+            "options.supabase.manualSync.push.state.checking.title",
+            "options.supabase.manualSync.push.state.checking.subtitle",
+            "options.supabase.manualSync.push.state.ready.title",
+            "options.supabase.manualSync.push.state.ready.subtitle",
+            "options.supabase.manualSync.push.state.noChanges.title",
+            "options.supabase.manualSync.push.state.noChanges.subtitle",
+            "options.supabase.manualSync.push.state.blocked.title",
+            "options.supabase.manualSync.push.state.blocked.subtitle",
+            "options.supabase.manualSync.push.state.failed.title",
+            "options.supabase.manualSync.push.state.failed.subtitle",
+            "options.supabase.manualSync.push.state.stale.title",
+            "options.supabase.manualSync.push.state.stale.subtitle",
+            "options.supabase.manualSync.push.state.sending.title",
+            "options.supabase.manualSync.push.state.sending.subtitle",
+            "options.supabase.manualSync.push.state.succeeded.title",
+            "options.supabase.manualSync.push.state.succeeded.subtitle",
+            "options.supabase.manualSync.push.state.partial.title",
+            "options.supabase.manualSync.push.state.partial.subtitle",
+            "options.supabase.manualSync.push.summary.noChanges",
+            "options.supabase.manualSync.push.summary.succeeded",
+            "options.supabase.manualSync.push.summary.succeededNeedsCheck",
+            "options.supabase.manualSync.push.summary.partial",
+            "options.supabase.manualSync.push.summary.blocked",
+            "options.supabase.manualSync.push.summary.failedBeforeWrite",
+            "options.supabase.manualSync.push.summary.interrupted",
+            "options.supabase.manualSync.push.summary.stale",
+            "options.supabase.manualSync.push.blocked.session",
+            "options.supabase.manualSync.push.review.title",
+            "options.supabase.manualSync.push.review.subtitle",
+            "options.supabase.manualSync.push.review.subtitle.final",
+            "options.supabase.manualSync.push.review.subtitle.sending",
+            "options.supabase.manualSync.push.review.subtitle.blocked",
+            "options.supabase.manualSync.push.review.ready.title",
+            "options.supabase.manualSync.push.review.ready.message",
+            "options.supabase.manualSync.push.review.attention.title",
+            "options.supabase.manualSync.push.review.attention.message",
+            "options.supabase.manualSync.push.review.blocked.title",
+            "options.supabase.manualSync.push.review.blocked.message",
+            "options.supabase.manualSync.push.review.final.title",
+            "options.supabase.manualSync.push.review.footer.ready",
+            "options.supabase.manualSync.push.review.footer.updateFirst",
+            "options.supabase.manualSync.push.review.footer.blocked",
+            "options.supabase.manualSync.push.review.footer.sending",
+            "options.supabase.manualSync.push.review.footer.final",
+            "options.supabase.manualSync.push.review.action.send",
+            "options.supabase.manualSync.push.review.action.sending",
+            "options.supabase.manualSync.confirm.send.title",
+            "options.supabase.manualSync.confirm.send.message",
+            "options.supabase.manualSync.confirm.send.cancel",
+            "options.supabase.manualSync.confirm.send.send",
             "options.supabase.manualSync.disabled.authChanging",
             "options.supabase.manualSync.disabled.accessUnavailable"
         ]
@@ -118,7 +172,12 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "dto",
             "syncpreview",
             "rpc",
+            "baseline",
             "payload",
+            "owneruserid",
+            "owner_user_id",
+            "jwt",
+            "rls",
             "retryable",
             "uuid",
             "barcode",
@@ -278,16 +337,17 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         let factorySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift")
 
         XCTAssertTrue(factorySource.contains("pullPreviewService: SupabasePullPreviewService? = nil"))
+        XCTAssertTrue(factorySource.contains("manualPushService: SupabaseManualPushService? = nil"))
         XCTAssertTrue(factorySource.contains("remotePreviewAdapter = pullPreviewService.map"))
         XCTAssertTrue(factorySource.contains("SupabaseManualSyncPullPreviewAdapter(service: $0, context: context)"))
+        XCTAssertTrue(factorySource.contains("SupabaseManualSyncReleasePushAdapter"))
         XCTAssertTrue(factorySource.contains("remotePreviewProvider: remotePreviewProvider"))
-        XCTAssertTrue(factorySource.contains("capabilities: .releaseCurrent(remotePreviewProvider: remotePreviewProvider)"))
+        XCTAssertTrue(factorySource.contains("catalogPushProvider: catalogPushProvider"))
         XCTAssertTrue(factorySource.contains("remotePreviewStaging: remotePreviewAdapter"))
         XCTAssertTrue(factorySource.contains("localApplyService: SupabasePullApplyService()"))
         XCTAssertTrue(factorySource.contains("localApplyContext: context"))
         XCTAssertFalse(factorySource.contains("supportsGuidedManualSync: true"))
         XCTAssertFalse(factorySource.contains("SyncEventOutboxDrainService"))
-        XCTAssertFalse(factorySource.contains("SupabaseManualPushService"))
     }
 
     func testTask069ReleaseFactoryUsesLocalPendingSnapshotProvider() throws {
@@ -320,9 +380,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "drainOnce",
             "SyncEventOutboxDrainService",
             "SyncEventOutboxEnqueueService",
-            "SupabaseManualPushService",
             "SupabaseProductPriceManualPushService",
-            "SupabaseCatalogBaselineWriter",
             "confirmationDialog",
             "BGTask",
             "Timer",

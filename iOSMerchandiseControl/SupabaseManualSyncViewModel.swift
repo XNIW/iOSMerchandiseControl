@@ -18,23 +18,45 @@ nonisolated enum SupabaseManualSyncUserPresentationKind: Equatable, Sendable {
     case auxiliaryModeUnavailable
     case localApplyCompleted
     case localApplyFailed
+    case catalogPushReady
+    case catalogPushNoChanges
+    case catalogPushBlocked
+    case catalogPushFailed
+    case catalogPushStale
+    case catalogPushSending
+    case catalogPushSucceeded
+    case catalogPushPartiallySucceeded
 }
 
 nonisolated struct SupabaseManualSyncCapabilitySet: Equatable, Sendable {
     var supportsRemoteCloudCheck: Bool
     var supportsGuidedManualSync: Bool
+    var supportsCatalogPush: Bool
+
+    init(
+        supportsRemoteCloudCheck: Bool,
+        supportsGuidedManualSync: Bool,
+        supportsCatalogPush: Bool = false
+    ) {
+        self.supportsRemoteCloudCheck = supportsRemoteCloudCheck
+        self.supportsGuidedManualSync = supportsGuidedManualSync
+        self.supportsCatalogPush = supportsCatalogPush
+    }
 
     static let releaseCurrent = SupabaseManualSyncCapabilitySet(
         supportsRemoteCloudCheck: false,
-        supportsGuidedManualSync: false
+        supportsGuidedManualSync: false,
+        supportsCatalogPush: false
     )
 
     static func releaseCurrent(
-        remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)?
+        remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)?,
+        catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = nil
     ) -> SupabaseManualSyncCapabilitySet {
         SupabaseManualSyncCapabilitySet(
             supportsRemoteCloudCheck: remotePreviewProvider != nil,
-            supportsGuidedManualSync: false
+            supportsGuidedManualSync: false,
+            supportsCatalogPush: catalogPushProvider != nil
         )
     }
 }
@@ -57,6 +79,7 @@ nonisolated enum SupabaseManualSyncPresentationActionID: Equatable, Sendable {
     case checkCloud
     case reviewChanges
     case syncNow
+    case sendCloudChanges
     case retry
     case cancel
 }
@@ -82,6 +105,14 @@ nonisolated enum SupabaseManualSyncUserFacingSummaryKind: Equatable, Sendable {
     case cancelled
     case localApplyCompleted
     case localApplyFailed
+    case catalogPushNoChanges
+    case catalogPushSucceeded
+    case catalogPushSucceededNeedsCheck
+    case catalogPushPartial
+    case catalogPushBlocked
+    case catalogPushFailedBeforeWrite
+    case catalogPushInterrupted
+    case catalogPushStale
 }
 
 nonisolated struct SupabaseManualSyncUserFacingSummary: Equatable, Sendable {
@@ -98,7 +129,9 @@ nonisolated struct SupabaseManualSyncLocalApplySummary: Equatable, Sendable {
 
 nonisolated enum SupabaseManualSyncReviewSectionTone: Equatable, Sendable {
     case neutral
+    case success
     case attention
+    case blocked
 }
 
 nonisolated enum SupabaseManualSyncReviewSectionID: String, Equatable, Sendable {
@@ -106,6 +139,10 @@ nonisolated enum SupabaseManualSyncReviewSectionID: String, Equatable, Sendable 
     case deviceToCloud
     case prices
     case attention
+    case readyToSend
+    case sendAttention
+    case sendBlocked
+    case finalSummary
 }
 
 nonisolated struct SupabaseManualSyncReviewSectionState: Equatable, Identifiable, Sendable {
@@ -116,11 +153,18 @@ nonisolated struct SupabaseManualSyncReviewSectionState: Equatable, Identifiable
     var tone: SupabaseManualSyncReviewSectionTone
 }
 
+nonisolated enum SupabaseManualSyncReviewPrimaryActionID: Equatable, Sendable {
+    case none
+    case updateDevice
+    case sendCloudChanges
+}
+
 nonisolated struct SupabaseManualSyncReviewSheetState: Equatable, Sendable {
     var title: String
     var subtitle: String
     var sections: [SupabaseManualSyncReviewSectionState]
     var footerMessage: String
+    var primaryActionID: SupabaseManualSyncReviewPrimaryActionID
     var primaryActionTitle: String
     var primaryActionSystemImage: String
     var primaryActionIsEnabled: Bool
@@ -142,6 +186,45 @@ nonisolated struct SupabaseManualSyncPresentationState: Equatable, Sendable {
     var isLoading: Bool
     var accessibilityLabel: String
     var accessibilityHint: String?
+}
+
+nonisolated struct SupabaseManualSyncCatalogPushSummary: Equatable, Sendable {
+    var readyCount: Int
+    var createCount: Int
+    var updateCount: Int
+    var linkCount: Int
+    var blockerCount: Int
+    var warningCount: Int
+    var futureOnlyCount: Int
+    var planFingerprint: String?
+    var resultStatus: SupabaseManualPushTerminalStatus?
+    var resultMessage: String?
+
+    var hasReadyChanges: Bool { readyCount > 0 }
+    var hasBlockers: Bool { blockerCount > 0 }
+    var hasWarnings: Bool { warningCount > 0 || futureOnlyCount > 0 }
+}
+
+nonisolated enum SupabaseManualSyncCatalogPushPhase: Equatable, Sendable {
+    case idle
+    case checking
+    case ready(SupabaseManualSyncCatalogPushSummary)
+    case noChanges(SupabaseManualSyncCatalogPushSummary)
+    case blocked(SupabaseManualSyncCatalogPushSummary)
+    case failed(String?)
+    case stale
+    case sending(SupabaseManualSyncCatalogPushSummary)
+    case succeeded(SupabaseManualSyncCatalogPushSummary)
+    case succeededNeedsCheck(SupabaseManualSyncCatalogPushSummary)
+    case partial(SupabaseManualSyncCatalogPushSummary)
+    case sendBlocked(SupabaseManualSyncCatalogPushSummary)
+    case sendFailed(SupabaseManualSyncCatalogPushSummary)
+}
+
+@MainActor
+protocol SupabaseManualSyncCatalogPushProviding: AnyObject {
+    func makePushPlan(ownerUserID: UUID) async throws -> ManualPushPlan
+    func execute(plan: ManualPushPlan, ownerUserID: UUID) async -> SupabaseManualPushResult
 }
 
 @MainActor
@@ -167,7 +250,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private let localApplyService: SupabasePullApplyService?
     private let localApplyContext: ModelContext?
     private let isLocalApplyAuthenticated: (@MainActor () -> Bool)?
+    private let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)?
+    private let currentCatalogPushOwnerID: (@MainActor () -> UUID?)?
     private var lastStartedMode: SupabaseManualSyncRunMode?
+    private var stagedCatalogPushPlan: ManualPushPlan?
 
     @Published private(set) var presentationKind: SupabaseManualSyncUserPresentationKind = .idleReady
     @Published private(set) var title: String = Copy.idleTitle
@@ -181,6 +267,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     @Published private(set) var applyBlockedReason: String?
     @Published private(set) var isApplyingLocalChanges = false
     @Published private(set) var lastLocalApplySummary: SupabaseManualSyncLocalApplySummary?
+    @Published private(set) var catalogPushPhase: SupabaseManualSyncCatalogPushPhase = .idle
 
     init(
         coordinator: any SupabaseManualSyncCoordinating,
@@ -189,7 +276,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         remotePreviewStaging: (any SupabaseManualSyncRemotePreviewStaging)? = nil,
         localApplyService: SupabasePullApplyService? = nil,
         localApplyContext: ModelContext? = nil,
-        isLocalApplyAuthenticated: (@MainActor () -> Bool)? = nil
+        isLocalApplyAuthenticated: (@MainActor () -> Bool)? = nil,
+        catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = nil,
+        currentCatalogPushOwnerID: (@MainActor () -> UUID?)? = nil
     ) {
         self.coordinator = coordinator
         self.capabilities = capabilities
@@ -198,6 +287,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         self.localApplyService = localApplyService
         self.localApplyContext = localApplyContext
         self.isLocalApplyAuthenticated = isLocalApplyAuthenticated
+        self.catalogPushProvider = catalogPushProvider
+        self.currentCatalogPushOwnerID = currentCatalogPushOwnerID
     }
 
     var presentationState: SupabaseManualSyncPresentationState {
@@ -205,13 +296,29 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     var canStart: Bool {
-        !isRunning
+        !isRunning && !isApplyingLocalChanges && !isSendingCatalogChanges
     }
 
     /// Future guided flow gate (confirmation before mutations). Stubbed false until guided UX exists.
     var pendingConfirmation: Bool { false }
 
     var shouldShowConfirmation: Bool { false }
+
+    var isSendingCatalogChanges: Bool {
+        if case .sending = catalogPushPhase {
+            return true
+        }
+        return false
+    }
+
+    var hasTerminalCatalogPushSummary: Bool {
+        switch catalogPushPhase {
+        case .succeeded, .succeededNeedsCheck, .partial, .sendBlocked, .sendFailed, .stale, .failed, .noChanges:
+            return true
+        case .idle, .checking, .ready, .blocked, .sending:
+            return false
+        }
+    }
 
     var lastUserMessage: String {
         var parts = [title]
@@ -231,6 +338,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     func start(with mode: SupabaseManualSyncRunMode) async {
         guard !isRunning else { return }
         invalidateLocalApplyStaging(clearSummary: true)
+        invalidateCatalogPushPlan(clearSummary: true)
         lastStartedMode = mode
         isRunning = true
         defer { isRunning = false }
@@ -250,6 +358,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         }
 
         apply(summary: summary)
+        await prepareCatalogPushPlanIfNeeded(after: summary)
     }
 
     private func cancelledFallbackSummary(previous: SupabaseManualSyncRunSummary) -> SupabaseManualSyncRunSummary {
@@ -357,6 +466,17 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         invalidateLocalApplyStaging(reason: L("options.supabase.manualSync.apply.blocked.refreshRequired"))
     }
 
+    func cancelReviewFlow() {
+        guard !isApplyingLocalChanges && !isSendingCatalogChanges else { return }
+        cancelLocalApplyReview()
+        switch catalogPushPhase {
+        case .ready, .blocked, .checking:
+            invalidateCatalogPushPlan()
+        case .idle, .noChanges, .failed, .stale, .sending, .succeeded, .succeededNeedsCheck, .partial, .sendBlocked, .sendFailed:
+            break
+        }
+    }
+
     func applyStagedLocalChanges() async {
         guard !isApplyingLocalChanges else { return }
 
@@ -391,6 +511,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             )
 
             invalidateLocalApplyStaging(clearSummary: false)
+            invalidateCatalogPushPlan(clearSummary: true)
             isApplyingLocalChanges = false
             lastSummary = nil
             lastLocalApplySummary = summary
@@ -473,6 +594,243 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         if clearSummary {
             lastLocalApplySummary = nil
         }
+    }
+
+    func prepareCatalogPushPlanForReview() async {
+        guard let lastSummary else { return }
+        await prepareCatalogPushPlanIfNeeded(after: lastSummary, force: true)
+    }
+
+    private func prepareCatalogPushPlanIfNeeded(
+        after summary: SupabaseManualSyncRunSummary,
+        force: Bool = false
+    ) async {
+        guard capabilities.supportsCatalogPush,
+              let catalogPushProvider else {
+            invalidateCatalogPushPlan()
+            return
+        }
+
+        guard force || shouldPrepareCatalogPushPlan(after: summary) else {
+            invalidateCatalogPushPlan()
+            return
+        }
+
+        guard let ownerUserID = currentCatalogPushOwnerID?(),
+              authPresentationContext.isSignedIn else {
+            stagedCatalogPushPlan = nil
+            catalogPushPhase = .failed(L("options.supabase.manualSync.push.blocked.session"))
+            if !canApplyLocalChanges {
+                presentationKind = .catalogPushFailed
+            }
+            return
+        }
+
+        catalogPushPhase = .checking
+        if !canApplyLocalChanges {
+            presentationKind = .catalogPushReady
+        }
+
+        do {
+            let plan = try await catalogPushProvider.makePushPlan(ownerUserID: ownerUserID)
+            guard !Task.isCancelled else { return }
+            applyCatalogPushPlan(plan)
+        } catch {
+            guard !Task.isCancelled else { return }
+            stagedCatalogPushPlan = nil
+            catalogPushPhase = .failed(L("options.supabase.manualSync.push.summary.failedBeforeWrite"))
+            if !canApplyLocalChanges {
+                presentationKind = .catalogPushFailed
+            }
+        }
+    }
+
+    private func shouldPrepareCatalogPushPlan(after summary: SupabaseManualSyncRunSummary) -> Bool {
+        guard let remotePreviewSummary = summary.remotePreviewSummary else {
+            return false
+        }
+        guard remotePreviewSummary.isComplete,
+              !remotePreviewSummary.isPartial,
+              !remotePreviewSummary.wasCancelled,
+              remotePreviewSummary.failureCategory == nil else {
+            return false
+        }
+        return true
+    }
+
+    private func applyCatalogPushPlan(_ plan: ManualPushPlan) {
+        let summary = makeCatalogPushSummary(from: plan)
+        if plan.hasWriteOrLinkCandidates,
+           plan.isSendable,
+           !plan.hasBlockers {
+            stagedCatalogPushPlan = plan
+            catalogPushPhase = .ready(summary)
+            if !canApplyLocalChanges {
+                presentationKind = .catalogPushReady
+            }
+        } else if plan.hasBlockers {
+            stagedCatalogPushPlan = nil
+            catalogPushPhase = .blocked(summary)
+            if !canApplyLocalChanges {
+                presentationKind = .catalogPushBlocked
+            }
+        } else {
+            stagedCatalogPushPlan = nil
+            catalogPushPhase = .noChanges(summary)
+            if !canApplyLocalChanges {
+                presentationKind = .catalogPushNoChanges
+            }
+        }
+    }
+
+    func sendConfirmedCatalogChanges() async {
+        guard !isSendingCatalogChanges else { return }
+        guard capabilities.supportsCatalogPush,
+              let catalogPushProvider else {
+            stagedCatalogPushPlan = nil
+            catalogPushPhase = .sendFailed(makeCatalogPushSummary(
+                from: stagedCatalogPushPlan,
+                result: .blocked(message: L("options.supabase.manualSync.push.summary.failedBeforeWrite"))
+            ))
+            presentationKind = .catalogPushFailed
+            return
+        }
+        guard let stagedPlan = stagedCatalogPushPlan,
+              stagedPlan.isSendable,
+              !stagedPlan.hasBlockers else {
+            stagedCatalogPushPlan = nil
+            catalogPushPhase = .stale
+            presentationKind = .catalogPushStale
+            return
+        }
+        guard let ownerUserID = currentCatalogPushOwnerID?(),
+              authPresentationContext.isSignedIn,
+              stagedPlan.ownerUserID == ownerUserID else {
+            let result = SupabaseManualPushResult.blocked(
+                message: L("options.supabase.manualSync.push.blocked.session")
+            )
+            stagedCatalogPushPlan = nil
+            catalogPushPhase = .sendFailed(makeCatalogPushSummary(from: stagedPlan, result: result))
+            presentationKind = .catalogPushFailed
+            return
+        }
+
+        let sendingSummary = makeCatalogPushSummary(from: stagedPlan)
+        catalogPushPhase = .sending(sendingSummary)
+        presentationKind = .catalogPushSending
+        await Task.yield()
+
+        do {
+            let currentPlan = try await catalogPushProvider.makePushPlan(ownerUserID: ownerUserID)
+            guard !Task.isCancelled else { return }
+            guard currentPlan.planFingerprint == stagedPlan.planFingerprint,
+                  currentPlan.isSendable,
+                  !currentPlan.hasBlockers else {
+                stagedCatalogPushPlan = nil
+                catalogPushPhase = .stale
+                presentationKind = .catalogPushStale
+                return
+            }
+            guard let latestOwnerUserID = currentCatalogPushOwnerID?(),
+                  authPresentationContext.isSignedIn,
+                  latestOwnerUserID == ownerUserID,
+                  currentPlan.ownerUserID == ownerUserID else {
+                let result = SupabaseManualPushResult.blocked(
+                    message: L("options.supabase.manualSync.push.blocked.session")
+                )
+                stagedCatalogPushPlan = nil
+                catalogPushPhase = .sendFailed(makeCatalogPushSummary(from: currentPlan, result: result))
+                presentationKind = .catalogPushFailed
+                return
+            }
+
+            let result = await catalogPushProvider.execute(plan: currentPlan, ownerUserID: ownerUserID)
+            guard !Task.isCancelled else { return }
+            stagedCatalogPushPlan = nil
+            applyCatalogPushResult(result, plan: currentPlan)
+        } catch {
+            guard !Task.isCancelled else { return }
+            let result = SupabaseManualPushResult.blocked(
+                message: L("options.supabase.manualSync.push.summary.failedBeforeWrite")
+            )
+            stagedCatalogPushPlan = nil
+            catalogPushPhase = .sendFailed(makeCatalogPushSummary(from: stagedPlan, result: result))
+            presentationKind = .catalogPushFailed
+        }
+    }
+
+    private func applyCatalogPushResult(
+        _ result: SupabaseManualPushResult,
+        plan: ManualPushPlan
+    ) {
+        let summary = makeCatalogPushSummary(from: plan, result: result)
+        switch result.status {
+        case .completed:
+            catalogPushPhase = .succeeded(summary)
+            presentationKind = .catalogPushSucceeded
+        case .completedBaselineRefreshFailed:
+            catalogPushPhase = .succeededNeedsCheck(summary)
+            presentationKind = .catalogPushSucceeded
+        case .partial:
+            catalogPushPhase = .partial(summary)
+            presentationKind = .catalogPushPartiallySucceeded
+        case .blockedBeforeWrite:
+            catalogPushPhase = .sendBlocked(summary)
+            presentationKind = .catalogPushBlocked
+        case .failedBeforeWrite:
+            catalogPushPhase = .sendFailed(summary)
+            presentationKind = .catalogPushFailed
+        }
+    }
+
+    private func invalidateCatalogPushPlan(clearSummary: Bool = false) {
+        stagedCatalogPushPlan = nil
+        if clearSummary || !hasTerminalCatalogPushSummary {
+            catalogPushPhase = .idle
+        }
+    }
+
+    private func makeCatalogPushSummary(
+        from plan: ManualPushPlan?,
+        result: SupabaseManualPushResult? = nil
+    ) -> SupabaseManualSyncCatalogPushSummary {
+        guard let plan else {
+            return SupabaseManualSyncCatalogPushSummary(
+                readyCount: 0,
+                createCount: 0,
+                updateCount: 0,
+                linkCount: 0,
+                blockerCount: 0,
+                warningCount: 0,
+                futureOnlyCount: 0,
+                planFingerprint: nil,
+                resultStatus: result?.status,
+                resultMessage: result?.message
+            )
+        }
+        return makeCatalogPushSummary(from: plan, result: result)
+    }
+
+    private func makeCatalogPushSummary(
+        from plan: ManualPushPlan,
+        result: SupabaseManualPushResult? = nil
+    ) -> SupabaseManualSyncCatalogPushSummary {
+        let createCount = plan.writeCandidates.filter { $0.action == .dryRunCreateCandidate }.count
+        let updateCount = plan.writeCandidates.filter { $0.action == .dryRunUpdateCandidate }.count
+        let linkCount = plan.writeCandidates.filter { $0.action == .dryRunLinkCandidate }.count
+        return SupabaseManualSyncCatalogPushSummary(
+            readyCount: plan.writeCandidates.count,
+            createCount: createCount,
+            updateCount: updateCount,
+            linkCount: linkCount,
+            blockerCount: plan.blockedReasons.count,
+            warningCount: plan.warnings.filter { $0.severity == .warning }.count,
+            futureOnlyCount: plan.candidates.filter { $0.severity == .futureOnly }.count
+                + plan.warnings.filter { $0.severity == .futureOnly }.count,
+            planFingerprint: plan.planFingerprint,
+            resultStatus: result?.status,
+            resultMessage: result?.message
+        )
     }
 
     private func localApplyBlockedMessage(
@@ -574,6 +932,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         lastSummary = nil
         lastStartedMode = nil
         invalidateLocalApplyStaging(clearSummary: true)
+        invalidateCatalogPushPlan(clearSummary: true)
         presentationKind = .idleReady
         title = Copy.idleTitle
         subtitle = Copy.idleSubtitle
@@ -585,6 +944,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         authPresentationContext = context
         if !context.isSignedIn {
             invalidateLocalApplyStaging(clearSummary: true)
+            invalidateCatalogPushPlan(clearSummary: true)
         }
     }
 
@@ -596,6 +956,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return nil
         case .syncNow:
             return capabilities.supportsGuidedManualSync ? .guidedManual : nil
+        case .sendCloudChanges:
+            return nil
         case .retry, .realignData:
             return lastStartedMode ?? preferredCapabilityRunMode()
         case .signIn, .cancel:
@@ -642,6 +1004,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 isLoading: authPresentationContext.isTransitioning,
                 hintKey: hintKey
             )
+        }
+
+        if let catalogPushState = catalogPushPresentationState() {
+            return catalogPushState
         }
 
         switch presentationKind {
@@ -797,6 +1163,169 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 isRunning: false,
                 isLoading: false
             )
+
+        case .catalogPushReady,
+             .catalogPushNoChanges,
+             .catalogPushBlocked,
+             .catalogPushFailed,
+             .catalogPushStale,
+             .catalogPushSending,
+             .catalogPushSucceeded,
+             .catalogPushPartiallySucceeded:
+            return state(
+                titleKey: "options.supabase.manualSync.state.idle.title",
+                subtitleKey: "options.supabase.manualSync.state.idle.subtitle",
+                badgeKey: "options.supabase.manualSync.badge.manual",
+                badgeSystemImage: "hand.tap.fill",
+                primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
+        }
+    }
+
+    private func catalogPushPresentationState() -> SupabaseManualSyncPresentationState? {
+        guard !canApplyLocalChanges else {
+            return nil
+        }
+
+        switch catalogPushPhase {
+        case .idle:
+            return nil
+        case .checking:
+            return state(
+                titleKey: "options.supabase.manualSync.push.state.checking.title",
+                subtitleKey: "options.supabase.manualSync.push.state.checking.subtitle",
+                badgeKey: "options.supabase.manualSync.badge.running",
+                badgeSystemImage: "arrow.triangle.2.circlepath",
+                primaryAction: nil,
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: true
+            )
+        case .ready(let summary):
+            return state(
+                titleKey: "options.supabase.manualSync.push.state.ready.title",
+                subtitleKey: "options.supabase.manualSync.push.state.ready.subtitle",
+                summary: catalogPushUserFacingSummary(for: catalogPushPhase),
+                reviewSheet: makeCatalogPushReviewSheetState(phase: catalogPushPhase, summary: summary),
+                badgeKey: "options.supabase.manualSync.badge.readyToSend",
+                badgeSystemImage: "icloud.and.arrow.up",
+                primaryAction: action(.reviewChanges),
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
+        case .noChanges:
+            return state(
+                titleKey: "options.supabase.manualSync.push.state.noChanges.title",
+                subtitleKey: "options.supabase.manualSync.push.state.noChanges.subtitle",
+                summary: catalogPushUserFacingSummary(for: catalogPushPhase),
+                reviewSheet: nil,
+                badgeKey: "options.supabase.manualSync.badge.noChanges",
+                badgeSystemImage: "checkmark.circle.fill",
+                primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
+        case .blocked(let summary):
+            return state(
+                titleKey: "options.supabase.manualSync.push.state.blocked.title",
+                subtitleKey: "options.supabase.manualSync.push.state.blocked.subtitle",
+                summary: catalogPushUserFacingSummary(for: catalogPushPhase),
+                reviewSheet: makeCatalogPushReviewSheetState(phase: catalogPushPhase, summary: summary),
+                badgeKey: "options.supabase.manualSync.badge.needsFix",
+                badgeSystemImage: "xmark.octagon.fill",
+                primaryAction: action(.reviewChanges),
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
+        case .failed:
+            return retryState(
+                titleKey: "options.supabase.manualSync.push.state.failed.title",
+                subtitleKey: "options.supabase.manualSync.push.state.failed.subtitle",
+                badgeKey: "options.supabase.manualSync.badge.retry",
+                badgeSystemImage: "exclamationmark.triangle.fill"
+            )
+        case .stale:
+            return state(
+                titleKey: "options.supabase.manualSync.push.state.stale.title",
+                subtitleKey: "options.supabase.manualSync.push.state.stale.subtitle",
+                summary: catalogPushUserFacingSummary(for: catalogPushPhase),
+                badgeKey: "options.supabase.manualSync.badge.retry",
+                badgeSystemImage: "arrow.clockwise.circle.fill",
+                primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
+        case .sending(let summary):
+            return state(
+                titleKey: "options.supabase.manualSync.push.state.sending.title",
+                subtitleKey: "options.supabase.manualSync.push.state.sending.subtitle",
+                reviewSheet: makeCatalogPushReviewSheetState(phase: catalogPushPhase, summary: summary),
+                badgeKey: "options.supabase.manualSync.badge.running",
+                badgeSystemImage: "arrow.triangle.2.circlepath",
+                primaryAction: nil,
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: true
+            )
+        case .succeeded(let summary), .succeededNeedsCheck(let summary):
+            return state(
+                titleKey: "options.supabase.manualSync.push.state.succeeded.title",
+                subtitleKey: "options.supabase.manualSync.push.state.succeeded.subtitle",
+                summary: catalogPushUserFacingSummary(for: catalogPushPhase),
+                reviewSheet: makeCatalogPushReviewSheetState(phase: catalogPushPhase, summary: summary),
+                badgeKey: "options.supabase.manualSync.badge.sent",
+                badgeSystemImage: "checkmark.circle.fill",
+                primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
+        case .partial(let summary):
+            return state(
+                titleKey: "options.supabase.manualSync.push.state.partial.title",
+                subtitleKey: "options.supabase.manualSync.push.state.partial.subtitle",
+                summary: catalogPushUserFacingSummary(for: catalogPushPhase),
+                reviewSheet: makeCatalogPushReviewSheetState(phase: catalogPushPhase, summary: summary),
+                badgeKey: "options.supabase.manualSync.badge.retry",
+                badgeSystemImage: "exclamationmark.triangle.fill",
+                primaryAction: action(.retry),
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
+        case .sendBlocked(let summary):
+            return state(
+                titleKey: "options.supabase.manualSync.push.state.blocked.title",
+                subtitleKey: "options.supabase.manualSync.push.state.blocked.subtitle",
+                summary: catalogPushUserFacingSummary(for: catalogPushPhase),
+                reviewSheet: makeCatalogPushReviewSheetState(phase: catalogPushPhase, summary: summary),
+                badgeKey: "options.supabase.manualSync.badge.needsFix",
+                badgeSystemImage: "xmark.octagon.fill",
+                primaryAction: action(.reviewChanges),
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
+        case .sendFailed(let summary):
+            return state(
+                titleKey: "options.supabase.manualSync.push.state.failed.title",
+                subtitleKey: "options.supabase.manualSync.push.state.failed.subtitle",
+                summary: catalogPushUserFacingSummary(for: catalogPushPhase),
+                reviewSheet: makeCatalogPushReviewSheetState(phase: catalogPushPhase, summary: summary),
+                badgeKey: "options.supabase.manualSync.badge.retry",
+                badgeSystemImage: "exclamationmark.triangle.fill",
+                primaryAction: action(.retry),
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
         }
     }
 
@@ -858,12 +1387,46 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .successFullyUpToDate, .partialSync, .connectivityIssue, .cancelledRun, .technicalFollowUpNeeded:
             guard let lastSummary else { return nil }
             return makeUserFacingSummary(from: lastSummary)
+        case .catalogPushNoChanges,
+             .catalogPushBlocked,
+             .catalogPushFailed,
+             .catalogPushStale,
+             .catalogPushSucceeded,
+             .catalogPushPartiallySucceeded:
+            return catalogPushUserFacingSummary(for: catalogPushPhase)
         case .idleReady,
              .running,
              .blockedNeedsSignIn,
              .blockedNeedsCloudRealignment,
              .auxiliaryBusyConcurrent,
-             .auxiliaryModeUnavailable:
+             .auxiliaryModeUnavailable,
+             .catalogPushReady,
+             .catalogPushSending:
+            return nil
+        }
+    }
+
+    private func catalogPushUserFacingSummary(
+        for phase: SupabaseManualSyncCatalogPushPhase
+    ) -> SupabaseManualSyncUserFacingSummary? {
+        switch phase {
+        case .noChanges:
+            return userFacingSummary(.catalogPushNoChanges, key: "options.supabase.manualSync.push.summary.noChanges")
+        case .blocked, .sendBlocked:
+            return userFacingSummary(.catalogPushBlocked, key: "options.supabase.manualSync.push.summary.blocked")
+        case .failed:
+            return userFacingSummary(.catalogPushFailedBeforeWrite, key: "options.supabase.manualSync.push.summary.failedBeforeWrite")
+        case .stale:
+            return userFacingSummary(.catalogPushStale, key: "options.supabase.manualSync.push.summary.stale")
+        case .succeeded:
+            return userFacingSummary(.catalogPushSucceeded, key: "options.supabase.manualSync.push.summary.succeeded")
+        case .succeededNeedsCheck:
+            return userFacingSummary(.catalogPushSucceededNeedsCheck, key: "options.supabase.manualSync.push.summary.succeededNeedsCheck")
+        case .partial:
+            return userFacingSummary(.catalogPushPartial, key: "options.supabase.manualSync.push.summary.partial")
+        case .sendFailed:
+            return userFacingSummary(.catalogPushFailedBeforeWrite, key: "options.supabase.manualSync.push.summary.failedBeforeWrite")
+        case .idle, .checking, .ready, .sending:
             return nil
         }
     }
@@ -977,7 +1540,15 @@ final class SupabaseManualSyncViewModel: ObservableObject {
              .genericIssue,
              .cancelled,
              .localApplyCompleted,
-             .localApplyFailed:
+             .localApplyFailed,
+             .catalogPushNoChanges,
+             .catalogPushSucceeded,
+             .catalogPushSucceededNeedsCheck,
+             .catalogPushPartial,
+             .catalogPushBlocked,
+             .catalogPushFailedBeforeWrite,
+             .catalogPushInterrupted,
+             .catalogPushStale:
             return nil
         }
     }
@@ -1045,6 +1616,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             subtitle: subtitle,
             sections: sections,
             footerMessage: footerMessage,
+            primaryActionID: .updateDevice,
             primaryActionTitle: primaryActionTitle,
             primaryActionSystemImage: "arrow.down.circle",
             primaryActionIsEnabled: canApplyLocalChanges && !isApplyingLocalChanges,
@@ -1052,6 +1624,165 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             secondaryActionTitle: secondaryActionTitle,
             accessibilityLabel: accessibilityLabel
         )
+    }
+
+    private func makeCatalogPushReviewSheetState(
+        phase: SupabaseManualSyncCatalogPushPhase,
+        summary: SupabaseManualSyncCatalogPushSummary
+    ) -> SupabaseManualSyncReviewSheetState {
+        let title = L("options.supabase.manualSync.push.review.title")
+        let subtitle = catalogPushReviewSubtitle(phase: phase)
+        let sections = catalogPushReviewSections(phase: phase, summary: summary)
+        let footerMessage = catalogPushReviewFooter(phase: phase)
+        let primaryID = catalogPushReviewPrimaryActionID(phase: phase)
+        let primaryTitle: String
+        let primarySystemImage: String
+        switch primaryID {
+        case .sendCloudChanges:
+            primaryTitle = isSendingCatalogChanges
+                ? L("options.supabase.manualSync.push.review.action.sending")
+                : L("options.supabase.manualSync.push.review.action.send")
+            primarySystemImage = "icloud.and.arrow.up"
+        case .updateDevice:
+            primaryTitle = L("options.supabase.manualSync.review.action.updateDevice")
+            primarySystemImage = "arrow.down.circle"
+        case .none:
+            primaryTitle = ""
+            primarySystemImage = "icloud.and.arrow.up"
+        }
+        let accessibilityLabel = ([title, subtitle] + sections.flatMap { [$0.title, $0.message] } + [footerMessage])
+            .joined(separator: ". ")
+
+        return SupabaseManualSyncReviewSheetState(
+            title: title,
+            subtitle: subtitle,
+            sections: sections,
+            footerMessage: footerMessage,
+            primaryActionID: primaryID,
+            primaryActionTitle: primaryTitle,
+            primaryActionSystemImage: primarySystemImage,
+            primaryActionIsEnabled: primaryID == .sendCloudChanges && !isSendingCatalogChanges,
+            primaryActionIsLoading: isSendingCatalogChanges,
+            secondaryActionTitle: L(hasTerminalCatalogPushSummary ? "common.close" : "common.cancel"),
+            accessibilityLabel: accessibilityLabel
+        )
+    }
+
+    private func catalogPushReviewSubtitle(phase: SupabaseManualSyncCatalogPushPhase) -> String {
+        switch phase {
+        case .succeeded, .succeededNeedsCheck, .partial, .sendBlocked, .sendFailed:
+            return L("options.supabase.manualSync.push.review.subtitle.final")
+        case .sending:
+            return L("options.supabase.manualSync.push.review.subtitle.sending")
+        case .blocked:
+            return L("options.supabase.manualSync.push.review.subtitle.blocked")
+        case .ready, .checking, .noChanges, .failed, .stale, .idle:
+            return L("options.supabase.manualSync.push.review.subtitle")
+        }
+    }
+
+    private func catalogPushReviewSections(
+        phase: SupabaseManualSyncCatalogPushPhase,
+        summary: SupabaseManualSyncCatalogPushSummary
+    ) -> [SupabaseManualSyncReviewSectionState] {
+        var sections: [SupabaseManualSyncReviewSectionState] = []
+        if summary.hasReadyChanges {
+            sections.append(reviewSection(
+                id: .readyToSend,
+                titleKey: "options.supabase.manualSync.push.review.ready.title",
+                message: L(
+                    "options.supabase.manualSync.push.review.ready.message",
+                    summary.readyCount,
+                    summary.createCount,
+                    summary.updateCount,
+                    summary.linkCount
+                ),
+                systemImage: "checkmark.circle.fill",
+                tone: .success
+            ))
+        }
+        if summary.hasWarnings {
+            sections.append(reviewSection(
+                id: .sendAttention,
+                titleKey: "options.supabase.manualSync.push.review.attention.title",
+                message: L("options.supabase.manualSync.push.review.attention.message"),
+                systemImage: "exclamationmark.triangle.fill",
+                tone: .attention
+            ))
+        }
+        if summary.hasBlockers {
+            sections.append(reviewSection(
+                id: .sendBlocked,
+                titleKey: "options.supabase.manualSync.push.review.blocked.title",
+                message: L("options.supabase.manualSync.push.review.blocked.message", summary.blockerCount),
+                systemImage: "xmark.octagon.fill",
+                tone: .blocked
+            ))
+        }
+        if case .succeeded = phase {
+            sections.append(finalSummarySection(key: "options.supabase.manualSync.push.summary.succeeded"))
+        } else if case .succeededNeedsCheck = phase {
+            sections.append(finalSummarySection(key: "options.supabase.manualSync.push.summary.succeededNeedsCheck"))
+        } else if case .partial = phase {
+            sections.append(finalSummarySection(key: "options.supabase.manualSync.push.summary.partial"))
+        } else if case .sendFailed = phase {
+            sections.append(finalSummarySection(key: "options.supabase.manualSync.push.summary.failedBeforeWrite"))
+        } else if case .sendBlocked = phase {
+            sections.append(finalSummarySection(key: "options.supabase.manualSync.push.summary.blocked"))
+        }
+        if sections.isEmpty {
+            sections.append(reviewSection(
+                id: .finalSummary,
+                titleKey: "options.supabase.manualSync.push.review.final.title",
+                message: L("options.supabase.manualSync.push.summary.noChanges"),
+                systemImage: "checkmark.circle.fill",
+                tone: .neutral
+            ))
+        }
+        return sections
+    }
+
+    private func finalSummarySection(key: String) -> SupabaseManualSyncReviewSectionState {
+        reviewSection(
+            id: .finalSummary,
+            titleKey: "options.supabase.manualSync.push.review.final.title",
+            message: L(key),
+            systemImage: "list.bullet.clipboard",
+            tone: .neutral
+        )
+    }
+
+    private func catalogPushReviewFooter(phase: SupabaseManualSyncCatalogPushPhase) -> String {
+        switch phase {
+        case .ready:
+            if canApplyLocalChanges {
+                return L("options.supabase.manualSync.push.review.footer.updateFirst")
+            }
+            return L("options.supabase.manualSync.push.review.footer.ready")
+        case .blocked, .sendBlocked:
+            return L("options.supabase.manualSync.push.review.footer.blocked")
+        case .sending:
+            return L("options.supabase.manualSync.push.review.footer.sending")
+        case .succeeded, .succeededNeedsCheck, .partial, .sendFailed:
+            return L("options.supabase.manualSync.push.review.footer.final")
+        case .stale:
+            return L("options.supabase.manualSync.push.summary.stale")
+        case .idle, .checking, .noChanges, .failed:
+            return L("options.supabase.manualSync.push.review.footer.ready")
+        }
+    }
+
+    private func catalogPushReviewPrimaryActionID(
+        phase: SupabaseManualSyncCatalogPushPhase
+    ) -> SupabaseManualSyncReviewPrimaryActionID {
+        switch phase {
+        case .ready:
+            return canApplyLocalChanges ? .none : .sendCloudChanges
+        case .sending:
+            return .sendCloudChanges
+        case .idle, .checking, .noChanges, .blocked, .failed, .stale, .succeeded, .succeededNeedsCheck, .partial, .sendBlocked, .sendFailed:
+            return .none
+        }
     }
 
     private func reviewFooterMessage(
@@ -1082,6 +1813,22 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             id: id,
             title: L(titleKey),
             message: L(messageKey),
+            systemImage: systemImage,
+            tone: tone
+        )
+    }
+
+    private func reviewSection(
+        id: SupabaseManualSyncReviewSectionID,
+        titleKey: String,
+        message: String,
+        systemImage: String,
+        tone: SupabaseManualSyncReviewSectionTone
+    ) -> SupabaseManualSyncReviewSectionState {
+        SupabaseManualSyncReviewSectionState(
+            id: id,
+            title: L(titleKey),
+            message: message,
             systemImage: systemImage,
             tone: tone
         )
@@ -1127,6 +1874,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .syncNow:
             key = "syncNow"
             systemImage = "arrow.triangle.2.circlepath.circle.fill"
+        case .sendCloudChanges:
+            key = "sendToCloud"
+            systemImage = "icloud.and.arrow.up"
         case .retry:
             key = "retry"
             systemImage = "arrow.clockwise.circle.fill"
@@ -1191,6 +1941,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         subtitle: String?
     ) -> SupabaseManualSyncUserFacingSummary? {
         guard let summary else { return nil }
+        if summary.kind.isCatalogPushTerminal {
+            return summary
+        }
         let normalizedMessage = normalizedCopy(summary.message)
         guard normalizedMessage != normalizedCopy(title) else { return nil }
         if let subtitle, normalizedMessage == normalizedCopy(subtitle) {
@@ -1204,6 +1957,24 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: ".…"))
             .lowercased()
+    }
+}
+
+private extension SupabaseManualSyncUserFacingSummaryKind {
+    var isCatalogPushTerminal: Bool {
+        switch self {
+        case .catalogPushNoChanges,
+             .catalogPushSucceeded,
+             .catalogPushSucceededNeedsCheck,
+             .catalogPushPartial,
+             .catalogPushBlocked,
+             .catalogPushFailedBeforeWrite,
+             .catalogPushInterrupted,
+             .catalogPushStale:
+            return true
+        default:
+            return false
+        }
     }
 }
 

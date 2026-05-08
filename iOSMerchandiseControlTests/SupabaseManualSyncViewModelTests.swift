@@ -43,6 +43,68 @@ private final class ManualSyncPreviewStagingFake: SupabaseManualSyncRemotePrevie
 }
 
 @MainActor
+private final class ManualSyncCatalogPushProviderFake: SupabaseManualSyncCatalogPushProviding {
+    var plans: [ManualPushPlan]
+    var executeResult: SupabaseManualPushResult
+    var makePlanError: Error?
+    private(set) var makePlanCallCount = 0
+    private(set) var executeCallCount = 0
+    var executeDelayNanoseconds: UInt64 = 0
+    var onMakePlan: ((Int) -> Void)?
+
+    init(
+        plans: [ManualPushPlan],
+        executeResult: SupabaseManualPushResult = SupabaseManualPushResult(
+            status: .completed,
+            supplierCreates: 0,
+            supplierUpdates: 0,
+            supplierLinks: 0,
+            categoryCreates: 0,
+            categoryUpdates: 0,
+            categoryLinks: 0,
+            productCreates: 1,
+            productUpdates: 0,
+            productLinks: 0,
+            baselineRunID: UUID(),
+            message: nil
+        )
+    ) {
+        self.plans = plans
+        self.executeResult = executeResult
+    }
+
+    func makePushPlan(ownerUserID: UUID) async throws -> ManualPushPlan {
+        makePlanCallCount += 1
+        onMakePlan?(makePlanCallCount)
+        if let makePlanError {
+            throw makePlanError
+        }
+        if plans.count > 1 {
+            return plans.removeFirst()
+        }
+        guard let plan = plans.first else {
+            return ManualPushPlan(
+                generatedAt: Date(timeIntervalSince1970: 1_778_500_000),
+                ownerUserID: ownerUserID,
+                candidates: [],
+                blockedReasons: [],
+                warnings: [],
+                futureEventChangedCount: 0
+            )
+        }
+        return plan
+    }
+
+    func execute(plan: ManualPushPlan, ownerUserID: UUID) async -> SupabaseManualPushResult {
+        executeCallCount += 1
+        if executeDelayNanoseconds > 0 {
+            try? await Task.sleep(nanoseconds: executeDelayNanoseconds)
+        }
+        return executeResult
+    }
+}
+
+@MainActor
 final class SupabaseManualSyncViewModelTests: XCTestCase {
     private static var retainedContainers: [ModelContainer] = []
 
@@ -91,7 +153,12 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             "sync_events",
             "rpc",
             "record_sync_event",
+            "baseline",
             "payload",
+            "owneruserid",
+            "owner_user_id",
+            "jwt",
+            "rls",
             "retryable",
             "uuid",
             "barcode",
@@ -1321,6 +1388,310 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertNil(staging.stagedPreviewForLocalApply)
     }
 
+    func testTask079PreflightZeroChangeShowsNoMutativeCTAAndDoesNotExecute() async throws {
+        let ownerID = UUID()
+        let provider = ManualSyncCatalogPushProviderFake(plans: [
+            makeCatalogPushPlan(ownerID: ownerID)
+        ])
+        let vm = makePushReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+
+        let state = vm.presentationState
+        XCTAssertEqual(state.title, "Nessuna modifica locale da inviare")
+        XCTAssertEqual(state.userFacingSummary?.kind, .catalogPushNoChanges)
+        XCTAssertNotEqual(state.primaryAction?.id, .sendCloudChanges)
+        XCTAssertNil(state.reviewSheet)
+        XCTAssertEqual(provider.makePlanCallCount, 1)
+        XCTAssertEqual(provider.executeCallCount, 0)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask079PreflightValidCandidatesCreatesVolatileReviewPlan() async throws {
+        let ownerID = UUID()
+        let plan = makeCatalogPushPlan(
+            ownerID: ownerID,
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "100", action: .dryRunCreateCandidate)
+            ]
+        )
+        let provider = ManualSyncCatalogPushProviderFake(plans: [plan])
+        let vm = makePushReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+
+        let state = vm.presentationState
+        let review = try XCTUnwrap(state.reviewSheet)
+        XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
+        XCTAssertEqual(review.primaryActionID, .sendCloudChanges)
+        XCTAssertTrue(review.primaryActionIsEnabled)
+        XCTAssertEqual(review.primaryActionTitle, "Invia modifiche al cloud")
+        XCTAssertEqual(review.sections.map(\.id), [.readyToSend])
+        XCTAssertEqual(provider.executeCallCount, 0)
+        assertSinglePrimaryAction(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask079RemoteApplyKeepsPriorityBeforeCatalogPush() async throws {
+        let context = try makeContext()
+        let staging = ManualSyncPreviewStagingFake()
+        staging.stagedPreviewForLocalApply = makeApplicablePreview(
+            newProducts: [makeApplicableProductSummary(barcode: "200")]
+        )
+        let ownerID = UUID()
+        let provider = ManualSyncCatalogPushProviderFake(plans: [
+            makeCatalogPushPlan(
+                ownerID: ownerID,
+                candidates: [
+                    PushCandidate(entityKind: .product, localID: "100", action: .dryRunCreateCandidate)
+                ]
+            )
+        ])
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsCatalogPush: true
+            ),
+            remotePreviewStaging: staging,
+            localApplyService: SupabasePullApplyService(),
+            localApplyContext: context,
+            isLocalApplyAuthenticated: { true },
+            catalogPushProvider: provider,
+            currentCatalogPushOwnerID: { ownerID }
+        )
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1),
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+
+        let state = vm.presentationState
+        let review = try XCTUnwrap(state.reviewSheet)
+        XCTAssertTrue(vm.canApplyLocalChanges)
+        XCTAssertEqual(provider.makePlanCallCount, 1)
+        XCTAssertEqual(provider.executeCallCount, 0)
+        XCTAssertEqual(review.primaryActionID, .updateDevice)
+        XCTAssertEqual(review.primaryActionTitle, "Aggiorna questo dispositivo")
+        XCTAssertEqual(review.sections.map(\.id), [.cloudToDevice, .deviceToCloud, .prices])
+        XCTAssertNotEqual(state.primaryAction?.id, .sendCloudChanges)
+        assertSinglePrimaryAction(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask079PreflightBlockersShowNeedsFixWithoutMutativeCTA() async throws {
+        let ownerID = UUID()
+        let provider = ManualSyncCatalogPushProviderFake(plans: [
+            makeCatalogPushPlan(ownerID: ownerID, blockedReasons: [.blockedMissingBaseline])
+        ])
+        let vm = makePushReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+
+        let state = vm.presentationState
+        let review = try XCTUnwrap(state.reviewSheet)
+        XCTAssertEqual(state.title, "Da correggere")
+        XCTAssertEqual(state.userFacingSummary?.kind, .catalogPushBlocked)
+        XCTAssertEqual(review.primaryActionID, .none)
+        XCTAssertFalse(review.primaryActionIsEnabled)
+        XCTAssertEqual(review.sections.map(\.id), [.sendBlocked])
+        XCTAssertEqual(provider.executeCallCount, 0)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask079AuthFailureFailsBeforeWriteAndDoesNotExecute() async throws {
+        let ownerID = UUID()
+        let plan = makeCatalogPushPlan(
+            ownerID: ownerID,
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "100", action: .dryRunCreateCandidate)
+            ]
+        )
+        let provider = ManualSyncCatalogPushProviderFake(plans: [plan])
+        let vm = makePushReadyViewModel(provider: provider, ownerID: nil)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+
+        XCTAssertEqual(vm.presentationState.userFacingSummary?.kind, .catalogPushFailedBeforeWrite)
+        XCTAssertEqual(provider.makePlanCallCount, 0)
+        XCTAssertEqual(provider.executeCallCount, 0)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask079StalePlanCannotBeConfirmed() async throws {
+        let ownerID = UUID()
+        let firstPlan = makeCatalogPushPlan(
+            ownerID: ownerID,
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "100", action: .dryRunCreateCandidate)
+            ]
+        )
+        let changedPlan = makeCatalogPushPlan(
+            ownerID: ownerID,
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "101", action: .dryRunCreateCandidate)
+            ]
+        )
+        let provider = ManualSyncCatalogPushProviderFake(plans: [firstPlan, changedPlan])
+        let vm = makePushReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+        await vm.sendConfirmedCatalogChanges()
+
+        XCTAssertEqual(vm.presentationState.userFacingSummary?.kind, .catalogPushStale)
+        XCTAssertEqual(provider.makePlanCallCount, 2)
+        XCTAssertEqual(provider.executeCallCount, 0)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask079ConfirmedPushMapsTerminalResultsAndKeepsSummary() async throws {
+        let ownerID = UUID()
+        let cases: [(SupabaseManualPushTerminalStatus, SupabaseManualSyncUserFacingSummaryKind)] = [
+            (.completed, .catalogPushSucceeded),
+            (.completedBaselineRefreshFailed, .catalogPushSucceededNeedsCheck),
+            (.partial, .catalogPushPartial),
+            (.blockedBeforeWrite, .catalogPushBlocked),
+            (.failedBeforeWrite, .catalogPushFailedBeforeWrite),
+        ]
+
+        for (status, expectedKind) in cases {
+            let plan = makeCatalogPushPlan(
+                ownerID: ownerID,
+                candidates: [
+                    PushCandidate(entityKind: .product, localID: "100", action: .dryRunCreateCandidate)
+                ]
+            )
+            let provider = ManualSyncCatalogPushProviderFake(
+                plans: [plan, plan],
+                executeResult: SupabaseManualPushResult(
+                    status: status,
+                    supplierCreates: 0,
+                    supplierUpdates: 0,
+                    supplierLinks: 0,
+                    categoryCreates: 0,
+                    categoryUpdates: 0,
+                    categoryLinks: 0,
+                    productCreates: status == .failedBeforeWrite ? 0 : 1,
+                    productUpdates: 0,
+                    productLinks: 0,
+                    baselineRunID: status == .completed ? UUID() : nil,
+                    message: nil
+                )
+            )
+            let vm = makePushReadyViewModel(provider: provider, ownerID: ownerID)
+            vm.apply(summary: cloudCheckSummary(
+                finalState: .completedSuccessfully,
+                counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1),
+                remotePreviewSummary: remotePreviewSummary()
+            ))
+            await vm.prepareCatalogPushPlanForReview()
+            await vm.sendConfirmedCatalogChanges()
+
+            XCTAssertEqual(vm.presentationState.userFacingSummary?.kind, expectedKind)
+            XCTAssertEqual(provider.executeCallCount, 1)
+            XCTAssertNotNil(vm.presentationState.userFacingSummary?.message)
+            assertNoForbiddenUserFacingJargon(vm)
+        }
+    }
+
+    func testTask079DoubleSendTapOnlyExecutesOnce() async throws {
+        let ownerID = UUID()
+        let plan = makeCatalogPushPlan(
+            ownerID: ownerID,
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "100", action: .dryRunCreateCandidate)
+            ]
+        )
+        let provider = ManualSyncCatalogPushProviderFake(plans: [plan, plan])
+        provider.executeDelayNanoseconds = 100_000_000
+        let vm = makePushReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+
+        async let first: Void = vm.sendConfirmedCatalogChanges()
+        async let second: Void = vm.sendConfirmedCatalogChanges()
+        _ = await (first, second)
+
+        XCTAssertEqual(provider.executeCallCount, 1)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask079SessionChangeDuringPreWriteRecheckDoesNotExecute() async throws {
+        let ownerID = UUID()
+        let plan = makeCatalogPushPlan(
+            ownerID: ownerID,
+            candidates: [
+                PushCandidate(entityKind: .product, localID: "100", action: .dryRunCreateCandidate)
+            ]
+        )
+        let provider = ManualSyncCatalogPushProviderFake(plans: [plan, plan])
+        var currentOwnerID: UUID? = ownerID
+        provider.onMakePlan = { callCount in
+            if callCount == 2 {
+                currentOwnerID = nil
+            }
+        }
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsCatalogPush: true
+            ),
+            catalogPushProvider: provider,
+            currentCatalogPushOwnerID: { currentOwnerID }
+        )
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+        await vm.sendConfirmedCatalogChanges()
+
+        XCTAssertEqual(provider.makePlanCallCount, 2)
+        XCTAssertEqual(provider.executeCallCount, 0)
+        XCTAssertEqual(vm.presentationState.userFacingSummary?.kind, .catalogPushFailedBeforeWrite)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
     func testTask078NoFinalManualSyncCopyUsesOldApplyChangesLabel() throws {
         let root = repoRootURL()
         let supportedLanguages = ["it", "en", "es", "zh-Hans"]
@@ -1389,6 +1760,44 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             localApplyService: SupabasePullApplyService(),
             localApplyContext: context,
             isLocalApplyAuthenticated: isAuthenticated
+        )
+    }
+
+    private func makePushReadyViewModel(
+        provider: ManualSyncCatalogPushProviderFake,
+        ownerID: UUID? = UUID(uuidString: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA")!,
+        isSignedIn: Bool = true
+    ) -> SupabaseManualSyncViewModel {
+        SupabaseManualSyncViewModel(
+            coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsCatalogPush: true
+            ),
+            initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext(
+                isSignedIn: isSignedIn,
+                canSignIn: true,
+                isTransitioning: false
+            ),
+            catalogPushProvider: provider,
+            currentCatalogPushOwnerID: { ownerID }
+        )
+    }
+
+    private func makeCatalogPushPlan(
+        ownerID: UUID,
+        candidates: [PushCandidate] = [],
+        blockedReasons: [PushBlockedReason] = [],
+        warnings: [PushWarning] = []
+    ) -> ManualPushPlan {
+        ManualPushPlan(
+            generatedAt: Date(timeIntervalSince1970: 1_778_500_000),
+            ownerUserID: ownerID,
+            candidates: candidates,
+            blockedReasons: blockedReasons,
+            warnings: warnings,
+            futureEventChangedCount: candidates.count
         )
     }
 
