@@ -19,7 +19,13 @@ enum SupabaseManualSyncReleaseFactory {
         )
 
         return SupabaseManualSyncViewModel(
-            coordinator: SupabaseManualSyncCoordinator(dependencies: dependencies)
+            coordinator: SupabaseManualSyncCoordinator(dependencies: dependencies),
+            capabilities: .releaseCurrent,
+            initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext(
+                isSignedIn: authViewModel.isSignedIn,
+                canSignIn: authViewModel.canSignIn,
+                isTransitioning: authViewModel.isTransitioning
+            )
         )
     }
 }

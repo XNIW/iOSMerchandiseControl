@@ -90,7 +90,7 @@ nonisolated enum SupabaseManualSyncBaselineGateResult: Equatable, Sendable {
 nonisolated enum SupabaseManualSyncUserFacingCopy {
     static let signInAgain = "Serve accedere di nuovo"
     static let realignFromCloud = "Serve riallineare i dati dal cloud"
-    static let allUpToDate = "Tutto aggiornato"
+    static let allUpToDate = "Nessuna modifica da sincronizzare."
     static let connectivityRetry = "Connessione non riuscita. Puoi riprovare."
     static let partialSync = "Sincronizzazione parziale"
     static let technicalFollowUp = "Sincronizzazione non completata. Serve un controllo tecnico."

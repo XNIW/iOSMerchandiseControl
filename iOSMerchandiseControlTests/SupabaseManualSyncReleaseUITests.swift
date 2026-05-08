@@ -30,12 +30,21 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.state.busy.subtitle",
             "options.supabase.manualSync.state.unavailable.title",
             "options.supabase.manualSync.state.unavailable.subtitle",
-            "options.supabase.manualSync.action.check",
-            "options.supabase.manualSync.action.checkAgain",
-            "options.supabase.manualSync.action.tryAgain",
+            "options.supabase.manualSync.action.checkCloud",
+            "options.supabase.manualSync.action.syncNow",
             "options.supabase.manualSync.action.signIn",
-            "options.supabase.manualSync.action.running",
-            "options.supabase.manualSync.accessibility.primaryAction",
+            "options.supabase.manualSync.action.realign",
+            "options.supabase.manualSync.action.retry",
+            "options.supabase.manualSync.action.cancel",
+            "options.supabase.manualSync.badge.manual",
+            "options.supabase.manualSync.badge.running",
+            "options.supabase.manualSync.badge.needsAccess",
+            "options.supabase.manualSync.badge.needsAction",
+            "options.supabase.manualSync.badge.localChanges",
+            "options.supabase.manualSync.badge.noChanges",
+            "options.supabase.manualSync.badge.retry",
+            "options.supabase.manualSync.badge.cancelled",
+            "options.supabase.manualSync.badge.unavailable",
             "options.supabase.manualSync.disabled.authChanging",
             "options.supabase.manualSync.disabled.accessUnavailable"
         ]
@@ -54,10 +63,13 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "outbox",
             "drain",
             "sync_events",
+            "dto",
+            "syncpreview",
             "rpc",
             "payload",
             "retryable",
             "uuid",
+            "barcode",
             "json",
             "record_sync_event",
         ]
@@ -82,6 +94,42 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         }
     }
 
+    func testTask072ManualSyncReleaseCopyDoesNotClaimCloudUpdatedWithoutPreview() throws {
+        let forbiddenClaims = [
+            "cloud aggiornato",
+            "tutto aggiornato",
+            "everything is up to date",
+            "todo actualizado",
+            "全部已更新",
+        ]
+
+        for language in supportedLanguages {
+            let strings = try loadStrings(language: language)
+            let releaseValues = strings
+                .filter { $0.key.hasPrefix("options.supabase.manualSync.") }
+                .map(\.value)
+
+            for value in releaseValues {
+                let normalized = value.lowercased()
+                for claim in forbiddenClaims {
+                    XCTAssertFalse(
+                        normalized.contains(claim),
+                        "\(language) Release copy makes an unverified cloud-updated claim: \(value)"
+                    )
+                }
+            }
+        }
+    }
+
+    func testTask072ManualSyncLocalizationKeysHaveNoDuplicates() throws {
+        for language in supportedLanguages {
+            let source = try readSource("iOSMerchandiseControl/\(language).lproj/Localizable.strings")
+            let keys = extractLocalizationKeys(from: source)
+                .filter { $0.hasPrefix("options.supabase.manualSync.") }
+            XCTAssertEqual(keys.count, Set(keys).count, "Duplicate manual sync localization key in \(language)")
+        }
+    }
+
     func testTask067OptionsViewDoesNotUseSupabaseClientDirectly() throws {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
 
@@ -96,9 +144,40 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         let viewModelSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift")
         let combined = [releaseCardSource, factorySource, viewModelSource].joined(separator: "\n")
 
-        for forbidden in ["BGTask", "Timer", "Realtime", "worker", ".channel", "SupabaseClient", ".rpc", ".from", ".upsert", "TASK-068"] {
+        for forbidden in ["BGTask", "Timer", "Realtime", "worker", "polling", ".channel", "SupabaseClient", ".rpc", ".from", ".upsert", "TASK-068"] {
             XCTAssertFalse(combined.contains(forbidden), "Forbidden release scope term found: \(forbidden)")
         }
+    }
+
+    func testTask072ReleaseCardRendersPresentationStateOnly() throws {
+        let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
+        let releaseCardSource = try extractReleaseCardSource(from: source)
+
+        XCTAssertTrue(releaseCardSource.contains("viewModel.presentationState"))
+        XCTAssertTrue(releaseCardSource.contains("presentation.primaryAction"))
+        XCTAssertTrue(releaseCardSource.contains("presentation.secondaryAction"))
+        XCTAssertTrue(releaseCardSource.contains("ProgressView()"))
+        XCTAssertTrue(releaseCardSource.contains(".buttonStyle(.borderedProminent)"))
+        XCTAssertTrue(releaseCardSource.contains(".buttonStyle(.bordered)"))
+        XCTAssertFalse(releaseCardSource.contains("stateKey"))
+        XCTAssertFalse(releaseCardSource.contains("actionKey"))
+    }
+
+    func testTask072ReleaseCardDeclaresOneProminentActionStyle() throws {
+        let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
+        let releaseCardSource = try extractReleaseCardSource(from: source)
+
+        XCTAssertEqual(countOccurrences(of: ".buttonStyle(.borderedProminent)", in: releaseCardSource), 1)
+        XCTAssertEqual(countOccurrences(of: ".buttonStyle(.bordered)", in: releaseCardSource), 1)
+    }
+
+    func testTask072ReleaseFactoryKeepsLivePreviewWiringOutOfRelease() throws {
+        let factorySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift")
+
+        XCTAssertTrue(factorySource.contains("capabilities: .releaseCurrent"))
+        XCTAssertFalse(factorySource.contains("remotePreviewProvider:"))
+        XCTAssertFalse(factorySource.contains("SupabaseManualSyncPullPreviewAdapter"))
+        XCTAssertFalse(factorySource.contains("SupabasePullPreviewService"))
     }
 
     func testTask069ReleaseFactoryUsesLocalPendingSnapshotProvider() throws {
@@ -152,7 +231,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: source)
 
-        for forbidden in ["outbox", "drain", "sync_events", "RPC", "payload", "retryable", "UUID", "JSON", "record_sync_event"] {
+        for forbidden in ["DTO", "SyncPreview", "outbox", "drain", "sync_events", "RPC", "payload", "retryable", "UUID", "JSON", "record_sync_event", "barcode"] {
             XCTAssertFalse(releaseCardSource.localizedCaseInsensitiveContains(forbidden))
         }
     }
@@ -189,6 +268,20 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             format: nil
         )
         return try XCTUnwrap(plist as? [String: String])
+    }
+
+    private func extractLocalizationKeys(from source: String) -> [String] {
+        let pattern = #"\"([^\"]+)\"\s*="#
+        let regex = try! NSRegularExpression(pattern: pattern)
+        let nsRange = NSRange(source.startIndex..<source.endIndex, in: source)
+        return regex.matches(in: source, range: nsRange).compactMap { match in
+            guard let range = Range(match.range(at: 1), in: source) else { return nil }
+            return String(source[range])
+        }
+    }
+
+    private func countOccurrences(of needle: String, in source: String) -> Int {
+        source.components(separatedBy: needle).count - 1
     }
 
     private func repoRoot() -> URL {
