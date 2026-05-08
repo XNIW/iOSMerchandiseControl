@@ -36,6 +36,21 @@ final class SupabaseManualSyncCoordinator {
         let baselineGate: any SupabaseManualSyncBaselineGateProviding
         let pendingSnapshot: any SupabaseManualSyncLocalPendingProviding
         let phaseSimulation: any SupabaseManualSyncDryRunPhaseSimulating
+        let remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)?
+
+        init(
+            authGate: any SupabaseManualSyncAuthGateProviding,
+            baselineGate: any SupabaseManualSyncBaselineGateProviding,
+            pendingSnapshot: any SupabaseManualSyncLocalPendingProviding,
+            phaseSimulation: any SupabaseManualSyncDryRunPhaseSimulating,
+            remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)? = nil
+        ) {
+            self.authGate = authGate
+            self.baselineGate = baselineGate
+            self.pendingSnapshot = pendingSnapshot
+            self.phaseSimulation = phaseSimulation
+            self.remotePreviewProvider = remotePreviewProvider
+        }
     }
 
     private let dependencies: Dependencies
@@ -67,6 +82,7 @@ final class SupabaseManualSyncCoordinator {
         var skipped: [SupabaseManualSyncPhase] = []
         var counts = SupabaseManualSyncPrivacyCounts()
         var ledger: [SupabaseManualSyncPhase: SupabaseManualSyncPhaseOutcome] = [:]
+        var remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary?
 
         do {
             try Task.checkCancellation()
@@ -134,10 +150,24 @@ final class SupabaseManualSyncCoordinator {
             // remotePreview
             try Task.checkCancellation()
             try await runPhase(.remotePreview, executed: &executed, ledger: &ledger) {
-                try await dependencies.phaseSimulation.simulateRemotePreview(counts: counts)
+                if let provider = dependencies.remotePreviewProvider {
+                    let summary = await provider.loadRemotePreviewSummary()
+                    remotePreviewSummary = summary
+                    return SupabaseManualSyncRemotePreviewOutcomeMapper.phaseOutcome(for: summary)
+                }
+                return try await dependencies.phaseSimulation.simulateRemotePreview(counts: counts)
             }
             if let stop = Self.shouldAbortAfterOutcome(ledger[.remotePreview]) {
                 Self.appendSkippedAfterAbort(from: .userConfirmation, skipped: &skipped)
+                if stop == .cancelled {
+                    return Self.finalizeCancelled(
+                        executed: executed,
+                        skipped: skipped,
+                        counts: counts,
+                        ledger: ledger,
+                        remotePreviewSummary: remotePreviewSummary
+                    )
+                }
                 try Task.checkCancellation()
                 try await runPhase(.summary, executed: &executed, ledger: &ledger) { .completed }
                 return Self.finalizeEarlyFailure(
@@ -145,7 +175,20 @@ final class SupabaseManualSyncCoordinator {
                     skipped: skipped,
                     counts: counts,
                     ledger: ledger,
-                    abortKind: stop
+                    abortKind: stop,
+                    remotePreviewSummary: remotePreviewSummary
+                )
+            }
+
+            if let remotePreviewSummary {
+                Self.appendSkippedAfterAbort(from: .userConfirmation, skipped: &skipped)
+                try Task.checkCancellation()
+                try await runPhase(.summary, executed: &executed, ledger: &ledger) { .completed }
+                return Self.finalizeRemotePreviewOnly(
+                    executed: executed,
+                    skipped: skipped,
+                    counts: counts,
+                    remotePreviewSummary: remotePreviewSummary
                 )
             }
 
@@ -247,6 +290,7 @@ final class SupabaseManualSyncCoordinator {
     private enum AbortKind {
         case connectivity
         case technical
+        case cancelled
     }
 
     private static func shouldAbortAfterOutcome(_ outcome: SupabaseManualSyncPhaseOutcome?) -> AbortKind? {
@@ -255,6 +299,8 @@ final class SupabaseManualSyncCoordinator {
             return .connectivity
         case .some(.failedNonRetryable), .some(.blocked):
             return .technical
+        case .some(.cancelled):
+            return .cancelled
         default:
             return nil
         }
@@ -360,7 +406,8 @@ final class SupabaseManualSyncCoordinator {
         skipped: [SupabaseManualSyncPhase],
         counts: SupabaseManualSyncPrivacyCounts,
         ledger: [SupabaseManualSyncPhase: SupabaseManualSyncPhaseOutcome],
-        abortKind: AbortKind
+        abortKind: AbortKind,
+        remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary? = nil
     ) -> SupabaseManualSyncRunSummary {
         switch abortKind {
         case .connectivity:
@@ -371,7 +418,8 @@ final class SupabaseManualSyncCoordinator {
                 skippedPhases: skipped,
                 countsSnapshot: counts,
                 suggestedNextStep: SupabaseManualSyncUserFacingCopy.retryConnectivitySuggestion,
-                detailMessage: nil
+                detailMessage: nil,
+                remotePreviewSummary: remotePreviewSummary
             )
         case .technical:
             return SupabaseManualSyncRunSummary(
@@ -381,9 +429,49 @@ final class SupabaseManualSyncCoordinator {
                 skippedPhases: skipped,
                 countsSnapshot: counts,
                 suggestedNextStep: nil,
-                detailMessage: nil
+                detailMessage: nil,
+                remotePreviewSummary: remotePreviewSummary
+            )
+        case .cancelled:
+            return finalizeCancelled(
+                executed: executed,
+                skipped: skipped,
+                counts: counts,
+                ledger: ledger,
+                remotePreviewSummary: remotePreviewSummary
             )
         }
+    }
+
+    private static func finalizeRemotePreviewOnly(
+        executed: [SupabaseManualSyncPhase],
+        skipped: [SupabaseManualSyncPhase],
+        counts: SupabaseManualSyncPrivacyCounts,
+        remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary
+    ) -> SupabaseManualSyncRunSummary {
+        let finalState = SupabaseManualSyncRemotePreviewOutcomeMapper.finalUserState(for: remotePreviewSummary)
+        let headline: String
+        switch remotePreviewSummary.recommendedUserMessageKey {
+        case .cloudCheckCompleteNoAction:
+            headline = SupabaseManualSyncUserFacingCopy.cloudCheckNoAction
+        case .cloudCheckFailedRetry:
+            headline = SupabaseManualSyncUserFacingCopy.connectivityRetry
+        case .cloudCheckCancelled:
+            headline = SupabaseManualSyncUserFacingCopy.cancelled
+        case .cloudDataNeedsReview, .cloudCheckIncomplete, .cloudCheckFailedPermission, .cloudCheckFailedTechnical:
+            headline = SupabaseManualSyncUserFacingCopy.technicalFollowUp
+        }
+
+        return SupabaseManualSyncRunSummary(
+            finalState: finalState,
+            userFacingHeadline: headline,
+            executedPhases: executed,
+            skippedPhases: skipped,
+            countsSnapshot: counts,
+            suggestedNextStep: nil,
+            detailMessage: nil,
+            remotePreviewSummary: remotePreviewSummary
+        )
     }
 
     private static func finalizeSuccessfulRun(
@@ -487,7 +575,8 @@ final class SupabaseManualSyncCoordinator {
         executed: [SupabaseManualSyncPhase],
         skipped: [SupabaseManualSyncPhase],
         counts: SupabaseManualSyncPrivacyCounts,
-        ledger: [SupabaseManualSyncPhase: SupabaseManualSyncPhaseOutcome]
+        ledger: [SupabaseManualSyncPhase: SupabaseManualSyncPhaseOutcome],
+        remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary? = nil
     ) -> SupabaseManualSyncRunSummary {
         _ = ledger
         var sk = skipped
@@ -504,7 +593,8 @@ final class SupabaseManualSyncCoordinator {
             skippedPhases: sk,
             countsSnapshot: counts,
             suggestedNextStep: nil,
-            detailMessage: nil
+            detailMessage: nil,
+            remotePreviewSummary: remotePreviewSummary
         )
     }
 

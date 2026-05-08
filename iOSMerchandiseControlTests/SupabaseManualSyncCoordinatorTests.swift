@@ -109,6 +109,146 @@ final class SupabaseManualSyncCoordinatorTests: XCTestCase {
         XCTAssertTrue(summary.skippedPhases.contains(.pendingEventsFlush))
         XCTAssertEqual(summary.finalState, .completedSuccessfully)
         XCTAssertEqual(fake.calls, [.authGate, .baselineGate, .pendingSnapshot, .remotePreview, .catalogPush, .finalRefresh])
+        XCTAssertNil(summary.remotePreviewSummary)
+        assertNoForbiddenUserFacingJargon(summary)
+    }
+
+    func testTask071RemotePreviewProviderNilPreservesTask069DryRunPath() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1, pendingPriceChangeCount: 0, pendingQueuedCloudOperationCount: 0)
+        let coordinator = makeCoordinator(fake: fake)
+
+        let summary = await coordinator.run(mode: .dryRun)
+
+        XCTAssertEqual(summary.finalState, .completedSuccessfully)
+        XCTAssertEqual(summary.executedPhases, [.authCheck, .baselineCheck, .localPendingCheck, .remotePreview, .userConfirmation, .catalogPush, .finalRefresh, .summary])
+        XCTAssertEqual(fake.calls, [.authGate, .baselineGate, .pendingSnapshot, .remotePreview, .catalogPush, .finalRefresh])
+        XCTAssertNil(summary.remotePreviewSummary)
+        assertNoForbiddenUserFacingJargon(summary)
+    }
+
+    func testTask071FakeRemotePreviewProviderRunsPreviewOnlyWithoutDownstreamPhases() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1, pendingPriceChangeCount: 1, pendingQueuedCloudOperationCount: 1)
+        fake.remotePreviewSummary = SupabaseManualSyncRemotePreviewSummary(
+            hasRemoteSignals: true,
+            isComplete: true,
+            isPartial: false,
+            wasCancelled: false,
+            safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 2),
+            recommendedUserMessageKey: .cloudDataNeedsReview,
+            failureCategory: nil
+        )
+        let coordinator = SupabaseManualSyncCoordinator(
+            dependencies: .init(
+                authGate: fake,
+                baselineGate: fake,
+                pendingSnapshot: fake,
+                phaseSimulation: fake,
+                remotePreviewProvider: fake
+            )
+        )
+
+        let summary = await coordinator.run(mode: .dryRun)
+
+        XCTAssertEqual(summary.remotePreviewSummary, fake.remotePreviewSummary)
+        XCTAssertEqual(summary.executedPhases, [.authCheck, .baselineCheck, .localPendingCheck, .remotePreview, .summary])
+        XCTAssertTrue(summary.skippedPhases.contains(.userConfirmation))
+        XCTAssertTrue(summary.skippedPhases.contains(.catalogPush))
+        XCTAssertTrue(summary.skippedPhases.contains(.productPricePush))
+        XCTAssertTrue(summary.skippedPhases.contains(.pendingEventsFlush))
+        XCTAssertTrue(summary.skippedPhases.contains(.finalRefresh))
+        XCTAssertEqual(fake.calls, [.authGate, .baselineGate, .pendingSnapshot, .remotePreview])
+        assertNoForbiddenUserFacingJargon(summary)
+    }
+
+    func testTask071CompleteRemotePreviewWithoutSignalsDoesNotPromiseCloudIsUpdated() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1, pendingPriceChangeCount: 0, pendingQueuedCloudOperationCount: 0)
+        fake.remotePreviewSummary = SupabaseManualSyncRemotePreviewSummary(
+            hasRemoteSignals: false,
+            isComplete: true,
+            isPartial: false,
+            wasCancelled: false,
+            safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(),
+            recommendedUserMessageKey: .cloudCheckCompleteNoAction,
+            failureCategory: nil
+        )
+        let coordinator = SupabaseManualSyncCoordinator(
+            dependencies: .init(
+                authGate: fake,
+                baselineGate: fake,
+                pendingSnapshot: fake,
+                phaseSimulation: fake,
+                remotePreviewProvider: fake
+            )
+        )
+
+        let summary = await coordinator.run(mode: .dryRun)
+
+        XCTAssertEqual(summary.finalState, .completedSuccessfully)
+        XCTAssertEqual(summary.userFacingHeadline, SupabaseManualSyncUserFacingCopy.cloudCheckNoAction)
+        XCTAssertNotEqual(summary.userFacingHeadline, SupabaseManualSyncUserFacingCopy.allUpToDate)
+        XCTAssertEqual(summary.executedPhases, [.authCheck, .baselineCheck, .localPendingCheck, .remotePreview, .summary])
+        XCTAssertEqual(fake.calls, [.authGate, .baselineGate, .pendingSnapshot, .remotePreview])
+        assertNoForbiddenUserFacingJargon(summary)
+    }
+
+    func testTask071PartialRemotePreviewProviderDoesNotBecomeSyncCompleted() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1, pendingPriceChangeCount: 0, pendingQueuedCloudOperationCount: 0)
+        fake.remotePreviewSummary = SupabaseManualSyncRemotePreviewSummary(
+            hasRemoteSignals: false,
+            isComplete: false,
+            isPartial: true,
+            wasCancelled: false,
+            safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(sourceErrorCount: 1),
+            recommendedUserMessageKey: .cloudCheckIncomplete,
+            failureCategory: nil
+        )
+        let coordinator = SupabaseManualSyncCoordinator(
+            dependencies: .init(
+                authGate: fake,
+                baselineGate: fake,
+                pendingSnapshot: fake,
+                phaseSimulation: fake,
+                remotePreviewProvider: fake
+            )
+        )
+
+        let summary = await coordinator.run(mode: .dryRun)
+
+        XCTAssertEqual(summary.remotePreviewSummary?.recommendedUserMessageKey, .cloudCheckIncomplete)
+        XCTAssertNotEqual(summary.finalState, .completedSuccessfully)
+        XCTAssertNotEqual(summary.finalState, .allUpToDate)
+        XCTAssertFalse(summary.executedPhases.contains(.catalogPush))
+        XCTAssertFalse(summary.executedPhases.contains(.productPricePush))
+        XCTAssertFalse(summary.executedPhases.contains(.pendingEventsFlush))
+        XCTAssertEqual(fake.calls, [.authGate, .baselineGate, .pendingSnapshot, .remotePreview])
+        assertNoForbiddenUserFacingJargon(summary)
+    }
+
+    func testTask071CancelledRemotePreviewProviderNeverMapsToSuccess() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1, pendingPriceChangeCount: 0, pendingQueuedCloudOperationCount: 0)
+        fake.remotePreviewSummary = SupabaseManualSyncRemotePreviewOutcomeMapper.cancelledSummary()
+        let coordinator = SupabaseManualSyncCoordinator(
+            dependencies: .init(
+                authGate: fake,
+                baselineGate: fake,
+                pendingSnapshot: fake,
+                phaseSimulation: fake,
+                remotePreviewProvider: fake
+            )
+        )
+
+        let summary = await coordinator.run(mode: .dryRun)
+
+        XCTAssertEqual(summary.finalState, .cancelled)
+        XCTAssertEqual(summary.remotePreviewSummary?.recommendedUserMessageKey, .cloudCheckCancelled)
+        XCTAssertNotEqual(summary.finalState, .completedSuccessfully)
+        XCTAssertNotEqual(summary.finalState, .allUpToDate)
+        XCTAssertEqual(fake.calls, [.authGate, .baselineGate, .pendingSnapshot, .remotePreview])
         assertNoForbiddenUserFacingJargon(summary)
     }
 
@@ -385,7 +525,8 @@ final class SupabaseManualSyncCoordinatorTests: XCTestCase {
 final class SupabaseManualSyncCoordinatorDryRunFake: SupabaseManualSyncAuthGateProviding,
     SupabaseManualSyncBaselineGateProviding,
     SupabaseManualSyncLocalPendingProviding,
-    SupabaseManualSyncDryRunPhaseSimulating
+    SupabaseManualSyncDryRunPhaseSimulating,
+    SupabaseManualSyncRemotePreviewProviding
 {
     var authResult: SupabaseManualSyncAuthGateResult = .authenticated
     var baselineResult: SupabaseManualSyncBaselineGateResult = .valid
@@ -396,6 +537,7 @@ final class SupabaseManualSyncCoordinatorDryRunFake: SupabaseManualSyncAuthGateP
     var priceOutcome: SupabaseManualSyncPhaseOutcome = .completed
     var flushOutcome: SupabaseManualSyncPhaseOutcome = .completed
     var refreshOutcome: SupabaseManualSyncPhaseOutcome = .completed
+    var remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary?
 
     var delayPreviewNanoseconds: UInt64 = 0
     var holdAtPreviewUntilSignaled = false
@@ -421,6 +563,97 @@ final class SupabaseManualSyncCoordinatorDryRunFake: SupabaseManualSyncAuthGateP
     func simulateRemotePreview(counts: SupabaseManualSyncPrivacyCounts) async throws -> SupabaseManualSyncPhaseOutcome {
         calls.append(.remotePreview)
         _ = counts
+        try await waitOrDelayRemotePreviewIfNeeded()
+        return previewOutcome
+    }
+
+    func loadRemotePreviewSummary() async -> SupabaseManualSyncRemotePreviewSummary {
+        calls.append(.remotePreview)
+        do {
+            try await waitOrDelayRemotePreviewIfNeeded()
+        } catch is CancellationError {
+            return SupabaseManualSyncRemotePreviewOutcomeMapper.cancelledSummary()
+        } catch {
+            return SupabaseManualSyncRemotePreviewSummary(
+                hasRemoteSignals: false,
+                isComplete: false,
+                isPartial: false,
+                wasCancelled: false,
+                safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(),
+                recommendedUserMessageKey: .cloudCheckFailedTechnical,
+                failureCategory: .unknown
+            )
+        }
+        if let remotePreviewSummary {
+            return remotePreviewSummary
+        }
+        switch previewOutcome {
+        case .completed:
+            return SupabaseManualSyncRemotePreviewSummary(
+                hasRemoteSignals: false,
+                isComplete: true,
+                isPartial: false,
+                wasCancelled: false,
+                safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(),
+                recommendedUserMessageKey: .cloudCheckCompleteNoAction,
+                failureCategory: nil
+            )
+        case .partial:
+            return SupabaseManualSyncRemotePreviewSummary(
+                hasRemoteSignals: false,
+                isComplete: false,
+                isPartial: true,
+                wasCancelled: false,
+                safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(sourceErrorCount: 1),
+                recommendedUserMessageKey: .cloudCheckIncomplete,
+                failureCategory: nil
+            )
+        case .failedRetryable:
+            return SupabaseManualSyncRemotePreviewSummary(
+                hasRemoteSignals: false,
+                isComplete: false,
+                isPartial: false,
+                wasCancelled: false,
+                safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(),
+                recommendedUserMessageKey: .cloudCheckFailedRetry,
+                failureCategory: .network
+            )
+        case .blocked:
+            return SupabaseManualSyncRemotePreviewSummary(
+                hasRemoteSignals: false,
+                isComplete: false,
+                isPartial: false,
+                wasCancelled: false,
+                safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(),
+                recommendedUserMessageKey: .cloudCheckFailedPermission,
+                failureCategory: .permission
+            )
+        case .failedNonRetryable:
+            return SupabaseManualSyncRemotePreviewSummary(
+                hasRemoteSignals: false,
+                isComplete: false,
+                isPartial: false,
+                wasCancelled: false,
+                safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(),
+                recommendedUserMessageKey: .cloudCheckFailedTechnical,
+                failureCategory: .unknown
+            )
+        case .cancelled:
+            return SupabaseManualSyncRemotePreviewOutcomeMapper.cancelledSummary()
+        case .skippedNoWork:
+            return SupabaseManualSyncRemotePreviewSummary(
+                hasRemoteSignals: false,
+                isComplete: true,
+                isPartial: false,
+                wasCancelled: false,
+                safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(),
+                recommendedUserMessageKey: .cloudCheckCompleteNoAction,
+                failureCategory: nil
+            )
+        }
+    }
+
+    private func waitOrDelayRemotePreviewIfNeeded() async throws {
         if holdAtPreviewUntilSignaled {
             previewHoldEngaged = true
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
@@ -431,7 +664,6 @@ final class SupabaseManualSyncCoordinatorDryRunFake: SupabaseManualSyncAuthGateP
             try await Task.sleep(nanoseconds: delayPreviewNanoseconds)
         }
         try Task.checkCancellation()
-        return previewOutcome
     }
 
     func waitUntilPreviewHoldEngaged() async throws {

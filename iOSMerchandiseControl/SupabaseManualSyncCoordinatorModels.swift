@@ -70,6 +70,7 @@ nonisolated struct SupabaseManualSyncRunSummary: Equatable, Sendable {
     var countsSnapshot: SupabaseManualSyncPrivacyCounts
     var suggestedNextStep: String?
     var detailMessage: String?
+    var remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary? = nil
 }
 
 // MARK: - Gates (dry-run environment)
@@ -96,6 +97,7 @@ nonisolated enum SupabaseManualSyncUserFacingCopy {
     static let cancelled = "Sincronizzazione annullata"
     static let unexpected = "Errore imprevisto durante la sincronizzazione"
     static let syncFinishedSuccessfully = "Sincronizzazione completata."
+    static let cloudCheckNoAction = "Controllo cloud completato. Nessuna azione richiesta."
     static let alreadyRunning = "Un'altra sincronizzazione è già in corso."
     static let sliceModeUnavailable = "Questa modalità non è disponibile in questa versione."
     static let automaticUnavailable = "La sincronizzazione automatica non è disponibile."
