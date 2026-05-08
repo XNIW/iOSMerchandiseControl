@@ -262,14 +262,11 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
             encoding: .utf8
         )
         let releaseCardSource = try extractReleaseCardSource(from: optionsSource)
-        let paths = [
-            "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
-            "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
-        ]
-        let combined = try ([releaseCardSource] + paths
-            .map { try String(contentsOf: root.appendingPathComponent($0), encoding: .utf8) }
+        let viewModelSource = try String(
+            contentsOf: root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift"),
+            encoding: .utf8
         )
-        .joined(separator: "\n")
+        let combined = [releaseCardSource, viewModelSource].joined(separator: "\n")
 
         XCTAssertFalse(combined.contains("SyncPreview"))
         XCTAssertFalse(combined.contains("SupabaseManualSyncPullPreviewAdapter"))

@@ -25,6 +25,15 @@ nonisolated struct SupabaseManualSyncCapabilitySet: Equatable, Sendable {
         supportsRemoteCloudCheck: false,
         supportsGuidedManualSync: false
     )
+
+    static func releaseCurrent(
+        remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)?
+    ) -> SupabaseManualSyncCapabilitySet {
+        SupabaseManualSyncCapabilitySet(
+            supportsRemoteCloudCheck: remotePreviewProvider != nil,
+            supportsGuidedManualSync: false
+        )
+    }
 }
 
 nonisolated struct SupabaseManualSyncAuthPresentationContext: Equatable, Sendable {
@@ -202,6 +211,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             title = SupabaseManualSyncUserFacingCopy.partialSync
             subtitle = nonEmpty(summary.suggestedNextStep) ?? nonEmpty(summary.userFacingHeadline)
             primaryActionTitle = Copy.dismissOrRetryAction
+
+        case .technicalReviewNeeded where summary.hasCompletedRemotePreviewSignals:
+            presentationKind = .partialSync
+            title = Copy.localPendingNeedsReviewTitle
+            subtitle = Copy.localPendingNeedsReviewSubtitle
+            primaryActionTitle = Copy.startAction
 
         case .blocked:
             let blockedPresentation = interpretBlocked(summary: summary)
@@ -614,5 +629,16 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             accessibilityLabel: accessibilityLabel,
             accessibilityHint: hint
         )
+    }
+}
+
+private extension SupabaseManualSyncRunSummary {
+    var hasCompletedRemotePreviewSignals: Bool {
+        guard let remotePreviewSummary else { return false }
+        return remotePreviewSummary.hasRemoteSignals
+            && remotePreviewSummary.isComplete
+            && !remotePreviewSummary.isPartial
+            && !remotePreviewSummary.wasCancelled
+            && remotePreviewSummary.failureCategory == nil
     }
 }

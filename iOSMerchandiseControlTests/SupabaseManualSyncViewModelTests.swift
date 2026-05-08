@@ -151,6 +151,17 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testTask073ReleaseCapabilitiesExposeCloudCheckOnlyWhenPreviewProviderExists() async {
+        let fakeProvider = SupabaseManualSyncCoordinatorDryRunFake()
+        let withProvider = SupabaseManualSyncCapabilitySet.releaseCurrent(remotePreviewProvider: fakeProvider)
+        let withoutProvider = SupabaseManualSyncCapabilitySet.releaseCurrent(remotePreviewProvider: nil)
+
+        XCTAssertTrue(withProvider.supportsRemoteCloudCheck)
+        XCTAssertFalse(withProvider.supportsGuidedManualSync)
+        XCTAssertFalse(withoutProvider.supportsRemoteCloudCheck)
+        XCTAssertFalse(withoutProvider.supportsGuidedManualSync)
+    }
+
     func testPresentationStateRemoteCapabilityShowsCheckCloudWithoutSyncNow() async {
         let fake = ClosureSupabaseManualSyncCoordinatorFake()
         let vm = SupabaseManualSyncViewModel(
@@ -474,6 +485,47 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertEqual(vm.presentationKind, .technicalFollowUpNeeded)
         XCTAssertEqual(vm.title, SupabaseManualSyncUserFacingCopy.technicalFollowUp)
         XCTAssertNotEqual(vm.title, SupabaseManualSyncUserFacingCopy.unexpected)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testCompletedRemotePreviewSignalsUseReviewStateWithoutTechnicalFailureCopy() async {
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        fake.handler = { _, _ in
+            SupabaseManualSyncRunSummary(
+                finalState: .technicalReviewNeeded,
+                userFacingHeadline: SupabaseManualSyncUserFacingCopy.technicalFollowUp,
+                executedPhases: [.authCheck, .baselineCheck, .localPendingCheck, .remotePreview, .summary],
+                skippedPhases: [.userConfirmation, .catalogPush, .productPricePush, .pendingEventsFlush, .finalRefresh],
+                countsSnapshot: .init(),
+                suggestedNextStep: nil,
+                detailMessage: nil,
+                remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary(
+                    hasRemoteSignals: true,
+                    isComplete: true,
+                    isPartial: false,
+                    wasCancelled: false,
+                    safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1),
+                    recommendedUserMessageKey: .cloudDataNeedsReview,
+                    failureCategory: nil
+                )
+            )
+        }
+
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false
+            )
+        )
+        await vm.start(with: .dryRun)
+
+        XCTAssertEqual(vm.presentationKind, .partialSync)
+        XCTAssertEqual(vm.title, "Ci sono modifiche da controllare")
+        XCTAssertEqual(vm.subtitle, "Nessun invio automatico.")
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .checkCloud)
+        XCTAssertFalse(actionIDs(vm.presentationState).contains(.syncNow))
+        XCTAssertEqual(vm.lastSummary?.remotePreviewSummary?.safeAggregateCounts.newProductCount, 1)
         assertNoForbiddenUserFacingJargon(vm)
     }
 

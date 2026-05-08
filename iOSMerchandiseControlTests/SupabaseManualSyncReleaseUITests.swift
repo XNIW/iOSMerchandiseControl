@@ -171,13 +171,18 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertEqual(countOccurrences(of: ".buttonStyle(.bordered)", in: releaseCardSource), 1)
     }
 
-    func testTask072ReleaseFactoryKeepsLivePreviewWiringOutOfRelease() throws {
+    func testTask073ReleaseFactoryBuildsReadOnlyRemotePreviewProvider() throws {
         let factorySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift")
 
-        XCTAssertTrue(factorySource.contains("capabilities: .releaseCurrent"))
-        XCTAssertFalse(factorySource.contains("remotePreviewProvider:"))
-        XCTAssertFalse(factorySource.contains("SupabaseManualSyncPullPreviewAdapter"))
-        XCTAssertFalse(factorySource.contains("SupabasePullPreviewService"))
+        XCTAssertTrue(factorySource.contains("pullPreviewService: SupabasePullPreviewService? = nil"))
+        XCTAssertTrue(factorySource.contains("= pullPreviewService.map"))
+        XCTAssertTrue(factorySource.contains("SupabaseManualSyncPullPreviewAdapter(service: $0, context: context)"))
+        XCTAssertTrue(factorySource.contains("remotePreviewProvider: remotePreviewProvider"))
+        XCTAssertTrue(factorySource.contains("capabilities: .releaseCurrent(remotePreviewProvider: remotePreviewProvider)"))
+        XCTAssertFalse(factorySource.contains("supportsGuidedManualSync: true"))
+        XCTAssertFalse(factorySource.contains("SupabasePullApplyService"))
+        XCTAssertFalse(factorySource.contains("SyncEventOutboxDrainService"))
+        XCTAssertFalse(factorySource.contains("SupabaseManualPushService"))
     }
 
     func testTask069ReleaseFactoryUsesLocalPendingSnapshotProvider() throws {

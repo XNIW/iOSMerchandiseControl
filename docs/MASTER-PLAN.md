@@ -4,10 +4,18 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**Progetto IDLE.** Nessun task attivo. **Ultimo completato:** **TASK-072 DONE / Chiusura** — Release CTA «Controlla cloud» / «Sincronizza ora» in `OptionsView` approvato con fix diretto in review. **TASK-073 / TASK-074 / TASK-075** restano **TODO / backlog roadmap** prima esperienza utente Supabase iOS (wiring live, summary user-facing, smoke dataset). **TASK-052 BLOCKED / superseded**.
+**Progetto IDLE.** Nessun task attivo. **Ultimo completato:** **TASK-073 DONE / Chiusura** — preview remota read-only in Release cablata tramite servizi iOS gia' esistenti, con review/fix diretto e check finali PASS. **TASK-074 / TASK-075** restano **TODO** (summary user-facing, smoke dataset). **TASK-052 BLOCKED / superseded**.
 
 ## Stato globale
-IDLE *(nessun task attivo; ultimo completato **TASK-072 DONE / Chiusura**; **TASK-073–075 TODO** sulla roadmap backlog; **TASK-071 DONE / Chiusura** come preview read-only adapter; **TASK-070 DONE / Chiusura** come planning pull preview read-only; **TASK-063 DONE / Chiusura** come planning base architetturale consumato; TASK-069/068/067/066/065/064 DONE)*
+IDLE *(nessun task attivo; ultimo completato **TASK-073 DONE / Chiusura**; **TASK-074 / TASK-075 TODO**; **TASK-072 DONE / Chiusura** come Release CTA; **TASK-071 DONE / Chiusura** come preview read-only adapter; **TASK-070 DONE / Chiusura** come planning pull preview read-only; **TASK-063 DONE / Chiusura** come planning base architetturale consumato; TASK-069/068/067/066/065/064 DONE)*
+
+> **2026-05-08 09:52 -0400 — REVIEW+FIX/CHIUSURA TASK-073 S73-a CHANGES_APPLIED / DONE:** review tecnica severa completata. Fix diretto minimo: `SupabaseManualSyncViewModel` presenta una preview remota completa con segnali cloud come «Ci sono modifiche da controllare» / «Nessun invio automatico.» invece di stato tecnico generico; test ViewModel aggiunto. Confermati: Release factory costruisce `SupabaseManualSyncPullPreviewAdapter` solo con `SupabasePullPreviewService` disponibile, `supportsRemoteCloudCheck` true solo con provider reale, `supportsGuidedManualSync` sempre false, `OptionsView` passa solo il servizio gia' costruito e non usa SDK Supabase diretto. Check PASS: XCTest mirati ViewModel/Release UI/RemotePreview **45 test**, build Release iPhone 16e OS 26.2, `git diff --check`, grep anti-scope richiesti. Warning residui preesistenti/out-of-scope in AppIntents metadata, `SupabaseProductPriceApplyService.swift`, `SyncEventOutboxDrainService.swift` / `SyncEventOutboxEntry.swift`. Nessun `guidedManual`, nessun apply/push/ProductPrice push/outbox drain/cleanup, nessun Timer/BGTask/Realtime/polling, nessun backend/SQL/Android/SwiftData schema/`project.pbxproj`. **TASK-073 DONE / Chiusura**; progetto **IDLE**; **TASK-074 / TASK-075 TODO**.
+
+> **2026-05-08 00:41 -0400 — EXECUTION TASK-073 S73-a avviata/cablata (override utente, NON DONE):** cablata preview remota read-only in Release: `OptionsView` passa il `SupabasePullPreviewService` gia' costruito dall'app alla card, `SupabaseManualSyncReleaseFactory` costruisce `SupabaseManualSyncPullPreviewAdapter` solo se il servizio esiste e imposta `supportsRemoteCloudCheck` solo con provider non nil; `supportsGuidedManualSync` resta sempre false. Test/check PASS: `git diff --check`, XCTest mirati ViewModel/Release UI/RemotePreview **44 test**, build Release iPhone 16e OS 26.2, grep anti-scope S73-a. Warning residui preesistenti/out-of-scope in AppIntents metadata, `SupabaseProductPriceApplyService.swift`, `SyncEventOutboxDrainService.swift` / `SyncEventOutboxEntry.swift`. Nessun `guidedManual`, nessun apply/push/ProductPrice push/outbox drain/cleanup, nessun Timer/BGTask/Realtime/polling, nessun backend/SQL/Android/SwiftData schema/`project.pbxproj`. Tracking mantenuto **TASK-073 ACTIVE / EXECUTION S73-a**, **NON DONE**; **TASK-074 / TASK-075 TODO**, ultimo completato **TASK-072 DONE**.
+
+> **2026-05-08 — PLANNING TASK-073 perfezionato (v2, solo markdown):** integrati UX contract Release, **D73-13** (sheet riassuntiva per conferme complesse), **User confirmation model**, tabella **Live now vs deferred**, **Concurrency/cancellation/retry**, checklist **a11y/l10n**, micro-slice **S73-a…f** e grep anti-scope esteso; handoff **READY FOR PLANNING REVIEW v2**, **NON READY FOR EXECUTION**. Stato invariato **TASK-073 ACTIVE / PLANNING**.
+
+> **2026-05-08 — PLANNING TASK-073 avviato (solo markdown):** creato **`docs/TASKS/TASK-073-supabase-manual-sync-live-wiring-ios.md`**; progetto da **IDLE → ACTIVE**; **TASK-073 ACTIVE / PLANNING**, responsabile **Claude / Planner**. Perimetro: inventario tecnico coordinator/factory/ViewModel/adapter preview, gap live vs deferred, decisioni **D73-01…D73-12**, micro-slice EXECUTION future, test matrix + grep anti-scope, handoff **READY FOR PLANNING REVIEW**, **NON READY FOR EXECUTION**. **Nessun** Swift, **nessun** `project.pbxproj`, **nessun** build/test obbligatorio questo turno. **Ultimo completato** invariato **TASK-072 DONE**. **TASK-074 / TASK-075** restano **TODO**.
 
 > **2026-05-08 00:24 -04 — REVIEW+FIX/CHIUSURA TASK-072 APPROVED_FIXED_DIRECTLY / DONE:** review severa repo-grounded completata. Fix diretti: footer/idle copy Release reso capability-neutral nelle quattro lingue, rimosse chiavi `Localizable` Release inutilizzate, test statici rafforzati per singola `.borderedProminent` e factory senza preview live. Check PASS: build Debug iPhone 16e OS 26.2, build Release iPhone 16e OS 26.2, XCTest mirati ViewModel/Release UI **32 test**, regressioni sync/outbox/coordinator **305 test**, `plutil`, duplicate localization keys, `git diff --check`, grep anti-scope e no-jargon/no "cloud aggiornato" su `options.supabase.manualSync.*`. Warning residui noti/preesistenti fuori perimetro in AppIntents metadata, `SupabaseProductPriceApplyService.swift`, `SyncEventOutboxDrainService.swift` / `SyncEventOutboxEntry.swift`. Confermati: **no TASK-073 creato/avviato**, no wiring live preview remoto, no backend/Supabase SQL/RLS/RPC/migration, no Android, no sync automatica, no Timer/BGTask/Realtime/worker/polling, no `SupabaseClient` diretto in `OptionsView`/card. **Progetto IDLE**. **TASK-073 / TASK-074 / TASK-075** restano **TODO**.
 
@@ -24,7 +32,7 @@ IDLE *(nessun task attivo; ultimo completato **TASK-072 DONE / Chiusura**; **TAS
 | Priorita' | Task ID | Stato | Obiettivo | Perimetro | Fuori perimetro |
 | --- | --- | --- | --- | --- | --- |
 | P0 | **TASK-072** | **DONE / Chiusura** | CTA Release «Controlla cloud» / «Sincronizza ora» in `OptionsView` | UI SwiftUI nativa, copy IT/EN/ES/ZH-Hans, accessibilita', uso del `SupabaseManualSyncViewModel` esistente, trigger manuale esplicito | Auto-sync, Timer, BGTask, Realtime, worker, polling, write remota nuova non mediata dal coordinator |
-| P0 | **TASK-073** | **TODO** | Collegare il coordinator manuale ai servizi live gia' esistenti | Gate auth/sessione, baseline, pending locali, preview remota read-only, conferma utente, apply/pull/push/drain solo se gia' supportati e fakeable in test | Nuovi schema SwiftData, SQL/migration, backend changes, Android changes, ProductPrice full sync se non gia' coperto da servizi esistenti |
+| P0 | **TASK-073** | **DONE / Chiusura** | Collegare il coordinator manuale ai servizi live gia' esistenti | Gate auth/sessione, baseline, pending locali, preview remota read-only, conferma utente, apply/pull/push/drain solo se gia' supportati e fakeable in test | Nuovi schema SwiftData, SQL/migration, backend changes, Android changes, ProductPrice full sync se non gia' coperto da servizi esistenti |
 | P1 | **TASK-074** | **TODO** | Summary finale chiaro e user-facing | Stato finale comprensibile: controllato, applicato, inviato, saltato, fallito; error taxonomy privacy-safe; no gergo tecnico in Release | DTO/raw payload, `SyncPreview` raw nella UI Release, log tecnici visibili all'utente |
 | P1 | **TASK-075** | **TODO** | Smoke operativo controllato | Dataset piccolo prima, dataset grande dopo; Debug/Release; evidenze manuali; no cleanup distruttivo; regressioni sync/outbox/coordinator | Live migration, db push, reset outbox, truncate/delete, automazioni background, risoluzione backend `record_sync_event` se richiede task separato |
 
@@ -263,11 +271,11 @@ IDLE *(nessun task attivo; ultimo completato **TASK-072 DONE / Chiusura**; **TAS
 ## Workflow task attivo
 - **Task attivo:** Nessuno
 - **Stato globale:** IDLE
-- **Ultimo completato:** **TASK-072 DONE / Chiusura**
-- **File ultimo task:** `docs/TASKS/TASK-072-supabase-release-cta-controlla-cloud-ios.md`
+- **Ultimo completato:** **TASK-073 DONE / Chiusura**
+- **File ultimo task:** `docs/TASKS/TASK-073-supabase-manual-sync-live-wiring-ios.md`
 - **Responsabile:** Nessuno / Workspace IDLE
-- **Ultimo aggiornamento:** 2026-05-08 00:24 -04 — TASK-072 chiuso **DONE / Chiusura** dopo review **APPROVED_FIXED_DIRECTLY** e check finali PASS.
-- **Nota tracking:** TASK-073 / TASK-074 / TASK-075 restano **TODO** sulla roadmap backlog; nessuno dei tre e' stato creato, avviato o promosso ad ACTIVE.
+- **Ultimo aggiornamento:** 2026-05-08 09:52 -0400 — TASK-073 chiuso **DONE / Chiusura** dopo review **CHANGES_APPLIED / APPROVED_FIXED_DIRECTLY** e check finali PASS.
+- **Nota tracking:** **TASK-074 / TASK-075** restano **TODO**; nessun task attivo.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -308,8 +316,10 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** **TASK-072** — Release CTA «Controlla cloud» / «Sincronizza ora» (`docs/TASKS/TASK-072-supabase-release-cta-controlla-cloud-ios.md`) — stato **ACTIVE**, fase **PLANNING** *(planning-only; **NON** EXECUTION autorizzata in questa fase)*.
-- **Ultimo completato:** **TASK-071** (`docs/TASKS/TASK-071-supabase-manual-sync-remote-preview-readonly-adapter-ios.md`) — **DONE / Chiusura** (remote preview read-only adapter, review **APPROVED_FIXED_DIRECTLY**, fix piccolo zero-pending + provider preview e check finali PASS).
+- **Task attivo corrente:** Nessuno — workspace **IDLE**.
+- **Ultimo completato:** **TASK-073** (`docs/TASKS/TASK-073-supabase-manual-sync-live-wiring-ios.md`) — **DONE / Chiusura** (preview remota read-only in Release cablata, review **CHANGES_APPLIED / APPROVED_FIXED_DIRECTLY**, fix UX post-preview e check finali PASS).
+- **Precedente completato:** **TASK-072** (`docs/TASKS/TASK-072-supabase-release-cta-controlla-cloud-ios.md`) — **DONE / Chiusura** (CTA Release «Controlla cloud» / «Sincronizza ora», `SupabaseManualSyncPresentationState`, capability-driven, review **APPROVED_FIXED_DIRECTLY**).
+- **TASK-071:** **DONE / Chiusura** (remote preview read-only adapter, review **APPROVED_FIXED_DIRECTLY**, fix piccolo zero-pending + provider preview e check finali PASS).
 - **TASK-070:** **DONE / Chiusura** come planning/gap analysis pull preview read-only; non dichiara implementazione codice.
 - **TASK-068:** **DONE / Chiusura**; planning/gap analysis live wiring approvato e consumato, senza codice Swift e senza execution implicita.
 - **TASK-067:** resta **DONE / Chiusura** (UI Release «Sincronizzazione cloud» in `OptionsView`, review **APPROVED_FIXED_DIRECTLY**, fix piccoli e check finali PASS).
@@ -620,6 +630,8 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-069 | Supabase manual sync local pending read-only iOS | 2026-05-07 |
 | TASK-070 | Supabase manual sync pull preview read-only planning iOS | 2026-05-07 |
 | TASK-071 | Supabase manual sync remote preview read-only adapter iOS | 2026-05-07 |
+| TASK-072 | Release CTA «Controlla cloud» / «Sincronizza ora» in OptionsView iOS | 2026-05-08 |
+| TASK-073 | Supabase manual sync live wiring iOS — S73-a preview remota read-only Release | 2026-05-08 |
 
 ## Blocchi e dipendenze
 - TASK-032 bloccato / in pausa.

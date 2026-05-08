@@ -5,8 +5,13 @@ import SwiftData
 enum SupabaseManualSyncReleaseFactory {
     static func makeViewModel(
         context: ModelContext,
-        authViewModel: SupabaseAuthViewModel
+        authViewModel: SupabaseAuthViewModel,
+        pullPreviewService: SupabasePullPreviewService? = nil
     ) -> SupabaseManualSyncViewModel {
+        let remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)? = pullPreviewService.map {
+            SupabaseManualSyncPullPreviewAdapter(service: $0, context: context)
+        }
+
         let dependencies = SupabaseManualSyncCoordinator.Dependencies(
             authGate: SupabaseManualSyncReleaseAuthGate(authViewModel: authViewModel),
             baselineGate: SupabaseManualSyncReleaseBaselineGate(context: context, authViewModel: authViewModel),
@@ -15,12 +20,13 @@ enum SupabaseManualSyncReleaseFactory {
                 catalogPendingCounter: SupabaseManualSyncCatalogPendingAdapter(context: context),
                 outboxPendingCounter: SupabaseManualSyncOutboxPendingAdapter(context: context)
             ),
-            phaseSimulation: SupabaseManualSyncReleaseDryRunPhaseSimulator()
+            phaseSimulation: SupabaseManualSyncReleaseDryRunPhaseSimulator(),
+            remotePreviewProvider: remotePreviewProvider
         )
 
         return SupabaseManualSyncViewModel(
             coordinator: SupabaseManualSyncCoordinator(dependencies: dependencies),
-            capabilities: .releaseCurrent,
+            capabilities: .releaseCurrent(remotePreviewProvider: remotePreviewProvider),
             initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext(
                 isSignedIn: authViewModel.isSignedIn,
                 canSignIn: authViewModel.canSignIn,

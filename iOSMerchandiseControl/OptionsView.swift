@@ -177,7 +177,8 @@ struct OptionsView: View {
             Section {
                 SupabaseManualSyncReleaseCard(
                     context: modelContext,
-                    authViewModel: supabaseAuthViewModel
+                    authViewModel: supabaseAuthViewModel,
+                    pullPreviewService: supabasePullPreviewService
                 )
             } header: {
                 SectionHeader(title: L("options.supabase.manualSync.header"), systemImage: "icloud")
@@ -2769,12 +2770,17 @@ private struct SupabaseManualSyncReleaseCard: View {
     @StateObject private var viewModel: SupabaseManualSyncViewModel
     @State private var activeRunTask: Task<Void, Never>?
 
-    init(context: ModelContext, authViewModel: SupabaseAuthViewModel) {
+    init(
+        context: ModelContext,
+        authViewModel: SupabaseAuthViewModel,
+        pullPreviewService: SupabasePullPreviewService?
+    ) {
         self.authViewModel = authViewModel
         _viewModel = StateObject(
             wrappedValue: SupabaseManualSyncReleaseFactory.makeViewModel(
                 context: context,
-                authViewModel: authViewModel
+                authViewModel: authViewModel,
+                pullPreviewService: pullPreviewService
             )
         )
     }
