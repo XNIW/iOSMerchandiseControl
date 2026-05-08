@@ -213,8 +213,34 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
         XCTAssertEqual(summary.safeAggregateCounts.remoteProductCount, 1)
         XCTAssertEqual(summary.safeAggregateCounts.newProductCount, 1)
         XCTAssertEqual(summary.recommendedUserMessageKey, .cloudDataNeedsReview)
+        XCTAssertNotNil(adapter.stagedPreviewForLocalApply)
+        adapter.clearStagedPreviewForLocalApply()
+        XCTAssertNil(adapter.stagedPreviewForLocalApply)
         let productFetchCount = await fetcher.productFetchCount()
         XCTAssertEqual(productFetchCount, 1)
+    }
+
+    func testTask078PullPreviewAdapterDoesNotStagePartialPreview() async throws {
+        let fetcher = RemotePreviewInventoryFetcherFake(
+            products: [
+                remoteProduct(barcode: "100", name: "Remote only")
+            ]
+        )
+        let service = SupabasePullPreviewService(
+            inventoryService: fetcher,
+            pageSize: 2,
+            catalogRowBudget: 0
+        )
+        let adapter = SupabaseManualSyncPullPreviewAdapter(
+            service: service,
+            context: try makeContext()
+        )
+
+        let summary = await adapter.loadRemotePreviewSummary()
+
+        XCTAssertTrue(summary.isPartial)
+        XCTAssertFalse(summary.isComplete)
+        XCTAssertNil(adapter.stagedPreviewForLocalApply)
     }
 
     func testTask071ProductionSourcesAvoidForbiddenWriteAndAutomationScope() throws {
@@ -232,7 +258,6 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
             .joined(separator: "\n")
 
         for forbidden in [
-            "SupabasePullApplyService",
             "SupabaseCatalogBaselineWriter",
             "drainOnce",
             "enqueue(",
@@ -268,7 +293,7 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
         )
         let combined = [releaseCardSource, viewModelSource].joined(separator: "\n")
 
-        XCTAssertFalse(combined.contains("SyncPreview"))
+        XCTAssertFalse(releaseCardSource.contains("SyncPreview"))
         XCTAssertFalse(combined.contains("SupabaseManualSyncPullPreviewAdapter"))
     }
 

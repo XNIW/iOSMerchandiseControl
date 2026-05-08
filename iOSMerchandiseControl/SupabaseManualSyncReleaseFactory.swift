@@ -8,9 +8,10 @@ enum SupabaseManualSyncReleaseFactory {
         authViewModel: SupabaseAuthViewModel,
         pullPreviewService: SupabasePullPreviewService? = nil
     ) -> SupabaseManualSyncViewModel {
-        let remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)? = pullPreviewService.map {
+        let remotePreviewAdapter = pullPreviewService.map {
             SupabaseManualSyncPullPreviewAdapter(service: $0, context: context)
         }
+        let remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)? = remotePreviewAdapter.map { $0 }
 
         let dependencies = SupabaseManualSyncCoordinator.Dependencies(
             authGate: SupabaseManualSyncReleaseAuthGate(authViewModel: authViewModel),
@@ -31,7 +32,11 @@ enum SupabaseManualSyncReleaseFactory {
                 isSignedIn: authViewModel.isSignedIn,
                 canSignIn: authViewModel.canSignIn,
                 isTransitioning: authViewModel.isTransitioning
-            )
+            ),
+            remotePreviewStaging: remotePreviewAdapter,
+            localApplyService: SupabasePullApplyService(),
+            localApplyContext: context,
+            isLocalApplyAuthenticated: { authViewModel.isSignedIn }
         )
     }
 }

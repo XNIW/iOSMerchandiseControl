@@ -6,6 +6,12 @@ protocol SupabaseManualSyncRemotePreviewProviding: AnyObject {
     func loadRemotePreviewSummary() async -> SupabaseManualSyncRemotePreviewSummary
 }
 
+@MainActor
+protocol SupabaseManualSyncRemotePreviewStaging: AnyObject {
+    var stagedPreviewForLocalApply: SyncPreview? { get }
+    func clearStagedPreviewForLocalApply()
+}
+
 nonisolated enum SupabaseManualSyncRemotePreviewMessageKey: String, Sendable, Equatable {
     case cloudCheckCompleteNoAction
     case cloudDataNeedsReview
@@ -223,9 +229,10 @@ nonisolated enum SupabaseManualSyncRemotePreviewOutcomeMapper {
 }
 
 @MainActor
-final class SupabaseManualSyncPullPreviewAdapter: SupabaseManualSyncRemotePreviewProviding {
+final class SupabaseManualSyncPullPreviewAdapter: SupabaseManualSyncRemotePreviewProviding, SupabaseManualSyncRemotePreviewStaging {
     private let service: SupabasePullPreviewService
     private let context: ModelContext
+    private(set) var stagedPreviewForLocalApply: SyncPreview?
 
     init(
         service: SupabasePullPreviewService,
@@ -236,14 +243,19 @@ final class SupabaseManualSyncPullPreviewAdapter: SupabaseManualSyncRemotePrevie
     }
 
     func loadRemotePreviewSummary() async -> SupabaseManualSyncRemotePreviewSummary {
+        clearStagedPreviewForLocalApply()
+
         do {
             try Task.checkCancellation()
             let viewState = await service.generatePreview(context: context)
             try Task.checkCancellation()
+            stagePreviewIfComplete(viewState)
             return SupabaseManualSyncRemotePreviewOutcomeMapper.summary(from: viewState)
         } catch is CancellationError {
+            clearStagedPreviewForLocalApply()
             return SupabaseManualSyncRemotePreviewOutcomeMapper.cancelledSummary()
         } catch {
+            clearStagedPreviewForLocalApply()
             return SupabaseManualSyncRemotePreviewSummary(
                 hasRemoteSignals: false,
                 isComplete: false,
@@ -254,5 +266,14 @@ final class SupabaseManualSyncPullPreviewAdapter: SupabaseManualSyncRemotePrevie
                 failureCategory: .unknown
             )
         }
+    }
+
+    func clearStagedPreviewForLocalApply() {
+        stagedPreviewForLocalApply = nil
+    }
+
+    private func stagePreviewIfComplete(_ viewState: SupabasePullPreviewViewState) {
+        guard case .success(let preview) = viewState else { return }
+        stagedPreviewForLocalApply = preview
     }
 }

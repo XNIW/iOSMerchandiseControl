@@ -1,4 +1,5 @@
 import XCTest
+import Foundation
 import SwiftData
 @testable import iOSMerchandiseControl
 
@@ -282,6 +283,15 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         XCTAssertEqual(products.first?.stockQuantity, nil)
     }
 
+    func testSaveFailurePathRollsBackBeforeSurfacingError() throws {
+        let source = try readSource("iOSMerchandiseControl/SupabasePullApplyService.swift")
+        let saveRange = try XCTUnwrap(source.range(of: "try context.save()"))
+        let rollbackRange = try XCTUnwrap(source.range(of: "context.rollback()", range: saveRange.upperBound..<source.endIndex))
+        let saveFailedRange = try XCTUnwrap(source.range(of: "SupabasePullApplyError.saveFailed", range: rollbackRange.upperBound..<source.endIndex))
+
+        XCTAssertLessThan(rollbackRange.lowerBound, saveFailedRange.lowerBound)
+    }
+
     func testSupplierAndCategoryReuseCaseInsensitive() throws {
         let context = try makeContext()
         context.insert(Supplier(name: "Acme"))
@@ -504,6 +514,13 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         let context = ModelContext(container)
         Self.retainedContexts.append(context)
         return context
+    }
+
+    private func readSource(_ relativePath: String) throws -> String {
+        let repoRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        return try String(contentsOf: repoRoot.appendingPathComponent(relativePath), encoding: .utf8)
     }
 
     private func makePreview(

@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import SwiftData
 
 // MARK: - Presentation
 
@@ -15,6 +16,8 @@ nonisolated enum SupabaseManualSyncUserPresentationKind: Equatable, Sendable {
     case technicalFollowUpNeeded
     case auxiliaryBusyConcurrent
     case auxiliaryModeUnavailable
+    case localApplyCompleted
+    case localApplyFailed
 }
 
 nonisolated struct SupabaseManualSyncCapabilitySet: Equatable, Sendable {
@@ -77,11 +80,20 @@ nonisolated enum SupabaseManualSyncUserFacingSummaryKind: Equatable, Sendable {
     case cloudAccessIssue
     case genericIssue
     case cancelled
+    case localApplyCompleted
+    case localApplyFailed
 }
 
 nonisolated struct SupabaseManualSyncUserFacingSummary: Equatable, Sendable {
     var kind: SupabaseManualSyncUserFacingSummaryKind
     var message: String
+}
+
+nonisolated struct SupabaseManualSyncLocalApplySummary: Equatable, Sendable {
+    var productsAdded: Int
+    var productsUpdated: Int
+    var suppliersCreated: Int
+    var categoriesCreated: Int
 }
 
 nonisolated enum SupabaseManualSyncReviewSectionTone: Equatable, Sendable {
@@ -112,6 +124,7 @@ nonisolated struct SupabaseManualSyncReviewSheetState: Equatable, Sendable {
     var primaryActionTitle: String
     var primaryActionSystemImage: String
     var primaryActionIsEnabled: Bool
+    var primaryActionIsLoading: Bool
     var secondaryActionTitle: String
     var accessibilityLabel: String
 }
@@ -150,6 +163,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
     private let coordinator: any SupabaseManualSyncCoordinating
     private let capabilities: SupabaseManualSyncCapabilitySet
+    private let remotePreviewStaging: (any SupabaseManualSyncRemotePreviewStaging)?
+    private let localApplyService: SupabasePullApplyService?
+    private let localApplyContext: ModelContext?
+    private let isLocalApplyAuthenticated: (@MainActor () -> Bool)?
     private var lastStartedMode: SupabaseManualSyncRunMode?
 
     @Published private(set) var presentationKind: SupabaseManualSyncUserPresentationKind = .idleReady
@@ -160,15 +177,27 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     @Published private(set) var cannotStartConcurrently = false
     @Published private(set) var lastSummary: SupabaseManualSyncRunSummary?
     @Published private(set) var authPresentationContext: SupabaseManualSyncAuthPresentationContext
+    @Published private(set) var canApplyLocalChanges = false
+    @Published private(set) var applyBlockedReason: String?
+    @Published private(set) var isApplyingLocalChanges = false
+    @Published private(set) var lastLocalApplySummary: SupabaseManualSyncLocalApplySummary?
 
     init(
         coordinator: any SupabaseManualSyncCoordinating,
         capabilities: SupabaseManualSyncCapabilitySet = .releaseCurrent,
-        initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext = .signedInReady
+        initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext = .signedInReady,
+        remotePreviewStaging: (any SupabaseManualSyncRemotePreviewStaging)? = nil,
+        localApplyService: SupabasePullApplyService? = nil,
+        localApplyContext: ModelContext? = nil,
+        isLocalApplyAuthenticated: (@MainActor () -> Bool)? = nil
     ) {
         self.coordinator = coordinator
         self.capabilities = capabilities
         self.authPresentationContext = initialAuthPresentationContext
+        self.remotePreviewStaging = remotePreviewStaging
+        self.localApplyService = localApplyService
+        self.localApplyContext = localApplyContext
+        self.isLocalApplyAuthenticated = isLocalApplyAuthenticated
     }
 
     var presentationState: SupabaseManualSyncPresentationState {
@@ -201,6 +230,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
     func start(with mode: SupabaseManualSyncRunMode) async {
         guard !isRunning else { return }
+        invalidateLocalApplyStaging(clearSummary: true)
         lastStartedMode = mode
         isRunning = true
         defer { isRunning = false }
@@ -244,6 +274,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     func apply(summary: SupabaseManualSyncRunSummary) {
         cannotStartConcurrently = false
         lastSummary = summary
+        canApplyLocalChanges = false
+        applyBlockedReason = nil
+        lastLocalApplySummary = nil
 
         switch summary.finalState {
         case .completedSuccessfully where summary.hasIncompleteRemotePreview:
@@ -313,6 +346,162 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             title = summary.userFacingHeadline
             subtitle = nil
             primaryActionTitle = Copy.startAction
+        }
+
+        refreshLocalApplyEligibility(from: summary)
+    }
+
+    func cancelLocalApplyReview() {
+        guard !isApplyingLocalChanges else { return }
+        guard canApplyLocalChanges || remotePreviewStaging?.stagedPreviewForLocalApply != nil else { return }
+        invalidateLocalApplyStaging(reason: L("options.supabase.manualSync.apply.blocked.refreshRequired"))
+    }
+
+    func applyStagedLocalChanges() async {
+        guard !isApplyingLocalChanges else { return }
+
+        guard let preview = remotePreviewStaging?.stagedPreviewForLocalApply else {
+            invalidateLocalApplyStaging(reason: L("options.supabase.manualSync.apply.blocked.refreshRequired"))
+            return
+        }
+
+        isApplyingLocalChanges = true
+        canApplyLocalChanges = false
+        applyBlockedReason = nil
+        await Task.yield()
+
+        guard !Task.isCancelled else {
+            isApplyingLocalChanges = false
+            invalidateLocalApplyStaging(clearSummary: true)
+            return
+        }
+
+        do {
+            let plan = try prepareLocalApplyPlan(from: preview)
+            guard let context = localApplyContext,
+                  let service = localApplyService else {
+                throw LocalApplyInternalError.dependenciesUnavailable
+            }
+            let result = try service.apply(plan: plan, context: context)
+            let summary = SupabaseManualSyncLocalApplySummary(
+                productsAdded: result.inserted,
+                productsUpdated: result.updated,
+                suppliersCreated: result.suppliersCreated,
+                categoriesCreated: result.categoriesCreated
+            )
+
+            invalidateLocalApplyStaging(clearSummary: false)
+            isApplyingLocalChanges = false
+            lastSummary = nil
+            lastLocalApplySummary = summary
+            presentationKind = .localApplyCompleted
+            title = L("options.supabase.manualSync.state.applied.title")
+            subtitle = L("options.supabase.manualSync.state.applied.subtitle")
+            primaryActionTitle = Copy.startAction
+        } catch {
+            let reason = localApplyBlockedMessage(for: error, failureContext: true)
+            invalidateLocalApplyStaging(reason: reason, clearSummary: true)
+            isApplyingLocalChanges = false
+            lastSummary = nil
+            presentationKind = .localApplyFailed
+            title = L("options.supabase.manualSync.state.applyFailed.title")
+            subtitle = reason
+            primaryActionTitle = Copy.dismissOrRetryAction
+        }
+    }
+
+    private enum LocalApplyInternalError: Error {
+        case dependenciesUnavailable
+    }
+
+    private func refreshLocalApplyEligibility(from summary: SupabaseManualSyncRunSummary) {
+        guard let remotePreviewSummary = summary.remotePreviewSummary else {
+            invalidateLocalApplyStaging()
+            return
+        }
+
+        guard !remotePreviewSummary.wasCancelled,
+              remotePreviewSummary.failureCategory == nil else {
+            invalidateLocalApplyStaging()
+            return
+        }
+
+        guard remotePreviewSummary.isComplete,
+              !remotePreviewSummary.isPartial else {
+            invalidateLocalApplyStaging(reason: L("options.supabase.manualSync.apply.blocked.incompleteCheck"))
+            return
+        }
+
+        guard let preview = remotePreviewStaging?.stagedPreviewForLocalApply else {
+            let reasonKey = remotePreviewSummary.hasRemoteSignals
+                ? "options.supabase.manualSync.apply.blocked.refreshRequired"
+                : "options.supabase.manualSync.apply.blocked.noChanges"
+            invalidateLocalApplyStaging(reason: L(reasonKey))
+            return
+        }
+
+        do {
+            _ = try prepareLocalApplyPlan(from: preview)
+            canApplyLocalChanges = true
+            applyBlockedReason = nil
+        } catch {
+            invalidateLocalApplyStaging(reason: localApplyBlockedMessage(for: error))
+        }
+    }
+
+    private func prepareLocalApplyPlan(from preview: SyncPreview) throws -> SupabasePullApplyPlan {
+        guard let context = localApplyContext,
+              let service = localApplyService else {
+            throw LocalApplyInternalError.dependenciesUnavailable
+        }
+
+        return try service.prepareApplyPlan(
+            preview: preview,
+            context: context,
+            options: SupabasePullApplyOptions(),
+            isAuthenticated: isLocalApplyAuthenticated?() ?? authPresentationContext.isSignedIn
+        )
+    }
+
+    private func invalidateLocalApplyStaging(
+        reason: String? = nil,
+        clearSummary: Bool = false
+    ) {
+        remotePreviewStaging?.clearStagedPreviewForLocalApply()
+        canApplyLocalChanges = false
+        applyBlockedReason = reason
+        if clearSummary {
+            lastLocalApplySummary = nil
+        }
+    }
+
+    private func localApplyBlockedMessage(
+        for error: Error,
+        failureContext: Bool = false
+    ) -> String {
+        guard let applyError = error as? SupabasePullApplyError else {
+            return failureContext
+                ? L("options.supabase.manualSync.apply.blocked.saveFailed")
+                : L("options.supabase.manualSync.apply.blocked.refreshRequired")
+        }
+
+        if case .saveFailed = applyError {
+            return L("options.supabase.manualSync.apply.blocked.saveFailed")
+        }
+
+        switch applyError.disabledReason {
+        case .sessionMissing, .accountMismatch:
+            return L("options.supabase.manualSync.apply.blocked.session")
+        case .partialPreview, .sourceErrorsPresent, .priceHistoryIncomplete:
+            return L("options.supabase.manualSync.apply.blocked.incompleteCheck")
+        case .conflictsPresent, .localDuplicateBarcode:
+            return L("options.supabase.manualSync.apply.blocked.needsAttention")
+        case .missingApplicablePayload, .missingRequiredField, .invalidPrice, .invalidStockQuantity:
+            return L("options.supabase.manualSync.apply.blocked.invalidData")
+        case .previewStale:
+            return L("options.supabase.manualSync.apply.blocked.stale")
+        case .noApplicableChanges:
+            return L("options.supabase.manualSync.apply.blocked.noChanges")
         }
     }
 
@@ -384,6 +573,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         cannotStartConcurrently = false
         lastSummary = nil
         lastStartedMode = nil
+        invalidateLocalApplyStaging(clearSummary: true)
         presentationKind = .idleReady
         title = Copy.idleTitle
         subtitle = Copy.idleSubtitle
@@ -393,6 +583,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     func applyAuthPresentationContext(_ context: SupabaseManualSyncAuthPresentationContext) {
         guard authPresentationContext != context else { return }
         authPresentationContext = context
+        if !context.isSignedIn {
+            invalidateLocalApplyStaging(clearSummary: true)
+        }
     }
 
     func runMode(for actionID: SupabaseManualSyncPresentationActionID) -> SupabaseManualSyncRunMode? {
@@ -578,6 +771,32 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 isRunning: false,
                 isLoading: false
             )
+
+        case .localApplyCompleted:
+            return state(
+                titleKey: "options.supabase.manualSync.state.applied.title",
+                subtitleKey: "options.supabase.manualSync.state.applied.subtitle",
+                summary: userFacingSummaryForCurrentState(),
+                badgeKey: "options.supabase.manualSync.badge.localUpdated",
+                badgeSystemImage: "checkmark.circle.fill",
+                primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
+
+        case .localApplyFailed:
+            return state(
+                titleKey: "options.supabase.manualSync.state.applyFailed.title",
+                subtitleKey: "options.supabase.manualSync.state.applyFailed.subtitle",
+                summary: userFacingSummaryForCurrentState(),
+                badgeKey: "options.supabase.manualSync.badge.retry",
+                badgeSystemImage: "exclamationmark.triangle.fill",
+                primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
         }
     }
 
@@ -627,10 +846,17 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     private func userFacingSummaryForCurrentState() -> SupabaseManualSyncUserFacingSummary? {
-        guard let lastSummary else { return nil }
-
         switch presentationKind {
+        case .localApplyCompleted:
+            guard let lastLocalApplySummary else { return nil }
+            return SupabaseManualSyncUserFacingSummary(
+                kind: .localApplyCompleted,
+                message: makeLocalApplyCompletedMessage(from: lastLocalApplySummary)
+            )
+        case .localApplyFailed:
+            return userFacingSummary(.localApplyFailed, key: "options.supabase.manualSync.summary.localApply.failed")
         case .successFullyUpToDate, .partialSync, .connectivityIssue, .cancelledRun, .technicalFollowUpNeeded:
+            guard let lastSummary else { return nil }
             return makeUserFacingSummary(from: lastSummary)
         case .idleReady,
              .running,
@@ -711,6 +937,29 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         SupabaseManualSyncUserFacingSummary(kind: kind, message: L(key))
     }
 
+    private func makeLocalApplyCompletedMessage(
+        from summary: SupabaseManualSyncLocalApplySummary
+    ) -> String {
+        var details: [String] = []
+        if summary.productsAdded > 0 {
+            details.append(L("options.supabase.manualSync.summary.localApply.productsAdded", summary.productsAdded))
+        }
+        if summary.productsUpdated > 0 {
+            details.append(L("options.supabase.manualSync.summary.localApply.productsUpdated", summary.productsUpdated))
+        }
+        if summary.suppliersCreated > 0 {
+            details.append(L("options.supabase.manualSync.summary.localApply.suppliersCreated", summary.suppliersCreated))
+        }
+        if summary.categoriesCreated > 0 {
+            details.append(L("options.supabase.manualSync.summary.localApply.categoriesCreated", summary.categoriesCreated))
+        }
+
+        guard !details.isEmpty else {
+            return L("options.supabase.manualSync.summary.localApply.completed")
+        }
+        return L("options.supabase.manualSync.summary.localApply.completedWithCounts", details.joined(separator: ", "))
+    }
+
     private func reviewSheetForCurrentState() -> SupabaseManualSyncReviewSheetState? {
         guard let lastSummary,
               let remotePreviewSummary = lastSummary.remotePreviewSummary,
@@ -726,7 +975,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
              .networkIssue,
              .cloudAccessIssue,
              .genericIssue,
-             .cancelled:
+             .cancelled,
+             .localApplyCompleted,
+             .localApplyFailed:
             return nil
         }
     }
@@ -781,8 +1032,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
         let title = L("options.supabase.manualSync.review.title")
         let subtitle = L("options.supabase.manualSync.review.subtitle")
-        let footerMessage = L("options.supabase.manualSync.review.footer.futureStep")
-        let primaryActionTitle = L("options.supabase.manualSync.review.action.applyFuture")
+        let footerMessage = reviewFooterMessage(remotePreviewSummary: remotePreviewSummary)
+        let primaryActionTitle = isApplyingLocalChanges
+            ? L("options.supabase.manualSync.review.action.updatingDevice")
+            : L("options.supabase.manualSync.review.action.updateDevice")
         let secondaryActionTitle = L("options.supabase.manualSync.review.action.cancel")
         let accessibilityLabel = ([title, subtitle] + sections.map(\.title) + [footerMessage])
             .joined(separator: ". ")
@@ -793,11 +1046,29 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             sections: sections,
             footerMessage: footerMessage,
             primaryActionTitle: primaryActionTitle,
-            primaryActionSystemImage: "checkmark.circle",
-            primaryActionIsEnabled: false,
+            primaryActionSystemImage: "arrow.down.circle",
+            primaryActionIsEnabled: canApplyLocalChanges && !isApplyingLocalChanges,
+            primaryActionIsLoading: isApplyingLocalChanges,
             secondaryActionTitle: secondaryActionTitle,
             accessibilityLabel: accessibilityLabel
         )
+    }
+
+    private func reviewFooterMessage(
+        remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary
+    ) -> String {
+        if isApplyingLocalChanges {
+            return L("options.supabase.manualSync.review.footer.updatingDevice")
+        }
+        if canApplyLocalChanges {
+            return L("options.supabase.manualSync.review.footer.readyToUpdateDevice")
+        }
+        if let applyBlockedReason {
+            return applyBlockedReason
+        }
+        return remotePreviewSummary.hasRemoteSignals
+            ? L("options.supabase.manualSync.apply.blocked.refreshRequired")
+            : L("options.supabase.manualSync.apply.blocked.noChanges")
     }
 
     private func reviewSection(

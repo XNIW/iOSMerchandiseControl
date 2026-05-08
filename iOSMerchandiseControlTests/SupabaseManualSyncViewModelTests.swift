@@ -1,4 +1,5 @@
 import XCTest
+import SwiftData
 @testable import iOSMerchandiseControl
 
 // MARK: - Test doubles
@@ -31,7 +32,20 @@ final class ClosureSupabaseManualSyncCoordinatorFake: SupabaseManualSyncCoordina
 }
 
 @MainActor
+private final class ManualSyncPreviewStagingFake: SupabaseManualSyncRemotePreviewStaging {
+    var stagedPreviewForLocalApply: SyncPreview?
+    private(set) var clearCount = 0
+
+    func clearStagedPreviewForLocalApply() {
+        clearCount += 1
+        stagedPreviewForLocalApply = nil
+    }
+}
+
+@MainActor
 final class SupabaseManualSyncViewModelTests: XCTestCase {
+    private static var retainedContainers: [ModelContainer] = []
+
     private func repoRootURL() -> URL {
         URL(fileURLWithPath: #file)
             .deletingLastPathComponent()
@@ -657,7 +671,9 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
         XCTAssertNil(vm.runMode(for: .reviewChanges))
         XCTAssertFalse(review.primaryActionIsEnabled)
-        XCTAssertEqual(review.primaryActionTitle, "Applica modifiche")
+        XCTAssertFalse(review.primaryActionIsLoading)
+        XCTAssertEqual(review.primaryActionTitle, "Aggiorna questo dispositivo")
+        XCTAssertEqual(review.footerMessage, "Riesegui Controlla cloud prima di aggiornare questo dispositivo.")
         XCTAssertEqual(review.secondaryActionTitle, "Annulla")
         XCTAssertEqual(review.sections.map(\.id), [.cloudToDevice, .deviceToCloud, .prices, .attention])
         XCTAssertFalse(actionIDs(state).contains(.syncNow))
@@ -1071,6 +1087,259 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testTask078FullApplicablePreviewEnablesUpdateDeviceAndAppliesLocally() async throws {
+        let context = try makeContext()
+        let staging = ManualSyncPreviewStagingFake()
+        staging.stagedPreviewForLocalApply = makeApplicablePreview(
+            newProducts: [
+                makeApplicableProductSummary(
+                    barcode: "100",
+                    productName: "Remote item",
+                    supplierName: "Cloud supplier",
+                    categoryName: "Cloud category"
+                )
+            ]
+        )
+        let vm = makeApplyReadyViewModel(context: context, staging: staging)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+
+        let review = try XCTUnwrap(vm.presentationState.reviewSheet)
+        XCTAssertTrue(vm.canApplyLocalChanges)
+        XCTAssertNil(vm.applyBlockedReason)
+        XCTAssertTrue(review.primaryActionIsEnabled)
+        XCTAssertFalse(review.primaryActionIsLoading)
+        XCTAssertEqual(review.primaryActionTitle, "Aggiorna questo dispositivo")
+        XCTAssertEqual(review.footerMessage, "Aggiornerò solo questo dispositivo. I dati nel cloud non verranno modificati.")
+
+        await vm.applyStagedLocalChanges()
+
+        XCTAssertEqual(vm.presentationKind, .localApplyCompleted)
+        XCTAssertEqual(vm.lastLocalApplySummary, SupabaseManualSyncLocalApplySummary(
+            productsAdded: 1,
+            productsUpdated: 0,
+            suppliersCreated: 1,
+            categoriesCreated: 1
+        ))
+        XCTAssertFalse(vm.canApplyLocalChanges)
+        XCTAssertNil(staging.stagedPreviewForLocalApply)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Supplier>()).count, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductCategory>()).count, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 0)
+        let appliedProduct = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
+        XCTAssertNotEqual(appliedProduct.stockQuantity ?? -1, 99, "Stock remoto non deve essere copiato quando applyStockQuantity resta false")
+        XCTAssertTrue(vm.presentationState.userFacingSummary?.message.contains("prodotti aggiunti: 1") ?? false)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask078PartialPreviewBlocksLocalApplyWithNaturalCopy() async throws {
+        let context = try makeContext()
+        let staging = ManualSyncPreviewStagingFake()
+        let vm = makeApplyReadyViewModel(context: context, staging: staging)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                isComplete: false,
+                isPartial: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(sourceErrorCount: 1),
+                key: .cloudCheckIncomplete
+            )
+        ))
+
+        XCTAssertFalse(vm.canApplyLocalChanges)
+        XCTAssertEqual(vm.applyBlockedReason, "Il controllo cloud non è completo. Riesegui Controlla cloud.")
+        XCTAssertNil(staging.stagedPreviewForLocalApply)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask078ConflictsBlockLocalApplyAndDoNotExposeIdentifiers() async throws {
+        let context = try makeContext()
+        let staging = ManualSyncPreviewStagingFake()
+        let privateID = UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")!
+        staging.stagedPreviewForLocalApply = makeApplicablePreview(
+            newProducts: [makeApplicableProductSummary(barcode: "PRIVATE-123", productName: "Secret product")],
+            conflicts: [
+                SyncPreviewConflict(
+                    kind: .remoteIDConflict,
+                    barcodeOrKey: "PRIVATE-123",
+                    detail: privateID.uuidString,
+                    relatedRemoteIDs: [privateID]
+                )
+            ]
+        )
+        let vm = makeApplyReadyViewModel(context: context, staging: staging)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1, conflictCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+
+        let review = try XCTUnwrap(vm.presentationState.reviewSheet)
+        XCTAssertFalse(vm.canApplyLocalChanges)
+        XCTAssertFalse(review.primaryActionIsEnabled)
+        XCTAssertEqual(review.footerMessage, "Alcuni elementi richiedono attenzione. Riesegui Controlla cloud dopo averli controllati.")
+        XCTAssertFalse(review.footerMessage.contains("PRIVATE-123"))
+        XCTAssertFalse(review.footerMessage.localizedCaseInsensitiveContains("secret product"))
+        XCTAssertFalse(review.footerMessage.localizedCaseInsensitiveContains(privateID.uuidString))
+        XCTAssertNil(staging.stagedPreviewForLocalApply)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask078WarningsDoNotBlockApplicablePreview() async throws {
+        let context = try makeContext()
+        let staging = ManualSyncPreviewStagingFake()
+        staging.stagedPreviewForLocalApply = makeApplicablePreview(
+            newProducts: [makeApplicableProductSummary()],
+            warnings: [
+                SyncPreviewWarning(code: .remoteDuplicateName, detail: "supplier", relatedKey: "supplier")
+            ]
+        )
+        let vm = makeApplyReadyViewModel(context: context, staging: staging)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1, warningCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+
+        let review = try XCTUnwrap(vm.presentationState.reviewSheet)
+        XCTAssertTrue(vm.canApplyLocalChanges)
+        XCTAssertTrue(review.primaryActionIsEnabled)
+        XCTAssertEqual(review.sections.map(\.id), [.cloudToDevice, .deviceToCloud, .prices, .attention])
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask078StaleLocalDataInvalidatesStagingBeforeApply() async throws {
+        let context = try makeContext()
+        let staging = ManualSyncPreviewStagingFake()
+        staging.stagedPreviewForLocalApply = makeApplicablePreview(
+            newProducts: [makeApplicableProductSummary(barcode: "100")]
+        )
+        let vm = makeApplyReadyViewModel(context: context, staging: staging)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+        XCTAssertTrue(vm.canApplyLocalChanges)
+
+        context.insert(Product(barcode: "100", productName: "Local edit"))
+        try context.save()
+
+        await vm.applyStagedLocalChanges()
+
+        XCTAssertEqual(vm.presentationKind, .localApplyFailed)
+        XCTAssertFalse(vm.canApplyLocalChanges)
+        XCTAssertEqual(vm.applyBlockedReason, "I dati locali sono cambiati. Riesegui Controlla cloud.")
+        XCTAssertNil(staging.stagedPreviewForLocalApply)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 1)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask078CancelAndRelaunchLoseStaging() async throws {
+        let context = try makeContext()
+        let staging = ManualSyncPreviewStagingFake()
+        staging.stagedPreviewForLocalApply = makeApplicablePreview(
+            newProducts: [makeApplicableProductSummary()]
+        )
+        let vm = makeApplyReadyViewModel(context: context, staging: staging)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+        XCTAssertTrue(vm.canApplyLocalChanges)
+
+        vm.cancelLocalApplyReview()
+
+        XCTAssertFalse(vm.canApplyLocalChanges)
+        XCTAssertEqual(vm.applyBlockedReason, "Riesegui Controlla cloud prima di aggiornare questo dispositivo.")
+        XCTAssertNil(staging.stagedPreviewForLocalApply)
+
+        let relaunchedVM = makeApplyReadyViewModel(context: context, staging: ManualSyncPreviewStagingFake())
+        relaunchedVM.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+
+        XCTAssertFalse(relaunchedVM.canApplyLocalChanges)
+        XCTAssertEqual(relaunchedVM.applyBlockedReason, "Riesegui Controlla cloud prima di aggiornare questo dispositivo.")
+        assertNoForbiddenUserFacingJargon(relaunchedVM)
+    }
+
+    func testTask078DoubleApplyTapOnlyWritesOnce() async throws {
+        let context = try makeContext()
+        let staging = ManualSyncPreviewStagingFake()
+        staging.stagedPreviewForLocalApply = makeApplicablePreview(
+            newProducts: [makeApplicableProductSummary(barcode: "100")]
+        )
+        let vm = makeApplyReadyViewModel(context: context, staging: staging)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+
+        await vm.applyStagedLocalChanges()
+        await vm.applyStagedLocalChanges()
+
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 1)
+        XCTAssertEqual(vm.lastLocalApplySummary?.productsAdded, 1)
+        XCTAssertNil(staging.stagedPreviewForLocalApply)
+    }
+
+    func testTask078NoFinalManualSyncCopyUsesOldApplyChangesLabel() throws {
+        let root = repoRootURL()
+        let supportedLanguages = ["it", "en", "es", "zh-Hans"]
+        for language in supportedLanguages {
+            let source = try String(
+                contentsOf: root.appendingPathComponent("iOSMerchandiseControl/\(language).lproj/Localizable.strings"),
+                encoding: .utf8
+            )
+            let manualSyncLines = source
+                .components(separatedBy: .newlines)
+                .filter { $0.contains("options.supabase.manualSync.") }
+                .joined(separator: "\n")
+            XCTAssertFalse(manualSyncLines.contains("Applica modifiche"))
+            XCTAssertFalse(manualSyncLines.contains("Apply changes"))
+            XCTAssertFalse(manualSyncLines.contains("Aplicar modificaciones"))
+            XCTAssertFalse(manualSyncLines.contains("应用更改"))
+        }
+    }
+
     func testViewModelSourcesAvoidForbiddenScopeTerms() throws {
         let root = repoRootURL()
         let urls = [
@@ -1088,6 +1357,101 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             XCTAssertFalse(text.contains("optionsview"))
             XCTAssertFalse(text.contains("task-067"))
         }
+    }
+
+    private func makeContext() throws -> ModelContext {
+        let schema = Schema([
+            Product.self,
+            Supplier.self,
+            ProductCategory.self,
+            ProductPrice.self,
+            SupabaseCatalogBaselineRun.self,
+            SupabaseCatalogBaselineRecord.self,
+        ])
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [configuration])
+        Self.retainedContainers.append(container)
+        return ModelContext(container)
+    }
+
+    private func makeApplyReadyViewModel(
+        context: ModelContext,
+        staging: ManualSyncPreviewStagingFake,
+        isAuthenticated: @MainActor @Sendable @escaping () -> Bool = { true }
+    ) -> SupabaseManualSyncViewModel {
+        SupabaseManualSyncViewModel(
+            coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false
+            ),
+            remotePreviewStaging: staging,
+            localApplyService: SupabasePullApplyService(),
+            localApplyContext: context,
+            isLocalApplyAuthenticated: isAuthenticated
+        )
+    }
+
+    private func makeApplicablePreview(
+        outcome: SyncPreviewOutcome = .success,
+        newProducts: [SyncPreviewProductSummary] = [],
+        updateCandidates: [SyncPreviewProductSummary] = [],
+        conflicts: [SyncPreviewConflict] = [],
+        warnings: [SyncPreviewWarning] = [],
+        sourceErrors: [SyncPreviewWarning] = []
+    ) -> SyncPreview {
+        SyncPreview(
+            generatedAt: Date(timeIntervalSince1970: 1_778_400_000),
+            outcome: outcome,
+            remoteCounts: RemoteInventorySnapshotCounts(
+                products: newProducts.count + updateCandidates.count + conflicts.count,
+                activeProducts: newProducts.count + updateCandidates.count + conflicts.count,
+                tombstonedProducts: 0,
+                suppliers: 0,
+                categories: 0,
+                productPrices: 0
+            ),
+            localCounts: LocalInventorySnapshotCounts(products: 0, suppliers: 0, categories: 0, productPrices: 0),
+            newProducts: newProducts,
+            updateCandidates: updateCandidates,
+            conflicts: conflicts,
+            unchangedProducts: [],
+            remoteTombstones: [],
+            supplierDiffs: [],
+            categoryDiffs: [],
+            priceHistoryDiffs: [],
+            warnings: warnings,
+            metrics: [],
+            sourceErrors: sourceErrors
+        )
+    }
+
+    private func makeApplicableProductSummary(
+        barcode: String = "100",
+        productName: String = "Remote item",
+        supplierName: String? = nil,
+        categoryName: String? = nil
+    ) -> SyncPreviewProductSummary {
+        let payload = SyncPreviewProductApplyPayload(
+            remoteID: UUID(),
+            remoteUpdatedAt: Date(timeIntervalSince1970: 1_778_400_001),
+            barcode: barcode,
+            productName: productName,
+            purchasePrice: 10,
+            retailPrice: 12,
+            stockQuantity: 99,
+            supplierName: supplierName,
+            supplierRemoteID: supplierName == nil ? nil : UUID(),
+            categoryName: categoryName,
+            categoryRemoteID: categoryName == nil ? nil : UUID()
+        )
+        return SyncPreviewProductSummary(
+            classification: .newProduct,
+            remoteID: payload.remoteID,
+            barcode: barcode,
+            productName: productName,
+            applyPayload: payload
+        )
     }
 
     private func makeTask075SmallDatasetCoordinator(

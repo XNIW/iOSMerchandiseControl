@@ -2770,6 +2770,8 @@ private struct SupabaseManualSyncReleaseCard: View {
     @StateObject private var viewModel: SupabaseManualSyncViewModel
     @State private var activeRunTask: Task<Void, Never>?
     @State private var isReviewSheetPresented = false
+    @State private var isApplyConfirmationPresented = false
+    @State private var activeApplyTask: Task<Void, Never>?
 
     init(
         context: ModelContext,
@@ -2876,12 +2878,48 @@ private struct SupabaseManualSyncReleaseCard: View {
         .onDisappear {
             activeRunTask?.cancel()
             activeRunTask = nil
+            activeApplyTask?.cancel()
+            activeApplyTask = nil
+            isApplyConfirmationPresented = false
         }
-        .sheet(isPresented: $isReviewSheetPresented) {
+        .sheet(
+            isPresented: $isReviewSheetPresented,
+            onDismiss: { viewModel.cancelLocalApplyReview() }
+        ) {
             if let review = viewModel.presentationState.reviewSheet {
-                SupabaseManualSyncReviewSheet(review: review) {
-                    isReviewSheetPresented = false
-                }
+                SupabaseManualSyncReviewSheet(
+                    review: review,
+                    primaryAction: {
+                        isApplyConfirmationPresented = true
+                    },
+                    dismiss: {
+                        viewModel.cancelLocalApplyReview()
+                        isReviewSheetPresented = false
+                    }
+                )
+            }
+        }
+        .alert(
+            L("options.supabase.manualSync.confirm.updateDevice.title"),
+            isPresented: $isApplyConfirmationPresented
+        ) {
+            Button(L("options.supabase.manualSync.confirm.updateDevice.cancel"), role: .cancel) {}
+            Button(L("options.supabase.manualSync.confirm.updateDevice.update")) {
+                startLocalApply()
+            }
+        } message: {
+            Text(L("options.supabase.manualSync.confirm.updateDevice.message"))
+        }
+    }
+
+    private func startLocalApply() {
+        guard activeApplyTask == nil else { return }
+
+        activeApplyTask = Task { @MainActor in
+            await viewModel.applyStagedLocalChanges()
+            activeApplyTask = nil
+            if !viewModel.isApplyingLocalChanges {
+                isReviewSheetPresented = false
             }
         }
     }
@@ -2951,11 +2989,15 @@ private struct SupabaseManualSyncReleaseCard: View {
     private func cancelActiveRun() {
         activeRunTask?.cancel()
         activeRunTask = nil
+        viewModel.cancelLocalApplyReview()
     }
 
     private func resetAfterAccountChange() {
         activeRunTask?.cancel()
         activeRunTask = nil
+        activeApplyTask?.cancel()
+        activeApplyTask = nil
+        isApplyConfirmationPresented = false
         isReviewSheetPresented = false
         viewModel.resetPresentationToIdleReady()
         syncAuthPresentationContext()
@@ -2974,6 +3016,7 @@ private struct SupabaseManualSyncReleaseCard: View {
 
 private struct SupabaseManualSyncReviewSheet: View {
     let review: SupabaseManualSyncReviewSheetState
+    let primaryAction: () -> Void
     let dismiss: () -> Void
 
     var body: some View {
@@ -3010,8 +3053,17 @@ private struct SupabaseManualSyncReviewSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 Button {
+                    primaryAction()
                 } label: {
-                    Label(review.primaryActionTitle, systemImage: review.primaryActionSystemImage)
+                    HStack(spacing: 8) {
+                        if review.primaryActionIsLoading {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: review.primaryActionSystemImage)
+                        }
+                        Text(review.primaryActionTitle)
+                    }
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)

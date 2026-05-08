@@ -30,6 +30,10 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.state.busy.subtitle",
             "options.supabase.manualSync.state.unavailable.title",
             "options.supabase.manualSync.state.unavailable.subtitle",
+            "options.supabase.manualSync.state.applied.title",
+            "options.supabase.manualSync.state.applied.subtitle",
+            "options.supabase.manualSync.state.applyFailed.title",
+            "options.supabase.manualSync.state.applyFailed.subtitle",
             "options.supabase.manualSync.summary.cloudCheck.completed.ok",
             "options.supabase.manualSync.summary.cloudCheck.completed.noAction",
             "options.supabase.manualSync.summary.cloudCheck.differences",
@@ -39,6 +43,13 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.summary.session",
             "options.supabase.manualSync.summary.generic",
             "options.supabase.manualSync.summary.cancelled",
+            "options.supabase.manualSync.summary.localApply.completed",
+            "options.supabase.manualSync.summary.localApply.completedWithCounts",
+            "options.supabase.manualSync.summary.localApply.productsAdded",
+            "options.supabase.manualSync.summary.localApply.productsUpdated",
+            "options.supabase.manualSync.summary.localApply.suppliersCreated",
+            "options.supabase.manualSync.summary.localApply.categoriesCreated",
+            "options.supabase.manualSync.summary.localApply.failed",
             "options.supabase.manualSync.action.checkCloud",
             "options.supabase.manualSync.action.review",
             "options.supabase.manualSync.action.syncNow",
@@ -59,9 +70,23 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.review.prices.noAction",
             "options.supabase.manualSync.review.attention.title",
             "options.supabase.manualSync.review.attention.message",
-            "options.supabase.manualSync.review.footer.futureStep",
-            "options.supabase.manualSync.review.action.applyFuture",
+            "options.supabase.manualSync.review.footer.readyToUpdateDevice",
+            "options.supabase.manualSync.review.footer.updatingDevice",
+            "options.supabase.manualSync.review.action.updateDevice",
+            "options.supabase.manualSync.review.action.updatingDevice",
             "options.supabase.manualSync.review.action.cancel",
+            "options.supabase.manualSync.confirm.updateDevice.title",
+            "options.supabase.manualSync.confirm.updateDevice.message",
+            "options.supabase.manualSync.confirm.updateDevice.cancel",
+            "options.supabase.manualSync.confirm.updateDevice.update",
+            "options.supabase.manualSync.apply.blocked.refreshRequired",
+            "options.supabase.manualSync.apply.blocked.incompleteCheck",
+            "options.supabase.manualSync.apply.blocked.needsAttention",
+            "options.supabase.manualSync.apply.blocked.invalidData",
+            "options.supabase.manualSync.apply.blocked.stale",
+            "options.supabase.manualSync.apply.blocked.noChanges",
+            "options.supabase.manualSync.apply.blocked.session",
+            "options.supabase.manualSync.apply.blocked.saveFailed",
             "options.supabase.manualSync.badge.manual",
             "options.supabase.manualSync.badge.running",
             "options.supabase.manualSync.badge.needsAccess",
@@ -71,6 +96,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.badge.retry",
             "options.supabase.manualSync.badge.cancelled",
             "options.supabase.manualSync.badge.unavailable",
+            "options.supabase.manualSync.badge.localUpdated",
             "options.supabase.manualSync.disabled.authChanging",
             "options.supabase.manualSync.disabled.accessUnavailable"
         ]
@@ -199,11 +225,16 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: source)
 
-        XCTAssertTrue(releaseCardSource.contains(".sheet(isPresented: $isReviewSheetPresented)"))
+        XCTAssertTrue(releaseCardSource.contains(".sheet("))
+        XCTAssertTrue(releaseCardSource.contains("isPresented: $isReviewSheetPresented"))
         XCTAssertTrue(releaseCardSource.contains("viewModel.presentationState.reviewSheet"))
-        XCTAssertTrue(releaseCardSource.contains("SupabaseManualSyncReviewSheet(review: review)"))
+        XCTAssertTrue(releaseCardSource.contains("SupabaseManualSyncReviewSheet("))
+        XCTAssertTrue(releaseCardSource.contains("review: review"))
+        XCTAssertTrue(releaseCardSource.contains("primaryAction:"))
         XCTAssertTrue(releaseCardSource.contains("review.sections"))
         XCTAssertTrue(releaseCardSource.contains(".disabled(!review.primaryActionIsEnabled)"))
+        XCTAssertTrue(releaseCardSource.contains("review.primaryActionIsLoading"))
+        XCTAssertTrue(releaseCardSource.contains(".controlSize(.small)"))
         XCTAssertFalse(releaseCardSource.contains("SupabaseManualSyncRunSummary"))
         XCTAssertFalse(releaseCardSource.contains("SupabaseManualSyncRemotePreviewSummary"))
         XCTAssertFalse(releaseCardSource.contains("SyncPreview"))
@@ -247,12 +278,14 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         let factorySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift")
 
         XCTAssertTrue(factorySource.contains("pullPreviewService: SupabasePullPreviewService? = nil"))
-        XCTAssertTrue(factorySource.contains("= pullPreviewService.map"))
+        XCTAssertTrue(factorySource.contains("remotePreviewAdapter = pullPreviewService.map"))
         XCTAssertTrue(factorySource.contains("SupabaseManualSyncPullPreviewAdapter(service: $0, context: context)"))
         XCTAssertTrue(factorySource.contains("remotePreviewProvider: remotePreviewProvider"))
         XCTAssertTrue(factorySource.contains("capabilities: .releaseCurrent(remotePreviewProvider: remotePreviewProvider)"))
+        XCTAssertTrue(factorySource.contains("remotePreviewStaging: remotePreviewAdapter"))
+        XCTAssertTrue(factorySource.contains("localApplyService: SupabasePullApplyService()"))
+        XCTAssertTrue(factorySource.contains("localApplyContext: context"))
         XCTAssertFalse(factorySource.contains("supportsGuidedManualSync: true"))
-        XCTAssertFalse(factorySource.contains("SupabasePullApplyService"))
         XCTAssertFalse(factorySource.contains("SyncEventOutboxDrainService"))
         XCTAssertFalse(factorySource.contains("SupabaseManualPushService"))
     }
@@ -283,16 +316,12 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             ".rpc",
             ".from",
             ".upsert",
-            ".insert",
-            ".update",
-            ".delete",
             "record_sync_event",
             "drainOnce",
             "SyncEventOutboxDrainService",
             "SyncEventOutboxEnqueueService",
             "SupabaseManualPushService",
             "SupabaseProductPriceManualPushService",
-            "SupabasePullApplyService",
             "SupabaseCatalogBaselineWriter",
             "confirmationDialog",
             "BGTask",
