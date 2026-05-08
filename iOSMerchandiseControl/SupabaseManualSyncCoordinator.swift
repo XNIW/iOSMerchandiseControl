@@ -133,7 +133,7 @@ final class SupabaseManualSyncCoordinator {
                 return .completed
             }
 
-            if !counts.hasAnyPendingWork {
+            if !counts.hasAnyPendingWork, dependencies.remotePreviewProvider == nil {
                 Self.markNoWorkSkips(skipped: &skipped)
                 try Task.checkCancellation()
                 try await runPhase(.summary, executed: &executed, ledger: &ledger) {

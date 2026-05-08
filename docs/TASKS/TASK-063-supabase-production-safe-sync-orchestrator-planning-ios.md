@@ -7,12 +7,12 @@
 | **Task ID** | TASK-063 |
 | **Titolo** | Supabase production-safe sync orchestrator planning iOS |
 | **File task** | `docs/TASKS/TASK-063-supabase-production-safe-sync-orchestrator-planning-ios.md` |
-| **Stato** | ACTIVE |
-| **Fase attuale** | PLANNING |
-| **Responsabile attuale** | Claude / Planner (review documentale pianificazione) |
+| **Stato** | DONE |
+| **Fase attuale** | Chiusura |
+| **Responsabile attuale** | Nessuno / Workspace IDLE |
 | **Data creazione** | 2026-05-07 |
-| **Ultimo aggiornamento** | 2026-05-07 — micro-rifinitura finale documentale: error taxonomy user-facing (**§4.g**), metriche/osservabilità privacy-safe (**§4.h**), planning freeze / non-execution boundary (**§4.i**), RQ9–11 + checklist planning review; correzioni typo/markdown (**§4.b** Cancellation, **§4.e** preflight); **READY FOR PLANNING REVIEW**, **non** READY FOR EXECUTION — **senza** codice/tests. |
-| **Ultimo agente** | Cursor / Planner |
+| **Ultimo aggiornamento** | 2026-05-07 23:15 -04 — Planning review documentale APPROVED_FIXED_DIRECTLY; TASK-063 chiuso **DONE / Chiusura** come planning base architetturale production-safe approvato e consumato dai task successivi, non come execution codice. |
+| **Ultimo agente** | Codex / Reviewer+Closer |
 
 ## Dipendenze
 
@@ -53,7 +53,7 @@ Definire **solo in markdown** il passaggio concettuale da: base iOS **manuale**,
 - [ ] Ordine slice **TASK-064…TASK-070+** allineato a **§5**.
 - [ ] Planning review checklist compilata come guida (**non** check operativi runtime).
 - [ ] Presenti **§4.d**, **§4.e**, **§4.f**, **§4.g**, **§4.h**, **§4.i**, **§7.b** (*review questions*).
-- [ ] `docs/MASTER-PLAN.md` coerente con **TASK-063 ACTIVE / PLANNING**.
+- [x] `docs/MASTER-PLAN.md` coerente con lo stato corrente di chiusura **TASK-063 DONE / Chiusura**.
 
 ---
 
@@ -430,7 +430,7 @@ Nessuna implementazione di coordinator/UI in TASK‑063; nessuna automazione gar
 
 ### §9 — Handoff finale
 
-- **TASK-063 resta ACTIVE / PLANNING.** **READY FOR PLANNING REVIEW.** **Non DONE.** **Non EXECUTION.** Il documento non autorizza Coding/Swift nei confini TASK‑063.
+- **Stato storico pre-review:** TASK-063 era **ACTIVE / PLANNING**, **READY FOR PLANNING REVIEW**, **Non DONE**, **Non EXECUTION**. Dopo la review documentale del 2026-05-07 23:15 -04, lo stato corrente e' **DONE / Chiusura** come planning/documentazione.
 - **Revisione pianificazione consigliata:** leggere Decisioni **D63‑01…08**, blocchi **§4.a–§4.i**, backlog **§5**, domande **§7.b**.
 - **Dopo una review PLANNING favorevole + override utente:** il primo intervento operativo consigliato resta **TASK‑064** — hardening **`sending` stale** (**D63‑05**), **solo** previa creazione del file task e handoff EXECUTION forma — **mai** dall’interno TASK‑063.
 - **TASK‑065**: solo coordinator **dry‑run/mock** dopo **TASK‑064** (**D63‑06**).
@@ -455,7 +455,7 @@ Nessuna implementazione di coordinator/UI in TASK‑063; nessuna automazione gar
 - [ ] Nessuna sezione **dichiara** READY FOR EXECUTION né autorizza implementazione ora (**§9**).
 - [ ] Nessun codice Swift modificato in questo task.
 - [ ] Nessun file **TASK-064** (né altri task `.md`) creato da questo perfezionamento.
-- [ ] **`docs/MASTER-PLAN.md`** coerente con **TASK-063 ACTIVE / PLANNING**.
+- [x] **`docs/MASTER-PLAN.md`** coerente con **TASK-063 DONE / Chiusura**.
 - [ ] Handoff **READY FOR PLANNING REVIEW** — **non** READY FOR EXECUTION.
 
 ---
@@ -481,3 +481,29 @@ TASK‑070 retryable head‑of‑line (**Android** storico **non** nomenclatura 
 ## Fix (Codex)
 
 *(Non autorizzato in TASK‑063.)*
+
+## Review (Claude)
+
+### 2026-05-07 23:15 -04 — Planning review / APPROVED_FIXED_DIRECTLY
+
+Esito review: **APPROVED_FIXED_DIRECTLY** *(solo tracking/markdown di chiusura; nessuna modifica codice)*.
+
+Verifiche documentali:
+
+- TASK-063 e' effettivamente **planning-only**: non contiene execution Swift, build/test obbligatori o handoff verso EXECUTION.
+- Non autorizza Swift, backend, Supabase live, SQL, Android, Realtime, worker, BGTask, timer, full sync o cleanup outbox.
+- Le decisioni **D63-01...D63-08** sono coerenti con manual-first, no automation, separazione DEBUG/Release, no baseline bump implicito e partial success user-facing.
+- Il planning e' stato consumato dai task successivi senza riaprire TASK-063: **TASK-064**, **TASK-065**, **TASK-066**, **TASK-067**, **TASK-068**, **TASK-069**, **TASK-070**, **TASK-071**.
+- TASK-063 non viene dichiarato come implementazione codice: il DONE e' solo approvazione/chiusura della base architetturale documentale.
+
+Fix applicato in review:
+
+- Riallineati metadati del file da **ACTIVE / PLANNING** a **DONE / Chiusura** secondo override utente controllato.
+
+## Chiusura
+
+TASK-063 **DONE / Chiusura**.
+
+- Chiuso come **planning/documentazione**, non come execution.
+- Base architetturale production-safe approvata e consumata dalle slice successive.
+- Nessun Swift, backend/Supabase/SQL o Android modificato da TASK-063.

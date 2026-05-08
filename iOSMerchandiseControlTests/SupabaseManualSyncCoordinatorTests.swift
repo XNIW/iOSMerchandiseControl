@@ -162,6 +162,43 @@ final class SupabaseManualSyncCoordinatorTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(summary)
     }
 
+    func testTask071RemotePreviewProviderRunsPreviewOnlyEvenWithZeroLocalPending() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts()
+        fake.remotePreviewSummary = SupabaseManualSyncRemotePreviewSummary(
+            hasRemoteSignals: false,
+            isComplete: true,
+            isPartial: false,
+            wasCancelled: false,
+            safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(),
+            recommendedUserMessageKey: .cloudCheckCompleteNoAction,
+            failureCategory: nil
+        )
+        let coordinator = SupabaseManualSyncCoordinator(
+            dependencies: .init(
+                authGate: fake,
+                baselineGate: fake,
+                pendingSnapshot: fake,
+                phaseSimulation: fake,
+                remotePreviewProvider: fake
+            )
+        )
+
+        let summary = await coordinator.run(mode: .dryRun)
+
+        XCTAssertEqual(summary.remotePreviewSummary, fake.remotePreviewSummary)
+        XCTAssertEqual(summary.userFacingHeadline, SupabaseManualSyncUserFacingCopy.cloudCheckNoAction)
+        XCTAssertNotEqual(summary.userFacingHeadline, SupabaseManualSyncUserFacingCopy.allUpToDate)
+        XCTAssertEqual(summary.executedPhases, [.authCheck, .baselineCheck, .localPendingCheck, .remotePreview, .summary])
+        XCTAssertTrue(summary.skippedPhases.contains(.userConfirmation))
+        XCTAssertTrue(summary.skippedPhases.contains(.catalogPush))
+        XCTAssertTrue(summary.skippedPhases.contains(.productPricePush))
+        XCTAssertTrue(summary.skippedPhases.contains(.pendingEventsFlush))
+        XCTAssertTrue(summary.skippedPhases.contains(.finalRefresh))
+        XCTAssertEqual(fake.calls, [.authGate, .baselineGate, .pendingSnapshot, .remotePreview])
+        assertNoForbiddenUserFacingJargon(summary)
+    }
+
     func testTask071CompleteRemotePreviewWithoutSignalsDoesNotPromiseCloudIsUpdated() async {
         let fake = SupabaseManualSyncCoordinatorDryRunFake()
         fake.snapshot = SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1, pendingPriceChangeCount: 0, pendingQueuedCloudOperationCount: 0)

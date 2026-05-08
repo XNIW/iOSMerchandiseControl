@@ -7,12 +7,12 @@
 | **Task ID** | TASK-070 |
 | **Titolo** | Supabase manual sync pull preview read-only planning iOS |
 | **File task** | `docs/TASKS/TASK-070-supabase-manual-sync-pull-preview-readonly-planning-ios.md` |
-| **Stato** | ACTIVE |
-| **Fase attuale** | PLANNING |
-| **Responsabile attuale** | Claude / Cursor Planner |
+| **Stato** | DONE |
+| **Fase attuale** | Chiusura |
+| **Responsabile attuale** | Nessuno / Workspace IDLE |
 | **Data creazione** | 2026-05-07 |
-| **Ultimo aggiornamento** | 2026-05-07 — Rifinitura governance / chiusura planning (solo markdown, user override controllato). |
-| **Ultimo agente** | Cursor / Claude (planning markdown) |
+| **Ultimo aggiornamento** | 2026-05-07 23:15 -04 — Planning review documentale APPROVED_FIXED_DIRECTLY; TASK-070 chiuso **DONE / Chiusura** come planning/gap analysis pull preview read-only. TASK-071 resta execution separata avviata e chiusa con override utente. |
+| **Ultimo agente** | Codex / Reviewer+Closer |
 
 ## User override controllato
 
@@ -70,7 +70,7 @@ Task **solo markdown / planning**:
 | ID | Criterio | Stato |
 |----|----------|-------|
 | CA70-01 | File TASK-070 creato e path coerente con MASTER-PLAN `File task`. | [x] |
-| CA70-02 | MASTER-PLAN aggiornato (ACTIVE / PLANNING / task attivo / ultimo DONE TASK-069). | [x] |
+| CA70-02 | MASTER-PLAN aggiornato durante planning (storicamente ACTIVE / PLANNING / task attivo / ultimo DONE TASK-069) e riallineato in chiusura a IDLE / TASK-071 ultimo completato. | [x] |
 | CA70-03 | `SupabasePullPreviewService` e dipendenze **inventariate** (dati letti, paginazione, partial, side effects vs apply). | [x] |
 | CA70-04 | Rischi read-only remoti chiari + legame a TASK-063 manual-first/sicurezza. | [x] |
 | CA70-05 | UX user-facing **proposta** senza jargon in Release per stati preview (vedi §UX). | [x] |
@@ -392,7 +392,7 @@ Scelta consigliata per la **prima EXECUTION** dopo **Planning Review approvata +
 - [ ] Decisioni **D70-01…D70-26** complete, leggibili e **senza contraddizioni interne** evidenti.
 - [ ] Rapporto con **TASK-068 D68-04** chiarito: **NESSUN tag OBSOLETA** necessario (**non** è in conflitto con questo planning — TASK-069 = micro-step senza read remoto; TASK-070 = slice successiva di **progettazione** read-only opzionale).
 - [ ] Durante refinement TASK-070: **nessun** file `.swift` modificato dalla sessione; **nessuna** validazione tramite Supabase live obbligatoria; **nessun** file **`TASK-071*.md`** creato dall’azione di refinement.
-- [ ] Finché TASK-070 resta **aperto**, `MASTER-PLAN.md` resta **coerente** con stato **ACTIVE / PLANNING** e task attivo TASK-070; dopo chiusura ufficiale, aggiornare MASTER secondo **§Come chiudere TASK-070 dopo review**.
+- [x] `MASTER-PLAN.md` riallineato dopo chiusura ufficiale: progetto **IDLE**, nessun task attivo, TASK-070 **DONE / Chiusura**.
 
 ---
 
@@ -418,9 +418,9 @@ Scelta consigliata per la **prima EXECUTION** dopo **Planning Review approvata +
 
 ## Handoff finale (TASK-070)
 
-- **Stato:** **ACTIVE** / **PLANNING**.  
-- **Esito:** **READY FOR PLANNING REVIEW**.  
-- **NON READY FOR EXECUTION** (nessuna autorizzazione Codex; **nessun** Swift / test obbligatori / xcodebuild / Supabase live obbligatori per validare questo planning).  
+- **Stato storico pre-review:** **ACTIVE** / **PLANNING**.
+- **Esito storico pre-review:** **READY FOR PLANNING REVIEW**.
+- **Stato corrente post-review:** **DONE / Chiusura** come planning/gap analysis; resta **NON READY FOR EXECUTION** nel perimetro TASK-070 (nessuna autorizzazione Codex; **nessun** Swift / test obbligatori / xcodebuild / Supabase live obbligatori per validare questo planning).
 - **TASK-070 è chiudibile come planning documentale dopo review favorevole secondo §Come chiudere**; **la chiusura non implica** che la **pull preview remota sia implementata** nell’app.  
 - **TASK-071** resta una **proposta futura** scritta in questo documento, **non** un file **`TASK-071*.md`** esistente **né** un task attivo sul MASTER-PLAN.  
 - **Nessun** file **Swift** modificato con questa rifinitura TASK-070.  
@@ -492,13 +492,26 @@ Scelta consigliata per la **prima EXECUTION** dopo **Planning Review approvata +
 
 ## Review (Claude)
 
-*(Sezione riservata alla **Planning Review** documentale — **non** compilata come esito definitivo in questo turno di planning.)*
-
 | Campo | Valore |
 |-------|--------|
-| **Stato review** | **PENDING** |
-| **Esito review** | Da compilare durante **Planning Review** (`APPROVED` / `CHANGES_REQUIRED` / `REJECTED — planning` secondo workflow progetto). |
-| **Checklist operativa** | Vedere **§Planning Review Checklist** e **§Checklist per chiusura planning TASK-070**. |
+| **Stato review** | **COMPLETATA** |
+| **Esito review** | **APPROVED_FIXED_DIRECTLY** *(solo tracking/markdown di chiusura; nessun codice in TASK-070).* |
+| **Data review** | 2026-05-07 23:15 -04 |
+
+Verifiche documentali:
+
+- TASK-070 e' **planning-only**: non implementa e non dichiara implementata la pull preview remota.
+- Le decisioni **D70-01...D70-26** sono coerenti e non contraddittorie.
+- Il rapporto con **D68-04** e' chiarito senza dichiararlo obsoleto: TASK-069 resta micro-step locale read-only; TASK-070 pianifica una slice successiva remota read-only opzionale.
+- La policy **pending locali zero** e' chiara: preview cloud futura ammessa solo da CTA manuale esplicita, bounded e non automatica.
+- UX futura chiara: pending locali e segnali cloud separati; preview partial diversa da sync partial; famiglia copy **"Controllo cloud incompleto"** per partial/budget-limited; niente jargon Release.
+- Adapter design concettuale sufficiente: provider fakeable, DTO piccolo/privacy-safe, mapper outcome, no `SyncPreview` raw verso Release.
+- Definition of Ready e micro-slice **TASK-071** consigliata sono coerenti: adapter/mapper/coordinator/test, niente UI strutturale, niente apply/push/drain/baseline writer.
+- TASK-070 puo' essere chiuso come planning anche se TASK-071 e' stato avviato con override separato: la chiusura non equivale a execution.
+
+Fix applicato in review:
+
+- Riallineati metadati e sezioni **Review / Chiusura** da **ACTIVE / PLANNING** a **DONE / Chiusura** secondo override utente controllato.
 
 ---
 
@@ -506,7 +519,7 @@ Scelta consigliata per la **prima EXECUTION** dopo **Planning Review approvata +
 
 | Campo | Valore |
 |-------|--------|
-| **Stato chiusura task** | **NON COMPILATA** |
-| **Nota** | TASK-070 resta **ACTIVE** / **PLANNING** finché non viene **approvato nella review** e **confermato dall’utente** secondo il workflow del progetto (**non** dichiarare **DONE** qui). |
+| **Stato chiusura task** | **DONE / Chiusura** |
+| **Nota** | TASK-070 e' chiuso come **planning/gap analysis** pull preview read-only. Non dichiara che la pull preview sia implementata nel codice; TASK-071 e' l'execution separata avviata con override utente. |
 
 ---
