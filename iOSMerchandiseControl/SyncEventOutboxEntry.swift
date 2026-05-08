@@ -404,6 +404,9 @@ nonisolated enum SyncEventOutboxFactory {
 }
 
 struct SyncEventOutboxLocalStore {
+    static let defaultSendingRecoveryScanLimit = 50
+    static let hardSendingRecoveryScanLimit = 200
+
     let context: ModelContext
 
     init(context: ModelContext) {
@@ -440,6 +443,71 @@ struct SyncEventOutboxLocalStore {
         }
 
         return try context.fetch(descriptor)
+    }
+
+    func recoverStaleSending(
+        ownerUserID: String,
+        now: Date,
+        staleInterval: TimeInterval = SyncEventOutboxStateMachine.defaultSendingStaleInterval,
+        scanLimit: Int = defaultSendingRecoveryScanLimit
+    ) throws -> SyncEventOutboxSendingRecoveryResult {
+        let ownerUserID = ownerUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sending = SyncEventOutboxStatus.sending.rawValue
+        var descriptor = FetchDescriptor<SyncEventOutboxEntry>(
+            predicate: #Predicate { entry in
+                entry.ownerUserID == ownerUserID && entry.statusRaw == sending
+            },
+            sortBy: [
+                SortDescriptor(\SyncEventOutboxEntry.updatedAt, order: .forward),
+                SortDescriptor(\SyncEventOutboxEntry.createdAt, order: .forward),
+                SortDescriptor(\SyncEventOutboxEntry.id, order: .forward)
+            ]
+        )
+
+        let boundedLimit = min(
+            max(0, scanLimit),
+            Self.hardSendingRecoveryScanLimit
+        )
+        guard boundedLimit > 0 else {
+            return SyncEventOutboxSendingRecoveryResult()
+        }
+        descriptor.fetchLimit = boundedLimit
+
+        let entries = try context.fetch(descriptor)
+        var recoveredCount = 0
+        var exhaustedCount = 0
+        var skippedFreshSendingCount = 0
+
+        for entry in entries {
+            let state = entry.state
+            guard SyncEventOutboxStateMachine.isSendingStale(
+                state,
+                now: now,
+                staleInterval: staleInterval
+            ) else {
+                skippedFreshSendingCount += 1
+                continue
+            }
+
+            let recovered = SyncEventOutboxStateMachine.recoverStaleSending(state, now: now)
+            entry.apply(recovered)
+
+            switch recovered.status {
+            case .failedRetryable:
+                recoveredCount += 1
+            case .dead:
+                exhaustedCount += 1
+            case .pending, .sending, .sent, .blockedContract, .blockedAuth, .blockedSchema, .localOnly:
+                break
+            }
+        }
+
+        return SyncEventOutboxSendingRecoveryResult(
+            scannedCount: entries.count,
+            recoveredCount: recoveredCount,
+            exhaustedCount: exhaustedCount,
+            skippedFreshSendingCount: skippedFreshSendingCount
+        )
     }
 
     func fetchCounts(ownerUserID: String, now: Date) throws -> SyncEventOutboxCounts {

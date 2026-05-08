@@ -140,6 +140,55 @@ final class SyncEventOutboxStateTests: XCTestCase {
         XCTAssertTrue(SyncEventOutboxStateMachine.isTerminal(sent.status))
     }
 
+    func testSendingStaleRecoveryReturnsRetryableWithoutConsumingAttempt() throws {
+        let entry = try makeEntry()
+        let sendingAt = now.addingTimeInterval(-SyncEventOutboxStateMachine.defaultSendingStaleInterval - 1)
+        entry.apply(SyncEventOutboxStateMachine.toSending(entry.state, now: sendingAt))
+
+        XCTAssertTrue(
+            SyncEventOutboxStateMachine.isSendingStale(
+                entry.state,
+                now: now,
+                staleInterval: SyncEventOutboxStateMachine.defaultSendingStaleInterval
+            )
+        )
+
+        let recovered = SyncEventOutboxStateMachine.recoverStaleSending(entry.state, now: now)
+
+        XCTAssertEqual(recovered.status, .failedRetryable)
+        XCTAssertEqual(recovered.attemptCount, 0)
+        XCTAssertEqual(recovered.nextRetryAt, now)
+        XCTAssertEqual(recovered.lastErrorKind, .timeout)
+        XCTAssertEqual(recovered.lastErrorCode, SyncEventOutboxStateMachine.staleSendingRecoveryErrorCode)
+    }
+
+    func testFreshSendingIsNotStale() throws {
+        let entry = try makeEntry()
+        entry.apply(SyncEventOutboxStateMachine.toSending(entry.state, now: now.addingTimeInterval(-60)))
+
+        XCTAssertFalse(
+            SyncEventOutboxStateMachine.isSendingStale(
+                entry.state,
+                now: now,
+                staleInterval: SyncEventOutboxStateMachine.defaultSendingStaleInterval
+            )
+        )
+    }
+
+    func testExhaustedSendingRecoveryMapsToDead() throws {
+        let entry = try makeEntry()
+        entry.attemptCount = 3
+        entry.maxAttempts = 3
+        entry.apply(SyncEventOutboxStateMachine.toSending(entry.state, now: now.addingTimeInterval(-700)))
+
+        let recovered = SyncEventOutboxStateMachine.recoverStaleSending(entry.state, now: now)
+
+        XCTAssertEqual(recovered.status, .dead)
+        XCTAssertEqual(recovered.attemptCount, 3)
+        XCTAssertEqual(recovered.lastErrorKind, .timeout)
+        XCTAssertEqual(recovered.lastErrorCode, SyncEventOutboxStateMachine.staleSendingRecoveryErrorCode)
+    }
+
     func testAuthMapsToBlockedAuth() throws {
         let entry = try makeEntry()
         let next = SyncEventOutboxStateMachine.transitionAfterFailure(

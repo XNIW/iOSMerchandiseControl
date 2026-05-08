@@ -39,6 +39,29 @@ nonisolated struct SyncEventOutboxFailure: Sendable, Equatable {
     }
 }
 
+nonisolated struct SyncEventOutboxSendingRecoveryResult: Sendable, Equatable {
+    let scannedCount: Int
+    let recoveredCount: Int
+    let exhaustedCount: Int
+    let skippedFreshSendingCount: Int
+
+    init(
+        scannedCount: Int = 0,
+        recoveredCount: Int = 0,
+        exhaustedCount: Int = 0,
+        skippedFreshSendingCount: Int = 0
+    ) {
+        self.scannedCount = scannedCount
+        self.recoveredCount = recoveredCount
+        self.exhaustedCount = exhaustedCount
+        self.skippedFreshSendingCount = skippedFreshSendingCount
+    }
+
+    var hasChanges: Bool {
+        recoveredCount > 0 || exhaustedCount > 0
+    }
+}
+
 nonisolated struct SyncEventOutboxState: Sendable, Equatable {
     let status: SyncEventOutboxStatus
     let attemptCount: Int
@@ -77,6 +100,14 @@ nonisolated struct SyncEventOutboxState: Sendable, Equatable {
 }
 
 nonisolated enum SyncEventOutboxStateMachine {
+    static let defaultSendingStaleInterval: TimeInterval = 10 * 60
+    static let staleSendingRecoveryErrorCode = "sending_stale_recovered"
+    private static let staleSendingRecoveryFailure = SyncEventOutboxFailure(
+        kind: .timeout,
+        code: staleSendingRecoveryErrorCode,
+        message: "Stale sending outbox entry recovered locally."
+    )
+
     static func isRetryable(
         status: SyncEventOutboxStatus,
         attemptCount: Int,
@@ -116,6 +147,42 @@ nonisolated enum SyncEventOutboxStateMachine {
         case .pending, .sending, .failedRetryable:
             return false
         }
+    }
+
+    static func isSendingStale(
+        _ state: SyncEventOutboxState,
+        now: Date,
+        staleInterval: TimeInterval = defaultSendingStaleInterval
+    ) -> Bool {
+        guard state.status == .sending else { return false }
+        let referenceDate = state.lastAttemptAt ?? state.updatedAt
+        return now.timeIntervalSince(referenceDate) >= max(0, staleInterval)
+    }
+
+    static func recoverStaleSending(_ state: SyncEventOutboxState, now: Date) -> SyncEventOutboxState {
+        guard state.status == .sending else { return state }
+        guard state.attemptCount < state.maxAttempts else {
+            return toDeadWhenAttemptsExhausted(
+                state,
+                failure: staleSendingRecoveryFailure,
+                now: now
+            )
+        }
+
+        return SyncEventOutboxState(
+            status: .failedRetryable,
+            attemptCount: state.attemptCount,
+            maxAttempts: state.maxAttempts,
+            nextRetryAt: now,
+            lastAttemptAt: state.lastAttemptAt,
+            lastErrorCode: staleSendingRecoveryFailure.code,
+            lastErrorKind: staleSendingRecoveryFailure.kind,
+            lastErrorMessageSanitized: SyncEventOutboxPrivacySanitizer.sanitizeErrorMessage(
+                staleSendingRecoveryFailure.message
+            ),
+            updatedAt: now,
+            sentAt: nil
+        )
     }
 
     static func toSending(_ state: SyncEventOutboxState, now: Date) -> SyncEventOutboxState {

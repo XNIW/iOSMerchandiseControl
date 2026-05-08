@@ -43,6 +43,101 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(requests.first?.entityIDs, .null)
     }
 
+    func testDrainRecoversStaleSendingBeforeProcessing() async throws {
+        let context = try makeContext()
+        let entry = try makeEntry(id: "entry-stale-sending", clientEventID: "client-stale-sending")
+        entry.apply(
+            SyncEventOutboxStateMachine.toSending(
+                entry.state,
+                now: now.addingTimeInterval(-SyncEventOutboxStateMachine.defaultSendingStaleInterval - 1)
+            )
+        )
+        try insert([entry], in: context)
+        let recorder = FakeDrainRecorder([.success(try row(id: 20, clientEventID: "client-stale-sending"))])
+        let service = makeService(context: context, recorder: recorder)
+
+        let outcome = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+
+        XCTAssertEqual(outcome.status, .drained)
+        XCTAssertEqual(outcome.recoveredCount, 1)
+        XCTAssertEqual(outcome.exhaustedCount, 0)
+        XCTAssertEqual(outcome.skippedFreshSendingCount, 0)
+        XCTAssertEqual(outcome.attempted, 1)
+        XCTAssertEqual(outcome.sent, 1)
+        XCTAssertEqual(entry.status, .sent)
+        let requests = await recorder.requests()
+        XCTAssertEqual(requests.map(\.clientEventID), ["client-stale-sending"])
+    }
+
+    func testFreshSendingIsSkippedByRecoveryAndNotProcessed() async throws {
+        let context = try makeContext()
+        let entry = try makeEntry(id: "entry-fresh-sending", clientEventID: "client-fresh-sending")
+        entry.apply(SyncEventOutboxStateMachine.toSending(entry.state, now: now.addingTimeInterval(-60)))
+        try insert([entry], in: context)
+        let recorder = FakeDrainRecorder([.success(try row(id: 21, clientEventID: "client-fresh-sending"))])
+        let service = makeService(context: context, recorder: recorder)
+
+        let outcome = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+
+        XCTAssertEqual(outcome.status, .noWork)
+        XCTAssertEqual(outcome.recoveredCount, 0)
+        XCTAssertEqual(outcome.exhaustedCount, 0)
+        XCTAssertEqual(outcome.skippedFreshSendingCount, 1)
+        XCTAssertEqual(entry.status, .sending)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 0)
+    }
+
+    func testExhaustedStaleSendingRecoveryDoesNotRetry() async throws {
+        let context = try makeContext()
+        let entry = try makeEntry(id: "entry-stale-exhausted", clientEventID: "client-stale-exhausted")
+        entry.attemptCount = 3
+        entry.maxAttempts = 3
+        entry.apply(
+            SyncEventOutboxStateMachine.toSending(
+                entry.state,
+                now: now.addingTimeInterval(-SyncEventOutboxStateMachine.defaultSendingStaleInterval - 1)
+            )
+        )
+        try insert([entry], in: context)
+        let recorder = FakeDrainRecorder([.success(try row(id: 22, clientEventID: "client-stale-exhausted"))])
+        let service = makeService(context: context, recorder: recorder)
+
+        let outcome = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+
+        XCTAssertEqual(outcome.status, .networkFailed)
+        XCTAssertEqual(outcome.recoveredCount, 0)
+        XCTAssertEqual(outcome.exhaustedCount, 1)
+        XCTAssertEqual(entry.status, .dead)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 0)
+    }
+
+    func testExhaustedStaleRecoveryMakesSuccessfulDrainPartial() async throws {
+        let context = try makeContext()
+        let exhausted = try makeEntry(id: "entry-recovery-dead", clientEventID: "client-recovery-dead")
+        exhausted.attemptCount = 3
+        exhausted.maxAttempts = 3
+        exhausted.apply(
+            SyncEventOutboxStateMachine.toSending(
+                exhausted.state,
+                now: now.addingTimeInterval(-SyncEventOutboxStateMachine.defaultSendingStaleInterval - 1)
+            )
+        )
+        let pending = try makeEntry(id: "entry-after-recovery-dead", clientEventID: "client-after-recovery-dead")
+        try insert([exhausted, pending], in: context)
+        let recorder = FakeDrainRecorder([.success(try row(id: 23, clientEventID: "client-after-recovery-dead"))])
+        let service = makeService(context: context, recorder: recorder)
+
+        let outcome = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+
+        XCTAssertEqual(outcome.status, .partiallyDrained)
+        XCTAssertEqual(outcome.sent, 1)
+        XCTAssertEqual(outcome.exhaustedCount, 1)
+        XCTAssertEqual(exhausted.status, .dead)
+        XCTAssertEqual(pending.status, .sent)
+    }
+
     func testSuccessReplaysPersistedEntityIDsAndMetadata() async throws {
         let context = try makeContext()
         let productID = "11111111-1111-4111-8111-111111111111"
@@ -247,6 +342,29 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         XCTAssertEqual(callCount, 0)
     }
 
+    func testSendingRecoveryScanLimitIsBounded() async throws {
+        var capturedScanLimit: Int?
+        let recorder = FakeDrainRecorder([])
+        let service = SyncEventOutboxDrainService(
+            recorder: recorder,
+            sendingRecoveryScanLimit: 10_000,
+            clock: { self.now },
+            recoverStaleSending: { _, _, _, scanLimit in
+                capturedScanLimit = scanLimit
+                return SyncEventOutboxSendingRecoveryResult()
+            },
+            fetchRetryable: { _, _, _ in [] },
+            saveChanges: {}
+        )
+
+        let outcome = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+
+        XCTAssertEqual(outcome.status, .noWork)
+        XCTAssertEqual(capturedScanLimit, SyncEventOutboxLocalStore.hardSendingRecoveryScanLimit)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 0)
+    }
+
     func testInvalidOwnerDoesNotFetchOrCallRecorder() async throws {
         var fetchCalls = 0
         let recorder = FakeDrainRecorder([])
@@ -314,6 +432,112 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         } catch {
             XCTFail("Expected CancellationError, got \(error).")
         }
+    }
+
+    func testCancellationAfterStaleRecoveryDoesNotReturnFalseSuccess() async throws {
+        let context = try makeContext()
+        let entry = try makeEntry(id: "entry-recovered-cancel", clientEventID: "client-recovered-cancel")
+        entry.apply(
+            SyncEventOutboxStateMachine.toSending(
+                entry.state,
+                now: now.addingTimeInterval(-SyncEventOutboxStateMachine.defaultSendingStaleInterval - 1)
+            )
+        )
+        try insert([entry], in: context)
+        let recorder = FakeDrainRecorder([.cancel])
+        let service = makeService(context: context, recorder: recorder)
+
+        do {
+            _ = try await service.drainOnce(ownerUserID: ownerID, limit: 1)
+            XCTFail("Expected CancellationError.")
+        } catch is CancellationError {
+            XCTAssertEqual(entry.status, .failedRetryable)
+            XCTAssertNil(entry.sentAt)
+            let callCount = await recorder.callCount()
+            XCTAssertEqual(callCount, 1)
+        } catch {
+            XCTFail("Expected CancellationError, got \(error).")
+        }
+    }
+
+    func testCancellationBeforeDrainDoesNotRecoverFetchOrRecord() async throws {
+        var recoveryCalls = 0
+        var fetchCalls = 0
+        var saveCalls = 0
+        let recorder = FakeDrainRecorder([])
+        let service = SyncEventOutboxDrainService(
+            recorder: recorder,
+            clock: { self.now },
+            recoverStaleSending: { _, _, _, _ in
+                recoveryCalls += 1
+                return SyncEventOutboxSendingRecoveryResult(scannedCount: 1, recoveredCount: 1)
+            },
+            fetchRetryable: { _, _, _ in
+                fetchCalls += 1
+                return []
+            },
+            saveChanges: {
+                saveCalls += 1
+            }
+        )
+
+        let task = Task { @MainActor in
+            try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+        }
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            XCTFail("Expected CancellationError.")
+        } catch is CancellationError {
+            XCTAssertEqual(recoveryCalls, 0)
+            XCTAssertEqual(fetchCalls, 0)
+            XCTAssertEqual(saveCalls, 0)
+            let callCount = await recorder.callCount()
+            XCTAssertEqual(callCount, 0)
+        } catch {
+            XCTFail("Expected CancellationError, got \(error).")
+        }
+    }
+
+    func testRecoverySaveFailureStopsBeforeFetchAndRecorder() async throws {
+        var fetchCalls = 0
+        var saveCalls = 0
+        var rollbackCalls = 0
+        let recorder = FakeDrainRecorder([])
+        let service = SyncEventOutboxDrainService(
+            recorder: recorder,
+            clock: { self.now },
+            recoverStaleSending: { _, _, _, _ in
+                SyncEventOutboxSendingRecoveryResult(scannedCount: 1, recoveredCount: 1)
+            },
+            fetchRetryable: { _, _, _ in
+                fetchCalls += 1
+                return []
+            },
+            saveChanges: {
+                saveCalls += 1
+                throw TestError.saveFailed
+            },
+            rollbackChanges: {
+                rollbackCalls += 1
+            }
+        )
+
+        do {
+            _ = try await service.drainOnce(ownerUserID: ownerID, limit: 5)
+            XCTFail("Expected local save failure.")
+        } catch let error as SyncEventOutboxDrainError {
+            XCTAssertEqual(error, .localSaveFailed(operation: "sending_stale_recovery"))
+        } catch {
+            XCTFail("Expected SyncEventOutboxDrainError, got \(error).")
+        }
+
+        XCTAssertEqual(saveCalls, 1)
+        XCTAssertEqual(rollbackCalls, 1)
+        XCTAssertEqual(fetchCalls, 0)
+        let callCount = await recorder.callCount()
+        XCTAssertEqual(callCount, 0)
     }
 
     func testSecondDrainForSameOwnerIsNoOpWhileFirstIsRunning() async throws {

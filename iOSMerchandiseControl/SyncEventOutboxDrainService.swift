@@ -20,6 +20,9 @@ nonisolated struct SyncEventOutboxDrainOutcome: Sendable, Equatable {
     let dead: Int
     let skippedIneligible: Int
     let remainingRetryable: Int?
+    let recoveredCount: Int
+    let exhaustedCount: Int
+    let skippedFreshSendingCount: Int
 
     init(
         status: SyncEventOutboxDrainStatus,
@@ -29,7 +32,10 @@ nonisolated struct SyncEventOutboxDrainOutcome: Sendable, Equatable {
         blocked: Int = 0,
         dead: Int = 0,
         skippedIneligible: Int = 0,
-        remainingRetryable: Int? = nil
+        remainingRetryable: Int? = nil,
+        recoveredCount: Int = 0,
+        exhaustedCount: Int = 0,
+        skippedFreshSendingCount: Int = 0
     ) {
         self.status = status
         self.attempted = attempted
@@ -39,6 +45,9 @@ nonisolated struct SyncEventOutboxDrainOutcome: Sendable, Equatable {
         self.dead = dead
         self.skippedIneligible = skippedIneligible
         self.remainingRetryable = remainingRetryable
+        self.recoveredCount = recoveredCount
+        self.exhaustedCount = exhaustedCount
+        self.skippedFreshSendingCount = skippedFreshSendingCount
     }
 }
 
@@ -50,6 +59,7 @@ nonisolated enum SyncEventOutboxDrainError: Error, Sendable, Equatable {
 @MainActor
 struct SyncEventOutboxDrainService {
     typealias Clock = () -> Date
+    typealias SendingRecovery = (String, Date, TimeInterval, Int) throws -> SyncEventOutboxSendingRecoveryResult
 
     nonisolated static let hardLimit = 50
     nonisolated static let hardFetchScanLimit = 200
@@ -59,6 +69,9 @@ struct SyncEventOutboxDrainService {
     private let recorder: any SyncEventRecording
     private let retryDelay: TimeInterval
     private let clock: Clock
+    private let sendingStaleInterval: TimeInterval
+    private let sendingRecoveryScanLimit: Int
+    private let recoverStaleSending: SendingRecovery
     private let fetchRetryable: (String, Date, Int?) throws -> [SyncEventOutboxEntry]
     private let saveChanges: () throws -> Void
     private let rollbackChanges: () -> Void
@@ -68,6 +81,8 @@ struct SyncEventOutboxDrainService {
         recorder: any SyncEventRecording,
         validator: SyncEventRecordValidator = SyncEventRecordValidator(),
         retryDelay: TimeInterval = Self.defaultRetryDelay,
+        sendingStaleInterval: TimeInterval = SyncEventOutboxStateMachine.defaultSendingStaleInterval,
+        sendingRecoveryScanLimit: Int = SyncEventOutboxLocalStore.defaultSendingRecoveryScanLimit,
         clock: @escaping Clock = Date.init
     ) {
         let store = SyncEventOutboxLocalStore(context: context)
@@ -75,7 +90,17 @@ struct SyncEventOutboxDrainService {
             recorder: recorder,
             validator: validator,
             retryDelay: retryDelay,
+            sendingStaleInterval: sendingStaleInterval,
+            sendingRecoveryScanLimit: sendingRecoveryScanLimit,
             clock: clock,
+            recoverStaleSending: { ownerUserID, now, staleInterval, scanLimit in
+                try store.recoverStaleSending(
+                    ownerUserID: ownerUserID,
+                    now: now,
+                    staleInterval: staleInterval,
+                    scanLimit: scanLimit
+                )
+            },
             fetchRetryable: { ownerUserID, now, limit in
                 try store.fetchRetryable(ownerUserID: ownerUserID, now: now, limit: limit)
             },
@@ -92,7 +117,12 @@ struct SyncEventOutboxDrainService {
         recorder: any SyncEventRecording,
         validator: SyncEventRecordValidator = SyncEventRecordValidator(),
         retryDelay: TimeInterval = Self.defaultRetryDelay,
+        sendingStaleInterval: TimeInterval = SyncEventOutboxStateMachine.defaultSendingStaleInterval,
+        sendingRecoveryScanLimit: Int = SyncEventOutboxLocalStore.defaultSendingRecoveryScanLimit,
         clock: @escaping Clock = Date.init,
+        recoverStaleSending: @escaping SendingRecovery = { _, _, _, _ in
+            SyncEventOutboxSendingRecoveryResult()
+        },
         fetchRetryable: @escaping (String, Date, Int?) throws -> [SyncEventOutboxEntry],
         saveChanges: @escaping () throws -> Void,
         rollbackChanges: @escaping () -> Void = {}
@@ -101,6 +131,12 @@ struct SyncEventOutboxDrainService {
         self.recorder = recorder
         self.retryDelay = retryDelay
         self.clock = clock
+        self.sendingStaleInterval = max(0, sendingStaleInterval)
+        self.sendingRecoveryScanLimit = min(
+            max(0, sendingRecoveryScanLimit),
+            SyncEventOutboxLocalStore.hardSendingRecoveryScanLimit
+        )
+        self.recoverStaleSending = recoverStaleSending
         self.fetchRetryable = fetchRetryable
         self.saveChanges = saveChanges
         self.rollbackChanges = rollbackChanges
@@ -127,15 +163,38 @@ struct SyncEventOutboxDrainService {
             SyncEventOutboxDrainCoordinator.release(ownerUserID)
         }
 
+        try Task.checkCancellation()
+
         let scanLimit = resolvedFetchScanLimit(batchLimit: batchLimit, fetchScanLimit: fetchScanLimit)
-        let candidates = try fetchRetryable(ownerUserID, clock(), scanLimit)
-        guard !candidates.isEmpty else {
-            return SyncEventOutboxDrainOutcome(status: .noWork)
+        let recoveryResult = try recoverStaleSending(
+            ownerUserID,
+            clock(),
+            sendingStaleInterval,
+            sendingRecoveryScanLimit
+        )
+        if recoveryResult.hasChanges {
+            try save(operation: "sending_stale_recovery")
         }
 
-        var summary = DrainSummary()
+        try Task.checkCancellation()
+
+        let candidates = try fetchRetryable(ownerUserID, clock(), scanLimit)
+        try Task.checkCancellation()
+
+        guard !candidates.isEmpty else {
+            return SyncEventOutboxDrainOutcome(
+                status: recoveryResult.exhaustedCount > 0 ? .networkFailed : .noWork,
+                recoveredCount: recoveryResult.recoveredCount,
+                exhaustedCount: recoveryResult.exhaustedCount,
+                skippedFreshSendingCount: recoveryResult.skippedFreshSendingCount
+            )
+        }
+
+        var summary = DrainSummary(recovery: recoveryResult)
 
         for entry in candidates {
+            try Task.checkCancellation()
+
             guard summary.attempted < batchLimit else {
                 break
             }
@@ -165,6 +224,8 @@ struct SyncEventOutboxDrainService {
                 summary.blocked += 1
                 continue
             }
+
+            try Task.checkCancellation()
 
             let sending = SyncEventOutboxStateMachine.toSending(snapshot, now: clock())
             entry.apply(sending)
@@ -329,6 +390,15 @@ private struct DrainSummary {
     var dead = 0
     var skippedIneligible = 0
     var payloadReplayBlocked = 0
+    var recoveredCount = 0
+    var exhaustedCount = 0
+    var skippedFreshSendingCount = 0
+
+    init(recovery: SyncEventOutboxSendingRecoveryResult = SyncEventOutboxSendingRecoveryResult()) {
+        recoveredCount = recovery.recoveredCount
+        exhaustedCount = recovery.exhaustedCount
+        skippedFreshSendingCount = recovery.skippedFreshSendingCount
+    }
 
     mutating func recordTransition(_ status: SyncEventOutboxStatus) {
         switch status {
@@ -352,12 +422,15 @@ private struct DrainSummary {
             blocked: blocked,
             dead: dead,
             skippedIneligible: skippedIneligible,
-            remainingRetryable: nil
+            remainingRetryable: nil,
+            recoveredCount: recoveredCount,
+            exhaustedCount: exhaustedCount,
+            skippedFreshSendingCount: skippedFreshSendingCount
         )
     }
 
     private func status() -> SyncEventOutboxDrainStatus {
-        let nonSuccess = retryScheduled + blocked + dead + skippedIneligible
+        let nonSuccess = retryScheduled + blocked + dead + skippedIneligible + exhaustedCount
         if sent > 0 && nonSuccess == 0 {
             return .drained
         }
@@ -368,6 +441,9 @@ private struct DrainSummary {
             return .blockedPayloadReplay
         }
         if retryScheduled > 0 || dead > 0 {
+            return .networkFailed
+        }
+        if exhaustedCount > 0 {
             return .networkFailed
         }
         if blocked > 0 {
