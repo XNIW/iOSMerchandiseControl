@@ -66,9 +66,27 @@ nonisolated struct SupabaseManualSyncPresentationAction: Equatable, Sendable {
     var accessibilityHint: String?
 }
 
+nonisolated enum SupabaseManualSyncUserFacingSummaryKind: Equatable, Sendable {
+    case cloudCheckCompleted
+    case cloudCheckCompletedNoAction
+    case remoteReviewNeeded
+    case noLocalChangesToSend
+    case cloudCheckIncomplete
+    case networkIssue
+    case cloudAccessIssue
+    case genericIssue
+    case cancelled
+}
+
+nonisolated struct SupabaseManualSyncUserFacingSummary: Equatable, Sendable {
+    var kind: SupabaseManualSyncUserFacingSummaryKind
+    var message: String
+}
+
 nonisolated struct SupabaseManualSyncPresentationState: Equatable, Sendable {
     var title: String
     var subtitle: String?
+    var userFacingSummary: SupabaseManualSyncUserFacingSummary?
     var statusBadgeText: String
     var statusBadgeSystemImage: String?
     var primaryAction: SupabaseManualSyncPresentationAction?
@@ -194,6 +212,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         lastSummary = summary
 
         switch summary.finalState {
+        case .completedSuccessfully where summary.hasIncompleteRemotePreview:
+            presentationKind = .technicalFollowUpNeeded
+            title = SupabaseManualSyncUserFacingCopy.technicalFollowUp
+            subtitle = nonEmpty(summary.suggestedNextStep)
+            primaryActionTitle = Copy.dismissOrRetryAction
+
         case .completedSuccessfully where summary.countsSnapshot.hasAnyPendingWork:
             presentationKind = .partialSync
             title = Copy.localPendingNeedsReviewTitle
@@ -421,6 +445,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return state(
                 titleKey: "options.supabase.manualSync.state.success.title",
                 subtitleKey: "options.supabase.manualSync.state.success.subtitle",
+                summary: userFacingSummaryForCurrentState(),
                 badgeKey: "options.supabase.manualSync.badge.noChanges",
                 badgeSystemImage: "checkmark.circle.fill",
                 primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
@@ -434,6 +459,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return state(
                 titleKey: "options.supabase.manualSync.state.partial.title",
                 subtitleKey: "options.supabase.manualSync.state.partial.subtitle",
+                summary: userFacingSummaryForCurrentState(),
                 badgeKey: "options.supabase.manualSync.badge.localChanges",
                 badgeSystemImage: "exclamationmark.circle.fill",
                 primaryAction: actions.primary,
@@ -522,6 +548,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         state(
             titleKey: titleKey,
             subtitleKey: subtitleKey,
+            summary: userFacingSummaryForCurrentState(),
             badgeKey: badgeKey,
             badgeSystemImage: badgeSystemImage,
             primaryAction: runMode(for: .retry) == nil ? nil : action(.retry),
@@ -555,6 +582,91 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return .dryRun
         }
         return nil
+    }
+
+    private func userFacingSummaryForCurrentState() -> SupabaseManualSyncUserFacingSummary? {
+        guard let lastSummary else { return nil }
+
+        switch presentationKind {
+        case .successFullyUpToDate, .partialSync, .connectivityIssue, .cancelledRun, .technicalFollowUpNeeded:
+            return makeUserFacingSummary(from: lastSummary)
+        case .idleReady,
+             .running,
+             .blockedNeedsSignIn,
+             .blockedNeedsCloudRealignment,
+             .auxiliaryBusyConcurrent,
+             .auxiliaryModeUnavailable:
+            return nil
+        }
+    }
+
+    private func makeUserFacingSummary(from summary: SupabaseManualSyncRunSummary) -> SupabaseManualSyncUserFacingSummary? {
+        if let remotePreviewSummary = summary.remotePreviewSummary {
+            return makeUserFacingSummary(
+                from: remotePreviewSummary,
+                counts: summary.countsSnapshot
+            )
+        }
+
+        switch summary.finalState {
+        case .allUpToDate:
+            return userFacingSummary(.noLocalChangesToSend, key: "options.supabase.manualSync.summary.local.noPending")
+        case .completedSuccessfully where !summary.countsSnapshot.hasAnyPendingWork:
+            return userFacingSummary(.noLocalChangesToSend, key: "options.supabase.manualSync.summary.local.noPending")
+        case .connectivityIssue:
+            return userFacingSummary(.networkIssue, key: "options.supabase.manualSync.summary.network")
+        case .technicalReviewNeeded:
+            return userFacingSummary(.genericIssue, key: "options.supabase.manualSync.summary.generic")
+        case .cancelled:
+            return userFacingSummary(.cancelled, key: "options.supabase.manualSync.summary.cancelled")
+        case .completedSuccessfully,
+             .partialSync,
+             .blocked,
+             .concurrentRunNotAllowed,
+             .modeNotSupportedInThisSlice:
+            return nil
+        }
+    }
+
+    private func makeUserFacingSummary(
+        from remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary,
+        counts: SupabaseManualSyncPrivacyCounts
+    ) -> SupabaseManualSyncUserFacingSummary? {
+        if remotePreviewSummary.wasCancelled {
+            return userFacingSummary(.cancelled, key: "options.supabase.manualSync.summary.cancelled")
+        }
+
+        if let failureCategory = remotePreviewSummary.failureCategory {
+            switch failureCategory {
+            case .network:
+                return userFacingSummary(.networkIssue, key: "options.supabase.manualSync.summary.network")
+            case .permission:
+                return userFacingSummary(.cloudAccessIssue, key: "options.supabase.manualSync.summary.session")
+            case .schemaOrDecode, .localSnapshot, .unknown:
+                return userFacingSummary(.genericIssue, key: "options.supabase.manualSync.summary.generic")
+            }
+        }
+
+        if remotePreviewSummary.isPartial || !remotePreviewSummary.isComplete {
+            return userFacingSummary(.cloudCheckIncomplete, key: "options.supabase.manualSync.summary.cloudCheck.incomplete")
+        }
+
+        if remotePreviewSummary.hasRemoteSignals {
+            return userFacingSummary(.remoteReviewNeeded, key: "options.supabase.manualSync.summary.cloudCheck.differences")
+        }
+
+        if counts.hasAnyPendingWork {
+            return userFacingSummary(.cloudCheckCompleted, key: "options.supabase.manualSync.summary.cloudCheck.completed.ok")
+        }
+
+        return userFacingSummary(.cloudCheckCompletedNoAction, key: "options.supabase.manualSync.summary.cloudCheck.completed.noAction")
+    }
+
+    private func userFacingSummary(
+        _ kind: SupabaseManualSyncUserFacingSummaryKind,
+        key: String
+    ) -> SupabaseManualSyncUserFacingSummary {
+        SupabaseManualSyncUserFacingSummary(kind: kind, message: L(key))
     }
 
     private func action(
@@ -600,6 +712,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private func state(
         titleKey: String,
         subtitleKey: String?,
+        summary: SupabaseManualSyncUserFacingSummary? = nil,
         badgeKey: String,
         badgeSystemImage: String?,
         primaryAction: SupabaseManualSyncPresentationAction?,
@@ -610,9 +723,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     ) -> SupabaseManualSyncPresentationState {
         let title = L(titleKey)
         let subtitle = subtitleKey.map { L($0) }
+        let userFacingSummary = nonRedundantSummary(summary, title: title, subtitle: subtitle)
         let badgeText = L(badgeKey)
         let hint = hintKey.map { L($0) }
-        let accessibilityLabel = [title, subtitle, badgeText]
+        let accessibilityLabel = [title, subtitle, userFacingSummary?.message, badgeText]
             .compactMap { $0 }
             .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             .joined(separator: ". ")
@@ -620,6 +734,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         return SupabaseManualSyncPresentationState(
             title: title,
             subtitle: subtitle,
+            userFacingSummary: userFacingSummary,
             statusBadgeText: badgeText,
             statusBadgeSystemImage: badgeSystemImage,
             primaryAction: primaryAction,
@@ -629,6 +744,27 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             accessibilityLabel: accessibilityLabel,
             accessibilityHint: hint
         )
+    }
+
+    private func nonRedundantSummary(
+        _ summary: SupabaseManualSyncUserFacingSummary?,
+        title: String,
+        subtitle: String?
+    ) -> SupabaseManualSyncUserFacingSummary? {
+        guard let summary else { return nil }
+        let normalizedMessage = normalizedCopy(summary.message)
+        guard normalizedMessage != normalizedCopy(title) else { return nil }
+        if let subtitle, normalizedMessage == normalizedCopy(subtitle) {
+            return nil
+        }
+        return summary
+    }
+
+    private func normalizedCopy(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ".…"))
+            .lowercased()
     }
 }
 
@@ -640,5 +776,10 @@ private extension SupabaseManualSyncRunSummary {
             && !remotePreviewSummary.isPartial
             && !remotePreviewSummary.wasCancelled
             && remotePreviewSummary.failureCategory == nil
+    }
+
+    var hasIncompleteRemotePreview: Bool {
+        guard let remotePreviewSummary else { return false }
+        return remotePreviewSummary.isPartial || !remotePreviewSummary.isComplete
     }
 }

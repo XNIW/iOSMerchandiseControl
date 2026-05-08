@@ -1,6 +1,7 @@
 import XCTest
 @testable import iOSMerchandiseControl
 
+#if DEBUG
 @MainActor
 final class SyncEventOutboxDrainDebugViewModelTests: XCTestCase {
     private let ownerA = "00000000-0000-4000-8000-000000000061"
@@ -426,3 +427,4 @@ private final class BlockingDrainDebugDependencies {
         drainContinuation = nil
     }
 }
+#endif

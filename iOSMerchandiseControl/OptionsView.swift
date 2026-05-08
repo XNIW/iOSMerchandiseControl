@@ -2813,6 +2813,16 @@ private struct SupabaseManualSyncReleaseCard: View {
             .accessibilityLabel(presentation.accessibilityLabel)
             .accessibilityHint(presentation.accessibilityHint ?? "")
 
+            if let summary = presentation.userFacingSummary,
+               !summary.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(summary.message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true)
+            }
+
             if presentation.isRunning {
                 HStack(spacing: 10) {
                     ProgressView()

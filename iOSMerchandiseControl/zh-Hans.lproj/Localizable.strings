@@ -1024,6 +1024,15 @@
 "options.supabase.manualSync.state.busy.subtitle" = "请等待完成后再重试。";
 "options.supabase.manualSync.state.unavailable.title" = "暂无可用操作";
 "options.supabase.manualSync.state.unavailable.subtitle" = "你可以继续处理本地数据。";
+"options.supabase.manualSync.summary.cloudCheck.completed.ok" = "上次检查：云端检查已完成。";
+"options.supabase.manualSync.summary.cloudCheck.completed.noAction" = "上次检查：已完成。无需操作。";
+"options.supabase.manualSync.summary.cloudCheck.differences" = "上次检查：云端有需要核对的项目。";
+"options.supabase.manualSync.summary.local.noPending" = "没有待发送的本地更改。";
+"options.supabase.manualSync.summary.cloudCheck.incomplete" = "上次检查：云端检查未完成。请重试。";
+"options.supabase.manualSync.summary.network" = "网络不可用。请重试。";
+"options.supabase.manualSync.summary.session" = "需要访问云端。";
+"options.supabase.manualSync.summary.generic" = "检查未能完成。请重试。";
+"options.supabase.manualSync.summary.cancelled" = "检查已取消。";
 "options.supabase.manualSync.action.checkCloud" = "检查云端";
 "options.supabase.manualSync.action.syncNow" = "立即同步";
 "options.supabase.manualSync.action.signIn" = "登录";

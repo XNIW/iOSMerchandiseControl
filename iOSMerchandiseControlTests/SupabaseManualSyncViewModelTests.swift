@@ -51,7 +51,14 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             }
         let blob = (
             [vm.title, vm.subtitle, vm.primaryActionTitle, vm.lastUserMessage]
-                + [state.title, state.subtitle, state.statusBadgeText, state.accessibilityLabel, state.accessibilityHint]
+                + [
+                    state.title,
+                    state.subtitle,
+                    state.userFacingSummary?.message,
+                    state.statusBadgeText,
+                    state.accessibilityLabel,
+                    state.accessibilityHint,
+                ]
                 + actionValues
         )
             .compactMap { $0 }
@@ -84,6 +91,59 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
     private func actionIDs(_ state: SupabaseManualSyncPresentationState) -> [SupabaseManualSyncPresentationActionID] {
         [state.primaryAction, state.secondaryAction]
             .compactMap { $0?.id }
+    }
+
+    private func assertNoDuplicateSummaryCopy(_ state: SupabaseManualSyncPresentationState, file: StaticString = #filePath, line: UInt = #line) {
+        guard let summary = state.userFacingSummary else { return }
+        let normalizedSummary = normalizeCopy(summary.message)
+        XCTAssertNotEqual(normalizedSummary, normalizeCopy(state.title), file: file, line: line)
+        if let subtitle = state.subtitle {
+            XCTAssertNotEqual(normalizedSummary, normalizeCopy(subtitle), file: file, line: line)
+        }
+    }
+
+    private func normalizeCopy(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ".…"))
+            .lowercased()
+    }
+
+    private func cloudCheckSummary(
+        finalState: SupabaseManualSyncFinalUserState,
+        counts: SupabaseManualSyncPrivacyCounts = .init(),
+        remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary? = nil
+    ) -> SupabaseManualSyncRunSummary {
+        SupabaseManualSyncRunSummary(
+            finalState: finalState,
+            userFacingHeadline: SupabaseManualSyncUserFacingCopy.cloudCheckNoAction,
+            executedPhases: [.authCheck, .baselineCheck, .localPendingCheck, .remotePreview, .summary],
+            skippedPhases: [.userConfirmation, .catalogPush, .productPricePush, .pendingEventsFlush, .finalRefresh],
+            countsSnapshot: counts,
+            suggestedNextStep: nil,
+            detailMessage: nil,
+            remotePreviewSummary: remotePreviewSummary
+        )
+    }
+
+    private func remotePreviewSummary(
+        hasRemoteSignals: Bool = false,
+        isComplete: Bool = true,
+        isPartial: Bool = false,
+        wasCancelled: Bool = false,
+        counts: SupabaseManualSyncRemotePreviewAggregateCounts = .init(),
+        key: SupabaseManualSyncRemotePreviewMessageKey = .cloudCheckCompleteNoAction,
+        failureCategory: SupabaseManualSyncRemotePreviewFailureCategory? = nil
+    ) -> SupabaseManualSyncRemotePreviewSummary {
+        SupabaseManualSyncRemotePreviewSummary(
+            hasRemoteSignals: hasRemoteSignals,
+            isComplete: isComplete,
+            isPartial: isPartial,
+            wasCancelled: wasCancelled,
+            safeAggregateCounts: counts,
+            recommendedUserMessageKey: key,
+            failureCategory: failureCategory
+        )
     }
 
     func testInitialStateIdleReadyPrivacySafeTitles() async {
@@ -529,6 +589,204 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testCloudCheckNoActionAddsCompactUserFacingSummary() async {
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false
+            )
+        )
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+
+        let state = vm.presentationState
+        XCTAssertEqual(state.userFacingSummary?.kind, .cloudCheckCompletedNoAction)
+        XCTAssertFalse(state.userFacingSummary?.message.localizedCaseInsensitiveContains("sincronizzato") ?? false)
+        XCTAssertFalse(state.userFacingSummary?.message.localizedCaseInsensitiveContains("fully synced") ?? false)
+        XCTAssertTrue(state.accessibilityLabel.contains(state.userFacingSummary?.message ?? ""))
+        assertNoDuplicateSummaryCopy(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testRemoteSignalsSummaryAvoidsIdentifiersAndCounts() async throws {
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false
+            )
+        )
+        let privateID = UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")!
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                    remoteProductCount: 42,
+                    newProductCount: 7,
+                    conflictCount: 3
+                ),
+                key: .cloudDataNeedsReview
+            )
+        ))
+
+        let state = vm.presentationState
+        let summaryMessage = try XCTUnwrap(state.userFacingSummary?.message)
+        XCTAssertEqual(state.userFacingSummary?.kind, .remoteReviewNeeded)
+        XCTAssertFalse(summaryMessage.contains("42"))
+        XCTAssertFalse(summaryMessage.contains("7"))
+        XCTAssertFalse(summaryMessage.contains("3"))
+        XCTAssertFalse(summaryMessage.localizedCaseInsensitiveContains(privateID.uuidString))
+        XCTAssertFalse(summaryMessage.localizedCaseInsensitiveContains("987654321"))
+        assertNoDuplicateSummaryCopy(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testNoLocalPendingSummaryDoesNotClaimCloudIsSynced() async {
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        let vm = SupabaseManualSyncViewModel(coordinator: fake)
+
+        vm.apply(summary: cloudCheckSummary(finalState: .allUpToDate))
+
+        let state = vm.presentationState
+        XCTAssertEqual(state.userFacingSummary?.kind, .noLocalChangesToSend)
+        XCTAssertFalse(state.userFacingSummary?.message.localizedCaseInsensitiveContains("tutto sincronizzato") ?? false)
+        XCTAssertFalse(state.userFacingSummary?.message.localizedCaseInsensitiveContains("fully synced") ?? false)
+        assertNoDuplicateSummaryCopy(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testRemotePartialSummaryWinsOverCompletedState() async {
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        let vm = SupabaseManualSyncViewModel(coordinator: fake)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            remotePreviewSummary: remotePreviewSummary(
+                isComplete: false,
+                isPartial: true,
+                key: .cloudCheckIncomplete
+            )
+        ))
+
+        let state = vm.presentationState
+        XCTAssertEqual(vm.presentationKind, .technicalFollowUpNeeded)
+        XCTAssertNotEqual(vm.presentationKind, .successFullyUpToDate)
+        XCTAssertEqual(state.userFacingSummary?.kind, .cloudCheckIncomplete)
+        assertNoDuplicateSummaryCopy(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testRemoteFailureSummariesUseUserFacingCategories() async {
+        let cases: [(SupabaseManualSyncRemotePreviewFailureCategory, SupabaseManualSyncUserFacingSummaryKind)] = [
+            (.network, .networkIssue),
+            (.permission, .cloudAccessIssue),
+            (.schemaOrDecode, .genericIssue),
+            (.localSnapshot, .genericIssue),
+            (.unknown, .genericIssue),
+        ]
+
+        for (failureCategory, expectedKind) in cases {
+            let fake = ClosureSupabaseManualSyncCoordinatorFake()
+            let vm = SupabaseManualSyncViewModel(coordinator: fake)
+
+            vm.apply(summary: cloudCheckSummary(
+                finalState: failureCategory == .network ? .connectivityIssue : .technicalReviewNeeded,
+                remotePreviewSummary: remotePreviewSummary(
+                    isComplete: false,
+                    key: failureCategory == .network ? .cloudCheckFailedRetry : .cloudCheckFailedTechnical,
+                    failureCategory: failureCategory
+                )
+            ))
+
+            let state = vm.presentationState
+            XCTAssertEqual(state.userFacingSummary?.kind, expectedKind)
+            assertNoDuplicateSummaryCopy(state)
+            assertNoForbiddenUserFacingJargon(vm)
+        }
+    }
+
+    func testCancelledCloudCheckShowsNeutralSummary() async {
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        let vm = SupabaseManualSyncViewModel(coordinator: fake)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .cancelled,
+            remotePreviewSummary: remotePreviewSummary(
+                isComplete: false,
+                wasCancelled: true,
+                key: .cloudCheckCancelled
+            )
+        ))
+
+        let state = vm.presentationState
+        XCTAssertEqual(state.userFacingSummary?.kind, .cancelled)
+        XCTAssertNotEqual(vm.presentationKind, .successFullyUpToDate)
+        assertNoDuplicateSummaryCopy(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testRunningAuthAndBaselineStatesHidePreviousSummary() async throws {
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        fake.handler = { _, _ in
+            try? await Task.sleep(for: .milliseconds(200))
+            return self.cloudCheckSummary(
+                finalState: .completedSuccessfully,
+                remotePreviewSummary: self.remotePreviewSummary()
+            )
+        }
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false
+            )
+        )
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        XCTAssertNotNil(vm.presentationState.userFacingSummary)
+
+        let run = Task { await vm.start(with: .dryRun) }
+        try await Task.sleep(for: .milliseconds(25))
+        XCTAssertTrue(vm.presentationState.isRunning)
+        XCTAssertNil(vm.presentationState.userFacingSummary)
+        run.cancel()
+        await run.value
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        vm.applyAuthPresentationContext(SupabaseManualSyncAuthPresentationContext(
+            isSignedIn: false,
+            canSignIn: true,
+            isTransitioning: false
+        ))
+        XCTAssertNil(vm.presentationState.userFacingSummary)
+
+        vm.applyAuthPresentationContext(.signedInReady)
+        vm.apply(summary: SupabaseManualSyncRunSummary(
+            finalState: .blocked,
+            userFacingHeadline: SupabaseManualSyncUserFacingCopy.realignFromCloud,
+            executedPhases: [.baselineCheck],
+            skippedPhases: [],
+            countsSnapshot: .init(),
+            suggestedNextStep: SupabaseManualSyncUserFacingCopy.realignFromCloud,
+            detailMessage: nil
+        ))
+        XCTAssertEqual(vm.presentationKind, .blockedNeedsCloudRealignment)
+        XCTAssertNil(vm.presentationState.userFacingSummary)
+    }
+
     func testZeroPendingDryRunLeavesAllUpToDateHeadlineWithoutPartialMasking() async {
         let dryFake = SupabaseManualSyncCoordinatorDryRunFake()
         dryFake.snapshot = SupabaseManualSyncPrivacyCounts()
@@ -579,6 +837,179 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testTask075SmallDatasetNoPendingCompletesReadOnlyCloudCheck() async throws {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts()
+        fake.remotePreviewSummary = remotePreviewSummary(
+            counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                remoteProductCount: 2,
+                remoteSupplierCount: 1,
+                remoteCategoryCount: 1,
+                remoteProductPriceCount: 2
+            )
+        )
+        fake.delayPreviewNanoseconds = 50_000_000
+        let coordinator = makeTask075SmallDatasetCoordinator(fake: fake)
+        let vm = makeTask075SmallDatasetViewModel(coordinator: coordinator)
+
+        let idle = vm.presentationState
+        XCTAssertEqual(idle.primaryAction?.id, .checkCloud)
+        XCTAssertNil(idle.secondaryAction)
+        XCTAssertFalse(actionIDs(idle).contains(.syncNow))
+
+        let run = Task { await vm.start(with: .dryRun) }
+        try await Task.sleep(for: .milliseconds(10))
+
+        let running = vm.presentationState
+        XCTAssertTrue(running.isRunning)
+        XCTAssertTrue(running.isLoading)
+        XCTAssertNil(running.primaryAction)
+        XCTAssertEqual(running.secondaryAction?.id, .cancel)
+        XCTAssertNil(running.userFacingSummary)
+
+        await run.value
+
+        let completed = vm.presentationState
+        XCTAssertEqual(vm.presentationKind, .successFullyUpToDate)
+        XCTAssertEqual(completed.userFacingSummary?.kind, .cloudCheckCompletedNoAction)
+        XCTAssertEqual(completed.primaryAction?.id, .checkCloud)
+        XCTAssertNil(completed.secondaryAction)
+        XCTAssertFalse(fake.calls.contains(.catalogPush))
+        XCTAssertFalse(fake.calls.contains(.productPricePush))
+        XCTAssertFalse(fake.calls.contains(.queuedCloudOperationsFlush))
+        assertNoDuplicateSummaryCopy(completed)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask075SmallDatasetPendingLocalWorkRemainsReadOnlyAndRetryable() async throws {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts(
+            pendingCatalogChangeCount: 2,
+            pendingPriceChangeCount: 0,
+            pendingQueuedCloudOperationCount: 1
+        )
+        fake.remotePreviewSummary = remotePreviewSummary(
+            counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                remoteProductCount: 3,
+                remoteSupplierCount: 1,
+                remoteCategoryCount: 1,
+                remoteProductPriceCount: 0
+            )
+        )
+        let coordinator = makeTask075SmallDatasetCoordinator(fake: fake)
+        let vm = makeTask075SmallDatasetViewModel(coordinator: coordinator)
+
+        await vm.start(with: .dryRun)
+
+        let state = vm.presentationState
+        XCTAssertEqual(vm.presentationKind, .partialSync)
+        XCTAssertEqual(state.userFacingSummary?.kind, .cloudCheckCompleted)
+        XCTAssertEqual(state.primaryAction?.id, .checkCloud)
+        XCTAssertNil(state.secondaryAction)
+        XCTAssertFalse(actionIDs(state).contains(.syncNow))
+        XCTAssertEqual(vm.privacySafeAggregatesSnapshot?.pendingCatalogChangeCount, 2)
+        XCTAssertEqual(vm.privacySafeAggregatesSnapshot?.pendingQueuedCloudOperationCount, 1)
+        XCTAssertFalse(fake.calls.contains(.catalogPush))
+        XCTAssertFalse(fake.calls.contains(.productPricePush))
+        XCTAssertFalse(fake.calls.contains(.queuedCloudOperationsFlush))
+        assertNoDuplicateSummaryCopy(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask075SmallDatasetPartialAndErrorStatesStayRecoverable() async throws {
+        let partialFake = SupabaseManualSyncCoordinatorDryRunFake()
+        partialFake.snapshot = SupabaseManualSyncPrivacyCounts()
+        partialFake.remotePreviewSummary = remotePreviewSummary(
+            isComplete: false,
+            isPartial: true,
+            counts: SupabaseManualSyncRemotePreviewAggregateCounts(sourceErrorCount: 1),
+            key: .cloudCheckIncomplete
+        )
+        let partialVM = makeTask075SmallDatasetViewModel(
+            coordinator: makeTask075SmallDatasetCoordinator(fake: partialFake)
+        )
+
+        await partialVM.start(with: .dryRun)
+
+        let partialState = partialVM.presentationState
+        XCTAssertEqual(partialVM.presentationKind, .technicalFollowUpNeeded)
+        XCTAssertEqual(partialState.userFacingSummary?.kind, .cloudCheckIncomplete)
+        XCTAssertEqual(partialState.primaryAction?.id, .retry)
+        XCTAssertNil(partialState.secondaryAction)
+        assertNoDuplicateSummaryCopy(partialState)
+        assertNoForbiddenUserFacingJargon(partialVM)
+
+        let errorFake = SupabaseManualSyncCoordinatorDryRunFake()
+        errorFake.snapshot = SupabaseManualSyncPrivacyCounts()
+        errorFake.remotePreviewSummary = remotePreviewSummary(
+            isComplete: false,
+            key: .cloudCheckFailedRetry,
+            failureCategory: .network
+        )
+        let errorVM = makeTask075SmallDatasetViewModel(
+            coordinator: makeTask075SmallDatasetCoordinator(fake: errorFake)
+        )
+
+        await errorVM.start(with: .dryRun)
+
+        let errorState = errorVM.presentationState
+        XCTAssertEqual(errorVM.presentationKind, .connectivityIssue)
+        XCTAssertEqual(errorState.userFacingSummary?.kind, .networkIssue)
+        XCTAssertEqual(errorState.primaryAction?.id, .retry)
+        XCTAssertNil(errorState.secondaryAction)
+        assertNoDuplicateSummaryCopy(errorState)
+        assertNoForbiddenUserFacingJargon(errorVM)
+    }
+
+    func testTask075SmallDatasetCancelShowsRetryAndVolatileSummary() async throws {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts()
+        fake.delayPreviewNanoseconds = 500_000_000
+        let coordinator = makeTask075SmallDatasetCoordinator(fake: fake)
+        let vm = makeTask075SmallDatasetViewModel(coordinator: coordinator)
+
+        let run = Task { await vm.start(with: .dryRun) }
+        try await Task.sleep(for: .milliseconds(25))
+        XCTAssertTrue(vm.presentationState.isRunning)
+
+        run.cancel()
+        await run.value
+
+        let state = vm.presentationState
+        XCTAssertEqual(vm.presentationKind, .cancelledRun)
+        XCTAssertEqual(state.userFacingSummary?.kind, .cancelled)
+        XCTAssertEqual(state.primaryAction?.id, .retry)
+        XCTAssertNil(state.secondaryAction)
+        assertNoDuplicateSummaryCopy(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask075SmallDatasetDoubleTapDoesNotStartConcurrentRun() async throws {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts()
+        fake.holdAtPreviewUntilSignaled = true
+        let coordinator = SupabaseManualSyncCoordinatingInvocationCounter(
+            inner: makeTask075SmallDatasetCoordinator(fake: fake)
+        )
+        let vm = makeTask075SmallDatasetViewModel(coordinator: coordinator)
+
+        let firstRun = Task { await vm.start(with: .dryRun) }
+        try await fake.waitUntilPreviewHoldEngaged()
+        XCTAssertTrue(vm.presentationState.isRunning)
+
+        await vm.start(with: .dryRun)
+
+        XCTAssertEqual(coordinator.runInvocationCount, 1)
+        XCTAssertTrue(vm.presentationState.isRunning)
+
+        fake.releasePreviewHold()
+        await firstRun.value
+
+        XCTAssertEqual(coordinator.runInvocationCount, 1)
+        XCTAssertFalse(vm.presentationState.isRunning)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
     func testViewModelSourcesAvoidForbiddenScopeTerms() throws {
         let root = repoRootURL()
         let urls = [
@@ -596,5 +1027,31 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             XCTAssertFalse(text.contains("optionsview"))
             XCTAssertFalse(text.contains("task-067"))
         }
+    }
+
+    private func makeTask075SmallDatasetCoordinator(
+        fake: SupabaseManualSyncCoordinatorDryRunFake
+    ) -> SupabaseManualSyncCoordinator {
+        SupabaseManualSyncCoordinator(
+            dependencies: .init(
+                authGate: fake,
+                baselineGate: fake,
+                pendingSnapshot: fake,
+                phaseSimulation: fake,
+                remotePreviewProvider: fake
+            )
+        )
+    }
+
+    private func makeTask075SmallDatasetViewModel(
+        coordinator: any SupabaseManualSyncCoordinating
+    ) -> SupabaseManualSyncViewModel {
+        SupabaseManualSyncViewModel(
+            coordinator: coordinator,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false
+            )
+        )
     }
 }

@@ -1024,6 +1024,15 @@
 "options.supabase.manualSync.state.busy.subtitle" = "Wait for it to finish before trying again.";
 "options.supabase.manualSync.state.unavailable.title" = "No action available";
 "options.supabase.manualSync.state.unavailable.subtitle" = "You can keep working with local data.";
+"options.supabase.manualSync.summary.cloudCheck.completed.ok" = "Last check: cloud check completed.";
+"options.supabase.manualSync.summary.cloudCheck.completed.noAction" = "Last check: completed. No action needed.";
+"options.supabase.manualSync.summary.cloudCheck.differences" = "Last check: items on the cloud need review.";
+"options.supabase.manualSync.summary.local.noPending" = "No local changes waiting to send.";
+"options.supabase.manualSync.summary.cloudCheck.incomplete" = "Last check: cloud check incomplete. Try again.";
+"options.supabase.manualSync.summary.network" = "Connection unavailable. Try again.";
+"options.supabase.manualSync.summary.session" = "Cloud access required.";
+"options.supabase.manualSync.summary.generic" = "The check could not be completed. Try again.";
+"options.supabase.manualSync.summary.cancelled" = "Check cancelled.";
 "options.supabase.manualSync.action.checkCloud" = "Check cloud";
 "options.supabase.manualSync.action.syncNow" = "Sync now";
 "options.supabase.manualSync.action.signIn" = "Sign in";

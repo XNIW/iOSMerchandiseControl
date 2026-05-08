@@ -30,6 +30,15 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.state.busy.subtitle",
             "options.supabase.manualSync.state.unavailable.title",
             "options.supabase.manualSync.state.unavailable.subtitle",
+            "options.supabase.manualSync.summary.cloudCheck.completed.ok",
+            "options.supabase.manualSync.summary.cloudCheck.completed.noAction",
+            "options.supabase.manualSync.summary.cloudCheck.differences",
+            "options.supabase.manualSync.summary.local.noPending",
+            "options.supabase.manualSync.summary.cloudCheck.incomplete",
+            "options.supabase.manualSync.summary.network",
+            "options.supabase.manualSync.summary.session",
+            "options.supabase.manualSync.summary.generic",
+            "options.supabase.manualSync.summary.cancelled",
             "options.supabase.manualSync.action.checkCloud",
             "options.supabase.manualSync.action.syncNow",
             "options.supabase.manualSync.action.signIn",
@@ -101,6 +110,10 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "everything is up to date",
             "todo actualizado",
             "全部已更新",
+            "fully synced",
+            "todo sincronizado",
+            "tutto sincronizzato",
+            "全部同步",
         ]
 
         for language in supportedLanguages {
@@ -154,6 +167,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         let releaseCardSource = try extractReleaseCardSource(from: source)
 
         XCTAssertTrue(releaseCardSource.contains("viewModel.presentationState"))
+        XCTAssertTrue(releaseCardSource.contains("presentation.userFacingSummary"))
         XCTAssertTrue(releaseCardSource.contains("presentation.primaryAction"))
         XCTAssertTrue(releaseCardSource.contains("presentation.secondaryAction"))
         XCTAssertTrue(releaseCardSource.contains("ProgressView()"))
@@ -161,6 +175,30 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertTrue(releaseCardSource.contains(".buttonStyle(.bordered)"))
         XCTAssertFalse(releaseCardSource.contains("stateKey"))
         XCTAssertFalse(releaseCardSource.contains("actionKey"))
+    }
+
+    func testTask074ReleaseCardRendersPreparedSummaryOnly() throws {
+        let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
+        let releaseCardSource = try extractReleaseCardSource(from: source)
+
+        XCTAssertTrue(releaseCardSource.contains("presentation.userFacingSummary"))
+        XCTAssertTrue(releaseCardSource.contains("summary.message"))
+        XCTAssertFalse(releaseCardSource.contains("SupabaseManualSyncRunSummary"))
+        XCTAssertFalse(releaseCardSource.contains("SupabaseManualSyncRemotePreviewSummary"))
+        XCTAssertFalse(releaseCardSource.contains("SyncPreview"))
+        XCTAssertFalse(releaseCardSource.contains("recommendedUserMessageKey"))
+        XCTAssertFalse(releaseCardSource.contains("failureCategory"))
+    }
+
+    func testTask074SummaryIsNotPersistedByReleaseSurface() throws {
+        let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
+        let releaseCardSource = try extractReleaseCardSource(from: source)
+        let viewModelSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift")
+        let combined = [releaseCardSource, viewModelSource].joined(separator: "\n")
+
+        for forbidden in ["UserDefaults", "AppStorage", "FileManager", ".write(", "@Model"] {
+            XCTAssertFalse(combined.contains(forbidden), "Summary surface must remain volatile; found \(forbidden)")
+        }
     }
 
     func testTask072ReleaseCardDeclaresOneProminentActionStyle() throws {

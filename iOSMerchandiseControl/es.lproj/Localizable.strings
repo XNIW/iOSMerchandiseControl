@@ -1024,6 +1024,15 @@
 "options.supabase.manualSync.state.busy.subtitle" = "Espera a que termine antes de reintentar.";
 "options.supabase.manualSync.state.unavailable.title" = "No hay acción disponible";
 "options.supabase.manualSync.state.unavailable.subtitle" = "Puedes seguir trabajando con los datos locales.";
+"options.supabase.manualSync.summary.cloudCheck.completed.ok" = "Última revisión: revisión en la nube completada.";
+"options.supabase.manualSync.summary.cloudCheck.completed.noAction" = "Última revisión: completada. No se necesita ninguna acción.";
+"options.supabase.manualSync.summary.cloudCheck.differences" = "Última revisión: hay elementos que revisar en la nube.";
+"options.supabase.manualSync.summary.local.noPending" = "No hay cambios locales pendientes de enviar.";
+"options.supabase.manualSync.summary.cloudCheck.incomplete" = "Última revisión: revisión en la nube incompleta. Reintenta.";
+"options.supabase.manualSync.summary.network" = "Sin conexión. Reintenta.";
+"options.supabase.manualSync.summary.session" = "Se necesita acceso a la nube.";
+"options.supabase.manualSync.summary.generic" = "No se pudo completar la revisión. Reintenta.";
+"options.supabase.manualSync.summary.cancelled" = "Revisión cancelada.";
 "options.supabase.manualSync.action.checkCloud" = "Revisar la nube";
 "options.supabase.manualSync.action.syncNow" = "Sincronizar ahora";
 "options.supabase.manualSync.action.signIn" = "Iniciar sesión";

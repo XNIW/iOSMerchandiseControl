@@ -1023,6 +1023,15 @@
 "options.supabase.manualSync.state.busy.subtitle" = "Attendi che finisca prima di riprovare.";
 "options.supabase.manualSync.state.unavailable.title" = "Nessuna azione disponibile";
 "options.supabase.manualSync.state.unavailable.subtitle" = "Puoi continuare a lavorare sui dati locali.";
+"options.supabase.manualSync.summary.cloudCheck.completed.ok" = "Ultimo controllo: controllo cloud completato.";
+"options.supabase.manualSync.summary.cloudCheck.completed.noAction" = "Ultimo controllo: completato. Nessuna azione richiesta.";
+"options.supabase.manualSync.summary.cloudCheck.differences" = "Ultimo controllo: elementi da rivedere sul cloud.";
+"options.supabase.manualSync.summary.local.noPending" = "Non risultano modifiche locali da inviare.";
+"options.supabase.manualSync.summary.cloudCheck.incomplete" = "Ultimo controllo: controllo cloud incompleto. Riprova.";
+"options.supabase.manualSync.summary.network" = "Connessione non disponibile. Riprova.";
+"options.supabase.manualSync.summary.session" = "Accesso al cloud necessario.";
+"options.supabase.manualSync.summary.generic" = "Non è stato possibile completare il controllo. Riprova.";
+"options.supabase.manualSync.summary.cancelled" = "Controllo annullato.";
 "options.supabase.manualSync.action.checkCloud" = "Controlla cloud";
 "options.supabase.manualSync.action.syncNow" = "Sincronizza ora";
 "options.supabase.manualSync.action.signIn" = "Accedi";
