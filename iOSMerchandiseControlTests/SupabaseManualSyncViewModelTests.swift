@@ -234,6 +234,47 @@ private final class ManualSyncProductPriceProviderFake: SupabaseManualSyncProduc
 }
 
 @MainActor
+private final class ManualSyncActivityRegistrationProviderFake: SupabaseManualSyncActivityRegistrationProviding {
+    var snapshots: [SupabaseManualSyncActivityRegistrationSnapshot]
+    var result: SupabaseManualSyncActivityRegistrationResult
+    var loadError: Error?
+    var registerError: Error?
+    var registerDelayNanoseconds: UInt64 = 0
+    private(set) var loadCallCount = 0
+    private(set) var registerCallCount = 0
+
+    init(
+        snapshots: [SupabaseManualSyncActivityRegistrationSnapshot],
+        result: SupabaseManualSyncActivityRegistrationResult
+    ) {
+        self.snapshots = snapshots
+        self.result = result
+    }
+
+    func loadActivityRegistrationSnapshot(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationSnapshot {
+        loadCallCount += 1
+        if let loadError {
+            throw loadError
+        }
+        if snapshots.count > 1 {
+            return snapshots.removeFirst()
+        }
+        return snapshots.first ?? .empty
+    }
+
+    func registerActivities(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationResult {
+        registerCallCount += 1
+        if registerDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: registerDelayNanoseconds)
+        }
+        if let registerError {
+            throw registerError
+        }
+        return result
+    }
+}
+
+@MainActor
 final class SupabaseManualSyncViewModelTests: XCTestCase {
     private static var retainedContainers: [ModelContainer] = []
 
@@ -1987,6 +2028,237 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testTask081ActivitiesOnlyShowsRegisterCTAAfterCloudCheckReview() async throws {
+        let ownerID = UUID(uuidString: "A81A0000-0000-4000-8000-000000000001")!
+        let provider = ManualSyncActivityRegistrationProviderFake(
+            snapshots: [SupabaseManualSyncActivityRegistrationSnapshot(readyToRegister: 3, waiting: 3, notRegisterable: 0)],
+            result: SupabaseManualSyncActivityRegistrationResult(
+                status: .success,
+                summary: SupabaseManualSyncActivityRegistrationSummary(registered: 3, waiting: 0, notRegisterable: 0)
+            )
+        )
+        let vm = makeActivityRegistrationViewModel(provider: provider, ownerID: ownerID)
+
+        XCTAssertNotEqual(vm.presentationState.primaryAction?.title, "Registra attività sul cloud")
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingQueuedCloudOperationCount: 3),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareActivityRegistrationForReview()
+
+        let state = vm.presentationState
+        let review = try XCTUnwrap(state.reviewSheet)
+        XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
+        XCTAssertEqual(review.primaryActionID, .registerCloudActivity)
+        XCTAssertEqual(review.primaryActionTitle, "Registra attività sul cloud")
+        XCTAssertTrue(review.primaryActionIsEnabled)
+        XCTAssertTrue(review.sections.contains { $0.id == .activityRegistration })
+        XCTAssertEqual(provider.registerCallCount, 0)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask081SuccessfulRegistrationUpdatesSummaryAndPendingCount() async throws {
+        let ownerID = UUID(uuidString: "A81A0000-0000-4000-8000-000000000002")!
+        let provider = ManualSyncActivityRegistrationProviderFake(
+            snapshots: [SupabaseManualSyncActivityRegistrationSnapshot(readyToRegister: 2, waiting: 2, notRegisterable: 0)],
+            result: SupabaseManualSyncActivityRegistrationResult(
+                status: .success,
+                summary: SupabaseManualSyncActivityRegistrationSummary(registered: 2, waiting: 0, notRegisterable: 0)
+            )
+        )
+        let vm = makeActivityRegistrationViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingQueuedCloudOperationCount: 2),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareActivityRegistrationForReview()
+        await vm.confirmActivityRegistration()
+
+        let message = try XCTUnwrap(vm.presentationState.userFacingSummary?.message)
+        XCTAssertTrue(message.contains("Attività registrate sul cloud."))
+        XCTAssertTrue(message.contains("Attività registrate: 2"))
+        XCTAssertTrue(message.contains("Ancora in attesa: 0"))
+        XCTAssertTrue(message.contains("Non registrabili: 0"))
+        XCTAssertTrue(vm.presentationState.accessibilityLabel.contains("Attività registrate: 2"))
+        XCTAssertTrue(vm.presentationState.accessibilityLabel.contains("Ancora in attesa: 0"))
+        XCTAssertTrue(vm.presentationState.accessibilityLabel.contains("Non registrabili: 0"))
+        XCTAssertEqual(vm.privacySafeAggregatesSnapshot?.pendingQueuedCloudOperationCount, 0)
+        XCTAssertEqual(provider.registerCallCount, 1)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask081ConfirmBeforeReviewDoesNotRegisterActivities() async throws {
+        let ownerID = UUID(uuidString: "A81A0000-0000-4000-8000-000000000007")!
+        let provider = ManualSyncActivityRegistrationProviderFake(
+            snapshots: [SupabaseManualSyncActivityRegistrationSnapshot(readyToRegister: 1, waiting: 1, notRegisterable: 0)],
+            result: SupabaseManualSyncActivityRegistrationResult(
+                status: .success,
+                summary: SupabaseManualSyncActivityRegistrationSummary(registered: 1, waiting: 0, notRegisterable: 0)
+            )
+        )
+        let vm = makeActivityRegistrationViewModel(provider: provider, ownerID: ownerID)
+
+        await vm.confirmActivityRegistration()
+
+        XCTAssertEqual(provider.registerCallCount, 0)
+        XCTAssertNil(vm.presentationState.reviewSheet)
+        XCTAssertNotEqual(vm.presentationState.primaryAction?.title, "Registra attività sul cloud")
+    }
+
+    func testTask081BlockedAndRetryableFailuresUseNonTechnicalCopy() async throws {
+        let ownerID = UUID(uuidString: "A81A0000-0000-4000-8000-000000000003")!
+        let blockedProvider = ManualSyncActivityRegistrationProviderFake(
+            snapshots: [SupabaseManualSyncActivityRegistrationSnapshot(readyToRegister: 1, waiting: 1, notRegisterable: 0)],
+            result: SupabaseManualSyncActivityRegistrationResult(
+                status: .blocked,
+                summary: SupabaseManualSyncActivityRegistrationSummary(registered: 0, waiting: 0, notRegisterable: 1)
+            )
+        )
+        let blockedVM = makeActivityRegistrationViewModel(provider: blockedProvider, ownerID: ownerID)
+        blockedVM.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingQueuedCloudOperationCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await blockedVM.prepareActivityRegistrationForReview()
+        await blockedVM.confirmActivityRegistration()
+
+        XCTAssertTrue(blockedVM.presentationState.userFacingSummary?.message.contains("Alcune attività non possono essere registrate automaticamente.") ?? false)
+        assertNoForbiddenUserFacingJargon(blockedVM)
+
+        let retryProvider = ManualSyncActivityRegistrationProviderFake(
+            snapshots: [SupabaseManualSyncActivityRegistrationSnapshot(readyToRegister: 1, waiting: 1, notRegisterable: 0)],
+            result: SupabaseManualSyncActivityRegistrationResult(
+                status: .retryableFailure,
+                summary: SupabaseManualSyncActivityRegistrationSummary(registered: 0, waiting: 1, notRegisterable: 0)
+            )
+        )
+        let retryVM = makeActivityRegistrationViewModel(provider: retryProvider, ownerID: ownerID)
+        retryVM.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingQueuedCloudOperationCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await retryVM.prepareActivityRegistrationForReview()
+        await retryVM.confirmActivityRegistration()
+
+        let retryReview = try XCTUnwrap(retryVM.presentationState.reviewSheet)
+        XCTAssertEqual(retryReview.primaryActionTitle, "Riprova")
+        XCTAssertTrue(retryVM.presentationState.userFacingSummary?.message.contains("Non è stato possibile completare la registrazione. Puoi riprovare.") ?? false)
+        assertNoForbiddenUserFacingJargon(retryVM)
+    }
+
+    func testTask081AuthGateAndCancellationAreUserFacing() async throws {
+        let ownerID = UUID(uuidString: "A81A0000-0000-4000-8000-000000000004")!
+        let authProvider = ManualSyncActivityRegistrationProviderFake(
+            snapshots: [SupabaseManualSyncActivityRegistrationSnapshot(readyToRegister: 1, waiting: 1, notRegisterable: 0)],
+            result: SupabaseManualSyncActivityRegistrationResult(status: .success, summary: .empty)
+        )
+        let authVM = makeActivityRegistrationViewModel(provider: authProvider, ownerID: nil, isSignedIn: false)
+        await authVM.prepareActivityRegistrationForReview()
+        await authVM.confirmActivityRegistration()
+
+        XCTAssertEqual(authProvider.registerCallCount, 0)
+        XCTAssertTrue(authVM.presentationState.userFacingSummary?.message.contains("Accedi per registrare le attività sul cloud.") ?? false)
+
+        let cancelProvider = ManualSyncActivityRegistrationProviderFake(
+            snapshots: [SupabaseManualSyncActivityRegistrationSnapshot(readyToRegister: 1, waiting: 1, notRegisterable: 0)],
+            result: SupabaseManualSyncActivityRegistrationResult(status: .success, summary: .empty)
+        )
+        cancelProvider.registerDelayNanoseconds = 500_000_000
+        let cancelVM = makeActivityRegistrationViewModel(provider: cancelProvider, ownerID: ownerID)
+        cancelVM.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingQueuedCloudOperationCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await cancelVM.prepareActivityRegistrationForReview()
+
+        let task = Task { @MainActor in
+            await cancelVM.confirmActivityRegistration()
+        }
+        try await Task.sleep(nanoseconds: 20_000_000)
+        task.cancel()
+        await task.value
+
+        XCTAssertTrue(cancelVM.presentationState.userFacingSummary?.message.contains("Registrazione annullata.") ?? false)
+        assertNoForbiddenUserFacingJargon(cancelVM)
+    }
+
+    func testTask081DataActionsStayBeforeActivityRegistration() async throws {
+        let ownerID = UUID(uuidString: "A81A0000-0000-4000-8000-000000000005")!
+        let plan = makeCatalogPushPlan(
+            ownerID: ownerID,
+            candidates: [PushCandidate(entityKind: .product, localID: "100", action: .dryRunCreateCandidate)]
+        )
+        let pushProvider = ManualSyncCatalogPushProviderFake(plans: [plan, plan])
+        let activityProvider = ManualSyncActivityRegistrationProviderFake(
+            snapshots: [SupabaseManualSyncActivityRegistrationSnapshot(readyToRegister: 1, waiting: 1, notRegisterable: 0)],
+            result: SupabaseManualSyncActivityRegistrationResult(status: .success, summary: .empty)
+        )
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsCatalogPush: true,
+                supportsActivityRegistration: true
+            ),
+            catalogPushProvider: pushProvider,
+            currentCatalogPushOwnerID: { ownerID },
+            activityRegistrationProvider: activityProvider,
+            currentActivityRegistrationOwnerID: { ownerID }
+        )
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1, pendingQueuedCloudOperationCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+        await vm.prepareActivityRegistrationForReview()
+
+        var review = try XCTUnwrap(vm.presentationState.reviewSheet)
+        XCTAssertEqual(review.primaryActionID, .sendCloudChanges)
+        XCTAssertEqual(review.primaryActionTitle, "Invia modifiche al cloud")
+
+        await vm.sendConfirmedCatalogChanges()
+
+        review = try XCTUnwrap(vm.presentationState.reviewSheet)
+        XCTAssertEqual(review.primaryActionID, .registerCloudActivity)
+        XCTAssertEqual(review.primaryActionTitle, "Registra attività sul cloud")
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask081DoubleTapDoesNotStartConcurrentRegistration() async throws {
+        let ownerID = UUID(uuidString: "A81A0000-0000-4000-8000-000000000006")!
+        let provider = ManualSyncActivityRegistrationProviderFake(
+            snapshots: [SupabaseManualSyncActivityRegistrationSnapshot(readyToRegister: 1, waiting: 1, notRegisterable: 0)],
+            result: SupabaseManualSyncActivityRegistrationResult(
+                status: .success,
+                summary: SupabaseManualSyncActivityRegistrationSummary(registered: 1, waiting: 0, notRegisterable: 0)
+            )
+        )
+        provider.registerDelayNanoseconds = 100_000_000
+        let vm = makeActivityRegistrationViewModel(provider: provider, ownerID: ownerID)
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingQueuedCloudOperationCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareActivityRegistrationForReview()
+
+        async let first: Void = vm.confirmActivityRegistration()
+        async let second: Void = vm.retryActivityRegistration()
+        _ = await (first, second)
+
+        XCTAssertEqual(provider.registerCallCount, 1)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
     func testTask078NoFinalManualSyncCopyUsesOldApplyChangesLabel() throws {
         let root = repoRootURL()
         let supportedLanguages = ["it", "en", "es", "zh-Hans"]
@@ -2101,6 +2373,28 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             currentCatalogPushOwnerID: { ownerID },
             productPriceProvider: provider,
             currentProductPriceOwnerID: { ownerID }
+        )
+    }
+
+    private func makeActivityRegistrationViewModel(
+        provider: ManualSyncActivityRegistrationProviderFake,
+        ownerID: UUID?,
+        isSignedIn: Bool = true
+    ) -> SupabaseManualSyncViewModel {
+        SupabaseManualSyncViewModel(
+            coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsActivityRegistration: true
+            ),
+            initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext(
+                isSignedIn: isSignedIn,
+                canSignIn: true,
+                isTransitioning: false
+            ),
+            activityRegistrationProvider: provider,
+            currentActivityRegistrationOwnerID: { ownerID }
         )
     }
 

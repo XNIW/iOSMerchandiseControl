@@ -159,6 +159,47 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.confirm.send.message",
             "options.supabase.manualSync.confirm.send.cancel",
             "options.supabase.manualSync.confirm.send.send",
+            "options.supabase.manualSync.activity.state.ready.title",
+            "options.supabase.manualSync.activity.state.ready.subtitle",
+            "options.supabase.manualSync.activity.state.success.title",
+            "options.supabase.manualSync.activity.state.success.subtitle",
+            "options.supabase.manualSync.activity.state.empty.title",
+            "options.supabase.manualSync.activity.state.empty.subtitle",
+            "options.supabase.manualSync.activity.state.partial.title",
+            "options.supabase.manualSync.activity.state.partial.subtitle",
+            "options.supabase.manualSync.activity.state.auth.title",
+            "options.supabase.manualSync.activity.state.auth.subtitle",
+            "options.supabase.manualSync.activity.state.failed.title",
+            "options.supabase.manualSync.activity.state.failed.subtitle",
+            "options.supabase.manualSync.activity.state.blocked.title",
+            "options.supabase.manualSync.activity.state.blocked.subtitle",
+            "options.supabase.manualSync.activity.state.cancelled.title",
+            "options.supabase.manualSync.activity.state.cancelled.subtitle",
+            "options.supabase.manualSync.activity.review.title",
+            "options.supabase.manualSync.activity.review.subtitle",
+            "options.supabase.manualSync.activity.review.section.title",
+            "options.supabase.manualSync.activity.review.ready",
+            "options.supabase.manualSync.activity.review.registering",
+            "options.supabase.manualSync.activity.review.footer.ready",
+            "options.supabase.manualSync.activity.review.footer.registering",
+            "options.supabase.manualSync.activity.review.footer.retry",
+            "options.supabase.manualSync.activity.review.footer.final",
+            "options.supabase.manualSync.activity.review.action.register",
+            "options.supabase.manualSync.activity.review.action.registering",
+            "options.supabase.manualSync.activity.summary.success",
+            "options.supabase.manualSync.activity.summary.empty",
+            "options.supabase.manualSync.activity.summary.partialRetryable",
+            "options.supabase.manualSync.activity.summary.authRequired",
+            "options.supabase.manualSync.activity.summary.retryableFailure",
+            "options.supabase.manualSync.activity.summary.blocked",
+            "options.supabase.manualSync.activity.summary.cancelled",
+            "options.supabase.manualSync.activity.summary.registered",
+            "options.supabase.manualSync.activity.summary.waiting",
+            "options.supabase.manualSync.activity.summary.notRegisterable",
+            "options.supabase.manualSync.confirm.activity.title",
+            "options.supabase.manualSync.confirm.activity.message",
+            "options.supabase.manualSync.confirm.activity.cancel",
+            "options.supabase.manualSync.confirm.activity.register",
             "options.supabase.manualSync.disabled.authChanging",
             "options.supabase.manualSync.disabled.accessUnavailable"
         ]
@@ -168,6 +209,26 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             for key in keys {
                 XCTAssertNotNil(strings[key], "\(key) missing in \(language)")
                 XCTAssertFalse(strings[key]?.isEmpty ?? true, "\(key) empty in \(language)")
+            }
+        }
+    }
+
+    func testTask081ManualSyncReleaseCopyAvoidsIdentifiersAndRawDataShapes() throws {
+        let uuidPattern = #"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"#
+
+        for language in supportedLanguages {
+            let strings = try loadStrings(language: language)
+            let releaseValues = strings
+                .filter { $0.key.hasPrefix("options.supabase.manualSync.") }
+                .map(\.value)
+
+            for value in releaseValues {
+                XCTAssertNil(
+                    value.range(of: uuidPattern, options: .regularExpression),
+                    "\(language) Release copy contains UUID-like data: \(value)"
+                )
+                XCTAssertFalse(value.contains("{"), "\(language) Release copy looks like raw JSON: \(value)")
+                XCTAssertFalse(value.contains("}"), "\(language) Release copy looks like raw JSON: \(value)")
             }
         }
     }
@@ -354,8 +415,29 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertTrue(factorySource.contains("remotePreviewStaging: remotePreviewAdapter"))
         XCTAssertTrue(factorySource.contains("localApplyService: SupabasePullApplyService()"))
         XCTAssertTrue(factorySource.contains("localApplyContext: context"))
+        XCTAssertTrue(factorySource.contains("activityRecorder: (any SyncEventRecording)? = nil"))
+        XCTAssertTrue(factorySource.contains("activityRegistrationProvider"))
+        XCTAssertTrue(factorySource.contains("SupabaseManualSyncReleaseActivityRegistrationAdapter"))
         XCTAssertFalse(factorySource.contains("supportsGuidedManualSync: true"))
         XCTAssertFalse(factorySource.contains("SyncEventOutboxDrainService"))
+    }
+
+    func testTask081ActivityRegistrationDrainIsAdapterOwned() throws {
+        let optionsViewSource = try readSource("iOSMerchandiseControl/OptionsView.swift")
+        let releaseCardSource = try extractReleaseCardSource(from: optionsViewSource)
+        let factorySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift")
+        let viewModelSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift")
+        let adapterSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift")
+
+        XCTAssertTrue(adapterSource.contains("SyncEventOutboxDrainService"))
+        XCTAssertTrue(adapterSource.contains("drainOnce"))
+        XCTAssertFalse(releaseCardSource.contains("SyncEventOutboxDrainService"))
+        XCTAssertFalse(releaseCardSource.contains("drainOnce"))
+        XCTAssertFalse(factorySource.contains("SyncEventOutboxDrainService"))
+        XCTAssertFalse(factorySource.contains("drainOnce"))
+        XCTAssertFalse(viewModelSource.contains("SyncEventOutboxDrainService"))
+        XCTAssertFalse(viewModelSource.contains("drainOnce"))
+        XCTAssertFalse(factorySource.contains("supportsGuidedManualSync: true"))
     }
 
     func testTask069ReleaseFactoryUsesLocalPendingSnapshotProvider() throws {

@@ -22,9 +22,7 @@ struct OptionsView: View {
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
     private let supabaseManualPushService: SupabaseManualPushService?
-#if DEBUG
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
-#endif
 
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
@@ -70,8 +68,8 @@ struct OptionsView: View {
         self.supabasePullPreviewService = supabasePullPreviewService
         self.supabaseSyncEventPreviewService = supabaseSyncEventPreviewService
         self.supabaseManualPushService = supabaseManualPushService
-#if DEBUG
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
+#if DEBUG
         _productPriceManualPushViewModel = StateObject(
             wrappedValue: ProductPriceManualPushDebugViewModel(remote: supabaseInventoryService)
         )
@@ -182,7 +180,8 @@ struct OptionsView: View {
                     authViewModel: supabaseAuthViewModel,
                     inventoryService: supabaseInventoryService,
                     pullPreviewService: supabasePullPreviewService,
-                    manualPushService: supabaseManualPushService
+                    manualPushService: supabaseManualPushService,
+                    activityRecorder: syncEventOutboxDrainRecorder
                 )
             } header: {
                 SectionHeader(title: L("options.supabase.manualSync.header"), systemImage: "icloud")
@@ -2776,15 +2775,18 @@ private struct SupabaseManualSyncReleaseCard: View {
     @State private var isReviewSheetPresented = false
     @State private var isApplyConfirmationPresented = false
     @State private var isSendConfirmationPresented = false
+    @State private var isActivityRegistrationConfirmationPresented = false
     @State private var activeApplyTask: Task<Void, Never>?
     @State private var activeSendTask: Task<Void, Never>?
+    @State private var activeActivityRegistrationTask: Task<Void, Never>?
 
     init(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
         inventoryService: SupabaseInventoryService?,
         pullPreviewService: SupabasePullPreviewService?,
-        manualPushService: SupabaseManualPushService?
+        manualPushService: SupabaseManualPushService?,
+        activityRecorder: (any SyncEventRecording)?
     ) {
         self.authViewModel = authViewModel
         _viewModel = StateObject(
@@ -2793,7 +2795,8 @@ private struct SupabaseManualSyncReleaseCard: View {
                 authViewModel: authViewModel,
                 inventoryService: inventoryService,
                 pullPreviewService: pullPreviewService,
-                manualPushService: manualPushService
+                manualPushService: manualPushService,
+                activityRecorder: activityRecorder
             )
         )
     }
@@ -2831,7 +2834,6 @@ private struct SupabaseManualSyncReleaseCard: View {
                 Text(summary.message)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityHidden(true)
             }
@@ -2892,8 +2894,11 @@ private struct SupabaseManualSyncReleaseCard: View {
             activeApplyTask = nil
             activeSendTask?.cancel()
             activeSendTask = nil
+            activeActivityRegistrationTask?.cancel()
+            activeActivityRegistrationTask = nil
             isApplyConfirmationPresented = false
             isSendConfirmationPresented = false
+            isActivityRegistrationConfirmationPresented = false
         }
         .sheet(
             isPresented: $isReviewSheetPresented,
@@ -2910,7 +2915,7 @@ private struct SupabaseManualSyncReleaseCard: View {
                         isReviewSheetPresented = false
                     }
                 )
-                .interactiveDismissDisabled(viewModel.isApplyingLocalChanges || viewModel.isSendingCatalogChanges)
+                .interactiveDismissDisabled(viewModel.isReviewMutationInProgress)
             }
         }
         .alert(
@@ -2935,6 +2940,17 @@ private struct SupabaseManualSyncReleaseCard: View {
         } message: {
             Text(L("options.supabase.manualSync.confirm.send.message"))
         }
+        .alert(
+            L("options.supabase.manualSync.confirm.activity.title"),
+            isPresented: $isActivityRegistrationConfirmationPresented
+        ) {
+            Button(L("options.supabase.manualSync.confirm.activity.cancel"), role: .cancel) {}
+            Button(L("options.supabase.manualSync.confirm.activity.register")) {
+                startActivityRegistration()
+            }
+        } message: {
+            Text(L("options.supabase.manualSync.confirm.activity.message"))
+        }
     }
 
     private func handle(reviewPrimaryAction actionID: SupabaseManualSyncReviewPrimaryActionID) {
@@ -2943,6 +2959,8 @@ private struct SupabaseManualSyncReleaseCard: View {
             isApplyConfirmationPresented = true
         case .sendCloudChanges:
             isSendConfirmationPresented = true
+        case .registerCloudActivity:
+            isActivityRegistrationConfirmationPresented = true
         case .none:
             break
         }
@@ -2954,7 +2972,8 @@ private struct SupabaseManualSyncReleaseCard: View {
         activeApplyTask = Task { @MainActor in
             await viewModel.applyStagedLocalChanges()
             activeApplyTask = nil
-            if !viewModel.isApplyingLocalChanges {
+            if !viewModel.isApplyingLocalChanges,
+               viewModel.presentationState.reviewSheet == nil {
                 isReviewSheetPresented = false
             }
         }
@@ -2966,6 +2985,15 @@ private struct SupabaseManualSyncReleaseCard: View {
         activeSendTask = Task { @MainActor in
             await viewModel.sendConfirmedCatalogChanges()
             activeSendTask = nil
+        }
+    }
+
+    private func startActivityRegistration() {
+        guard activeActivityRegistrationTask == nil else { return }
+
+        activeActivityRegistrationTask = Task { @MainActor in
+            await viewModel.confirmActivityRegistration()
+            activeActivityRegistrationTask = nil
         }
     }
 
@@ -3034,6 +3062,8 @@ private struct SupabaseManualSyncReleaseCard: View {
     private func cancelActiveRun() {
         activeRunTask?.cancel()
         activeRunTask = nil
+        activeActivityRegistrationTask?.cancel()
+        activeActivityRegistrationTask = nil
         viewModel.cancelLocalApplyReview()
     }
 
@@ -3044,8 +3074,11 @@ private struct SupabaseManualSyncReleaseCard: View {
         activeApplyTask = nil
         activeSendTask?.cancel()
         activeSendTask = nil
+        activeActivityRegistrationTask?.cancel()
+        activeActivityRegistrationTask = nil
         isApplyConfirmationPresented = false
         isSendConfirmationPresented = false
+        isActivityRegistrationConfirmationPresented = false
         isReviewSheetPresented = false
         viewModel.resetPresentationToIdleReady()
         syncAuthPresentationContext()

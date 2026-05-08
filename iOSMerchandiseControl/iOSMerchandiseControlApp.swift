@@ -56,15 +56,11 @@ struct iOSMerchandiseControlApp: App {
             let syncEventReader = SupabaseSyncEventRemoteReader(clientProvider: provider)
             let syncEventPreviewService = SupabaseSyncEventPreviewService(fetcher: syncEventReader)
             let manualPushService = SupabaseManualPushService(clientProvider: provider)
-#if DEBUG
             let syncEventOutboxDrainRecorder: (any SyncEventRecording)? = SupabaseSyncEventLiveRecorder(
                 configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
                 sessionProvider: authService,
                 transport: SupabaseSyncEventRPCTransport(clientProvider: provider)
             )
-#else
-            let syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil
-#endif
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(authService: authService),
                 inventoryService: inventoryService,

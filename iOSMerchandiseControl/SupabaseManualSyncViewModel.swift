@@ -26,6 +26,14 @@ nonisolated enum SupabaseManualSyncUserPresentationKind: Equatable, Sendable {
     case catalogPushSending
     case catalogPushSucceeded
     case catalogPushPartiallySucceeded
+    case activityRegistrationReady
+    case activityRegistrationSucceeded
+    case activityRegistrationEmpty
+    case activityRegistrationPartiallySucceeded
+    case activityRegistrationAuthRequired
+    case activityRegistrationRetryableFailure
+    case activityRegistrationBlocked
+    case activityRegistrationCancelled
 }
 
 nonisolated struct SupabaseManualSyncCapabilitySet: Equatable, Sendable {
@@ -33,36 +41,42 @@ nonisolated struct SupabaseManualSyncCapabilitySet: Equatable, Sendable {
     var supportsGuidedManualSync: Bool
     var supportsCatalogPush: Bool
     var supportsProductPriceSync: Bool
+    var supportsActivityRegistration: Bool
 
     init(
         supportsRemoteCloudCheck: Bool,
         supportsGuidedManualSync: Bool,
         supportsCatalogPush: Bool = false,
-        supportsProductPriceSync: Bool = false
+        supportsProductPriceSync: Bool = false,
+        supportsActivityRegistration: Bool = false
     ) {
         self.supportsRemoteCloudCheck = supportsRemoteCloudCheck
         self.supportsGuidedManualSync = supportsGuidedManualSync
         self.supportsCatalogPush = supportsCatalogPush
         self.supportsProductPriceSync = supportsProductPriceSync
+        self.supportsActivityRegistration = supportsActivityRegistration
     }
 
     static let releaseCurrent = SupabaseManualSyncCapabilitySet(
         supportsRemoteCloudCheck: false,
         supportsGuidedManualSync: false,
         supportsCatalogPush: false,
-        supportsProductPriceSync: false
+        supportsProductPriceSync: false,
+        supportsActivityRegistration: false
     )
 
     static func releaseCurrent(
         remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)?,
         catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = nil,
-        productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = nil
+        productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = nil,
+        activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = nil
     ) -> SupabaseManualSyncCapabilitySet {
         SupabaseManualSyncCapabilitySet(
             supportsRemoteCloudCheck: remotePreviewProvider != nil,
             supportsGuidedManualSync: false,
             supportsCatalogPush: catalogPushProvider != nil,
-            supportsProductPriceSync: productPriceProvider != nil
+            supportsProductPriceSync: productPriceProvider != nil,
+            supportsActivityRegistration: activityRegistrationProvider != nil
         )
     }
 }
@@ -119,6 +133,13 @@ nonisolated enum SupabaseManualSyncUserFacingSummaryKind: Equatable, Sendable {
     case catalogPushFailedBeforeWrite
     case catalogPushInterrupted
     case catalogPushStale
+    case activityRegistrationSucceeded
+    case activityRegistrationEmpty
+    case activityRegistrationPartial
+    case activityRegistrationAuthRequired
+    case activityRegistrationRetryableFailure
+    case activityRegistrationBlocked
+    case activityRegistrationCancelled
 }
 
 nonisolated struct SupabaseManualSyncUserFacingSummary: Equatable, Sendable {
@@ -149,6 +170,7 @@ nonisolated enum SupabaseManualSyncReviewSectionID: String, Equatable, Sendable 
     case readyToSend
     case sendAttention
     case sendBlocked
+    case activityRegistration
     case finalSummary
 }
 
@@ -164,6 +186,7 @@ nonisolated enum SupabaseManualSyncReviewPrimaryActionID: Equatable, Sendable {
     case none
     case updateDevice
     case sendCloudChanges
+    case registerCloudActivity
 }
 
 nonisolated struct SupabaseManualSyncReviewSheetState: Equatable, Sendable {
@@ -285,6 +308,56 @@ nonisolated enum SupabaseManualSyncCatalogPushPhase: Equatable, Sendable {
     case sendFailed(SupabaseManualSyncCatalogPushSummary)
 }
 
+nonisolated enum SupabaseManualSyncActivityRegistrationStatus: Equatable, Sendable {
+    case success
+    case empty
+    case partialRetryable
+    case authRequired
+    case retryableFailure
+    case blocked
+    case cancelled
+}
+
+nonisolated struct SupabaseManualSyncActivityRegistrationSnapshot: Equatable, Sendable {
+    var readyToRegister: Int
+    var waiting: Int
+    var notRegisterable: Int
+
+    static let empty = SupabaseManualSyncActivityRegistrationSnapshot(
+        readyToRegister: 0,
+        waiting: 0,
+        notRegisterable: 0
+    )
+
+    var hasAnyActivity: Bool {
+        readyToRegister > 0 || waiting > 0 || notRegisterable > 0
+    }
+}
+
+nonisolated struct SupabaseManualSyncActivityRegistrationSummary: Equatable, Sendable {
+    var registered: Int
+    var waiting: Int
+    var notRegisterable: Int
+
+    static let empty = SupabaseManualSyncActivityRegistrationSummary(
+        registered: 0,
+        waiting: 0,
+        notRegisterable: 0
+    )
+}
+
+nonisolated struct SupabaseManualSyncActivityRegistrationResult: Equatable, Sendable {
+    var status: SupabaseManualSyncActivityRegistrationStatus
+    var summary: SupabaseManualSyncActivityRegistrationSummary
+}
+
+nonisolated enum SupabaseManualSyncActivityRegistrationPhase: Equatable, Sendable {
+    case idle
+    case ready(SupabaseManualSyncActivityRegistrationSnapshot)
+    case registering(SupabaseManualSyncActivityRegistrationSnapshot)
+    case finished(SupabaseManualSyncActivityRegistrationStatus, SupabaseManualSyncActivityRegistrationSummary)
+}
+
 @MainActor
 protocol SupabaseManualSyncCatalogPushProviding: AnyObject {
     func makePushPlan(ownerUserID: UUID) async throws -> ManualPushPlan
@@ -297,6 +370,12 @@ protocol SupabaseManualSyncProductPriceSyncProviding: AnyObject {
     func apply(plan: ProductPriceApplyPlan, ownerUserID: UUID) async throws -> ProductPriceApplyResult
     func makePushPlan(ownerUserID: UUID) async throws -> ProductPricePushDryRunPlan
     func push(plan: ProductPricePushDryRunPlan, ownerUserID: UUID) async throws -> ProductPriceManualPushResult
+}
+
+@MainActor
+protocol SupabaseManualSyncActivityRegistrationProviding: AnyObject {
+    func loadActivityRegistrationSnapshot(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationSnapshot
+    func registerActivities(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationResult
 }
 
 @MainActor
@@ -326,6 +405,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private let currentCatalogPushOwnerID: (@MainActor () -> UUID?)?
     private let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)?
     private let currentProductPriceOwnerID: (@MainActor () -> UUID?)?
+    private let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)?
+    private let currentActivityRegistrationOwnerID: (@MainActor () -> UUID?)?
     private var lastStartedMode: SupabaseManualSyncRunMode?
     private var stagedCatalogPushPlan: ManualPushPlan?
     private var canApplyCatalogChanges = false
@@ -350,6 +431,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     @Published private(set) var catalogPushPhase: SupabaseManualSyncCatalogPushPhase = .idle
     @Published private(set) var productPricePushPhase: SupabaseManualSyncProductPricePushPhase = .idle
     @Published private(set) var productPriceSummary: SupabaseManualSyncProductPriceSummary = .empty
+    @Published private(set) var activityRegistrationPhase: SupabaseManualSyncActivityRegistrationPhase = .idle
+    @Published private(set) var isRegisteringActivities = false
 
     init(
         coordinator: any SupabaseManualSyncCoordinating,
@@ -362,7 +445,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = nil,
         currentCatalogPushOwnerID: (@MainActor () -> UUID?)? = nil,
         productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = nil,
-        currentProductPriceOwnerID: (@MainActor () -> UUID?)? = nil
+        currentProductPriceOwnerID: (@MainActor () -> UUID?)? = nil,
+        activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = nil,
+        currentActivityRegistrationOwnerID: (@MainActor () -> UUID?)? = nil
     ) {
         self.coordinator = coordinator
         self.capabilities = capabilities
@@ -375,6 +460,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         self.currentCatalogPushOwnerID = currentCatalogPushOwnerID
         self.productPriceProvider = productPriceProvider
         self.currentProductPriceOwnerID = currentProductPriceOwnerID
+        self.activityRegistrationProvider = activityRegistrationProvider
+        self.currentActivityRegistrationOwnerID = currentActivityRegistrationOwnerID
     }
 
     var presentationState: SupabaseManualSyncPresentationState {
@@ -382,7 +469,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     var canStart: Bool {
-        !isRunning && !isApplyingLocalChanges && !isSendingCatalogChanges
+        !isRunning && !isApplyingLocalChanges && !isSendingCatalogChanges && !isRegisteringActivities
     }
 
     /// Future guided flow gate (confirmation before mutations). Stubbed false until guided UX exists.
@@ -398,6 +485,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return true
         }
         return false
+    }
+
+    var isReviewMutationInProgress: Bool {
+        isApplyingLocalChanges || isSendingCatalogChanges || isRegisteringActivities
     }
 
     var hasTerminalCatalogPushSummary: Bool {
@@ -429,6 +520,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         invalidateLocalApplyStaging(clearSummary: true)
         invalidateCatalogPushPlan(clearSummary: true)
         invalidateProductPricePlans(clearSummary: true)
+        invalidateActivityRegistration(clearSummary: true)
         lastStartedMode = mode
         isRunning = true
         defer { isRunning = false }
@@ -450,6 +542,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         apply(summary: summary)
         await prepareCatalogPushPlanIfNeeded(after: summary)
         await prepareProductPricePlansIfNeeded(after: summary)
+        await prepareActivityRegistrationIfNeeded(after: summary)
     }
 
     private func cancelledFallbackSummary(previous: SupabaseManualSyncRunSummary) -> SupabaseManualSyncRunSummary {
@@ -563,7 +656,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     func cancelReviewFlow() {
-        guard !isApplyingLocalChanges && !isSendingCatalogChanges else { return }
+        guard !isReviewMutationInProgress else { return }
         cancelLocalApplyReview()
         switch catalogPushPhase {
         case .ready, .blocked, .checking:
@@ -575,6 +668,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .ready, .blocked, .checking:
             invalidateProductPricePushPlan()
         case .idle, .noChanges, .failed, .stale, .sending, .succeeded, .partial, .sendFailed:
+            break
+        }
+        switch activityRegistrationPhase {
+        case .ready:
+            invalidateActivityRegistration(clearSummary: false)
+        case .idle, .registering, .finished:
             break
         }
     }
@@ -646,6 +745,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             title = L("options.supabase.manualSync.state.applied.title")
             subtitle = L("options.supabase.manualSync.state.applied.subtitle")
             primaryActionTitle = Copy.startAction
+            await prepareActivityRegistrationAfterDataStep()
         } catch {
             let reason = localApplyBlockedMessage(for: error, failureContext: true)
             invalidateLocalApplyStaging(reason: reason, clearSummary: true)
@@ -736,6 +836,342 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             applyBlockedReason = nil
         } else if let fallbackReason {
             applyBlockedReason = fallbackReason
+        }
+    }
+
+    private func prepareActivityRegistrationIfNeeded(after summary: SupabaseManualSyncRunSummary) async {
+        guard shouldPrepareActivityRegistration(after: summary) else {
+            invalidateActivityRegistration(clearSummary: false)
+            return
+        }
+        await loadActivityRegistrationSnapshot()
+    }
+
+    private func prepareActivityRegistrationAfterDataStep() async {
+        guard capabilities.supportsActivityRegistration else {
+            invalidateActivityRegistration(clearSummary: false)
+            return
+        }
+        await loadActivityRegistrationSnapshot()
+    }
+
+    private func shouldPrepareActivityRegistration(after summary: SupabaseManualSyncRunSummary) -> Bool {
+        guard capabilities.supportsActivityRegistration else {
+            return false
+        }
+        guard summary.countsSnapshot.pendingQueuedCloudOperationCount > 0 else {
+            return false
+        }
+        guard let remotePreviewSummary = summary.remotePreviewSummary else {
+            return false
+        }
+        guard remotePreviewSummary.isComplete,
+              !remotePreviewSummary.isPartial,
+              !remotePreviewSummary.wasCancelled,
+              remotePreviewSummary.failureCategory == nil else {
+            return false
+        }
+        return true
+    }
+
+    private func loadActivityRegistrationSnapshot() async {
+        guard capabilities.supportsActivityRegistration,
+              let activityRegistrationProvider else {
+            invalidateActivityRegistration(clearSummary: false)
+            return
+        }
+        guard authPresentationContext.isSignedIn,
+              let ownerUserID = currentActivityRegistrationOwnerID?() else {
+            applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
+                status: .authRequired,
+                summary: .empty
+            ))
+            return
+        }
+
+        do {
+            let snapshot = try await activityRegistrationProvider.loadActivityRegistrationSnapshot(ownerUserID: ownerUserID)
+            guard !Task.isCancelled else { return }
+            applyActivityRegistrationSnapshot(snapshot)
+        } catch {
+            guard !Task.isCancelled else { return }
+            applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
+                status: .retryableFailure,
+                summary: activityRegistrationSummaryForCurrentPhase()
+            ))
+        }
+    }
+
+    private func applyActivityRegistrationSnapshot(_ snapshot: SupabaseManualSyncActivityRegistrationSnapshot) {
+        guard snapshot.hasAnyActivity else {
+            activityRegistrationPhase = .idle
+            return
+        }
+
+        if snapshot.readyToRegister > 0 {
+            activityRegistrationPhase = .ready(snapshot)
+            promoteActivityRegistrationIfNoDataAction()
+            return
+        }
+
+        let summary = SupabaseManualSyncActivityRegistrationSummary(
+            registered: 0,
+            waiting: snapshot.waiting,
+            notRegisterable: snapshot.notRegisterable
+        )
+        let status: SupabaseManualSyncActivityRegistrationStatus = {
+            if snapshot.notRegisterable > 0 {
+                return .blocked
+            }
+            if snapshot.waiting > 0 {
+                return .retryableFailure
+            }
+            return .empty
+        }()
+        applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
+            status: status,
+            summary: summary
+        ))
+    }
+
+    private func promoteActivityRegistrationIfNoDataAction() {
+        guard !hasPendingDataActionBeforeActivityRegistration else { return }
+        presentationKind = .activityRegistrationReady
+        title = L("options.supabase.manualSync.activity.state.ready.title")
+        subtitle = L("options.supabase.manualSync.activity.state.ready.subtitle")
+        primaryActionTitle = L("options.supabase.manualSync.action.review")
+    }
+
+    private var hasPendingDataActionBeforeActivityRegistration: Bool {
+        if canApplyLocalChanges {
+            return true
+        }
+        switch catalogPushPhase {
+        case .checking, .ready, .blocked, .sending:
+            return true
+        case .idle, .noChanges, .failed, .stale, .succeeded, .succeededNeedsCheck, .partial, .sendBlocked, .sendFailed:
+            break
+        }
+        switch productPricePushPhase {
+        case .checking, .ready, .blocked, .sending:
+            return true
+        case .idle, .noChanges, .failed, .stale, .succeeded, .partial, .sendFailed:
+            break
+        }
+        return false
+    }
+
+    func confirmActivityRegistration() async {
+        await registerActivitiesIfNeeded()
+    }
+
+    func retryActivityRegistration() async {
+        await registerActivitiesIfNeeded()
+    }
+
+    private func registerActivitiesIfNeeded() async {
+        guard !isRegisteringActivities else { return }
+        guard activityRegistrationPhase.hasRegisterAction else { return }
+        guard capabilities.supportsActivityRegistration,
+              let activityRegistrationProvider else {
+            applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
+                status: .retryableFailure,
+                summary: activityRegistrationSummaryForCurrentPhase()
+            ))
+            return
+        }
+        guard authPresentationContext.isSignedIn,
+              let ownerUserID = currentActivityRegistrationOwnerID?() else {
+            applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
+                status: .authRequired,
+                summary: activityRegistrationSummaryForCurrentPhase()
+            ))
+            return
+        }
+
+        isRegisteringActivities = true
+        let snapshot = activityRegistrationSnapshotForCurrentPhase()
+        activityRegistrationPhase = .registering(snapshot)
+        await Task.yield()
+
+        do {
+            let result = try await activityRegistrationProvider.registerActivities(ownerUserID: ownerUserID)
+            guard !Task.isCancelled else { throw CancellationError() }
+            isRegisteringActivities = false
+            applyActivityRegistrationResult(result)
+        } catch is CancellationError {
+            isRegisteringActivities = false
+            applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
+                status: .cancelled,
+                summary: activityRegistrationSummaryForCurrentPhase()
+            ))
+        } catch {
+            isRegisteringActivities = false
+            applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
+                status: .retryableFailure,
+                summary: activityRegistrationSummaryForCurrentPhase()
+            ))
+        }
+    }
+
+    private func applyActivityRegistrationResult(_ result: SupabaseManualSyncActivityRegistrationResult) {
+        activityRegistrationPhase = .finished(result.status, result.summary)
+        updateLastSummaryActivityCount(result.summary.waiting + result.summary.notRegisterable)
+
+        switch result.status {
+        case .success:
+            presentationKind = .activityRegistrationSucceeded
+        case .empty:
+            presentationKind = .activityRegistrationEmpty
+        case .partialRetryable:
+            presentationKind = .activityRegistrationPartiallySucceeded
+        case .authRequired:
+            presentationKind = .activityRegistrationAuthRequired
+        case .retryableFailure:
+            presentationKind = .activityRegistrationRetryableFailure
+        case .blocked:
+            presentationKind = .activityRegistrationBlocked
+        case .cancelled:
+            presentationKind = .activityRegistrationCancelled
+        }
+        title = activityRegistrationTitle(for: result.status)
+        subtitle = activityRegistrationSubtitle(for: result.status)
+        primaryActionTitle = result.status == .partialRetryable || result.status == .retryableFailure
+            ? L("options.supabase.manualSync.action.retry")
+            : Copy.startAction
+    }
+
+    private func updateLastSummaryActivityCount(_ count: Int) {
+        guard var summary = lastSummary else { return }
+        summary.countsSnapshot.pendingQueuedCloudOperationCount = max(0, count)
+        lastSummary = summary
+    }
+
+    private func activityRegistrationTitle(
+        for status: SupabaseManualSyncActivityRegistrationStatus
+    ) -> String {
+        L(activityRegistrationStateTitleKey(for: status))
+    }
+
+    private func activityRegistrationSubtitle(
+        for status: SupabaseManualSyncActivityRegistrationStatus
+    ) -> String {
+        L(activityRegistrationStateSubtitleKey(for: status))
+    }
+
+    private func activityRegistrationStateTitleKey(
+        for status: SupabaseManualSyncActivityRegistrationStatus
+    ) -> String {
+        switch status {
+        case .success:
+            return "options.supabase.manualSync.activity.state.success.title"
+        case .empty:
+            return "options.supabase.manualSync.activity.state.empty.title"
+        case .partialRetryable:
+            return "options.supabase.manualSync.activity.state.partial.title"
+        case .authRequired:
+            return "options.supabase.manualSync.activity.state.auth.title"
+        case .retryableFailure:
+            return "options.supabase.manualSync.activity.state.failed.title"
+        case .blocked:
+            return "options.supabase.manualSync.activity.state.blocked.title"
+        case .cancelled:
+            return "options.supabase.manualSync.activity.state.cancelled.title"
+        }
+    }
+
+    private func activityRegistrationStateSubtitleKey(
+        for status: SupabaseManualSyncActivityRegistrationStatus
+    ) -> String {
+        switch status {
+        case .success:
+            return "options.supabase.manualSync.activity.state.success.subtitle"
+        case .empty:
+            return "options.supabase.manualSync.activity.state.empty.subtitle"
+        case .partialRetryable:
+            return "options.supabase.manualSync.activity.state.partial.subtitle"
+        case .authRequired:
+            return "options.supabase.manualSync.activity.state.auth.subtitle"
+        case .retryableFailure:
+            return "options.supabase.manualSync.activity.state.failed.subtitle"
+        case .blocked:
+            return "options.supabase.manualSync.activity.state.blocked.subtitle"
+        case .cancelled:
+            return "options.supabase.manualSync.activity.state.cancelled.subtitle"
+        }
+    }
+
+    private func activityRegistrationBadgeKey(
+        for status: SupabaseManualSyncActivityRegistrationStatus
+    ) -> String {
+        switch status {
+        case .success:
+            return "options.supabase.manualSync.badge.sent"
+        case .empty:
+            return "options.supabase.manualSync.badge.noChanges"
+        case .partialRetryable, .retryableFailure, .cancelled:
+            return "options.supabase.manualSync.badge.retry"
+        case .authRequired:
+            return "options.supabase.manualSync.badge.needsAccess"
+        case .blocked:
+            return "options.supabase.manualSync.badge.needsFix"
+        }
+    }
+
+    private func activityRegistrationBadgeSystemImage(
+        for status: SupabaseManualSyncActivityRegistrationStatus
+    ) -> String {
+        switch status {
+        case .success:
+            return "checkmark.circle.fill"
+        case .empty:
+            return "tray"
+        case .partialRetryable, .retryableFailure:
+            return "exclamationmark.triangle.fill"
+        case .authRequired:
+            return "lock.fill"
+        case .blocked:
+            return "xmark.octagon.fill"
+        case .cancelled:
+            return "xmark.circle.fill"
+        }
+    }
+
+    private func invalidateActivityRegistration(clearSummary: Bool = false) {
+        activityRegistrationPhase = .idle
+        isRegisteringActivities = false
+        if clearSummary {
+            updateLastSummaryActivityCount(0)
+        }
+    }
+
+    private func activityRegistrationSnapshotForCurrentPhase() -> SupabaseManualSyncActivityRegistrationSnapshot {
+        switch activityRegistrationPhase {
+        case .ready(let snapshot), .registering(let snapshot):
+            return snapshot
+        case .finished(_, let summary):
+            return SupabaseManualSyncActivityRegistrationSnapshot(
+                readyToRegister: summary.waiting,
+                waiting: summary.waiting,
+                notRegisterable: summary.notRegisterable
+            )
+        case .idle:
+            return .empty
+        }
+    }
+
+    private func activityRegistrationSummaryForCurrentPhase() -> SupabaseManualSyncActivityRegistrationSummary {
+        switch activityRegistrationPhase {
+        case .finished(_, let summary):
+            return summary
+        case .ready(let snapshot), .registering(let snapshot):
+            return SupabaseManualSyncActivityRegistrationSummary(
+                registered: 0,
+                waiting: snapshot.waiting,
+                notRegisterable: snapshot.notRegisterable
+            )
+        case .idle:
+            return .empty
         }
     }
 
@@ -923,6 +1359,14 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         await prepareProductPricePlansIfNeeded(after: lastSummary)
     }
 
+    func prepareActivityRegistrationForReview() async {
+        if let lastSummary {
+            await prepareActivityRegistrationIfNeeded(after: lastSummary)
+        } else {
+            await prepareActivityRegistrationAfterDataStep()
+        }
+    }
+
     private func prepareCatalogPushPlanIfNeeded(
         after summary: SupabaseManualSyncRunSummary,
         force: Bool = false
@@ -1070,6 +1514,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             } else {
                 applyPriceOnlyPushPresentationAfterSend()
             }
+            await prepareActivityRegistrationAfterDataStep()
         } catch CatalogPushInternalError.stale {
             stagedProductPricePushPlan = nil
             stagedProductPricePushFingerprint = nil
@@ -1462,6 +1907,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         invalidateLocalApplyStaging(clearSummary: true)
         invalidateCatalogPushPlan(clearSummary: true)
         invalidateProductPricePlans(clearSummary: true)
+        invalidateActivityRegistration(clearSummary: true)
         presentationKind = .idleReady
         title = Copy.idleTitle
         subtitle = Copy.idleSubtitle
@@ -1475,6 +1921,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             invalidateLocalApplyStaging(clearSummary: true)
             invalidateCatalogPushPlan(clearSummary: true)
             invalidateProductPricePlans(clearSummary: true)
+            invalidateActivityRegistration(clearSummary: true)
         }
     }
 
@@ -1518,10 +1965,17 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             } else {
                 hintKey = nil
             }
+            let summary: SupabaseManualSyncUserFacingSummary?
+            if case .finished(.authRequired, _) = activityRegistrationPhase {
+                summary = activityRegistrationUserFacingSummary(for: activityRegistrationPhase)
+            } else {
+                summary = nil
+            }
 
             return state(
                 titleKey: "options.supabase.manualSync.state.auth.title",
                 subtitleKey: "options.supabase.manualSync.state.auth.subtitle",
+                summary: summary,
                 badgeKey: "options.supabase.manualSync.badge.needsAccess",
                 badgeSystemImage: "lock.fill",
                 primaryAction: action(
@@ -1538,6 +1992,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
         if let catalogPushState = catalogPushPresentationState() {
             return catalogPushState
+        }
+
+        if let activityState = activityRegistrationPresentationState() {
+            return activityState
         }
 
         switch presentationKind {
@@ -1701,7 +2159,15 @@ final class SupabaseManualSyncViewModel: ObservableObject {
              .catalogPushStale,
              .catalogPushSending,
              .catalogPushSucceeded,
-             .catalogPushPartiallySucceeded:
+             .catalogPushPartiallySucceeded,
+             .activityRegistrationReady,
+             .activityRegistrationSucceeded,
+             .activityRegistrationEmpty,
+             .activityRegistrationPartiallySucceeded,
+             .activityRegistrationAuthRequired,
+             .activityRegistrationRetryableFailure,
+             .activityRegistrationBlocked,
+             .activityRegistrationCancelled:
             return state(
                 titleKey: "options.supabase.manualSync.state.idle.title",
                 subtitleKey: "options.supabase.manualSync.state.idle.subtitle",
@@ -1753,6 +2219,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .noChanges:
             if let priceOnlyState = productPriceOnlyPushPresentationState() {
                 return priceOnlyState
+            }
+            if activityRegistrationPhase.shouldShowReviewSection {
+                return nil
             }
             return state(
                 titleKey: "options.supabase.manualSync.push.state.noChanges.title",
@@ -1818,7 +2287,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 reviewSheet: makeCatalogPushReviewSheetState(phase: catalogPushPhase, summary: summary),
                 badgeKey: "options.supabase.manualSync.badge.sent",
                 badgeSystemImage: "checkmark.circle.fill",
-                primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
+                primaryAction: activityRegistrationPhase.hasPrimaryReviewAction
+                    ? action(.reviewChanges)
+                    : (capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil),
                 secondaryAction: nil,
                 isRunning: false,
                 isLoading: false
@@ -1955,7 +2426,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 ),
                 badgeKey: "options.supabase.manualSync.badge.sent",
                 badgeSystemImage: "checkmark.circle.fill",
-                primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
+                primaryAction: activityRegistrationPhase.hasPrimaryReviewAction
+                    ? action(.reviewChanges)
+                    : (capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil),
                 secondaryAction: nil,
                 isRunning: false,
                 isLoading: false
@@ -1979,6 +2452,50 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .idle, .noChanges:
             return nil
         }
+    }
+
+    private func activityRegistrationPresentationState() -> SupabaseManualSyncPresentationState? {
+        guard activityRegistrationPhase.shouldShowReviewSection else {
+            return nil
+        }
+
+        let status = activityRegistrationPhase.statusForPresentation
+        let titleKey: String
+        let subtitleKey: String
+        let badgeKey: String
+        let badgeSystemImage: String
+        switch activityRegistrationPhase {
+        case .ready, .registering:
+            titleKey = "options.supabase.manualSync.activity.state.ready.title"
+            subtitleKey = "options.supabase.manualSync.activity.state.ready.subtitle"
+            badgeKey = "options.supabase.manualSync.badge.readyToSend"
+            badgeSystemImage = "checkmark.icloud"
+        case .idle, .finished:
+            titleKey = activityRegistrationStateTitleKey(for: status)
+            subtitleKey = activityRegistrationStateSubtitleKey(for: status)
+            badgeKey = activityRegistrationBadgeKey(for: status)
+            badgeSystemImage = activityRegistrationBadgeSystemImage(for: status)
+        }
+        let primaryAction: SupabaseManualSyncPresentationAction?
+        switch status {
+        case .success, .empty:
+            primaryAction = capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil
+        case .partialRetryable, .retryableFailure, .cancelled, .blocked, .authRequired:
+            primaryAction = action(.reviewChanges)
+        }
+
+        return state(
+            titleKey: titleKey,
+            subtitleKey: subtitleKey,
+            summary: activityRegistrationUserFacingSummary(for: activityRegistrationPhase),
+            reviewSheet: makeActivityRegistrationReviewSheetState(),
+            badgeKey: badgeKey,
+            badgeSystemImage: badgeSystemImage,
+            primaryAction: primaryAction,
+            secondaryAction: nil,
+            isRunning: false,
+            isLoading: isRegisteringActivities
+        )
     }
 
     private func retryState(
@@ -2046,6 +2563,15 @@ final class SupabaseManualSyncViewModel: ObservableObject {
              .catalogPushSucceeded,
              .catalogPushPartiallySucceeded:
             return catalogPushUserFacingSummary(for: catalogPushPhase)
+        case .activityRegistrationReady,
+             .activityRegistrationSucceeded,
+             .activityRegistrationEmpty,
+             .activityRegistrationPartiallySucceeded,
+             .activityRegistrationAuthRequired,
+             .activityRegistrationRetryableFailure,
+             .activityRegistrationBlocked,
+             .activityRegistrationCancelled:
+            return activityRegistrationUserFacingSummary(for: activityRegistrationPhase)
         case .idleReady,
              .running,
              .blockedNeedsSignIn,
@@ -2080,6 +2606,60 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return userFacingSummary(.catalogPushFailedBeforeWrite, key: "options.supabase.manualSync.push.summary.failedBeforeWrite")
         case .idle, .checking, .ready, .sending:
             return nil
+        }
+    }
+
+    private func activityRegistrationUserFacingSummary(
+        for phase: SupabaseManualSyncActivityRegistrationPhase
+    ) -> SupabaseManualSyncUserFacingSummary? {
+        guard case .finished(let status, let summary) = phase else {
+            return nil
+        }
+        return SupabaseManualSyncUserFacingSummary(
+            kind: activityRegistrationSummaryKind(for: status),
+            message: activityRegistrationSummaryMessage(status: status, summary: summary)
+        )
+    }
+
+    private func activityRegistrationSummaryKind(
+        for status: SupabaseManualSyncActivityRegistrationStatus
+    ) -> SupabaseManualSyncUserFacingSummaryKind {
+        switch status {
+        case .success:
+            return .activityRegistrationSucceeded
+        case .empty:
+            return .activityRegistrationEmpty
+        case .partialRetryable:
+            return .activityRegistrationPartial
+        case .authRequired:
+            return .activityRegistrationAuthRequired
+        case .retryableFailure:
+            return .activityRegistrationRetryableFailure
+        case .blocked:
+            return .activityRegistrationBlocked
+        case .cancelled:
+            return .activityRegistrationCancelled
+        }
+    }
+
+    private func activityRegistrationSummaryKey(
+        for status: SupabaseManualSyncActivityRegistrationStatus
+    ) -> String {
+        switch status {
+        case .success:
+            return "options.supabase.manualSync.activity.summary.success"
+        case .empty:
+            return "options.supabase.manualSync.activity.summary.empty"
+        case .partialRetryable:
+            return "options.supabase.manualSync.activity.summary.partialRetryable"
+        case .authRequired:
+            return "options.supabase.manualSync.activity.summary.authRequired"
+        case .retryableFailure:
+            return "options.supabase.manualSync.activity.summary.retryableFailure"
+        case .blocked:
+            return "options.supabase.manualSync.activity.summary.blocked"
+        case .cancelled:
+            return "options.supabase.manualSync.activity.summary.cancelled"
         }
     }
 
@@ -2201,7 +2781,14 @@ final class SupabaseManualSyncViewModel: ObservableObject {
              .catalogPushBlocked,
              .catalogPushFailedBeforeWrite,
              .catalogPushInterrupted,
-             .catalogPushStale:
+             .catalogPushStale,
+             .activityRegistrationSucceeded,
+             .activityRegistrationEmpty,
+             .activityRegistrationPartial,
+             .activityRegistrationAuthRequired,
+             .activityRegistrationRetryableFailure,
+             .activityRegistrationBlocked,
+             .activityRegistrationCancelled:
             return nil
         }
     }
@@ -2253,15 +2840,36 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 )
             )
         }
+        appendActivityRegistrationSectionIfNeeded(to: &sections)
 
         let title = L("options.supabase.manualSync.review.title")
         let subtitle = L("options.supabase.manualSync.review.subtitle")
         let footerMessage = reviewFooterMessage(remotePreviewSummary: remotePreviewSummary)
-        let primaryActionTitle = isApplyingLocalChanges
-            ? L("options.supabase.manualSync.review.action.updatingDevice")
-            : L("options.supabase.manualSync.review.action.updateDevice")
+        let primaryActionID: SupabaseManualSyncReviewPrimaryActionID
+        if canApplyLocalChanges || isApplyingLocalChanges {
+            primaryActionID = .updateDevice
+        } else if activityRegistrationPhase.hasRegisterAction {
+            primaryActionID = .registerCloudActivity
+        } else {
+            primaryActionID = .updateDevice
+        }
+        let primaryActionTitle = reviewPrimaryActionTitle(for: primaryActionID)
+        let primaryActionSystemImage = reviewPrimaryActionSystemImage(for: primaryActionID)
+        let primaryActionIsLoading = primaryActionID == .updateDevice
+            ? isApplyingLocalChanges
+            : isRegisteringActivities
+        let primaryActionIsEnabled: Bool = {
+            switch primaryActionID {
+            case .updateDevice:
+                return canApplyLocalChanges && !isApplyingLocalChanges && !isRegisteringActivities
+            case .registerCloudActivity:
+                return activityRegistrationPhase.hasRegisterAction && !isRegisteringActivities && !isApplyingLocalChanges
+            case .sendCloudChanges, .none:
+                return false
+            }
+        }()
         let secondaryActionTitle = L("options.supabase.manualSync.review.action.cancel")
-        let accessibilityLabel = ([title, subtitle] + sections.map(\.title) + [footerMessage])
+        let accessibilityLabel = ([title, subtitle] + sections.flatMap { [$0.title, $0.message] } + [footerMessage])
             .joined(separator: ". ")
 
         return SupabaseManualSyncReviewSheetState(
@@ -2269,11 +2877,11 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             subtitle: subtitle,
             sections: sections,
             footerMessage: footerMessage,
-            primaryActionID: .updateDevice,
+            primaryActionID: primaryActionID,
             primaryActionTitle: primaryActionTitle,
-            primaryActionSystemImage: "arrow.down.circle",
-            primaryActionIsEnabled: canApplyLocalChanges && !isApplyingLocalChanges,
-            primaryActionIsLoading: isApplyingLocalChanges,
+            primaryActionSystemImage: primaryActionSystemImage,
+            primaryActionIsEnabled: primaryActionIsEnabled,
+            primaryActionIsLoading: primaryActionIsLoading,
             secondaryActionTitle: secondaryActionTitle,
             accessibilityLabel: accessibilityLabel
         )
@@ -2299,6 +2907,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .updateDevice:
             primaryTitle = L("options.supabase.manualSync.review.action.updateDevice")
             primarySystemImage = "arrow.down.circle"
+        case .registerCloudActivity:
+            primaryTitle = reviewPrimaryActionTitle(for: .registerCloudActivity)
+            primarySystemImage = reviewPrimaryActionSystemImage(for: .registerCloudActivity)
         case .none:
             primaryTitle = ""
             primarySystemImage = "icloud.and.arrow.up"
@@ -2314,8 +2925,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             primaryActionID: primaryID,
             primaryActionTitle: primaryTitle,
             primaryActionSystemImage: primarySystemImage,
-            primaryActionIsEnabled: primaryID == .sendCloudChanges && !isSendingCatalogChanges,
-            primaryActionIsLoading: isSendingCatalogChanges,
+            primaryActionIsEnabled: reviewPrimaryActionIsEnabled(primaryID),
+            primaryActionIsLoading: reviewPrimaryActionIsLoading(primaryID),
             secondaryActionTitle: L(hasTerminalCatalogPushSummary ? "common.close" : "common.cancel"),
             accessibilityLabel: accessibilityLabel
         )
@@ -2381,6 +2992,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 tone: productPriceSummary.hasProblems ? .attention : .neutral
             ))
         }
+        appendActivityRegistrationSectionIfNeeded(to: &sections)
         if case .succeeded = phase {
             sections.append(finalSummarySection(key: "options.supabase.manualSync.push.summary.succeeded"))
         } else if case .succeededNeedsCheck = phase {
@@ -2415,17 +3027,28 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     private func catalogPushReviewFooter(phase: SupabaseManualSyncCatalogPushPhase) -> String {
+        if isRegisteringActivities {
+            return L("options.supabase.manualSync.activity.review.footer.registering")
+        }
         switch phase {
         case .ready:
             if canApplyLocalChanges {
                 return L("options.supabase.manualSync.push.review.footer.updateFirst")
+            }
+            if activityRegistrationPhase.hasRegisterAction {
+                return L("options.supabase.manualSync.push.review.footer.ready")
             }
             return L("options.supabase.manualSync.push.review.footer.ready")
         case .blocked, .sendBlocked:
             return L("options.supabase.manualSync.push.review.footer.blocked")
         case .sending:
             return L("options.supabase.manualSync.push.review.footer.sending")
-        case .succeeded, .succeededNeedsCheck, .partial, .sendFailed:
+        case .succeeded, .succeededNeedsCheck:
+            if activityRegistrationPhase.hasRegisterAction {
+                return L("options.supabase.manualSync.activity.review.footer.ready")
+            }
+            return L("options.supabase.manualSync.push.review.footer.final")
+        case .partial, .sendFailed:
             return L("options.supabase.manualSync.push.review.footer.final")
         case .stale:
             return L("options.supabase.manualSync.push.summary.stale")
@@ -2441,10 +3064,15 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .ready:
             return canApplyLocalChanges ? .none : .sendCloudChanges
         case .noChanges:
-            return productPriceSummary.hasReadyToPush ? .sendCloudChanges : .none
+            if productPriceSummary.hasReadyToPush {
+                return .sendCloudChanges
+            }
+            return activityRegistrationPhase.hasRegisterAction ? .registerCloudActivity : .none
         case .sending:
             return .sendCloudChanges
-        case .idle, .checking, .blocked, .failed, .stale, .succeeded, .succeededNeedsCheck, .partial, .sendBlocked, .sendFailed:
+        case .succeeded, .succeededNeedsCheck:
+            return activityRegistrationPhase.hasRegisterAction ? .registerCloudActivity : .none
+        case .idle, .checking, .blocked, .failed, .stale, .partial, .sendBlocked, .sendFailed:
             return .none
         }
     }
@@ -2458,12 +3086,200 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         if canApplyLocalChanges {
             return L("options.supabase.manualSync.review.footer.readyToUpdateDevice")
         }
+        if isRegisteringActivities {
+            return L("options.supabase.manualSync.activity.review.footer.registering")
+        }
+        if activityRegistrationPhase.hasRegisterAction {
+            return L("options.supabase.manualSync.activity.review.footer.ready")
+        }
+        if let activityMessage = activityRegistrationFooterMessageForTerminalPhase() {
+            return activityMessage
+        }
         if let applyBlockedReason {
             return applyBlockedReason
         }
         return remotePreviewSummary.hasRemoteSignals
             ? L("options.supabase.manualSync.apply.blocked.refreshRequired")
             : L("options.supabase.manualSync.apply.blocked.noChanges")
+    }
+
+    private func makeActivityRegistrationReviewSheetState() -> SupabaseManualSyncReviewSheetState? {
+        guard activityRegistrationPhase.shouldShowReviewSection else { return nil }
+        let title = L("options.supabase.manualSync.activity.review.title")
+        let subtitle = L("options.supabase.manualSync.activity.review.subtitle")
+        let sections = [activityRegistrationSection()]
+        let footerMessage = activityRegistrationFooterMessage()
+        let primaryID: SupabaseManualSyncReviewPrimaryActionID = activityRegistrationPhase.hasRegisterAction
+            ? .registerCloudActivity
+            : .none
+        let accessibilityLabel = ([title, subtitle] + sections.flatMap { [$0.title, $0.message] } + [footerMessage])
+            .joined(separator: ". ")
+
+        return SupabaseManualSyncReviewSheetState(
+            title: title,
+            subtitle: subtitle,
+            sections: sections,
+            footerMessage: footerMessage,
+            primaryActionID: primaryID,
+            primaryActionTitle: reviewPrimaryActionTitle(for: primaryID),
+            primaryActionSystemImage: reviewPrimaryActionSystemImage(for: primaryID),
+            primaryActionIsEnabled: reviewPrimaryActionIsEnabled(primaryID),
+            primaryActionIsLoading: reviewPrimaryActionIsLoading(primaryID),
+            secondaryActionTitle: L(activityRegistrationPhase.isTerminal ? "common.close" : "common.cancel"),
+            accessibilityLabel: accessibilityLabel
+        )
+    }
+
+    private func appendActivityRegistrationSectionIfNeeded(
+        to sections: inout [SupabaseManualSyncReviewSectionState]
+    ) {
+        guard activityRegistrationPhase.shouldShowReviewSection else { return }
+        sections.append(activityRegistrationSection())
+    }
+
+    private func activityRegistrationSection() -> SupabaseManualSyncReviewSectionState {
+        reviewSection(
+            id: .activityRegistration,
+            titleKey: "options.supabase.manualSync.activity.review.section.title",
+            message: activityRegistrationSectionMessage(),
+            systemImage: activityRegistrationPhase.systemImage,
+            tone: activityRegistrationPhase.reviewTone
+        )
+    }
+
+    private func activityRegistrationSectionMessage() -> String {
+        switch activityRegistrationPhase {
+        case .ready(let snapshot):
+            return activityRegistrationReadyMessage(snapshot)
+        case .registering:
+            return L("options.supabase.manualSync.activity.review.registering")
+        case .finished(let status, let summary):
+            return activityRegistrationSummaryMessage(status: status, summary: summary)
+        case .idle:
+            return L("options.supabase.manualSync.activity.summary.empty")
+        }
+    }
+
+    private func activityRegistrationReadyMessage(
+        _ snapshot: SupabaseManualSyncActivityRegistrationSnapshot
+    ) -> String {
+        var lines = [L("options.supabase.manualSync.activity.review.ready", snapshot.readyToRegister)]
+        let waitingAfterReady = max(0, snapshot.waiting - snapshot.readyToRegister)
+        if waitingAfterReady > 0 {
+            lines.append(L("options.supabase.manualSync.activity.summary.waiting", waitingAfterReady))
+        }
+        if snapshot.notRegisterable > 0 {
+            lines.append(L("options.supabase.manualSync.activity.summary.notRegisterable", snapshot.notRegisterable))
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private func activityRegistrationSummaryMessage(
+        status: SupabaseManualSyncActivityRegistrationStatus,
+        summary: SupabaseManualSyncActivityRegistrationSummary
+    ) -> String {
+        let headline = L(activityRegistrationSummaryKey(for: status))
+        let details = [
+            L("options.supabase.manualSync.activity.summary.registered", summary.registered),
+            L("options.supabase.manualSync.activity.summary.waiting", summary.waiting),
+            L("options.supabase.manualSync.activity.summary.notRegisterable", summary.notRegisterable)
+        ]
+        return ([headline] + details).joined(separator: "\n")
+    }
+
+    private func activityRegistrationFooterMessage() -> String {
+        if isRegisteringActivities {
+            return L("options.supabase.manualSync.activity.review.footer.registering")
+        }
+        if activityRegistrationPhase.hasRegisterAction {
+            return L("options.supabase.manualSync.activity.review.footer.ready")
+        }
+        return activityRegistrationFooterMessageForTerminalPhase()
+            ?? L("options.supabase.manualSync.activity.review.footer.final")
+    }
+
+    private func activityRegistrationFooterMessageForTerminalPhase() -> String? {
+        guard case .finished(let status, _) = activityRegistrationPhase else { return nil }
+        switch status {
+        case .success, .empty:
+            return L("options.supabase.manualSync.activity.review.footer.final")
+        case .partialRetryable, .retryableFailure, .cancelled:
+            return L("options.supabase.manualSync.activity.review.footer.retry")
+        case .authRequired:
+            return L("options.supabase.manualSync.activity.summary.authRequired")
+        case .blocked:
+            return L("options.supabase.manualSync.activity.summary.blocked")
+        }
+    }
+
+    private func reviewPrimaryActionTitle(
+        for primaryID: SupabaseManualSyncReviewPrimaryActionID
+    ) -> String {
+        switch primaryID {
+        case .updateDevice:
+            return isApplyingLocalChanges
+                ? L("options.supabase.manualSync.review.action.updatingDevice")
+                : L("options.supabase.manualSync.review.action.updateDevice")
+        case .sendCloudChanges:
+            return isSendingCatalogChanges
+                ? L("options.supabase.manualSync.push.review.action.sending")
+                : L("options.supabase.manualSync.push.review.action.send")
+        case .registerCloudActivity:
+            if isRegisteringActivities {
+                return L("options.supabase.manualSync.activity.review.action.registering")
+            }
+            if activityRegistrationPhase.prefersRetryTitle {
+                return L("options.supabase.manualSync.action.retry")
+            }
+            return L("options.supabase.manualSync.activity.review.action.register")
+        case .none:
+            return ""
+        }
+    }
+
+    private func reviewPrimaryActionSystemImage(
+        for primaryID: SupabaseManualSyncReviewPrimaryActionID
+    ) -> String {
+        switch primaryID {
+        case .updateDevice:
+            return "arrow.down.circle"
+        case .sendCloudChanges:
+            return "icloud.and.arrow.up"
+        case .registerCloudActivity:
+            return activityRegistrationPhase.prefersRetryTitle ? "arrow.clockwise.circle.fill" : "checkmark.icloud"
+        case .none:
+            return "icloud"
+        }
+    }
+
+    private func reviewPrimaryActionIsEnabled(
+        _ primaryID: SupabaseManualSyncReviewPrimaryActionID
+    ) -> Bool {
+        switch primaryID {
+        case .updateDevice:
+            return canApplyLocalChanges && !isReviewMutationInProgress
+        case .sendCloudChanges:
+            return !isReviewMutationInProgress
+        case .registerCloudActivity:
+            return activityRegistrationPhase.hasRegisterAction && !isReviewMutationInProgress
+        case .none:
+            return false
+        }
+    }
+
+    private func reviewPrimaryActionIsLoading(
+        _ primaryID: SupabaseManualSyncReviewPrimaryActionID
+    ) -> Bool {
+        switch primaryID {
+        case .updateDevice:
+            return isApplyingLocalChanges
+        case .sendCloudChanges:
+            return isSendingCatalogChanges
+        case .registerCloudActivity:
+            return isRegisteringActivities
+        case .none:
+            return false
+        }
     }
 
     private func reviewSection(
@@ -2644,7 +3460,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         subtitle: String?
     ) -> SupabaseManualSyncUserFacingSummary? {
         guard let summary else { return nil }
-        if summary.kind.isCatalogPushTerminal {
+        if summary.kind.shouldAlwaysShowSummary {
             return summary
         }
         let normalizedMessage = normalizedCopy(summary.message)
@@ -2664,7 +3480,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 }
 
 private extension SupabaseManualSyncUserFacingSummaryKind {
-    var isCatalogPushTerminal: Bool {
+    var shouldAlwaysShowSummary: Bool {
         switch self {
         case .catalogPushNoChanges,
              .catalogPushSucceeded,
@@ -2673,7 +3489,14 @@ private extension SupabaseManualSyncUserFacingSummaryKind {
              .catalogPushBlocked,
              .catalogPushFailedBeforeWrite,
              .catalogPushInterrupted,
-             .catalogPushStale:
+             .catalogPushStale,
+             .activityRegistrationSucceeded,
+             .activityRegistrationEmpty,
+             .activityRegistrationPartial,
+             .activityRegistrationAuthRequired,
+             .activityRegistrationRetryableFailure,
+             .activityRegistrationBlocked,
+             .activityRegistrationCancelled:
             return true
         default:
             return false
@@ -2726,6 +3549,112 @@ private extension SupabaseManualSyncProductPricePushPhase {
             return true
         case .idle, .checking, .ready, .sending:
             return false
+        }
+    }
+}
+
+private extension SupabaseManualSyncActivityRegistrationPhase {
+    var shouldShowReviewSection: Bool {
+        switch self {
+        case .idle:
+            return false
+        case .ready(let snapshot), .registering(let snapshot):
+            return snapshot.hasAnyActivity
+        case .finished:
+            return true
+        }
+    }
+
+    var hasRegisterAction: Bool {
+        switch self {
+        case .ready(let snapshot):
+            return snapshot.readyToRegister > 0
+        case .finished(let status, let summary):
+            switch status {
+            case .partialRetryable, .retryableFailure, .cancelled:
+                return summary.waiting > 0
+            case .success, .empty, .authRequired, .blocked:
+                return false
+            }
+        case .idle, .registering:
+            return false
+        }
+    }
+
+    var hasPrimaryReviewAction: Bool {
+        switch self {
+        case .ready, .registering, .finished:
+            return shouldShowReviewSection
+        case .idle:
+            return false
+        }
+    }
+
+    var isTerminal: Bool {
+        if case .finished = self {
+            return true
+        }
+        return false
+    }
+
+    var prefersRetryTitle: Bool {
+        guard case .finished(let status, _) = self else { return false }
+        switch status {
+        case .partialRetryable, .retryableFailure, .cancelled:
+            return true
+        case .success, .empty, .authRequired, .blocked:
+            return false
+        }
+    }
+
+    var statusForPresentation: SupabaseManualSyncActivityRegistrationStatus {
+        switch self {
+        case .idle, .ready:
+            return .partialRetryable
+        case .registering:
+            return .partialRetryable
+        case .finished(let status, _):
+            return status
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .idle, .ready:
+            return "checkmark.icloud"
+        case .registering:
+            return "arrow.triangle.2.circlepath"
+        case .finished(let status, _):
+            switch status {
+            case .success:
+                return "checkmark.circle.fill"
+            case .empty:
+                return "tray"
+            case .partialRetryable, .retryableFailure:
+                return "exclamationmark.triangle.fill"
+            case .authRequired:
+                return "lock.fill"
+            case .blocked:
+                return "xmark.octagon.fill"
+            case .cancelled:
+                return "xmark.circle.fill"
+            }
+        }
+    }
+
+    var reviewTone: SupabaseManualSyncReviewSectionTone {
+        switch self {
+        case .idle, .ready, .registering:
+            return .neutral
+        case .finished(let status, _):
+            switch status {
+            case .success, .empty:
+                return .success
+            case .partialRetryable, .retryableFailure, .cancelled:
+                return .attention
+            case .authRequired, .blocked:
+                return .blocked
+            }
         }
     }
 }

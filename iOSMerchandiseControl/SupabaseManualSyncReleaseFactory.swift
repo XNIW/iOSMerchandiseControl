@@ -8,7 +8,8 @@ enum SupabaseManualSyncReleaseFactory {
         authViewModel: SupabaseAuthViewModel,
         inventoryService: SupabaseInventoryService? = nil,
         pullPreviewService: SupabasePullPreviewService? = nil,
-        manualPushService: SupabaseManualPushService? = nil
+        manualPushService: SupabaseManualPushService? = nil,
+        activityRecorder: (any SyncEventRecording)? = nil
     ) -> SupabaseManualSyncViewModel {
         let remotePreviewAdapter = pullPreviewService.map {
             SupabaseManualSyncPullPreviewAdapter(service: $0, context: context)
@@ -25,6 +26,9 @@ enum SupabaseManualSyncReleaseFactory {
                 context: context,
                 remote: $0
             )
+        }
+        let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = activityRecorder.map {
+            SupabaseManualSyncReleaseActivityRegistrationAdapter(context: context, recorder: $0)
         }
 
         let dependencies = SupabaseManualSyncCoordinator.Dependencies(
@@ -44,7 +48,8 @@ enum SupabaseManualSyncReleaseFactory {
             capabilities: .releaseCurrent(
                 remotePreviewProvider: remotePreviewProvider,
                 catalogPushProvider: catalogPushProvider,
-                productPriceProvider: productPriceProvider
+                productPriceProvider: productPriceProvider,
+                activityRegistrationProvider: activityRegistrationProvider
             ),
             initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext(
                 isSignedIn: authViewModel.isSignedIn,
@@ -58,7 +63,9 @@ enum SupabaseManualSyncReleaseFactory {
             catalogPushProvider: catalogPushProvider,
             currentCatalogPushOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
             productPriceProvider: productPriceProvider,
-            currentProductPriceOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil }
+            currentProductPriceOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
+            activityRegistrationProvider: activityRegistrationProvider,
+            currentActivityRegistrationOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil }
         )
     }
 }
