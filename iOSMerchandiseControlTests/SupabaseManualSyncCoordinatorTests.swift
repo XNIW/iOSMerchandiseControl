@@ -362,6 +362,7 @@ final class SupabaseManualSyncCoordinatorTests: XCTestCase {
         let paths = [
             root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncCoordinator.swift"),
             root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncCoordinatorModels.swift"),
+            root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift"),
         ]
         for url in paths {
             let text = try String(contentsOf: url, encoding: .utf8)
