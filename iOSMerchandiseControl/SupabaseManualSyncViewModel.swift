@@ -52,6 +52,7 @@ nonisolated enum SupabaseManualSyncPresentationActionID: Equatable, Sendable {
     case signIn
     case realignData
     case checkCloud
+    case reviewChanges
     case syncNow
     case retry
     case cancel
@@ -83,10 +84,43 @@ nonisolated struct SupabaseManualSyncUserFacingSummary: Equatable, Sendable {
     var message: String
 }
 
+nonisolated enum SupabaseManualSyncReviewSectionTone: Equatable, Sendable {
+    case neutral
+    case attention
+}
+
+nonisolated enum SupabaseManualSyncReviewSectionID: String, Equatable, Sendable {
+    case cloudToDevice
+    case deviceToCloud
+    case prices
+    case attention
+}
+
+nonisolated struct SupabaseManualSyncReviewSectionState: Equatable, Identifiable, Sendable {
+    var id: SupabaseManualSyncReviewSectionID
+    var title: String
+    var message: String
+    var systemImage: String
+    var tone: SupabaseManualSyncReviewSectionTone
+}
+
+nonisolated struct SupabaseManualSyncReviewSheetState: Equatable, Sendable {
+    var title: String
+    var subtitle: String
+    var sections: [SupabaseManualSyncReviewSectionState]
+    var footerMessage: String
+    var primaryActionTitle: String
+    var primaryActionSystemImage: String
+    var primaryActionIsEnabled: Bool
+    var secondaryActionTitle: String
+    var accessibilityLabel: String
+}
+
 nonisolated struct SupabaseManualSyncPresentationState: Equatable, Sendable {
     var title: String
     var subtitle: String?
     var userFacingSummary: SupabaseManualSyncUserFacingSummary?
+    var reviewSheet: SupabaseManualSyncReviewSheetState?
     var statusBadgeText: String
     var statusBadgeSystemImage: String?
     var primaryAction: SupabaseManualSyncPresentationAction?
@@ -365,6 +399,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         switch actionID {
         case .checkCloud:
             return capabilities.supportsRemoteCloudCheck ? .dryRun : nil
+        case .reviewChanges:
+            return nil
         case .syncNow:
             return capabilities.supportsGuidedManualSync ? .guidedManual : nil
         case .retry, .realignData:
@@ -442,28 +478,34 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             )
 
         case .successFullyUpToDate:
+            let reviewSheet = reviewSheetForCurrentState()
             return state(
                 titleKey: "options.supabase.manualSync.state.success.title",
                 subtitleKey: "options.supabase.manualSync.state.success.subtitle",
                 summary: userFacingSummaryForCurrentState(),
+                reviewSheet: reviewSheet,
                 badgeKey: "options.supabase.manualSync.badge.noChanges",
                 badgeSystemImage: "checkmark.circle.fill",
-                primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
+                primaryAction: reviewSheet == nil
+                    ? (capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil)
+                    : action(.reviewChanges),
                 secondaryAction: nil,
                 isRunning: false,
                 isLoading: false
             )
 
         case .partialSync:
+            let reviewSheet = reviewSheetForCurrentState()
             let actions = capabilityActionsForWork()
             return state(
                 titleKey: "options.supabase.manualSync.state.partial.title",
                 subtitleKey: "options.supabase.manualSync.state.partial.subtitle",
                 summary: userFacingSummaryForCurrentState(),
+                reviewSheet: reviewSheet,
                 badgeKey: "options.supabase.manualSync.badge.localChanges",
                 badgeSystemImage: "exclamationmark.circle.fill",
-                primaryAction: actions.primary,
-                secondaryAction: actions.secondary,
+                primaryAction: reviewSheet == nil ? actions.primary : action(.reviewChanges),
+                secondaryAction: reviewSheet == nil ? actions.secondary : nil,
                 isRunning: false,
                 isLoading: false
             )
@@ -669,6 +711,127 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         SupabaseManualSyncUserFacingSummary(kind: kind, message: L(key))
     }
 
+    private func reviewSheetForCurrentState() -> SupabaseManualSyncReviewSheetState? {
+        guard let lastSummary,
+              let remotePreviewSummary = lastSummary.remotePreviewSummary,
+              let summary = makeUserFacingSummary(from: lastSummary) else {
+            return nil
+        }
+
+        switch summary.kind {
+        case .cloudCheckCompleted, .cloudCheckCompletedNoAction, .remoteReviewNeeded:
+            return makeReviewSheetState(from: lastSummary, remotePreviewSummary: remotePreviewSummary)
+        case .noLocalChangesToSend,
+             .cloudCheckIncomplete,
+             .networkIssue,
+             .cloudAccessIssue,
+             .genericIssue,
+             .cancelled:
+            return nil
+        }
+    }
+
+    private func makeReviewSheetState(
+        from summary: SupabaseManualSyncRunSummary,
+        remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary
+    ) -> SupabaseManualSyncReviewSheetState {
+        let counts = summary.countsSnapshot
+        let aggregateCounts = remotePreviewSummary.safeAggregateCounts
+        var sections: [SupabaseManualSyncReviewSectionState] = [
+            reviewSection(
+                id: .cloudToDevice,
+                titleKey: "options.supabase.manualSync.review.cloudToDevice.title",
+                messageKey: remotePreviewSummary.hasRemoteSignals
+                    ? "options.supabase.manualSync.review.cloudToDevice.needsReview"
+                    : "options.supabase.manualSync.review.cloudToDevice.noChanges",
+                systemImage: "icloud.and.arrow.down",
+                tone: .neutral
+            ),
+            reviewSection(
+                id: .deviceToCloud,
+                titleKey: "options.supabase.manualSync.review.deviceToCloud.title",
+                messageKey: counts.hasAnyPendingWork
+                    ? "options.supabase.manualSync.review.deviceToCloud.localChanges"
+                    : "options.supabase.manualSync.review.deviceToCloud.noChanges",
+                systemImage: "iphone.and.arrow.forward",
+                tone: .neutral
+            ),
+            reviewSection(
+                id: .prices,
+                titleKey: "options.supabase.manualSync.review.prices.title",
+                messageKey: hasPriceSignals(counts: counts, aggregateCounts: aggregateCounts)
+                    ? "options.supabase.manualSync.review.prices.needsDedicatedStep"
+                    : "options.supabase.manualSync.review.prices.noAction",
+                systemImage: "tag",
+                tone: .neutral
+            )
+        ]
+
+        if hasAttentionSignals(aggregateCounts) {
+            sections.append(
+                reviewSection(
+                    id: .attention,
+                    titleKey: "options.supabase.manualSync.review.attention.title",
+                    messageKey: "options.supabase.manualSync.review.attention.message",
+                    systemImage: "exclamationmark.triangle.fill",
+                    tone: .attention
+                )
+            )
+        }
+
+        let title = L("options.supabase.manualSync.review.title")
+        let subtitle = L("options.supabase.manualSync.review.subtitle")
+        let footerMessage = L("options.supabase.manualSync.review.footer.futureStep")
+        let primaryActionTitle = L("options.supabase.manualSync.review.action.applyFuture")
+        let secondaryActionTitle = L("options.supabase.manualSync.review.action.cancel")
+        let accessibilityLabel = ([title, subtitle] + sections.map(\.title) + [footerMessage])
+            .joined(separator: ". ")
+
+        return SupabaseManualSyncReviewSheetState(
+            title: title,
+            subtitle: subtitle,
+            sections: sections,
+            footerMessage: footerMessage,
+            primaryActionTitle: primaryActionTitle,
+            primaryActionSystemImage: "checkmark.circle",
+            primaryActionIsEnabled: false,
+            secondaryActionTitle: secondaryActionTitle,
+            accessibilityLabel: accessibilityLabel
+        )
+    }
+
+    private func reviewSection(
+        id: SupabaseManualSyncReviewSectionID,
+        titleKey: String,
+        messageKey: String,
+        systemImage: String,
+        tone: SupabaseManualSyncReviewSectionTone
+    ) -> SupabaseManualSyncReviewSectionState {
+        SupabaseManualSyncReviewSectionState(
+            id: id,
+            title: L(titleKey),
+            message: L(messageKey),
+            systemImage: systemImage,
+            tone: tone
+        )
+    }
+
+    private func hasPriceSignals(
+        counts: SupabaseManualSyncPrivacyCounts,
+        aggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts
+    ) -> Bool {
+        counts.pendingPriceChangeCount > 0
+            || aggregateCounts.remoteProductPriceCount > 0
+            || aggregateCounts.priceHistorySignalCount > 0
+    }
+
+    private func hasAttentionSignals(_ counts: SupabaseManualSyncRemotePreviewAggregateCounts) -> Bool {
+        counts.conflictCount > 0
+            || counts.tombstoneCount > 0
+            || counts.warningCount > 0
+            || counts.sourceErrorCount > 0
+    }
+
     private func action(
         _ id: SupabaseManualSyncPresentationActionID,
         isEnabled: Bool = true,
@@ -687,6 +850,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .checkCloud:
             key = "checkCloud"
             systemImage = "icloud"
+        case .reviewChanges:
+            key = "review"
+            systemImage = "doc.text.magnifyingglass"
         case .syncNow:
             key = "syncNow"
             systemImage = "arrow.triangle.2.circlepath.circle.fill"
@@ -713,6 +879,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         titleKey: String,
         subtitleKey: String?,
         summary: SupabaseManualSyncUserFacingSummary? = nil,
+        reviewSheet: SupabaseManualSyncReviewSheetState? = nil,
         badgeKey: String,
         badgeSystemImage: String?,
         primaryAction: SupabaseManualSyncPresentationAction?,
@@ -735,6 +902,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             title: title,
             subtitle: subtitle,
             userFacingSummary: userFacingSummary,
+            reviewSheet: reviewSheet,
             statusBadgeText: badgeText,
             statusBadgeSystemImage: badgeSystemImage,
             primaryAction: primaryAction,

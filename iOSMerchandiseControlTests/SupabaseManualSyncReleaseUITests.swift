@@ -40,11 +40,28 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.summary.generic",
             "options.supabase.manualSync.summary.cancelled",
             "options.supabase.manualSync.action.checkCloud",
+            "options.supabase.manualSync.action.review",
             "options.supabase.manualSync.action.syncNow",
             "options.supabase.manualSync.action.signIn",
             "options.supabase.manualSync.action.realign",
             "options.supabase.manualSync.action.retry",
             "options.supabase.manualSync.action.cancel",
+            "options.supabase.manualSync.review.title",
+            "options.supabase.manualSync.review.subtitle",
+            "options.supabase.manualSync.review.cloudToDevice.title",
+            "options.supabase.manualSync.review.cloudToDevice.needsReview",
+            "options.supabase.manualSync.review.cloudToDevice.noChanges",
+            "options.supabase.manualSync.review.deviceToCloud.title",
+            "options.supabase.manualSync.review.deviceToCloud.localChanges",
+            "options.supabase.manualSync.review.deviceToCloud.noChanges",
+            "options.supabase.manualSync.review.prices.title",
+            "options.supabase.manualSync.review.prices.needsDedicatedStep",
+            "options.supabase.manualSync.review.prices.noAction",
+            "options.supabase.manualSync.review.attention.title",
+            "options.supabase.manualSync.review.attention.message",
+            "options.supabase.manualSync.review.footer.futureStep",
+            "options.supabase.manualSync.review.action.applyFuture",
+            "options.supabase.manualSync.review.action.cancel",
             "options.supabase.manualSync.badge.manual",
             "options.supabase.manualSync.badge.running",
             "options.supabase.manualSync.badge.needsAccess",
@@ -168,6 +185,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
 
         XCTAssertTrue(releaseCardSource.contains("viewModel.presentationState"))
         XCTAssertTrue(releaseCardSource.contains("presentation.userFacingSummary"))
+        XCTAssertTrue(releaseCardSource.contains("viewModel.presentationState.reviewSheet"))
         XCTAssertTrue(releaseCardSource.contains("presentation.primaryAction"))
         XCTAssertTrue(releaseCardSource.contains("presentation.secondaryAction"))
         XCTAssertTrue(releaseCardSource.contains("ProgressView()"))
@@ -175,6 +193,22 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertTrue(releaseCardSource.contains(".buttonStyle(.bordered)"))
         XCTAssertFalse(releaseCardSource.contains("stateKey"))
         XCTAssertFalse(releaseCardSource.contains("actionKey"))
+    }
+
+    func testTask077ReleaseCardRendersReviewSheetFromPreparedPresentationOnly() throws {
+        let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
+        let releaseCardSource = try extractReleaseCardSource(from: source)
+
+        XCTAssertTrue(releaseCardSource.contains(".sheet(isPresented: $isReviewSheetPresented)"))
+        XCTAssertTrue(releaseCardSource.contains("viewModel.presentationState.reviewSheet"))
+        XCTAssertTrue(releaseCardSource.contains("SupabaseManualSyncReviewSheet(review: review)"))
+        XCTAssertTrue(releaseCardSource.contains("review.sections"))
+        XCTAssertTrue(releaseCardSource.contains(".disabled(!review.primaryActionIsEnabled)"))
+        XCTAssertFalse(releaseCardSource.contains("SupabaseManualSyncRunSummary"))
+        XCTAssertFalse(releaseCardSource.contains("SupabaseManualSyncRemotePreviewSummary"))
+        XCTAssertFalse(releaseCardSource.contains("SyncPreview"))
+        XCTAssertFalse(releaseCardSource.contains("SupabasePullApplyService"))
+        XCTAssertFalse(releaseCardSource.contains("SyncEventOutboxDrainService"))
     }
 
     func testTask074ReleaseCardRendersPreparedSummaryOnly() throws {
@@ -201,12 +235,12 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         }
     }
 
-    func testTask072ReleaseCardDeclaresOneProminentActionStyle() throws {
+    func testTask072ReleaseCardDeclaresProminentActionStylesForCardAndSheet() throws {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: source)
 
-        XCTAssertEqual(countOccurrences(of: ".buttonStyle(.borderedProminent)", in: releaseCardSource), 1)
-        XCTAssertEqual(countOccurrences(of: ".buttonStyle(.bordered)", in: releaseCardSource), 1)
+        XCTAssertEqual(countOccurrences(of: ".buttonStyle(.borderedProminent)", in: releaseCardSource), 2)
+        XCTAssertEqual(countOccurrences(of: ".buttonStyle(.bordered)", in: releaseCardSource), 2)
     }
 
     func testTask073ReleaseFactoryBuildsReadOnlyRemotePreviewProvider() throws {

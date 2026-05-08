@@ -2769,6 +2769,7 @@ private struct SupabaseManualSyncReleaseCard: View {
     @ObservedObject private var authViewModel: SupabaseAuthViewModel
     @StateObject private var viewModel: SupabaseManualSyncViewModel
     @State private var activeRunTask: Task<Void, Never>?
+    @State private var isReviewSheetPresented = false
 
     init(
         context: ModelContext,
@@ -2876,6 +2877,13 @@ private struct SupabaseManualSyncReleaseCard: View {
             activeRunTask?.cancel()
             activeRunTask = nil
         }
+        .sheet(isPresented: $isReviewSheetPresented) {
+            if let review = viewModel.presentationState.reviewSheet {
+                SupabaseManualSyncReviewSheet(review: review) {
+                    isReviewSheetPresented = false
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -2921,6 +2929,11 @@ private struct SupabaseManualSyncReleaseCard: View {
             return
         }
 
+        if action.id == .reviewChanges {
+            isReviewSheetPresented = viewModel.presentationState.reviewSheet != nil
+            return
+        }
+
         startRun(for: action.id)
     }
 
@@ -2943,6 +2956,7 @@ private struct SupabaseManualSyncReleaseCard: View {
     private func resetAfterAccountChange() {
         activeRunTask?.cancel()
         activeRunTask = nil
+        isReviewSheetPresented = false
         viewModel.resetPresentationToIdleReady()
         syncAuthPresentationContext()
     }
@@ -2955,6 +2969,97 @@ private struct SupabaseManualSyncReleaseCard: View {
                 isTransitioning: authViewModel.isTransitioning
             )
         )
+    }
+}
+
+private struct SupabaseManualSyncReviewSheet: View {
+    let review: SupabaseManualSyncReviewSheetState
+    let dismiss: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(review.title)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(review.subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    ForEach(review.sections) { section in
+                        reviewSection(section)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 22)
+                .padding(.bottom, 18)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(review.footerMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                } label: {
+                    Label(review.primaryActionTitle, systemImage: review.primaryActionSystemImage)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!review.primaryActionIsEnabled)
+
+                Button(review.secondaryActionTitle) {
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity)
+            }
+            .padding(20)
+        }
+        .presentationDetents([.medium, .large])
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(review.accessibilityLabel)
+    }
+
+    private func reviewSection(_ section: SupabaseManualSyncReviewSectionState) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: section.systemImage)
+                .font(.subheadline)
+                .foregroundStyle(tint(for: section.tone))
+                .frame(width: 24, height: 24)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(section.title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(section.message)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func tint(for tone: SupabaseManualSyncReviewSectionTone) -> Color {
+        switch tone {
+        case .neutral:
+            return .accentColor
+        case .attention:
+            return .orange
+        }
     }
 }
 

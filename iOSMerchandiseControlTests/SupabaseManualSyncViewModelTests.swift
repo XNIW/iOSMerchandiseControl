@@ -49,6 +49,10 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
                 }
                 return values
             }
+        let reviewValues = state.reviewSheet.map { sheet in
+            [sheet.title, sheet.subtitle, sheet.footerMessage, sheet.primaryActionTitle, sheet.secondaryActionTitle, sheet.accessibilityLabel]
+                + sheet.sections.flatMap { [$0.title, $0.message] }
+        } ?? []
         let blob = (
             [vm.title, vm.subtitle, vm.primaryActionTitle, vm.lastUserMessage]
                 + [
@@ -60,6 +64,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
                     state.accessibilityHint,
                 ]
                 + actionValues
+                + reviewValues
         )
             .compactMap { $0 }
             .joined(separator: " ")
@@ -583,7 +588,9 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertEqual(vm.presentationKind, .partialSync)
         XCTAssertEqual(vm.title, "Ci sono modifiche da controllare")
         XCTAssertEqual(vm.subtitle, "Nessun invio automatico.")
-        XCTAssertEqual(vm.presentationState.primaryAction?.id, .checkCloud)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .reviewChanges)
+        XCTAssertNil(vm.runMode(for: .reviewChanges))
+        XCTAssertNotNil(vm.presentationState.reviewSheet)
         XCTAssertFalse(actionIDs(vm.presentationState).contains(.syncNow))
         XCTAssertEqual(vm.lastSummary?.remotePreviewSummary?.safeAggregateCounts.newProductCount, 1)
         assertNoForbiddenUserFacingJargon(vm)
@@ -606,10 +613,55 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         let state = vm.presentationState
         XCTAssertEqual(state.userFacingSummary?.kind, .cloudCheckCompletedNoAction)
+        XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
+        XCTAssertNotNil(state.reviewSheet)
         XCTAssertFalse(state.userFacingSummary?.message.localizedCaseInsensitiveContains("sincronizzato") ?? false)
         XCTAssertFalse(state.userFacingSummary?.message.localizedCaseInsensitiveContains("fully synced") ?? false)
         XCTAssertTrue(state.accessibilityLabel.contains(state.userFacingSummary?.message ?? ""))
         assertNoDuplicateSummaryCopy(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask077ReviewSheetIsPreparedForCompletedPreviewWithoutMutativeAction() async throws {
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false
+            )
+        )
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            counts: SupabaseManualSyncPrivacyCounts(
+                pendingCatalogChangeCount: 1,
+                pendingPriceChangeCount: 1,
+                pendingQueuedCloudOperationCount: 1
+            ),
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                    remoteProductPriceCount: 2,
+                    newProductCount: 1,
+                    conflictCount: 1,
+                    priceHistorySignalCount: 1
+                ),
+                key: .cloudDataNeedsReview
+            )
+        ))
+
+        let state = vm.presentationState
+        let review = try XCTUnwrap(state.reviewSheet)
+
+        XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
+        XCTAssertNil(vm.runMode(for: .reviewChanges))
+        XCTAssertFalse(review.primaryActionIsEnabled)
+        XCTAssertEqual(review.primaryActionTitle, "Applica modifiche")
+        XCTAssertEqual(review.secondaryActionTitle, "Annulla")
+        XCTAssertEqual(review.sections.map(\.id), [.cloudToDevice, .deviceToCloud, .prices, .attention])
+        XCTAssertFalse(actionIDs(state).contains(.syncNow))
+        XCTAssertFalse(actionIDs(state).contains(.checkCloud))
         assertNoForbiddenUserFacingJargon(vm)
     }
 
@@ -639,12 +691,19 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         let state = vm.presentationState
         let summaryMessage = try XCTUnwrap(state.userFacingSummary?.message)
+        let review = try XCTUnwrap(state.reviewSheet)
+        let reviewCopy = ([review.title, review.subtitle, review.footerMessage] + review.sections.flatMap { [$0.title, $0.message] })
+            .joined(separator: " ")
         XCTAssertEqual(state.userFacingSummary?.kind, .remoteReviewNeeded)
         XCTAssertFalse(summaryMessage.contains("42"))
         XCTAssertFalse(summaryMessage.contains("7"))
         XCTAssertFalse(summaryMessage.contains("3"))
         XCTAssertFalse(summaryMessage.localizedCaseInsensitiveContains(privateID.uuidString))
         XCTAssertFalse(summaryMessage.localizedCaseInsensitiveContains("987654321"))
+        XCTAssertFalse(reviewCopy.contains("42"))
+        XCTAssertFalse(reviewCopy.contains("7"))
+        XCTAssertFalse(reviewCopy.contains("3"))
+        XCTAssertFalse(reviewCopy.localizedCaseInsensitiveContains(privateID.uuidString))
         assertNoDuplicateSummaryCopy(state)
         assertNoForbiddenUserFacingJargon(vm)
     }
@@ -872,7 +931,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let completed = vm.presentationState
         XCTAssertEqual(vm.presentationKind, .successFullyUpToDate)
         XCTAssertEqual(completed.userFacingSummary?.kind, .cloudCheckCompletedNoAction)
-        XCTAssertEqual(completed.primaryAction?.id, .checkCloud)
+        XCTAssertEqual(completed.primaryAction?.id, .reviewChanges)
+        XCTAssertNotNil(completed.reviewSheet)
         XCTAssertNil(completed.secondaryAction)
         XCTAssertFalse(fake.calls.contains(.catalogPush))
         XCTAssertFalse(fake.calls.contains(.productPricePush))
@@ -904,7 +964,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let state = vm.presentationState
         XCTAssertEqual(vm.presentationKind, .partialSync)
         XCTAssertEqual(state.userFacingSummary?.kind, .cloudCheckCompleted)
-        XCTAssertEqual(state.primaryAction?.id, .checkCloud)
+        XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
+        XCTAssertNotNil(state.reviewSheet)
         XCTAssertNil(state.secondaryAction)
         XCTAssertFalse(actionIDs(state).contains(.syncNow))
         XCTAssertEqual(vm.privacySafeAggregatesSnapshot?.pendingCatalogChangeCount, 2)
