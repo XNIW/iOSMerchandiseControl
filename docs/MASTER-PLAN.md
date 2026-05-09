@@ -4,14 +4,24 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**Progetto IDLE.** Ultimo completato: **TASK-089 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`) — benchmark sintetico D89-M **read-only / controllato** reviewato con fix test minimo; LG1-LG4 verificati, LG5 SKIPPED per gate, D89-L/device reale/Supabase live restano limitazioni documentate. **TASK-090** resta **TODO / Planning — non aperto**.
+**Progetto IDLE.** Ultimo completato: **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED** (`docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`) — acceptance finale documentata iOS-first con evidenze privacy-safe, build/test PASS, ProductPrice PASS, UI/copy PASS, e residui runtime **PARTIAL / BLOCKED_ENV** accettati (nuovo live `TASK090_*`, Android runtime fresh, import/export UI manuale). **TASK-091 TODO / Planning — non aperto**. Nessun claim production-ready globale 100%.
 
-**Precedente completato:** **TASK-088 DONE / Chiusura / PASS** (`docs/TASKS/TASK-088-productprice-post-push-identity-ios.md`) — ProductPrice post-push identity **`TASK088_*`**, revisione PASS; micro-fix fail-closed su `ProductPriceManualPushIdentityReconciler`; nessun claim production-ready globale.
+**Precedente completato:** **TASK-089 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`) — benchmark sintetico D89-M read-only/controllato; LG1-LG4 verificati in review, LG5 SKIPPED per gate; D89-L/device reale/Supabase live restano limitazioni documentate.
 
 ## Stato globale
-**IDLE — nessun task attivo.** TASK-089 è chiuso **DONE / Chiusura — REVIEW PASS** con limitazioni esplicite; **TASK-090** resta **TODO / Planning — non aperto**.
+**IDLE — nessun task attivo.** TASK-090 e' chiuso **DONE / Chiusura — PARTIAL_ACCEPTED** con residui espliciti; **TASK-091** resta **TODO / Planning — non aperto**.
 
-**Ultimo completato:** **TASK-089 DONE / Chiusura — REVIEW PASS.** **TASK-088** resta l'ultimo completato prima di TASK-089; ancora **DONE / Chiusura**: **TASK-087**, **TASK-086**, **TASK-085 (PARTIAL_ACCEPTED)** — come da tabella backlog.
+**Ultimo completato:** **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED.** **TASK-089** resta il completato precedente; ancora **DONE / Chiusura**: **TASK-088**, **TASK-087**, **TASK-086**, **TASK-085 (PARTIAL_ACCEPTED)** — come da tabella backlog.
+
+> **2026-05-09 17:26 -0400 — REVIEW+CHIUSURA TASK-090 PARTIAL_ACCEPTED / DONE:** review severa completata su MASTER-PLAN, file TASK-090, evidence folder e diff corrente. Fix diretto solo documentale: chiarito che l'handoff planning-init e le sezioni "futura execution" sono storiche/superate, e aggiornata decisione finale a **DONE / Chiusura — PARTIAL_ACCEPTED**. Check review rieseguiti: `git status`, `git diff --check`, `xcodebuild -list`, build Debug, build Release, XCTest mirati manual sync/ProductPrice/pull/export/localization **314/0**, full XCTest **567/0**, `plutil`, grep `TASK090` source/test e Release binary, secret scan evidenze/tracking. Residui accettati: nuovo live `TASK090_*` **BLOCKED_ENV/PARTIAL**, Android runtime fresh **SKIPPED/PARTIAL**, import/export UI manuale **PARTIAL**. Nessun dato reale, segreto, cleanup distruttivo, patch Swift/Kotlin/SQL/RLS/Localizable o sync automatica/background. **Progetto IDLE**; **TASK-091 TODO / Planning — non aperto**; nessun claim production-ready globale 100%.
+
+> **2026-05-09 17:10 -0400 — EXECUTION TASK-090 completata / handoff REVIEW (PARTIAL_READY_FOR_REVIEW):** compilate evidenze privacy-safe in `docs/TASKS/EVIDENCE/TASK-090/` (manifest, matrice S90-F finale, Must/CA, test/build, schema Supabase read-only, UI copy audit, retry/idempotenza, decisione finale). Check PASS: build Debug, build Release, XCTest mirati **299/0**, full XCTest **567/0**, `plutil`, `git diff --check`, Release binary senza `TASK090`, secret scan evidenze. Nessuna patch Swift/Kotlin/SQL/migration/RLS/Localizable; nessun dato reale, segreto, write Supabase live o cleanup distruttivo; nessuna sync automatica/background. Nuovo smoke live `TASK090_*` e import/export UI runtime restano **PARTIAL / BLOCKED_ENV** per gate owner/session/collision/costo-beneficio documentati. **TASK-090 ACTIVE / REVIEW**, **NON DONE**; **TASK-091 non aperto**; ultimo completato resta **TASK-089 DONE / Chiusura — REVIEW PASS**.
+
+> **2026-05-09 16:57 -0400 — EXECUTION TASK-090 avviata (override utente):** TASK-090 promosso da **ACTIVE / PLANNING** a **ACTIVE / EXECUTION**, responsabile **Claude / Executor**. Perimetro confermato: release acceptance cross-platform finale iOS-first, evidenze privacy-safe, matrice S90-F, audit statici/read-only prima di qualunque scenario mutativo, prefisso **`TASK090_*`** solo dopo gate/collision scan; Android solo riferimento funzionale; nessuna patch Kotlin/SQL/migration/RLS, nessuna sync automatica/background, nessun dato reale/segreto, nessun cleanup distruttivo. **TASK-089 resta ultimo completato DONE / Chiusura — REVIEW PASS**; **TASK-090 NON DONE**; **TASK-091 non aperto**.
+
+> **2026-05-09 — PERFEZIONAMENTO PLANNING TASK-090 (solo markdown — UX/UI + efficienza):** integrato il planning TASK-090 con review aggiuntiva su UX/UI iOS-native, decisioni operative per scegliere autonomamente l'opzione migliore quando le alternative sono equivalenti, criteri di efficienza per evitare N+1/full reload/main-thread work, recovery/cancel/retry e acceptance criteria aggiuntivi CA-T090-UX/EFF/SAFE. Nessun Swift/Kotlin/SQL/backend/Supabase live/Localizable/build/test/runtime modificato o eseguito. TASK-090 resta ACTIVE / PLANNING, NON READY FOR EXECUTION, NON DONE; TASK-091 non aperto.
+
+> **2026-05-09 16:45 -0400 — PLANNING TASK-090 inizializzato (solo markdown):** creato **`docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`**; progetto **IDLE → ACTIVE** unicamente per **PLANNING TASK-090**. **TASK-090 ACTIVE / PLANNING**, responsabile **Claude / Planner**; micro-slice **S90-A…S90-E**, **CA-T090-01…10**, rischi **R90-xx**, gate Go/No-Go per futura EXECUTION solo dopo override utente esplicito; contesto da **TASK-089 DONE / REVIEW PASS** (LG1-LG4, LG5 SKIPPED; limiti D89-L/device/Supabase live documentati). **TASK-090 NON READY FOR EXECUTION**, **NON DONE**; **TASK-091 non aperto**. **Ultimo completato invariato TASK-089 DONE / Chiusura — REVIEW PASS** (nessuna riscrittura retroattiva dello stato reale di TASK-089). Vietati questo turno: Swift/Kotlin/SQL/migration/RLS, write Supabase live, build/test/simulator/runtime obbligatori, dati reali come fixture, sync automatica/background/Timer/BGTask/Realtime/polling/worker.
 
 > **2026-05-09 16:39 -0400 — REVIEW+FIX/CHIUSURA TASK-089 REVIEW PASS / DONE (user override):** review tecnica completa eseguita su tracking, diff e codice. Fix minimo applicato solo a `Task089LargeDatasetBenchmarkTests`: assert su paginazione LG1, segnali ProductPrice, contenuto minimo XLSX LG2/LG3, sheet Suppliers/Categories/PriceHistory e cleanup dei file temporanei. Harness `Task089SyntheticBenchmarkHarness` confermato DEBUG-only (`#if DEBUG`), non agganciato alla UI production, senza dati reali/segreti/API pubbliche/deps nuove. Check PASS: `git status`, `git diff --check`, `xcodebuild -list`, test TASK-089 mirati **4/0** (LG1 454,53 ms; LG2 43,12 ms / 169.034 byte; LG3 80,03 ms / 304.126 byte; LG4 first feedback 3,40 ms / cancel recovery 2,17 ms), full XCTest **567/0**, Release build, xcresult build warnings **0**, Release binary senza `TASK089|Task089`. LG1/LG2/LG3 restano **PARTIAL** per assenza di device fisico/D89-L/Supabase live/UI export manuale/Instruments; LG4 **PASS**; LG5/S89-E **SKIPPED** per gate §10 non GO e mutazioni consentite NO. Nessun dato reale, nessun Supabase write/live distruttivo, nessun SQL/Android/UI production/Localizable, nessun claim production-ready globale. **TASK-089 DONE / Chiusura — REVIEW PASS**; progetto **IDLE**; **TASK-090 non aperto**.
 
@@ -228,7 +238,7 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Roadmap follow-up Supabase iOS — chiusura 95% → 100%
 
-**Contesto:** dopo **TASK-089 DONE / Chiusura — REVIEW PASS**, l'integrazione Supabase iOS e' funzionalmente avanzata ma non ancora dichiarabile production-ready 100%. I gap residui ufficiali sono: D89-L/device fisico/Supabase live/Instruments non eseguiti dentro TASK-089, round-trip runtime import/export non chiuso e acceptance finale cross-platform **TASK-090** ancora **TODO / Planning**; ProductPrice post-push identity e idempotenza su scenario `TASK088_*` risultano chiusi PASS da TASK-088.
+**Contesto:** dopo **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED**, l'integrazione Supabase iOS ha una acceptance finale documentata e auditabile, ma non viene dichiarata production-ready 100%. I gap residui ufficiali restano: nuovo live `TASK090_*` non eseguito per gate owner/session/collision, Android runtime fresh non rieseguito, round-trip UI manuale import/export non chiuso. ProductPrice post-push identity e idempotenza su scenario `TASK088_*` risultano chiusi PASS da TASK-088.
 
 **Obiettivo:** aprire una pianificazione separata, progressiva e sicura per portare la roadmap Supabase iOS dal livello attuale circa **80-85% funzionale / 70-75% production-ready reale** verso **95%+**, lasciando il claim **100%** solo a una review/smoke finale cross-platform con evidenze runtime.
 
@@ -240,11 +250,11 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 | P0 | **TASK-087** | **DONE / Chiusura** | Smoke runtime piccolo Android ↔ Supabase ↔ iOS | File: `docs/TASKS/TASK-087-android-ios-supabase-small-runtime-smoke.md` — review finale **PATCHED_PASS**: MIN-A Android→Supabase→iOS e MIN-I iOS→Supabase→Android **VERIFIED_RUNTIME** su `TASK087_*`, con runner DEBUG-only scoped e tracking privacy-safe | Dataset negozio reale come fixture; cleanup distruttivo; sync automatica/background; **`migration repair` / normalization history** dentro TASK-087; claim production-ready globale |
 | P0 | **TASK-088** | **DONE / Chiusura — PASS** *(file:* `docs/TASKS/TASK-088-productprice-post-push-identity-ios.md`*) | ProductPrice post-push identity reale | Scenario controllato `TASK088_*` PASS: push iOS, read-back Supabase, secondo push idempotente, `remoteID` persistente dopo reload SwiftData/context; Android verificato come riferimento funzionale con test mirati e valori last/prev coerenti | Redesign storico prezzi; schema prezzi nuovo; merge conflitti avanzato fuori dalla identity; delete/cleanup; claim production-ready globale |
 | P1 | **TASK-089** | **DONE / Chiusura — REVIEW PASS** *(file:* `docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`*) | Benchmark dataset grande read-only / controllato | Review chiusa su execution sintetica D89-M: preview fake/read-mostly, export prodotti/full DB harness DEBUG, cancel/retry ViewModel, test/build Release/full XCTest, Release binary clean; D89-L/device reale/Supabase live/Instruments documentati come limiti non bloccanti | Full sync distruttiva; negozio reale write; ottimizzazioni premature non misurate; claim production-ready globale; aprire TASK-090 dentro TASK-089 |
-| P0 | **TASK-090** | **TODO / Planning** | Release acceptance cross-platform finale | Review/smoke finale dopo TASK-086…089: cicli bidirezionali, Product/Supplier/Category/ProductPrice, current/previous, import/export runtime, UI copy veritiera, nessun duplicato, nessun conflitto silenzioso | Nuove feature; refactor ampi; automazioni background; dichiarare 100% se restano PARTIAL non spiegati |
+| P0 | **TASK-090** | **DONE / Chiusura — PARTIAL_ACCEPTED** *(file:* `docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`*) | Release acceptance cross-platform finale | Matrice S90-F, evidenze privacy-safe, build/test PASS, ProductPrice PASS, UI/copy PASS; cross-platform/import-export/live `TASK090_*` PARTIAL/BLOCKED_ENV accettati e motivati; nessun claim 100% | Nuove feature; refactor ampi; automazioni background; dichiarare 100% se restano PARTIAL non spiegati; claim production-ready globale |
 
-**Sequenza consigliata:** TASK-086 → TASK-087 → TASK-088 → TASK-089 → TASK-090.
+**Sequenza completata:** TASK-086 → TASK-087 → TASK-088 → TASK-089 → TASK-090.
 
-**Stima dopo TASK-086…089:** se tutti passano con evidenze runtime, il progetto Supabase iOS puo' essere considerato circa **90-95%**. Il **100%** richiede TASK-090 come acceptance finale, non solo il completamento tecnico dei quattro follow-up.
+**Stima dopo TASK-086…090:** il progetto ha evidenze forti sul percorso iOS e ProductPrice, ma resta senza claim **100%** per i residui runtime dichiarati in TASK-090.
 
 **Definizione di DONE per questa roadmap follow-up:**
 
@@ -488,14 +498,12 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 ## Workflow task attivo
 - **Task attivo:** Nessuno
 - **Stato globale:** **IDLE**
-- **Ultimo completato:** **TASK-089 DONE / Chiusura — REVIEW PASS**
-- **File task ultimo completato:** `docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`
-- **Stato/Fase TASK-089:** **DONE / Chiusura / REVIEW COMPLETATA — PASS**
-- **Precedente completato:** **TASK-088 DONE / Chiusura / PASS**
-- **File task TASK-088:** `docs/TASKS/TASK-088-productprice-post-push-identity-ios.md`
-- **Responsabile attuale:** nessuno; chiusura review registrata da **Codex / Reviewer+Fixer** con user override esplicito
-- **Ultimo aggiornamento TASK-089:** 2026-05-09 16:39 -0400 — review+fix chiusa; TASK-089 DONE con limitazioni D89-L/device/Supabase live/Instruments documentate.
-- **Nota tracking:** **TASK-090 TODO / Planning — non aperto**; **TASK-089 DONE** non equivale a production-ready globale.
+- **Ultimo completato:** **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED**
+- **File task ultimo completato:** `docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`
+- **Stato TASK-090:** **DONE / Chiusura — PARTIAL_ACCEPTED** (acceptance documentata con residui runtime accettati; nessun claim 100%)
+- **Precedente completato:** **TASK-089 DONE / Chiusura — REVIEW PASS**
+- **File task TASK-089:** `docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`
+- **Nota tracking:** **TASK-091 TODO / Planning — non aperto**; **TASK-090 DONE** non equivale a production-ready globale 100%.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -536,9 +544,10 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** Nessuno — progetto **IDLE**. **TASK-090** resta **TODO / Planning** — **non aperto**.
-- **Ultimo completato:** **TASK-089** (`docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`) — **DONE / Chiusura — REVIEW PASS** (benchmark sintetico D89-M read-only/controllato: LG1-LG3 PARTIAL motivati, LG4 PASS, LG5 SKIPPED; harness DEBUG-only e Release binary clean; nessun claim production-ready globale).
-- **Precedente completato:** **TASK-088** (`docs/TASKS/TASK-088-productprice-post-push-identity-ios.md`) — **DONE / Chiusura / PASS** (ProductPrice post-push identity reale: `remoteID` persistito dopo push e reload SwiftData/context, secondo push idempotente, Supabase read-back 4 righe / 0 duplicati, Android reference last/prev coerente; nessun claim production-ready globale).
+- **Task attivo corrente:** Nessuno — progetto **IDLE**. **TASK-091** resta **TODO / Planning — non aperto**.
+- **Ultimo completato:** **TASK-090** (`docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`) — **DONE / Chiusura — PARTIAL_ACCEPTED** (acceptance finale documentata iOS-first: ProductPrice e UI/copy PASS, cross-platform/import-export/live `TASK090_*` PARTIAL/BLOCKED_ENV accettati; nessun claim production-ready globale 100%).
+- **Precedente completato:** **TASK-089** (`docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`) — **DONE / Chiusura — REVIEW PASS** (benchmark sintetico D89-M read-only/controllato: LG1-LG3 PARTIAL motivati, LG4 PASS, LG5 SKIPPED; harness DEBUG-only e Release binary clean; nessun claim production-ready globale).
+- **Completato precedente:** **TASK-088** (`docs/TASKS/TASK-088-productprice-post-push-identity-ios.md`) — **DONE / Chiusura / PASS** (ProductPrice post-push identity reale: `remoteID` persistito dopo push e reload SwiftData/context, secondo push idempotente, Supabase read-back 4 righe / 0 duplicati, Android reference last/prev coerente; nessun claim production-ready globale).
 - **Completato precedente:** **TASK-087** (`docs/TASKS/TASK-087-android-ios-supabase-small-runtime-smoke.md`) — **DONE / Chiusura** (smoke sandbox `TASK087_*` VERIFIED_RUNTIME dopo review PATCHED_PASS; runner DEBUG-only dove documentato).
 - **TASK-086:** **DONE / Chiusura** (trigger additivi `updated_at` catalogo, drift migration history accettato come follow-up separato, nessun `migration repair` dentro il task).
 - **TASK-085:** **DONE / Chiusura (PARTIAL_ACCEPTED)** (hardening production-ready senza claim 100%; ProductPrice post-push identity ora chiusa da TASK-088).
