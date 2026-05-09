@@ -50,13 +50,15 @@ nonisolated struct ProductPriceApplyLocalProduct: Sendable, Equatable {
 }
 
 nonisolated struct ProductPriceApplyLocalPrice: Sendable, Equatable {
+    let remoteID: UUID?
     let productRemoteID: UUID?
     let productBarcode: String
     let type: String
     let price: Double
     let effectiveAt: Date
 
-    init(productBarcode: String, productRemoteID: UUID? = nil, type: String, price: Double, effectiveAt: Date) {
+    init(remoteID: UUID? = nil, productBarcode: String, productRemoteID: UUID? = nil, type: String, price: Double, effectiveAt: Date) {
+        self.remoteID = remoteID
         self.productRemoteID = productRemoteID
         self.productBarcode = productBarcode
         self.type = type
@@ -102,6 +104,7 @@ nonisolated struct ProductPriceApplyIssue: Identifiable, Sendable, Equatable {
 nonisolated struct ProductPriceApplySummary: Sendable, Equatable {
     let remoteRead: Int
     let included: Int
+    let remoteIdentityLinks: Int
     let skippedExisting: Int
     let unmapped: Int
     let invalid: Int
@@ -110,6 +113,32 @@ nonisolated struct ProductPriceApplySummary: Sendable, Equatable {
     let partial: Bool
     let truncated: Bool
     let sourceError: String?
+
+    init(
+        remoteRead: Int,
+        included: Int,
+        remoteIdentityLinks: Int = 0,
+        skippedExisting: Int,
+        unmapped: Int,
+        invalid: Int,
+        conflicts: Int,
+        mappingConflicts: Int,
+        partial: Bool,
+        truncated: Bool,
+        sourceError: String?
+    ) {
+        self.remoteRead = remoteRead
+        self.included = included
+        self.remoteIdentityLinks = remoteIdentityLinks
+        self.skippedExisting = skippedExisting
+        self.unmapped = unmapped
+        self.invalid = invalid
+        self.conflicts = conflicts
+        self.mappingConflicts = mappingConflicts
+        self.partial = partial
+        self.truncated = truncated
+        self.sourceError = sourceError
+    }
 }
 
 nonisolated struct ProductPriceApplyLine: Identifiable, Sendable, Equatable {
@@ -145,6 +174,33 @@ nonisolated struct ProductPriceApplyLine: Identifiable, Sendable, Equatable {
     }
 }
 
+nonisolated struct ProductPriceApplyIdentityLink: Identifiable, Sendable, Equatable {
+    let id: UUID
+    let remoteRowID: UUID
+    let productID: UUID
+    let productBarcode: String
+    let type: String
+    let canonicalPrice: ProductPriceCanonicalAmount
+    let effectiveAtCanonical: String
+
+    init(
+        remoteRowID: UUID,
+        productID: UUID,
+        productBarcode: String,
+        type: String,
+        canonicalPrice: ProductPriceCanonicalAmount,
+        effectiveAtCanonical: String
+    ) {
+        self.id = remoteRowID
+        self.remoteRowID = remoteRowID
+        self.productID = productID
+        self.productBarcode = productBarcode
+        self.type = type
+        self.canonicalPrice = canonicalPrice
+        self.effectiveAtCanonical = effectiveAtCanonical
+    }
+}
+
 nonisolated struct ProductPriceApplyPlan: Sendable {
     let generatedAt: Date
     let sessionSnapshot: ProductPriceApplySessionSnapshot
@@ -152,11 +208,34 @@ nonisolated struct ProductPriceApplyPlan: Sendable {
     let summary: ProductPriceApplySummary
     let blockReasons: [ProductPriceApplyBlockReason]
     let linesToInsert: [ProductPriceApplyLine]
+    let remoteIdentityLinks: [ProductPriceApplyIdentityLink]
     let issues: [ProductPriceApplyIssue]
     let remoteRows: [RemoteInventoryProductPriceRow]
 
+    init(
+        generatedAt: Date,
+        sessionSnapshot: ProductPriceApplySessionSnapshot,
+        sourceState: ProductPriceApplySourceState,
+        summary: ProductPriceApplySummary,
+        blockReasons: [ProductPriceApplyBlockReason],
+        linesToInsert: [ProductPriceApplyLine],
+        remoteIdentityLinks: [ProductPriceApplyIdentityLink] = [],
+        issues: [ProductPriceApplyIssue],
+        remoteRows: [RemoteInventoryProductPriceRow]
+    ) {
+        self.generatedAt = generatedAt
+        self.sessionSnapshot = sessionSnapshot
+        self.sourceState = sourceState
+        self.summary = summary
+        self.blockReasons = blockReasons
+        self.linesToInsert = linesToInsert
+        self.remoteIdentityLinks = remoteIdentityLinks
+        self.issues = issues
+        self.remoteRows = remoteRows
+    }
+
     var isApplyAllowed: Bool {
-        blockReasons.isEmpty && !linesToInsert.isEmpty
+        blockReasons.isEmpty && (!linesToInsert.isEmpty || !remoteIdentityLinks.isEmpty)
     }
 
     var hasHardBlocks: Bool {
@@ -166,8 +245,16 @@ nonisolated struct ProductPriceApplyPlan: Sendable {
 
 nonisolated struct ProductPriceApplyResult: Sendable, Equatable {
     let inserted: Int
+    let remoteIdentityLinked: Int
     let skippedExisting: Int
     let totalConsidered: Int
+
+    init(inserted: Int, remoteIdentityLinked: Int = 0, skippedExisting: Int, totalConsidered: Int) {
+        self.inserted = inserted
+        self.remoteIdentityLinked = remoteIdentityLinked
+        self.skippedExisting = skippedExisting
+        self.totalConsidered = totalConsidered
+    }
 }
 
 nonisolated enum ProductPriceApplyError: Error, Sendable, Equatable {
@@ -343,9 +430,39 @@ struct SupabaseProductPriceApplyService {
         }
 
         let productsByRemoteID = try fetchUniqueProductsByRemoteID(context: context)
-        var currentPricesByKey = try fetchCurrentPriceLookup(context: context)
+        var currentPricesByKey = try fetchCurrentPricesByKey(context: context)
         var inserted = 0
+        var remoteIdentityLinked = 0
         var skippedExisting = 0
+
+        for link in plan.remoteIdentityLinks {
+            let key = ProductPriceApplyLogicalKey(
+                productID: link.productID,
+                type: link.type,
+                effectiveAt: link.effectiveAtCanonical
+            )
+            guard let existingPrices = currentPricesByKey[key] else {
+                throw ProductPriceApplyError.verificationFailed
+            }
+            let matchingPrices = existingPrices.filter {
+                PriceCanonicalizer.canonicalAmount(from: $0.price) == link.canonicalPrice
+            }
+            guard matchingPrices.count == 1,
+                  let existing = matchingPrices.first else {
+                throw ProductPriceApplyError.policyBlocked([.conflicts])
+            }
+            if let existingRemoteID = existing.remoteID {
+                guard existingRemoteID == link.remoteRowID else {
+                    throw ProductPriceApplyError.policyBlocked([.conflicts])
+                }
+                skippedExisting += 1
+                continue
+            }
+
+            existing.remoteID = link.remoteRowID
+            remoteIdentityLinked += 1
+            skippedExisting += 1
+        }
 
         for line in plan.linesToInsert {
             guard let product = productsByRemoteID[line.productID] else {
@@ -358,29 +475,43 @@ struct SupabaseProductPriceApplyService {
             )
 
             if let existingPrices = currentPricesByKey[key] {
-                guard existingPrices.count == 1, existingPrices.contains(line.canonicalPrice) else {
+                guard existingPrices.count == 1 else {
                     throw ProductPriceApplyError.policyBlocked([.conflicts])
+                }
+                let existingAmounts = Set(existingPrices.compactMap { PriceCanonicalizer.canonicalAmount(from: $0.price) })
+                guard existingAmounts.count == 1, existingAmounts.contains(line.canonicalPrice) else {
+                    throw ProductPriceApplyError.policyBlocked([.conflicts])
+                }
+                let existingRemoteIDs = Set(existingPrices.compactMap(\.remoteID))
+                guard existingRemoteIDs.allSatisfy({ $0 == line.remoteRowID }) else {
+                    throw ProductPriceApplyError.policyBlocked([.conflicts])
+                }
+                if existingPrices.count == 1,
+                   let existing = existingPrices.first,
+                   existing.remoteID == nil {
+                    existing.remoteID = line.remoteRowID
+                    remoteIdentityLinked += 1
                 }
                 skippedExisting += 1
                 continue
             }
 
-            context.insert(
-                ProductPrice(
-                    type: priceType(from: line.type),
-                    price: line.canonicalPrice.doubleValue,
-                    effectiveAt: line.effectiveAt,
-                    source: Self.localSource,
-                    note: nil,
-                    createdAt: line.createdAt ?? Date(),
-                    product: product
-                )
+            let newPrice = ProductPrice(
+                remoteID: line.remoteRowID,
+                type: priceType(from: line.type),
+                price: line.canonicalPrice.doubleValue,
+                effectiveAt: line.effectiveAt,
+                source: Self.localSource,
+                note: nil,
+                createdAt: line.createdAt ?? Date(),
+                product: product
             )
-            currentPricesByKey[key, default: []].insert(line.canonicalPrice)
+            context.insert(newPrice)
+            currentPricesByKey[key, default: []].append(newPrice)
             inserted += 1
         }
 
-        if inserted > 0 {
+        if inserted > 0 || remoteIdentityLinked > 0 {
             do {
                 try context.save()
             } catch {
@@ -396,12 +527,15 @@ struct SupabaseProductPriceApplyService {
             sessionSnapshot: currentSessionSnapshot
         )
         let verificationHardBlocks = verificationPlan.blockReasons.filter { $0 != .noApplicableRows }
-        guard verificationHardBlocks.isEmpty, verificationPlan.linesToInsert.isEmpty else {
+        guard verificationHardBlocks.isEmpty,
+              verificationPlan.linesToInsert.isEmpty,
+              verificationPlan.remoteIdentityLinks.isEmpty else {
             throw ProductPriceApplyError.verificationFailed
         }
 
         return ProductPriceApplyResult(
             inserted: inserted,
+            remoteIdentityLinked: remoteIdentityLinked,
             skippedExisting: skippedExisting,
             totalConsidered: verificationPlan.summary.remoteRead
         )
@@ -503,6 +637,7 @@ struct SupabaseProductPriceApplyService {
                 return nil
             }
             return ProductPriceApplyLocalPrice(
+                remoteID: price.remoteID,
                 productBarcode: product.barcode,
                 productRemoteID: product.remoteID,
                 type: price.type.rawValue,
@@ -540,18 +675,18 @@ struct SupabaseProductPriceApplyService {
         return result
     }
 
-    private func fetchCurrentPriceLookup(context: ModelContext) throws -> [ProductPriceApplyLogicalKey: Set<ProductPriceCanonicalAmount>] {
+    private func fetchCurrentPricesByKey(context: ModelContext) throws -> [ProductPriceApplyLogicalKey: [ProductPrice]] {
         let prices = try context.fetch(
             FetchDescriptor<ProductPrice>(
                 sortBy: [SortDescriptor(\ProductPrice.effectiveAt)]
             )
         )
-        var result: [ProductPriceApplyLogicalKey: Set<ProductPriceCanonicalAmount>] = [:]
+        var result: [ProductPriceApplyLogicalKey: [ProductPrice]] = [:]
 
         for price in prices {
             guard let product = price.product,
                   let productID = product.remoteID,
-                  let canonicalPrice = PriceCanonicalizer.canonicalAmount(from: price.price) else {
+                  PriceCanonicalizer.canonicalAmount(from: price.price) != nil else {
                 continue
             }
 
@@ -560,7 +695,7 @@ struct SupabaseProductPriceApplyService {
                 type: price.type.rawValue,
                 effectiveAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(from: price.effectiveAt)
             )
-            result[key, default: []].insert(canonicalPrice)
+            result[key, default: []].append(price)
         }
 
         return result
@@ -585,6 +720,11 @@ nonisolated private struct ProductPriceApplyLogicalKey: Hashable {
     let effectiveAt: String
 }
 
+nonisolated private struct ProductPriceApplyLocalPriceInfo: Sendable, Equatable {
+    let canonicalPrice: ProductPriceCanonicalAmount
+    let remoteID: UUID?
+}
+
 nonisolated private struct ProductPriceApplyPlanBuilder {
     private let remoteRows: [RemoteInventoryProductPriceRow]
     private let localSnapshot: ProductPriceApplyLocalSnapshot
@@ -592,6 +732,7 @@ nonisolated private struct ProductPriceApplyPlanBuilder {
     private let sessionSnapshot: ProductPriceApplySessionSnapshot
 
     private var linesToInsert: [ProductPriceApplyLine] = []
+    private var remoteIdentityLinks: [ProductPriceApplyIdentityLink] = []
     private var issues: [ProductPriceApplyIssue] = []
     private var skippedExisting = 0
     private var unmapped = 0
@@ -661,22 +802,51 @@ nonisolated private struct ProductPriceApplyPlanBuilder {
             )
 
             if let existingPrices = localPricesByKey[key] {
-                guard existingPrices.count == 1, existingPrices.contains(canonicalPrice) else {
+                guard existingPrices.count == 1 else {
                     conflicts += 1
                     appendIssue(.priceConflict, detail: "\(product.barcode) / \(type) / \(effectiveAtCanonical)")
                     continue
+                }
+                let existingAmounts = Set(existingPrices.map(\.canonicalPrice))
+                guard existingAmounts.count == 1, existingAmounts.contains(canonicalPrice) else {
+                    conflicts += 1
+                    appendIssue(.priceConflict, detail: "\(product.barcode) / \(type) / \(effectiveAtCanonical)")
+                    continue
+                }
+                let existingRemoteIDs = Set(existingPrices.compactMap(\.remoteID))
+                if existingRemoteIDs.contains(where: { $0 != row.id }) {
+                    conflicts += 1
+                    appendIssue(.priceConflict, detail: "\(product.barcode) / \(type) / \(effectiveAtCanonical)")
+                    continue
+                }
+                if existingPrices.count == 1, existingPrices[0].remoteID == nil {
+                    if remoteIdentityLinks.contains(where: {
+                        $0.productID == row.productID
+                            && $0.type == type
+                            && $0.effectiveAtCanonical == effectiveAtCanonical
+                    }) {
+                        conflicts += 1
+                        appendIssue(.duplicateRemoteLogicalRow, detail: "\(product.barcode) / \(type) / \(effectiveAtCanonical)")
+                        continue
+                    }
+                    remoteIdentityLinks.append(
+                        ProductPriceApplyIdentityLink(
+                            remoteRowID: row.id,
+                            productID: row.productID,
+                            productBarcode: product.barcode,
+                            type: type,
+                            canonicalPrice: canonicalPrice,
+                            effectiveAtCanonical: effectiveAtCanonical
+                        )
+                    )
                 }
                 skippedExisting += 1
                 continue
             }
 
-            if let remotePrice = remotePricesByKey[key] {
-                guard remotePrice == canonicalPrice else {
-                    conflicts += 1
-                    appendIssue(.duplicateRemoteLogicalRow, detail: "\(product.barcode) / \(type) / \(effectiveAtCanonical)")
-                    continue
-                }
-                skippedExisting += 1
+            if remotePricesByKey[key] != nil {
+                conflicts += 1
+                appendIssue(.duplicateRemoteLogicalRow, detail: "\(product.barcode) / \(type) / \(effectiveAtCanonical)")
                 continue
             }
 
@@ -698,6 +868,7 @@ nonisolated private struct ProductPriceApplyPlanBuilder {
         let summary = ProductPriceApplySummary(
             remoteRead: remoteRows.count,
             included: linesToInsert.count,
+            remoteIdentityLinks: remoteIdentityLinks.count,
             skippedExisting: skippedExisting,
             unmapped: unmapped,
             invalid: invalid,
@@ -715,6 +886,10 @@ nonisolated private struct ProductPriceApplyPlanBuilder {
             summary: summary,
             blockReasons: makeBlockReasons(summary: summary),
             linesToInsert: linesToInsert.sorted {
+                ($0.productBarcode, $0.type, $0.effectiveAtCanonical, $0.remoteRowID.uuidString)
+                    < ($1.productBarcode, $1.type, $1.effectiveAtCanonical, $1.remoteRowID.uuidString)
+            },
+            remoteIdentityLinks: remoteIdentityLinks.sorted {
                 ($0.productBarcode, $0.type, $0.effectiveAtCanonical, $0.remoteRowID.uuidString)
                     < ($1.productBarcode, $1.type, $1.effectiveAtCanonical, $1.remoteRowID.uuidString)
             },
@@ -743,8 +918,8 @@ nonisolated private struct ProductPriceApplyPlanBuilder {
 
     private func makeLocalPriceLookup(
         productLookup: (productsByRemoteID: [UUID: ProductPriceApplyLocalProduct], duplicateRemoteIDs: Set<UUID>)
-    ) -> [ProductPriceApplyLogicalKey: Set<ProductPriceCanonicalAmount>] {
-        var result: [ProductPriceApplyLogicalKey: Set<ProductPriceCanonicalAmount>] = [:]
+    ) -> [ProductPriceApplyLogicalKey: [ProductPriceApplyLocalPriceInfo]] {
+        var result: [ProductPriceApplyLogicalKey: [ProductPriceApplyLocalPriceInfo]] = [:]
         let remoteIDByBarcode = Dictionary(
             productLookup.productsByRemoteID.map { ($0.value.barcode, $0.key) },
             uniquingKeysWith: { first, _ in first }
@@ -763,7 +938,9 @@ nonisolated private struct ProductPriceApplyPlanBuilder {
                 type: type,
                 effectiveAt: effectiveAt
             )
-            result[key, default: []].insert(canonicalPrice)
+            result[key, default: []].append(
+                ProductPriceApplyLocalPriceInfo(canonicalPrice: canonicalPrice, remoteID: price.remoteID)
+            )
         }
 
         return result
@@ -802,7 +979,7 @@ nonisolated private struct ProductPriceApplyPlanBuilder {
         if summary.conflicts > 0 {
             reasons.append(.conflicts)
         }
-        if summary.included == 0 {
+        if summary.included == 0 && summary.remoteIdentityLinks == 0 {
             reasons.append(.noApplicableRows)
         }
 

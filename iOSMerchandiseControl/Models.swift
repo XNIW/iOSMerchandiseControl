@@ -119,6 +119,8 @@ final class Product {
 
 @Model
 final class ProductPrice {
+    var remoteID: UUID?
+
     var type: PriceType
     var price: Double
     var effectiveAt: Date
@@ -131,6 +133,7 @@ final class ProductPrice {
     var product: Product?
 
     init(
+        remoteID: UUID? = nil,
         type: PriceType,
         price: Double,
         effectiveAt: Date = Date(),
@@ -139,6 +142,7 @@ final class ProductPrice {
         createdAt: Date = Date(),
         product: Product? = nil
     ) {
+        self.remoteID = remoteID
         self.type = type
         self.price = price
         self.effectiveAt = effectiveAt

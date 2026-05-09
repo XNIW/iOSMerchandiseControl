@@ -304,6 +304,7 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
 
     private func localPrice(
         localID: String = "price-1",
+        remoteID: UUID? = nil,
         productRemoteID: UUID? = nil,
         productBarcode: String = "100",
         type: String = "purchase",
@@ -313,6 +314,7 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
     ) -> ProductPricePushDryRunLocalPrice {
         ProductPricePushDryRunLocalPrice(
             localID: localID,
+            remoteID: remoteID,
             productLocalID: productBarcode,
             productRemoteID: productRemoteID ?? uuid(201),
             productBarcode: productBarcode,

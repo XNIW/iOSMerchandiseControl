@@ -1600,9 +1600,16 @@ struct DatabaseView: View {
         let secondProductName: String
         let purchasePrice: Double?
         let retailPrice: Double?
+        let oldPurchasePrice: Double?
+        let oldRetailPrice: Double?
         let stockQuantity: Double?
         let supplierName: String
         let categoryName: String
+    }
+
+    private struct ExportedProductPriceSummary {
+        let current: Double?
+        let previous: Double?
     }
 
     // filtro in memoria sui prodotti, come facevi in Compose
@@ -2039,6 +2046,8 @@ struct DatabaseView: View {
             "secondProductName",
             "purchasePrice",
             "retailPrice",
+            "oldPurchasePrice",
+            "oldRetailPrice",
             "stockQuantity",
             "supplierName",
             "categoryName"
@@ -2088,16 +2097,26 @@ struct DatabaseView: View {
                 worksheet.write(.number(retail), [row, 5])
             }
 
-            // 6: stockQuantity (numero)
-            if let stock = product.stockQuantity {
-                worksheet.write(.number(stock), [row, 6])
+            // 6: oldPurchasePrice (numero)
+            if let oldPurchase = product.oldPurchasePrice {
+                worksheet.write(.number(oldPurchase), [row, 6])
             }
 
-            // 7: supplierName
-            worksheet.write(.string(product.supplierName), [row, 7])
+            // 7: oldRetailPrice (numero)
+            if let oldRetail = product.oldRetailPrice {
+                worksheet.write(.number(oldRetail), [row, 7])
+            }
 
-            // 8: categoryName
-            worksheet.write(.string(product.categoryName), [row, 8])
+            // 8: stockQuantity (numero)
+            if let stock = product.stockQuantity {
+                worksheet.write(.number(stock), [row, 8])
+            }
+
+            // 9: supplierName
+            worksheet.write(.string(product.supplierName), [row, 9])
+
+            // 10: categoryName
+            worksheet.write(.string(product.categoryName), [row, 10])
         }
 
         workbook.close()
@@ -2161,6 +2180,8 @@ struct DatabaseView: View {
             "secondProductName",
             "purchasePrice",
             "retailPrice",
+            "oldPurchasePrice",
+            "oldRetailPrice",
             "stockQuantity",
             "supplierName",
             "categoryName"
@@ -2183,12 +2204,18 @@ struct DatabaseView: View {
             if let retail = product.retailPrice {
                 productsSheet.write(.number(retail), [row, 5])
             }
+            if let oldPurchase = product.oldPurchasePrice {
+                productsSheet.write(.number(oldPurchase), [row, 6])
+            }
+            if let oldRetail = product.oldRetailPrice {
+                productsSheet.write(.number(oldRetail), [row, 7])
+            }
             if let stock = product.stockQuantity {
-                productsSheet.write(.number(stock), [row, 6])
+                productsSheet.write(.number(stock), [row, 8])
             }
 
-            productsSheet.write(.string(product.supplierName), [row, 7])
-            productsSheet.write(.string(product.categoryName), [row, 8])
+            productsSheet.write(.string(product.supplierName), [row, 9])
+            productsSheet.write(.string(product.categoryName), [row, 10])
         }
 
         let suppliersSheet = workbook.addWorksheet(name: "Suppliers")
@@ -2254,18 +2281,62 @@ struct DatabaseView: View {
         )
 
         return try context.fetch(descriptor).map { product in
-            ExportedProductRow(
+            let purchaseSummary = priceSummary(
+                for: product,
+                type: .purchase,
+                fallbackCurrentPrice: product.purchasePrice
+            )
+            let retailSummary = priceSummary(
+                for: product,
+                type: .retail,
+                fallbackCurrentPrice: product.retailPrice
+            )
+
+            return ExportedProductRow(
                 barcode: product.barcode,
                 itemNumber: product.itemNumber ?? "",
                 productName: product.productName ?? "",
                 secondProductName: product.secondProductName ?? "",
-                purchasePrice: product.purchasePrice,
-                retailPrice: product.retailPrice,
+                purchasePrice: purchaseSummary.current,
+                retailPrice: retailSummary.current,
+                oldPurchasePrice: purchaseSummary.previous,
+                oldRetailPrice: retailSummary.previous,
                 stockQuantity: product.stockQuantity,
                 supplierName: resolvedSupplierName(for: product),
                 categoryName: resolvedCategoryName(for: product)
             )
         }
+    }
+
+    private func priceSummary(
+        for product: Product,
+        type: PriceType,
+        fallbackCurrentPrice: Double?
+    ) -> ExportedProductPriceSummary {
+        let history = (resolvedCurrentProduct(for: product)?.priceHistory ?? product.priceHistory)
+            .filter { $0.type == type }
+            .sorted { lhs, rhs in
+                if lhs.effectiveAt != rhs.effectiveAt {
+                    return lhs.effectiveAt > rhs.effectiveAt
+                }
+                return lhs.createdAt > rhs.createdAt
+            }
+
+        guard let latest = history.first else {
+            return ExportedProductPriceSummary(
+                current: fallbackCurrentPrice,
+                previous: nil
+            )
+        }
+
+        let previous = history.dropFirst().first {
+            $0.effectiveAt < latest.effectiveAt
+        }?.price
+
+        return ExportedProductPriceSummary(
+            current: latest.price,
+            previous: previous
+        )
     }
 
     private func resolvedSupplierName(for product: Product) -> String {

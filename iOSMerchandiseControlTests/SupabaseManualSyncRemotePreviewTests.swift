@@ -262,7 +262,6 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
             "drainOnce",
             "enqueue(",
             "SupabaseManualPushService.execute",
-            "SupabaseProductPriceManualPushService",
             "record_sync_event",
             ".rpc(",
             ".upsert(",

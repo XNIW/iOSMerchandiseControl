@@ -28,8 +28,9 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         XCTAssertEqual(plan.summary.remoteRead, 1)
         XCTAssertEqual(plan.summary.included, 0)
         XCTAssertEqual(plan.summary.skippedExisting, 1)
+        XCTAssertEqual(plan.summary.remoteIdentityLinks, 1)
         XCTAssertEqual(plan.summary.conflicts, 0)
-        XCTAssertFalse(plan.isApplyAllowed)
+        XCTAssertTrue(plan.isApplyAllowed)
     }
 
     func testSameLogicalKeyWithDifferentCanonicalPriceIsConflict() throws {
@@ -43,6 +44,27 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
             ],
             localPrices: [
                 localPrice(barcode: "100", price: 12.340)
+            ]
+        )
+
+        XCTAssertEqual(plan.summary.included, 0)
+        XCTAssertEqual(plan.summary.conflicts, 1)
+        XCTAssertTrue(plan.blockReasons.contains(.conflicts))
+        XCTAssertFalse(plan.isApplyAllowed)
+    }
+
+    func testDuplicateLocalProductPricesSameKeySamePriceAreConflict() throws {
+        let productID = uuid(215)
+        let plan = makePlan(
+            remoteRows: [
+                remotePrice(productID: productID, price: 12.34)
+            ],
+            localProducts: [
+                localProduct(remoteID: productID, barcode: "100")
+            ],
+            localPrices: [
+                localPrice(barcode: "100", price: 12.34),
+                localPrice(barcode: "100", price: 12.34)
             ]
         )
 
@@ -90,8 +112,9 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
 
         XCTAssertEqual(plan.summary.included, 0)
         XCTAssertEqual(plan.summary.skippedExisting, 1)
+        XCTAssertEqual(plan.summary.remoteIdentityLinks, 1)
         XCTAssertEqual(plan.summary.invalid, 0)
-        XCTAssertFalse(plan.isApplyAllowed)
+        XCTAssertTrue(plan.isApplyAllowed)
     }
 
     func testInvalidEffectiveAtIsInvalid() {
@@ -159,6 +182,24 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         XCTAssertFalse(plan.isApplyAllowed)
     }
 
+    func testDuplicateRemoteLogicalRowsWithSameCanonicalPriceConflict() {
+        let productID = uuid(216)
+        let plan = makePlan(
+            remoteRows: [
+                remotePrice(id: uuid(501), productID: productID, price: 2.5),
+                remotePrice(id: uuid(502), productID: productID, price: 2.5)
+            ],
+            localProducts: [
+                localProduct(remoteID: productID, barcode: "100")
+            ]
+        )
+
+        XCTAssertEqual(plan.summary.included, 1)
+        XCTAssertEqual(plan.summary.conflicts, 1)
+        XCTAssertTrue(plan.blockReasons.contains(.conflicts))
+        XCTAssertFalse(plan.isApplyAllowed)
+    }
+
     func testPartialTruncatedAndSourceErrorBlockApply() {
         let sourceStates: [ProductPriceApplySourceState] = [
             ProductPriceApplySourceState(partial: true),
@@ -213,6 +254,59 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         XCTAssertEqual(first.skippedExisting, 0)
         XCTAssertEqual(second.inserted, 0)
         XCTAssertEqual(second.skippedExisting, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 1)
+    }
+
+    func testApplyPersistsRemoteRowIDOnInsertedProductPrice() throws {
+        let context = try makeContext()
+        let productID = uuid(213)
+        let remoteRowID = uuid(413)
+        try insertProduct(context: context, barcode: "TASK085-REMOTE-213", remoteID: productID)
+        let plan = try service.prepareApplyPlan(
+            remoteRows: [remotePrice(id: remoteRowID, productID: productID)],
+            context: context,
+            sessionSnapshot: session
+        )
+
+        let result = try service.apply(plan: plan, context: context, currentSessionSnapshot: session)
+        let prices = try context.fetch(FetchDescriptor<ProductPrice>())
+
+        XCTAssertEqual(result.inserted, 1)
+        XCTAssertEqual(result.remoteIdentityLinked, 0)
+        XCTAssertEqual(prices.count, 1)
+        XCTAssertEqual(prices.first?.remoteID, remoteRowID)
+    }
+
+    func testApplyLinksExistingProductPriceRemoteIDWithoutDuplicate() throws {
+        let context = try makeContext()
+        let productID = uuid(214)
+        let remoteRowID = uuid(414)
+        let product = try insertProduct(context: context, barcode: "TASK085-LINK-214", remoteID: productID)
+        let existing = ProductPrice(
+            type: .purchase,
+            price: 2.5,
+            effectiveAt: try date("2026-05-01 10:30:00"),
+            product: product
+        )
+        context.insert(existing)
+        try context.save()
+
+        let plan = try service.prepareApplyPlan(
+            remoteRows: [remotePrice(id: remoteRowID, productID: productID)],
+            context: context,
+            sessionSnapshot: session
+        )
+
+        XCTAssertEqual(plan.summary.included, 0)
+        XCTAssertEqual(plan.summary.remoteIdentityLinks, 1)
+        XCTAssertTrue(plan.isApplyAllowed)
+
+        let result = try service.apply(plan: plan, context: context, currentSessionSnapshot: session)
+
+        XCTAssertEqual(result.inserted, 0)
+        XCTAssertEqual(result.remoteIdentityLinked, 1)
+        XCTAssertEqual(result.skippedExisting, 1)
+        XCTAssertEqual(existing.remoteID, remoteRowID)
         XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 1)
     }
 

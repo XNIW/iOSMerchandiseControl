@@ -94,6 +94,17 @@ final class SupabaseProductPricePushDryRunServiceTests: XCTestCase {
         XCTAssertEqual(plan.candidates.map { $0.productBarcode }, ["100", "200"])
     }
 
+    func testLinkedLocalRemoteIDIsNotPushedAgain() {
+        let plan = makePlan(localPrices: [
+            localPrice(remoteID: uuid(301), productRemoteID: uuid(201), productBarcode: "100"),
+            localPrice(localID: "new", productRemoteID: uuid(202), productBarcode: "200")
+        ])
+
+        XCTAssertEqual(plan.summary.localPriceCount, 2)
+        XCTAssertEqual(plan.summary.readyCandidates, 1)
+        XCTAssertEqual(plan.candidates.map(\.productBarcode), ["200"])
+    }
+
     func testRemoteSameKeySamePriceIsAlreadyPresent() {
         let plan = makePlan(remoteRows: [
             remotePrice(productID: uuid(201), price: 12.3404)
@@ -359,6 +370,7 @@ final class SupabaseProductPricePushDryRunServiceTests: XCTestCase {
 
     private func localPrice(
         localID: String = "price-1",
+        remoteID: UUID? = nil,
         productRemoteID: UUID? = UUID(uuidString: "00000000-0000-0000-0000-000000000201")!,
         productBarcode: String = "100",
         type: String = "purchase",
@@ -370,6 +382,7 @@ final class SupabaseProductPricePushDryRunServiceTests: XCTestCase {
     ) -> ProductPricePushDryRunLocalPrice {
         ProductPricePushDryRunLocalPrice(
             localID: localID,
+            remoteID: remoteID,
             productLocalID: productBarcode,
             productRemoteID: productRemoteID,
             productBarcode: productBarcode,

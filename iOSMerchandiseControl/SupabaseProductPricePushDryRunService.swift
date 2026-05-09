@@ -39,6 +39,7 @@ nonisolated struct ProductPricePushDryRunLocalProduct: Sendable, Equatable {
 
 nonisolated struct ProductPricePushDryRunLocalPrice: Sendable, Equatable {
     let localID: String
+    let remoteID: UUID?
     let productLocalID: String
     let productRemoteID: UUID?
     let productBarcode: String
@@ -283,6 +284,9 @@ nonisolated struct SupabaseProductPricePushDryRunEngine: Sendable {
         var excludedInvalidLocal: [ProductPricePushDryRunLine] = []
 
         for price in input.localSnapshot.prices {
+            guard price.remoteID == nil else {
+                continue
+            }
             guard let productID = price.productRemoteID else {
                 blockedNoRemoteID.append(blockedLine(price: price, reason: .blockedNoRemoteID, detail: "missing product remoteID"))
                 continue
@@ -850,6 +854,7 @@ struct SupabaseProductPricePushDryRunService {
 
             return ProductPricePushDryRunLocalPrice(
                 localID: "price-\(index)-\(product.barcode)-\(price.type.rawValue)",
+                remoteID: price.remoteID,
                 productLocalID: product.barcode,
                 productRemoteID: product.remoteID,
                 productBarcode: product.barcode,
