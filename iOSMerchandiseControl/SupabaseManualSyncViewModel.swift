@@ -187,11 +187,18 @@ nonisolated enum SupabaseManualSyncReviewPrimaryActionID: Equatable, Sendable {
     case updateDevice
     case sendCloudChanges
     case registerCloudActivity
+    case recheck
+    case signInAgain
+    case openDatabase
 }
 
 nonisolated struct SupabaseManualSyncReviewSheetState: Equatable, Sendable {
     var title: String
     var subtitle: String
+    var summaryTitle: String = ""
+    var summaryMessage: String = ""
+    var summarySystemImage: String = "checkmark.circle.fill"
+    var summaryTone: SupabaseManualSyncReviewSectionTone = .neutral
     var sections: [SupabaseManualSyncReviewSectionState]
     var footerMessage: String
     var primaryActionID: SupabaseManualSyncReviewPrimaryActionID
@@ -401,6 +408,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private let localApplyService: SupabasePullApplyService?
     private let localApplyContext: ModelContext?
     private let isLocalApplyAuthenticated: (@MainActor () -> Bool)?
+    private let currentLocalApplyOwnerID: (@MainActor () -> UUID?)?
     private let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)?
     private let currentCatalogPushOwnerID: (@MainActor () -> UUID?)?
     private let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)?
@@ -409,6 +417,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private let currentActivityRegistrationOwnerID: (@MainActor () -> UUID?)?
     private var lastStartedMode: SupabaseManualSyncRunMode?
     private var stagedCatalogPushPlan: ManualPushPlan?
+    private var stagedLocalApplyOwnerID: UUID?
+    private var hasStagedLocalApplyOwnerID = false
     private var canApplyCatalogChanges = false
     private var canApplyProductPriceChanges = false
     private var stagedProductPriceApplyPlan: ProductPriceApplyPlan?
@@ -442,6 +452,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         localApplyService: SupabasePullApplyService? = nil,
         localApplyContext: ModelContext? = nil,
         isLocalApplyAuthenticated: (@MainActor () -> Bool)? = nil,
+        currentLocalApplyOwnerID: (@MainActor () -> UUID?)? = nil,
         catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = nil,
         currentCatalogPushOwnerID: (@MainActor () -> UUID?)? = nil,
         productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = nil,
@@ -456,6 +467,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         self.localApplyService = localApplyService
         self.localApplyContext = localApplyContext
         self.isLocalApplyAuthenticated = isLocalApplyAuthenticated
+        self.currentLocalApplyOwnerID = currentLocalApplyOwnerID
         self.catalogPushProvider = catalogPushProvider
         self.currentCatalogPushOwnerID = currentCatalogPushOwnerID
         self.productPriceProvider = productPriceProvider
@@ -709,6 +721,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             )
             if let preview, remotePreviewStaging?.stagedPreviewForLocalApply != nil {
                 do {
+                    try validateLocalApplyOwnerStillCurrent()
                     let plan = try prepareLocalApplyPlan(from: preview)
                     guard let context = localApplyContext,
                           let service = localApplyService else {
@@ -794,6 +807,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
         do {
             _ = try prepareLocalApplyPlan(from: preview)
+            stagedLocalApplyOwnerID = currentLocalApplyOwnerID?()
+            hasStagedLocalApplyOwnerID = true
             canApplyCatalogChanges = true
             applyBlockedReason = nil
         } catch {
@@ -813,8 +828,19 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             preview: preview,
             context: context,
             options: SupabasePullApplyOptions(),
-            isAuthenticated: isLocalApplyAuthenticated?() ?? authPresentationContext.isSignedIn
+            isAuthenticated: isLocalApplyAuthenticated?() ?? authPresentationContext.isSignedIn,
+            accountGuard: SupabasePullApplyAccountGuard(
+                currentUserID: currentLocalApplyOwnerID?(),
+                lastLinkedUserID: stagedLocalApplyOwnerID ?? currentLocalApplyOwnerID?()
+            )
         )
+    }
+
+    private func validateLocalApplyOwnerStillCurrent() throws {
+        guard hasStagedLocalApplyOwnerID else { return }
+        guard currentLocalApplyOwnerID?() == stagedLocalApplyOwnerID else {
+            throw SupabasePullApplyError.previewStale
+        }
     }
 
     private func invalidateLocalApplyStaging(
@@ -822,6 +848,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         clearSummary: Bool = false
     ) {
         remotePreviewStaging?.clearStagedPreviewForLocalApply()
+        stagedLocalApplyOwnerID = nil
+        hasStagedLocalApplyOwnerID = false
         canApplyCatalogChanges = false
         applyBlockedReason = reason
         if clearSummary {
@@ -1710,7 +1738,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private func makeProductPriceSummary(applyPlan plan: ProductPriceApplyPlan) -> SupabaseManualSyncProductPriceSummary {
         let sourceBlocked = (plan.summary.partial ? 1 : 0)
             + (plan.summary.truncated ? 1 : 0)
-            + (plan.summary.sourceError == nil ? 0 : 1)
+        let accessOrSyncFailed = plan.summary.sourceError == nil ? 0 : 1
         return SupabaseManualSyncProductPriceSummary(
             remoteFound: plan.summary.remoteRead,
             localFound: productPriceSummary.localFound,
@@ -1720,7 +1748,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             pushed: 0,
             skippedDuplicate: plan.summary.skippedExisting,
             skippedConflict: plan.summary.conflicts,
-            failed: 0,
+            failed: accessOrSyncFailed,
             blocked: plan.summary.unmapped + plan.summary.invalid + sourceBlocked
         )
     }
@@ -1742,6 +1770,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
     private func makeProductPriceSummary(pushPlan plan: ProductPricePushDryRunPlan) -> SupabaseManualSyncProductPriceSummary {
         let unsafeRemoteDedupeBlock = plan.isRemoteDedupeSafe ? 0 : max(1, plan.summary.localPriceCount)
+        let accessOrSyncFailed = plan.remoteDedupeStatus.accessOrSyncFailureCount
         return SupabaseManualSyncProductPriceSummary(
             remoteFound: productPriceSummary.remoteFound,
             localFound: plan.summary.localPriceCount,
@@ -1751,7 +1780,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             pushed: 0,
             skippedDuplicate: plan.summary.alreadyPresentRemote + plan.summary.localDuplicateSameKey,
             skippedConflict: plan.summary.conflictSameKeyDifferentPrice + plan.summary.localConflictSameKeyDifferentPrice,
-            failed: 0,
+            failed: accessOrSyncFailed,
             blocked: plan.summary.blockedTotal + plan.summary.excludedInvalidLocal + unsafeRemoteDedupeBlock
         )
     }
@@ -1827,7 +1856,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return L("options.supabase.manualSync.apply.blocked.incompleteCheck")
         case .conflictsPresent, .localDuplicateBarcode:
             return L("options.supabase.manualSync.apply.blocked.needsAttention")
-        case .missingApplicablePayload, .missingRequiredField, .invalidPrice, .invalidStockQuantity:
+        case .missingApplicablePayload, .missingRequiredField, .invalidLocalData, .invalidPrice, .invalidStockQuantity:
             return L("options.supabase.manualSync.apply.blocked.invalidData")
         case .previewStale:
             return L("options.supabase.manualSync.apply.blocked.stale")
@@ -2799,6 +2828,11 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     ) -> SupabaseManualSyncReviewSheetState {
         let counts = summary.countsSnapshot
         let aggregateCounts = remotePreviewSummary.safeAggregateCounts
+        let plan = makeCloudReviewPlan(
+            counts: counts,
+            aggregateCounts: aggregateCounts,
+            remotePreviewSummary: remotePreviewSummary
+        )
         var sections: [SupabaseManualSyncReviewSectionState] = [
             reviewSection(
                 id: .cloudToDevice,
@@ -2829,45 +2863,34 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             )
         ]
 
-        if hasAttentionSignals(aggregateCounts) {
+        if plan.state != .ready || hasAttentionSignals(aggregateCounts) {
             sections.append(
                 reviewSection(
                     id: .attention,
                     titleKey: "options.supabase.manualSync.review.attention.title",
-                    messageKey: "options.supabase.manualSync.review.attention.message",
+                    message: syncPlanAttentionMessage(plan),
                     systemImage: "exclamationmark.triangle.fill",
-                    tone: .attention
+                    tone: plan.state == .blocked || plan.state == .failed ? .blocked : .attention
                 )
             )
         }
         appendActivityRegistrationSectionIfNeeded(to: &sections)
+        sections = orderReviewSections(sections, plan: plan)
 
         let title = L("options.supabase.manualSync.review.title")
         let subtitle = L("options.supabase.manualSync.review.subtitle")
         let footerMessage = reviewFooterMessage(remotePreviewSummary: remotePreviewSummary)
-        let primaryActionID: SupabaseManualSyncReviewPrimaryActionID
+        let preferredPrimaryActionID: SupabaseManualSyncReviewPrimaryActionID
         if canApplyLocalChanges || isApplyingLocalChanges {
-            primaryActionID = .updateDevice
+            preferredPrimaryActionID = .updateDevice
         } else if activityRegistrationPhase.hasRegisterAction {
-            primaryActionID = .registerCloudActivity
+            preferredPrimaryActionID = .registerCloudActivity
         } else {
-            primaryActionID = .updateDevice
+            preferredPrimaryActionID = .none
         }
+        let primaryActionID = reviewPrimaryActionID(plan: plan, readyAction: preferredPrimaryActionID)
         let primaryActionTitle = reviewPrimaryActionTitle(for: primaryActionID)
         let primaryActionSystemImage = reviewPrimaryActionSystemImage(for: primaryActionID)
-        let primaryActionIsLoading = primaryActionID == .updateDevice
-            ? isApplyingLocalChanges
-            : isRegisteringActivities
-        let primaryActionIsEnabled: Bool = {
-            switch primaryActionID {
-            case .updateDevice:
-                return canApplyLocalChanges && !isApplyingLocalChanges && !isRegisteringActivities
-            case .registerCloudActivity:
-                return activityRegistrationPhase.hasRegisterAction && !isRegisteringActivities && !isApplyingLocalChanges
-            case .sendCloudChanges, .none:
-                return false
-            }
-        }()
         let secondaryActionTitle = L("options.supabase.manualSync.review.action.cancel")
         let accessibilityLabel = ([title, subtitle] + sections.flatMap { [$0.title, $0.message] } + [footerMessage])
             .joined(separator: ". ")
@@ -2875,13 +2898,17 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         return SupabaseManualSyncReviewSheetState(
             title: title,
             subtitle: subtitle,
+            summaryTitle: syncPlanSummaryTitle(plan),
+            summaryMessage: syncPlanSummaryMessage(plan),
+            summarySystemImage: syncPlanSummarySystemImage(plan),
+            summaryTone: syncPlanSummaryTone(plan),
             sections: sections,
             footerMessage: footerMessage,
             primaryActionID: primaryActionID,
             primaryActionTitle: primaryActionTitle,
             primaryActionSystemImage: primaryActionSystemImage,
-            primaryActionIsEnabled: primaryActionIsEnabled,
-            primaryActionIsLoading: primaryActionIsLoading,
+            primaryActionIsEnabled: reviewPrimaryActionIsEnabled(primaryActionID),
+            primaryActionIsLoading: reviewPrimaryActionIsLoading(primaryActionID),
             secondaryActionTitle: secondaryActionTitle,
             accessibilityLabel: accessibilityLabel
         )
@@ -2893,33 +2920,26 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     ) -> SupabaseManualSyncReviewSheetState {
         let title = L("options.supabase.manualSync.push.review.title")
         let subtitle = catalogPushReviewSubtitle(phase: phase)
-        let sections = catalogPushReviewSections(phase: phase, summary: summary)
+        let plan = makeCatalogPushReviewPlan(phase: phase, summary: summary)
+        let sections = orderReviewSections(
+            catalogPushReviewSections(phase: phase, summary: summary, plan: plan),
+            plan: plan
+        )
         let footerMessage = catalogPushReviewFooter(phase: phase)
-        let primaryID = catalogPushReviewPrimaryActionID(phase: phase)
-        let primaryTitle: String
-        let primarySystemImage: String
-        switch primaryID {
-        case .sendCloudChanges:
-            primaryTitle = isSendingCatalogChanges
-                ? L("options.supabase.manualSync.push.review.action.sending")
-                : L("options.supabase.manualSync.push.review.action.send")
-            primarySystemImage = "icloud.and.arrow.up"
-        case .updateDevice:
-            primaryTitle = L("options.supabase.manualSync.review.action.updateDevice")
-            primarySystemImage = "arrow.down.circle"
-        case .registerCloudActivity:
-            primaryTitle = reviewPrimaryActionTitle(for: .registerCloudActivity)
-            primarySystemImage = reviewPrimaryActionSystemImage(for: .registerCloudActivity)
-        case .none:
-            primaryTitle = ""
-            primarySystemImage = "icloud.and.arrow.up"
-        }
+        let readyPrimaryID = catalogPushReviewPrimaryActionID(phase: phase)
+        let primaryID = reviewPrimaryActionID(plan: plan, readyAction: readyPrimaryID)
+        let primaryTitle = reviewPrimaryActionTitle(for: primaryID)
+        let primarySystemImage = reviewPrimaryActionSystemImage(for: primaryID)
         let accessibilityLabel = ([title, subtitle] + sections.flatMap { [$0.title, $0.message] } + [footerMessage])
             .joined(separator: ". ")
 
         return SupabaseManualSyncReviewSheetState(
             title: title,
             subtitle: subtitle,
+            summaryTitle: syncPlanSummaryTitle(plan),
+            summaryMessage: syncPlanSummaryMessage(plan),
+            summarySystemImage: syncPlanSummarySystemImage(plan),
+            summaryTone: syncPlanSummaryTone(plan),
             sections: sections,
             footerMessage: footerMessage,
             primaryActionID: primaryID,
@@ -2947,9 +2967,19 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
     private func catalogPushReviewSections(
         phase: SupabaseManualSyncCatalogPushPhase,
-        summary: SupabaseManualSyncCatalogPushSummary
+        summary: SupabaseManualSyncCatalogPushSummary,
+        plan: SupabaseSyncPlan
     ) -> [SupabaseManualSyncReviewSectionState] {
         var sections: [SupabaseManualSyncReviewSectionState] = []
+        if plan.state != .ready {
+            sections.append(reviewSection(
+                id: .attention,
+                titleKey: "options.supabase.manualSync.review.attention.title",
+                message: syncPlanAttentionMessage(plan),
+                systemImage: "exclamationmark.triangle.fill",
+                tone: plan.state == .blocked || plan.state == .failed ? .blocked : .attention
+            ))
+        }
         if summary.hasReadyChanges {
             sections.append(reviewSection(
                 id: .readyToSend,
@@ -3105,19 +3135,25 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
     private func makeActivityRegistrationReviewSheetState() -> SupabaseManualSyncReviewSheetState? {
         guard activityRegistrationPhase.shouldShowReviewSection else { return nil }
+        let plan = makeActivityRegistrationReviewPlan()
         let title = L("options.supabase.manualSync.activity.review.title")
         let subtitle = L("options.supabase.manualSync.activity.review.subtitle")
-        let sections = [activityRegistrationSection()]
+        let sections = orderReviewSections([activityRegistrationSection()], plan: plan)
         let footerMessage = activityRegistrationFooterMessage()
-        let primaryID: SupabaseManualSyncReviewPrimaryActionID = activityRegistrationPhase.hasRegisterAction
+        let readyPrimaryID: SupabaseManualSyncReviewPrimaryActionID = activityRegistrationPhase.hasRegisterAction
             ? .registerCloudActivity
             : .none
+        let primaryID = reviewPrimaryActionID(plan: plan, readyAction: readyPrimaryID)
         let accessibilityLabel = ([title, subtitle] + sections.flatMap { [$0.title, $0.message] } + [footerMessage])
             .joined(separator: ". ")
 
         return SupabaseManualSyncReviewSheetState(
             title: title,
             subtitle: subtitle,
+            summaryTitle: syncPlanSummaryTitle(plan),
+            summaryMessage: syncPlanSummaryMessage(plan),
+            summarySystemImage: syncPlanSummarySystemImage(plan),
+            summaryTone: syncPlanSummaryTone(plan),
             sections: sections,
             footerMessage: footerMessage,
             primaryActionID: primaryID,
@@ -3212,6 +3248,260 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         }
     }
 
+    private func makeCloudReviewPlan(
+        counts: SupabaseManualSyncPrivacyCounts,
+        aggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts,
+        remotePreviewSummary: SupabaseManualSyncRemotePreviewSummary
+    ) -> SupabaseSyncPlan {
+        var counters = SupabaseSyncPlanCounters(
+            toApply: canApplyLocalChanges
+                ? aggregateCounts.newProductCount
+                    + aggregateCounts.updateCandidateCount
+                    + productPriceSummary.readyToApply
+                : 0,
+            skipped: productPriceSummary.skippedDuplicate,
+            reviewNeeded: aggregateCounts.conflictCount
+                + aggregateCounts.tombstoneCount
+                + aggregateCounts.sourceErrorCount
+                + productPriceSummary.skippedConflict,
+            blocked: productPriceSummary.blocked,
+            failed: productPriceSummary.failed
+        )
+        if remotePreviewSummary.hasRemoteSignals,
+           !canApplyLocalChanges,
+           counters.reviewNeeded == 0,
+           counters.blocked == 0,
+           counters.failed == 0 {
+            counters.reviewNeeded = 1
+        }
+        let reasons = syncPlanBlockingReasons(
+            counters: counters,
+            hasInvalidData: applyBlockedReason == L("options.supabase.manualSync.apply.blocked.invalidData"),
+            hasAccessIssue: applyBlockedReason == L("options.supabase.manualSync.apply.blocked.session")
+        )
+        return SupabaseSyncPlanResolver.makePlan(
+            counters: counters,
+            requestedSections: [
+                .cloud,
+                .device,
+                .prices
+            ] + (activityRegistrationPhase.shouldShowReviewSection ? [.activity] : []),
+            blockingReasons: reasons,
+            planFingerprint: [
+                "\(remotePreviewSummary.safeAggregateCounts.reviewSignalCount)",
+                "\(counts.pendingQueuedCloudOperationCount)",
+                "\(productPriceSummary.readyToApply)",
+                "\(productPriceSummary.readyToPush)"
+            ].joined(separator: "|")
+        )
+    }
+
+    private func makeCatalogPushReviewPlan(
+        phase: SupabaseManualSyncCatalogPushPhase,
+        summary: SupabaseManualSyncCatalogPushSummary
+    ) -> SupabaseSyncPlan {
+        var explicitState: SupabaseSyncPlanState?
+        switch phase {
+        case .failed, .sendFailed:
+            explicitState = .failed
+        case .partial:
+            explicitState = .partial
+        case .stale:
+            explicitState = .stale
+        case .blocked, .sendBlocked:
+            explicitState = .blocked
+        case .ready, .sending, .succeeded, .succeededNeedsCheck, .noChanges, .idle, .checking:
+            explicitState = nil
+        }
+        let counters = SupabaseSyncPlanCounters(
+            toApply: summary.readyCount + productPriceSummary.readyToPush,
+            applied: summary.resultStatus == .completed || summary.resultStatus == .completedBaselineRefreshFailed
+                ? summary.readyCount
+                : 0,
+            skipped: productPriceSummary.skippedDuplicate,
+            reviewNeeded: summary.warningCount + summary.futureOnlyCount + productPriceSummary.skippedConflict,
+            blocked: summary.blockerCount + productPriceSummary.blocked,
+            failed: productPriceSummary.failed
+        )
+        return SupabaseSyncPlanResolver.makePlan(
+            counters: counters,
+            requestedSections: [
+                .device,
+                .prices
+            ] + (activityRegistrationPhase.shouldShowReviewSection ? [.activity] : []),
+            blockingReasons: syncPlanBlockingReasons(
+                counters: counters,
+                hasInvalidData: summary.hasBlockers,
+                hasAccessIssue: false
+            ),
+            explicitState: explicitState,
+            planFingerprint: summary.planFingerprint
+        )
+    }
+
+    private func makeActivityRegistrationReviewPlan() -> SupabaseSyncPlan {
+        let snapshot = activityRegistrationSnapshotForCurrentPhase()
+        let explicitState: SupabaseSyncPlanState?
+        if case .finished(let status, _) = activityRegistrationPhase {
+            switch status {
+            case .success, .empty:
+                explicitState = nil
+            case .partialRetryable:
+                explicitState = .partial
+            case .authRequired:
+                explicitState = .failed
+            case .retryableFailure, .cancelled:
+                explicitState = .stale
+            case .blocked:
+                explicitState = .blocked
+            }
+        } else {
+            explicitState = nil
+        }
+        let counters = SupabaseSyncPlanCounters(
+            toApply: snapshot.readyToRegister,
+            applied: activityRegistrationSummaryForCurrentPhase().registered,
+            blocked: snapshot.notRegisterable,
+            stale: snapshot.waiting > 0 && snapshot.readyToRegister == 0 ? 1 : 0
+        )
+        return SupabaseSyncPlanResolver.makePlan(
+            counters: counters,
+            requestedSections: [.activity],
+            blockingReasons: syncPlanBlockingReasons(
+                counters: counters,
+                hasInvalidData: snapshot.notRegisterable > 0,
+                hasAccessIssue: explicitState == .failed
+            ),
+            explicitState: explicitState
+        )
+    }
+
+    private func syncPlanBlockingReasons(
+        counters: SupabaseSyncPlanCounters,
+        hasInvalidData: Bool,
+        hasAccessIssue: Bool
+    ) -> [SupabaseSyncPlanBlockingReason] {
+        var reasons: [SupabaseSyncPlanBlockingReason] = []
+        if hasInvalidData {
+            reasons.append(.invalidLocalData)
+        }
+        if hasAccessIssue || counters.failed > 0 {
+            reasons.append(.accessOrSync)
+        }
+        if counters.reviewNeeded > 0 {
+            reasons.append(.cloudConflict)
+        }
+        if counters.stale > 0 {
+            reasons.append(.changedData)
+        }
+        if reasons.isEmpty, counters.blocked > 0 {
+            reasons.append(.cloudConflict)
+        }
+        return reasons
+    }
+
+    private func orderReviewSections(
+        _ sections: [SupabaseManualSyncReviewSectionState],
+        plan: SupabaseSyncPlan
+    ) -> [SupabaseManualSyncReviewSectionState] {
+        let ranks = Dictionary(
+            uniqueKeysWithValues: plan.sections.enumerated().map { ($0.element.id, $0.offset) }
+        )
+        return sections.sorted {
+            rank(for: $0.id, ranks: ranks) < rank(for: $1.id, ranks: ranks)
+        }
+    }
+
+    private func rank(
+        for id: SupabaseManualSyncReviewSectionID,
+        ranks: [SupabaseSyncPlanSectionID: Int]
+    ) -> Int {
+        switch id {
+        case .attention, .sendAttention, .sendBlocked:
+            return ranks[.attention] ?? 45
+        case .cloudToDevice:
+            return ranks[.cloud] ?? 10
+        case .deviceToCloud, .readyToSend:
+            return ranks[.device] ?? 20
+        case .prices:
+            return ranks[.prices] ?? 30
+        case .activityRegistration:
+            return ranks[.activity] ?? 40
+        case .finalSummary:
+            return 50
+        }
+    }
+
+    private func reviewPrimaryActionID(
+        plan: SupabaseSyncPlan,
+        readyAction: SupabaseManualSyncReviewPrimaryActionID
+    ) -> SupabaseManualSyncReviewPrimaryActionID {
+        switch plan.primaryAction {
+        case .apply:
+            return readyAction
+        case .recheck:
+            return .recheck
+        case .openDatabase:
+            return .openDatabase
+        case .signInAgain:
+            return authPresentationContext.canSignIn ? .signInAgain : .recheck
+        case .none:
+            return .none
+        }
+    }
+
+    private func syncPlanSummaryTitle(_ plan: SupabaseSyncPlan) -> String {
+        L("options.supabase.manualSync.plan.summary.\(plan.state.rawValue).title")
+    }
+
+    private func syncPlanSummaryMessage(_ plan: SupabaseSyncPlan) -> String {
+        if plan.blockingReasons.contains(.invalidLocalData) {
+            return L("options.supabase.manualSync.plan.summary.invalidData.message")
+        }
+        if plan.blockingReasons.contains(.accessOrSync) {
+            return L("options.supabase.manualSync.plan.summary.access.message")
+        }
+        return L("options.supabase.manualSync.plan.summary.\(plan.state.rawValue).message")
+    }
+
+    private func syncPlanAttentionMessage(_ plan: SupabaseSyncPlan) -> String {
+        if plan.blockingReasons.contains(.invalidLocalData) {
+            return L("options.supabase.manualSync.plan.attention.invalidData")
+        }
+        if plan.blockingReasons.contains(.accessOrSync) {
+            return L("options.supabase.manualSync.plan.attention.access")
+        }
+        return L("options.supabase.manualSync.plan.attention.\(plan.state.rawValue)")
+    }
+
+    private func syncPlanSummarySystemImage(_ plan: SupabaseSyncPlan) -> String {
+        switch plan.state {
+        case .ready:
+            return "checkmark.circle.fill"
+        case .needsReview:
+            return "exclamationmark.triangle.fill"
+        case .blocked:
+            return "xmark.octagon.fill"
+        case .stale:
+            return "arrow.clockwise.circle.fill"
+        case .partial:
+            return "exclamationmark.triangle.fill"
+        case .failed:
+            return "wifi.exclamationmark"
+        }
+    }
+
+    private func syncPlanSummaryTone(_ plan: SupabaseSyncPlan) -> SupabaseManualSyncReviewSectionTone {
+        switch plan.state {
+        case .ready:
+            return .success
+        case .needsReview, .stale, .partial:
+            return .attention
+        case .blocked, .failed:
+            return .blocked
+        }
+    }
+
     private func reviewPrimaryActionTitle(
         for primaryID: SupabaseManualSyncReviewPrimaryActionID
     ) -> String {
@@ -3232,6 +3522,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 return L("options.supabase.manualSync.action.retry")
             }
             return L("options.supabase.manualSync.activity.review.action.register")
+        case .recheck:
+            return L("options.supabase.manualSync.action.recheck")
+        case .signInAgain:
+            return L("options.supabase.manualSync.action.signInAgain")
+        case .openDatabase:
+            return L("options.supabase.manualSync.action.openDatabase")
         case .none:
             return ""
         }
@@ -3247,6 +3543,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return "icloud.and.arrow.up"
         case .registerCloudActivity:
             return activityRegistrationPhase.prefersRetryTitle ? "arrow.clockwise.circle.fill" : "checkmark.icloud"
+        case .recheck:
+            return "arrow.clockwise.circle.fill"
+        case .signInAgain:
+            return "person.crop.circle.badge.plus"
+        case .openDatabase:
+            return "shippingbox"
         case .none:
             return "icloud"
         }
@@ -3262,6 +3564,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return !isReviewMutationInProgress
         case .registerCloudActivity:
             return activityRegistrationPhase.hasRegisterAction && !isReviewMutationInProgress
+        case .recheck:
+            return !isReviewMutationInProgress && capabilities.supportsRemoteCloudCheck
+        case .signInAgain:
+            return !isReviewMutationInProgress && authPresentationContext.canSignIn
+        case .openDatabase:
+            return !isReviewMutationInProgress
         case .none:
             return false
         }
@@ -3277,6 +3585,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return isSendingCatalogChanges
         case .registerCloudActivity:
             return isRegisteringActivities
+        case .recheck, .signInAgain, .openDatabase:
+            return false
         case .none:
             return false
         }
@@ -3680,6 +3990,20 @@ private extension ProductPricePushRemoteDedupeStatus {
             return "complete"
         case .unsafePartialRemoteDedupe(let reason):
             return "unsafe:\(reason.rawValue)"
+        }
+    }
+
+    var accessOrSyncFailureCount: Int {
+        switch self {
+        case .notNeeded, .complete:
+            return 0
+        case .unsafePartialRemoteDedupe(let reason):
+            switch reason {
+            case .networkOrPermission, .invalidRemoteRows:
+                return 1
+            case .notNeeded, .complete, .pageBudgetExceeded, .rowBudgetExceeded, .cancelled:
+                return 0
+            }
         }
     }
 }

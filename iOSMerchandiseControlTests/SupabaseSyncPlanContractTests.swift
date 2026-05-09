@@ -1,0 +1,93 @@
+import XCTest
+@testable import iOSMerchandiseControl
+
+final class SupabaseSyncPlanContractTests: XCTestCase {
+    func testStatePrecedenceUsesHighestSeverity() {
+        let plan = SupabaseSyncPlanResolver.makePlan(
+            counters: SupabaseSyncPlanCounters(
+                toApply: 3,
+                reviewNeeded: 4,
+                blocked: 2,
+                stale: 1,
+                failed: 1
+            ),
+            requestedSections: [.cloud, .device]
+        )
+
+        XCTAssertEqual(plan.state, .failed)
+        XCTAssertFalse(plan.canApply)
+        XCTAssertEqual(plan.primaryAction, .recheck)
+        XCTAssertEqual(plan.sections.first?.id, .attention)
+    }
+
+    func testPartialWinsOverStaleBlockedAndReview() {
+        let plan = SupabaseSyncPlanResolver.makePlan(
+            counters: SupabaseSyncPlanCounters(
+                reviewNeeded: 1,
+                blocked: 1,
+                stale: 1
+            ),
+            requestedSections: [.prices],
+            explicitState: .partial
+        )
+
+        XCTAssertEqual(plan.state, .partial)
+        XCTAssertFalse(plan.canApply)
+        XCTAssertEqual(plan.primaryAction, .recheck)
+    }
+
+    func testReadyAllowsApplyAndDoesNotCountSkippedAsApplied() {
+        let plan = SupabaseSyncPlanResolver.makePlan(
+            counters: SupabaseSyncPlanCounters(
+                toApply: 2,
+                applied: 0,
+                skipped: 5
+            ),
+            requestedSections: [.cloud, .prices]
+        )
+
+        XCTAssertEqual(plan.state, .ready)
+        XCTAssertTrue(plan.canApply)
+        XCTAssertEqual(plan.primaryAction, .apply)
+        XCTAssertEqual(plan.counters.applied, 0)
+        XCTAssertEqual(plan.counters.skipped, 5)
+        XCTAssertEqual(plan.sections.map(\.id), [.cloud, .prices])
+    }
+
+    func testReadyWithoutWorkHasNoPrimaryAction() {
+        let plan = SupabaseSyncPlanResolver.makePlan(
+            counters: SupabaseSyncPlanCounters(skipped: 2),
+            requestedSections: [.cloud]
+        )
+
+        XCTAssertEqual(plan.state, .ready)
+        XCTAssertTrue(plan.canApply)
+        XCTAssertEqual(plan.primaryAction, .none)
+    }
+
+    func testBlockedInvalidLocalDataUsesDatabaseAction() {
+        let plan = SupabaseSyncPlanResolver.makePlan(
+            counters: SupabaseSyncPlanCounters(blocked: 1),
+            requestedSections: [.device],
+            blockingReasons: [.invalidLocalData]
+        )
+
+        XCTAssertEqual(plan.state, .blocked)
+        XCTAssertFalse(plan.canApply)
+        XCTAssertEqual(plan.primaryAction, .openDatabase)
+        XCTAssertEqual(plan.blockingReasons, [.invalidLocalData])
+        XCTAssertEqual(plan.sections.map(\.id), [.attention, .device])
+    }
+
+    func testAccessFailureUsesSignInAgainAction() {
+        let plan = SupabaseSyncPlanResolver.makePlan(
+            counters: SupabaseSyncPlanCounters(failed: 1),
+            requestedSections: [.activity],
+            blockingReasons: [.accessOrSync]
+        )
+
+        XCTAssertEqual(plan.state, .failed)
+        XCTAssertEqual(plan.primaryAction, .signInAgain)
+        XCTAssertFalse(plan.canApply)
+    }
+}

@@ -60,6 +60,7 @@ enum SupabaseManualSyncReleaseFactory {
             localApplyService: SupabasePullApplyService(),
             localApplyContext: context,
             isLocalApplyAuthenticated: { authViewModel.isSignedIn },
+            currentLocalApplyOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
             catalogPushProvider: catalogPushProvider,
             currentCatalogPushOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
             productPriceProvider: productPriceProvider,

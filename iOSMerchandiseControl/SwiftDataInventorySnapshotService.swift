@@ -35,6 +35,7 @@ struct SwiftDataInventorySnapshotService {
         var productsByRemoteID: [UUID: LocalProductSnapshot] = [:]
         var productBarcodeCounts: [String: Int] = [:]
         var productRemoteIDCounts: [UUID: Int] = [:]
+        var invalidProductBarcodes = 0
 
         for product in products {
             if let remoteID = product.remoteID {
@@ -42,6 +43,7 @@ struct SwiftDataInventorySnapshotService {
             }
 
             guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(product.barcode) else {
+                invalidProductBarcodes += 1
                 continue
             }
 
@@ -130,7 +132,10 @@ struct SwiftDataInventorySnapshotService {
             duplicateSupplierNames: supplierNames.duplicates,
             duplicateSupplierRemoteIDs: duplicateRemoteIDs(suppliers.compactMap(\.remoteID)),
             duplicateCategoryNames: categoryNames.duplicates,
-            duplicateCategoryRemoteIDs: duplicateRemoteIDs(categories.compactMap(\.remoteID))
+            duplicateCategoryRemoteIDs: duplicateRemoteIDs(categories.compactMap(\.remoteID)),
+            invalidProductBarcodes: invalidProductBarcodes,
+            invalidSupplierNames: supplierNames.invalidCount,
+            invalidCategoryNames: categoryNames.invalidCount
         )
     }
 
@@ -205,12 +210,14 @@ struct SwiftDataInventorySnapshotService {
         }
     }
 
-    private func makeNameDictionary(_ names: [String]) -> (values: [String: String], duplicates: [String]) {
+    private func makeNameDictionary(_ names: [String]) -> (values: [String: String], duplicates: [String], invalidCount: Int) {
         var values: [String: String] = [:]
         var counts: [String: Int] = [:]
+        var invalidCount = 0
 
         for name in names {
             guard let key = SupabasePullPreviewNormalizer.normalizedLookupName(name) else {
+                invalidCount += 1
                 continue
             }
 
@@ -225,7 +232,8 @@ struct SwiftDataInventorySnapshotService {
             duplicates: counts
                 .filter { $0.value > 1 }
                 .map(\.key)
-                .sorted()
+                .sorted(),
+            invalidCount: invalidCount
         )
     }
 

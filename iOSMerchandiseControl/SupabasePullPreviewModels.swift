@@ -351,6 +351,9 @@ nonisolated struct LocalInventorySnapshot: Sendable {
     let duplicateSupplierRemoteIDs: [UUID]
     let duplicateCategoryNames: [String]
     let duplicateCategoryRemoteIDs: [UUID]
+    let invalidProductBarcodes: Int
+    let invalidSupplierNames: Int
+    let invalidCategoryNames: Int
 
     init(
         productsByBarcode: [String: LocalProductSnapshot],
@@ -368,7 +371,10 @@ nonisolated struct LocalInventorySnapshot: Sendable {
         duplicateSupplierNames: [String],
         duplicateSupplierRemoteIDs: [UUID] = [],
         duplicateCategoryNames: [String],
-        duplicateCategoryRemoteIDs: [UUID] = []
+        duplicateCategoryRemoteIDs: [UUID] = [],
+        invalidProductBarcodes: Int = 0,
+        invalidSupplierNames: Int = 0,
+        invalidCategoryNames: Int = 0
     ) {
         self.productsByBarcode = productsByBarcode
         self.productsByRemoteID = productsByRemoteID
@@ -386,6 +392,9 @@ nonisolated struct LocalInventorySnapshot: Sendable {
         self.duplicateSupplierRemoteIDs = duplicateSupplierRemoteIDs
         self.duplicateCategoryNames = duplicateCategoryNames
         self.duplicateCategoryRemoteIDs = duplicateCategoryRemoteIDs
+        self.invalidProductBarcodes = invalidProductBarcodes
+        self.invalidSupplierNames = invalidSupplierNames
+        self.invalidCategoryNames = invalidCategoryNames
     }
 }
 

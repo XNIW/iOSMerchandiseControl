@@ -2961,6 +2961,15 @@ private struct SupabaseManualSyncReleaseCard: View {
             isSendConfirmationPresented = true
         case .registerCloudActivity:
             isActivityRegistrationConfirmationPresented = true
+        case .recheck:
+            isReviewSheetPresented = false
+            startRun(for: .checkCloud)
+        case .signInAgain:
+            isReviewSheetPresented = false
+            authViewModel.signInWithGoogle()
+        case .openDatabase:
+            isReviewSheetPresented = false
+            NotificationCenter.default.post(name: .openDatabaseTabRequested, object: nil)
         case .none:
             break
         }
@@ -3116,6 +3125,8 @@ private struct SupabaseManualSyncReviewSheet: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
+                    summaryCard
+
                     ForEach(review.sections) { section in
                         reviewSection(section)
                     }
@@ -3185,6 +3196,32 @@ private struct SupabaseManualSyncReviewSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var summaryCard: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: review.summarySystemImage)
+                .font(.headline)
+                .foregroundStyle(tint(for: review.summaryTone))
+                .frame(width: 26, height: 26)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(review.summaryTitle)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(review.summaryMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 

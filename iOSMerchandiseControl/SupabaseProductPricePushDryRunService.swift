@@ -537,6 +537,7 @@ nonisolated struct SupabaseProductPricePushDryRunEngine: Sendable {
 
         for row in remoteRows {
             guard row.ownerUserID == ownerUserID else {
+                invalidRemoteRows = true
                 continue
             }
 

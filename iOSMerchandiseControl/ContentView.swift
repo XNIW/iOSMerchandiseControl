@@ -106,6 +106,9 @@ struct ContentView: View {
         .task {
             schedulePriceHistoryBackfillIfNeeded()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openDatabaseTabRequested)) { _ in
+            selectedTab = 1
+        }
         .onOpenURL { url in
             guard url.isFileURL else { return }
             // Policy URL singolo: se c'è già un URL pendente o un import in corso, scarta

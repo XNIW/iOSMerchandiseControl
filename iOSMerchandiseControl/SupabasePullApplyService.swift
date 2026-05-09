@@ -19,6 +19,7 @@ nonisolated enum SupabasePullApplyDisabledReason: String, Sendable, Equatable {
     case localDuplicateBarcode
     case missingApplicablePayload
     case missingRequiredField
+    case invalidLocalData
     case invalidPrice
     case invalidStockQuantity
     case previewStale
@@ -35,6 +36,7 @@ nonisolated enum SupabasePullApplyError: Error, Sendable, Equatable {
     case localDuplicateBarcode
     case missingApplicablePayload(barcode: String?)
     case missingRequiredField(barcode: String?, field: String)
+    case invalidLocalData
     case invalidPrice(barcode: String?, field: SyncPreviewFieldKey)
     case invalidStockQuantity(barcode: String?)
     case previewStale
@@ -62,6 +64,8 @@ nonisolated enum SupabasePullApplyError: Error, Sendable, Equatable {
             return .missingApplicablePayload
         case .missingRequiredField:
             return .missingRequiredField
+        case .invalidLocalData:
+            return .invalidLocalData
         case .invalidPrice:
             return .invalidPrice
         case .invalidStockQuantity:
@@ -192,7 +196,7 @@ nonisolated struct SupabasePullApplyAccountGuard: Sendable, Equatable {
     }
 
     var hasMismatch: Bool {
-        guard let currentUserID, let lastLinkedUserID else {
+        guard currentUserID != nil || lastLinkedUserID != nil else {
             return false
         }
         return currentUserID != lastLinkedUserID
@@ -227,6 +231,7 @@ struct SupabasePullApplyService {
         if !snapshot.duplicateProductBarcodes.isEmpty {
             throw SupabasePullApplyError.localDuplicateBarcode
         }
+        try validateLocalInvariants(snapshot)
 
         var inserts: [SupabasePullApplyProductInsert] = []
         var updates: [SupabasePullApplyProductUpdate] = []
@@ -485,6 +490,19 @@ struct SupabasePullApplyService {
         (preview.warnings + preview.sourceErrors).contains { $0.code == .priceHistoryIncomplete }
     }
 
+    private func validateLocalInvariants(_ snapshot: LocalInventorySnapshot) throws {
+        guard snapshot.invalidProductBarcodes == 0,
+              snapshot.invalidSupplierNames == 0,
+              snapshot.invalidCategoryNames == 0,
+              snapshot.duplicateProductRemoteIDs.isEmpty,
+              snapshot.duplicateSupplierRemoteIDs.isEmpty,
+              snapshot.duplicateCategoryRemoteIDs.isEmpty,
+              snapshot.duplicateSupplierNames.isEmpty,
+              snapshot.duplicateCategoryNames.isEmpty else {
+            throw SupabasePullApplyError.invalidLocalData
+        }
+    }
+
     private func validateNumbers(
         payload: SyncPreviewProductApplyPayload,
         options: SupabasePullApplyOptions
@@ -572,6 +590,7 @@ struct SupabasePullApplyService {
         if !snapshot.duplicateProductBarcodes.isEmpty {
             throw SupabasePullApplyError.localDuplicateBarcode
         }
+        try validateLocalInvariants(snapshot)
 
         for expected in plan.expectedProductStates {
             let current = snapshot.productsByBarcode[expected.barcode]

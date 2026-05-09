@@ -263,7 +263,7 @@ nonisolated enum ProductPriceEffectiveAtCanonicalizer {
 @MainActor
 struct SupabaseProductPriceApplyService {
     private static let localSource = "SUPABASE_PULL"
-    fileprivate static let issueLimit = 8
+    nonisolated fileprivate static let issueLimit = 8
 
     private let fetcher: (any SupabaseProductPricePreviewFetching)?
     private let fetchOptions: ProductPriceApplyFetchOptions
@@ -598,6 +598,7 @@ nonisolated private struct ProductPriceApplyPlanBuilder {
     private var invalid = 0
     private var conflicts = 0
     private var mappingConflicts = 0
+    private var accessOrSyncError: String?
 
     init(
         remoteRows: [RemoteInventoryProductPriceRow],
@@ -617,6 +618,12 @@ nonisolated private struct ProductPriceApplyPlanBuilder {
         var remotePricesByKey: [ProductPriceApplyLogicalKey: ProductPriceCanonicalAmount] = [:]
 
         for row in remoteRows {
+            guard row.ownerUserID == sessionSnapshot.userID else {
+                accessOrSyncError = accessOrSyncError ?? "owner mismatch"
+                appendInvalid(.sourceError, detail: "owner mismatch")
+                continue
+            }
+
             guard let type = SupabasePullPreviewNormalizer.normalizedPriceType(row.type) else {
                 appendInvalid(.invalidType, detail: row.type)
                 continue
@@ -698,7 +705,7 @@ nonisolated private struct ProductPriceApplyPlanBuilder {
             mappingConflicts: mappingConflicts,
             partial: sourceState.partial,
             truncated: sourceState.truncated,
-            sourceError: sourceState.sourceError
+            sourceError: sourceState.sourceError ?? accessOrSyncError
         )
 
         return ProductPriceApplyPlan(

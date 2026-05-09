@@ -54,6 +54,33 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         try assertPrepareThrows(.conflictsPresent, preview: preview, context: context)
     }
 
+    func testPrepareApplyPlanBlocksInvalidLocalInventoryBeforeMutations() throws {
+        let context = try makeContext()
+        context.insert(Product(barcode: "   ", productName: "Broken local product"))
+        context.insert(Supplier(name: "   "))
+        context.insert(ProductCategory(name: "   "))
+        try context.save()
+
+        let preview = makePreview(newProducts: [
+            makeSummary(payload: makePayload(barcode: "100", productName: "Remote"))
+        ])
+
+        try assertPrepareThrows(.invalidLocalData, preview: preview, context: context)
+    }
+
+    func testPrepareApplyPlanBlocksDuplicateLocalRemoteIdentityBeforeMutations() throws {
+        let context = try makeContext()
+        let remoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000001")!
+        try insertProduct(context: context, barcode: "100", productName: "First", remoteID: remoteID)
+        try insertProduct(context: context, barcode: "101", productName: "Second", remoteID: remoteID)
+
+        let preview = makePreview(newProducts: [
+            makeSummary(payload: makePayload(barcode: "102", productName: "Remote"))
+        ])
+
+        try assertPrepareThrows(.invalidLocalData, preview: preview, context: context)
+    }
+
     func testPrepareApplyPlanBlocksSessionMissing() throws {
         let context = try makeContext()
         let preview = makePreview(newProducts: [
@@ -380,6 +407,27 @@ final class SupabasePullApplyServiceTests: XCTestCase {
                 accountGuard: SupabasePullApplyAccountGuard(
                     currentUserID: UUID(),
                     lastLinkedUserID: UUID()
+                )
+            )
+        ) { error in
+            XCTAssertEqual(error as? SupabasePullApplyError, .accountMismatch)
+        }
+    }
+
+    func testAccountGuardTreatsMissingCapturedOwnerAsMismatch() throws {
+        let context = try makeContext()
+        let preview = makePreview(newProducts: [
+            makeSummary(payload: makePayload(barcode: "100", productName: "Remote"))
+        ])
+
+        XCTAssertThrowsError(
+            try service.prepareApplyPlan(
+                preview: preview,
+                context: context,
+                isAuthenticated: true,
+                accountGuard: SupabasePullApplyAccountGuard(
+                    currentUserID: UUID(),
+                    lastLinkedUserID: nil
                 )
             )
         ) { error in

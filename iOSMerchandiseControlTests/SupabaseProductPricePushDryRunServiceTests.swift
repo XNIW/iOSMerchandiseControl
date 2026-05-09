@@ -148,12 +148,13 @@ final class SupabaseProductPricePushDryRunServiceTests: XCTestCase {
         XCTAssertTrue(plan.candidates.isEmpty)
     }
 
-    func testWrongOwnerRemoteRowsAreNotUsedForDedupe() {
+    func testWrongOwnerRemoteRowsMakeDedupeUnsafe() {
         let plan = makePlan(remoteRows: [
             remotePrice(ownerUserID: uuid(888), productID: uuid(201), price: 12.34)
         ])
 
-        XCTAssertEqual(plan.summary.readyCandidates, 1)
+        XCTAssertEqual(plan.remoteDedupeStatus, .unsafePartialRemoteDedupe(.invalidRemoteRows))
+        XCTAssertEqual(plan.summary.readyCandidates, 0)
         XCTAssertEqual(plan.summary.alreadyPresentRemote, 0)
     }
 

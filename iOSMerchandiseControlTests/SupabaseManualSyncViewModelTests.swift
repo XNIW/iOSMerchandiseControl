@@ -907,12 +907,13 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
         XCTAssertNil(vm.runMode(for: .reviewChanges))
-        XCTAssertFalse(review.primaryActionIsEnabled)
+        XCTAssertTrue(review.primaryActionIsEnabled)
         XCTAssertFalse(review.primaryActionIsLoading)
-        XCTAssertEqual(review.primaryActionTitle, "Aggiorna questo dispositivo")
+        XCTAssertEqual(review.primaryActionID, .recheck)
+        XCTAssertEqual(review.primaryActionTitle, "Ricontrolla")
         XCTAssertEqual(review.footerMessage, "Riesegui Controlla cloud prima di aggiornare questo dispositivo.")
         XCTAssertEqual(review.secondaryActionTitle, "Annulla")
-        XCTAssertEqual(review.sections.map(\.id), [.cloudToDevice, .deviceToCloud, .prices, .attention])
+        XCTAssertEqual(review.sections.map(\.id), [.attention, .cloudToDevice, .deviceToCloud, .prices])
         XCTAssertFalse(actionIDs(state).contains(.syncNow))
         XCTAssertFalse(actionIDs(state).contains(.checkCloud))
         assertNoForbiddenUserFacingJargon(vm)
@@ -1427,7 +1428,9 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         let review = try XCTUnwrap(vm.presentationState.reviewSheet)
         XCTAssertFalse(vm.canApplyLocalChanges)
-        XCTAssertFalse(review.primaryActionIsEnabled)
+        XCTAssertTrue(review.primaryActionIsEnabled)
+        XCTAssertEqual(review.primaryActionID, .recheck)
+        XCTAssertEqual(review.primaryActionTitle, "Ricontrolla")
         XCTAssertEqual(review.footerMessage, "Alcuni elementi richiedono attenzione. Riesegui Controlla cloud dopo averli controllati.")
         XCTAssertFalse(review.footerMessage.contains("PRIVATE-123"))
         XCTAssertFalse(review.footerMessage.localizedCaseInsensitiveContains("secret product"))
@@ -1491,6 +1494,40 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertEqual(vm.applyBlockedReason, "I dati locali sono cambiati. Riesegui Controlla cloud.")
         XCTAssertNil(staging.stagedPreviewForLocalApply)
         XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 1)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask082ChangedLocalApplyOwnerInvalidatesStagingBeforeApply() async throws {
+        let context = try makeContext()
+        let staging = ManualSyncPreviewStagingFake()
+        staging.stagedPreviewForLocalApply = makeApplicablePreview(
+            newProducts: [makeApplicableProductSummary(barcode: "100")]
+        )
+        var currentOwnerID: UUID? = nil
+        let vm = makeApplyReadyViewModel(
+            context: context,
+            staging: staging,
+            currentOwnerID: { currentOwnerID }
+        )
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+        XCTAssertTrue(vm.canApplyLocalChanges)
+
+        currentOwnerID = UUID(uuidString: "D8200000-0000-4000-8000-000000000082")!
+        await vm.applyStagedLocalChanges()
+
+        XCTAssertEqual(vm.presentationKind, .localApplyFailed)
+        XCTAssertFalse(vm.canApplyLocalChanges)
+        XCTAssertEqual(vm.applyBlockedReason, "I dati locali sono cambiati. Riesegui Controlla cloud.")
+        XCTAssertNil(staging.stagedPreviewForLocalApply)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 0)
         assertNoForbiddenUserFacingJargon(vm)
     }
 
@@ -1683,9 +1720,9 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let review = try XCTUnwrap(state.reviewSheet)
         XCTAssertEqual(state.title, "Da correggere")
         XCTAssertEqual(state.userFacingSummary?.kind, .catalogPushBlocked)
-        XCTAssertEqual(review.primaryActionID, .none)
-        XCTAssertFalse(review.primaryActionIsEnabled)
-        XCTAssertEqual(review.sections.map(\.id), [.sendBlocked])
+        XCTAssertEqual(review.primaryActionID, .openDatabase)
+        XCTAssertTrue(review.primaryActionIsEnabled)
+        XCTAssertEqual(review.sections.map(\.id), [.attention, .sendBlocked])
         XCTAssertEqual(provider.executeCallCount, 0)
         assertNoForbiddenUserFacingJargon(vm)
     }
@@ -2028,6 +2065,40 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testTask082AccessIssueWithoutSupportedSignInUsesRecheckCTA() async throws {
+        let ownerID = UUID(uuidString: "D8200000-0000-4000-8000-000000000083")!
+        let pushPlan = makeProductPricePushPlan(
+            ownerID: ownerID,
+            candidateCount: 1,
+            remoteDedupeStatus: .unsafePartialRemoteDedupe(.networkOrPermission)
+        )
+        let provider = ManualSyncProductPriceProviderFake(pushPlans: [pushPlan])
+        let vm = makeProductPriceReadyViewModel(
+            provider: provider,
+            ownerID: ownerID,
+            canSignIn: false
+        )
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                    remoteProductPriceCount: 1,
+                    priceHistorySignalCount: 1
+                ),
+                key: .cloudDataNeedsReview
+            )
+        ))
+        await vm.prepareProductPricePlansForReview()
+
+        let review = try XCTUnwrap(vm.presentationState.reviewSheet)
+        XCTAssertEqual(review.primaryActionID, .recheck)
+        XCTAssertTrue(review.primaryActionIsEnabled)
+        XCTAssertTrue(review.summaryMessage.contains("accedere") || review.summaryMessage.contains("accesso"))
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
     func testTask081ActivitiesOnlyShowsRegisterCTAAfterCloudCheckReview() async throws {
         let ownerID = UUID(uuidString: "A81A0000-0000-4000-8000-000000000001")!
         let provider = ManualSyncActivityRegistrationProviderFake(
@@ -2146,7 +2217,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         await retryVM.confirmActivityRegistration()
 
         let retryReview = try XCTUnwrap(retryVM.presentationState.reviewSheet)
-        XCTAssertEqual(retryReview.primaryActionTitle, "Riprova")
+        XCTAssertEqual(retryReview.primaryActionTitle, "Ricontrolla")
         XCTAssertTrue(retryVM.presentationState.userFacingSummary?.message.contains("Non è stato possibile completare la registrazione. Puoi riprovare.") ?? false)
         assertNoForbiddenUserFacingJargon(retryVM)
     }
@@ -2315,7 +2386,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
     private func makeApplyReadyViewModel(
         context: ModelContext,
         staging: ManualSyncPreviewStagingFake,
-        isAuthenticated: @MainActor @Sendable @escaping () -> Bool = { true }
+        isAuthenticated: @MainActor @Sendable @escaping () -> Bool = { true },
+        currentOwnerID: (@MainActor () -> UUID?)? = nil
     ) -> SupabaseManualSyncViewModel {
         SupabaseManualSyncViewModel(
             coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
@@ -2326,7 +2398,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             remotePreviewStaging: staging,
             localApplyService: SupabasePullApplyService(),
             localApplyContext: context,
-            isLocalApplyAuthenticated: isAuthenticated
+            isLocalApplyAuthenticated: isAuthenticated,
+            currentLocalApplyOwnerID: currentOwnerID
         )
     }
 
@@ -2355,7 +2428,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
     private func makeProductPriceReadyViewModel(
         provider: ManualSyncProductPriceProviderFake,
         ownerID: UUID?,
-        isSignedIn: Bool = true
+        isSignedIn: Bool = true,
+        canSignIn: Bool = true
     ) -> SupabaseManualSyncViewModel {
         SupabaseManualSyncViewModel(
             coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
@@ -2367,7 +2441,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             ),
             initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext(
                 isSignedIn: isSignedIn,
-                canSignIn: true,
+                canSignIn: canSignIn,
                 isTransitioning: false
             ),
             currentCatalogPushOwnerID: { ownerID },
@@ -2484,7 +2558,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         alreadyPresent: Int = 0,
         conflicts: Int = 0,
         blocked: Int = 0,
-        seed: Int = 0
+        seed: Int = 0,
+        remoteDedupeStatus: ProductPricePushRemoteDedupeStatus = .complete
     ) -> ProductPricePushDryRunPlan {
         let candidates = (0..<candidateCount).map { index in
             makeProductPricePushLine(ownerID: ownerID, index: seed + index, reason: .candidate)
@@ -2516,7 +2591,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         return ProductPricePushDryRunPlan(
             generatedAt: Date(timeIntervalSince1970: 1_778_500_000),
             sessionSnapshot: ProductPricePushDryRunSessionSnapshot(userID: ownerID, lastLinkedUserID: ownerID),
-            remoteDedupeStatus: .complete,
+            remoteDedupeStatus: remoteDedupeStatus,
             summary: ProductPricePushDryRunSummary(
                 localPriceCount: candidateCount + alreadyPresent + conflicts + blocked,
                 remoteRowsRead: alreadyPresent + conflicts,

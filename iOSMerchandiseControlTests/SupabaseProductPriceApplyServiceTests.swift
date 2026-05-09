@@ -102,6 +102,18 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         XCTAssertFalse(plan.isApplyAllowed)
     }
 
+    func testWrongOwnerRemoteRowsAreInvalidAccessData() {
+        let plan = makePlan(remoteRows: [
+            remotePrice(ownerUserID: uuid(888))
+        ])
+
+        XCTAssertEqual(plan.summary.invalid, 1)
+        XCTAssertEqual(plan.summary.sourceError, "owner mismatch")
+        XCTAssertTrue(plan.blockReasons.contains(.sourceError))
+        XCTAssertTrue(plan.blockReasons.contains(.invalidRows))
+        XCTAssertFalse(plan.isApplyAllowed)
+    }
+
     func testRemoteProductWithoutLocalProductIsUnmapped() {
         let plan = makePlan(
             remoteRows: [remotePrice(productID: uuid(404))],
@@ -404,6 +416,7 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
 
     private func remotePrice(
         id: UUID = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!,
+        ownerUserID: UUID? = nil,
         productID: UUID = UUID(uuidString: "00000000-0000-0000-0000-000000000201")!,
         type: String = "PURCHASE",
         price: Double = 2.5,
@@ -412,7 +425,7 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
     ) -> RemoteInventoryProductPriceRow {
         RemoteInventoryProductPriceRow(
             id: id,
-            ownerUserID: session.userID,
+            ownerUserID: ownerUserID ?? session.userID,
             productID: productID,
             type: type,
             price: price,
