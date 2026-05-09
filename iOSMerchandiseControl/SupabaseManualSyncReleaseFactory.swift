@@ -114,7 +114,14 @@ private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManual
         guard snapshot.ownerUserID == ownerUserID else {
             throw ProductPriceManualPushError.invalidPayload
         }
-        return try await SupabaseProductPriceManualPushService(remote: remote).push(snapshot: snapshot)
+        let result = try await SupabaseProductPriceManualPushService(remote: remote).push(snapshot: snapshot)
+        if result.isVerifiedSuccess {
+            _ = try ProductPriceManualPushIdentityReconciler().linkVerifiedPayloads(
+                snapshot.payloads,
+                context: context
+            )
+        }
+        return result
     }
 }
 

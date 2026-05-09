@@ -99,6 +99,12 @@ actor SupabaseInventoryService {
     private static let task087SupplierNames = ["TASK087_SUP", "TASK087_SUPPLIER"]
     private static let task087CategoryNames = ["TASK087_CAT", "TASK087_CATEGORY"]
     private static let task087ProductBarcodes = ["TASK087_BAR_A", "TASK087_BAR_I"]
+    nonisolated static let task088Prefix = "TASK088_"
+    private static let task088UpperBound = "TASK088`"
+    private static let task088SupplierName = "TASK088_SUPPLIER"
+    private static let task088CategoryName = "TASK088_CATEGORY"
+    private static let task088ProductBarcode = "TASK088_BAR_PRICE"
+    private static let task088ProductName = "TASK088_PRODUCT"
 #endif
 
     init(clientProvider: SupabaseClientProvider) {
@@ -272,6 +278,111 @@ actor SupabaseInventoryService {
             return updated
         } catch let error as SupabaseInventoryServiceError {
             throw error
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    func ensureTask088RemoteSeed() async throws -> SupabaseTask088RemoteSeed {
+        let ownerUserID = try await requireAuthenticatedSession()
+
+        let existingSuppliers = try await fetchTask088SuppliersByPrefix(ownerUserID: ownerUserID)
+        guard existingSuppliers.allSatisfy({
+            $0.ownerUserID == ownerUserID
+                && $0.name == Self.task088SupplierName
+                && $0.deletedAt == nil
+        }), existingSuppliers.count <= 1 else {
+            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 supplier collision.")
+        }
+        let supplier: RemoteInventorySupplierRow
+        if let existingSupplier = existingSuppliers.first {
+            supplier = existingSupplier
+        } else {
+            supplier = try await createTask088Supplier(ownerUserID: ownerUserID)
+        }
+
+        let existingCategories = try await fetchTask088CategoriesByPrefix(ownerUserID: ownerUserID)
+        guard existingCategories.allSatisfy({
+            $0.ownerUserID == ownerUserID
+                && $0.name == Self.task088CategoryName
+                && $0.deletedAt == nil
+        }), existingCategories.count <= 1 else {
+            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 category collision.")
+        }
+        let category: RemoteInventoryCategoryRow
+        if let existingCategory = existingCategories.first {
+            category = existingCategory
+        } else {
+            category = try await createTask088Category(ownerUserID: ownerUserID)
+        }
+
+        let existingProducts = try await fetchTask088ProductsByPrefix(ownerUserID: ownerUserID)
+        guard existingProducts.allSatisfy({
+            $0.ownerUserID == ownerUserID
+                && $0.barcode == Self.task088ProductBarcode
+                && $0.deletedAt == nil
+        }), existingProducts.count <= 1 else {
+            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 product collision.")
+        }
+        let product: RemoteInventoryProductRow
+        if let existingProduct = existingProducts.first {
+            product = existingProduct
+        } else {
+            product = try await createTask088Product(
+                ownerUserID: ownerUserID,
+                supplierID: supplier.id,
+                categoryID: category.id
+            )
+        }
+
+        guard product.ownerUserID == ownerUserID,
+              product.barcode == Self.task088ProductBarcode,
+              product.deletedAt == nil else {
+            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 product seed read-back mismatch.")
+        }
+
+        return SupabaseTask088RemoteSeed(
+            ownerUserID: ownerUserID,
+            supplier: supplier,
+            category: category,
+            product: product
+        )
+    }
+
+    func fetchTask088ProductPriceRows(
+        ownerUserID: UUID,
+        productID: UUID
+    ) async throws -> [RemoteInventoryProductPriceRow] {
+        let authenticatedUserID = try await requireAuthenticatedSession()
+        guard authenticatedUserID == ownerUserID else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+                statusCode: nil,
+                code: nil,
+                message: "TASK088 owner mismatch"
+            )
+        }
+
+        do {
+            return try await clientProvider.client
+                .from("inventory_product_prices")
+                .select("id,owner_user_id,product_id,type,price,effective_at,source,note,created_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .eq("product_id", value: productID.uuidString)
+                .order("type", ascending: true)
+                .order("effective_at", ascending: true)
+                .order("id", ascending: true)
+                .limit(20)
+                .execute()
+                .value
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {
@@ -802,6 +913,195 @@ actor SupabaseInventoryService {
                 .single()
                 .execute()
                 .value
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func fetchTask088SuppliersByPrefix(ownerUserID: UUID) async throws -> [RemoteInventorySupplierRow] {
+        do {
+            return try await clientProvider.client
+                .from("inventory_suppliers")
+                .select("id,owner_user_id,name,updated_at,deleted_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .gte("name", value: Self.task088Prefix)
+                .lt("name", value: Self.task088UpperBound)
+                .order(Self.stablePageOrderColumn, ascending: true)
+                .limit(20)
+                .execute()
+                .value
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func createTask088Supplier(ownerUserID: UUID) async throws -> RemoteInventorySupplierRow {
+        do {
+            let rows: [RemoteInventorySupplierRow] = try await clientProvider.client
+                .from("inventory_suppliers")
+                .insert([SupabaseManualPushSupplierCreatePayload(ownerUserID: ownerUserID, name: Self.task088SupplierName)])
+                .select("id,owner_user_id,name,updated_at,deleted_at")
+                .execute()
+                .value
+            guard rows.count == 1, let row = rows.first,
+                  row.ownerUserID == ownerUserID,
+                  row.name == Self.task088SupplierName,
+                  row.deletedAt == nil else {
+                throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 supplier seed read-back mismatch.")
+            }
+            return row
+        } catch let error as SupabaseInventoryServiceError {
+            throw error
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func fetchTask088CategoriesByPrefix(ownerUserID: UUID) async throws -> [RemoteInventoryCategoryRow] {
+        do {
+            return try await clientProvider.client
+                .from("inventory_categories")
+                .select("id,owner_user_id,name,updated_at,deleted_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .gte("name", value: Self.task088Prefix)
+                .lt("name", value: Self.task088UpperBound)
+                .order(Self.stablePageOrderColumn, ascending: true)
+                .limit(20)
+                .execute()
+                .value
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func createTask088Category(ownerUserID: UUID) async throws -> RemoteInventoryCategoryRow {
+        do {
+            let rows: [RemoteInventoryCategoryRow] = try await clientProvider.client
+                .from("inventory_categories")
+                .insert([SupabaseManualPushCategoryCreatePayload(ownerUserID: ownerUserID, name: Self.task088CategoryName)])
+                .select("id,owner_user_id,name,updated_at,deleted_at")
+                .execute()
+                .value
+            guard rows.count == 1, let row = rows.first,
+                  row.ownerUserID == ownerUserID,
+                  row.name == Self.task088CategoryName,
+                  row.deletedAt == nil else {
+                throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 category seed read-back mismatch.")
+            }
+            return row
+        } catch let error as SupabaseInventoryServiceError {
+            throw error
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func fetchTask088ProductsByPrefix(ownerUserID: UUID) async throws -> [RemoteInventoryProductRow] {
+        do {
+            return try await clientProvider.client
+                .from("inventory_products")
+                .select("id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .gte("barcode", value: Self.task088Prefix)
+                .lt("barcode", value: Self.task088UpperBound)
+                .order("barcode", ascending: true)
+                .limit(20)
+                .execute()
+                .value
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func createTask088Product(
+        ownerUserID: UUID,
+        supplierID: UUID,
+        categoryID: UUID
+    ) async throws -> RemoteInventoryProductRow {
+        let payload = SupabaseManualPushProductCreatePayload(
+            ownerUserID: ownerUserID,
+            barcode: Self.task088ProductBarcode,
+            itemNumber: nil,
+            productName: Self.task088ProductName,
+            secondProductName: nil,
+            purchasePrice: 122.20,
+            retailPrice: 244.40,
+            supplierID: supplierID,
+            categoryID: categoryID,
+            stockQuantity: 0
+        )
+
+        do {
+            let rows: [RemoteInventoryProductRow] = try await clientProvider.client
+                .from("inventory_products")
+                .insert([payload])
+                .select("id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at")
+                .execute()
+                .value
+            guard rows.count == 1, let row = rows.first,
+                  row.ownerUserID == ownerUserID,
+                  row.barcode == Self.task088ProductBarcode,
+                  row.productName == Self.task088ProductName,
+                  row.deletedAt == nil else {
+                throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 product seed read-back mismatch.")
+            }
+            return row
+        } catch let error as SupabaseInventoryServiceError {
+            throw error
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {

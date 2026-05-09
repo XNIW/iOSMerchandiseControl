@@ -183,6 +183,120 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
     }
 
     @MainActor
+    func testTask088VerifiedPushLinksRemoteIDAcrossReloadAndSecondDryRun() async throws {
+        let container = try makeContainer()
+        let context = makeContext(for: container)
+        try insertValidBaseline(context: context, ownerID: ownerID)
+        let product = Product(
+            barcode: "TASK088_BAR_PRICE",
+            remoteID: uuid(201),
+            productName: "TASK088_PRODUCT"
+        )
+        context.insert(product)
+        let prices: [(PriceType, Double, String)] = [
+            (.purchase, 10.10, "2026-05-01 10:00:00"),
+            (.purchase, 11.20, "2026-05-02 10:00:00"),
+            (.retail, 20.30, "2026-05-01 11:00:00"),
+            (.retail, 21.40, "2026-05-02 11:00:00")
+        ]
+        for (type, amount, effectiveAt) in prices {
+            context.insert(
+                ProductPrice(
+                    type: type,
+                    price: amount,
+                    effectiveAt: try date(effectiveAt),
+                    source: "TASK088_IOS_PUSH",
+                    note: "TASK088_IDENTITY",
+                    createdAt: try date(effectiveAt),
+                    product: product
+                )
+            )
+        }
+        try context.save()
+
+        let remote = MockProductPriceManualPushRemote(echoInsertedRowsToReadBack: true)
+        let dryRunService = SupabaseProductPricePushDryRunService(fetcher: remote)
+        let firstPlan = try await dryRunService.loadDryRun(context: context, sessionSnapshot: session())
+        XCTAssertEqual(firstPlan.summary.readyCandidates, 4)
+        let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: firstPlan)
+        let pushResult = try await SupabaseProductPriceManualPushService(remote: remote).push(snapshot: snapshot)
+
+        XCTAssertTrue(pushResult.isVerifiedSuccess)
+        XCTAssertEqual(
+            try ProductPriceManualPushIdentityReconciler().linkVerifiedPayloads(snapshot.payloads, context: context),
+            4
+        )
+
+        let reloadedContext = makeContext(for: container)
+        let reloadedPrices = try reloadedContext.fetch(
+            FetchDescriptor<ProductPrice>(
+                sortBy: [
+                    SortDescriptor(\ProductPrice.effectiveAt),
+                    SortDescriptor(\ProductPrice.createdAt)
+                ]
+            )
+        )
+        XCTAssertEqual(Set(reloadedPrices.compactMap(\.remoteID)), Set(snapshot.payloads.map(\.id)))
+
+        let secondPlan = try await dryRunService.loadDryRun(context: reloadedContext, sessionSnapshot: session())
+        XCTAssertEqual(secondPlan.summary.localPriceCount, 4)
+        XCTAssertEqual(secondPlan.summary.readyCandidates, 0)
+        XCTAssertTrue(secondPlan.candidates.isEmpty)
+    }
+
+    @MainActor
+    func testTask088IdentityReconcilerFailsClosedForAmbiguousLocalMatch() async throws {
+        let context = try makeContext()
+        let product = Product(
+            barcode: "TASK088_BAR_PRICE",
+            remoteID: uuid(201),
+            productName: "TASK088_PRODUCT"
+        )
+        context.insert(product)
+        for index in 0..<2 {
+            context.insert(
+                ProductPrice(
+                    type: .purchase,
+                    price: 10.10,
+                    effectiveAt: try date("2026-05-01 10:00:00"),
+                    source: "TASK088_IOS_PUSH",
+                    note: "TASK088_IDENTITY",
+                    createdAt: try date("2026-05-01 10:0\(index):00"),
+                    product: product
+                )
+            )
+        }
+        try context.save()
+
+        let payload = ProductPriceManualPushPayload(
+            id: uuid(301),
+            ownerUserID: ownerID,
+            productID: try XCTUnwrap(product.remoteID),
+            type: "PURCHASE",
+            price: 10.10,
+            priceCanonical: try XCTUnwrap(PriceCanonicalizer.canonicalAmount(from: 10.10)?.value),
+            effectiveAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(
+                from: try date("2026-05-01 10:00:00")
+            ),
+            source: "TASK088_IOS_PUSH",
+            note: "TASK088_IDENTITY",
+            createdAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(
+                from: try date("2026-05-01 10:00:00")
+            )
+        )
+
+        XCTAssertThrowsError(
+            try ProductPriceManualPushIdentityReconciler().linkVerifiedPayloads([payload], context: context)
+        ) { error in
+            guard case ProductPriceManualPushError.network = error else {
+                return XCTFail("Expected fail-closed identity reconciliation error, got \(error)")
+            }
+        }
+        let prices = try context.fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertTrue(prices.allSatisfy { $0.remoteID == nil })
+    }
+
+    @MainActor
     func testViewModelDoubleTapRunsSingleInsert() async throws {
         let context = try makeContextWithOnePrice()
         let remote = MockProductPriceManualPushRemote(
@@ -349,6 +463,11 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
 
     @MainActor
     private func makeContext() throws -> ModelContext {
+        makeContext(for: try makeContainer())
+    }
+
+    @MainActor
+    private func makeContainer() throws -> ModelContainer {
         let schema = Schema([
             Product.self,
             Supplier.self,
@@ -360,6 +479,11 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         Self.retainedContainers.append(container)
+        return container
+    }
+
+    @MainActor
+    private func makeContext(for container: ModelContainer) -> ModelContext {
         let context = ModelContext(container)
         Self.retainedContexts.append(context)
         return context

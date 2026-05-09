@@ -30,6 +30,9 @@ struct ContentView: View {
     @StateObject private var excelSession = ExcelSessionViewModel()
     @State private var selectedTab = 0
     @State private var didSchedulePriceHistoryBackfillThisLaunch = false
+#if DEBUG
+    @State private var didRunTask088ProductPriceSmoke = false
+#endif
 
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
@@ -109,6 +112,10 @@ struct ContentView: View {
             if isTask087SmokeLaunchRequested {
                 selectedTab = 3
             }
+            if isTask088ProductPriceSmokeLaunchRequested {
+                selectedTab = 3
+                runTask088ProductPriceSmokeIfRequested()
+            }
 #endif
         }
         .onReceive(NotificationCenter.default.publisher(for: .openDatabaseTabRequested)) { _ in
@@ -153,6 +160,42 @@ struct ContentView: View {
             || ProcessInfo.processInfo.arguments.contains("--task087-smoke-run")
             || ProcessInfo.processInfo.environment["TASK087_SMOKE"] == "1"
             || ProcessInfo.processInfo.environment["TASK087_SMOKE_RUN"] == "1"
+    }
+
+    private var isTask088ProductPriceSmokeLaunchRequested: Bool {
+        ProcessInfo.processInfo.arguments.contains("--task088-price-smoke-run")
+            || ProcessInfo.processInfo.environment["TASK088_PRICE_SMOKE_RUN"] == "1"
+    }
+
+    @MainActor
+    private func runTask088ProductPriceSmokeIfRequested() {
+        guard isTask088ProductPriceSmokeLaunchRequested,
+              !didRunTask088ProductPriceSmoke else {
+            return
+        }
+        didRunTask088ProductPriceSmoke = true
+
+        guard let supabaseInventoryService else {
+            debugPrint("[Task088Smoke] outcome=blocked reason=inventory_service_missing")
+            return
+        }
+
+        Task { @MainActor in
+            do {
+                let result = try await SupabaseTask088ProductPriceSmokeService(
+                    inventoryService: supabaseInventoryService
+                ).run()
+                debugPrint("[Task088Smoke] outcome=ok \(result.privacySafeSummary)")
+            } catch let error as SupabaseTask088ProductPriceSmokeError {
+                debugPrint("[Task088Smoke] outcome=blocked \(error.safeMessage)")
+            } catch SupabaseInventoryServiceError.sessionMissing {
+                debugPrint("[Task088Smoke] outcome=blocked reason=session_missing")
+            } catch let error as SupabaseInventoryServiceError {
+                debugPrint("[Task088Smoke] outcome=blocked reason=\(error.safeDiagnosticDetail ?? "inventory_service_error")")
+            } catch {
+                debugPrint("[Task088Smoke] outcome=blocked reason=unexpected_error")
+            }
+        }
     }
 #endif
 }

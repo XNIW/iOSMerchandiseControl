@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import SwiftData
 
 protocol SupabaseProductPriceManualPushRemoteAccessing: Sendable {
     func insertProductPriceManualPushPayloads(_ payloads: [ProductPriceManualPushPayload]) async throws -> [RemoteInventoryProductPriceRow]
@@ -409,5 +410,122 @@ struct SupabaseProductPriceManualPushService: Sendable {
         }
         return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(String(describing: error))
             ?? "inventory_product_prices"
+    }
+}
+
+@MainActor
+struct ProductPriceManualPushIdentityReconciler {
+    func linkVerifiedPayloads(
+        _ payloads: [ProductPriceManualPushPayload],
+        context: ModelContext
+    ) throws -> Int {
+        guard !payloads.isEmpty else {
+            return 0
+        }
+
+        let keyedPayloads = payloads.map { (key(for: $0), $0) }
+        guard Set(keyedPayloads.map(\.0)).count == payloads.count else {
+            throw ProductPriceManualPushError.invalidPayload
+        }
+        let payloadsByKey = Dictionary(uniqueKeysWithValues: keyedPayloads)
+        let prices = try context.fetch(
+            FetchDescriptor<ProductPrice>(
+                sortBy: [
+                    SortDescriptor(\ProductPrice.effectiveAt),
+                    SortDescriptor(\ProductPrice.createdAt)
+                ]
+            )
+        )
+        var candidatesByKey: [PayloadKey: [ProductPrice]] = [:]
+
+        for price in prices where price.remoteID == nil {
+            guard let key = key(for: price),
+                  payloadsByKey[key] != nil else {
+                continue
+            }
+            candidatesByKey[key, default: []].append(price)
+        }
+
+        var links: [(price: ProductPrice, remoteID: UUID)] = []
+        for key in payloadsByKey.keys.sorted() {
+            guard let payload = payloadsByKey[key],
+                  let matches = candidatesByKey[key],
+                  matches.count == 1,
+                  let price = matches.first else {
+                throw ProductPriceManualPushError.network(
+                    message: "product price identity reconciliation incomplete"
+                )
+            }
+            links.append((price, payload.id))
+        }
+
+        for link in links {
+            link.price.remoteID = link.remoteID
+        }
+
+        if !links.isEmpty {
+            do {
+                try context.save()
+            } catch {
+                context.rollback()
+                throw ProductPriceManualPushError.network(
+                    message: SupabaseInventoryServiceError.sanitizedDiagnosticDetail(String(describing: error))
+                        ?? "product price identity"
+                )
+            }
+        }
+
+        return links.count
+    }
+
+    private func key(for payload: ProductPriceManualPushPayload) -> PayloadKey {
+        PayloadKey(
+            productID: payload.productID,
+            type: payload.type.lowercased(),
+            priceCanonical: payload.priceCanonical,
+            effectiveAt: payload.effectiveAt,
+            source: payload.source,
+            note: payload.note
+        )
+    }
+
+    private func key(for price: ProductPrice) -> PayloadKey? {
+        guard let productID = price.product?.remoteID,
+              let type = SupabasePullPreviewNormalizer.normalizedPriceType(price.type.rawValue),
+              let priceCanonical = PriceCanonicalizer.canonicalAmount(from: price.price)?.value else {
+            return nil
+        }
+        return PayloadKey(
+            productID: productID,
+            type: type,
+            priceCanonical: priceCanonical,
+            effectiveAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(from: price.effectiveAt),
+            source: SupabasePullPreviewNormalizer.semanticString(price.source),
+            note: SupabasePullPreviewNormalizer.semanticString(price.note)
+        )
+    }
+
+    private struct PayloadKey: Hashable, Comparable {
+        let productID: UUID
+        let type: String
+        let priceCanonical: String
+        let effectiveAt: String
+        let source: String?
+        let note: String?
+
+        var stableID: String {
+            [
+                productID.uuidString.lowercased(),
+                type,
+                priceCanonical,
+                effectiveAt,
+                source ?? "",
+                note ?? ""
+            ].joined(separator: "|")
+        }
+
+        static func < (lhs: PayloadKey, rhs: PayloadKey) -> Bool {
+            lhs.stableID < rhs.stableID
+        }
     }
 }
