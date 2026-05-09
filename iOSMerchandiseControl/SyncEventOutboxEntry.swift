@@ -405,8 +405,8 @@ nonisolated enum SyncEventOutboxFactory {
 }
 
 struct SyncEventOutboxLocalStore {
-    static let defaultSendingRecoveryScanLimit = 50
-    static let hardSendingRecoveryScanLimit = 200
+    nonisolated static let defaultSendingRecoveryScanLimit = 50
+    nonisolated static let hardSendingRecoveryScanLimit = 200
 
     let context: ModelContext
 

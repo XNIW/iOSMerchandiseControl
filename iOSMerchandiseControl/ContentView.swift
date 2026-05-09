@@ -105,6 +105,11 @@ struct ContentView: View {
         .preferredColorScheme(resolvedColorScheme)
         .task {
             schedulePriceHistoryBackfillIfNeeded()
+#if DEBUG
+            if isTask087SmokeLaunchRequested {
+                selectedTab = 3
+            }
+#endif
         }
         .onReceive(NotificationCenter.default.publisher(for: .openDatabaseTabRequested)) { _ in
             selectedTab = 1
@@ -141,6 +146,15 @@ struct ContentView: View {
             }
         }
     }
+
+#if DEBUG
+    private var isTask087SmokeLaunchRequested: Bool {
+        ProcessInfo.processInfo.arguments.contains("--task087-smoke")
+            || ProcessInfo.processInfo.arguments.contains("--task087-smoke-run")
+            || ProcessInfo.processInfo.environment["TASK087_SMOKE"] == "1"
+            || ProcessInfo.processInfo.environment["TASK087_SMOKE_RUN"] == "1"
+    }
+#endif
 }
 
 #Preview {

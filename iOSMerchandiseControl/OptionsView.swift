@@ -55,6 +55,10 @@ struct OptionsView: View {
     @State private var task045RemoteCollisionGatePassed = false
     @State private var pendingManualPushPlan: ManualPushPlan?
     @State private var isShowingManualPushConfirmation = false
+    @State private var task087SmokeState: Task087SmokeUIState = .idle
+    @State private var didAutoRunTask087Smoke = false
+    @State private var task087SmokeRunID: UUID?
+    @State private var task087SmokeTask: Task<Void, Never>?
 #endif
 
     init(
@@ -416,6 +420,19 @@ struct OptionsView: View {
                     }
                 }
 
+                if isTask087SmokeEnabled {
+                    Divider()
+
+                    Button {
+                        runTask087SandboxSmoke()
+                    } label: {
+                        Label("TASK087 sandbox smoke", systemImage: "checkmark.shield")
+                    }
+                    .disabled(!canRunAuthenticatedSupabaseActions || task087SmokeState.isRunning)
+
+                    task087SmokeStatusRow
+                }
+
                 Button {
                     runSupabasePushPreflight()
                 } label: {
@@ -530,9 +547,15 @@ struct OptionsView: View {
             resetProductPriceManualPush()
             syncEventDebugViewModel.cancel()
             pushPreflightViewModel.cancel()
+            task087SmokeTask?.cancel()
+            task087SmokeTask = nil
+            task087SmokeRunID = nil
         }
         .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
             refreshSupabaseBaselineSummary()
+        }
+        .task(id: task087SmokeAutoRunTrigger) {
+            runTask087SandboxSmokeIfRequested()
         }
         .onChange(of: pushPreflightViewModel.state) { _, state in
             switch state {
@@ -673,6 +696,66 @@ struct OptionsView: View {
         guard isPushPreflightAccountReady else { return false }
         guard selectedPushPreflightScope.isScopedTask045 else { return true }
         return task045RemoteCollisionGatePassed
+    }
+
+    private var isTask087SmokeEnabled: Bool {
+        ProcessInfo.processInfo.arguments.contains("--task087-smoke")
+            || ProcessInfo.processInfo.arguments.contains("--task087-smoke-run")
+            || ProcessInfo.processInfo.environment["TASK087_SMOKE"] == "1"
+            || ProcessInfo.processInfo.environment["TASK087_SMOKE_RUN"] == "1"
+    }
+
+    private var shouldAutoRunTask087Smoke: Bool {
+        ProcessInfo.processInfo.arguments.contains("--task087-smoke-run")
+            || ProcessInfo.processInfo.environment["TASK087_SMOKE_RUN"] == "1"
+    }
+
+    private var task087SmokeAutoRunTrigger: String {
+        [
+            shouldAutoRunTask087Smoke.description,
+            supabaseAuthViewModel.isTransitioning.description,
+            supabaseAuthViewModel.isSignedIn.description,
+            supabaseAuthViewModel.sessionInfo?.userID.uuidString ?? "no-user"
+        ].joined(separator: "|")
+    }
+
+    @ViewBuilder
+    private var task087SmokeStatusRow: some View {
+        switch task087SmokeState {
+        case .idle:
+            EmptyView()
+        case .running:
+            HStack(spacing: 12) {
+                ProgressView()
+                Text("Verifica dati in corso…")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .success(let result):
+            Label {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Dati verificati su questo dispositivo.")
+                    Text(result.privacySafeSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color.green)
+            }
+        case .failed(let message):
+            Label {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Sincronizzazione parziale: controlla i dettagli.")
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.orange)
+            }
+        }
     }
 
     private var canRunManualPush: Bool {
@@ -2146,6 +2229,85 @@ struct OptionsView: View {
 
             isRunningTask045RemoteCollisionCheck = false
         }
+    }
+
+    private func runTask087SandboxSmoke() {
+        guard isTask087SmokeEnabled else { return }
+        guard !task087SmokeState.isRunning else { return }
+        guard supabaseAuthViewModel.isSignedIn else {
+            task087SmokeState = .failed("Operazione bloccata: controlla accesso o ambiente di test.")
+            return
+        }
+        guard let service = supabaseInventoryService else {
+            task087SmokeState = .failed("Operazione bloccata: controlla accesso o ambiente di test.")
+            return
+        }
+
+        let runID = UUID()
+        task087SmokeRunID = runID
+        task087SmokeState = .running
+        task087SmokeTask?.cancel()
+        task087SmokeTask = Task { @MainActor in
+            do {
+                let runner = SupabaseTask087SandboxSmokeService(
+                    context: modelContext,
+                    inventoryService: service,
+                    syncEventRecorder: syncEventOutboxDrainRecorder
+                )
+                let result = try await runner.run()
+                guard task087SmokeRunID == runID else { return }
+                task087SmokeRunID = nil
+                task087SmokeTask = nil
+                task087SmokeState = .success(result)
+            } catch let error as SupabaseTask087SandboxSmokeError {
+                guard task087SmokeRunID == runID else { return }
+                task087SmokeRunID = nil
+                task087SmokeTask = nil
+                task087SmokeState = .failed(error.safeMessage)
+            } catch let error as SupabaseInventoryServiceError {
+                guard task087SmokeRunID == runID else { return }
+                task087SmokeRunID = nil
+                task087SmokeTask = nil
+                task087SmokeState = .failed(
+                    error.safeDiagnosticDetail
+                        ?? "Operazione bloccata: controlla accesso o ambiente di test."
+                )
+            } catch let error as SyncEventRecordError {
+                guard task087SmokeRunID == runID else { return }
+                task087SmokeRunID = nil
+                task087SmokeTask = nil
+                task087SmokeState = .failed(error.failure.message)
+            } catch is CancellationError {
+                guard task087SmokeRunID == runID else { return }
+                task087SmokeRunID = nil
+                task087SmokeTask = nil
+                task087SmokeState = .failed("Sincronizzazione parziale: controlla i dettagli.")
+            } catch {
+                guard task087SmokeRunID == runID else { return }
+                task087SmokeRunID = nil
+                task087SmokeTask = nil
+                task087SmokeState = .failed("Sincronizzazione parziale: controlla i dettagli.")
+            }
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 60_000_000_000)
+            guard task087SmokeRunID == runID,
+                  task087SmokeState.isRunning else { return }
+            task087SmokeRunID = nil
+            task087SmokeTask?.cancel()
+            task087SmokeTask = nil
+            task087SmokeState = .failed("Operazione bloccata: controlla accesso o ambiente di test.")
+        }
+    }
+
+    private func runTask087SandboxSmokeIfRequested() {
+        guard shouldAutoRunTask087Smoke else { return }
+        guard !didAutoRunTask087Smoke else { return }
+        guard !supabaseAuthViewModel.isTransitioning else { return }
+
+        didAutoRunTask087Smoke = true
+        runTask087SandboxSmoke()
     }
 
     private func resetTask045RemoteCollisionGate() {
@@ -4200,6 +4362,20 @@ private enum ProductPriceApplyViewState {
     case applying(ProductPriceApplyPlan)
     case applied(ProductPriceApplyResult)
     case failed(String)
+}
+
+private enum Task087SmokeUIState {
+    case idle
+    case running
+    case success(SupabaseTask087SandboxSmokeResult)
+    case failed(String)
+
+    var isRunning: Bool {
+        if case .running = self {
+            return true
+        }
+        return false
+    }
 }
 
 #endif
