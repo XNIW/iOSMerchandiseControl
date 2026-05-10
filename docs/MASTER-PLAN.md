@@ -4,14 +4,28 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**Progetto IDLE** — nessun task attivo. **Ultimo completato:** **TASK-096 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`) — acceptance finale sync semi-automatica iOS Release verificata con evidenze privacy-safe, build/test/regressioni/anti-scope PASS, senza nuove feature e senza claim production-ready globale 100%.
+**Progetto IDLE**. **Ultimo completato:** **TASK-097 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — runtime sandbox smoke iOS ↔ Supabase verificato con dataset sintetico `TASK097_*_R1778437271`, evidenze privacy-safe e nessun claim production-ready globale 100%.
 
-**Precedente completato:** **TASK-095 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-095-policy-lifecycle-background-ios.md`) — policy lifecycle/background iOS foreground-first. **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** resta **DONE / Chiusura — PARTIAL_ACCEPTED** con residui runtime accettati.
+**Task attivo:** nessuno. **TASK-097** e' chiuso **DONE / Chiusura — REVIEW PASS**.
+
+**Roadmap backlog (non ACTIVE):** **TASK-098…TASK-102** restano solo voci MASTER-PLAN backlog — **TODO / Planning — non aperti** *(nessun file task creato)*.
+
+**Precedente completato:** **TASK-096 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`) — acceptance finale sync semi-automatica iOS Release. **TASK-095** resta **DONE / Chiusura — REVIEW PASS**; **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** resta **DONE / Chiusura — PARTIAL_ACCEPTED** con residui runtime accettati.
 
 ## Stato globale
-**IDLE** — nessun task attivo. **TASK-096** e' **DONE / Chiusura — REVIEW PASS** dopo review completa, fix documentale di tracking e build/test/regressioni/anti-scope PASS. **TASK-095** resta **DONE / Chiusura — REVIEW PASS** come completato precedente. **TASK-094** resta **DONE / Chiusura — REVIEW PASS**. **TASK-093** resta **DONE / Chiusura — REVIEW PASS**. **TASK-092** resta **DONE / Chiusura — REVIEW PASS**. **TASK-091** resta **DONE / Chiusura — REVIEW PASS**. **TASK-090** resta **DONE / Chiusura — PARTIAL_ACCEPTED** *(non riaperto)* con residui documentati. **TASK-097 non aperto**.
+**IDLE** — nessun task attivo. **TASK-097 DONE / Chiusura — REVIEW PASS** e' l'ultimo completato. **TASK-096…TASK-091** restano DONE come completati precedenti. **TASK-090** resta **DONE / Chiusura — PARTIAL_ACCEPTED** *(non riaperto)*. **TASK-098…TASK-102** restano **TODO / Planning — non aperti** *(file task non creati)*.
 
-**Ultimo completato:** **TASK-096 DONE / Chiusura — REVIEW PASS.** **TASK-095** resta il completato precedente; ancora **DONE / Chiusura**: **TASK-094**, **TASK-093**, **TASK-092**, **TASK-091**, **TASK-090 (PARTIAL_ACCEPTED)**, **TASK-089**, **TASK-088**, **TASK-087**, **TASK-086**, **TASK-085 (PARTIAL_ACCEPTED)** — come da tabella backlog.
+**Ultimo completato:** **TASK-097 DONE / Chiusura — REVIEW PASS.** *(Dettaglio completati TASK-096…085 invariati — tabella backlog.)*
+
+> **2026-05-10 14:57 -0400 — REVIEW+CHIUSURA TASK-097 REVIEW PASS / DONE:** review completa eseguita su tracking, task file, evidenze `docs/TASKS/EVIDENCE/TASK-097/`, harness runtime, task collegati TASK-091...096 e diff corrente. Fix review test-only: aggiunto `iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift`, harness read-only/gated per read-back remoto del dataset `TASK097_*_R1778437271`; nessuna patch Swift produzione. Check review PASS: `git status --short`, `git diff --check`, `xcodebuild -list`, build Debug iPhone 17 Pro iOS 26.4, build Release iPhone 17 Pro iOS 26.4, harness TASK-097 gated/skipped in suite standard, regressioni TASK-091...096 **246/0**, full XCTest **626 passed / 1 skipped / 0 failed**, `plutil` localizzazioni, anti-scope/privacy checks. Confermati read-back remoto+locale, ProductPrice current/previous, owner/RLS redatti, no service_role/admin, no dati reali/segreti. **TASK-097 DONE / Chiusura — REVIEW PASS**; progetto **IDLE**; **ultimo completato TASK-097**. **TASK-098…TASK-102** restano **TODO / Planning — non aperti**; nessun claim production-ready globale 100%.
+
+> **2026-05-10 14:36 -0400 — EXECUTION TASK-097 completata / handoff REVIEW:** smoke runtime reale iOS-first Supabase completato con dataset sintetico **`TASK097_*_R1778437271`**, owner/project redatti, no service_role/admin, no dati reali. M97-01…10 **PASS** con evidenze in `docs/TASKS/EVIDENCE/TASK-097/`; read-back remoto seed/post-push e read-back locale PASS; ProductPrice current/previous con effectiveAt deterministici e tolleranza `<= 0.005` PASS; lifecycle/UX/anti-scope/privacy PASS; build Debug/Release PASS; regressioni mirate TASK-091…096 PASS **310/0**; full XCTest PASS **626/0** su iPhone 17 Pro iOS 26.4. **No-code-needed**: nessuna patch Swift produzione. **TASK-097 ACTIVE / REVIEW**, responsabile **Claude / Reviewer**, **READY FOR REVIEW**, **TASK-097 NON DONE**. **Ultimo completato resta TASK-096 DONE / Chiusura — REVIEW PASS**. **TASK-098…TASK-102** restano **TODO / Planning — non aperti** *(nessun file task creato)*.
+
+> **2026-05-10 14:01 -0400 — PLANNING REVIEW TASK-097 completata / EXECUTION avviata (override utente):** validati manifest §8.1, collision scan §8.2, ProductPrice/effectiveAt/tolleranza §8.3, owner/RLS/write sandbox §8.4, sequenza runtime §9.1, matrice **M97-01…10**, evidenze §16 + ledger §16.1 e condizioni PASS runtime §19.4. Corretto refuso matrice `M97-01…10`. **TASK-097 ACTIVE / EXECUTION**, responsabile **Codex / Executor**, **TASK-097 NON DONE**. **Ultimo completato resta TASK-096 DONE / Chiusura — REVIEW PASS**. **TASK-098…TASK-102** restano **TODO / Planning — non aperti** *(nessun file task creato)*.
+
+> **2026-05-10 — PLANNING TASK-097 inizializzato (solo markdown):** creato **`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`**; progetto **IDLE → ACTIVE** unicamente per **PLANNING TASK-097**. **TASK-097 ACTIVE / PLANNING**, responsabile **Claude / Planner**; titolo backlog: **Runtime sandbox smoke iOS ↔ Supabase**; manifest **`TASK097_*`** pianificato (nessun seed/runtime questo turno); **TASK-097 NON DONE**, **NON READY FOR EXECUTION**, handoff **READY FOR PLANNING REVIEW**. **Ultimo completato invariato TASK-096 DONE / Chiusura — REVIEW PASS**. **TASK-098…TASK-102** restano **TODO / Planning — non aperti**. Vietati questo turno: Swift/Kotlin/SQL/migration/RLS/`Localizable.strings`/`project.pbxproj`, write Supabase live/sandbox runtime, seed, build/test obbligatori, Timer/BGTask/Realtime/polling/worker, sync mutativa automatica, **implementazione EXECUTION codice TASK-097**, creazione **`docs/TASKS/TASK-098…`**, dati reali/segreti.
+
+> **2026-05-10 — ROADMAP FUTURA TASK-097…TASK-102 integrata nel MASTER-PLAN (solo backlog/planning):** runtime sandbox smoke iOS, cross-platform smoke Android↔Supabase↔iOS, conflict/recovery hardening, large dataset performance acceptance, privacy/RLS/security audit, release polish UX. **TASK-097** successivamente inizializzato come file task **ACTIVE / PLANNING** *(voce pianificazione dedicata sotto)*; **TASK-098…TASK-102** restano solo backlog finché non attivati; nessuna execution automatica dal solo MASTER-PLAN.
 
 > **2026-05-10 12:52 -0400 — REVIEW+CHIUSURA TASK-096 REVIEW PASS / DONE:** review completa eseguita su tracking, task file, evidenze `docs/TASKS/EVIDENCE/TASK-096/`, task collegati TASK-091...095 e diff corrente. Fix diretto solo documentale: riallineata sezione finale del MASTER-PLAN rimasta stale su PLANNING e compilata Review TASK-096. Check review PASS: `git status --short`, `git diff --check`, `xcodebuild -list`, build Debug iPhone 17 Pro iOS 26.4.1, build Release iPhone 17 Pro iOS 26.4.1, `SupabaseManualSyncViewModelTests` **87/0**, `SupabaseManualSyncLifecycleRunGateTests` **6/0**, `LocalPendingAggregatedPushPlannerTests` **11/0**, snapshot/pending TASK-093 **25/0**, `SupabaseManualSyncReleaseUITests` **24/0**, `LocalizationCoverageTests` **8/0**, regressione sync TASK-091...095 **364/0**, full XCTest **626/0**, `plutil` localizzazioni, anti-scope/privacy checks. Quattro warning non-Sendable nei test outbox debug confermati preesistenti/fuori scope; nessun warning TASK-096 nuovo. **TASK-096 DONE / Chiusura — REVIEW PASS**; progetto **IDLE**; **ultimo completato TASK-096**. **TASK-097 non aperto**; nessun claim production-ready globale 100%.
 
@@ -333,6 +347,12 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 | P0 | TASK-094 | **DONE / Chiusura — REVIEW PASS** *(file `docs/TASKS/TASK-094-smart-aggregated-push-ios.md`)* | Push intelligente aggregato e resource-aware | Implementato, reviewato e verificato: invio locale → Supabase manuale/guidato con planner aggregato bounded, retry controllato, owner/session recheck, stale baseline guard, ProductPrice dedupe/idempotenza, no N+1, outbox aggregata, summary review sheet; fix review su terminali/cap e local-key/remote-key; build/test PASS | Realtime, worker permanente, polling aggressivo, invio ogni singolo keystroke, merge conflitti avanzato campo-per-campo |
 | P1 | TASK-095 | **DONE / Chiusura — REVIEW PASS** *(file:* `docs/TASKS/TASK-095-policy-lifecycle-background-ios.md`*) | Policy lifecycle/background iOS | Implementato, reviewato e verificato: policy foreground-first, RunGate minimale/fakeable, single-flight root/Opzioni/sheet Release, preflight auth/owner/rete/stato app, time budget bounded, stati processo separati, card inline non invasiva, localizzazioni minime; build/test PASS | BackgroundTasks reali, WorkManager Android 1:1, servizi sempre attivi, Timer/polling/Realtime/worker, sync mutativa silenziosa; apertura/anteprima **TASK-096** file task in TASK-095 |
 | P1 | TASK-096 | **DONE / Chiusura — REVIEW PASS** *(file:* `docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`*)* | Acceptance finale sync semi-automatica | **Review PASS:** matrice accettazione composita iOS-first post-091...095 **PASS**, evidenze privacy-safe, build/test/regressioni/anti-scope PASS; nessuna modifica Swift; no claim 100% globale | Nuove feature, BGTask/Timer/worker/realtime, sync mutativa silenziosa, refactor ampio, Kotlin/SQL live non autorizzati, apertura TASK-097 |
+| P2 | TASK-097 | **DONE / Chiusura — REVIEW PASS** *(file `docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`)* | Runtime sandbox smoke iOS ↔ Supabase (`TASK097_*`) | Runtime reale iOS→Supabase→iOS eseguito e reviewato: pull/apply/push confermati; ProductPrice; pending/outbox/lifecycle esistenti; evidenze privacy-safe | Android runtime obbligatorio/cross TASK-098, dataset negozio reale, produzione globale, nuove feature sync, refactor ampio, BGTask/Timer/Realtime |
+| P2 | TASK-098 | **TODO / Planning — non aperto** | Cross-platform smoke Android ↔ Supabase ↔ iOS (`TASK098_*`) | Android scrive / iOS legge e viceversa; ProductPrice current/previous coerenti; schema/model parity minima; evidenze privacy-safe | Refactor Android ampio, dati reali, benchmark grande dataset, nuova architettura sync |
+| P2 | TASK-099 | **TODO / Planning — non aperto** | Conflict/recovery runtime hardening | Sessione scaduta, owner mismatch, rete instabile, write incerta, baseline stale, pending bloccati, retry manuale, UX copy chiaro | Editor conflitti avanzato, merge campo-per-campo complesso, sync automatica silenziosa |
+| P2 | TASK-100 | **TODO / Planning — non aperto** | Large dataset performance acceptance | Preview/pull/push su dataset sintetico grande; ProductPrice storico ampio; snapshot bounded; no N+1; UI non bloccata; budget memoria/tempo | Strumenti benchmark permanenti in produzione, dati reali, redesign UI |
+| P2 | TASK-101 | **TODO / Planning — non aperto** | Production readiness privacy/RLS/security audit | Review RLS/policy; scan segreti/log; owner scoping; no dati reali in log/evidenze; safety config Supabase; failure-mode review | Cambio auth model, multiutente avanzato, migration distruttive, claim 100% production-ready se restano residui |
+| P2 | TASK-102 | **TODO / Planning — non aperto** | Release polish & user-facing acceptance | Copy IT/EN/ES/ZH; stato sync chiaro; empty/error/loading; CTA principali; accessibility/Dynamic Type; smoke manuale guidato | Nuove feature business, redesign completo, nuova sync logic |
 
 ### Definizione di “sync semi-automatica intelligente”
 
@@ -346,7 +366,7 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ### Sequenza consigliata
 
-**TASK-091 → TASK-092 → TASK-093 → TASK-094 → TASK-095 → TASK-096**
+**TASK-091 → TASK-092 → TASK-093 → TASK-094 → TASK-095 → TASK-096** *(completata)*
 
 - TASK-091 implementa il primo MVP iOS-first della semi-automatica sopra la baseline manuale Release gia' documentata da TASK-072…090, senza aprire TASK-092 e senza mutazioni silenziose.
 - TASK-092 introduce solo auto-pull/preview leggero, non mutazioni rischiose.
@@ -354,6 +374,8 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 - TASK-094 abilita il push intelligente.
 - TASK-095 decide la strategia lifecycle/background.
 - TASK-096 è la chiusura finale con evidenze.
+
+**Roadmap backlog post-acceptance:** **TASK-097** e' **DONE / Chiusura — REVIEW PASS**; **TASK-098 → TASK-102** restano come **solo backlog** MASTER-PLAN — promuovere solo dopo init file/successivo ACTIVE. Ogni EXECUTION richiede **override utente**.
 
 > **2026-05-07 23:15 -04 — REVIEW+FIX/CHIUSURA TASK-063/TASK-070/TASK-071 (user override controllato):** review completa eseguita e chiusura coerente. **TASK-063** approvato e chiuso **DONE / Chiusura** come planning/documentazione base architetturale production-safe, non come execution codice. **TASK-070** approvato e chiuso **DONE / Chiusura** come planning/gap analysis pull preview read-only; TASK-071 resta execution separata avviata con override utente. **TASK-071** approvato con fix diretto piccolo: se `remotePreviewProvider` e' presente, il coordinator esegue preview-only anche con pending locali zero e termina dopo `.remotePreview` + `.summary`; con provider `nil` resta invariato il comportamento TASK-069. Check PASS: build Debug iPhone 16e OS 26.2, build Release iPhone 16e OS 26.2, XCTest richiesti **86 test** con `-parallel-testing-enabled NO`, `git diff --check`, grep anti-scope produzione/Release path e no raw `SyncPreview` nella card Release. Warning residui preesistenti/out-of-scope in `SyncEventOutboxDrainService.swift`, `SupabaseProductPriceApplyService.swift` e test DEBUG outbox. Confermati: no `OptionsView`, no nuova UI/Localizable, no live sync, no apply/push/ProductPrice push/drain/enqueue/baseline writer, no backend/Supabase/SQL/Android, **nessun TASK-072 creato**. **Workspace IDLE**, nessun task attivo. Prossimo consigliato solo testuale: task separato futuro per UI/CTA «Controlla cloud» o integrazione preview remota nella Release UI, solo dopo nuovo planning/override.
 > **2026-05-07 23:04 -04 — EXECUTION TASK-071 completata / handoff REVIEW:** implementato strato preview remota read-only/fakeable: protocol/provider `SupabaseManualSyncRemotePreviewProviding`, DTO summary aggregato privacy-safe, mapper outcome, adapter opzionale su `SupabasePullPreviewService`, DI opzionale nel coordinator con default `nil` e Release factory invariata. Preview-only con provider presente termina dopo `.remotePreview` + `.summary` e non avvia confirmation/apply/push/drain/flush; il messaggio interno no-action evita di promettere "Tutto aggiornato" su un controllo read-only. Check PASS: XCTest mirati iniziali nuovi/coordinator **35 test**, regressioni richieste finali **85 test**, build Debug iPhone 16e OS 26.2, build Release iPhone 16e OS 26.2, `git diff --check`, grep statici anti-scope e no raw `SyncPreview` nella card Release. Nessuna UI/Localizable, nessuna live call obbligatoria, nessun apply/push/drain/enqueue/baseline writer, nessun backend/Android/SQL. **TASK-071 ACTIVE / REVIEW**, responsabile **Claude / Reviewer**, **non DONE**.
@@ -586,13 +608,17 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 > **2026-05-05 (review/close/user override):** **TASK-040** review tecnica completa eseguita da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**: fix diretto limitato a conflitti `remoteID` per duplicati locali e supplier/category omonimi con UUID remoto diverso, piu' hardening apply anti-merge silenzioso. Build Debug PASS, build Release PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-scope PASS. Nessuna scrittura Supabase, nessun push, nessun `record_sync_event`, nessun outbox/dirty, nessun ProductPrice apply remoto, nessun SQL/migration. **TASK-039 resta DONE**. Follow-up futuri registrati ma non attivati.
 
 ## Workflow task attivo
-- **Task attivo:** Nessuno — progetto **IDLE**
-- **File task attivo:** N/A
-- **Stato globale:** **IDLE**
-- **Ultimo completato:** **TASK-096 DONE / Chiusura — REVIEW PASS**
-- **File task ultimo completato:** `docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`
-- **Stato TASK-096:** **DONE / Chiusura — REVIEW PASS** (acceptance finale sync semi-automatica iOS Release verificata; evidenze privacy-safe; build/test/regressioni/anti-scope PASS; nessun claim production-ready globale 100%)
-- **Precedente completato:** **TASK-095 DONE / Chiusura — REVIEW PASS**
+- **Task attivo:** nessuno
+- **File task attivo:** —
+- **Stato globale progetto:** **IDLE**
+- **Ultimo completato:** **TASK-097 DONE / Chiusura — REVIEW PASS**
+- **File task ultimo completato:** `docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`
+- **Stato TASK-097:** **DONE / Chiusura — REVIEW PASS**
+
+- **Completato precedente:** **TASK-096 DONE / Chiusura — REVIEW PASS**
+- **File task TASK-096:** `docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`
+- **Stato TASK-096:** **DONE / Chiusura — REVIEW PASS** *(invariato)*
+- **TASK-098…TASK-102:** **TODO / Planning — non aperti** *(nessun file task)*
 - **File task TASK-095:** `docs/TASKS/TASK-095-policy-lifecycle-background-ios.md`
 - **Stato TASK-095:** **DONE / Chiusura — REVIEW PASS** (policy lifecycle/background iOS foreground-first verificata; review con fix mirati; build/test PASS)
 - **Completato precedente:** **TASK-094 DONE / Chiusura — REVIEW PASS**
@@ -612,7 +638,7 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 - **Stato TASK-090:** **DONE / Chiusura — PARTIAL_ACCEPTED** (acceptance documentata con residui runtime accettati; nessun claim 100%)
 - **Completato precedente:** **TASK-089 DONE / Chiusura — REVIEW PASS**
 - **File task TASK-089:** `docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`
-- **Nota tracking:** **TASK-096 REVIEW PASS / DONE** (2026-05-10 12:52 -0400) — progetto **IDLE**, nessun task attivo, **TASK-097 non aperto**, nessun claim production-ready globale 100%.
+- **Nota tracking:** **REVIEW TASK-097 completata** (2026-05-10 14:57 -0400) — progetto **IDLE**, **TASK-097 DONE / Chiusura — REVIEW PASS**, ultimo completato **TASK-097**. **TASK-098…TASK-102** restano **TODO / Planning — non aperti** *(solo backlog)*, nessun claim production-ready globale 100%.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -653,14 +679,15 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** Nessuno — progetto **IDLE**
-- **File task:** N/A
-- **Stato task:** N/A
-- **Fase attuale:** N/A
-- **Responsabile attuale:** Nessuno / Chiusura
-- **Ultimo aggiornamento:** 2026-05-10 12:52 -0400 — **TASK-096 REVIEW PASS / DONE**
-- **Nota:** **TASK-096** e' **ultimo completato** **DONE / Chiusura — REVIEW PASS**. **TASK-097 non aperto**. Nessun claim production-ready globale 100%.
-- **Ultimo completato:** **TASK-096** (`docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`) — **DONE / Chiusura — REVIEW PASS** (acceptance finale sync semi-automatica iOS Release verificata; evidenze privacy-safe; build/test/regressioni/anti-scope PASS; nessun write Supabase live, no Android/Kotlin, no SQL/backend).
+- **Task attivo corrente:** nessuno
+- **File task:** —
+- **Stato task:** —
+- **Fase attuale:** —
+- **Responsabile attuale:** —
+- **Ultimo aggiornamento:** 2026-05-10 14:57 -0400 — **REVIEW+CHIUSURA TASK-097 REVIEW PASS / DONE**
+- **Nota:** **TASK-097 DONE / Chiusura — REVIEW PASS**; smoke runtime iOS-first Supabase PASS con evidenze `docs/TASKS/EVIDENCE/TASK-097/`. **TASK-098…TASK-102** restano **TODO / Planning — non aperti** *(nessun file ancora)*. Nessun claim production-ready globale 100%.
+- **Ultimo completato:** **TASK-097** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — **DONE / Chiusura — REVIEW PASS** (runtime sandbox smoke iOS ↔ Supabase verificato; evidenze privacy-safe; build/test/regressioni/anti-scope PASS; no Android/Kotlin, no SQL/backend, no claim globale 100%).
+- **Precedente completato:** **TASK-096** (`docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`) — **DONE / Chiusura — REVIEW PASS** (acceptance finale sync semi-automatica iOS Release verificata; evidenze privacy-safe; build/test/regressioni/anti-scope PASS; nessun write Supabase live, no Android/Kotlin, no SQL/backend).
 - **Precedente completato:** **TASK-095** (`docs/TASKS/TASK-095-policy-lifecycle-background-ios.md`) — **DONE / Chiusura — REVIEW PASS** (policy lifecycle/background iOS foreground-first verificata; review con fix mirati; build/test PASS; nessun write Supabase live, no Android/Kotlin, no SQL/backend).
 - **Completato precedente:** **TASK-094** (`docs/TASKS/TASK-094-smart-aggregated-push-ios.md`) — **DONE / Chiusura — REVIEW PASS** (push aggregato resource-aware verificato; review con fix mirati; build/test PASS; nessun write Supabase live, no Android/Kotlin, no SQL/backend).
 - **Completato precedente:** **TASK-093** (`docs/TASKS/TASK-093-local-change-accumulation-ios.md`) — **DONE / Chiusura — REVIEW PASS** (accumulo locale modifiche/dirty set iOS verificato; review con fix mirati; build/test/anti-scope/privacy PASS; nessun write Supabase live, no Android/Kotlin, no SQL/backend).
@@ -870,6 +897,8 @@ Task bloccati non attivi:
 (Task futuri ordinati per priorità — aggiornabile solo da Claude o dall'utente, con motivazione esplicita)
 Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase. **TASK-036** aggiunto 2026-04-27 come follow-up documentale post-**TASK-031** (HTML avanzato: colspan/rowspan, multi-table, XCTest opzionale). **TASK-037** aggiunto 2026-04-27 da user override per creare il target XCTest minimale sulle fixture TASK-036. **TASK-040** aggiunto 2026-05-05: post TASK-039 DONE — full pull/paginazione controllata + bridge `remoteId` SwiftData allineato a inventory Supabase/Android; dipendenze TASK-034/035/038/039 DONE; riferimento funzionale Android TASK-067/068/069/070/071 (**non** copia codice). **TASK-041** aggiunto 2026-05-05: post TASK-040 DONE — planning preflight/dry-run push manuale tombstone-compliant iOS; **nessuna** write Supabase in planning; push reale task successivo; Android TASK-068 PARTIAL / TASK-071 documentati nel file task (**non** contratto live iOS). **TASK-042** aggiunto 2026-05-05: UI DEBUG `OptionsView` per preflight/dry-run manual push locale, no-write Supabase, no outbox/dirty/baseline persistence, localizzazioni complete e test puri UI/viewmodel. **TASK-052** aggiunto 2026-05-06: post TASK-051 DONE — foundation `sync_events` / `record_sync_event` / outbox iOS (audit + roadmap slice A–G; non DONE / BLOCKED / superseded by TASK-053). **TASK-053** aggiunto 2026-05-06 su override utente: Slice A tecnica read-only `sync_events` iOS, senza UI/write/outbox/realtime/background. **TASK-057** aggiunto 2026-05-06: post TASK-056 DONE — Slice E planning **local enqueue** verso outbox SwiftData da outcome push manuali; **no** network/RPC live/drain; file `docs/TASKS/TASK-057-supabase-sync-events-slice-e-local-enqueue-ios.md`. **TASK-058** aggiunto 2026-05-06: post TASK-057 DONE — Slice F recorder live isolato `record_sync_event` con mapper RPC puro e transport fakeable; **no** RPC live/Supabase live/live dataset validation/drain/UI; file `docs/TASKS/TASK-058-supabase-record-sync-event-live-recorder-planning-ios.md`. **TASK-060** aggiunto 2026-05-07: post **TASK-059 DONE** — Slice **G2** drain outbox manuale; file `docs/TASKS/TASK-060-supabase-sync-events-outbox-drain-g2-ios.md`. **TASK-061** aggiunto 2026-05-07: post **TASK-060 DONE** — UI DEBUG drain manuale in `OptionsView` (`#if DEBUG`); planning, execution e review chiusi con **APPROVED_FIXED_DIRECTLY / DONE**; file `docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md`. **TASK-062** aggiunto 2026-05-07: post **TASK-061 DONE / Chiusura** — pianificazione **validazione operativa controllata** (smoke Simulator/manuale, matrice S62-01…S62-15, policy drain live opzionale); file `docs/TASKS/TASK-062-supabase-sync-events-manual-drain-operational-validation-ios.md`. **TASK-063** creato come **ACTIVE / PLANNING** (file `docs/TASKS/TASK-063-supabase-production-safe-sync-orchestrator-planning-ios.md`) — roadmap orchestratore production-safe dopo TASK-062, slice TASK-064+ solo proposta. **TASK-064** creato su user override come prima slice operativa post TASK-063: recovery iOS bounded/owner-scoped delle entry outbox `sending` stale; file `docs/TASKS/TASK-064-supabase-sync-events-outbox-sending-stale-recovery-ios.md`.
 
+**TASK-097…TASK-102** registrati il **2026-05-10** nel MASTER-PLAN dopo **TASK-096 DONE / REVIEW PASS**. **TASK-097** ha **`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`** in **DONE / Chiusura — REVIEW PASS**; **TASK-098…TASK-102** restano backlog **TODO / Planning — non aperti** *(nessun file ancora)*. Temi roadmap: smoke runtime sandbox iOS-first; smoke cross-platform (098); hardening conflitto/recovery (099); performance grande dataset (100); audit privacy/RLS (101); polish UX Release (102). Nessuna EXECUTION automatica dal solo MASTER-PLAN.
+
 | ID | Titolo | Stato | Priorità |
 |----|--------|-------|----------|
 | TASK-002 | External file opening (document handoff) | DONE | CRITICAL |
@@ -950,10 +979,30 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-077 | Supabase mutative sync Release review sheet iOS | DONE | HIGH |
 | TASK-078 | Supabase pull apply locale guidato Release iOS | DONE | HIGH |
 | TASK-091 | Supabase iOS — sync semi-automatica intelligente e parità Android (MVP iOS-first) | DONE / Chiusura — REVIEW PASS | HIGH |
+| TASK-097 | Runtime sandbox smoke iOS ↔ Supabase (`TASK097_*`) | DONE / Chiusura — REVIEW PASS | HIGH |
+| TASK-098 | Cross-platform smoke Android ↔ Supabase ↔ iOS (`TASK098_*`) | TODO / Planning — non aperto | HIGH |
+| TASK-099 | Conflict/recovery runtime hardening | TODO / Planning — non aperto | HIGH |
+| TASK-100 | Large dataset performance acceptance | TODO / Planning — non aperto | HIGH |
+| TASK-101 | Production readiness privacy/RLS/security audit | TODO / Planning — non aperto | HIGH |
+| TASK-102 | Release polish & user-facing acceptance | TODO / Planning — non aperto | MEDIUM |
+
+### Roadmap post-TASK-096 — dettaglio *(TASK-097 DONE / REVIEW PASS; 098–102 non aperti)*
+
+Voci **TASK-098…102** non aperte **(nessun file task)**; **TASK-097** chiuso in **DONE / Chiusura — REVIEW PASS**; obiettivo/dipendenze/anti-scope come tabella sotto.
+
+| ID | Titolo | Stato | Obiettivo (breve) | Dipendenze principali | Note anti-scope |
+|----|--------|-------|-------------------|-----------------------|----------------|
+| TASK-097 | Runtime sandbox smoke iOS ↔ Supabase | **DONE / Chiusura — REVIEW PASS** | Runtime reale **iOS-first** su sandbox con dati **`TASK097_*`** eseguito e reviewato; ciclo iOS→Supabase→iOS, pull/apply/push/ProductPrice/pending/evidenze PASS | TASK-096 DONE | Android obbligatorio / TASK-098 / dati reali / prod globale |
+| TASK-098 | Cross-platform smoke Android ↔ Supabase ↔ iOS | TODO / Planning — non aperto | Smoke **minimo**: Android scrive → iOS legge; iOS scrive → Android legge; solo prefisso **`TASK098_*`**; ProductPrice **current/previous** coerenti; parity schema/model **minima**; evidenze privacy-safe. | Consigliato dopo smoke iOS TASK-097; riferimento Android funzionale (repo separato come atteso) | **No** refactor Android ampio / dati reali / benchmark grande / **nuova** architettura sync |
+| TASK-099 | Conflict/recovery runtime hardening | TODO / Planning — non aperto | Validare e rifinire **casi reali**: sessione scaduta, owner mismatch, rete instabile, write incerta, baseline stale, pending bloccati, retry manuale, **copy UX** chiaro. | Stack TASK-091…096; evidenza runtime/controllo utente dove serve | **No** editor conflitti avanzato / merge campo-per-campo complesso / **sync automatica silenziosa** |
+| TASK-100 | Large dataset performance acceptance | TODO / Planning — non aperto | Misura e ottimizzazione bounded su **dataset sintetico realistico**: preview/pull/push, storico ProductPrice ampio, snapshot bounded, anti-**N+1**, UI reattiva, budget **memoria/tempo**. | TASK-096; consigliato contesto dopo TASK-097 (smoke configurato) | **No** strumenti benchmark permanenti / **no** dati reali / **no** redesign UI |
+| TASK-101 | Production readiness privacy/RLS/security audit | TODO / Planning — non aperto | Audit **privacy / security / Supabase readiness** prima di uso reale piu’ esteso: RLS/policy, scan segreti/log, owner scoping, **no dati reali** in evidenze, safety config Supabase, failure modes. | Completamenti tecnici TASK-097…100 come contesto dipendente dall’audit | **No** cambio auth model / multiutente avanzato / migration distruttive / **claim 100% production-ready se restano residui** |
+| TASK-102 | Release polish & user-facing acceptance | TODO / Planning — non aperto | **Polish UX/UI** uso quotidiano: copy **IT/EN/ES/zh-Hans**, stato sync chiaro, empty/error/loading, CTA, **accessibility**/Dynamic Type, smoke manuale guidato. | TASK-096 minimo; consigliato dopo TASK-101 per testi sensibili a messaggi sicuri | **No** nuove feature business / redesign completo / **nuova** sync logic |
 
 ## Task completati
 | ID | Titolo | Data completamento |
 |----|--------|--------------------|
+| TASK-097 | Runtime sandbox smoke iOS ↔ Supabase (`TASK097_*`) | 2026-05-10 |
 | TASK-091 | Supabase iOS — sync semi-automatica intelligente e parità Android (MVP iOS-first) | 2026-05-09 |
 | TASK-001 | Gap Audit iOS vs Android — Censimento funzionalità mancanti | 2026-03-19 |
 | TASK-003 | PreGenerate append/reload parity | 2026-03-20 |
