@@ -287,7 +287,22 @@ struct SupabaseProductPriceManualPushService: Sendable {
     }
 
     func push(snapshot: ProductPriceManualPushSnapshot) async throws -> ProductPriceManualPushResult {
-        let insertedCount = try await insert(snapshot: snapshot)
+        let insertedCount: Int
+        do {
+            insertedCount = try await insert(snapshot: snapshot)
+        } catch let error as ProductPriceManualPushError {
+            if case .uniqueConflict = error {
+                let verification = try await verify(snapshot: snapshot)
+                if case .exactMatch = verification {
+                    return ProductPriceManualPushResult(
+                        insertedCount: 0,
+                        verification: verification,
+                        fingerprint: snapshot.fingerprint
+                    )
+                }
+            }
+            throw error
+        }
         let verification = try await verify(snapshot: snapshot)
         return ProductPriceManualPushResult(
             insertedCount: insertedCount,

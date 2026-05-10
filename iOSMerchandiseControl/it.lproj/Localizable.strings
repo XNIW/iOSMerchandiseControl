@@ -1043,6 +1043,7 @@
 "options.supabase.manualSync.summary.cloudCheck.incomplete" = "Ultimo controllo: controllo cloud incompleto. Riprova.";
 "options.supabase.manualSync.summary.network" = "Connessione non disponibile. Riprova.";
 "options.supabase.manualSync.summary.session" = "Accesso al cloud necessario.";
+"options.supabase.manualSync.summary.permission" = "Permessi cloud non sufficienti. Controlla cloud.";
 "options.supabase.manualSync.summary.generic" = "Non è stato possibile completare il controllo. Riprova.";
 "options.supabase.manualSync.summary.cancelled" = "Controllo annullato.";
 "options.supabase.manualSync.summary.localApply.completed" = "Dati locali aggiornati.";
@@ -1052,7 +1053,7 @@
 "options.supabase.manualSync.summary.localApply.suppliersCreated" = "fornitori creati: %d";
 "options.supabase.manualSync.summary.localApply.categoriesCreated" = "categorie create: %d";
 "options.supabase.manualSync.summary.localApply.failed" = "Non ho aggiornato i dati locali. Riesegui Controlla cloud.";
-"options.supabase.manualSync.action.checkCloud" = "Controlla";
+"options.supabase.manualSync.action.checkCloud" = "Controlla cloud";
 "options.supabase.manualSync.action.review" = "Rivedi";
 "options.supabase.manualSync.action.syncNow" = "Sincronizza ora";
 "options.supabase.manualSync.action.signIn" = "Accedi";
@@ -1089,6 +1090,8 @@
 "options.supabase.manualSync.plan.summary.failed.message" = "Non è stato possibile completare il controllo.";
 "options.supabase.manualSync.plan.summary.invalidData.message" = "Dati da correggere prima di continuare.";
 "options.supabase.manualSync.plan.summary.access.message" = "Serve accedere di nuovo prima di continuare.";
+"options.supabase.manualSync.plan.summary.permission.title" = "Permessi cloud";
+"options.supabase.manualSync.plan.summary.permission.message" = "Permessi cloud non sufficienti. Controlla cloud.";
 "options.supabase.manualSync.plan.attention.ready" = "Puoi procedere con le modifiche sicure.";
 "options.supabase.manualSync.plan.attention.needsReview" = "Su alcune schede ci sono differenze da verificare prima di procedere.";
 "options.supabase.manualSync.plan.attention.blocked" = "Correggi gli elementi indicati e ricontrolla.";
@@ -1097,6 +1100,7 @@
 "options.supabase.manualSync.plan.attention.failed" = "Serve risolvere accesso o sincronizzazione e ricontrollare.";
 "options.supabase.manualSync.plan.attention.invalidData" = "Dati da correggere prima di continuare.";
 "options.supabase.manualSync.plan.attention.access" = "Serve accedere di nuovo prima di continuare.";
+"options.supabase.manualSync.plan.attention.permission" = "Controlla cloud per riprovare con i permessi correnti.";
 "options.supabase.manualSync.review.title" = "Rivedi modifiche cloud";
 "options.supabase.manualSync.review.subtitle" = "Controlla cosa potrà cambiare prima di aggiornare questo dispositivo.";
 "options.supabase.manualSync.review.cloudToDevice.title" = "Dal cloud al dispositivo";

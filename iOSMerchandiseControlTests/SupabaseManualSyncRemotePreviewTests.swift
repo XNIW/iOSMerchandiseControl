@@ -95,6 +95,9 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
         let permission = SupabaseManualSyncRemotePreviewOutcomeMapper.summary(
             from: .failed(.service(.permissionDeniedOrRLS(statusCode: 403, code: "42501", message: "permission denied")))
         )
+        let auth = SupabaseManualSyncRemotePreviewOutcomeMapper.summary(
+            from: .failed(.service(.sessionMissing))
+        )
         let schema = SupabaseManualSyncRemotePreviewOutcomeMapper.summary(
             from: .failed(.service(.schemaDrift(message: "missing column")))
         )
@@ -103,6 +106,11 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
         XCTAssertEqual(permission.recommendedUserMessageKey, .cloudCheckFailedPermission)
         XCTAssertEqual(SupabaseManualSyncRemotePreviewOutcomeMapper.phaseOutcome(for: permission), .blocked)
         XCTAssertNotEqual(SupabaseManualSyncRemotePreviewOutcomeMapper.finalUserState(for: permission), .completedSuccessfully)
+
+        XCTAssertEqual(auth.failureCategory, .auth)
+        XCTAssertEqual(auth.recommendedUserMessageKey, .cloudCheckFailedPermission)
+        XCTAssertEqual(SupabaseManualSyncRemotePreviewOutcomeMapper.phaseOutcome(for: auth), .blocked)
+        XCTAssertEqual(SupabaseManualSyncRemotePreviewOutcomeMapper.finalUserState(for: auth), .blocked)
 
         XCTAssertEqual(schema.failureCategory, .schemaOrDecode)
         XCTAssertEqual(schema.recommendedUserMessageKey, .cloudCheckFailedTechnical)

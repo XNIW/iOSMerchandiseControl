@@ -28,6 +28,8 @@ nonisolated enum SupabaseSyncPlanSectionID: String, Sendable, Equatable, Hashabl
 nonisolated enum SupabaseSyncPlanBlockingReason: String, Sendable, Equatable, Hashable, CaseIterable {
     case invalidLocalData
     case cloudConflict
+    case authRequired
+    case cloudPermission
     case accessOrSync
     case changedData
     case partialSync
@@ -83,11 +85,12 @@ nonisolated enum SupabaseSyncPlanResolver {
         explicitState: SupabaseSyncPlanState? = nil,
         planFingerprint: String? = nil
     ) -> SupabaseSyncPlan {
+        let safeReasons = Array(Set(blockingReasons)).sorted { $0.rawValue < $1.rawValue }
         let state = resolveState(
             counters: counters,
+            blockingReasons: safeReasons,
             explicitState: explicitState
         )
-        let safeReasons = Array(Set(blockingReasons)).sorted { $0.rawValue < $1.rawValue }
         let sections = resolvedSections(
             state: state,
             requestedSections: requestedSections
@@ -111,6 +114,7 @@ nonisolated enum SupabaseSyncPlanResolver {
 
     static func resolveState(
         counters: SupabaseSyncPlanCounters,
+        blockingReasons: [SupabaseSyncPlanBlockingReason] = [],
         explicitState: SupabaseSyncPlanState? = nil
     ) -> SupabaseSyncPlanState {
         let explicit = explicitState.map { countersForExplicitState($0) } ?? SupabaseSyncPlanCounters()
@@ -124,9 +128,11 @@ nonisolated enum SupabaseSyncPlanResolver {
             failed: counters.failed + explicit.failed
         )
 
-        if merged.failed > 0 { return .failed }
-        if explicitState == .partial { return .partial }
+        if blockingReasons.contains(.authRequired) { return .blocked }
+        if blockingReasons.contains(.cloudPermission) { return .blocked }
         if merged.stale > 0 { return .stale }
+        if explicitState == .partial { return .partial }
+        if merged.failed > 0 { return .failed }
         if merged.blocked > 0 { return .blocked }
         if merged.reviewNeeded > 0 { return .needsReview }
         return .ready
@@ -158,11 +164,11 @@ nonisolated enum SupabaseSyncPlanResolver {
         case .ready:
             return counters.toApply > 0 ? .apply : .none
         case .failed:
-            return blockingReasons.contains(.accessOrSync) ? .signInAgain : .recheck
+            return .recheck
         case .partial, .stale:
             return .recheck
         case .blocked:
-            if blockingReasons.contains(.accessOrSync) {
+            if blockingReasons.contains(.authRequired) {
                 return .signInAgain
             }
             if blockingReasons.contains(.invalidLocalData) {

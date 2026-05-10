@@ -1044,6 +1044,7 @@
 "options.supabase.manualSync.summary.cloudCheck.incomplete" = "Última revisión: revisión en la nube incompleta. Reintenta.";
 "options.supabase.manualSync.summary.network" = "Sin conexión. Reintenta.";
 "options.supabase.manualSync.summary.session" = "Se necesita acceso a la nube.";
+"options.supabase.manualSync.summary.permission" = "Los permisos de la nube no son suficientes. Comprueba la nube.";
 "options.supabase.manualSync.summary.generic" = "No se pudo completar la revisión. Reintenta.";
 "options.supabase.manualSync.summary.cancelled" = "Revisión cancelada.";
 "options.supabase.manualSync.summary.localApply.completed" = "Datos locales actualizados.";
@@ -1053,7 +1054,7 @@
 "options.supabase.manualSync.summary.localApply.suppliersCreated" = "proveedores creados: %d";
 "options.supabase.manualSync.summary.localApply.categoriesCreated" = "categorías creadas: %d";
 "options.supabase.manualSync.summary.localApply.failed" = "No actualicé los datos locales. Ejecuta Revisar la nube otra vez.";
-"options.supabase.manualSync.action.checkCloud" = "Comprobar";
+"options.supabase.manualSync.action.checkCloud" = "Comprobar nube";
 "options.supabase.manualSync.action.review" = "Revisar";
 "options.supabase.manualSync.action.syncNow" = "Sincronizar ahora";
 "options.supabase.manualSync.action.signIn" = "Iniciar sesión";
@@ -1090,6 +1091,8 @@
 "options.supabase.manualSync.plan.summary.failed.message" = "No se pudo completar la comprobación.";
 "options.supabase.manualSync.plan.summary.invalidData.message" = "Corrige los datos antes de continuar.";
 "options.supabase.manualSync.plan.summary.access.message" = "Inicia sesión de nuevo antes de continuar.";
+"options.supabase.manualSync.plan.summary.permission.title" = "Permisos de nube";
+"options.supabase.manualSync.plan.summary.permission.message" = "Los permisos de la nube no son suficientes. Comprueba la nube.";
 "options.supabase.manualSync.plan.attention.ready" = "Puedes continuar con los cambios seguros.";
 "options.supabase.manualSync.plan.attention.needsReview" = "Algunas fichas tienen diferencias por revisar antes de continuar.";
 "options.supabase.manualSync.plan.attention.blocked" = "Corrige los elementos indicados y vuelve a comprobar.";
@@ -1098,6 +1101,7 @@
 "options.supabase.manualSync.plan.attention.failed" = "Resuelve el acceso o la sincronización y vuelve a comprobar.";
 "options.supabase.manualSync.plan.attention.invalidData" = "Corrige los datos antes de continuar.";
 "options.supabase.manualSync.plan.attention.access" = "Inicia sesión de nuevo antes de continuar.";
+"options.supabase.manualSync.plan.attention.permission" = "Comprueba la nube para reintentar con los permisos actuales.";
 "options.supabase.manualSync.review.title" = "Revisar cambios de la nube";
 "options.supabase.manualSync.review.subtitle" = "Revisa qué podría cambiar antes de actualizar este dispositivo.";
 "options.supabase.manualSync.review.cloudToDevice.title" = "De la nube al dispositivo";

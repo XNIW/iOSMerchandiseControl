@@ -24,6 +24,7 @@ nonisolated enum SupabaseManualSyncRemotePreviewMessageKey: String, Sendable, Eq
 
 nonisolated enum SupabaseManualSyncRemotePreviewFailureCategory: String, Sendable, Equatable {
     case network
+    case auth
     case permission
     case schemaOrDecode
     case localSnapshot
@@ -103,7 +104,7 @@ nonisolated enum SupabaseManualSyncRemotePreviewOutcomeMapper {
             switch failureCategory {
             case .network:
                 return .failedRetryable
-            case .permission:
+            case .auth, .permission:
                 return .blocked
             case .schemaOrDecode, .localSnapshot, .unknown:
                 return .failedNonRetryable
@@ -126,6 +127,8 @@ nonisolated enum SupabaseManualSyncRemotePreviewOutcomeMapper {
             switch failureCategory {
             case .network:
                 return .connectivityIssue
+            case .auth:
+                return .blocked
             case .permission, .schemaOrDecode, .localSnapshot, .unknown:
                 return .technicalReviewNeeded
             }
@@ -194,7 +197,9 @@ nonisolated enum SupabaseManualSyncRemotePreviewOutcomeMapper {
         switch error {
         case .networkError:
             return .network
-        case .permissionDeniedOrRLS, .sessionMissing, .configMissing, .invalidConfig:
+        case .sessionMissing, .configMissing, .invalidConfig:
+            return .auth
+        case .permissionDeniedOrRLS:
             return .permission
         case .schemaDrift, .decodingError:
             return .schemaOrDecode
@@ -210,7 +215,7 @@ nonisolated enum SupabaseManualSyncRemotePreviewOutcomeMapper {
         switch category {
         case .network:
             key = .cloudCheckFailedRetry
-        case .permission:
+        case .auth, .permission:
             key = .cloudCheckFailedPermission
         case .schemaOrDecode, .localSnapshot, .unknown:
             key = .cloudCheckFailedTechnical

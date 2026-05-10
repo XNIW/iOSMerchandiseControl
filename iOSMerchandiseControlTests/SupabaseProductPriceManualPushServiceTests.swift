@@ -159,10 +159,32 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
         XCTAssertFalse(result.isVerifiedSuccess)
     }
 
-    func testUniqueConflictDoesNotRetryOrUpsert() async throws {
+    func testTask099UniqueConflictWithExactReadBackIsIdempotentSuccess() async throws {
         let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: makePlan())
         let remote = MockProductPriceManualPushRemote(
-            readBackRows: [],
+            readBackRows: snapshot.payloads.map { $0.remoteRow() },
+            insertError: ProductPriceManualPushError.uniqueConflict(message: "duplicate")
+        )
+        let service = SupabaseProductPriceManualPushService(remote: remote)
+
+        let result = try await service.push(snapshot: snapshot)
+
+        XCTAssertEqual(result.insertedCount, 0)
+        XCTAssertTrue(result.isVerifiedSuccess)
+        XCTAssertEqual(result.fingerprint, snapshot.fingerprint)
+        let insertCalls = await remote.insertCalls
+        let readBackCalls = await remote.readBackCalls
+        let upsertCalls = await remote.upsertCalls
+
+        XCTAssertEqual(insertCalls, 1)
+        XCTAssertEqual(readBackCalls, 1)
+        XCTAssertEqual(upsertCalls, 0)
+    }
+
+    func testTask099UniqueConflictWithMismatchedReadBackFailsClosed() async throws {
+        let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: makePlan())
+        let remote = MockProductPriceManualPushRemote(
+            readBackRows: snapshot.payloads.map { $0.remoteRow(price: $0.price + 1) },
             insertError: ProductPriceManualPushError.uniqueConflict(message: "duplicate")
         )
         let service = SupabaseProductPriceManualPushService(remote: remote)
@@ -173,12 +195,13 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? ProductPriceManualPushError, .uniqueConflict(message: "duplicate"))
         }
+
         let insertCalls = await remote.insertCalls
         let readBackCalls = await remote.readBackCalls
         let upsertCalls = await remote.upsertCalls
 
         XCTAssertEqual(insertCalls, 1)
-        XCTAssertEqual(readBackCalls, 0)
+        XCTAssertEqual(readBackCalls, 1)
         XCTAssertEqual(upsertCalls, 0)
     }
 

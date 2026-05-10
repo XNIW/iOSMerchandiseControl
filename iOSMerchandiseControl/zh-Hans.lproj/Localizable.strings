@@ -1044,6 +1044,7 @@
 "options.supabase.manualSync.summary.cloudCheck.incomplete" = "上次检查：云端检查未完成。请重试。";
 "options.supabase.manualSync.summary.network" = "网络不可用。请重试。";
 "options.supabase.manualSync.summary.session" = "需要访问云端。";
+"options.supabase.manualSync.summary.permission" = "云端权限不足。请检查云端。";
 "options.supabase.manualSync.summary.generic" = "检查未能完成。请重试。";
 "options.supabase.manualSync.summary.cancelled" = "检查已取消。";
 "options.supabase.manualSync.summary.localApply.completed" = "本地数据已更新。";
@@ -1053,7 +1054,7 @@
 "options.supabase.manualSync.summary.localApply.suppliersCreated" = "已创建供应商：%d";
 "options.supabase.manualSync.summary.localApply.categoriesCreated" = "已创建分类：%d";
 "options.supabase.manualSync.summary.localApply.failed" = "我没有更新本地数据。请重新运行“检查云端”。";
-"options.supabase.manualSync.action.checkCloud" = "检查";
+"options.supabase.manualSync.action.checkCloud" = "检查云端";
 "options.supabase.manualSync.action.review" = "查看";
 "options.supabase.manualSync.action.syncNow" = "立即同步";
 "options.supabase.manualSync.action.signIn" = "登录";
@@ -1090,6 +1091,8 @@
 "options.supabase.manualSync.plan.summary.failed.message" = "无法完成检查。";
 "options.supabase.manualSync.plan.summary.invalidData.message" = "继续前请先修正数据。";
 "options.supabase.manualSync.plan.summary.access.message" = "继续前需要重新登录。";
+"options.supabase.manualSync.plan.summary.permission.title" = "云端权限";
+"options.supabase.manualSync.plan.summary.permission.message" = "云端权限不足。请检查云端。";
 "options.supabase.manualSync.plan.attention.ready" = "可以继续处理安全的更改。";
 "options.supabase.manualSync.plan.attention.needsReview" = "部分资料存在差异，继续前需要检查。";
 "options.supabase.manualSync.plan.attention.blocked" = "请修正列出的项目后重新检查。";
@@ -1098,6 +1101,7 @@
 "options.supabase.manualSync.plan.attention.failed" = "请解决访问或同步问题后重新检查。";
 "options.supabase.manualSync.plan.attention.invalidData" = "继续前请先修正数据。";
 "options.supabase.manualSync.plan.attention.access" = "继续前需要重新登录。";
+"options.supabase.manualSync.plan.attention.permission" = "请检查云端，并使用当前权限重试。";
 "options.supabase.manualSync.review.title" = "查看云端更改";
 "options.supabase.manualSync.review.subtitle" = "更新此设备前，先查看可能发生的变化。";
 "options.supabase.manualSync.review.cloudToDevice.title" = "从云端到设备";

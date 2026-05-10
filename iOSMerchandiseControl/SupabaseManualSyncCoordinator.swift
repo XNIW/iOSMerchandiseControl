@@ -422,6 +422,14 @@ final class SupabaseManualSyncCoordinator {
                 remotePreviewSummary: remotePreviewSummary
             )
         case .technical:
+            if let remotePreviewSummary {
+                return finalizeRemotePreviewOnly(
+                    executed: executed,
+                    skipped: skipped,
+                    counts: counts,
+                    remotePreviewSummary: remotePreviewSummary
+                )
+            }
             return SupabaseManualSyncRunSummary(
                 finalState: .technicalReviewNeeded,
                 userFacingHeadline: SupabaseManualSyncUserFacingCopy.technicalFollowUp,
@@ -458,7 +466,11 @@ final class SupabaseManualSyncCoordinator {
             headline = SupabaseManualSyncUserFacingCopy.connectivityRetry
         case .cloudCheckCancelled:
             headline = SupabaseManualSyncUserFacingCopy.cancelled
-        case .cloudDataNeedsReview, .cloudCheckIncomplete, .cloudCheckFailedPermission, .cloudCheckFailedTechnical:
+        case .cloudCheckFailedPermission:
+            headline = remotePreviewSummary.failureCategory == .auth
+                ? SupabaseManualSyncUserFacingCopy.signInAgain
+                : SupabaseManualSyncUserFacingCopy.technicalFollowUp
+        case .cloudDataNeedsReview, .cloudCheckIncomplete, .cloudCheckFailedTechnical:
             headline = SupabaseManualSyncUserFacingCopy.technicalFollowUp
         }
 

@@ -1044,6 +1044,7 @@
 "options.supabase.manualSync.summary.cloudCheck.incomplete" = "Last check: cloud check incomplete. Try again.";
 "options.supabase.manualSync.summary.network" = "Connection unavailable. Try again.";
 "options.supabase.manualSync.summary.session" = "Cloud access required.";
+"options.supabase.manualSync.summary.permission" = "Cloud permissions are not enough. Check cloud.";
 "options.supabase.manualSync.summary.generic" = "The check could not be completed. Try again.";
 "options.supabase.manualSync.summary.cancelled" = "Check cancelled.";
 "options.supabase.manualSync.summary.localApply.completed" = "Local data updated.";
@@ -1053,7 +1054,7 @@
 "options.supabase.manualSync.summary.localApply.suppliersCreated" = "suppliers created: %d";
 "options.supabase.manualSync.summary.localApply.categoriesCreated" = "categories created: %d";
 "options.supabase.manualSync.summary.localApply.failed" = "I did not update local data. Run Check cloud again.";
-"options.supabase.manualSync.action.checkCloud" = "Check";
+"options.supabase.manualSync.action.checkCloud" = "Check cloud";
 "options.supabase.manualSync.action.review" = "Review";
 "options.supabase.manualSync.action.syncNow" = "Sync now";
 "options.supabase.manualSync.action.signIn" = "Sign in";
@@ -1090,6 +1091,8 @@
 "options.supabase.manualSync.plan.summary.failed.message" = "The check could not be completed.";
 "options.supabase.manualSync.plan.summary.invalidData.message" = "Fix data before continuing.";
 "options.supabase.manualSync.plan.summary.access.message" = "Sign in again before continuing.";
+"options.supabase.manualSync.plan.summary.permission.title" = "Cloud permissions";
+"options.supabase.manualSync.plan.summary.permission.message" = "Cloud permissions are not enough. Check cloud.";
 "options.supabase.manualSync.plan.attention.ready" = "You can continue with safe changes.";
 "options.supabase.manualSync.plan.attention.needsReview" = "Some records have differences to review before continuing.";
 "options.supabase.manualSync.plan.attention.blocked" = "Fix the listed items and recheck.";
@@ -1098,6 +1101,7 @@
 "options.supabase.manualSync.plan.attention.failed" = "Resolve access or sync and recheck.";
 "options.supabase.manualSync.plan.attention.invalidData" = "Fix data before continuing.";
 "options.supabase.manualSync.plan.attention.access" = "Sign in again before continuing.";
+"options.supabase.manualSync.plan.attention.permission" = "Check cloud to retry with the current permissions.";
 "options.supabase.manualSync.review.title" = "Review cloud changes";
 "options.supabase.manualSync.review.subtitle" = "Check what may change before updating this device.";
 "options.supabase.manualSync.review.cloudToDevice.title" = "From cloud to device";

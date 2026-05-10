@@ -1507,6 +1507,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
     func testRemoteFailureSummariesUseUserFacingCategories() async {
         let cases: [(SupabaseManualSyncRemotePreviewFailureCategory, SupabaseManualSyncUserFacingSummaryKind)] = [
             (.network, .networkIssue),
+            (.auth, .cloudAccessIssue),
             (.permission, .cloudAccessIssue),
             (.schemaOrDecode, .genericIssue),
             (.localSnapshot, .genericIssue),
@@ -1516,12 +1517,26 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         for (failureCategory, expectedKind) in cases {
             let fake = ClosureSupabaseManualSyncCoordinatorFake()
             let vm = SupabaseManualSyncViewModel(coordinator: fake)
+            let finalState: SupabaseManualSyncFinalUserState
+            switch failureCategory {
+            case .network:
+                finalState = .connectivityIssue
+            case .auth:
+                finalState = .blocked
+            case .permission, .schemaOrDecode, .localSnapshot, .unknown:
+                finalState = .technicalReviewNeeded
+            }
+            let messageKey: SupabaseManualSyncRemotePreviewMessageKey = failureCategory == .network
+                ? .cloudCheckFailedRetry
+                : (failureCategory == .schemaOrDecode || failureCategory == .localSnapshot || failureCategory == .unknown
+                    ? .cloudCheckFailedTechnical
+                    : .cloudCheckFailedPermission)
 
             vm.apply(summary: cloudCheckSummary(
-                finalState: failureCategory == .network ? .connectivityIssue : .technicalReviewNeeded,
+                finalState: finalState,
                 remotePreviewSummary: remotePreviewSummary(
                     isComplete: false,
-                    key: failureCategory == .network ? .cloudCheckFailedRetry : .cloudCheckFailedTechnical,
+                    key: messageKey,
                     failureCategory: failureCategory
                 )
             ))
@@ -1531,6 +1546,55 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             assertNoDuplicateSummaryCopy(state)
             assertNoForbiddenUserFacingJargon(vm)
         }
+    }
+
+    func testTask099PermissionFailureUsesCheckCloudRecoveryWithoutSignInCopy() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.remotePreviewSummary = remotePreviewSummary(
+            isComplete: false,
+            key: .cloudCheckFailedPermission,
+            failureCategory: .permission
+        )
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            isSignedIn: true,
+            supportsForegroundCloudCheck: true
+        )
+
+        await vm.start(with: .dryRun)
+
+        let state = vm.presentationState
+        XCTAssertEqual(vm.semiAutomaticState, .recoverableError)
+        XCTAssertEqual(vm.presentationKind, .technicalFollowUpNeeded)
+        XCTAssertEqual(state.primaryAction?.id, .checkCloud)
+        XCTAssertNil(state.secondaryAction)
+        XCTAssertEqual(state.userFacingSummary?.kind, .cloudAccessIssue)
+        XCTAssertFalse(state.userFacingSummary?.message.localizedCaseInsensitiveContains("acced") ?? false)
+        XCTAssertEqual(vm.rootPresentationState.primaryActionID, .checkCloud)
+        assertNoDuplicateSummaryCopy(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask099AuthFailureUsesSignInRecovery() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.remotePreviewSummary = remotePreviewSummary(
+            isComplete: false,
+            key: .cloudCheckFailedPermission,
+            failureCategory: .auth
+        )
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            isSignedIn: true,
+            supportsForegroundCloudCheck: true
+        )
+
+        await vm.start(with: .dryRun)
+
+        XCTAssertEqual(vm.semiAutomaticState, .blockedAuth)
+        XCTAssertEqual(vm.presentationKind, .blockedNeedsSignIn)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .signIn)
+        XCTAssertEqual(vm.rootPresentationState.primaryActionID, .signIn)
+        assertNoForbiddenUserFacingJargon(vm)
     }
 
     func testCancelledCloudCheckShowsNeutralSummary() async {
@@ -2724,7 +2788,9 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let review = try XCTUnwrap(vm.presentationState.reviewSheet)
         XCTAssertEqual(review.primaryActionID, .recheck)
         XCTAssertTrue(review.primaryActionIsEnabled)
-        XCTAssertTrue(review.summaryMessage.contains("accedere") || review.summaryMessage.contains("accesso"))
+        XCTAssertFalse(review.summaryMessage.localizedCaseInsensitiveContains("acced"))
+        XCTAssertFalse(review.summaryMessage.localizedCaseInsensitiveContains("accesso"))
+        XCTAssertTrue(review.summaryMessage.contains("controllo") || review.summaryMessage.contains("ricontroll"))
         assertNoForbiddenUserFacingJargon(vm)
     }
 

@@ -897,6 +897,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
         if remotePreviewSummary.wasCancelled {
             semiAutomaticState = .idle
+        } else if remotePreviewSummary.failureCategory == .auth {
+            semiAutomaticState = .blockedAuth
+            clearRecoverableError()
         } else if remotePreviewSummary.failureCategory != nil || remotePreviewSummary.isPartial || !remotePreviewSummary.isComplete {
             semiAutomaticState = .recoverableError
             setRecoverableError()
@@ -2608,6 +2611,11 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         }
     }
 
+    private var shouldRecoverPermissionFailureWithCloudCheck: Bool {
+        lastSummary?.remotePreviewSummary?.failureCategory == .permission
+            && capabilities.supportsRemoteCloudCheck
+    }
+
     private func makeRootPresentationState() -> SupabaseManualSyncRootPresentationState {
         if isRunning || semiAutomaticState == .checking {
             return rootState(
@@ -2647,12 +2655,13 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 systemImage: "lock.fill"
             )
         case .recoverableError:
+            let recoverWithCloudCheck = shouldRecoverPermissionFailureWithCloudCheck
             return rootState(
                 kind: .recoverableError,
                 titleKey: "options.supabase.manualSync.root.error.title",
                 detailKey: "options.supabase.manualSync.root.error.detail",
-                actionID: .retry,
-                systemImage: "wifi.exclamationmark"
+                actionID: recoverWithCloudCheck ? .checkCloud : .retry,
+                systemImage: recoverWithCloudCheck ? "exclamationmark.icloud" : "wifi.exclamationmark"
             )
         case .idle, .suggestedCheck, .noChanges, .reviewing:
             return .hidden
@@ -2899,6 +2908,19 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             )
 
         case .technicalFollowUpNeeded:
+            if shouldRecoverPermissionFailureWithCloudCheck {
+                return state(
+                    titleKey: "options.supabase.manualSync.state.technical.title",
+                    subtitleKey: "options.supabase.manualSync.state.technical.subtitle",
+                    summary: userFacingSummaryForCurrentState(),
+                    badgeKey: "options.supabase.manualSync.badge.retry",
+                    badgeSystemImage: "exclamationmark.triangle.fill",
+                    primaryAction: action(.checkCloud),
+                    secondaryAction: nil,
+                    isRunning: false,
+                    isLoading: false
+                )
+            }
             return retryState(
                 titleKey: "options.supabase.manualSync.state.technical.title",
                 subtitleKey: "options.supabase.manualSync.state.technical.subtitle",
@@ -3547,8 +3569,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             switch failureCategory {
             case .network:
                 return userFacingSummary(.networkIssue, key: "options.supabase.manualSync.summary.network")
-            case .permission:
+            case .auth:
                 return userFacingSummary(.cloudAccessIssue, key: "options.supabase.manualSync.summary.session")
+            case .permission:
+                return userFacingSummary(.cloudAccessIssue, key: "options.supabase.manualSync.summary.permission")
             case .schemaOrDecode, .localSnapshot, .unknown:
                 return userFacingSummary(.genericIssue, key: "options.supabase.manualSync.summary.generic")
             }
@@ -3704,8 +3728,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             preferredPrimaryActionID = .none
         }
         let primaryActionID = reviewPrimaryActionID(plan: plan, readyAction: preferredPrimaryActionID)
-        let primaryActionTitle = reviewPrimaryActionTitle(for: primaryActionID)
-        let primaryActionSystemImage = reviewPrimaryActionSystemImage(for: primaryActionID)
+        let primaryActionTitle = reviewPrimaryActionTitle(for: primaryActionID, plan: plan)
+        let primaryActionSystemImage = reviewPrimaryActionSystemImage(for: primaryActionID, plan: plan)
         let secondaryActionTitle = L("options.supabase.manualSync.review.action.cancel")
         let accessibilityLabel = ([title, subtitle] + sections.flatMap { [$0.title, $0.message] } + [footerMessage])
             .joined(separator: ". ")
@@ -3743,8 +3767,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         let footerMessage = catalogPushReviewFooter(phase: phase)
         let readyPrimaryID = catalogPushReviewPrimaryActionID(phase: phase)
         let primaryID = reviewPrimaryActionID(plan: plan, readyAction: readyPrimaryID)
-        let primaryTitle = reviewPrimaryActionTitle(for: primaryID)
-        let primarySystemImage = reviewPrimaryActionSystemImage(for: primaryID)
+        let primaryTitle = reviewPrimaryActionTitle(for: primaryID, plan: plan)
+        let primarySystemImage = reviewPrimaryActionSystemImage(for: primaryID, plan: plan)
         let accessibilityLabel = ([title, subtitle] + sections.flatMap { [$0.title, $0.message] } + [footerMessage])
             .joined(separator: ". ")
 
@@ -3974,8 +3998,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             sections: sections,
             footerMessage: footerMessage,
             primaryActionID: primaryID,
-            primaryActionTitle: reviewPrimaryActionTitle(for: primaryID),
-            primaryActionSystemImage: reviewPrimaryActionSystemImage(for: primaryID),
+            primaryActionTitle: reviewPrimaryActionTitle(for: primaryID, plan: plan),
+            primaryActionSystemImage: reviewPrimaryActionSystemImage(for: primaryID, plan: plan),
             primaryActionIsEnabled: reviewPrimaryActionIsEnabled(primaryID),
             primaryActionIsLoading: reviewPrimaryActionIsLoading(primaryID),
             secondaryActionTitle: L(activityRegistrationPhase.isTerminal ? "common.close" : "common.cancel"),
@@ -4094,7 +4118,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         let reasons = syncPlanBlockingReasons(
             counters: counters,
             hasInvalidData: applyBlockedReason == L("options.supabase.manualSync.apply.blocked.invalidData"),
-            hasAccessIssue: applyBlockedReason == L("options.supabase.manualSync.apply.blocked.session")
+            hasAccessIssue: applyBlockedReason == L("options.supabase.manualSync.apply.blocked.session"),
+            hasCloudPermissionIssue: remotePreviewSummary.failureCategory == .permission
         )
         return SupabaseSyncPlanResolver.makePlan(
             counters: counters,
@@ -4196,13 +4221,20 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private func syncPlanBlockingReasons(
         counters: SupabaseSyncPlanCounters,
         hasInvalidData: Bool,
-        hasAccessIssue: Bool
+        hasAccessIssue: Bool,
+        hasCloudPermissionIssue: Bool = false
     ) -> [SupabaseSyncPlanBlockingReason] {
         var reasons: [SupabaseSyncPlanBlockingReason] = []
         if hasInvalidData {
             reasons.append(.invalidLocalData)
         }
-        if hasAccessIssue || counters.failed > 0 {
+        if hasAccessIssue {
+            reasons.append(.authRequired)
+        }
+        if hasCloudPermissionIssue {
+            reasons.append(.cloudPermission)
+        }
+        if counters.failed > 0 {
             reasons.append(.accessOrSync)
         }
         if counters.reviewNeeded > 0 {
@@ -4268,30 +4300,48 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     private func syncPlanSummaryTitle(_ plan: SupabaseSyncPlan) -> String {
-        L("options.supabase.manualSync.plan.summary.\(plan.state.rawValue).title")
+        if plan.blockingReasons.contains(.authRequired) {
+            return L("options.supabase.manualSync.plan.summary.blocked.title")
+        }
+        if plan.blockingReasons.contains(.cloudPermission) {
+            return L("options.supabase.manualSync.plan.summary.permission.title")
+        }
+        return L("options.supabase.manualSync.plan.summary.\(plan.state.rawValue).title")
     }
 
     private func syncPlanSummaryMessage(_ plan: SupabaseSyncPlan) -> String {
+        if plan.blockingReasons.contains(.authRequired) {
+            return L("options.supabase.manualSync.plan.summary.access.message")
+        }
+        if plan.blockingReasons.contains(.cloudPermission) {
+            return L("options.supabase.manualSync.plan.summary.permission.message")
+        }
         if plan.blockingReasons.contains(.invalidLocalData) {
             return L("options.supabase.manualSync.plan.summary.invalidData.message")
-        }
-        if plan.blockingReasons.contains(.accessOrSync) {
-            return L("options.supabase.manualSync.plan.summary.access.message")
         }
         return L("options.supabase.manualSync.plan.summary.\(plan.state.rawValue).message")
     }
 
     private func syncPlanAttentionMessage(_ plan: SupabaseSyncPlan) -> String {
+        if plan.blockingReasons.contains(.authRequired) {
+            return L("options.supabase.manualSync.plan.attention.access")
+        }
+        if plan.blockingReasons.contains(.cloudPermission) {
+            return L("options.supabase.manualSync.plan.attention.permission")
+        }
         if plan.blockingReasons.contains(.invalidLocalData) {
             return L("options.supabase.manualSync.plan.attention.invalidData")
-        }
-        if plan.blockingReasons.contains(.accessOrSync) {
-            return L("options.supabase.manualSync.plan.attention.access")
         }
         return L("options.supabase.manualSync.plan.attention.\(plan.state.rawValue)")
     }
 
     private func syncPlanSummarySystemImage(_ plan: SupabaseSyncPlan) -> String {
+        if plan.blockingReasons.contains(.authRequired) {
+            return "lock.fill"
+        }
+        if plan.blockingReasons.contains(.cloudPermission) {
+            return "exclamationmark.icloud"
+        }
         switch plan.state {
         case .ready:
             return "checkmark.circle.fill"
@@ -4320,7 +4370,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     private func reviewPrimaryActionTitle(
-        for primaryID: SupabaseManualSyncReviewPrimaryActionID
+        for primaryID: SupabaseManualSyncReviewPrimaryActionID,
+        plan: SupabaseSyncPlan? = nil
     ) -> String {
         switch primaryID {
         case .updateDevice:
@@ -4340,6 +4391,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             }
             return L("options.supabase.manualSync.activity.review.action.register")
         case .recheck:
+            if plan?.blockingReasons.contains(.cloudPermission) == true {
+                return L("options.supabase.manualSync.action.checkCloud")
+            }
             return L("options.supabase.manualSync.action.recheck")
         case .signInAgain:
             return L("options.supabase.manualSync.action.signInAgain")
@@ -4351,7 +4405,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     private func reviewPrimaryActionSystemImage(
-        for primaryID: SupabaseManualSyncReviewPrimaryActionID
+        for primaryID: SupabaseManualSyncReviewPrimaryActionID,
+        plan: SupabaseSyncPlan? = nil
     ) -> String {
         switch primaryID {
         case .updateDevice:
@@ -4361,6 +4416,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .registerCloudActivity:
             return activityRegistrationPhase.prefersRetryTitle ? "arrow.clockwise.circle.fill" : "checkmark.icloud"
         case .recheck:
+            if plan?.blockingReasons.contains(.cloudPermission) == true {
+                return "icloud"
+            }
             return "arrow.clockwise.circle.fill"
         case .signInAgain:
             return "person.crop.circle.badge.plus"
