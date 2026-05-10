@@ -1028,6 +1028,10 @@
 "options.supabase.manualSync.state.applied.subtitle" = "You can run Check cloud again whenever you want.";
 "options.supabase.manualSync.state.applyFailed.title" = "Local data not updated";
 "options.supabase.manualSync.state.applyFailed.subtitle" = "Run Check cloud again before trying once more.";
+"options.supabase.manualSync.lifecycle.interrupted.title" = "Operation interrupted";
+"options.supabase.manualSync.lifecycle.interrupted.subtitle" = "Review the summary before trying again.";
+"options.supabase.manualSync.lifecycle.blocked.title" = "Sync paused";
+"options.supabase.manualSync.lifecycle.blocked.subtitle" = "Check access and connection before trying again.";
 "options.supabase.manualSync.state.suggested.title" = "Cloud check suggested";
 "options.supabase.manualSync.state.suggested.subtitle" = "You can check whether there are changes to review.";
 "options.supabase.manualSync.semiAuto.suggested" = "Suggestion ready: check whenever you want.";
@@ -1067,6 +1071,8 @@
 "options.supabase.manualSync.root.auth.detail" = "Automatic checks stay paused until access is valid.";
 "options.supabase.manualSync.root.error.title" = "Cloud check failed";
 "options.supabase.manualSync.root.error.detail" = "You can try again manually whenever you want.";
+"options.supabase.manualSync.root.interrupted.title" = "Operation interrupted";
+"options.supabase.manualSync.root.interrupted.detail" = "Open Options and review before trying again.";
 "options.supabase.manualSync.root.action.review" = "Review";
 "options.supabase.manualSync.root.action.signIn" = "Sign in";
 "options.supabase.manualSync.root.action.retry" = "Retry";

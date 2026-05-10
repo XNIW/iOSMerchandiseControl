@@ -2507,6 +2507,99 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testTask095PreflightBlocksUnsafeMutativeRetryBeforeWrite() async throws {
+        let ownerID = UUID(uuidString: "09500000-0000-4095-8095-000000000101")!
+        let plan = makeCatalogPushPlan(
+            ownerID: ownerID,
+            candidates: [PushCandidate(entityKind: .product, localID: "100", action: .dryRunCreateCandidate)]
+        )
+        let provider = ManualSyncCatalogPushProviderFake(plans: [plan, plan])
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsCatalogPush: true
+            ),
+            catalogPushProvider: provider,
+            currentCatalogPushOwnerID: { ownerID },
+            lifecycleNetworkIsAvailable: { false }
+        )
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+        await vm.sendConfirmedCatalogChanges()
+
+        XCTAssertEqual(provider.executeCallCount, 0)
+        XCTAssertEqual(vm.lifecycleProcessState.state, .blocked)
+        XCTAssertEqual(vm.lifecycleProcessState.blockReason, .networkUnavailable)
+        XCTAssertNil(vm.presentationState.secondaryAction)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask095CancelDuringPushKeepsRemoteWriteInterrupted() async throws {
+        let ownerID = UUID(uuidString: "09500000-0000-4095-8095-000000000102")!
+        let plan = makeCatalogPushPlan(
+            ownerID: ownerID,
+            candidates: [PushCandidate(entityKind: .product, localID: "100", action: .dryRunCreateCandidate)]
+        )
+        let provider = ManualSyncCatalogPushProviderFake(plans: [plan, plan])
+        provider.executeDelayNanoseconds = 500_000_000
+        let vm = makePushReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            counts: SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1),
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareCatalogPushPlanForReview()
+
+        let task = Task { @MainActor in
+            await vm.sendConfirmedCatalogChanges()
+        }
+        try await Task.sleep(nanoseconds: 20_000_000)
+        task.cancel()
+        await task.value
+
+        XCTAssertEqual(provider.executeCallCount, 1)
+        XCTAssertEqual(vm.lifecycleProcessState.state, .interrupted)
+        XCTAssertEqual(vm.lifecycleProcessState.interruptReason, .remoteWriteUnverified)
+        XCTAssertNil(vm.presentationState.secondaryAction)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask095UnverifiedRemoteWriteDoesNotBecomeCompletedVerified() async throws {
+        let ownerID = UUID(uuidString: "09500000-0000-4095-8095-000000000103")!
+        let pushPlan = makeProductPricePushPlan(ownerID: ownerID, candidateCount: 1)
+        let provider = ManualSyncProductPriceProviderFake(
+            pushPlans: [pushPlan, pushPlan],
+            pushResult: ProductPriceManualPushResult(
+                insertedCount: 1,
+                verification: .unknown(message: nil),
+                fingerprint: "task-095-unverified"
+            )
+        )
+        let vm = makeProductPriceReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareProductPricePlansForReview()
+        await vm.sendConfirmedCatalogChanges()
+
+        XCTAssertEqual(provider.pushCallCount, 1)
+        XCTAssertEqual(vm.lifecycleProcessState.state, .interrupted)
+        XCTAssertEqual(vm.lifecycleProcessState.interruptReason, .remoteWriteUnverified)
+        XCTAssertNotEqual(vm.lifecycleProcessState.state, .completedVerified)
+        XCTAssertNil(vm.presentationState.secondaryAction)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
     func testTask080ProductPricePushStalePlanDoesNotWrite() async throws {
         let ownerID = UUID(uuidString: "DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD")!
         let firstPlan = makeProductPricePushPlan(ownerID: ownerID, candidateCount: 1, seed: 10)
@@ -2889,18 +2982,24 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let root = repoRootURL()
         let urls = [
             root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift"),
+            root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncLifecycleRunGate.swift"),
             root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift"),
         ]
         for url in urls {
             let text = try String(contentsOf: url, encoding: .utf8).lowercased()
             XCTAssertFalse(text.contains("supabaseclient"))
-            XCTAssertFalse(text.contains("bgtask"))
+            XCTAssertFalse(text.contains("bgtaskscheduler"))
+            XCTAssertFalse(text.contains("bgapprefreshtask"))
+            XCTAssertFalse(text.contains("bgprocessingtask"))
             XCTAssertFalse(text.contains("timer("))
+            XCTAssertFalse(text.contains("polling"))
             XCTAssertFalse(text.contains("realtime"))
+            XCTAssertFalse(text.contains("worker"))
             XCTAssertFalse(text.contains(".rpc"))
             XCTAssertFalse(text.contains(".channel"))
             XCTAssertFalse(text.contains("optionsview"))
             XCTAssertFalse(text.contains("task-067"))
+            XCTAssertFalse(text.contains("task-096"))
         }
     }
 

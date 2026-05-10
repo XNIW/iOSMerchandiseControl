@@ -3307,9 +3307,14 @@ private struct SupabaseManualSyncReleaseCard: View {
     }
 
     private func cancelActiveRun() {
+        viewModel.requestLifecycleInterruptionForBackground()
         activeRunTask?.cancel()
         activeRunTask = nil
         cancelHandler?()
+        activeApplyTask?.cancel()
+        activeApplyTask = nil
+        activeSendTask?.cancel()
+        activeSendTask = nil
         activeActivityRegistrationTask?.cancel()
         activeActivityRegistrationTask = nil
     }

@@ -1027,6 +1027,10 @@
 "options.supabase.manualSync.state.applied.subtitle" = "Puoi eseguire un nuovo Controlla cloud quando vuoi.";
 "options.supabase.manualSync.state.applyFailed.title" = "Dati locali non aggiornati";
 "options.supabase.manualSync.state.applyFailed.subtitle" = "Riesegui Controlla cloud prima di riprovare.";
+"options.supabase.manualSync.lifecycle.interrupted.title" = "Operazione interrotta";
+"options.supabase.manualSync.lifecycle.interrupted.subtitle" = "Rivedi il riepilogo prima di riprovare.";
+"options.supabase.manualSync.lifecycle.blocked.title" = "Sincronizzazione sospesa";
+"options.supabase.manualSync.lifecycle.blocked.subtitle" = "Controlla accesso e connessione prima di riprovare.";
 "options.supabase.manualSync.state.suggested.title" = "Controllo cloud suggerito";
 "options.supabase.manualSync.state.suggested.subtitle" = "Puoi controllare se ci sono modifiche da rivedere.";
 "options.supabase.manualSync.semiAuto.suggested" = "Suggerimento pronto: controlla quando vuoi.";
@@ -1066,6 +1070,8 @@
 "options.supabase.manualSync.root.auth.detail" = "Il controllo automatico resta sospeso finché l’accesso non è valido.";
 "options.supabase.manualSync.root.error.title" = "Controllo cloud non riuscito";
 "options.supabase.manualSync.root.error.detail" = "Puoi riprovare manualmente quando vuoi.";
+"options.supabase.manualSync.root.interrupted.title" = "Operazione interrotta";
+"options.supabase.manualSync.root.interrupted.detail" = "Apri Opzioni e rivedi prima di riprovare.";
 "options.supabase.manualSync.root.action.review" = "Rivedi";
 "options.supabase.manualSync.root.action.signIn" = "Accedi";
 "options.supabase.manualSync.root.action.retry" = "Riprova";

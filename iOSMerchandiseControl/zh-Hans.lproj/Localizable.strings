@@ -1028,6 +1028,10 @@
 "options.supabase.manualSync.state.applied.subtitle" = "需要时可以再次运行“检查云端”。";
 "options.supabase.manualSync.state.applyFailed.title" = "本地数据未更新";
 "options.supabase.manualSync.state.applyFailed.subtitle" = "请先重新运行“检查云端”，再重试。";
+"options.supabase.manualSync.lifecycle.interrupted.title" = "操作已中断";
+"options.supabase.manualSync.lifecycle.interrupted.subtitle" = "重试前请先查看摘要。";
+"options.supabase.manualSync.lifecycle.blocked.title" = "同步已暂停";
+"options.supabase.manualSync.lifecycle.blocked.subtitle" = "重试前请检查访问权限和网络连接。";
 "options.supabase.manualSync.state.suggested.title" = "建议检查云端";
 "options.supabase.manualSync.state.suggested.subtitle" = "你可以检查是否有需要查看的更改。";
 "options.supabase.manualSync.semiAuto.suggested" = "建议已准备好：可随时检查。";
@@ -1067,6 +1071,8 @@
 "options.supabase.manualSync.root.auth.detail" = "访问有效前，自动检查会暂停。";
 "options.supabase.manualSync.root.error.title" = "云端检查失败";
 "options.supabase.manualSync.root.error.detail" = "你可以随时手动重试。";
+"options.supabase.manualSync.root.interrupted.title" = "操作已中断";
+"options.supabase.manualSync.root.interrupted.detail" = "打开“选项”并查看后再重试。";
 "options.supabase.manualSync.root.action.review" = "查看";
 "options.supabase.manualSync.root.action.signIn" = "登录";
 "options.supabase.manualSync.root.action.retry" = "重试";

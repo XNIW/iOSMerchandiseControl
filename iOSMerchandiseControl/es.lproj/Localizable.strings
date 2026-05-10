@@ -1028,6 +1028,10 @@
 "options.supabase.manualSync.state.applied.subtitle" = "Puedes ejecutar Revisar la nube otra vez cuando quieras.";
 "options.supabase.manualSync.state.applyFailed.title" = "Datos locales no actualizados";
 "options.supabase.manualSync.state.applyFailed.subtitle" = "Ejecuta Revisar la nube otra vez antes de reintentar.";
+"options.supabase.manualSync.lifecycle.interrupted.title" = "Operación interrumpida";
+"options.supabase.manualSync.lifecycle.interrupted.subtitle" = "Revisa el resumen antes de reintentar.";
+"options.supabase.manualSync.lifecycle.blocked.title" = "Sincronización pausada";
+"options.supabase.manualSync.lifecycle.blocked.subtitle" = "Comprueba acceso y conexión antes de reintentar.";
 "options.supabase.manualSync.state.suggested.title" = "Comprobación sugerida";
 "options.supabase.manualSync.state.suggested.subtitle" = "Puedes comprobar si hay cambios para revisar.";
 "options.supabase.manualSync.semiAuto.suggested" = "Sugerencia lista: comprueba cuando quieras.";
@@ -1067,6 +1071,8 @@
 "options.supabase.manualSync.root.auth.detail" = "La comprobación automática queda pausada hasta que el acceso sea válido.";
 "options.supabase.manualSync.root.error.title" = "La comprobación de la nube falló";
 "options.supabase.manualSync.root.error.detail" = "Puedes reintentar manualmente cuando quieras.";
+"options.supabase.manualSync.root.interrupted.title" = "Operación interrumpida";
+"options.supabase.manualSync.root.interrupted.detail" = "Abre Opciones y revisa antes de reintentar.";
 "options.supabase.manualSync.root.action.review" = "Revisar";
 "options.supabase.manualSync.root.action.signIn" = "Iniciar sesión";
 "options.supabase.manualSync.root.action.retry" = "Reintentar";

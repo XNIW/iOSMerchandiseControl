@@ -528,6 +528,11 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)?
     private let currentActivityRegistrationOwnerID: (@MainActor () -> UUID?)?
     private let semiAutomaticPolicy: SupabaseManualSyncSemiAutomaticPolicy
+    private let lifecycleRunGate: SupabaseManualSyncLifecycleRunGate
+    private let defaultLifecyclePreflight: SupabaseManualSyncLifecyclePreflight?
+    private let lifecycleNetworkIsAvailable: @MainActor () -> Bool
+    private let lifecycleAppContextIsSafe: @MainActor () -> Bool
+    private let lifecycleAppIsActive: @MainActor () -> Bool
     private var lastSemiAutomaticForegroundAttemptAt: Date?
     private var lastRecoverableForegroundErrorAt: Date?
     private var lastStartedMode: SupabaseManualSyncRunMode?
@@ -561,6 +566,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     @Published private(set) var semiAutomaticState: SupabaseManualSyncSemiAutomaticState = .idle
     @Published private(set) var lastCloudCheckAt: Date?
     @Published private(set) var lastForegroundObservationEvent: SupabaseManualSyncForegroundObservationEvent?
+    @Published private(set) var lifecycleProcessState: SupabaseManualSyncLifecycleRunSnapshot = .idle
 
     init(
         coordinator: any SupabaseManualSyncCoordinating,
@@ -577,7 +583,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         currentProductPriceOwnerID: (@MainActor () -> UUID?)? = nil,
         activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = nil,
         currentActivityRegistrationOwnerID: (@MainActor () -> UUID?)? = nil,
-        semiAutomaticPolicy: SupabaseManualSyncSemiAutomaticPolicy = SupabaseManualSyncSemiAutomaticPolicy()
+        semiAutomaticPolicy: SupabaseManualSyncSemiAutomaticPolicy = SupabaseManualSyncSemiAutomaticPolicy(),
+        lifecycleRunGate: SupabaseManualSyncLifecycleRunGate? = nil,
+        lifecycleNetworkIsAvailable: @escaping @MainActor () -> Bool = { true },
+        lifecycleAppContextIsSafe: @escaping @MainActor () -> Bool = { true },
+        lifecycleAppIsActive: @escaping @MainActor () -> Bool = { true },
+        lifecycleTimeBudget: TimeInterval = 45
     ) {
         self.coordinator = coordinator
         self.capabilities = capabilities
@@ -594,6 +605,26 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         self.activityRegistrationProvider = activityRegistrationProvider
         self.currentActivityRegistrationOwnerID = currentActivityRegistrationOwnerID
         self.semiAutomaticPolicy = semiAutomaticPolicy
+        self.lifecycleNetworkIsAvailable = lifecycleNetworkIsAvailable
+        self.lifecycleAppContextIsSafe = lifecycleAppContextIsSafe
+        self.lifecycleAppIsActive = lifecycleAppIsActive
+        if let lifecycleRunGate {
+            self.lifecycleRunGate = lifecycleRunGate
+            self.defaultLifecyclePreflight = nil
+        } else {
+            let preflight = SupabaseManualSyncLifecyclePreflight(
+                isSignedIn: { true },
+                ownerUserID: { UUID() },
+                isNetworkAvailable: lifecycleNetworkIsAvailable,
+                isAppContextSafe: lifecycleAppContextIsSafe,
+                isAppLifecycleCompatible: lifecycleAppIsActive
+            )
+            self.lifecycleRunGate = SupabaseManualSyncLifecycleRunGate(
+                preflight: preflight,
+                timeBudget: lifecycleTimeBudget
+            )
+            self.defaultLifecyclePreflight = preflight
+        }
     }
 
     var presentationState: SupabaseManualSyncPresentationState {
@@ -659,6 +690,136 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             ?? currentCatalogPushOwnerID?()
             ?? currentProductPriceOwnerID?()
             ?? currentActivityRegistrationOwnerID?()
+    }
+
+    private var hasLifecycleOwnerProvider: Bool {
+        currentLocalApplyOwnerID != nil
+            || currentCatalogPushOwnerID != nil
+            || currentProductPriceOwnerID != nil
+            || currentActivityRegistrationOwnerID != nil
+    }
+
+    private var currentLifecycleOwnerID: UUID? {
+        if hasLifecycleOwnerProvider {
+            return currentSemiAutomaticOwnerID
+        }
+        return UUID(uuidString: "09500000-0000-4095-8095-000000000001")
+    }
+
+    private func configureDefaultLifecyclePreflight() {
+        guard let defaultLifecyclePreflight else { return }
+        defaultLifecyclePreflight.isSignedIn = { [weak self] in
+            self?.authPresentationContext.isSignedIn == true
+        }
+        defaultLifecyclePreflight.ownerUserID = { [weak self] in
+            self?.currentLifecycleOwnerID
+        }
+        defaultLifecyclePreflight.isNetworkAvailable = lifecycleNetworkIsAvailable
+        defaultLifecyclePreflight.isAppContextSafe = lifecycleAppContextIsSafe
+        defaultLifecyclePreflight.isAppLifecycleCompatible = lifecycleAppIsActive
+    }
+
+    private func beginLifecycleRun(
+        kind: SupabaseManualSyncLifecycleRunKind,
+        source: SupabaseManualSyncLifecycleRunSource
+    ) -> UUID? {
+        configureDefaultLifecyclePreflight()
+        switch lifecycleRunGate.begin(kind: kind, source: source) {
+        case .started(let snapshot):
+            lifecycleProcessState = snapshot
+            return snapshot.runID
+        case .ignored(let reason, let snapshot):
+            lifecycleProcessState = snapshot
+            if reason == .interruptedMutationNeedsReview {
+                semiAutomaticState = .changesFound
+            }
+            return nil
+        case .blocked(let reason, let snapshot):
+            lifecycleProcessState = snapshot
+            applyLifecycleBlock(reason: reason, kind: kind)
+            return nil
+        }
+    }
+
+    private func lifecycleSource(
+        for source: SupabaseManualSyncSemiAutomaticTriggerSource
+    ) -> SupabaseManualSyncLifecycleRunSource {
+        switch source {
+        case .rootForeground:
+            return .rootForeground
+        case .releaseCard:
+            return .optionsCard
+        }
+    }
+
+    private func applyLifecycleBlock(
+        reason: SupabaseManualSyncLifecycleBlockReason,
+        kind: SupabaseManualSyncLifecycleRunKind
+    ) {
+        switch reason {
+        case .authMissing, .ownerMissing:
+            semiAutomaticState = .blockedAuth
+            presentationKind = .blockedNeedsSignIn
+            title = SupabaseManualSyncUserFacingCopy.signInAgain
+            subtitle = Copy.signInSubtitle
+            primaryActionTitle = Copy.signInAction
+        case .networkUnavailable, .unsafeAppContext, .appNotActive:
+            semiAutomaticState = .recoverableError
+            presentationKind = .technicalFollowUpNeeded
+            title = L("options.supabase.manualSync.lifecycle.blocked.title")
+            subtitle = L("options.supabase.manualSync.lifecycle.blocked.subtitle")
+            primaryActionTitle = Copy.dismissOrRetryAction
+        case .readOnlyIgnoredForMutatingRun,
+             .mutatingRunAlreadyActive,
+             .runAlreadyActive,
+             .interruptedMutationNeedsReview:
+            if kind.isMutating {
+                semiAutomaticState = .recoverableError
+                presentationKind = .auxiliaryBusyConcurrent
+            }
+        }
+    }
+
+    private func markLifecycleInterrupted(
+        runID: UUID?,
+        reason: SupabaseManualSyncLifecycleInterruptReason
+    ) {
+        guard let runID else { return }
+        lifecycleRunGate.markCancelling(runID: runID, reason: reason)
+        lifecycleProcessState = lifecycleRunGate.markInterrupted(runID: runID, reason: reason)
+        applyLifecycleInterruptedPresentationIfNeeded()
+    }
+
+    private func completeLifecycleRunIfVerified(_ runID: UUID?) {
+        guard let runID else { return }
+        lifecycleProcessState = lifecycleRunGate.markCompletedVerified(runID: runID)
+    }
+
+    private func interruptLifecycleRunIfBudgetExpired(_ runID: UUID?) -> Bool {
+        guard let runID else { return false }
+        let snapshot = lifecycleRunGate.expireBudgetIfNeeded()
+        lifecycleProcessState = snapshot
+        guard snapshot.runID == runID,
+              snapshot.state == .readyToRetry,
+              snapshot.interruptReason == .timeBudgetExceeded else {
+            return false
+        }
+        applyLifecycleInterruptedPresentationIfNeeded()
+        return true
+    }
+
+    private func applyLifecycleInterruptedPresentationIfNeeded() {
+        guard lifecycleProcessState.hasInterruptedMutationPriority else { return }
+        if lifecycleShouldShowPriorityAttention {
+            semiAutomaticState = .recoverableError
+        }
+    }
+
+    func requestLifecycleInterruptionForBackground() {
+        let snapshot = lifecycleRunGate.snapshot
+        guard let runID = snapshot.runID,
+              snapshot.state == .running || snapshot.state == .cancelling else { return }
+        markLifecycleInterrupted(runID: runID, reason: .appBackgrounded)
     }
 
     private var hasUnresolvedStagedPlan: Bool {
@@ -789,6 +950,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     ) async -> Bool {
         switch semiAutomaticForegroundDecision(now: now, source: source) {
         case .allowed:
+            guard let lifecycleRunID = beginLifecycleRun(
+                kind: .previewReadOnly,
+                source: lifecycleSource(for: source)
+            ) else {
+                return false
+            }
             lastSemiAutomaticForegroundAttemptAt = now
             SupabaseManualSyncForegroundAutomaticGate.markAttempt(at: now)
             if source == .rootForeground {
@@ -799,7 +966,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                     lastRecoverableErrorAt: lastRecoverableForegroundErrorAt
                 )
             }
-            await start(with: .dryRun, checkStartedAt: now)
+            await start(with: .dryRun, checkStartedAt: now, lifecycleRunID: lifecycleRunID)
             return true
         case .blocked(.authOrOwnerMissing):
             semiAutomaticState = .blockedAuth
@@ -839,8 +1006,21 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         await start(with: .dryRun)
     }
 
-    func start(with mode: SupabaseManualSyncRunMode, checkStartedAt: Date = Date()) async {
+    func start(
+        with mode: SupabaseManualSyncRunMode,
+        checkStartedAt: Date = Date(),
+        lifecycleRunID: UUID? = nil
+    ) async {
         guard !isRunning else { return }
+        let activeLifecycleRunID: UUID?
+        if let lifecycleRunID {
+            activeLifecycleRunID = lifecycleRunID
+        } else if mode == .dryRun {
+            guard let runID = beginLifecycleRun(kind: .pullPreview, source: .optionsCard) else { return }
+            activeLifecycleRunID = runID
+        } else {
+            activeLifecycleRunID = nil
+        }
         invalidateLocalApplyStaging(clearSummary: true)
         invalidateCatalogPushPlan(clearSummary: true)
         invalidateProductPricePlans(clearSummary: true)
@@ -862,9 +1042,15 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 ? summary
                 : cancelledFallbackSummary(previous: summary)
             apply(summary: cancelledSummary)
+            markLifecycleInterrupted(runID: activeLifecycleRunID, reason: .cancelledBeforeWrite)
             if mode == .dryRun {
                 semiAutomaticState = .idle
             }
+            return
+        }
+
+        if interruptLifecycleRunIfBudgetExpired(activeLifecycleRunID) {
+            apply(summary: cancelledFallbackSummary(previous: summary))
             return
         }
 
@@ -874,6 +1060,21 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         await prepareActivityRegistrationIfNeeded(after: summary)
         if mode == .dryRun {
             recordCloudCheckResult(summary, at: checkStartedAt)
+        }
+        switch summary.finalState {
+        case .allUpToDate, .completedSuccessfully:
+            completeLifecycleRunIfVerified(activeLifecycleRunID)
+        case .blocked:
+            lifecycleProcessState = lifecycleRunGate.markBlocked(
+                runID: activeLifecycleRunID,
+                kind: mode == .dryRun ? .pullPreview : .previewReadOnly,
+                source: .optionsCard,
+                reason: .unsafeAppContext
+            )
+        case .cancelled:
+            markLifecycleInterrupted(runID: activeLifecycleRunID, reason: .cancelledBeforeWrite)
+        case .partialSync, .connectivityIssue, .technicalReviewNeeded, .concurrentRunNotAllowed, .modeNotSupportedInThisSlice:
+            completeLifecycleRunIfVerified(activeLifecycleRunID)
         }
     }
 
@@ -1020,10 +1221,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
     func applyStagedLocalChanges() async {
         guard !isApplyingLocalChanges else { return }
+        guard let lifecycleRunID = beginLifecycleRun(kind: .pullApplyLocal, source: .releaseSheet) else { return }
 
         let preview = remotePreviewStaging?.stagedPreviewForLocalApply
         guard canApplyCatalogChanges || canApplyProductPriceChanges else {
             invalidateLocalApplyStaging(reason: L("options.supabase.manualSync.apply.blocked.refreshRequired"))
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
             return
         }
 
@@ -1037,6 +1240,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         guard !Task.isCancelled else {
             isApplyingLocalChanges = false
             invalidateLocalApplyStaging(clearSummary: true)
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
             return
         }
 
@@ -1087,7 +1291,13 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             subtitle = L("options.supabase.manualSync.state.applied.subtitle")
             primaryActionTitle = Copy.startAction
             semiAutomaticState = .noChanges
+            completeLifecycleRunIfVerified(lifecycleRunID)
             await prepareActivityRegistrationAfterDataStep()
+        } catch is CancellationError {
+            invalidateLocalApplyStaging(reason: L("options.supabase.manualSync.lifecycle.interrupted.subtitle"), clearSummary: true)
+            isApplyingLocalChanges = false
+            lastSummary = nil
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
         } catch {
             let reason = localApplyBlockedMessage(for: error, failureContext: true)
             invalidateLocalApplyStaging(reason: reason, clearSummary: true)
@@ -1098,6 +1308,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             subtitle = reason
             primaryActionTitle = Copy.dismissOrRetryAction
             semiAutomaticState = .recoverableError
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
         }
     }
 
@@ -1330,12 +1541,14 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private func registerActivitiesIfNeeded() async {
         guard !isRegisteringActivities else { return }
         guard activityRegistrationPhase.hasRegisterAction else { return }
+        guard let lifecycleRunID = beginLifecycleRun(kind: .drainOutbox, source: .releaseSheet) else { return }
         guard capabilities.supportsActivityRegistration,
               let activityRegistrationProvider else {
             applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
                 status: .retryableFailure,
                 summary: activityRegistrationSummaryForCurrentPhase()
             ))
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
             return
         }
         guard authPresentationContext.isSignedIn,
@@ -1344,6 +1557,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 status: .authRequired,
                 summary: activityRegistrationSummaryForCurrentPhase()
             ))
+            lifecycleProcessState = lifecycleRunGate.markBlocked(
+                runID: lifecycleRunID,
+                kind: .drainOutbox,
+                source: .releaseSheet,
+                reason: .authMissing
+            )
             return
         }
 
@@ -1357,18 +1576,25 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             guard !Task.isCancelled else { throw CancellationError() }
             isRegisteringActivities = false
             applyActivityRegistrationResult(result)
+            if result.status == .success || result.status == .empty {
+                completeLifecycleRunIfVerified(lifecycleRunID)
+            } else {
+                markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
+            }
         } catch is CancellationError {
             isRegisteringActivities = false
             applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
                 status: .cancelled,
                 summary: activityRegistrationSummaryForCurrentPhase()
             ))
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
         } catch {
             isRegisteringActivities = false
             applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
                 status: .retryableFailure,
                 summary: activityRegistrationSummaryForCurrentPhase()
             ))
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
         }
     }
 
@@ -1816,6 +2042,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
     func sendConfirmedCatalogChanges() async {
         guard !isSendingCatalogChanges else { return }
+        guard let lifecycleRunID = beginLifecycleRun(kind: .pushAggregated, source: .releaseSheet) else { return }
         guard capabilities.supportsCatalogPush || capabilities.supportsProductPriceSync else {
             stagedCatalogPushPlan = nil
             catalogPushPhase = .sendFailed(makeCatalogPushSummary(
@@ -1823,6 +2050,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 result: .blocked(message: L("options.supabase.manualSync.push.summary.failedBeforeWrite"))
             ))
             presentationKind = .catalogPushFailed
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
             return
         }
         let hasCatalogWork = stagedCatalogPushPlan?.isSendable == true
@@ -1835,6 +2063,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             catalogPushPhase = .stale
             productPricePushPhase = .stale(productPriceSummary)
             presentationKind = .catalogPushStale
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
             return
         }
         guard let ownerUserID = currentCatalogPushOwnerID?(),
@@ -1849,6 +2078,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             catalogPushPhase = .sendFailed(makeCatalogPushSummary(from: stagedCatalogPushPlan, result: result))
             productPricePushPhase = .sendFailed(productPriceSummary.withBlockedIncrement())
             presentationKind = .catalogPushFailed
+            lifecycleProcessState = lifecycleRunGate.markBlocked(
+                runID: lifecycleRunID,
+                kind: .pushAggregated,
+                source: .releaseSheet,
+                reason: .authMissing
+            )
             return
         }
 
@@ -1866,14 +2101,26 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 stagedPlan: stagedPlan,
                 ownerUserID: ownerUserID
             )
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled else {
+                markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
+                return
+            }
+            if interruptLifecycleRunIfBudgetExpired(lifecycleRunID) {
+                return
+            }
             let canContinueWithPrices = catalogResult.map(\.status.allowsProductPricePushAfterCatalog) ?? true
             if canContinueWithPrices {
                 try await executeProductPricePushIfNeeded(ownerUserID: ownerUserID)
             } else if hasProductPriceWork {
                 productPricePushPhase = .sendFailed(productPriceSummary.withBlockedIncrement())
             }
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled else {
+                markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
+                return
+            }
+            if interruptLifecycleRunIfBudgetExpired(lifecycleRunID) {
+                return
+            }
             if let catalogResult, let currentPlan = stagedPlan {
                 applyCatalogPushResult(catalogResult, plan: currentPlan)
                 if productPricePushPhase.needsAttentionAfterSend {
@@ -1884,14 +2131,21 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             } else {
                 applyPriceOnlyPushPresentationAfterSend()
             }
+            completeLifecycleAfterSendIfVerified(lifecycleRunID)
             await prepareActivityRegistrationAfterDataStep()
         } catch CatalogPushInternalError.stale {
             stagedProductPricePushPlan = nil
             stagedProductPricePushFingerprint = nil
             productPricePushPhase = .stale(productPriceSummary)
             presentationKind = .catalogPushStale
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
+        } catch is CancellationError {
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
         } catch {
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled else {
+                markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
+                return
+            }
             let result = SupabaseManualPushResult.blocked(
                 message: L("options.supabase.manualSync.push.summary.failedBeforeWrite")
             )
@@ -1901,6 +2155,27 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             catalogPushPhase = .sendFailed(makeCatalogPushSummary(from: stagedPlan, result: result))
             productPricePushPhase = .sendFailed(productPriceSummary.withFailedIncrement())
             presentationKind = .catalogPushFailed
+            markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
+        }
+    }
+
+    private func completeLifecycleAfterSendIfVerified(_ runID: UUID) {
+        switch catalogPushPhase {
+        case .succeeded, .succeededNeedsCheck:
+            if productPricePushPhase.needsAttentionAfterSend {
+                markLifecycleInterrupted(runID: runID, reason: .remoteWriteUnverified)
+            } else {
+                completeLifecycleRunIfVerified(runID)
+            }
+        case .noChanges:
+            switch productPricePushPhase {
+            case .succeeded:
+                completeLifecycleRunIfVerified(runID)
+            default:
+                markLifecycleInterrupted(runID: runID, reason: .remoteWriteUnverified)
+            }
+        case .idle, .checking, .ready, .blocked, .failed, .stale, .sending, .partial, .sendBlocked, .sendFailed:
+            markLifecycleInterrupted(runID: runID, reason: .remoteWriteUnverified)
         }
     }
 
@@ -2344,6 +2619,16 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             )
         }
 
+        if lifecycleShouldShowPriorityAttention {
+            return rootState(
+                kind: .recoverableError,
+                titleKey: "options.supabase.manualSync.root.interrupted.title",
+                detailKey: "options.supabase.manualSync.root.interrupted.detail",
+                actionID: .reviewChanges,
+                systemImage: "exclamationmark.arrow.triangle.2.circlepath"
+            )
+        }
+
         switch semiAutomaticState {
         case .changesFound, .staleOrConflict:
             return rootState(
@@ -2474,6 +2759,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 isLoading: authPresentationContext.isTransitioning,
                 hintKey: hintKey
             )
+        }
+
+        if let lifecycleState = lifecycleInterruptedPresentationState() {
+            return lifecycleState
         }
 
         if let catalogPushState = catalogPushPresentationState() {
@@ -2689,6 +2978,50 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 isRunning: false,
                 isLoading: false
             )
+        }
+    }
+
+    private func lifecycleInterruptedPresentationState() -> SupabaseManualSyncPresentationState? {
+        guard lifecycleShouldShowPriorityAttention else { return nil }
+        let reviewSheet = activityRegistrationPhase.shouldShowReviewSection
+            ? makeActivityRegistrationReviewSheetState()
+            : reviewSheetForCurrentState()
+        let actionID: SupabaseManualSyncPresentationActionID = reviewSheet != nil ? .reviewChanges : .checkCloud
+        let titleKey = lifecycleProcessState.state == .blocked
+            ? "options.supabase.manualSync.lifecycle.blocked.title"
+            : "options.supabase.manualSync.lifecycle.interrupted.title"
+        let subtitleKey = lifecycleProcessState.state == .blocked
+            ? "options.supabase.manualSync.lifecycle.blocked.subtitle"
+            : "options.supabase.manualSync.lifecycle.interrupted.subtitle"
+        return state(
+            titleKey: titleKey,
+            subtitleKey: subtitleKey,
+            summary: userFacingSummaryForCurrentState(),
+            reviewSheet: reviewSheet,
+            badgeKey: "options.supabase.manualSync.badge.retry",
+            badgeSystemImage: "exclamationmark.triangle.fill",
+            primaryAction: action(actionID),
+            secondaryAction: nil,
+            isRunning: false,
+            isLoading: false
+        )
+    }
+
+    private var lifecycleShouldShowPriorityAttention: Bool {
+        guard lifecycleProcessState.hasInterruptedMutationPriority else { return false }
+        switch lifecycleProcessState.state {
+        case .interrupted:
+            return lifecycleProcessState.interruptReason == .remoteWriteUnverified
+                || lifecycleProcessState.interruptReason == .appBackgrounded
+        case .readyToRetry:
+            return lifecycleProcessState.interruptReason == .timeBudgetExceeded
+                || lifecycleProcessState.interruptReason == .appBackgrounded
+        case .blocked:
+            return lifecycleProcessState.blockReason == .networkUnavailable
+                || lifecycleProcessState.blockReason == .unsafeAppContext
+                || lifecycleProcessState.blockReason == .appNotActive
+        case .idle, .running, .cancelling, .completedVerified:
+            return false
         }
     }
 
@@ -3625,7 +3958,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         let readyPrimaryID: SupabaseManualSyncReviewPrimaryActionID = activityRegistrationPhase.hasRegisterAction
             ? .registerCloudActivity
             : .none
-        let primaryID = reviewPrimaryActionID(plan: plan, readyAction: readyPrimaryID)
+        let primaryID: SupabaseManualSyncReviewPrimaryActionID = activityRegistrationPhase.prefersRetryTitle
+            ? .recheck
+            : reviewPrimaryActionID(plan: plan, readyAction: readyPrimaryID)
         let accessibilityLabel = ([title, subtitle] + sections.flatMap { [$0.title, $0.message] } + [footerMessage])
             .joined(separator: ". ")
 
