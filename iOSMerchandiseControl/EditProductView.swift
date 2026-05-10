@@ -6,6 +6,7 @@ struct EditProductView: View {
     @Environment(\.dismiss) private var dismiss
 
     let existingProduct: Product?
+    let pendingOwnerUserID: UUID?
 
     @Query(sort: \Supplier.name, order: .forward)
     private var suppliers: [Supplier]
@@ -23,8 +24,9 @@ struct EditProductView: View {
     @State private var supplierName: String
     @State private var categoryName: String
 
-    init(product: Product? = nil, initialBarcode: String? = nil) {
+    init(product: Product? = nil, initialBarcode: String? = nil, pendingOwnerUserID: UUID? = nil) {
         self.existingProduct = product
+        self.pendingOwnerUserID = pendingOwnerUserID
 
         let initialCode = product?.barcode ?? initialBarcode ?? ""
 
@@ -126,13 +128,17 @@ struct EditProductView: View {
         // prezzi precedenti per storico
         let oldPurchase = existingProduct?.purchasePrice
         let oldRetail = existingProduct?.retailPrice
+        let oldDraft = existingProduct.map(Self.makeDraft)
 
         let target: Product
+        let operation: LocalPendingChangeOperation
         if let existingProduct {
             target = existingProduct
+            operation = .update
         } else {
             target = Product(barcode: barcode)
             context.insert(target)
+            operation = .create
         }
 
         target.barcode = barcode
@@ -144,6 +150,7 @@ struct EditProductView: View {
         target.stockQuantity = stock
 
         let trimmedSupplier = supplierName.trimmingCharacters(in: .whitespacesAndNewlines)
+        var createdSupplier: Supplier?
         if trimmedSupplier.isEmpty {
             target.supplier = nil
         } else if let existing = suppliers.first(where: {
@@ -154,9 +161,11 @@ struct EditProductView: View {
             let newSupplier = Supplier(name: trimmedSupplier)
             context.insert(newSupplier)
             target.supplier = newSupplier
+            createdSupplier = newSupplier
         }
 
         let trimmedCategory = categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+        var createdCategory: ProductCategory?
         if trimmedCategory.isEmpty {
             target.category = nil
         } else if let existing = categories.first(where: {
@@ -167,10 +176,11 @@ struct EditProductView: View {
             let newCategory = ProductCategory(name: trimmedCategory)
             context.insert(newCategory)
             target.category = newCategory
+            createdCategory = newCategory
         }
 
         // storico prezzi automatico
-        createPriceHistoryIfNeeded(
+        let priceChanges = createPriceHistoryIfNeeded(
             for: target,
             oldPurchase: oldPurchase,
             newPurchase: purchase,
@@ -178,8 +188,47 @@ struct EditProductView: View {
             newRetail: retail
         )
 
-        try? context.save()
-        dismiss()
+        do {
+            let accumulator = LocalPendingChangeAccumulator(
+                context: context,
+                ownerUserID: pendingOwnerUserID
+            )
+            if let createdSupplier {
+                try accumulator.recordSupplierChange(
+                    supplier: createdSupplier,
+                    operation: .create,
+                    origin: .manualCatalogSave
+                )
+            }
+            if let createdCategory {
+                try accumulator.recordCategoryChange(
+                    category: createdCategory,
+                    operation: .create,
+                    origin: .manualCatalogSave
+                )
+            }
+            let changedFields = operation == .create
+                ? Self.createChangedFields
+                : ProductUpdateDraft.computeChangedFields(
+                    old: oldDraft ?? Self.makeDraft(target),
+                    new: Self.makeDraft(target)
+                ).map(\.rawValue)
+            try accumulator.recordProductChange(
+                product: target,
+                operation: operation,
+                origin: .manualCatalogSave,
+                changedFields: changedFields,
+                baselineFingerprintHash: oldDraft.map(LocalPendingChangeLogicalKey.productFingerprintHash)
+            )
+            try priceChanges.forEach {
+                try accumulator.recordProductPriceChange(price: $0, origin: .productPriceSave)
+            }
+            try context.save()
+            dismiss()
+        } catch {
+            context.rollback()
+            print("Errore durante il salvataggio locale.")
+        }
     }
 
     private func createPriceHistoryIfNeeded(
@@ -188,8 +237,9 @@ struct EditProductView: View {
         newPurchase: Double?,
         oldRetail: Double?,
         newRetail: Double?
-    ) {
+    ) -> [ProductPrice] {
         let now = Date()
+        var created: [ProductPrice] = []
 
         if let newPurchase, newPurchase != oldPurchase {
             let history = ProductPrice(
@@ -200,6 +250,7 @@ struct EditProductView: View {
                 product: product
             )
             context.insert(history)
+            created.append(history)
         }
 
         if let newRetail, newRetail != oldRetail {
@@ -211,7 +262,9 @@ struct EditProductView: View {
                 product: product
             )
             context.insert(history)
+            created.append(history)
         }
+        return created
     }
 
     private static func parseDouble(from text: String) -> Double? {
@@ -222,4 +275,30 @@ struct EditProductView: View {
         guard !normalized.isEmpty else { return nil }
         return Double(normalized)
     }
+
+    nonisolated private static func makeDraft(_ product: Product) -> ProductDraft {
+        ProductDraft(
+            barcode: product.barcode,
+            itemNumber: product.itemNumber,
+            productName: product.productName,
+            secondProductName: product.secondProductName,
+            purchasePrice: product.purchasePrice,
+            retailPrice: product.retailPrice,
+            stockQuantity: product.stockQuantity,
+            supplierName: product.supplier?.name,
+            categoryName: product.category?.name
+        )
+    }
+
+    private static let createChangedFields = [
+        "barcode",
+        "itemNumber",
+        "productName",
+        "secondProductName",
+        "purchasePrice",
+        "retailPrice",
+        "stockQuantity",
+        "supplierName",
+        "categoryName"
+    ]
 }

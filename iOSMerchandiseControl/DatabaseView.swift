@@ -19,6 +19,7 @@ nonisolated private struct ImportApplyPayload: Sendable {
     let pendingSupplierNames: [String]
     let pendingCategoryNames: [String]
     let recordPriceHistory: Bool
+    let ownerUserID: UUID?
 
     var productsTotalCount: Int {
         newProducts.count + updatedProducts.count
@@ -612,6 +613,7 @@ nonisolated private enum DatabaseImportPipeline {
                     payload.pendingPriceHistoryEntries,
                     alreadyPresentCount: payload.alreadyPresentPriceHistoryCount,
                     unresolvedCount: payload.unresolvedPriceHistoryCount,
+                    ownerUserID: payload.ownerUserID,
                     in: context,
                     onProgress: onProgress
                 )
@@ -895,6 +897,10 @@ nonisolated private enum DatabaseImportPipeline {
             existingSuppliers: existingSuppliers,
             existingCategories: existingCategories
         )
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: payload.ownerUserID
+        )
 
         var processedCount = 0
         var insertedCount = 0
@@ -912,14 +918,26 @@ nonisolated private enum DatabaseImportPipeline {
         resolver.preloadCategories(named: payload.pendingCategoryNames)
 
         for draft in payload.newProducts {
-            autoreleasepool {
+            let result = autoreleasepool { () -> (Product, [ProductPrice]) in
+                var priceChanges: [ProductPrice] = []
                 let product = ProductImportCore.insertProduct(
                     from: draft,
                     in: context,
                     resolver: resolver,
-                    recordPriceHistory: payload.recordPriceHistory
+                    recordPriceHistory: payload.recordPriceHistory,
+                    onPriceHistoryCreated: { priceChanges.append($0) }
                 )
                 productsByBarcode[draft.barcode] = product
+                return (product, priceChanges)
+            }
+            try accumulator.recordProductChange(
+                product: result.0,
+                operation: .create,
+                origin: .confirmedImport,
+                changedFields: DatabaseView.createChangedFields
+            )
+            try result.1.forEach {
+                try accumulator.recordProductPriceChange(price: $0, origin: .confirmedImport)
             }
 
             processedCount += 1
@@ -938,7 +956,8 @@ nonisolated private enum DatabaseImportPipeline {
                 continue
             }
 
-            autoreleasepool {
+            let baselineHash = LocalPendingChangeLogicalKey.productFingerprintHash(update.old)
+            let priceChanges = autoreleasepool { () -> [ProductPrice] in
                 ProductImportCore.applyUpdate(
                     update,
                     to: product,
@@ -946,6 +965,16 @@ nonisolated private enum DatabaseImportPipeline {
                     resolver: resolver,
                     recordPriceHistory: payload.recordPriceHistory
                 )
+            }
+            try accumulator.recordProductChange(
+                product: product,
+                operation: .update,
+                origin: .confirmedImport,
+                changedFields: update.changedFields.map(\.rawValue),
+                baselineFingerprintHash: baselineHash
+            )
+            try priceChanges.forEach {
+                try accumulator.recordProductPriceChange(price: $0, origin: .confirmedImport)
             }
 
             processedCount += 1
@@ -957,6 +986,21 @@ nonisolated private enum DatabaseImportPipeline {
                 onProgress: onProgress
             )
             _ = try await saveImportProgressIfNeeded(after: processedCount, in: context)
+        }
+
+        try resolver.createdSuppliers.forEach {
+            try accumulator.recordSupplierChange(
+                supplier: $0,
+                operation: .create,
+                origin: .confirmedImport
+            )
+        }
+        try resolver.createdCategories.forEach {
+            try accumulator.recordCategoryChange(
+                category: $0,
+                operation: .create,
+                origin: .confirmedImport
+            )
         }
 
         try context.save()
@@ -1120,6 +1164,7 @@ nonisolated private enum DatabaseImportPipeline {
         _ entries: [PendingPriceHistoryImportEntry],
         alreadyPresentCount: Int,
         unresolvedCount: Int,
+        ownerUserID: UUID?,
         in context: ModelContext,
         onProgress: @escaping @Sendable (DatabaseImportProgressSnapshot) async -> Void
     ) async throws -> ImportApplyPriceHistoryResult {
@@ -1141,6 +1186,10 @@ nonisolated private enum DatabaseImportPipeline {
             )
 
             let now = Date()
+            let accumulator = LocalPendingChangeAccumulator(
+                context: context,
+                ownerUserID: ownerUserID
+            )
             var processedCount = 0
             var insertedCount = 0
             let totalCount = entries.count
@@ -1166,7 +1215,7 @@ nonisolated private enum DatabaseImportPipeline {
                     continue
                 }
 
-                autoreleasepool {
+                let history = autoreleasepool { () -> ProductPrice in
                     let history = ProductPrice(
                         type: entry.type,
                         price: entry.price,
@@ -1177,7 +1226,12 @@ nonisolated private enum DatabaseImportPipeline {
                         product: product
                     )
                     context.insert(history)
+                    return history
                 }
+                try accumulator.recordProductPriceChange(
+                    price: history,
+                    origin: .confirmedImport
+                )
 
                 insertedCount += 1
                 await reportImportProgress(
@@ -1413,6 +1467,7 @@ private func importSurfaceCardWidth(for geometry: GeometryProxy) -> CGFloat {
 
 struct DatabaseView: View {
     @Environment(\.modelContext) private var context
+    @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @AppStorage("appLanguage") private var appLanguage: String = "system"
 
     // Tutti i prodotti dal database, ordinati per barcode
@@ -1789,13 +1844,19 @@ struct DatabaseView: View {
         // Sheet per NUOVO prodotto
         .sheet(isPresented: $showAddSheet) {
             NavigationStack {
-                EditProductView(initialBarcode: pendingBarcodeForNewProduct)
+                EditProductView(
+                    initialBarcode: pendingBarcodeForNewProduct,
+                    pendingOwnerUserID: currentPendingOwnerUserID
+                )
             }
         }
         // Sheet per MODIFICA prodotto esistente
         .sheet(item: $productToEdit) { (product: Product) in
             NavigationStack {
-                EditProductView(product: product)
+                EditProductView(
+                    product: product,
+                    pendingOwnerUserID: currentPendingOwnerUserID
+                )
             }
         }
         // Sheet per storico prezzi
@@ -2003,6 +2064,10 @@ struct DatabaseView: View {
 
     // MARK: - Azioni base
 
+    private var currentPendingOwnerUserID: UUID? {
+        supabaseAuthViewModel.isSignedIn ? supabaseAuthViewModel.sessionInfo?.userID : nil
+    }
+
     private func handleDatabaseScan(_ code: String) {
         let cleaned = code.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
@@ -2021,14 +2086,26 @@ struct DatabaseView: View {
     }
     
     private func deleteProducts(at offsets: IndexSet) {
-        for index in offsets {
-            let product = filteredProducts[index]
-            context.delete(product)
-        }
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: currentPendingOwnerUserID
+        )
         do {
+            for index in offsets {
+                let product = filteredProducts[index]
+                try accumulator.recordProductChange(
+                    product: product,
+                    operation: .delete,
+                    origin: .manualCatalogSave,
+                    changedFields: ["tombstone"],
+                    baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(product)
+                )
+                context.delete(product)
+            }
             try context.save()
         } catch {
-            print("Errore durante l'eliminazione: \(error)")
+            context.rollback()
+            print("Errore durante l'eliminazione.")
         }
     }
 
@@ -2799,7 +2876,8 @@ struct DatabaseView: View {
         do {
             payload = try Self.makeImportApplyPayload(
                 session: confirmedSession,
-                pendingFullImportContext: confirmedPendingContext
+                pendingFullImportContext: confirmedPendingContext,
+                ownerUserID: currentPendingOwnerUserID
             )
         } catch {
             progressState.resetRunningState()
@@ -2872,7 +2950,8 @@ struct DatabaseView: View {
     @MainActor
     private static func makeImportApplyPayload(
         session: ImportAnalysisSession,
-        pendingFullImportContext: PendingFullImportContext?
+        pendingFullImportContext: PendingFullImportContext?,
+        ownerUserID: UUID?
     ) throws -> ImportApplyPayload {
         guard hasWorkToApply(session: session, pendingFullImportContext: pendingFullImportContext) else {
             throw NSError(
@@ -2892,7 +2971,8 @@ struct DatabaseView: View {
             unresolvedPriceHistoryCount: pendingFullImportContext?.unresolvedPriceHistoryCount ?? 0,
             pendingSupplierNames: pendingFullImportContext?.pendingSupplierNames ?? [],
             pendingCategoryNames: pendingFullImportContext?.pendingCategoryNames ?? [],
-            recordPriceHistory: !(pendingFullImportContext?.suppressAutomaticProductPriceHistory ?? false)
+            recordPriceHistory: !(pendingFullImportContext?.suppressAutomaticProductPriceHistory ?? false),
+            ownerUserID: ownerUserID
         )
     }
 
@@ -2930,6 +3010,10 @@ struct DatabaseView: View {
     private func parseProductsCSV(_ content: String) throws {
         let lines = content.split(whereSeparator: \.isNewline)
         guard !lines.isEmpty else { return }
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: currentPendingOwnerUserID
+        )
 
         // salta l'header
         let dataLines = lines.dropFirst()
@@ -2958,16 +3042,21 @@ struct DatabaseView: View {
             let supplierName = col(7).trimmingCharacters(in: .whitespacesAndNewlines)
             let categoryName = col(8).trimmingCharacters(in: .whitespacesAndNewlines)
 
-            let supplier = supplierName.isEmpty ? nil : findOrCreateSupplier(named: supplierName)
-            let category = categoryName.isEmpty ? nil : findOrCreateCategory(named: categoryName)
+            let supplierResolution = supplierName.isEmpty ? nil : findOrCreateSupplier(named: supplierName)
+            let categoryResolution = categoryName.isEmpty ? nil : findOrCreateCategory(named: categoryName)
+            let supplier = supplierResolution?.entity
+            let category = categoryResolution?.entity
 
             // Cerca prodotto esistente per barcode
             let descriptor = FetchDescriptor<Product>(predicate: #Predicate { $0.barcode == barcode })
             let existing = try context.fetch(descriptor).first
+            let oldDraft = existing.map(Self.makeDraft)
 
             let product: Product
+            let operation: LocalPendingChangeOperation
             if let existing {
                 product = existing
+                operation = .update
             } else {
                 product = Product(
                     barcode: barcode,
@@ -2981,6 +3070,7 @@ struct DatabaseView: View {
                     category: category
                 )
                 context.insert(product)
+                operation = .create
             }
 
             product.itemNumber = itemNumber.isEmpty ? nil : itemNumber
@@ -2991,6 +3081,35 @@ struct DatabaseView: View {
             product.stockQuantity = stock
             product.supplier = supplier
             product.category = category
+
+            if let supplier, supplierResolution?.created == true {
+                try accumulator.recordSupplierChange(
+                    supplier: supplier,
+                    operation: .create,
+                    origin: .confirmedImport
+                )
+            }
+            if let category, categoryResolution?.created == true {
+                try accumulator.recordCategoryChange(
+                    category: category,
+                    operation: .create,
+                    origin: .confirmedImport
+                )
+            }
+
+            let changedFields = operation == .create
+                ? Self.createChangedFields
+                : ProductUpdateDraft.computeChangedFields(
+                    old: oldDraft ?? Self.makeDraft(product),
+                    new: Self.makeDraft(product)
+                ).map(\.rawValue)
+            try accumulator.recordProductChange(
+                product: product,
+                operation: operation,
+                origin: .confirmedImport,
+                changedFields: changedFields,
+                baselineFingerprintHash: oldDraft.map(LocalPendingChangeLogicalKey.productFingerprintHash)
+            )
         }
     }
 
@@ -3027,33 +3146,59 @@ struct DatabaseView: View {
         }
     }
 
-    private func findOrCreateSupplier(named name: String) -> Supplier {
+    private func findOrCreateSupplier(named name: String) -> (entity: Supplier, created: Bool)? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return Supplier(name: "") }
+        guard !trimmed.isEmpty else { return nil }
 
         let descriptor = FetchDescriptor<Supplier>(predicate: #Predicate { $0.name == trimmed })
         if let existing = try? context.fetch(descriptor).first {
-            return existing
+            return (existing, false)
         } else {
             let supplier = Supplier(name: trimmed)
             context.insert(supplier)
-            return supplier
+            return (supplier, true)
         }
     }
 
-    private func findOrCreateCategory(named name: String) -> ProductCategory {
+    private func findOrCreateCategory(named name: String) -> (entity: ProductCategory, created: Bool)? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return ProductCategory(name: "") }
+        guard !trimmed.isEmpty else { return nil }
 
         let descriptor = FetchDescriptor<ProductCategory>(predicate: #Predicate { $0.name == trimmed })
         if let existing = try? context.fetch(descriptor).first {
-            return existing
+            return (existing, false)
         } else {
             let category = ProductCategory(name: trimmed)
             context.insert(category)
-            return category
+            return (category, true)
         }
     }
+
+    nonisolated private static func makeDraft(_ product: Product) -> ProductDraft {
+        ProductDraft(
+            barcode: product.barcode,
+            itemNumber: product.itemNumber,
+            productName: product.productName,
+            secondProductName: product.secondProductName,
+            purchasePrice: product.purchasePrice,
+            retailPrice: product.retailPrice,
+            stockQuantity: product.stockQuantity,
+            supplierName: product.supplier?.name,
+            categoryName: product.category?.name
+        )
+    }
+
+    nonisolated fileprivate static let createChangedFields = [
+        "barcode",
+        "itemNumber",
+        "productName",
+        "secondProductName",
+        "purchasePrice",
+        "retailPrice",
+        "stockQuantity",
+        "supplierName",
+        "categoryName"
+    ]
 
     // MARK: - Formattazione / parsing numeri
 

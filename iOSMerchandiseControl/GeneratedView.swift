@@ -30,6 +30,7 @@ private enum RevertImportDecodeError: Error {
 ///   - fare entry manuali e usare uno pseudo-scanner barcode
 struct GeneratedView: View {
     @Environment(\.modelContext) private var context
+    @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @AppStorage("appLanguage") private var appLanguage: String = "system"
 
     /// Entry da modificare (passata dal chiamante, es. PreGenerateView o HistoryView)
@@ -406,7 +407,10 @@ struct GeneratedView: View {
         }
         .sheet(item: $productToEdit) { product in
             NavigationStack {
-                EditProductView(product: product)
+                EditProductView(
+                    product: product,
+                    pendingOwnerUserID: currentPendingOwnerUserID
+                )
             }
         }
         .sheet(isPresented: $showScanner, onDismiss: {
@@ -2087,7 +2091,10 @@ struct GeneratedView: View {
         }
 
         // Usa il motore di import (stesso che potresti usare da DatabaseView)
-        let vm = ProductImportViewModel(context: context)
+        let vm = ProductImportViewModel(
+            context: context,
+            ownerUserID: currentPendingOwnerUserID
+        )
         vm.analyzeMappedRows(mapped)
 
         if let analysis = vm.analysis {
@@ -2378,6 +2385,10 @@ struct GeneratedView: View {
             }
         }
         importAnalysisSession = nil
+    }
+
+    private var currentPendingOwnerUserID: UUID? {
+        supabaseAuthViewModel.isSignedIn ? supabaseAuthViewModel.sessionInfo?.userID : nil
     }
     
     private var isAlertPresented: Binding<Bool> {
@@ -5274,8 +5285,9 @@ private struct AppleLikeSearchField: View {
     return NavigationStack {
         GeneratedView(entry: entry)
     }
+    .environmentObject(SupabaseAuthViewModel(authService: nil))
     .modelContainer(
-        for: [Product.self, Supplier.self, ProductCategory.self, HistoryEntry.self, ProductPrice.self],
+        for: [Product.self, Supplier.self, ProductCategory.self, HistoryEntry.self, ProductPrice.self, LocalPendingChange.self],
         inMemory: true
     )
 }

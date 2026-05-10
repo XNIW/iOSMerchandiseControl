@@ -42,7 +42,8 @@ struct iOSMerchandiseControlApp: App {
             ProductPrice.self,
             SupabaseCatalogBaselineRun.self,
             SupabaseCatalogBaselineRecord.self,
-            SyncEventOutboxEntry.self
+            SyncEventOutboxEntry.self,
+            LocalPendingChange.self
         ])
     }
 

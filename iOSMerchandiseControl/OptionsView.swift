@@ -4479,7 +4479,8 @@ private enum Task087SmokeUIState {
             ProductPrice.self,
             SupabaseCatalogBaselineRun.self,
             SupabaseCatalogBaselineRecord.self,
-            SyncEventOutboxEntry.self
+            SyncEventOutboxEntry.self,
+            LocalPendingChange.self
         ],
         inMemory: true
     )

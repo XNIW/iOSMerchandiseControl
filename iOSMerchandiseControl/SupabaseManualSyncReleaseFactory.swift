@@ -30,12 +30,14 @@ enum SupabaseManualSyncReleaseFactory {
         let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = activityRecorder.map {
             SupabaseManualSyncReleaseActivityRegistrationAdapter(context: context, recorder: $0)
         }
+        let localPendingChangeCounter = LocalPendingChangePendingAdapter(context: context)
 
         let dependencies = SupabaseManualSyncCoordinator.Dependencies(
             authGate: SupabaseManualSyncReleaseAuthGate(authViewModel: authViewModel),
             baselineGate: SupabaseManualSyncReleaseBaselineGate(context: context, authViewModel: authViewModel),
             pendingSnapshot: SupabaseManualSyncLocalPendingSnapshotProvider(
                 sessionProvider: authViewModel,
+                localPendingChangeCounter: localPendingChangeCounter,
                 catalogPendingCounter: SupabaseManualSyncCatalogPendingAdapter(context: context),
                 outboxPendingCounter: SupabaseManualSyncOutboxPendingAdapter(context: context)
             ),

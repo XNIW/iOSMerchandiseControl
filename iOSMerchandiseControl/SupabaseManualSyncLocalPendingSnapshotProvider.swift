@@ -23,18 +23,29 @@ protocol SupabaseManualSyncOutboxPendingCounting: AnyObject {
 }
 
 @MainActor
+protocol SupabaseManualSyncProductPricePendingCounting: AnyObject {
+    func pendingProductPriceChangeCount(ownerUserID: UUID) async throws -> Int
+}
+
+@MainActor
 final class SupabaseManualSyncLocalPendingSnapshotProvider: SupabaseManualSyncLocalPendingProviding {
     private let sessionProvider: any SupabaseManualSyncLocalPendingSessionProviding
+    private let localPendingChangeCounter: (any SupabaseManualSyncLocalPendingChangeCounting)?
     private let catalogPendingCounter: any SupabaseManualSyncCatalogPendingCounting
+    private let productPricePendingCounter: (any SupabaseManualSyncProductPricePendingCounting)?
     private let outboxPendingCounter: any SupabaseManualSyncOutboxPendingCounting
 
     init(
         sessionProvider: any SupabaseManualSyncLocalPendingSessionProviding,
+        localPendingChangeCounter: (any SupabaseManualSyncLocalPendingChangeCounting)? = nil,
         catalogPendingCounter: any SupabaseManualSyncCatalogPendingCounting,
+        productPricePendingCounter: (any SupabaseManualSyncProductPricePendingCounting)? = nil,
         outboxPendingCounter: any SupabaseManualSyncOutboxPendingCounting
     ) {
         self.sessionProvider = sessionProvider
+        self.localPendingChangeCounter = localPendingChangeCounter
         self.catalogPendingCounter = catalogPendingCounter
+        self.productPricePendingCounter = productPricePendingCounter
         self.outboxPendingCounter = outboxPendingCounter
     }
 
@@ -45,14 +56,28 @@ final class SupabaseManualSyncLocalPendingSnapshotProvider: SupabaseManualSyncLo
         }
 
         try Task.checkCancellation()
-        let catalogCount = try await catalogPendingCounter.pendingCatalogChangeCount(ownerUserID: ownerUserID)
+        let localSnapshot = try await localPendingChangeCounter?.pendingLocalChangeSnapshot(ownerUserID: ownerUserID)
+        try Task.checkCancellation()
+        let fallbackCatalogCount: Int
+        if let localSnapshot, localSnapshot.pendingCatalogChangeCount > 0 {
+            fallbackCatalogCount = 0
+        } else {
+            fallbackCatalogCount = try await catalogPendingCounter.pendingCatalogChangeCount(ownerUserID: ownerUserID)
+        }
+        try Task.checkCancellation()
+        let priceCount: Int
+        if let localSnapshot {
+            priceCount = localSnapshot.pendingProductPriceChangeCount
+        } else {
+            priceCount = try await productPricePendingCounter?.pendingProductPriceChangeCount(ownerUserID: ownerUserID) ?? 0
+        }
         try Task.checkCancellation()
         let queuedOperationCount = try await outboxPendingCounter.pendingQueuedCloudOperationCount(ownerUserID: ownerUserID)
         try Task.checkCancellation()
 
         return SupabaseManualSyncPrivacyCounts(
-            pendingCatalogChangeCount: max(0, catalogCount),
-            pendingPriceChangeCount: 0,
+            pendingCatalogChangeCount: max(0, max(localSnapshot?.pendingCatalogChangeCount ?? 0, fallbackCatalogCount)),
+            pendingPriceChangeCount: max(0, priceCount),
             pendingQueuedCloudOperationCount: max(0, queuedOperationCount)
         )
     }

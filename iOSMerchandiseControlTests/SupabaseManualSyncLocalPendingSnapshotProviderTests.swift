@@ -49,6 +49,45 @@ final class SupabaseManualSyncLocalPendingSnapshotProviderTests: XCTestCase {
         XCTAssertTrue(snapshot.hasAnyPendingWork)
     }
 
+    func testProductPricePendingProducesAggregatedPendingSnapshot() async throws {
+        let session = ManualSyncSessionFake(isSignedIn: true, ownerUserID: ownerA)
+        let catalog = CatalogPendingCounterFake(countsByOwner: [ownerA: 0])
+        let price = ProductPricePendingCounterFake(countsByOwner: [ownerA: 4])
+        let outbox = OutboxPendingCounterFake(countsByOwner: [ownerA: 0])
+        let provider = makeProvider(session: session, catalog: catalog, price: price, outbox: outbox)
+
+        let snapshot = try await provider.loadLocalPendingSnapshot()
+
+        XCTAssertEqual(snapshot.pendingCatalogChangeCount, 0)
+        XCTAssertEqual(snapshot.pendingPriceChangeCount, 4)
+        XCTAssertEqual(snapshot.pendingQueuedCloudOperationCount, 0)
+        XCTAssertTrue(snapshot.hasAnyPendingWork)
+    }
+
+    func testCombinedLocalPendingCounterIsLoadedOnceAndAvoidsFallbackWhenCatalogExists() async throws {
+        let session = ManualSyncSessionFake(isSignedIn: true, ownerUserID: ownerA)
+        let local = LocalPendingCounterFake(snapshot: LocalPendingChangeSnapshot(
+            pendingCatalogChangeCount: 2,
+            pendingProductPriceChangeCount: 3,
+            blockedCount: 0,
+            staleBaselineCount: 0,
+            sentCount: 0,
+            supersededRetainedCount: 0,
+            isCapped: false
+        ))
+        let catalog = CatalogPendingCounterFake(countsByOwner: [ownerA: 9])
+        let outbox = OutboxPendingCounterFake(countsByOwner: [ownerA: 1])
+        let provider = makeProvider(session: session, local: local, catalog: catalog, outbox: outbox)
+
+        let snapshot = try await provider.loadLocalPendingSnapshot()
+
+        XCTAssertEqual(snapshot.pendingCatalogChangeCount, 2)
+        XCTAssertEqual(snapshot.pendingPriceChangeCount, 3)
+        XCTAssertEqual(snapshot.pendingQueuedCloudOperationCount, 1)
+        XCTAssertEqual(local.ownerCalls, [ownerA])
+        XCTAssertTrue(catalog.ownerCalls.isEmpty)
+    }
+
     func testMissingAuthSessionReturnsZeroWithoutCallingCounters() async throws {
         let session = ManualSyncSessionFake(isSignedIn: false, ownerUserID: nil)
         let catalog = CatalogPendingCounterFake(countsByOwner: [ownerA: 9])
@@ -212,12 +251,16 @@ final class SupabaseManualSyncLocalPendingSnapshotProviderTests: XCTestCase {
 
     private func makeProvider(
         session: ManualSyncSessionFake,
+        local: LocalPendingCounterFake? = nil,
         catalog: CatalogPendingCounterFake,
+        price: ProductPricePendingCounterFake? = nil,
         outbox: OutboxPendingCounterFake
     ) -> SupabaseManualSyncLocalPendingSnapshotProvider {
         SupabaseManualSyncLocalPendingSnapshotProvider(
             sessionProvider: session,
+            localPendingChangeCounter: local,
             catalogPendingCounter: catalog,
+            productPricePendingCounter: price,
             outboxPendingCounter: outbox
         )
     }
@@ -282,6 +325,21 @@ final class SupabaseManualSyncLocalPendingSnapshotProviderTests: XCTestCase {
 }
 
 @MainActor
+private final class LocalPendingCounterFake: SupabaseManualSyncLocalPendingChangeCounting {
+    let snapshot: LocalPendingChangeSnapshot
+    private(set) var ownerCalls: [UUID] = []
+
+    init(snapshot: LocalPendingChangeSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func pendingLocalChangeSnapshot(ownerUserID: UUID) async throws -> LocalPendingChangeSnapshot {
+        ownerCalls.append(ownerUserID)
+        return snapshot
+    }
+}
+
+@MainActor
 private final class ManualSyncSessionFake: SupabaseManualSyncLocalPendingSessionProviding {
     var manualSyncIsSignedIn: Bool
     var manualSyncOwnerUserID: UUID?
@@ -326,6 +384,21 @@ private final class OutboxPendingCounterFake: SupabaseManualSyncOutboxPendingCou
     }
 
     func pendingQueuedCloudOperationCount(ownerUserID: UUID) async throws -> Int {
+        ownerCalls.append(ownerUserID)
+        return countsByOwner[ownerUserID] ?? 0
+    }
+}
+
+@MainActor
+private final class ProductPricePendingCounterFake: SupabaseManualSyncProductPricePendingCounting {
+    var countsByOwner: [UUID: Int]
+    private(set) var ownerCalls: [UUID] = []
+
+    init(countsByOwner: [UUID: Int]) {
+        self.countsByOwner = countsByOwner
+    }
+
+    func pendingProductPriceChangeCount(ownerUserID: UUID) async throws -> Int {
         ownerCalls.append(ownerUserID)
         return countsByOwner[ownerUserID] ?? 0
     }

@@ -131,7 +131,8 @@ nonisolated enum ProductImportCore {
         from draft: ProductDraft,
         in context: ModelContext,
         resolver: ProductImportNamedEntityResolver,
-        recordPriceHistory: Bool
+        recordPriceHistory: Bool,
+        onPriceHistoryCreated: (ProductPrice) -> Void = { _ in }
     ) -> Product {
         let product = Product(
             barcode: draft.barcode,
@@ -153,20 +154,23 @@ nonisolated enum ProductImportCore {
                 newPurchase: draft.purchasePrice,
                 oldRetail: nil,
                 newRetail: draft.retailPrice,
-                in: context
+                in: context,
+                onPriceHistoryCreated: onPriceHistoryCreated
             )
         }
 
         return product
     }
 
+    @discardableResult
     static func applyUpdate(
         _ update: ProductUpdateDraft,
         to product: Product,
         in context: ModelContext,
         resolver: ProductImportNamedEntityResolver,
-        recordPriceHistory: Bool
-    ) {
+        recordPriceHistory: Bool,
+        onPriceHistoryCreated: (ProductPrice) -> Void = { _ in }
+    ) -> [ProductPrice] {
         let newDraft = update.new
         let oldPurchase = product.purchasePrice
         let oldRetail = product.retailPrice
@@ -197,26 +201,31 @@ nonisolated enum ProductImportCore {
         }
 
         if recordPriceHistory {
-            createPriceHistoryForImport(
+            return createPriceHistoryForImport(
                 product: product,
                 oldPurchase: oldPurchase,
                 newPurchase: newDraft.purchasePrice,
                 oldRetail: oldRetail,
                 newRetail: newDraft.retailPrice,
-                in: context
+                in: context,
+                onPriceHistoryCreated: onPriceHistoryCreated
             )
         }
+        return []
     }
 
+    @discardableResult
     static func createPriceHistoryForImport(
         product: Product,
         oldPurchase: Double?,
         newPurchase: Double?,
         oldRetail: Double?,
         newRetail: Double?,
-        in context: ModelContext
-    ) {
+        in context: ModelContext,
+        onPriceHistoryCreated: (ProductPrice) -> Void = { _ in }
+    ) -> [ProductPrice] {
         let now = Date()
+        var created: [ProductPrice] = []
 
         if let newPurchase, newPurchase != oldPurchase {
             let history = ProductPrice(
@@ -229,6 +238,8 @@ nonisolated enum ProductImportCore {
                 product: product
             )
             context.insert(history)
+            created.append(history)
+            onPriceHistoryCreated(history)
         }
 
         if let newRetail, newRetail != oldRetail {
@@ -242,7 +253,10 @@ nonisolated enum ProductImportCore {
                 product: product
             )
             context.insert(history)
+            created.append(history)
+            onPriceHistoryCreated(history)
         }
+        return created
     }
 }
 
@@ -252,6 +266,8 @@ nonisolated final class ProductImportNamedEntityResolver {
     private var categoriesByName: [String: ProductCategory]
     private var createdSupplierNames: Set<String> = []
     private var createdCategoryNames: Set<String> = []
+    private var createdSuppliersByName: [String: Supplier] = [:]
+    private var createdCategoriesByName: [String: ProductCategory] = [:]
 
     init(
         context: ModelContext,
@@ -301,6 +317,14 @@ nonisolated final class ProductImportNamedEntityResolver {
         createdCategoryNames.count
     }
 
+    var createdSuppliers: [Supplier] {
+        createdSuppliersByName.values.sorted { $0.name < $1.name }
+    }
+
+    var createdCategories: [ProductCategory] {
+        createdCategoriesByName.values.sorted { $0.name < $1.name }
+    }
+
     func preloadSuppliers(named names: [String]) {
         for name in names {
             _ = resolveSupplier(named: name)
@@ -326,6 +350,7 @@ nonisolated final class ProductImportNamedEntityResolver {
         context.insert(supplier)
         suppliersByName[normalizedName] = supplier
         createdSupplierNames.insert(normalizedName)
+        createdSuppliersByName[normalizedName] = supplier
         return supplier
     }
 
@@ -342,6 +367,7 @@ nonisolated final class ProductImportNamedEntityResolver {
         context.insert(category)
         categoriesByName[normalizedName] = category
         createdCategoryNames.insert(normalizedName)
+        createdCategoriesByName[normalizedName] = category
         return category
     }
 }

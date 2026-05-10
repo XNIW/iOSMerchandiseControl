@@ -540,7 +540,8 @@ private struct SupabaseManualSyncRootForegroundBanner: View {
                 Supplier.self,
                 ProductCategory.self,
                 HistoryEntry.self,
-                ProductPrice.self
+                ProductPrice.self,
+                LocalPendingChange.self
             ],
             inMemory: true
         )

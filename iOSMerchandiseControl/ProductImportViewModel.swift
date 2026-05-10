@@ -8,9 +8,11 @@ final class ProductImportViewModel: ObservableObject {
     @Published var lastError: String?
 
     private let context: ModelContext
+    private let ownerUserID: UUID?
 
-    init(context: ModelContext) {
+    init(context: ModelContext, ownerUserID: UUID? = nil) {
         self.context = context
+        self.ownerUserID = ownerUserID
     }
 
     // MARK: - API pubblica
@@ -61,6 +63,7 @@ final class ProductImportViewModel: ObservableObject {
             try context.save()
             lastError = nil
         } catch {
+            context.rollback()
             lastError = "Errore durante l'applicazione dell'import: \(error.localizedDescription)"
         }
     }
@@ -104,14 +107,29 @@ final class ProductImportViewModel: ObservableObject {
 
     private func applyImportAnalysis(_ analysis: ProductImportAnalysisResult) throws {
         let resolver = try ProductImportNamedEntityResolver(context: context)
+        let accumulator = LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: ownerUserID
+        )
 
         for draft in analysis.newProducts {
-            _ = ProductImportCore.insertProduct(
+            var priceChanges: [ProductPrice] = []
+            let product = ProductImportCore.insertProduct(
                 from: draft,
                 in: context,
                 resolver: resolver,
-                recordPriceHistory: true
+                recordPriceHistory: true,
+                onPriceHistoryCreated: { priceChanges.append($0) }
             )
+            try accumulator.recordProductChange(
+                product: product,
+                operation: .create,
+                origin: .confirmedImport,
+                changedFields: Self.createChangedFields
+            )
+            try priceChanges.forEach {
+                try accumulator.recordProductPriceChange(price: $0, origin: .confirmedImport)
+            }
         }
 
         for update in analysis.updatedProducts {
@@ -127,12 +145,38 @@ final class ProductImportViewModel: ObservableObject {
                 continue
             }
 
-            ProductImportCore.applyUpdate(
+            let baselineHash = LocalPendingChangeLogicalKey.productFingerprintHash(update.old)
+            let priceChanges = ProductImportCore.applyUpdate(
                 update,
                 to: product,
                 in: context,
                 resolver: resolver,
                 recordPriceHistory: true
+            )
+            try accumulator.recordProductChange(
+                product: product,
+                operation: .update,
+                origin: .confirmedImport,
+                changedFields: update.changedFields.map(\.rawValue),
+                baselineFingerprintHash: baselineHash
+            )
+            try priceChanges.forEach {
+                try accumulator.recordProductPriceChange(price: $0, origin: .confirmedImport)
+            }
+        }
+
+        try resolver.createdSuppliers.forEach {
+            try accumulator.recordSupplierChange(
+                supplier: $0,
+                operation: .create,
+                origin: .confirmedImport
+            )
+        }
+        try resolver.createdCategories.forEach {
+            try accumulator.recordCategoryChange(
+                category: $0,
+                operation: .create,
+                origin: .confirmedImport
             )
         }
     }
@@ -151,4 +195,16 @@ final class ProductImportViewModel: ObservableObject {
 
         return ordered
     }
+
+    private static let createChangedFields = [
+        "barcode",
+        "itemNumber",
+        "productName",
+        "secondProductName",
+        "purchasePrice",
+        "retailPrice",
+        "stockQuantity",
+        "supplierName",
+        "categoryName"
+    ]
 }
