@@ -1058,6 +1058,17 @@
 "options.supabase.manualSync.action.recheck" = "Ricontrolla";
 "options.supabase.manualSync.action.openDatabase" = "Apri database";
 "options.supabase.manualSync.action.cancel" = "Annulla";
+"options.supabase.manualSync.root.checking.title" = "Controllo aggiornamenti…";
+"options.supabase.manualSync.root.checking.detail" = "Puoi continuare a usare l’app.";
+"options.supabase.manualSync.root.changes.title" = "Ci sono aggiornamenti cloud da rivedere";
+"options.supabase.manualSync.root.changes.detail" = "Apri Opzioni per usare il flusso esistente.";
+"options.supabase.manualSync.root.auth.title" = "Accedi di nuovo per controllare il cloud";
+"options.supabase.manualSync.root.auth.detail" = "Il controllo automatico resta sospeso finché l’accesso non è valido.";
+"options.supabase.manualSync.root.error.title" = "Controllo cloud non riuscito";
+"options.supabase.manualSync.root.error.detail" = "Puoi riprovare manualmente quando vuoi.";
+"options.supabase.manualSync.root.action.review" = "Rivedi";
+"options.supabase.manualSync.root.action.signIn" = "Accedi";
+"options.supabase.manualSync.root.action.retry" = "Riprova";
 "options.supabase.manualSync.plan.summary.ready.title" = "Pronto";
 "options.supabase.manualSync.plan.summary.ready.message" = "Le modifiche sicure possono essere applicate.";
 "options.supabase.manualSync.plan.summary.needsReview.title" = "Da verificare";

@@ -1958,6 +1958,29 @@ struct DatabaseView: View {
         } message: {
             Text(importProgress.resultMessage ?? "")
         }
+        .foregroundCloudWorkflowActivity(
+            .importExcel,
+            isActive: showingCSVImportPicker
+                || showingExcelImportPicker
+                || showingFullExcelImportPicker
+                || importAnalysisSession != nil
+                || pendingFullImportContext != nil
+                || fullImportResultPayload != nil
+        )
+        .foregroundCloudWorkflowActivity(.exportShare, isActive: showingExportSheet || showingExportOptions)
+        .foregroundCloudWorkflowActivity(.scanner, isActive: showScanner)
+        .foregroundCloudWorkflowActivity(
+            .editing,
+            isActive: showAddSheet || productToEdit != nil || productForHistory != nil
+        )
+        .foregroundCloudWorkflowActivity(
+            .confirmationDialog,
+            isActive: showingImportOptions || showingExportOptions
+        )
+        .foregroundCloudWorkflowActivity(
+            .localProgress,
+            isActive: importProgress.isRunning || importProgress.showsOverlay
+        )
     }
 
     private var importProgressOverlay: some View {

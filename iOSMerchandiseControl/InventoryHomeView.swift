@@ -227,6 +227,9 @@ struct InventoryHomeView: View {
                 loadExternalFile(url)
             }
         }
+        .foregroundCloudWorkflowActivity(.importExcel, isActive: excelSession.isLoading || showFileImporter)
+        .foregroundCloudWorkflowActivity(.scanner, isActive: navigateToManualGenerated && autoOpenScannerInGenerated)
+        .foregroundCloudWorkflowActivity(.editing, isActive: showPreGenerate || navigateToManualGenerated)
     }
 }
 

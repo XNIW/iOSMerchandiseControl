@@ -278,6 +278,16 @@ private final class ManualSyncActivityRegistrationProviderFake: SupabaseManualSy
 final class SupabaseManualSyncViewModelTests: XCTestCase {
     private static var retainedContainers: [ModelContainer] = []
 
+    override func setUp() async throws {
+        try await super.setUp()
+        SupabaseManualSyncViewModel.resetForegroundAutomaticGateForTests()
+    }
+
+    override func tearDown() async throws {
+        SupabaseManualSyncViewModel.resetForegroundAutomaticGateForTests()
+        try await super.tearDown()
+    }
+
     private func repoRootURL() -> URL {
         URL(fileURLWithPath: #file)
             .deletingLastPathComponent()
@@ -335,6 +345,25 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         ]
         for word in forbidden {
             XCTAssertFalse(blob.contains(word), "Unexpected jargon fragment \(word)", file: file, line: line)
+        }
+    }
+
+    private func assertRootPresentationPrivacySafe(
+        _ state: SupabaseManualSyncRootPresentationState,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let blob = [
+            state.title,
+            state.detail,
+            state.primaryActionTitle,
+            state.accessibilityLabel
+        ]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            .lowercased()
+        for word in ["payload", "token", "session id", "owner", "email", "barcode", "productprice", "syncpreview", "outbox", "drain", "rpc", "uuid"] {
+            XCTAssertFalse(blob.contains(word), "Unexpected root privacy term \(word)", file: file, line: line)
         }
     }
 
@@ -454,6 +483,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
     func testReleaseCurrentCapabilitiesKeepCloudAndSyncActionsHidden() async {
         let capabilities = SupabaseManualSyncCapabilitySet.releaseCurrent
         XCTAssertFalse(capabilities.supportsRemoteCloudCheck)
+        XCTAssertFalse(capabilities.supportsForegroundCloudCheck)
         XCTAssertFalse(capabilities.supportsGuidedManualSync)
 
         let fake = ClosureSupabaseManualSyncCoordinatorFake()
@@ -473,8 +503,10 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let withoutProvider = SupabaseManualSyncCapabilitySet.releaseCurrent(remotePreviewProvider: nil)
 
         XCTAssertTrue(withProvider.supportsRemoteCloudCheck)
+        XCTAssertTrue(withProvider.supportsForegroundCloudCheck)
         XCTAssertFalse(withProvider.supportsGuidedManualSync)
         XCTAssertFalse(withoutProvider.supportsRemoteCloudCheck)
+        XCTAssertFalse(withoutProvider.supportsForegroundCloudCheck)
         XCTAssertFalse(withoutProvider.supportsGuidedManualSync)
     }
 
@@ -523,6 +555,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let blockedDecision = policy.foregroundCheckDecision(
             now: lastCheck.addingTimeInterval(1_799),
             lastCheckAt: lastCheck,
+            lastAttemptAt: nil,
+            lastRecoverableErrorAt: nil,
             supportsCloudCheck: true,
             isRunning: false,
             isAuthenticated: true,
@@ -532,6 +566,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let allowedDecision = policy.foregroundCheckDecision(
             now: lastCheck.addingTimeInterval(1_800),
             lastCheckAt: lastCheck,
+            lastAttemptAt: nil,
+            lastRecoverableErrorAt: nil,
             supportsCloudCheck: true,
             isRunning: false,
             isAuthenticated: true,
@@ -541,6 +577,202 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         XCTAssertEqual(blockedDecision, .blocked(.cooldown))
         XCTAssertEqual(allowedDecision, .allowed)
+    }
+
+    func testTask092RootForegroundStartsAfterSharedCapabilityAndStaysSilentWhenNoChanges() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        let vm = makeSemiAutomaticViewModel(fake: fake, supportsForegroundCloudCheck: true)
+        let now = Date(timeIntervalSince1970: 1_778_500_000)
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: now,
+            source: .rootForeground
+        )
+
+        XCTAssertTrue(didStart)
+        XCTAssertEqual(vm.semiAutomaticState, .noChanges)
+        XCTAssertEqual(vm.lastCloudCheckAt, now)
+        XCTAssertEqual(vm.rootPresentationState.kind, .hidden)
+        XCTAssertEqual(vm.lastForegroundObservationEvent, .foreground_check_completed_no_changes)
+        XCTAssertEqual(fake.calls.filter { $0 == .remotePreview }.count, 1)
+        assertRootPresentationPrivacySafe(vm.rootPresentationState)
+    }
+
+    func testTask092RootForegroundChangesFoundMapsToActionableBannerState() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.remotePreviewSummary = remotePreviewSummary(
+            hasRemoteSignals: true,
+            counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1)
+        )
+        let vm = makeSemiAutomaticViewModel(fake: fake, supportsForegroundCloudCheck: true)
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: Date(timeIntervalSince1970: 1_778_500_000),
+            source: .rootForeground
+        )
+
+        let state = vm.rootPresentationState
+        XCTAssertTrue(didStart)
+        XCTAssertEqual(vm.semiAutomaticState, .changesFound)
+        XCTAssertEqual(state.kind, .changesFound)
+        XCTAssertEqual(state.primaryActionID, .reviewChanges)
+        XCTAssertEqual(vm.lastForegroundObservationEvent, .foreground_check_completed_changes)
+        assertRootPresentationPrivacySafe(state)
+    }
+
+    func testTask092RootForegroundBlockedAuthMapsToSignInWithoutNetwork() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            ownerID: nil,
+            isSignedIn: true,
+            supportsForegroundCloudCheck: true
+        )
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: Date(timeIntervalSince1970: 1_778_500_000),
+            source: .rootForeground
+        )
+
+        let state = vm.rootPresentationState
+        XCTAssertFalse(didStart)
+        XCTAssertEqual(vm.semiAutomaticState, .blockedAuth)
+        XCTAssertEqual(state.kind, .blockedAuth)
+        XCTAssertEqual(state.primaryActionID, .signIn)
+        XCTAssertTrue(fake.calls.isEmpty)
+        assertRootPresentationPrivacySafe(state)
+    }
+
+    func testTask092RecoverableErrorBackoffThrottlesOnlyAutomaticRetry() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.remotePreviewSummary = remotePreviewSummary(
+            isComplete: false,
+            key: .cloudCheckFailedRetry,
+            failureCategory: .network
+        )
+        let policy = SupabaseManualSyncSemiAutomaticPolicy(
+            foregroundCooldown: 0,
+            foregroundDebounce: 0,
+            recoverableErrorBackoff: 600
+        )
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            supportsForegroundCloudCheck: true,
+            policy: policy
+        )
+        let now = Date(timeIntervalSince1970: 1_778_500_000)
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(now: now, source: .rootForeground)
+        let automaticRetry = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: now.addingTimeInterval(10),
+            source: .rootForeground
+        )
+
+        XCTAssertTrue(didStart)
+        XCTAssertFalse(automaticRetry)
+        XCTAssertEqual(vm.semiAutomaticState, .recoverableError)
+        XCTAssertEqual(vm.rootPresentationState.kind, .recoverableError)
+        XCTAssertEqual(vm.rootPresentationState.primaryActionID, .retry)
+        XCTAssertEqual(vm.lastForegroundObservationEvent, .foreground_check_throttled)
+        XCTAssertEqual(fake.calls.filter { $0 == .remotePreview }.count, 1)
+
+        fake.remotePreviewSummary = remotePreviewSummary()
+        await vm.start(with: .dryRun, checkStartedAt: now.addingTimeInterval(11))
+
+        XCTAssertEqual(fake.calls.filter { $0 == .remotePreview }.count, 2)
+        XCTAssertEqual(vm.rootPresentationState.kind, .hidden)
+        assertRootPresentationPrivacySafe(vm.rootPresentationState)
+    }
+
+    func testTask092RootAndCardAutomaticChecksShareDebounceAcrossScenes() async {
+        let firstFake = SupabaseManualSyncCoordinatorDryRunFake()
+        let secondFake = SupabaseManualSyncCoordinatorDryRunFake()
+        let policy = SupabaseManualSyncSemiAutomaticPolicy(
+            foregroundCooldown: 0,
+            foregroundDebounce: 60,
+            recoverableErrorBackoff: 0
+        )
+        let firstVM = makeSemiAutomaticViewModel(
+            fake: firstFake,
+            supportsForegroundCloudCheck: true,
+            policy: policy
+        )
+        let secondVM = makeSemiAutomaticViewModel(
+            fake: secondFake,
+            supportsForegroundCloudCheck: true,
+            policy: policy
+        )
+        let now = Date(timeIntervalSince1970: 1_778_500_000)
+
+        let firstStarted = await firstVM.startForegroundSemiAutomaticCheckIfAllowed(now: now, source: .rootForeground)
+        let secondSceneStarted = await secondVM.startForegroundSemiAutomaticCheckIfAllowed(
+            now: now.addingTimeInterval(1),
+            source: .rootForeground
+        )
+        let cardStarted = await firstVM.startForegroundSemiAutomaticCheckIfAllowed(
+            now: now.addingTimeInterval(1),
+            source: .releaseCard
+        )
+
+        XCTAssertTrue(firstStarted)
+        XCTAssertFalse(secondSceneStarted)
+        XCTAssertFalse(cardStarted)
+        XCTAssertEqual(firstFake.calls.filter { $0 == .remotePreview }.count, 1)
+        XCTAssertTrue(secondFake.calls.isEmpty)
+        XCTAssertEqual(secondVM.lastForegroundObservationEvent, .foreground_check_throttled)
+    }
+
+    func testTask092ForegroundRootRollbackOffLeavesReleaseCardTask091PathAvailable() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            supportsForegroundCloudCheck: false,
+            policy: SupabaseManualSyncSemiAutomaticPolicy(foregroundCooldown: 0, foregroundDebounce: 0)
+        )
+        let now = Date(timeIntervalSince1970: 1_778_500_000)
+
+        let rootStarted = await vm.startForegroundSemiAutomaticCheckIfAllowed(now: now, source: .rootForeground)
+        let cardStarted = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: now.addingTimeInterval(1),
+            source: .releaseCard
+        )
+
+        XCTAssertFalse(rootStarted)
+        XCTAssertTrue(cardStarted)
+        XCTAssertEqual(fake.calls.filter { $0 == .remotePreview }.count, 1)
+    }
+
+    func testTask092BusyWorkflowObservationIsPrivacySafeAndDoesNotStartNetwork() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        let vm = makeSemiAutomaticViewModel(fake: fake, supportsForegroundCloudCheck: true)
+
+        vm.markForegroundCheckSkippedBecauseBusy()
+
+        XCTAssertEqual(vm.lastForegroundObservationEvent, .foreground_check_skipped_busy)
+        XCTAssertTrue(fake.calls.isEmpty)
+        assertRootPresentationPrivacySafe(vm.rootPresentationState)
+    }
+
+    func testTask092WorkflowActivityCenterKeepsBusyUntilAllSourcesClearSameReason() {
+        var store = ForegroundCloudWorkflowActivityStore()
+        let firstSource = UUID()
+        let secondSource = UUID()
+
+        store.setActive(.importExcel, true, token: firstSource)
+        store.setActive(.importExcel, true, token: secondSource)
+
+        XCTAssertTrue(store.isBusy)
+        XCTAssertEqual(store.activeReasons, [.importExcel])
+
+        store.setActive(.importExcel, false, token: firstSource)
+
+        XCTAssertTrue(store.isBusy)
+        XCTAssertEqual(store.activeReasons, [.importExcel])
+
+        store.setActive(.importExcel, false, token: secondSource)
+
+        XCTAssertFalse(store.isBusy)
+        XCTAssertTrue(store.activeReasons.isEmpty)
     }
 
     func testTask091SemiAutomaticCheckBlocksWhileRunIsActive() async throws {
@@ -761,6 +993,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertNil(vm.lastSummary)
         XCTAssertNil(vm.presentationState.reviewSheet)
         XCTAssertEqual(vm.semiAutomaticState, .noChanges)
+        XCTAssertEqual(vm.rootPresentationState.kind, .hidden)
 
         vm.suggestSemiAutomaticCheckIfAllowed(now: now.addingTimeInterval(1_800))
 
@@ -1649,6 +1882,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let appliedProduct = try XCTUnwrap(context.fetch(FetchDescriptor<Product>()).first)
         XCTAssertNotEqual(appliedProduct.stockQuantity ?? -1, 99, "Stock remoto non deve essere copiato quando applyStockQuantity resta false")
         XCTAssertTrue(vm.presentationState.userFacingSummary?.message.contains("prodotti aggiunti: 1") ?? false)
+        XCTAssertEqual(vm.rootPresentationState.kind, .hidden)
         assertNoForbiddenUserFacingJargon(vm)
     }
 
@@ -2661,7 +2895,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         context: ModelContext,
         staging: ManualSyncPreviewStagingFake,
         isAuthenticated: @MainActor @Sendable @escaping () -> Bool = { true },
-        currentOwnerID: (@MainActor () -> UUID?)? = nil
+        currentOwnerID: (@MainActor @Sendable () -> UUID?)? = nil
     ) -> SupabaseManualSyncViewModel {
         SupabaseManualSyncViewModel(
             coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
@@ -3004,6 +3238,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         fake: SupabaseManualSyncCoordinatorDryRunFake,
         ownerID: UUID? = UUID(uuidString: "00000000-0000-0000-0000-000000000091")!,
         isSignedIn: Bool = true,
+        supportsForegroundCloudCheck: Bool = true,
         catalogPushProvider: ManualSyncCatalogPushProviderFake? = nil,
         productPriceProvider: ManualSyncProductPriceProviderFake? = nil,
         activityRegistrationProvider: ManualSyncActivityRegistrationProviderFake? = nil,
@@ -3013,6 +3248,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             coordinator: makeTask075SmallDatasetCoordinator(fake: fake),
             capabilities: SupabaseManualSyncCapabilitySet(
                 supportsRemoteCloudCheck: true,
+                supportsForegroundCloudCheck: supportsForegroundCloudCheck,
                 supportsGuidedManualSync: false,
                 supportsCatalogPush: catalogPushProvider != nil,
                 supportsProductPriceSync: productPriceProvider != nil,

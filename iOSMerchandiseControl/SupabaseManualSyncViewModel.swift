@@ -38,6 +38,7 @@ nonisolated enum SupabaseManualSyncUserPresentationKind: Equatable, Sendable {
 
 nonisolated struct SupabaseManualSyncCapabilitySet: Equatable, Sendable {
     var supportsRemoteCloudCheck: Bool
+    var supportsForegroundCloudCheck: Bool
     var supportsGuidedManualSync: Bool
     var supportsCatalogPush: Bool
     var supportsProductPriceSync: Bool
@@ -45,12 +46,14 @@ nonisolated struct SupabaseManualSyncCapabilitySet: Equatable, Sendable {
 
     init(
         supportsRemoteCloudCheck: Bool,
+        supportsForegroundCloudCheck: Bool? = nil,
         supportsGuidedManualSync: Bool,
         supportsCatalogPush: Bool = false,
         supportsProductPriceSync: Bool = false,
         supportsActivityRegistration: Bool = false
     ) {
         self.supportsRemoteCloudCheck = supportsRemoteCloudCheck
+        self.supportsForegroundCloudCheck = supportsForegroundCloudCheck ?? false
         self.supportsGuidedManualSync = supportsGuidedManualSync
         self.supportsCatalogPush = supportsCatalogPush
         self.supportsProductPriceSync = supportsProductPriceSync
@@ -59,6 +62,7 @@ nonisolated struct SupabaseManualSyncCapabilitySet: Equatable, Sendable {
 
     static let releaseCurrent = SupabaseManualSyncCapabilitySet(
         supportsRemoteCloudCheck: false,
+        supportsForegroundCloudCheck: false,
         supportsGuidedManualSync: false,
         supportsCatalogPush: false,
         supportsProductPriceSync: false,
@@ -73,12 +77,119 @@ nonisolated struct SupabaseManualSyncCapabilitySet: Equatable, Sendable {
     ) -> SupabaseManualSyncCapabilitySet {
         SupabaseManualSyncCapabilitySet(
             supportsRemoteCloudCheck: remotePreviewProvider != nil,
+            supportsForegroundCloudCheck: remotePreviewProvider != nil,
             supportsGuidedManualSync: false,
             supportsCatalogPush: catalogPushProvider != nil,
             supportsProductPriceSync: productPriceProvider != nil,
             supportsActivityRegistration: activityRegistrationProvider != nil
         )
     }
+}
+
+nonisolated enum SupabaseManualSyncSemiAutomaticTriggerSource: Equatable, Sendable {
+    case releaseCard
+    case rootForeground
+}
+
+nonisolated enum SupabaseManualSyncRootPresentationKind: Equatable, Sendable {
+    case hidden
+    case checking
+    case changesFound
+    case blockedAuth
+    case recoverableError
+}
+
+nonisolated enum SupabaseManualSyncForegroundObservationEvent: String, Equatable, Sendable {
+    case foreground_check_suggested
+    case foreground_check_skipped_busy
+    case foreground_check_throttled
+    case foreground_check_completed_no_changes
+    case foreground_check_completed_changes
+}
+
+@MainActor
+private enum SupabaseManualSyncForegroundAutomaticGate {
+    private static var isRunning = false
+    private static var lastAttemptAt: Date?
+    private static var lastRecoverableErrorAt: Date?
+
+    static func reset() {
+        isRunning = false
+        lastAttemptAt = nil
+        lastRecoverableErrorAt = nil
+    }
+
+    static func clearRecoverableError() {
+        lastRecoverableErrorAt = nil
+    }
+
+    static func markAttempt(at date: Date) {
+        lastAttemptAt = date
+        isRunning = true
+    }
+
+    static func finish(lastRecoverableErrorAt recoverableErrorAt: Date?) {
+        isRunning = false
+        lastRecoverableErrorAt = recoverableErrorAt
+    }
+
+    static func decision(
+        policy: SupabaseManualSyncSemiAutomaticPolicy,
+        now: Date,
+        lastCheckAt: Date?,
+        instanceLastAttemptAt: Date?,
+        instanceLastRecoverableErrorAt: Date?,
+        supportsCloudCheck: Bool,
+        isInstanceRunning: Bool,
+        isAuthenticated: Bool,
+        ownerUserID: UUID?,
+        hasUnresolvedStagedPlan: Bool
+    ) -> SupabaseManualSyncSemiAutomaticDecision {
+        policy.foregroundCheckDecision(
+            now: now,
+            lastCheckAt: lastCheckAt,
+            lastAttemptAt: latest(instanceLastAttemptAt, lastAttemptAt),
+            lastRecoverableErrorAt: latest(instanceLastRecoverableErrorAt, lastRecoverableErrorAt),
+            supportsCloudCheck: supportsCloudCheck,
+            isRunning: isInstanceRunning || isRunning,
+            isAuthenticated: isAuthenticated,
+            ownerUserID: ownerUserID,
+            hasUnresolvedStagedPlan: hasUnresolvedStagedPlan
+        )
+    }
+
+    private static func latest(_ lhs: Date?, _ rhs: Date?) -> Date? {
+        switch (lhs, rhs) {
+        case (.some(let lhs), .some(let rhs)):
+            return max(lhs, rhs)
+        case (.some(let lhs), .none):
+            return lhs
+        case (.none, .some(let rhs)):
+            return rhs
+        case (.none, .none):
+            return nil
+        }
+    }
+}
+
+nonisolated struct SupabaseManualSyncRootPresentationState: Equatable, Sendable {
+    var kind: SupabaseManualSyncRootPresentationKind
+    var title: String
+    var detail: String?
+    var primaryActionTitle: String?
+    var primaryActionID: SupabaseManualSyncPresentationActionID?
+    var systemImage: String
+    var accessibilityLabel: String
+
+    static let hidden = SupabaseManualSyncRootPresentationState(
+        kind: .hidden,
+        title: "",
+        detail: nil,
+        primaryActionTitle: nil,
+        primaryActionID: nil,
+        systemImage: "icloud",
+        accessibilityLabel: ""
+    )
 }
 
 nonisolated struct SupabaseManualSyncAuthPresentationContext: Equatable, Sendable {
@@ -417,6 +528,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)?
     private let currentActivityRegistrationOwnerID: (@MainActor () -> UUID?)?
     private let semiAutomaticPolicy: SupabaseManualSyncSemiAutomaticPolicy
+    private var lastSemiAutomaticForegroundAttemptAt: Date?
+    private var lastRecoverableForegroundErrorAt: Date?
     private var lastStartedMode: SupabaseManualSyncRunMode?
     private var stagedCatalogPushPlan: ManualPushPlan?
     private var stagedLocalApplyOwnerID: UUID?
@@ -447,6 +560,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     @Published private(set) var isRegisteringActivities = false
     @Published private(set) var semiAutomaticState: SupabaseManualSyncSemiAutomaticState = .idle
     @Published private(set) var lastCloudCheckAt: Date?
+    @Published private(set) var lastForegroundObservationEvent: SupabaseManualSyncForegroundObservationEvent?
 
     init(
         coordinator: any SupabaseManualSyncCoordinating,
@@ -484,6 +598,14 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
     var presentationState: SupabaseManualSyncPresentationState {
         makePresentationState()
+    }
+
+    var rootPresentationState: SupabaseManualSyncRootPresentationState {
+        makeRootPresentationState()
+    }
+
+    static func resetForegroundAutomaticGateForTests() {
+        SupabaseManualSyncForegroundAutomaticGate.reset()
     }
 
     var canStart: Bool {
@@ -560,12 +682,21 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         return false
     }
 
-    private func semiAutomaticForegroundDecision(now: Date) -> SupabaseManualSyncSemiAutomaticDecision {
-        semiAutomaticPolicy.foregroundCheckDecision(
+    private func semiAutomaticForegroundDecision(
+        now: Date,
+        source: SupabaseManualSyncSemiAutomaticTriggerSource
+    ) -> SupabaseManualSyncSemiAutomaticDecision {
+        let supportsCloudCheck = source == .rootForeground
+            ? capabilities.supportsForegroundCloudCheck
+            : capabilities.supportsRemoteCloudCheck
+        return SupabaseManualSyncForegroundAutomaticGate.decision(
+            policy: semiAutomaticPolicy,
             now: now,
             lastCheckAt: lastCloudCheckAt,
-            supportsCloudCheck: capabilities.supportsRemoteCloudCheck,
-            isRunning: isRunning || !canStart,
+            instanceLastAttemptAt: lastSemiAutomaticForegroundAttemptAt,
+            instanceLastRecoverableErrorAt: lastRecoverableForegroundErrorAt,
+            supportsCloudCheck: supportsCloudCheck,
+            isInstanceRunning: isRunning || !canStart,
             isAuthenticated: authPresentationContext.isSignedIn,
             ownerUserID: currentSemiAutomaticOwnerID,
             hasUnresolvedStagedPlan: hasUnresolvedStagedPlan
@@ -575,18 +706,30 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private func recordCloudCheckResult(_ summary: SupabaseManualSyncRunSummary, at date: Date) {
         lastCloudCheckAt = date
 
+        let setRecoverableError: () -> Void = {
+            self.lastRecoverableForegroundErrorAt = date
+        }
+        let clearRecoverableError: () -> Void = {
+            self.lastRecoverableForegroundErrorAt = nil
+        }
+
         guard let remotePreviewSummary = summary.remotePreviewSummary else {
             switch summary.finalState {
             case .blocked:
                 semiAutomaticState = .blockedAuth
             case .connectivityIssue, .technicalReviewNeeded:
                 semiAutomaticState = .recoverableError
+                setRecoverableError()
             case .partialSync:
                 semiAutomaticState = .changesFound
+                clearRecoverableError()
+                lastForegroundObservationEvent = .foreground_check_completed_changes
             case .cancelled:
                 semiAutomaticState = .idle
             case .allUpToDate, .completedSuccessfully, .concurrentRunNotAllowed, .modeNotSupportedInThisSlice:
                 semiAutomaticState = .noChanges
+                clearRecoverableError()
+                lastForegroundObservationEvent = .foreground_check_completed_no_changes
             }
             return
         }
@@ -595,27 +738,44 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             semiAutomaticState = .idle
         } else if remotePreviewSummary.failureCategory != nil || remotePreviewSummary.isPartial || !remotePreviewSummary.isComplete {
             semiAutomaticState = .recoverableError
+            setRecoverableError()
         } else if remotePreviewSummary.safeAggregateCounts.conflictCount > 0
             || remotePreviewSummary.safeAggregateCounts.tombstoneCount > 0
             || remotePreviewSummary.safeAggregateCounts.sourceErrorCount > 0 {
             semiAutomaticState = .staleOrConflict
+            clearRecoverableError()
+            lastForegroundObservationEvent = .foreground_check_completed_changes
         } else if remotePreviewSummary.hasRemoteSignals || summary.countsSnapshot.hasAnyPendingWork || hasUnresolvedStagedPlan {
             semiAutomaticState = .changesFound
+            clearRecoverableError()
+            lastForegroundObservationEvent = .foreground_check_completed_changes
         } else {
             semiAutomaticState = .noChanges
+            clearRecoverableError()
+            lastForegroundObservationEvent = .foreground_check_completed_no_changes
         }
     }
 
-    func suggestSemiAutomaticCheckIfAllowed(now: Date = Date()) {
-        switch semiAutomaticForegroundDecision(now: now) {
+    func suggestSemiAutomaticCheckIfAllowed(
+        now: Date = Date(),
+        source: SupabaseManualSyncSemiAutomaticTriggerSource = .releaseCard
+    ) {
+        switch semiAutomaticForegroundDecision(now: now, source: source) {
         case .allowed:
             guard semiAutomaticState == .idle || semiAutomaticState == .noChanges else { return }
             semiAutomaticState = .suggestedCheck
+            if source == .rootForeground {
+                lastForegroundObservationEvent = .foreground_check_suggested
+            }
         case .blocked(.authOrOwnerMissing):
             semiAutomaticState = .blockedAuth
         case .blocked(.stagedPlanUnresolved):
             if semiAutomaticState != .reviewing {
                 semiAutomaticState = .changesFound
+            }
+        case .blocked(.debounce), .blocked(.cooldown), .blocked(.recoverableErrorBackoff):
+            if source == .rootForeground {
+                lastForegroundObservationEvent = .foreground_check_throttled
             }
         case .blocked:
             break
@@ -623,9 +783,22 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     @discardableResult
-    func startForegroundSemiAutomaticCheckIfAllowed(now: Date = Date()) async -> Bool {
-        switch semiAutomaticForegroundDecision(now: now) {
+    func startForegroundSemiAutomaticCheckIfAllowed(
+        now: Date = Date(),
+        source: SupabaseManualSyncSemiAutomaticTriggerSource = .releaseCard
+    ) async -> Bool {
+        switch semiAutomaticForegroundDecision(now: now, source: source) {
         case .allowed:
+            lastSemiAutomaticForegroundAttemptAt = now
+            SupabaseManualSyncForegroundAutomaticGate.markAttempt(at: now)
+            if source == .rootForeground {
+                lastForegroundObservationEvent = .foreground_check_suggested
+            }
+            defer {
+                SupabaseManualSyncForegroundAutomaticGate.finish(
+                    lastRecoverableErrorAt: lastRecoverableForegroundErrorAt
+                )
+            }
             await start(with: .dryRun, checkStartedAt: now)
             return true
         case .blocked(.authOrOwnerMissing):
@@ -634,10 +807,18 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             if semiAutomaticState != .reviewing {
                 semiAutomaticState = .changesFound
             }
+        case .blocked(.debounce), .blocked(.cooldown), .blocked(.recoverableErrorBackoff):
+            if source == .rootForeground {
+                lastForegroundObservationEvent = .foreground_check_throttled
+            }
         case .blocked:
             break
         }
         return false
+    }
+
+    func markForegroundCheckSkippedBecauseBusy() {
+        lastForegroundObservationEvent = .foreground_check_skipped_busy
     }
 
     func markReviewingSemiAutomaticPlan() {
@@ -905,6 +1086,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             title = L("options.supabase.manualSync.state.applied.title")
             subtitle = L("options.supabase.manualSync.state.applied.subtitle")
             primaryActionTitle = Copy.startAction
+            semiAutomaticState = .noChanges
             await prepareActivityRegistrationAfterDataStep()
         } catch {
             let reason = localApplyBlockedMessage(for: error, failureContext: true)
@@ -915,6 +1097,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             title = L("options.supabase.manualSync.state.applyFailed.title")
             subtitle = reason
             primaryActionTitle = Copy.dismissOrRetryAction
+            semiAutomaticState = .recoverableError
         }
     }
 
@@ -1196,18 +1379,25 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         switch result.status {
         case .success:
             presentationKind = .activityRegistrationSucceeded
+            semiAutomaticState = .noChanges
         case .empty:
             presentationKind = .activityRegistrationEmpty
+            semiAutomaticState = .noChanges
         case .partialRetryable:
             presentationKind = .activityRegistrationPartiallySucceeded
+            semiAutomaticState = .recoverableError
         case .authRequired:
             presentationKind = .activityRegistrationAuthRequired
+            semiAutomaticState = .blockedAuth
         case .retryableFailure:
             presentationKind = .activityRegistrationRetryableFailure
+            semiAutomaticState = .recoverableError
         case .blocked:
             presentationKind = .activityRegistrationBlocked
+            semiAutomaticState = .recoverableError
         case .cancelled:
             presentationKind = .activityRegistrationCancelled
+            semiAutomaticState = .idle
         }
         title = activityRegistrationTitle(for: result.status)
         subtitle = activityRegistrationSubtitle(for: result.status)
@@ -1817,18 +2007,23 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .completed:
             catalogPushPhase = .succeeded(summary)
             presentationKind = .catalogPushSucceeded
+            semiAutomaticState = .noChanges
         case .completedBaselineRefreshFailed:
             catalogPushPhase = .succeededNeedsCheck(summary)
             presentationKind = .catalogPushSucceeded
+            semiAutomaticState = .noChanges
         case .partial:
             catalogPushPhase = .partial(summary)
             presentationKind = .catalogPushPartiallySucceeded
+            semiAutomaticState = .recoverableError
         case .blockedBeforeWrite:
             catalogPushPhase = .sendBlocked(summary)
             presentationKind = .catalogPushBlocked
+            semiAutomaticState = .recoverableError
         case .failedBeforeWrite:
             catalogPushPhase = .sendFailed(summary)
             presentationKind = .catalogPushFailed
+            semiAutomaticState = .recoverableError
         }
     }
 
@@ -2100,9 +2295,13 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             invalidateCatalogPushPlan(clearSummary: true)
             invalidateProductPricePlans(clearSummary: true)
             invalidateActivityRegistration(clearSummary: true)
+            lastRecoverableForegroundErrorAt = nil
+            SupabaseManualSyncForegroundAutomaticGate.clearRecoverableError()
             semiAutomaticState = .blockedAuth
         } else if semiAutomaticState == .blockedAuth {
             semiAutomaticState = .idle
+            lastRecoverableForegroundErrorAt = nil
+            SupabaseManualSyncForegroundAutomaticGate.clearRecoverableError()
         }
     }
 
@@ -2120,6 +2319,101 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return lastStartedMode ?? preferredCapabilityRunMode()
         case .signIn, .cancel:
             return nil
+        }
+    }
+
+    private func makeRootPresentationState() -> SupabaseManualSyncRootPresentationState {
+        if isRunning || semiAutomaticState == .checking {
+            return rootState(
+                kind: .checking,
+                titleKey: "options.supabase.manualSync.root.checking.title",
+                detailKey: "options.supabase.manualSync.root.checking.detail",
+                actionID: nil,
+                systemImage: "arrow.triangle.2.circlepath"
+            )
+        }
+
+        switch semiAutomaticState {
+        case .changesFound, .staleOrConflict:
+            return rootState(
+                kind: .changesFound,
+                titleKey: "options.supabase.manualSync.root.changes.title",
+                detailKey: "options.supabase.manualSync.root.changes.detail",
+                actionID: .reviewChanges,
+                systemImage: "icloud.and.arrow.down"
+            )
+        case .blockedAuth:
+            return rootState(
+                kind: .blockedAuth,
+                titleKey: "options.supabase.manualSync.root.auth.title",
+                detailKey: "options.supabase.manualSync.root.auth.detail",
+                actionID: .signIn,
+                systemImage: "lock.fill"
+            )
+        case .recoverableError:
+            return rootState(
+                kind: .recoverableError,
+                titleKey: "options.supabase.manualSync.root.error.title",
+                detailKey: "options.supabase.manualSync.root.error.detail",
+                actionID: .retry,
+                systemImage: "wifi.exclamationmark"
+            )
+        case .idle, .suggestedCheck, .noChanges, .reviewing:
+            return .hidden
+        case .checking:
+            return rootState(
+                kind: .checking,
+                titleKey: "options.supabase.manualSync.root.checking.title",
+                detailKey: "options.supabase.manualSync.root.checking.detail",
+                actionID: nil,
+                systemImage: "arrow.triangle.2.circlepath"
+            )
+        }
+    }
+
+    private func rootState(
+        kind: SupabaseManualSyncRootPresentationKind,
+        titleKey: String,
+        detailKey: String?,
+        actionID: SupabaseManualSyncPresentationActionID?,
+        systemImage: String
+    ) -> SupabaseManualSyncRootPresentationState {
+        let title = L(titleKey)
+        let detail = detailKey.map { L($0) }
+        let actionTitle = actionID.map { rootActionTitle(for: $0) }
+        let accessibilityLabel = [title, detail, actionTitle]
+            .compactMap { $0 }
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .joined(separator: ". ")
+        return SupabaseManualSyncRootPresentationState(
+            kind: kind,
+            title: title,
+            detail: detail,
+            primaryActionTitle: actionTitle,
+            primaryActionID: actionID,
+            systemImage: systemImage,
+            accessibilityLabel: accessibilityLabel
+        )
+    }
+
+    private func rootActionTitle(for actionID: SupabaseManualSyncPresentationActionID) -> String {
+        switch actionID {
+        case .reviewChanges:
+            return L("options.supabase.manualSync.root.action.review")
+        case .signIn:
+            return L("options.supabase.manualSync.root.action.signIn")
+        case .retry:
+            return L("options.supabase.manualSync.root.action.retry")
+        case .checkCloud:
+            return L("options.supabase.manualSync.action.checkCloud")
+        case .realignData:
+            return L("options.supabase.manualSync.action.realign")
+        case .syncNow:
+            return L("options.supabase.manualSync.action.syncNow")
+        case .sendCloudChanges:
+            return L("options.supabase.manualSync.action.sendToCloud")
+        case .cancel:
+            return L("options.supabase.manualSync.action.cancel")
         }
     }
 

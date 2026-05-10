@@ -23,6 +23,8 @@ struct OptionsView: View {
     private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
     private let supabaseManualPushService: SupabaseManualPushService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
+    private let manualSyncViewModel: SupabaseManualSyncViewModel?
+    private let manualSyncCancelHandler: (() -> Void)?
 
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
@@ -66,13 +68,17 @@ struct OptionsView: View {
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService? = nil,
         supabaseManualPushService: SupabaseManualPushService? = nil,
-        syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil
+        syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil,
+        manualSyncViewModel: SupabaseManualSyncViewModel? = nil,
+        manualSyncCancelHandler: (() -> Void)? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
         self.supabaseSyncEventPreviewService = supabaseSyncEventPreviewService
         self.supabaseManualPushService = supabaseManualPushService
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
+        self.manualSyncViewModel = manualSyncViewModel
+        self.manualSyncCancelHandler = manualSyncCancelHandler
 #if DEBUG
         _productPriceManualPushViewModel = StateObject(
             wrappedValue: ProductPriceManualPushDebugViewModel(remote: supabaseInventoryService)
@@ -185,7 +191,9 @@ struct OptionsView: View {
                     inventoryService: supabaseInventoryService,
                     pullPreviewService: supabasePullPreviewService,
                     manualPushService: supabaseManualPushService,
-                    activityRecorder: syncEventOutboxDrainRecorder
+                    activityRecorder: syncEventOutboxDrainRecorder,
+                    viewModel: manualSyncViewModel,
+                    cancelHandler: manualSyncCancelHandler
                 )
             } header: {
                 SectionHeader(title: L("options.supabase.manualSync.header"), systemImage: "icloud")
@@ -2934,6 +2942,7 @@ private struct SupabaseManualSyncReleaseCard: View {
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var authViewModel: SupabaseAuthViewModel
     @StateObject private var viewModel: SupabaseManualSyncViewModel
+    private let cancelHandler: (() -> Void)?
     @State private var activeRunTask: Task<Void, Never>?
     @State private var isReviewSheetPresented = false
     @State private var isApplyConfirmationPresented = false
@@ -2950,18 +2959,22 @@ private struct SupabaseManualSyncReleaseCard: View {
         inventoryService: SupabaseInventoryService?,
         pullPreviewService: SupabasePullPreviewService?,
         manualPushService: SupabaseManualPushService?,
-        activityRecorder: (any SyncEventRecording)?
+        activityRecorder: (any SyncEventRecording)?,
+        viewModel: SupabaseManualSyncViewModel? = nil,
+        cancelHandler: (() -> Void)? = nil
     ) {
         self.authViewModel = authViewModel
+        self.cancelHandler = cancelHandler
+        let resolvedViewModel = viewModel ?? SupabaseManualSyncReleaseFactory.makeViewModel(
+            context: context,
+            authViewModel: authViewModel,
+            inventoryService: inventoryService,
+            pullPreviewService: pullPreviewService,
+            manualPushService: manualPushService,
+            activityRecorder: activityRecorder
+        )
         _viewModel = StateObject(
-            wrappedValue: SupabaseManualSyncReleaseFactory.makeViewModel(
-                context: context,
-                authViewModel: authViewModel,
-                inventoryService: inventoryService,
-                pullPreviewService: pullPreviewService,
-                manualPushService: manualPushService,
-                activityRecorder: activityRecorder
-            )
+            wrappedValue: resolvedViewModel
         )
     }
 
@@ -3155,6 +3168,14 @@ private struct SupabaseManualSyncReleaseCard: View {
         } message: {
             Text(L("options.supabase.manualSync.confirm.discard.message"))
         }
+        .foregroundCloudWorkflowActivity(.manualSyncSheet, isActive: isReviewSheetPresented)
+        .foregroundCloudWorkflowActivity(
+            .confirmationDialog,
+            isActive: isApplyConfirmationPresented
+                || isSendConfirmationPresented
+                || isActivityRegistrationConfirmationPresented
+                || isDiscardConfirmationPresented
+        )
     }
 
     private func handle(reviewPrimaryAction actionID: SupabaseManualSyncReviewPrimaryActionID) {
@@ -3288,6 +3309,7 @@ private struct SupabaseManualSyncReleaseCard: View {
     private func cancelActiveRun() {
         activeRunTask?.cancel()
         activeRunTask = nil
+        cancelHandler?()
         activeActivityRegistrationTask?.cancel()
         activeActivityRegistrationTask = nil
     }

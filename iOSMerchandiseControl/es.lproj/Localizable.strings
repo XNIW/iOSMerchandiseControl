@@ -1059,6 +1059,17 @@
 "options.supabase.manualSync.action.recheck" = "Volver a comprobar";
 "options.supabase.manualSync.action.openDatabase" = "Abrir base de datos";
 "options.supabase.manualSync.action.cancel" = "Cancelar";
+"options.supabase.manualSync.root.checking.title" = "Comprobando actualizaciones…";
+"options.supabase.manualSync.root.checking.detail" = "Puedes seguir usando la app.";
+"options.supabase.manualSync.root.changes.title" = "Hay actualizaciones de la nube por revisar";
+"options.supabase.manualSync.root.changes.detail" = "Abre Opciones para usar el flujo existente.";
+"options.supabase.manualSync.root.auth.title" = "Inicia sesión de nuevo para revisar la nube";
+"options.supabase.manualSync.root.auth.detail" = "La comprobación automática queda pausada hasta que el acceso sea válido.";
+"options.supabase.manualSync.root.error.title" = "La comprobación de la nube falló";
+"options.supabase.manualSync.root.error.detail" = "Puedes reintentar manualmente cuando quieras.";
+"options.supabase.manualSync.root.action.review" = "Revisar";
+"options.supabase.manualSync.root.action.signIn" = "Iniciar sesión";
+"options.supabase.manualSync.root.action.retry" = "Reintentar";
 "options.supabase.manualSync.plan.summary.ready.title" = "Listo";
 "options.supabase.manualSync.plan.summary.ready.message" = "Los cambios seguros se pueden aplicar.";
 "options.supabase.manualSync.plan.summary.needsReview.title" = "Por verificar";

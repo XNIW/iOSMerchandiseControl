@@ -515,6 +515,26 @@ struct GeneratedView: View {
         .sheet(item: $shareItem) { item in
             ShareSheet(items: [item.url])
         }
+        .foregroundCloudWorkflowActivity(.localProgress, isActive: isBusy)
+        .foregroundCloudWorkflowActivity(.exportShare, isActive: isExportingShare || shareItem != nil)
+        .foregroundCloudWorkflowActivity(.scanner, isActive: showScanner)
+        .foregroundCloudWorkflowActivity(
+            .editing,
+            isActive: productToEdit != nil
+                || productForHistory != nil
+                || rowDetail != nil
+                || showManualEntrySheet
+                || importAnalysisSession != nil
+                || showSearch
+                || showingEntryInfo
+        )
+        .foregroundCloudWorkflowActivity(
+            .confirmationDialog,
+            isActive: pendingForceComplete != nil
+                || showRevertConfirmation
+                || showImportRevertConfirmation
+                || pendingDeleteRowIndex != nil
+        )
     }
 
     private var generatedForm: some View {

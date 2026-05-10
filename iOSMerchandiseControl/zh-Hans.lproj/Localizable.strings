@@ -1059,6 +1059,17 @@
 "options.supabase.manualSync.action.recheck" = "重新检查";
 "options.supabase.manualSync.action.openDatabase" = "打开数据库";
 "options.supabase.manualSync.action.cancel" = "取消";
+"options.supabase.manualSync.root.checking.title" = "正在检查更新…";
+"options.supabase.manualSync.root.checking.detail" = "你可以继续使用应用。";
+"options.supabase.manualSync.root.changes.title" = "有云端更新待查看";
+"options.supabase.manualSync.root.changes.detail" = "打开“选项”以使用现有流程。";
+"options.supabase.manualSync.root.auth.title" = "请重新登录以检查云端";
+"options.supabase.manualSync.root.auth.detail" = "访问有效前，自动检查会暂停。";
+"options.supabase.manualSync.root.error.title" = "云端检查失败";
+"options.supabase.manualSync.root.error.detail" = "你可以随时手动重试。";
+"options.supabase.manualSync.root.action.review" = "查看";
+"options.supabase.manualSync.root.action.signIn" = "登录";
+"options.supabase.manualSync.root.action.retry" = "重试";
 "options.supabase.manualSync.plan.summary.ready.title" = "已准备好";
 "options.supabase.manualSync.plan.summary.ready.message" = "可以应用安全的更改。";
 "options.supabase.manualSync.plan.summary.needsReview.title" = "需要检查";

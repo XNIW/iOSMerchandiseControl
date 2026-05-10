@@ -63,6 +63,17 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.action.sendToCloud",
             "options.supabase.manualSync.action.retry",
             "options.supabase.manualSync.action.cancel",
+            "options.supabase.manualSync.root.checking.title",
+            "options.supabase.manualSync.root.checking.detail",
+            "options.supabase.manualSync.root.changes.title",
+            "options.supabase.manualSync.root.changes.detail",
+            "options.supabase.manualSync.root.auth.title",
+            "options.supabase.manualSync.root.auth.detail",
+            "options.supabase.manualSync.root.error.title",
+            "options.supabase.manualSync.root.error.detail",
+            "options.supabase.manualSync.root.action.review",
+            "options.supabase.manualSync.root.action.signIn",
+            "options.supabase.manualSync.root.action.retry",
             "options.supabase.manualSync.review.title",
             "options.supabase.manualSync.review.subtitle",
             "options.supabase.manualSync.review.cloudToDevice.title",
@@ -510,6 +521,82 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertTrue(source.contains("productPriceRowBudget: 5_000"))
     }
 
+    func testTask092RootForegroundHostUsesPresenterSharedViewModelAndBusyGating() throws {
+        let contentSource = try readSource("iOSMerchandiseControl/ContentView.swift")
+        let hostSource = try extractRootForegroundHostSource(from: contentSource)
+        let optionsSource = try readSource("iOSMerchandiseControl/OptionsView.swift")
+
+        XCTAssertTrue(contentSource.contains("manualSyncViewModel: manualSyncViewModel"))
+        XCTAssertTrue(contentSource.contains("manualSyncCancelHandler: cancelForegroundCheck"))
+        XCTAssertTrue(optionsSource.contains("viewModel: manualSyncViewModel"))
+        XCTAssertTrue(optionsSource.contains("cancelHandler?()"))
+        XCTAssertTrue(hostSource.contains("viewModel.rootPresentationState"))
+        XCTAssertTrue(hostSource.contains("Task.yield()"))
+        XCTAssertTrue(hostSource.contains("startForegroundSemiAutomaticCheckIfAllowed(source: .rootForeground)"))
+        XCTAssertTrue(hostSource.contains("safeAreaInset(edge: .top"))
+        XCTAssertTrue(hostSource.contains("activityCenter.isBusy"))
+        XCTAssertTrue(hostSource.contains("markForegroundCheckSkippedBecauseBusy()"))
+        XCTAssertTrue(hostSource.contains("state.primaryActionID != nil"))
+        XCTAssertTrue(hostSource.contains("selectedTab != 3"))
+
+        for forbidden in ["SyncPreview", "ProductPrice", "baseline", "outbox", "SupabaseClient", ".rpc", ".from", ".upsert"] {
+            XCTAssertFalse(hostSource.localizedCaseInsensitiveContains(forbidden), "Root host should stay presenter-only; found \(forbidden)")
+        }
+    }
+
+    func testTask092WorkflowBusyGatingIsDeclaredOnInteractiveSurfaces() throws {
+        let sources = try [
+            "iOSMerchandiseControl/InventoryHomeView.swift",
+            "iOSMerchandiseControl/DatabaseView.swift",
+            "iOSMerchandiseControl/PreGenerateView.swift",
+            "iOSMerchandiseControl/GeneratedView.swift",
+            "iOSMerchandiseControl/OptionsView.swift",
+        ].map(readSource).joined(separator: "\n")
+
+        for marker in [
+            ".foregroundCloudWorkflowActivity(.importExcel",
+            ".foregroundCloudWorkflowActivity(.exportShare",
+            ".foregroundCloudWorkflowActivity(.scanner",
+            ".foregroundCloudWorkflowActivity(.editing",
+            ".foregroundCloudWorkflowActivity(.manualSyncSheet",
+            ".foregroundCloudWorkflowActivity(.confirmationDialog",
+            ".foregroundCloudWorkflowActivity(.localProgress",
+        ] {
+            XCTAssertTrue(sources.contains(marker), "Missing TASK-092 busy marker \(marker)")
+        }
+    }
+
+    func testTask092RootForegroundSourcesAvoidForbiddenAutomationScope() throws {
+        let contentSource = try extractRootForegroundHostSource(from: readSource("iOSMerchandiseControl/ContentView.swift"))
+        let policySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncSemiAutomaticPolicy.swift")
+        let viewModelSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift")
+        let combined = [contentSource, policySource, viewModelSource].joined(separator: "\n")
+
+        for forbidden in ["BGTaskScheduler", "Timer", "Realtime", "polling", ".channel", "SupabaseClient", ".rpc", ".from", ".upsert"] {
+            XCTAssertFalse(combined.contains(forbidden), "Forbidden TASK-092 foreground source term found: \(forbidden)")
+        }
+        XCTAssertFalse(combined.localizedCaseInsensitiveContains("automatic apply"))
+        XCTAssertFalse(combined.localizedCaseInsensitiveContains("automatic push"))
+        XCTAssertFalse(combined.localizedCaseInsensitiveContains("automatic drain"))
+    }
+
+    func testTask092RootForegroundCopyIsLocalizedNotHardcodedInSwift() throws {
+        let swiftSources = try [
+            "iOSMerchandiseControl/ContentView.swift",
+            "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+        ].map(readSource).joined(separator: "\n")
+
+        XCTAssertTrue(swiftSources.contains("options.supabase.manualSync.root.changes.title"))
+        for literal in [
+            "Cloud updates are ready",
+            "Controllo cloud non riuscito",
+            "Hay actualizaciones",
+            "正在检查更新",
+        ] {
+            XCTAssertFalse(swiftSources.contains(literal), "TASK-092 user copy must stay in Localizable.strings")
+        }
+    }
+
     func testTask067ReleaseCardSourceAvoidsDeveloperJargon() throws {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: source)
@@ -530,6 +617,13 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
     private func extractReleaseCardSource(from source: String) throws -> String {
         let start = try XCTUnwrap(source.range(of: "private struct SupabaseManualSyncReleaseCard"))
         let end = try XCTUnwrap(source.range(of: "// MARK: - Header di sezione"))
+        XCTAssertLessThan(start.lowerBound, end.lowerBound)
+        return String(source[start.lowerBound..<end.lowerBound])
+    }
+
+    private func extractRootForegroundHostSource(from source: String) throws -> String {
+        let start = try XCTUnwrap(source.range(of: "private struct SupabaseManualSyncForegroundRootHost"))
+        let end = try XCTUnwrap(source.range(of: "#Preview"))
         XCTAssertLessThan(start.lowerBound, end.lowerBound)
         return String(source[start.lowerBound..<end.lowerBound])
     }

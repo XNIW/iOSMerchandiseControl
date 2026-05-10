@@ -498,6 +498,16 @@ struct PreGenerateView: View {
             guard !Task.isCancelled else { return }
             debouncedCategoryQuery = q
         }
+        .foregroundCloudWorkflowActivity(.importExcel, isActive: excelSession.isLoading || isFileImporterPresented)
+        .foregroundCloudWorkflowActivity(.localProgress, isActive: isGenerating)
+        .foregroundCloudWorkflowActivity(
+            .editing,
+            isActive: focusedField != nil
+                || showAllSuppliersSheet
+                || showAllCategoriesSheet
+                || navigateToGenerated
+        )
+        .foregroundCloudWorkflowActivity(.confirmationDialog, isActive: showLowConfidenceConfirm)
     }
     
     /// Righe di anteprima (esclude la riga 0 = header)
