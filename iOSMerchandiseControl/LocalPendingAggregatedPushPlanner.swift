@@ -271,10 +271,11 @@ final class LocalPendingAggregatedPushPlanner {
             blockers.insert(.staleBaselineLocalChanges)
         }
 
-        let activeChanges = try fetchOwnerChanges(ownerUserID: ownerUserID, limit: hardCap + 1)
+        let activeChanges = try fetchActiveOwnerChanges(ownerUserID: ownerUserID, limit: hardCap + 1)
         if activeChanges.count > hardCap {
             blockers.insert(.hardCapExceeded)
         }
+        let terminalCounts = try fetchTerminalOwnerChangeCounts(ownerUserID: ownerUserID, limit: hardCap + 1)
 
         let retryInfo = retryInfo(from: activeChanges, at: generatedAt)
         if retryInfo.cooldownCount > 0 {
@@ -289,8 +290,8 @@ final class LocalPendingAggregatedPushPlanner {
         let pendingChanges = activeChanges.filter { $0.status == .pending }
         counts.pendingCatalogCandidates = pendingChanges.filter { $0.entityKind.isCatalogKind }.count
         counts.pendingProductPriceCandidates = pendingChanges.filter { $0.entityKind == .productPrice }.count
-        counts.supersededIgnoredCount = activeChanges.filter { $0.status == .superseded }.count
-        counts.acknowledgedIgnoredCount = activeChanges.filter { $0.status == .acknowledged }.count
+        counts.supersededIgnoredCount = max(snapshot.supersededRetainedCount, terminalCounts.superseded)
+        counts.acknowledgedIgnoredCount = terminalCounts.acknowledged
         if counts.supersededIgnoredCount + counts.acknowledgedIgnoredCount > 0 {
             warnings.insert(.terminalChangesIgnored)
         }
@@ -408,11 +409,15 @@ final class LocalPendingAggregatedPushPlanner {
         )
     }
 
-    private func fetchOwnerChanges(ownerUserID: UUID, limit: Int) throws -> [LocalPendingChange] {
+    private func fetchActiveOwnerChanges(ownerUserID: UUID, limit: Int) throws -> [LocalPendingChange] {
         let owner = ownerUserID.uuidString.lowercased()
+        let superseded = LocalPendingChangeStatus.superseded.rawValue
+        let acknowledged = LocalPendingChangeStatus.acknowledged.rawValue
         var descriptor = FetchDescriptor<LocalPendingChange>(
             predicate: #Predicate<LocalPendingChange> { change in
                 change.ownerUserID == owner
+                    && change.statusRaw != superseded
+                    && change.statusRaw != acknowledged
             },
             sortBy: [
                 SortDescriptor(\.updatedAt, order: .forward),
@@ -421,6 +426,31 @@ final class LocalPendingAggregatedPushPlanner {
         )
         descriptor.fetchLimit = limit
         return try context.fetch(descriptor)
+    }
+
+    private func fetchTerminalOwnerChangeCounts(
+        ownerUserID: UUID,
+        limit: Int
+    ) throws -> (superseded: Int, acknowledged: Int) {
+        let owner = ownerUserID.uuidString.lowercased()
+        let superseded = LocalPendingChangeStatus.superseded.rawValue
+        let acknowledged = LocalPendingChangeStatus.acknowledged.rawValue
+        var descriptor = FetchDescriptor<LocalPendingChange>(
+            predicate: #Predicate<LocalPendingChange> { change in
+                change.ownerUserID == owner
+                    && (change.statusRaw == superseded || change.statusRaw == acknowledged)
+            },
+            sortBy: [
+                SortDescriptor(\.updatedAt, order: .forward),
+                SortDescriptor(\.changeID, order: .forward)
+            ]
+        )
+        descriptor.fetchLimit = limit
+        let changes = try context.fetch(descriptor)
+        return (
+            superseded: changes.filter { $0.status == .superseded }.count,
+            acknowledged: changes.filter { $0.status == .acknowledged }.count
+        )
     }
 
     private func retryInfo(from changes: [LocalPendingChange], at date: Date) -> LocalPendingAggregatedPushRetryInfo {
@@ -499,17 +529,21 @@ final class LocalPendingAggregatedPushPlanner {
         }
 
         let selectedSuppliers = suppliers.values.filter {
-            supplierKeys.contains(LocalPendingChangeLogicalKey.supplier(remoteID: $0.remoteID, name: $0.name))
+            !supplierKeys.isDisjoint(with: pendingKeys(for: $0))
         }
         let selectedCategories = categories.values.filter {
-            categoryKeys.contains(LocalPendingChangeLogicalKey.category(remoteID: $0.remoteID, name: $0.name))
+            !categoryKeys.isDisjoint(with: pendingKeys(for: $0))
         }
         let selectedProducts = products.values.filter {
-            productKeys.contains(LocalPendingChangeLogicalKey.product(remoteID: $0.remoteID, barcode: $0.barcode))
+            !productKeys.isDisjoint(with: pendingKeys(for: $0))
         }
 
-        let missingCount = supplierKeys.count + categoryKeys.count + productKeys.count
-            - selectedSuppliers.count - selectedCategories.count - selectedProducts.count
+        let resolvedSupplierKeys = Set(selectedSuppliers.flatMap { pendingKeys(for: $0) }).intersection(supplierKeys)
+        let resolvedCategoryKeys = Set(selectedCategories.flatMap { pendingKeys(for: $0) }).intersection(categoryKeys)
+        let resolvedProductKeys = Set(selectedProducts.flatMap { pendingKeys(for: $0) }).intersection(productKeys)
+        let missingCount = supplierKeys.subtracting(resolvedSupplierKeys).count
+            + categoryKeys.subtracting(resolvedCategoryKeys).count
+            + productKeys.subtracting(resolvedProductKeys).count
         if missingCount > 0 {
             counts.missingLiveModelCount += missingCount
             blockers.insert(.missingLiveModel)
@@ -552,23 +586,9 @@ final class LocalPendingAggregatedPushPlanner {
             blockers.insert(.localSnapshotExceeded)
         }
         let selectedPrices = prices.values.filter { price in
-            guard let product = price.product else { return false }
-            return changeKeys.contains(LocalPendingChangeLogicalKey.productPrice(
-                productRemoteID: product.remoteID,
-                productBarcode: product.barcode,
-                type: price.type,
-                effectiveAt: price.effectiveAt
-            ))
+            !changeKeys.isDisjoint(with: pendingKeys(for: price))
         }
-        let selectedKeys = Set(selectedPrices.compactMap { price -> String? in
-            guard let product = price.product else { return nil }
-            return LocalPendingChangeLogicalKey.productPrice(
-                productRemoteID: product.remoteID,
-                productBarcode: product.barcode,
-                type: price.type,
-                effectiveAt: price.effectiveAt
-            )
-        })
+        let selectedKeys = Set(selectedPrices.flatMap { pendingKeys(for: $0) }).intersection(changeKeys)
         let missingCount = changeKeys.subtracting(selectedKeys).count
         if missingCount > 0 {
             counts.missingLiveModelCount += missingCount
@@ -713,6 +733,45 @@ final class LocalPendingAggregatedPushPlanner {
         descriptor.fetchLimit = limit
         let values = try context.fetch(descriptor)
         return (Array(values.prefix(max(0, limit - 1))), values.count >= limit)
+    }
+
+    private func pendingKeys(for supplier: Supplier) -> Set<String> {
+        Set([
+            LocalPendingChangeLogicalKey.supplier(remoteID: supplier.remoteID, name: supplier.name),
+            LocalPendingChangeLogicalKey.supplier(remoteID: nil, name: supplier.name)
+        ])
+    }
+
+    private func pendingKeys(for category: ProductCategory) -> Set<String> {
+        Set([
+            LocalPendingChangeLogicalKey.category(remoteID: category.remoteID, name: category.name),
+            LocalPendingChangeLogicalKey.category(remoteID: nil, name: category.name)
+        ])
+    }
+
+    private func pendingKeys(for product: Product) -> Set<String> {
+        Set([
+            LocalPendingChangeLogicalKey.product(remoteID: product.remoteID, barcode: product.barcode),
+            LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: product.barcode)
+        ])
+    }
+
+    private func pendingKeys(for price: ProductPrice) -> Set<String> {
+        guard let product = price.product else { return [] }
+        return Set([
+            LocalPendingChangeLogicalKey.productPrice(
+                productRemoteID: product.remoteID,
+                productBarcode: product.barcode,
+                type: price.type,
+                effectiveAt: price.effectiveAt
+            ),
+            LocalPendingChangeLogicalKey.productPrice(
+                productRemoteID: nil,
+                productBarcode: product.barcode,
+                type: price.type,
+                effectiveAt: price.effectiveAt
+            )
+        ])
     }
 
     private func makeSupplierState(_ supplier: Supplier) -> ManualPushLookupState {

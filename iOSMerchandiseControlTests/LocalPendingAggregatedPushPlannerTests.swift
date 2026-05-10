@@ -51,6 +51,42 @@ final class LocalPendingAggregatedPushPlannerTests: XCTestCase {
         XCTAssertTrue(plan.warnings.contains(.terminalChangesIgnored))
     }
 
+    func testTerminalRowsDoNotConsumeHardCapOrHidePendingCandidate() async throws {
+        let context = try makeContext()
+        try commitBaseline(context)
+        for index in 0..<5 {
+            context.insert(change(
+                entityKind: index.isMultiple(of: 2) ? .supplier : .product,
+                operation: .update,
+                status: index.isMultiple(of: 2) ? .superseded : .acknowledged,
+                logicalKey: "terminal:\(index)",
+                updatedAt: now.addingTimeInterval(Double(index))
+            ))
+        }
+        let product = Product(barcode: "TASK094_TERMINAL_CAP", productName: "Visible")
+        context.insert(product)
+        try LocalPendingChangeAccumulator(context: context, ownerUserID: ownerID, now: { self.now.addingTimeInterval(10) })
+            .recordProductChange(
+                product: product,
+                operation: .create,
+                origin: .manualCatalogSave,
+                changedFields: ["barcode", "productName"]
+            )
+        try context.save()
+
+        let plan = try await LocalPendingAggregatedPushPlanner(
+            context: context,
+            now: { self.now },
+            hardCap: 3,
+            includesProductPrice: false
+        ).makePlan(ownerUserID: ownerID)
+
+        XCTAssertFalse(plan.blockers.contains(.hardCapExceeded))
+        XCTAssertEqual(plan.counts.selectedCatalogChanges, 1)
+        XCTAssertEqual(plan.catalogBatch?.plan.writeCandidates.count, 1)
+        XCTAssertTrue(plan.warnings.contains(.terminalChangesIgnored))
+    }
+
     func testBlockedStaleCappedAndSentRowsBlockBeforeNetwork() async throws {
         let context = try makeContext()
         context.insert(change(entityKind: .product, operation: .update, status: .blocked, logicalKey: "blocked"))
@@ -147,6 +183,37 @@ final class LocalPendingAggregatedPushPlannerTests: XCTestCase {
         XCTAssertEqual(hardPlan.capState, .hardBlocked(available: 2, limit: 1))
     }
 
+    func testCatalogPendingRecordedBeforeRemoteLinkMatchesCurrentRemoteModel() async throws {
+        let context = try makeContext()
+        let product = Product(
+            barcode: "TASK094_LINKED_RETRY",
+            remoteID: UUID(uuidString: "09400000-0000-4094-8094-000000000301")!,
+            productName: "Old"
+        )
+        context.insert(product)
+        try context.save()
+        try commitBaseline(context)
+        product.productName = "New"
+        context.insert(change(
+            entityKind: .product,
+            operation: .update,
+            logicalKey: LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: product.barcode),
+            updatedAt: now.addingTimeInterval(1)
+        ))
+        try context.save()
+
+        let plan = try await LocalPendingAggregatedPushPlanner(
+            context: context,
+            now: { self.now },
+            includesProductPrice: false
+        ).makePlan(ownerUserID: ownerID)
+
+        XCTAssertFalse(plan.blockers.contains(.missingLiveModel))
+        XCTAssertTrue(plan.blockers.isEmpty)
+        XCTAssertEqual(plan.counts.selectedCatalogChanges, 1)
+        XCTAssertEqual(plan.catalogBatch?.plan.writeCandidates.count, 1)
+    }
+
     func testProductPriceDedupeUsesSingleRemoteFetchAndDeterministicFingerprint() async throws {
         let context = try makeContext()
         let productID = UUID(uuidString: "09400000-0000-4094-8094-000000000201")!
@@ -191,6 +258,45 @@ final class LocalPendingAggregatedPushPlannerTests: XCTestCase {
         XCTAssertEqual(firstPlan.fingerprint, secondPlan.fingerprint)
         let calls = await fetcher.snapshotCalls()
         XCTAssertEqual(calls.count, 2)
+        XCTAssertEqual(calls.first?.productIDs, [productID])
+    }
+
+    func testProductPricePendingRecordedBeforeProductRemoteLinkUsesCurrentRemoteIDForPush() async throws {
+        let context = try makeContext()
+        let productID = UUID(uuidString: "09400000-0000-4094-8094-000000000302")!
+        let product = Product(barcode: "TASK094_PRICE_LINKED", remoteID: productID, productName: "Price linked")
+        context.insert(product)
+        try context.save()
+        try commitBaseline(context)
+        let effectiveAt = Date(timeIntervalSince1970: 1_778_500_200)
+        let price = ProductPrice(type: .retail, price: 20, effectiveAt: effectiveAt, createdAt: now, product: product)
+        context.insert(price)
+        context.insert(change(
+            entityKind: .productPrice,
+            operation: .upsert,
+            logicalKey: LocalPendingChangeLogicalKey.productPrice(
+                productRemoteID: nil,
+                productBarcode: product.barcode,
+                type: .retail,
+                effectiveAt: effectiveAt
+            )
+        ))
+        try context.save()
+        let fetcher = MockAggregatedPriceRemoteFetcher(rows: [])
+
+        let plan = try await LocalPendingAggregatedPushPlanner(
+            context: context,
+            priceRemoteFetcher: fetcher,
+            now: { self.now },
+            includesCatalog: false,
+            includesProductPrice: true
+        ).makePlan(ownerUserID: ownerID)
+
+        XCTAssertFalse(plan.blockers.contains(.missingLiveModel))
+        XCTAssertTrue(plan.blockers.isEmpty)
+        XCTAssertEqual(plan.counts.selectedProductPriceChanges, 1)
+        XCTAssertEqual(plan.productPriceBatch?.plan.summary.readyCandidates, 1)
+        let calls = await fetcher.snapshotCalls()
         XCTAssertEqual(calls.first?.productIDs, [productID])
     }
 

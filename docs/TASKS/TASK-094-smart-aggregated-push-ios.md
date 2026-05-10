@@ -5,14 +5,14 @@
 - **Task ID:** TASK-094
 - **Titolo:** Push intelligente aggregato e resource-aware *(iOS)*
 - **File task:** `docs/TASKS/TASK-094-smart-aggregated-push-ios.md`
-- **Stato:** **ACTIVE**
-- **Fase attuale:** **REVIEW**
-- **Responsabile attuale:** **Claude / Reviewer**
+- **Stato:** **DONE**
+- **Fase attuale:** **Chiusura — REVIEW PASS**
+- **Responsabile attuale:** **Nessuno — task chiuso**
 - **Data creazione:** 2026-05-09
-- **Ultimo aggiornamento:** 2026-05-09 23:57 -0400 — EXECUTION completa Codex su override utente; build/test PASS; **READY FOR REVIEW**.
-- **Ultimo agente che ha operato:** Codex / Executor
+- **Ultimo aggiornamento:** 2026-05-10 00:12 -0400 — REVIEW completa Codex con fix mirati e verifiche finali PASS; **TASK-094 DONE / Chiusura — REVIEW PASS**.
+- **Ultimo agente che ha operato:** Codex / Reviewer+Fixer
 
-**Flag execution:** **`READY_FOR_REVIEW`** — l’utente ha autorizzato override esplicito da PLANNING a EXECUTION; Codex ha eseguito lettura repo-grounded, implementazione Swift/XCTest/localizzazioni e handoff review. **TASK-094 NON DONE** fino a review finale.
+**Flag chiusura:** **`TASK-094_DONE_REVIEW_PASS`** — l’utente ha autorizzato REVIEW completa e chiusura dopo correzioni dirette. Codex ha reviewato l’implementazione `6fca107`, applicato fix mirati, rieseguito build/test Xcode e allineato il tracking. **TASK-094 DONE**.
 
 ---
 
@@ -235,14 +235,81 @@ Numerazione **`CA-T094-01…`** da assegnare **solo dopo** **`NEEDS_PLANNING_REV
 - Nessun blocker tecnico residuo rilevato.
 - Follow-up candidate fuori scope: eventuale granularità UX “Invia N modifiche” dinamica; TASK-094 implementa la CTA sicura “Invia modifiche locali” senza introdurre nuove API/UI globali.
 
-### Handoff post-execution
+### Handoff post-execution *(storico, superato dalla review)*
 
-- **Stato:** ACTIVE
-- **Fase attuale:** REVIEW
-- **Responsabile attuale:** Claude / Reviewer
+- **Stato al termine execution:** ACTIVE
+- **Fase al termine execution:** REVIEW
+- **Responsabile al termine execution:** Claude / Reviewer
 - **Esito:** **READY FOR REVIEW**
 - **Note reviewer:** verificare in particolare policy `.sent` fail-closed, wrapper outbox per rispettare guardrail TASK-069/TASK-071, e semantica “successo con follow-up tecnico” quando telemetry enqueue fallisce dopo write verificato.
-- **TASK-094 NON DONE** — da chiudere solo dopo review finale.
+- **Nota:** handoff storico consumato dalla sezione **Review (Codex)**; stato finale corrente **TASK-094 DONE / Chiusura — REVIEW PASS**.
+
+---
+
+## Review (Codex)
+
+### Override operativo review
+
+- **Override utente ricevuto:** 2026-05-10 — autorizzata REVIEW completa di TASK-094 su commit `6fca107`, con correzioni dirette, test completi e chiusura a DONE se tutto PASS.
+- **Impatto processo:** Codex ha agito come reviewer+fixer su richiesta esplicita utente; TASK-095/TASK-096 non sono stati aperti.
+
+### File rivisti
+
+- `iOSMerchandiseControl/LocalPendingAggregatedPushPlanner.swift`
+- `iOSMerchandiseControl/SupabaseManualSyncAggregatedPushOutboxProducer.swift`
+- `iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift`
+- `iOSMerchandiseControl/SupabaseManualSyncViewModel.swift`
+- `iOSMerchandiseControl/SupabaseProductPriceManualPushService.swift`
+- `iOSMerchandiseControl/en.lproj/Localizable.strings`
+- `iOSMerchandiseControl/es.lproj/Localizable.strings`
+- `iOSMerchandiseControl/it.lproj/Localizable.strings`
+- `iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings`
+- `iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests.swift`
+- `iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift`
+- `iOSMerchandiseControl/LocalPendingChange.swift`
+- `iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift`
+- `iOSMerchandiseControl/SupabaseManualPushService.swift`
+- `iOSMerchandiseControl/SupabaseManualPushPreflightService.swift`
+- Servizi ProductPrice push/apply, `SyncEventOutbox*`, `SyncEventRecording*`, `SupabaseManualSyncCoordinator*`.
+
+### Problemi trovati
+
+- **Terminali inclusi nel cap attivo:** il planner contava anche pending già terminali (`superseded`, `acknowledged`) nel fetch bounded principale. In dataset con molte righe terminali storiche, questo poteva produrre falsi `hardCapExceeded` e nascondere candidate `.pending` realmente inviabili.
+- **Logical key locale/remota dopo link remoteID:** modifiche registrate prima dell’assegnazione di `remoteID` usavano chiavi logiche locali, mentre il payload live dopo link remoto poteva esporre chiavi remote. Questo poteva far risultare “missing live model” un pending valido dopo catalog push/retry, soprattutto su catena catalogo → ProductPrice.
+
+### Correzioni applicate
+
+- Separato il fetch attivo dal conteggio terminale: il planner ora usa un fetch bounded solo per stati non terminali e calcola i terminal ignored con count dedicati, senza contaminare cap e candidate.
+- Aggiunto matching doppio local-key/remote-key per Supplier, ProductCategory, Product e ProductPrice, così i pending pre-link restano riconciliabili con i modelli SwiftData correnti dopo l’arrivo del `remoteID`.
+- Rafforzati gli XCTest del planner per hard cap con terminali storici e per replan/retry dopo link remoteID.
+
+### Test eseguiti
+
+- ✅ ESEGUITO — `git status` — PASS prima della review, branch pulito e ahead remoto solo del commit `6fca107`.
+- ✅ ESEGUITO — `git show --stat --oneline 6fca107` — PASS, commit revisionato.
+- ✅ ESEGUITO — `git diff 6fca107^..6fca107 --check` — PASS.
+- ✅ ESEGUITO — `git diff --check` — PASS prima e dopo le correzioni.
+- ✅ ESEGUITO — `xcodebuild build -quiet -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4.1'` — PASS.
+- ✅ ESEGUITO — `xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4.1' -only-testing:iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests` — PASS.
+- ✅ ESEGUITO — regressione mirata manual sync / ProductPrice / outbox / pull preview / TASK-093 pending snapshot — PASS.
+- ✅ ESEGUITO — `xcodebuild test -quiet -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4.1'` — PASS, exit code 0.
+
+### Note Supabase / simulatori
+
+- Simulatore usato: **iPhone 17 Pro, iOS 26.4.1**.
+- Supabase live/staging/local non usato: la review non ha richiesto write live; copertura effettuata con build, XCTest, fake/test double e path adapter esistenti.
+- Warning osservato: `AppIntents.framework dependency` metadata extraction warning durante alcune run Xcode, non bloccante e non introdotto da TASK-094.
+
+### Rischi residui
+
+- Nessun blocker tecnico residuo rilevato.
+- Nessuna apertura TASK-095/TASK-096, nessun background worker, Timer, BGTask, realtime o polling aggressivo.
+
+### Decisione review
+
+- **Verdetto:** **REVIEW PASS**
+- **Stato finale:** **TASK-094 DONE / Chiusura — REVIEW PASS**
+- **Handoff:** pronto per storico progetto; nessun ulteriore handoff operativo richiesto per TASK-094.
 
 ---
 
