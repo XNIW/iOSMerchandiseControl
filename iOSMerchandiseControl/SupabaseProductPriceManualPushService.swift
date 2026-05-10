@@ -58,12 +58,25 @@ nonisolated struct ProductPriceManualPushResult: Sendable, Equatable {
     let insertedCount: Int
     let verification: ProductPriceManualPushVerificationResult
     let fingerprint: String
+    let needsTechnicalFollowUp: Bool
 
     var isVerifiedSuccess: Bool {
         if case .exactMatch = verification {
             return true
         }
         return false
+    }
+
+    init(
+        insertedCount: Int,
+        verification: ProductPriceManualPushVerificationResult,
+        fingerprint: String,
+        needsTechnicalFollowUp: Bool = false
+    ) {
+        self.insertedCount = insertedCount
+        self.verification = verification
+        self.fingerprint = fingerprint
+        self.needsTechnicalFollowUp = needsTechnicalFollowUp
     }
 }
 

@@ -1876,6 +1876,11 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
             if let catalogResult, let currentPlan = stagedPlan {
                 applyCatalogPushResult(catalogResult, plan: currentPlan)
+                if productPricePushPhase.needsAttentionAfterSend {
+                    catalogPushPhase = .partial(makeCatalogPushSummary(from: currentPlan, result: catalogResult))
+                    presentationKind = .catalogPushPartiallySucceeded
+                    semiAutomaticState = .recoverableError
+                }
             } else {
                 applyPriceOnlyPushPresentationAfterSend()
             }
@@ -1970,8 +1975,14 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         summary.pushed += result.insertedCount
         switch result.verification {
         case .exactMatch:
-            productPriceSummary = summary
-            productPricePushPhase = .succeeded(summary)
+            if result.needsTechnicalFollowUp {
+                summary.failed += 1
+                productPriceSummary = summary
+                productPricePushPhase = .partial(summary)
+            } else {
+                productPriceSummary = summary
+                productPricePushPhase = .succeeded(summary)
+            }
         case .unknown, .missingRows, .mismatchedRows:
             summary.failed += max(1, candidateCount - result.insertedCount)
             productPriceSummary = summary
@@ -4349,6 +4360,15 @@ private extension SupabaseManualSyncProductPricePushPhase {
         case .noChanges, .blocked, .failed, .stale, .succeeded, .partial, .sendFailed:
             return true
         case .idle, .checking, .ready, .sending:
+            return false
+        }
+    }
+
+    var needsAttentionAfterSend: Bool {
+        switch self {
+        case .partial, .sendFailed, .stale:
+            return true
+        case .idle, .checking, .ready, .noChanges, .blocked, .failed, .sending, .succeeded:
             return false
         }
     }

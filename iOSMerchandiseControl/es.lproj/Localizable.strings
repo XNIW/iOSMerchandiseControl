@@ -1189,7 +1189,7 @@
 "options.supabase.manualSync.push.review.footer.blocked" = "Corrige los elementos indicados y ejecuta Comprobar nube de nuevo.";
 "options.supabase.manualSync.push.review.footer.sending" = "El envío está en curso. Las acciones están desactivadas para evitar un doble envío.";
 "options.supabase.manualSync.push.review.footer.final" = "Puedes cerrar el resumen o iniciar una nueva comprobación.";
-"options.supabase.manualSync.push.review.action.send" = "Preparar envío";
+"options.supabase.manualSync.push.review.action.send" = "Enviar cambios locales";
 "options.supabase.manualSync.push.review.action.sending" = "Enviando…";
 "options.supabase.manualSync.confirm.send.title" = "¿Enviar cambios a la nube?";
 "options.supabase.manualSync.confirm.send.message" = "Enviaré solo los cambios locales listos. Los cambios de la nube no se aplicarán en este paso.";

@@ -1188,7 +1188,7 @@
 "options.supabase.manualSync.push.review.footer.blocked" = "Correggi gli elementi indicati e riesegui Controlla cloud.";
 "options.supabase.manualSync.push.review.footer.sending" = "Invio in corso. Le azioni sono disabilitate per evitare doppio invio.";
 "options.supabase.manualSync.push.review.footer.final" = "Puoi chiudere il riepilogo o avviare un nuovo Controlla cloud.";
-"options.supabase.manualSync.push.review.action.send" = "Prepara invio";
+"options.supabase.manualSync.push.review.action.send" = "Invia modifiche locali";
 "options.supabase.manualSync.push.review.action.sending" = "Invio…";
 "options.supabase.manualSync.confirm.send.title" = "Inviare modifiche al cloud?";
 "options.supabase.manualSync.confirm.send.message" = "Invierò solo le modifiche locali pronte. Le modifiche dal cloud non verranno applicate in questo passaggio.";

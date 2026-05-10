@@ -1189,7 +1189,7 @@
 "options.supabase.manualSync.push.review.footer.blocked" = "请修正列出的项目，然后重新检查云端。";
 "options.supabase.manualSync.push.review.footer.sending" = "发送正在进行。操作已停用以避免重复发送。";
 "options.supabase.manualSync.push.review.footer.final" = "你可以关闭摘要，或开始新的检查云端。";
-"options.supabase.manualSync.push.review.action.send" = "准备发送";
+"options.supabase.manualSync.push.review.action.send" = "发送本地更改";
 "options.supabase.manualSync.push.review.action.sending" = "正在发送…";
 "options.supabase.manualSync.confirm.send.title" = "发送更改到云端？";
 "options.supabase.manualSync.confirm.send.message" = "只会发送已准备好的本地更改。此步骤不会应用云端更改。";

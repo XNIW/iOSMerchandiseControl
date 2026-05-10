@@ -77,6 +77,7 @@ enum SupabaseManualSyncReleaseFactory {
 private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding {
     private let context: ModelContext
     private let remote: SupabaseInventoryService
+    private var stagedPendingBatchesByFingerprint: [String: LocalPendingAggregatedProductPriceBatch] = [:]
 
     init(
         context: ModelContext,
@@ -102,28 +103,183 @@ private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManual
     }
 
     func makePushPlan(ownerUserID: UUID) async throws -> ProductPricePushDryRunPlan {
-        try await SupabaseProductPricePushDryRunService(fetcher: remote).loadDryRun(
+        let aggregatedPlan = try await LocalPendingAggregatedPushPlanner(
             context: context,
-            sessionSnapshot: ProductPricePushDryRunSessionSnapshot(
-                userID: ownerUserID,
-                lastLinkedUserID: ownerUserID
+            priceRemoteFetcher: remote,
+            includesCatalog: false,
+            includesProductPrice: true
+        ).makePlan(ownerUserID: ownerUserID)
+        guard aggregatedPlan.blockers.isEmpty else {
+            stagedPendingBatchesByFingerprint.removeAll()
+            return Self.blockedPricePlan(
+                ownerUserID: ownerUserID,
+                blockerCount: max(1, aggregatedPlan.blockers.count),
+                generatedAt: aggregatedPlan.generatedAt
             )
-        )
+        }
+        guard let batch = aggregatedPlan.productPriceBatch else {
+            stagedPendingBatchesByFingerprint.removeAll()
+            return Self.emptyPricePlan(ownerUserID: ownerUserID, generatedAt: aggregatedPlan.generatedAt)
+        }
+        stagedPendingBatchesByFingerprint[productPricePushFingerprint(batch.plan)] = batch
+        return batch.plan
     }
 
     func push(plan: ProductPricePushDryRunPlan, ownerUserID: UUID) async throws -> ProductPriceManualPushResult {
-        let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: plan)
-        guard snapshot.ownerUserID == ownerUserID else {
-            throw ProductPriceManualPushError.invalidPayload
+        let batchFingerprint = productPricePushFingerprint(plan)
+        let pendingBatch = stagedPendingBatchesByFingerprint[batchFingerprint]
+        if let pendingBatch {
+            try LocalPendingAggregatedPushStateStore(context: context).markSent(
+                changeIDs: pendingBatch.changeIDs,
+                ownerUserID: ownerUserID,
+                planFingerprint: batchFingerprint
+            )
         }
-        let result = try await SupabaseProductPriceManualPushService(remote: remote).push(snapshot: snapshot)
-        if result.isVerifiedSuccess {
-            _ = try ProductPriceManualPushIdentityReconciler().linkVerifiedPayloads(
-                snapshot.payloads,
-                context: context
+        let result: ProductPriceManualPushResult
+        do {
+            let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: plan)
+            guard snapshot.ownerUserID == ownerUserID else {
+                throw ProductPriceManualPushError.invalidPayload
+            }
+            result = try await SupabaseProductPriceManualPushService(remote: remote).push(snapshot: snapshot)
+            if result.isVerifiedSuccess {
+                _ = try ProductPriceManualPushIdentityReconciler().linkVerifiedPayloads(
+                    snapshot.payloads,
+                    context: context
+                )
+            }
+        } catch {
+            if let pendingBatch {
+                try? LocalPendingAggregatedPushStateStore(context: context).markRetryable(
+                    changeIDs: pendingBatch.changeIDs,
+                    ownerUserID: ownerUserID
+                )
+            }
+            throw error
+        }
+        if let pendingBatch {
+            if result.isVerifiedSuccess {
+                try LocalPendingAggregatedPushStateStore(context: context).markAcknowledged(
+                    changeIDs: pendingBatch.changeIDs,
+                    ownerUserID: ownerUserID
+                )
+            } else {
+                try LocalPendingAggregatedPushStateStore(context: context).markRetryable(
+                    changeIDs: pendingBatch.changeIDs,
+                    ownerUserID: ownerUserID
+                )
+            }
+            stagedPendingBatchesByFingerprint.removeValue(forKey: batchFingerprint)
+        }
+        let telemetryResult = SupabaseManualSyncAggregatedPushOutboxProducer(context: context).produce(
+            .productPriceManualPush(
+                result: result,
+                ownerUserID: ownerUserID,
+                currentOwnerUserID: ownerUserID
+            )
+        )
+        if result.isVerifiedSuccess, !telemetryResult.isAggregatedPushSuccess {
+            return ProductPriceManualPushResult(
+                insertedCount: result.insertedCount,
+                verification: result.verification,
+                fingerprint: result.fingerprint,
+                needsTechnicalFollowUp: true
             )
         }
         return result
+    }
+
+    private func productPricePushFingerprint(_ plan: ProductPricePushDryRunPlan) -> String {
+        let candidates = plan.candidates.map { line -> String in
+            [
+                line.key?.stableID ?? "",
+                line.canonicalPrice?.value ?? "",
+                line.createdAtCanonical ?? "",
+                line.source ?? "",
+                line.note ?? ""
+            ].joined(separator: "|")
+        }
+        let summary = [
+            "local:\(plan.summary.localPriceCount)",
+            "ready:\(plan.summary.readyCandidates)",
+            "present:\(plan.summary.alreadyPresentRemote)",
+            "remoteConflict:\(plan.summary.conflictSameKeyDifferentPrice)",
+            "localDuplicate:\(plan.summary.localDuplicateSameKey)",
+            "localConflict:\(plan.summary.localConflictSameKeyDifferentPrice)",
+            "blockedNoRemote:\(plan.summary.blockedNoRemoteID)",
+            "blockedTotal:\(plan.summary.blockedTotal)",
+            "invalid:\(plan.summary.excludedInvalidLocal)",
+            "dedupe:\(plan.remoteDedupeStatus.stableAggregatedFingerprintComponent)"
+        ]
+        return (candidates + summary).joined(separator: "\n")
+    }
+
+    private static func emptyPricePlan(ownerUserID: UUID, generatedAt: Date) -> ProductPricePushDryRunPlan {
+        ProductPricePushDryRunPlan(
+            generatedAt: generatedAt,
+            sessionSnapshot: ProductPricePushDryRunSessionSnapshot(userID: ownerUserID, lastLinkedUserID: ownerUserID),
+            remoteDedupeStatus: .notNeeded,
+            summary: ProductPricePushDryRunSummary(
+                localPriceCount: 0,
+                remoteRowsRead: 0,
+                remotePagesRead: 0,
+                readyCandidates: 0,
+                alreadyPresentRemote: 0,
+                conflictSameKeyDifferentPrice: 0,
+                localDuplicateSameKey: 0,
+                localConflictSameKeyDifferentPrice: 0,
+                blockedNoRemoteID: 0,
+                blockedNoAuth: 0,
+                blockedAccountMismatch: 0,
+                blockedBaselineMissing: 0,
+                blockedBaselineStale: 0,
+                blockedBaselinePartial: 0,
+                excludedInvalidLocal: 0
+            ),
+            candidates: [],
+            alreadyPresentRemote: [],
+            conflictSameKeyDifferentPrice: [],
+            localDuplicateSameKey: [],
+            localConflictSameKeyDifferentPrice: [],
+            blockedNoRemoteID: [],
+            excludedInvalidLocal: []
+        )
+    }
+
+    private static func blockedPricePlan(
+        ownerUserID: UUID,
+        blockerCount: Int,
+        generatedAt: Date
+    ) -> ProductPricePushDryRunPlan {
+        ProductPricePushDryRunPlan(
+            generatedAt: generatedAt,
+            sessionSnapshot: ProductPricePushDryRunSessionSnapshot(userID: ownerUserID, lastLinkedUserID: ownerUserID),
+            remoteDedupeStatus: .notNeeded,
+            summary: ProductPricePushDryRunSummary(
+                localPriceCount: blockerCount,
+                remoteRowsRead: 0,
+                remotePagesRead: 0,
+                readyCandidates: 0,
+                alreadyPresentRemote: 0,
+                conflictSameKeyDifferentPrice: 0,
+                localDuplicateSameKey: 0,
+                localConflictSameKeyDifferentPrice: 0,
+                blockedNoRemoteID: blockerCount,
+                blockedNoAuth: 0,
+                blockedAccountMismatch: 0,
+                blockedBaselineMissing: 0,
+                blockedBaselineStale: 0,
+                blockedBaselinePartial: 0,
+                excludedInvalidLocal: 0
+            ),
+            candidates: [],
+            alreadyPresentRemote: [],
+            conflictSameKeyDifferentPrice: [],
+            localDuplicateSameKey: [],
+            localConflictSameKeyDifferentPrice: [],
+            blockedNoRemoteID: [],
+            excludedInvalidLocal: []
+        )
     }
 }
 
@@ -133,6 +289,7 @@ private final class SupabaseManualSyncReleasePushAdapter: SupabaseManualSyncCata
     private let manualPushService: SupabaseManualPushService
     private let preflightService: SupabaseManualPushPreflightService
     private let baselineReader: SupabaseCatalogBaselineReader
+    private var stagedPendingBatchesByFingerprint: [String: LocalPendingAggregatedCatalogBatch] = [:]
 
     init(
         context: ModelContext,
@@ -147,30 +304,118 @@ private final class SupabaseManualSyncReleasePushAdapter: SupabaseManualSyncCata
     }
 
     func makePushPlan(ownerUserID: UUID) async throws -> ManualPushPlan {
-        try Task.checkCancellation()
-        let snapshotService = SwiftDataInventorySnapshotService(context: context)
-        let baselineResult = try baselineReader.readManualPushBaseline(
+        let aggregatedPlan = try await LocalPendingAggregatedPushPlanner(
             context: context,
-            ownerUserUUID: ownerUserID
-        )
-        let mappedBaseline = mapBaselineResult(baselineResult, ownerUserID: ownerUserID)
-        try Task.checkCancellation()
-        return preflightService.makePlan(input: ManualPushPreflightInput(
-            baselineRunID: mappedBaseline.runID,
-            pullState: ManualPushPullState(isComplete: true, hasSourceErrors: false),
-            accountState: mappedBaseline.accountState,
-            baseline: mappedBaseline.baseline,
-            suppliers: try snapshotService.makeManualPushPreflightSupplierStates(),
-            categories: try snapshotService.makeManualPushPreflightCategoryStates(),
-            products: try snapshotService.makeManualPushPreflightProductStates()
-        ))
+            includesCatalog: true,
+            includesProductPrice: false
+        ).makePlan(ownerUserID: ownerUserID)
+        guard aggregatedPlan.blockers.isEmpty else {
+            stagedPendingBatchesByFingerprint.removeAll()
+            return Self.blockedCatalogPlan(
+                ownerUserID: ownerUserID,
+                blockerCount: max(1, aggregatedPlan.blockers.count),
+                generatedAt: aggregatedPlan.generatedAt
+            )
+        }
+        guard let batch = aggregatedPlan.catalogBatch else {
+            stagedPendingBatchesByFingerprint.removeAll()
+            return ManualPushPlan(
+                generatedAt: aggregatedPlan.generatedAt,
+                ownerUserID: ownerUserID,
+                candidates: [],
+                blockedReasons: [],
+                warnings: [],
+                futureEventChangedCount: 0
+            )
+        }
+        stagedPendingBatchesByFingerprint[batch.plan.planFingerprint] = batch
+        return batch.plan
     }
 
     func execute(plan: ManualPushPlan, ownerUserID: UUID) async -> SupabaseManualPushResult {
-        await manualPushService.execute(
+        let pendingBatch = stagedPendingBatchesByFingerprint[plan.planFingerprint]
+        if let pendingBatch {
+            do {
+                try LocalPendingAggregatedPushStateStore(context: context).markSent(
+                    changeIDs: pendingBatch.changeIDs,
+                    ownerUserID: ownerUserID,
+                    planFingerprint: plan.planFingerprint
+                )
+            } catch {
+                return .blocked(message: "Local pending state could not be prepared.")
+            }
+        }
+        let result = await manualPushService.execute(
             plan: plan,
             context: context,
             ownerUserID: ownerUserID
+        )
+        if let pendingBatch {
+            applyPendingStateTransition(
+                result: result,
+                changeIDs: pendingBatch.changeIDs,
+                ownerUserID: ownerUserID
+            )
+            stagedPendingBatchesByFingerprint.removeValue(forKey: plan.planFingerprint)
+        }
+        guard result.confirmedCatalogChangeCount > 0 else {
+            return result
+        }
+        let telemetry = SupabaseManualSyncAggregatedPushOutboxProducer(context: context).produce(
+            .catalogManualPush(
+                result: result,
+                ownerUserID: ownerUserID,
+                currentOwnerUserID: ownerUserID,
+                planFingerprint: plan.planFingerprint
+            )
+        )
+        if result.status == .completed, !telemetry.isAggregatedPushSuccess {
+            return SupabaseManualPushResult(
+                status: .completedBaselineRefreshFailed,
+                supplierCreates: result.supplierCreates,
+                supplierUpdates: result.supplierUpdates,
+                supplierLinks: result.supplierLinks,
+                categoryCreates: result.categoryCreates,
+                categoryUpdates: result.categoryUpdates,
+                categoryLinks: result.categoryLinks,
+                productCreates: result.productCreates,
+                productUpdates: result.productUpdates,
+                productLinks: result.productLinks,
+                baselineRunID: result.baselineRunID,
+                message: "Technical follow-up required after verified push."
+            )
+        }
+        return result
+    }
+
+    private func applyPendingStateTransition(
+        result: SupabaseManualPushResult,
+        changeIDs: [String],
+        ownerUserID: UUID
+    ) {
+        let store = LocalPendingAggregatedPushStateStore(context: context)
+        switch result.status {
+        case .completed, .completedBaselineRefreshFailed:
+            try? store.markAcknowledged(changeIDs: changeIDs, ownerUserID: ownerUserID)
+        case .partial, .failedBeforeWrite:
+            try? store.markRetryable(changeIDs: changeIDs, ownerUserID: ownerUserID)
+        case .blockedBeforeWrite:
+            try? store.markBlocked(changeIDs: changeIDs, ownerUserID: ownerUserID)
+        }
+    }
+
+    private static func blockedCatalogPlan(
+        ownerUserID: UUID,
+        blockerCount: Int,
+        generatedAt: Date
+    ) -> ManualPushPlan {
+        ManualPushPlan(
+            generatedAt: generatedAt,
+            ownerUserID: ownerUserID,
+            candidates: [],
+            blockedReasons: Array(repeating: .blockedStaleOrPartialBaseline, count: blockerCount),
+            warnings: [],
+            futureEventChangedCount: 0
         )
     }
 
@@ -218,6 +463,44 @@ private final class SupabaseManualSyncReleasePushAdapter: SupabaseManualSyncCata
                 ),
                 ManualPushAccountState(currentUserID: ownerUserID, lastLinkedUserID: ownerUserID)
             )
+        }
+    }
+}
+
+private extension SupabaseManualPushResult {
+    var confirmedCatalogChangeCount: Int {
+        supplierCreates + supplierUpdates + supplierLinks
+            + categoryCreates + categoryUpdates + categoryLinks
+            + productCreates + productUpdates + productLinks
+    }
+}
+
+private extension SyncEventOutboxProducerResult {
+    var isAggregatedPushSuccess: Bool {
+        switch kind {
+        case .enqueued, .duplicateNoOp, .skippedNoOp:
+            return true
+        case .skippedDryRun,
+             .skippedFailedPreflight,
+             .blockedContract,
+             .blockedAuth,
+             .blockedSchema,
+             .enqueueFailedLocal,
+             .skippedUnsupported:
+            return false
+        }
+    }
+}
+
+private extension ProductPricePushRemoteDedupeStatus {
+    var stableAggregatedFingerprintComponent: String {
+        switch self {
+        case .notNeeded:
+            return "notNeeded"
+        case .complete:
+            return "complete"
+        case .unsafePartialRemoteDedupe(let reason):
+            return "unsafe:\(reason.rawValue)"
         }
     }
 }

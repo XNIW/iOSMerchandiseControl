@@ -1189,7 +1189,7 @@
 "options.supabase.manualSync.push.review.footer.blocked" = "Fix the listed items and run Check cloud again.";
 "options.supabase.manualSync.push.review.footer.sending" = "Sending is in progress. Actions are disabled to avoid sending twice.";
 "options.supabase.manualSync.push.review.footer.final" = "You can close the summary or start a new Check cloud.";
-"options.supabase.manualSync.push.review.action.send" = "Prepare send";
+"options.supabase.manualSync.push.review.action.send" = "Send local changes";
 "options.supabase.manualSync.push.review.action.sending" = "Sending…";
 "options.supabase.manualSync.confirm.send.title" = "Send changes to cloud?";
 "options.supabase.manualSync.confirm.send.message" = "I will send only the local changes that are ready. Cloud changes will not be applied in this step.";

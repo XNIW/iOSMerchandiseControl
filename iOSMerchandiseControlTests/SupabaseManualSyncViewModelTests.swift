@@ -2149,7 +2149,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
         XCTAssertEqual(review.primaryActionID, .sendCloudChanges)
         XCTAssertTrue(review.primaryActionIsEnabled)
-        XCTAssertEqual(review.primaryActionTitle, "Prepara invio")
+        XCTAssertEqual(review.primaryActionTitle, "Invia modifiche locali")
         XCTAssertEqual(review.sections.map(\.id), [.readyToSend])
         XCTAssertEqual(provider.executeCallCount, 0)
         assertSinglePrimaryAction(state)
@@ -2479,6 +2479,34 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testTask094TelemetryFollowUpAfterVerifiedProductPricePushShowsPartialSummary() async throws {
+        let ownerID = UUID(uuidString: "09400000-0000-4094-8094-000000000001")!
+        let pushPlan = makeProductPricePushPlan(ownerID: ownerID, candidateCount: 2)
+        let provider = ManualSyncProductPriceProviderFake(
+            pushPlans: [pushPlan, pushPlan],
+            pushResult: ProductPriceManualPushResult(
+                insertedCount: 2,
+                verification: .exactMatch(verifiedCount: 2),
+                fingerprint: "task-094-verified-follow-up",
+                needsTechnicalFollowUp: true
+            )
+        )
+        let vm = makeProductPriceReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .completedSuccessfully,
+            remotePreviewSummary: remotePreviewSummary()
+        ))
+        await vm.prepareProductPricePlansForReview()
+        await vm.sendConfirmedCatalogChanges()
+
+        XCTAssertEqual(provider.pushCallCount, 1)
+        XCTAssertEqual(vm.productPriceSummary.pushed, 2)
+        XCTAssertEqual(vm.productPriceSummary.failed, 1)
+        XCTAssertEqual(vm.presentationState.userFacingSummary?.kind, .catalogPushPartial)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
     func testTask080ProductPricePushStalePlanDoesNotWrite() async throws {
         let ownerID = UUID(uuidString: "DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD")!
         let firstPlan = makeProductPricePushPlan(ownerID: ownerID, candidateCount: 1, seed: 10)
@@ -2802,7 +2830,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         var review = try XCTUnwrap(vm.presentationState.reviewSheet)
         XCTAssertEqual(review.primaryActionID, .sendCloudChanges)
-        XCTAssertEqual(review.primaryActionTitle, "Prepara invio")
+        XCTAssertEqual(review.primaryActionTitle, "Invia modifiche locali")
 
         await vm.sendConfirmedCatalogChanges()
 
