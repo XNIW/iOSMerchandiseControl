@@ -52,7 +52,11 @@ struct iOSMerchandiseControlApp: App {
             let provider = SupabaseClientProvider(config: config)
             let authService = SupabaseAuthService(provider: provider)
             let inventoryService = SupabaseInventoryService(clientProvider: provider)
-            let previewService = SupabasePullPreviewService(inventoryService: inventoryService)
+            let previewService = SupabasePullPreviewService(
+                inventoryService: inventoryService,
+                catalogRowBudget: 5_000,
+                productPriceRowBudget: 5_000
+            )
             let syncEventReader = SupabaseSyncEventRemoteReader(clientProvider: provider)
             let syncEventPreviewService = SupabaseSyncEventPreviewService(fetcher: syncEventReader)
             let manualPushService = SupabaseManualPushService(clientProvider: provider)

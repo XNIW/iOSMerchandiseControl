@@ -1028,6 +1028,11 @@
 "options.supabase.manualSync.state.applied.subtitle" = "Puedes ejecutar Revisar la nube otra vez cuando quieras.";
 "options.supabase.manualSync.state.applyFailed.title" = "Datos locales no actualizados";
 "options.supabase.manualSync.state.applyFailed.subtitle" = "Ejecuta Revisar la nube otra vez antes de reintentar.";
+"options.supabase.manualSync.state.suggested.title" = "Comprobación sugerida";
+"options.supabase.manualSync.state.suggested.subtitle" = "Puedes comprobar si hay cambios para revisar.";
+"options.supabase.manualSync.semiAuto.suggested" = "Sugerencia lista: comprueba cuando quieras.";
+"options.supabase.manualSync.semiAuto.checking" = "Comprobación en curso.";
+"options.supabase.manualSync.lastCheck" = "Última comprobación: %@.";
 "options.supabase.manualSync.summary.cloudCheck.completed.ok" = "Última revisión: revisión en la nube completada.";
 "options.supabase.manualSync.summary.cloudCheck.completed.noAction" = "Última revisión: completada. No se necesita ninguna acción.";
 "options.supabase.manualSync.summary.cloudCheck.differences" = "Última revisión: hay elementos que revisar en la nube.";
@@ -1044,7 +1049,7 @@
 "options.supabase.manualSync.summary.localApply.suppliersCreated" = "proveedores creados: %d";
 "options.supabase.manualSync.summary.localApply.categoriesCreated" = "categorías creadas: %d";
 "options.supabase.manualSync.summary.localApply.failed" = "No actualicé los datos locales. Ejecuta Revisar la nube otra vez.";
-"options.supabase.manualSync.action.checkCloud" = "Revisar la nube";
+"options.supabase.manualSync.action.checkCloud" = "Comprobar";
 "options.supabase.manualSync.action.review" = "Revisar";
 "options.supabase.manualSync.action.syncNow" = "Sincronizar ahora";
 "options.supabase.manualSync.action.signIn" = "Iniciar sesión";
@@ -1127,7 +1132,8 @@
 "options.supabase.manualSync.badge.readyToSend" = "Por enviar";
 "options.supabase.manualSync.badge.sent" = "Enviado";
 "options.supabase.manualSync.badge.needsFix" = "Por corregir";
-"options.supabase.manualSync.action.sendToCloud" = "Enviar cambios a la nube";
+"options.supabase.manualSync.badge.suggested" = "Sugerido";
+"options.supabase.manualSync.action.sendToCloud" = "Preparar envío";
 "options.supabase.manualSync.push.state.checking.title" = "Comprobando cambios locales";
 "options.supabase.manualSync.push.state.checking.subtitle" = "Preparando el resumen del envío.";
 "options.supabase.manualSync.push.state.ready.title" = "Cambios locales listos";
@@ -1172,7 +1178,7 @@
 "options.supabase.manualSync.push.review.footer.blocked" = "Corrige los elementos indicados y ejecuta Comprobar nube de nuevo.";
 "options.supabase.manualSync.push.review.footer.sending" = "El envío está en curso. Las acciones están desactivadas para evitar un doble envío.";
 "options.supabase.manualSync.push.review.footer.final" = "Puedes cerrar el resumen o iniciar una nueva comprobación.";
-"options.supabase.manualSync.push.review.action.send" = "Enviar cambios a la nube";
+"options.supabase.manualSync.push.review.action.send" = "Preparar envío";
 "options.supabase.manualSync.push.review.action.sending" = "Enviando…";
 "options.supabase.manualSync.confirm.send.title" = "¿Enviar cambios a la nube?";
 "options.supabase.manualSync.confirm.send.message" = "Enviaré solo los cambios locales listos. Los cambios de la nube no se aplicarán en este paso.";
@@ -1219,5 +1225,9 @@
 "options.supabase.manualSync.confirm.activity.message" = "Registraré solo el resumen de actividad local. Los cambios del dispositivo y de la nube ya mostrados se mantienen separados.";
 "options.supabase.manualSync.confirm.activity.cancel" = "Cancelar";
 "options.supabase.manualSync.confirm.activity.register" = "Registrar";
+"options.supabase.manualSync.confirm.discard.title" = "¿Cancelar esta revisión?";
+"options.supabase.manualSync.confirm.discard.message" = "El resumen preparado se descartará. Podrás ejecutar una nueva comprobación.";
+"options.supabase.manualSync.confirm.discard.cancel" = "Seguir revisando";
+"options.supabase.manualSync.confirm.discard.discard" = "Cancelar";
 "options.supabase.manualSync.disabled.authChanging" = "Espera a que termine el acceso.";
 "options.supabase.manualSync.disabled.accessUnavailable" = "El acceso a la nube no está disponible en este dispositivo.";

@@ -1028,6 +1028,11 @@
 "options.supabase.manualSync.state.applied.subtitle" = "需要时可以再次运行“检查云端”。";
 "options.supabase.manualSync.state.applyFailed.title" = "本地数据未更新";
 "options.supabase.manualSync.state.applyFailed.subtitle" = "请先重新运行“检查云端”，再重试。";
+"options.supabase.manualSync.state.suggested.title" = "建议检查云端";
+"options.supabase.manualSync.state.suggested.subtitle" = "你可以检查是否有需要查看的更改。";
+"options.supabase.manualSync.semiAuto.suggested" = "建议已准备好：可随时检查。";
+"options.supabase.manualSync.semiAuto.checking" = "正在检查云端。";
+"options.supabase.manualSync.lastCheck" = "上次检查：%@。";
 "options.supabase.manualSync.summary.cloudCheck.completed.ok" = "上次检查：云端检查已完成。";
 "options.supabase.manualSync.summary.cloudCheck.completed.noAction" = "上次检查：已完成。无需操作。";
 "options.supabase.manualSync.summary.cloudCheck.differences" = "上次检查：云端有需要核对的项目。";
@@ -1044,7 +1049,7 @@
 "options.supabase.manualSync.summary.localApply.suppliersCreated" = "已创建供应商：%d";
 "options.supabase.manualSync.summary.localApply.categoriesCreated" = "已创建分类：%d";
 "options.supabase.manualSync.summary.localApply.failed" = "我没有更新本地数据。请重新运行“检查云端”。";
-"options.supabase.manualSync.action.checkCloud" = "检查云端";
+"options.supabase.manualSync.action.checkCloud" = "检查";
 "options.supabase.manualSync.action.review" = "查看";
 "options.supabase.manualSync.action.syncNow" = "立即同步";
 "options.supabase.manualSync.action.signIn" = "登录";
@@ -1127,7 +1132,8 @@
 "options.supabase.manualSync.badge.readyToSend" = "待发送";
 "options.supabase.manualSync.badge.sent" = "已发送";
 "options.supabase.manualSync.badge.needsFix" = "待修正";
-"options.supabase.manualSync.action.sendToCloud" = "发送更改到云端";
+"options.supabase.manualSync.badge.suggested" = "建议";
+"options.supabase.manualSync.action.sendToCloud" = "准备发送";
 "options.supabase.manualSync.push.state.checking.title" = "正在检查本地更改";
 "options.supabase.manualSync.push.state.checking.subtitle" = "正在准备发送摘要。";
 "options.supabase.manualSync.push.state.ready.title" = "本地更改已准备好";
@@ -1172,7 +1178,7 @@
 "options.supabase.manualSync.push.review.footer.blocked" = "请修正列出的项目，然后重新检查云端。";
 "options.supabase.manualSync.push.review.footer.sending" = "发送正在进行。操作已停用以避免重复发送。";
 "options.supabase.manualSync.push.review.footer.final" = "你可以关闭摘要，或开始新的检查云端。";
-"options.supabase.manualSync.push.review.action.send" = "发送更改到云端";
+"options.supabase.manualSync.push.review.action.send" = "准备发送";
 "options.supabase.manualSync.push.review.action.sending" = "正在发送…";
 "options.supabase.manualSync.confirm.send.title" = "发送更改到云端？";
 "options.supabase.manualSync.confirm.send.message" = "只会发送已准备好的本地更改。此步骤不会应用云端更改。";
@@ -1219,5 +1225,9 @@
 "options.supabase.manualSync.confirm.activity.message" = "只会记录本地活动摘要。已显示的设备和云端更改会保持分开。";
 "options.supabase.manualSync.confirm.activity.cancel" = "取消";
 "options.supabase.manualSync.confirm.activity.register" = "记录";
+"options.supabase.manualSync.confirm.discard.title" = "取消这次查看？";
+"options.supabase.manualSync.confirm.discard.message" = "已准备的摘要会被丢弃。你可以重新检查。";
+"options.supabase.manualSync.confirm.discard.cancel" = "继续查看";
+"options.supabase.manualSync.confirm.discard.discard" = "取消";
 "options.supabase.manualSync.disabled.authChanging" = "请等待登录完成。";
 "options.supabase.manualSync.disabled.accessUnavailable" = "此设备无法使用云端访问。";

@@ -34,6 +34,11 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.state.applied.subtitle",
             "options.supabase.manualSync.state.applyFailed.title",
             "options.supabase.manualSync.state.applyFailed.subtitle",
+            "options.supabase.manualSync.state.suggested.title",
+            "options.supabase.manualSync.state.suggested.subtitle",
+            "options.supabase.manualSync.semiAuto.suggested",
+            "options.supabase.manualSync.semiAuto.checking",
+            "options.supabase.manualSync.lastCheck",
             "options.supabase.manualSync.summary.cloudCheck.completed.ok",
             "options.supabase.manualSync.summary.cloudCheck.completed.noAction",
             "options.supabase.manualSync.summary.cloudCheck.differences",
@@ -109,6 +114,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.badge.readyToSend",
             "options.supabase.manualSync.badge.sent",
             "options.supabase.manualSync.badge.needsFix",
+            "options.supabase.manualSync.badge.suggested",
             "options.supabase.manualSync.push.state.checking.title",
             "options.supabase.manualSync.push.state.checking.subtitle",
             "options.supabase.manualSync.push.state.ready.title",
@@ -200,6 +206,10 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "options.supabase.manualSync.confirm.activity.message",
             "options.supabase.manualSync.confirm.activity.cancel",
             "options.supabase.manualSync.confirm.activity.register",
+            "options.supabase.manualSync.confirm.discard.title",
+            "options.supabase.manualSync.confirm.discard.message",
+            "options.supabase.manualSync.confirm.discard.cancel",
+            "options.supabase.manualSync.confirm.discard.discard",
             "options.supabase.manualSync.disabled.authChanging",
             "options.supabase.manualSync.disabled.accessUnavailable"
         ]
@@ -338,6 +348,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         let releaseCardSource = try extractReleaseCardSource(from: source)
 
         XCTAssertTrue(releaseCardSource.contains("viewModel.presentationState"))
+        XCTAssertTrue(releaseCardSource.contains("presentation.statusDetailText"))
         XCTAssertTrue(releaseCardSource.contains("presentation.userFacingSummary"))
         XCTAssertTrue(releaseCardSource.contains("viewModel.presentationState.reviewSheet"))
         XCTAssertTrue(releaseCardSource.contains("presentation.primaryAction"))
@@ -470,7 +481,6 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
             "drainOnce",
             "SyncEventOutboxDrainService",
             "SyncEventOutboxEnqueueService",
-            "confirmationDialog",
             "BGTask",
             "Timer",
             "Realtime",
@@ -478,6 +488,26 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         ] {
             XCTAssertFalse(combined.contains(forbidden), "Forbidden TASK-069 source term found: \(forbidden)")
         }
+    }
+
+    func testTask091ReleaseCardUsesConfirmationDialogsForMutationsAndDiscard() throws {
+        let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
+        let releaseCardSource = try extractReleaseCardSource(from: source)
+
+        XCTAssertEqual(countOccurrences(of: ".confirmationDialog(", in: releaseCardSource), 4)
+        XCTAssertTrue(releaseCardSource.contains("options.supabase.manualSync.confirm.updateDevice.title"))
+        XCTAssertTrue(releaseCardSource.contains("options.supabase.manualSync.confirm.send.title"))
+        XCTAssertTrue(releaseCardSource.contains("options.supabase.manualSync.confirm.activity.title"))
+        XCTAssertTrue(releaseCardSource.contains("options.supabase.manualSync.confirm.discard.title"))
+        XCTAssertFalse(releaseCardSource.contains(".alert("))
+    }
+
+    func testTask091AppWiresBoundedReleasePreview() throws {
+        let source = try readSource("iOSMerchandiseControl/iOSMerchandiseControlApp.swift")
+
+        XCTAssertTrue(source.contains("SupabasePullPreviewService("))
+        XCTAssertTrue(source.contains("catalogRowBudget: 5_000"))
+        XCTAssertTrue(source.contains("productPriceRowBudget: 5_000"))
     }
 
     func testTask067ReleaseCardSourceAvoidsDeveloperJargon() throws {

@@ -2931,6 +2931,7 @@ struct OptionsView: View {
 // MARK: - Release manual sync surface
 
 private struct SupabaseManualSyncReleaseCard: View {
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var authViewModel: SupabaseAuthViewModel
     @StateObject private var viewModel: SupabaseManualSyncViewModel
     @State private var activeRunTask: Task<Void, Never>?
@@ -2938,6 +2939,7 @@ private struct SupabaseManualSyncReleaseCard: View {
     @State private var isApplyConfirmationPresented = false
     @State private var isSendConfirmationPresented = false
     @State private var isActivityRegistrationConfirmationPresented = false
+    @State private var isDiscardConfirmationPresented = false
     @State private var activeApplyTask: Task<Void, Never>?
     @State private var activeSendTask: Task<Void, Never>?
     @State private var activeActivityRegistrationTask: Task<Void, Never>?
@@ -2991,6 +2993,15 @@ private struct SupabaseManualSyncReleaseCard: View {
             .accessibilityLabel(presentation.accessibilityLabel)
             .accessibilityHint(presentation.accessibilityHint ?? "")
 
+            if let statusDetailText = presentation.statusDetailText,
+               !statusDetailText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(statusDetailText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true)
+            }
+
             if let summary = presentation.userFacingSummary,
                !summary.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text(summary.message)
@@ -3036,6 +3047,15 @@ private struct SupabaseManualSyncReleaseCard: View {
         .padding(.vertical, 4)
         .onAppear {
             syncAuthPresentationContext()
+            startSemiAutomaticCheckIfNeeded()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                syncAuthPresentationContext()
+                startSemiAutomaticCheckIfNeeded()
+            } else if phase == .background {
+                cancelActiveRun()
+            }
         }
         .onChange(of: authViewModel.isTransitioning) { _, _ in
             syncAuthPresentationContext()
@@ -3061,10 +3081,11 @@ private struct SupabaseManualSyncReleaseCard: View {
             isApplyConfirmationPresented = false
             isSendConfirmationPresented = false
             isActivityRegistrationConfirmationPresented = false
+            isDiscardConfirmationPresented = false
         }
         .sheet(
             isPresented: $isReviewSheetPresented,
-            onDismiss: { viewModel.cancelReviewFlow() }
+            onDismiss: { viewModel.markReviewDismissedWithoutDiscard() }
         ) {
             if let review = viewModel.presentationState.reviewSheet {
                 SupabaseManualSyncReviewSheet(
@@ -3073,16 +3094,23 @@ private struct SupabaseManualSyncReleaseCard: View {
                         handle(reviewPrimaryAction: review.primaryActionID)
                     },
                     dismiss: {
-                        viewModel.cancelReviewFlow()
-                        isReviewSheetPresented = false
+                        if viewModel.requiresReviewDiscardConfirmation {
+                            isDiscardConfirmationPresented = true
+                        } else {
+                            viewModel.cancelReviewFlow()
+                            isReviewSheetPresented = false
+                        }
                     }
                 )
-                .interactiveDismissDisabled(viewModel.isReviewMutationInProgress)
+                .interactiveDismissDisabled(
+                    viewModel.isReviewMutationInProgress || viewModel.requiresReviewDiscardConfirmation
+                )
             }
         }
-        .alert(
+        .confirmationDialog(
             L("options.supabase.manualSync.confirm.updateDevice.title"),
-            isPresented: $isApplyConfirmationPresented
+            isPresented: $isApplyConfirmationPresented,
+            titleVisibility: .visible
         ) {
             Button(L("options.supabase.manualSync.confirm.updateDevice.cancel"), role: .cancel) {}
             Button(L("options.supabase.manualSync.confirm.updateDevice.update")) {
@@ -3091,9 +3119,10 @@ private struct SupabaseManualSyncReleaseCard: View {
         } message: {
             Text(L("options.supabase.manualSync.confirm.updateDevice.message"))
         }
-        .alert(
+        .confirmationDialog(
             L("options.supabase.manualSync.confirm.send.title"),
-            isPresented: $isSendConfirmationPresented
+            isPresented: $isSendConfirmationPresented,
+            titleVisibility: .visible
         ) {
             Button(L("options.supabase.manualSync.confirm.send.cancel"), role: .cancel) {}
             Button(L("options.supabase.manualSync.confirm.send.send")) {
@@ -3102,9 +3131,10 @@ private struct SupabaseManualSyncReleaseCard: View {
         } message: {
             Text(L("options.supabase.manualSync.confirm.send.message"))
         }
-        .alert(
+        .confirmationDialog(
             L("options.supabase.manualSync.confirm.activity.title"),
-            isPresented: $isActivityRegistrationConfirmationPresented
+            isPresented: $isActivityRegistrationConfirmationPresented,
+            titleVisibility: .visible
         ) {
             Button(L("options.supabase.manualSync.confirm.activity.cancel"), role: .cancel) {}
             Button(L("options.supabase.manualSync.confirm.activity.register")) {
@@ -3112,6 +3142,18 @@ private struct SupabaseManualSyncReleaseCard: View {
             }
         } message: {
             Text(L("options.supabase.manualSync.confirm.activity.message"))
+        }
+        .confirmationDialog(
+            L("options.supabase.manualSync.confirm.discard.title"),
+            isPresented: $isDiscardConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(L("options.supabase.manualSync.confirm.discard.cancel"), role: .cancel) {}
+            Button(L("options.supabase.manualSync.confirm.discard.discard"), role: .destructive) {
+                confirmDiscardReview()
+            }
+        } message: {
+            Text(L("options.supabase.manualSync.confirm.discard.message"))
         }
     }
 
@@ -3212,6 +3254,7 @@ private struct SupabaseManualSyncReleaseCard: View {
         }
 
         if action.id == .reviewChanges {
+            viewModel.markReviewingSemiAutomaticPlan()
             isReviewSheetPresented = viewModel.presentationState.reviewSheet != nil
             return
         }
@@ -3230,12 +3273,23 @@ private struct SupabaseManualSyncReleaseCard: View {
         }
     }
 
+    private func startSemiAutomaticCheckIfNeeded() {
+        guard activeRunTask == nil else { return }
+
+        activeRunTask = Task { @MainActor in
+            let didStart = await viewModel.startForegroundSemiAutomaticCheckIfAllowed()
+            if !didStart {
+                viewModel.suggestSemiAutomaticCheckIfAllowed()
+            }
+            activeRunTask = nil
+        }
+    }
+
     private func cancelActiveRun() {
         activeRunTask?.cancel()
         activeRunTask = nil
         activeActivityRegistrationTask?.cancel()
         activeActivityRegistrationTask = nil
-        viewModel.cancelLocalApplyReview()
     }
 
     private func resetAfterAccountChange() {
@@ -3253,6 +3307,13 @@ private struct SupabaseManualSyncReleaseCard: View {
         isReviewSheetPresented = false
         viewModel.resetPresentationToIdleReady()
         syncAuthPresentationContext()
+        startSemiAutomaticCheckIfNeeded()
+    }
+
+    private func confirmDiscardReview() {
+        viewModel.cancelReviewFlow()
+        isReviewSheetPresented = false
+        isDiscardConfirmationPresented = false
     }
 
     private func syncAuthPresentationContext() {

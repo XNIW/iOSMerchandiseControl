@@ -516,6 +516,280 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testTask091SemiAutomaticPolicyAppliesCooldownWindow() {
+        let policy = SupabaseManualSyncSemiAutomaticPolicy(foregroundCooldown: 1_800)
+        let lastCheck = Date(timeIntervalSince1970: 1_778_500_000)
+
+        let blockedDecision = policy.foregroundCheckDecision(
+            now: lastCheck.addingTimeInterval(1_799),
+            lastCheckAt: lastCheck,
+            supportsCloudCheck: true,
+            isRunning: false,
+            isAuthenticated: true,
+            ownerUserID: uuid(91),
+            hasUnresolvedStagedPlan: false
+        )
+        let allowedDecision = policy.foregroundCheckDecision(
+            now: lastCheck.addingTimeInterval(1_800),
+            lastCheckAt: lastCheck,
+            supportsCloudCheck: true,
+            isRunning: false,
+            isAuthenticated: true,
+            ownerUserID: uuid(91),
+            hasUnresolvedStagedPlan: false
+        )
+
+        XCTAssertEqual(blockedDecision, .blocked(.cooldown))
+        XCTAssertEqual(allowedDecision, .allowed)
+    }
+
+    func testTask091SemiAutomaticCheckBlocksWhileRunIsActive() async throws {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.holdAtPreviewUntilSignaled = true
+        let vm = makeSemiAutomaticViewModel(fake: fake)
+        let now = Date(timeIntervalSince1970: 1_778_500_000)
+
+        let firstRun = Task { await vm.startForegroundSemiAutomaticCheckIfAllowed(now: now) }
+        try await fake.waitUntilPreviewHoldEngaged()
+
+        XCTAssertTrue(vm.isRunning)
+        let secondRunStarted = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: now.addingTimeInterval(1_800)
+        )
+
+        XCTAssertFalse(secondRunStarted)
+        XCTAssertEqual(fake.calls.filter { $0 == .remotePreview }.count, 1)
+
+        fake.releasePreviewHold()
+        let firstRunStarted = await firstRun.value
+
+        XCTAssertTrue(firstRunStarted)
+        XCTAssertFalse(vm.isRunning)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask091SemiAutomaticCheckBlocksWhenSessionOwnerIsMissing() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        let vm = makeSemiAutomaticViewModel(fake: fake, ownerID: nil, isSignedIn: true)
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: Date(timeIntervalSince1970: 1_778_500_000)
+        )
+
+        XCTAssertFalse(didStart)
+        XCTAssertEqual(vm.semiAutomaticState, .blockedAuth)
+        XCTAssertTrue(fake.calls.isEmpty)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .signIn)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask091SemiAutomaticSuggestionAndNoChangesStateArePresented() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        let vm = makeSemiAutomaticViewModel(fake: fake)
+        let now = Date(timeIntervalSince1970: 1_778_500_000)
+
+        vm.suggestSemiAutomaticCheckIfAllowed(now: now)
+
+        XCTAssertEqual(vm.semiAutomaticState, .suggestedCheck)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .checkCloud)
+        XCTAssertNil(vm.presentationState.secondaryAction)
+        assertSinglePrimaryAction(vm.presentationState)
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(now: now)
+
+        XCTAssertTrue(didStart)
+        XCTAssertEqual(vm.semiAutomaticState, .noChanges)
+        XCTAssertEqual(vm.lastCloudCheckAt, now)
+        XCTAssertNotNil(vm.presentationState.statusDetailText)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask091ForegroundPreviewRemainsReadOnlyAndSkipsMutativeDryRunPhases() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.snapshot = SupabaseManualSyncPrivacyCounts(
+            pendingCatalogChangeCount: 2,
+            pendingPriceChangeCount: 1,
+            pendingQueuedCloudOperationCount: 1
+        )
+        fake.remotePreviewSummary = remotePreviewSummary(
+            hasRemoteSignals: true,
+            counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1)
+        )
+        let vm = makeSemiAutomaticViewModel(fake: fake)
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: Date(timeIntervalSince1970: 1_778_500_000)
+        )
+
+        XCTAssertTrue(didStart)
+        XCTAssertTrue(fake.calls.contains(.remotePreview))
+        XCTAssertFalse(fake.calls.contains(.catalogPush))
+        XCTAssertFalse(fake.calls.contains(.productPricePush))
+        XCTAssertFalse(fake.calls.contains(.queuedCloudOperationsFlush))
+        XCTAssertEqual(vm.semiAutomaticState, .changesFound)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .reviewChanges)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask091StagedPlanIsInvalidatedWhenAccessChanges() async {
+        let ownerID = uuid(91)
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.remotePreviewSummary = remotePreviewSummary(
+            hasRemoteSignals: true,
+            counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1)
+        )
+        let provider = ManualSyncCatalogPushProviderFake(plans: [
+            makeCatalogPushPlan(
+                ownerID: ownerID,
+                candidates: [PushCandidate(entityKind: .product, localID: "91", action: .dryRunCreateCandidate)]
+            )
+        ])
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            ownerID: ownerID,
+            catalogPushProvider: provider
+        )
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: Date(timeIntervalSince1970: 1_778_500_000)
+        )
+
+        XCTAssertTrue(didStart)
+        XCTAssertTrue(vm.requiresReviewDiscardConfirmation)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .reviewChanges)
+
+        vm.applyAuthPresentationContext(SupabaseManualSyncAuthPresentationContext(
+            isSignedIn: false,
+            canSignIn: true,
+            isTransitioning: false
+        ))
+
+        XCTAssertFalse(vm.requiresReviewDiscardConfirmation)
+        XCTAssertEqual(vm.semiAutomaticState, .blockedAuth)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .signIn)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask091RecoverablePreviewErrorFallsBackWithoutBlockingApp() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.remotePreviewSummary = remotePreviewSummary(
+            isComplete: false,
+            key: .cloudCheckFailedRetry,
+            failureCategory: .network
+        )
+        let vm = makeSemiAutomaticViewModel(fake: fake)
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: Date(timeIntervalSince1970: 1_778_500_000)
+        )
+
+        XCTAssertTrue(didStart)
+        XCTAssertEqual(vm.semiAutomaticState, .recoverableError)
+        XCTAssertFalse(vm.requiresReviewDiscardConfirmation)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .retry)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask091PreparedReviewDoesNotMutateBeforeConfirmation() async {
+        let ownerID = uuid(91)
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.remotePreviewSummary = remotePreviewSummary(
+            hasRemoteSignals: true,
+            counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1)
+        )
+        let catalogProvider = ManualSyncCatalogPushProviderFake(plans: [
+            makeCatalogPushPlan(
+                ownerID: ownerID,
+                candidates: [PushCandidate(entityKind: .product, localID: "91", action: .dryRunCreateCandidate)]
+            )
+        ])
+        let productProvider = ManualSyncProductPriceProviderFake(
+            applyPlans: [makeProductPriceApplyPlan(ownerID: ownerID, lineCount: 1)],
+            pushPlans: [makeProductPricePushPlan(ownerID: ownerID, candidateCount: 1)]
+        )
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            ownerID: ownerID,
+            catalogPushProvider: catalogProvider,
+            productPriceProvider: productProvider
+        )
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: Date(timeIntervalSince1970: 1_778_500_000)
+        )
+
+        XCTAssertTrue(didStart)
+        XCTAssertEqual(catalogProvider.makePlanCallCount, 1)
+        XCTAssertEqual(catalogProvider.executeCallCount, 0)
+        XCTAssertEqual(productProvider.makeApplyPlanCallCount, 1)
+        XCTAssertEqual(productProvider.applyCallCount, 0)
+        XCTAssertEqual(productProvider.makePushPlanCallCount, 1)
+        XCTAssertEqual(productProvider.pushCallCount, 0)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .reviewChanges)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask091DiscardReviewClearsUnresolvedStagedPlan() async {
+        let ownerID = uuid(91)
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.remotePreviewSummary = remotePreviewSummary(
+            hasRemoteSignals: true,
+            counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1)
+        )
+        let catalogProvider = ManualSyncCatalogPushProviderFake(plans: [
+            makeCatalogPushPlan(
+                ownerID: ownerID,
+                candidates: [PushCandidate(entityKind: .product, localID: "91", action: .dryRunCreateCandidate)]
+            )
+        ])
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            ownerID: ownerID,
+            catalogPushProvider: catalogProvider
+        )
+        let now = Date(timeIntervalSince1970: 1_778_500_000)
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(now: now)
+
+        XCTAssertTrue(didStart)
+        XCTAssertTrue(vm.requiresReviewDiscardConfirmation)
+        XCTAssertNotNil(vm.presentationState.reviewSheet)
+
+        vm.cancelReviewFlow()
+
+        XCTAssertFalse(vm.requiresReviewDiscardConfirmation)
+        XCTAssertNil(vm.lastSummary)
+        XCTAssertNil(vm.presentationState.reviewSheet)
+        XCTAssertEqual(vm.semiAutomaticState, .noChanges)
+
+        vm.suggestSemiAutomaticCheckIfAllowed(now: now.addingTimeInterval(1_800))
+
+        XCTAssertEqual(vm.semiAutomaticState, .suggestedCheck)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .checkCloud)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask091CancelledForegroundCheckDoesNotRemainChecking() async throws {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.holdAtPreviewUntilSignaled = true
+        let vm = makeSemiAutomaticViewModel(fake: fake)
+        let now = Date(timeIntervalSince1970: 1_778_500_000)
+
+        let run = Task { await vm.startForegroundSemiAutomaticCheckIfAllowed(now: now) }
+        try await fake.waitUntilPreviewHoldEngaged()
+
+        XCTAssertEqual(vm.semiAutomaticState, .checking)
+
+        run.cancel()
+        fake.releasePreviewHold()
+        _ = await run.value
+
+        XCTAssertFalse(vm.isRunning)
+        XCTAssertEqual(vm.semiAutomaticState, .idle)
+        XCTAssertNil(vm.lastCloudCheckAt)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
     func testStartWhileRunningIgnoresDuplicateCoordinatorRuns() async throws {
         let dryFake = SupabaseManualSyncCoordinatorDryRunFake()
         dryFake.snapshot = SupabaseManualSyncPrivacyCounts(pendingCatalogChangeCount: 1, pendingPriceChangeCount: 0, pendingQueuedCloudOperationCount: 0)
@@ -1641,7 +1915,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
         XCTAssertEqual(review.primaryActionID, .sendCloudChanges)
         XCTAssertTrue(review.primaryActionIsEnabled)
-        XCTAssertEqual(review.primaryActionTitle, "Invia modifiche al cloud")
+        XCTAssertEqual(review.primaryActionTitle, "Prepara invio")
         XCTAssertEqual(review.sections.map(\.id), [.readyToSend])
         XCTAssertEqual(provider.executeCallCount, 0)
         assertSinglePrimaryAction(state)
@@ -2294,7 +2568,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         var review = try XCTUnwrap(vm.presentationState.reviewSheet)
         XCTAssertEqual(review.primaryActionID, .sendCloudChanges)
-        XCTAssertEqual(review.primaryActionTitle, "Invia modifiche al cloud")
+        XCTAssertEqual(review.primaryActionTitle, "Prepara invio")
 
         await vm.sendConfirmedCatalogChanges()
 
@@ -2723,6 +2997,40 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             barcode: barcode,
             productName: productName,
             applyPayload: payload
+        )
+    }
+
+    private func makeSemiAutomaticViewModel(
+        fake: SupabaseManualSyncCoordinatorDryRunFake,
+        ownerID: UUID? = UUID(uuidString: "00000000-0000-0000-0000-000000000091")!,
+        isSignedIn: Bool = true,
+        catalogPushProvider: ManualSyncCatalogPushProviderFake? = nil,
+        productPriceProvider: ManualSyncProductPriceProviderFake? = nil,
+        activityRegistrationProvider: ManualSyncActivityRegistrationProviderFake? = nil,
+        policy: SupabaseManualSyncSemiAutomaticPolicy = SupabaseManualSyncSemiAutomaticPolicy()
+    ) -> SupabaseManualSyncViewModel {
+        SupabaseManualSyncViewModel(
+            coordinator: makeTask075SmallDatasetCoordinator(fake: fake),
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsCatalogPush: catalogPushProvider != nil,
+                supportsProductPriceSync: productPriceProvider != nil,
+                supportsActivityRegistration: activityRegistrationProvider != nil
+            ),
+            initialAuthPresentationContext: SupabaseManualSyncAuthPresentationContext(
+                isSignedIn: isSignedIn,
+                canSignIn: true,
+                isTransitioning: false
+            ),
+            currentLocalApplyOwnerID: { ownerID },
+            catalogPushProvider: catalogPushProvider,
+            currentCatalogPushOwnerID: { ownerID },
+            productPriceProvider: productPriceProvider,
+            currentProductPriceOwnerID: { ownerID },
+            activityRegistrationProvider: activityRegistrationProvider,
+            currentActivityRegistrationOwnerID: { ownerID },
+            semiAutomaticPolicy: policy
         )
     }
 

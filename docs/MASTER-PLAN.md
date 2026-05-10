@@ -4,14 +4,22 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**Progetto IDLE.** Ultimo completato: **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED** (`docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`) — acceptance finale documentata iOS-first con evidenze privacy-safe, build/test PASS, ProductPrice PASS, UI/copy PASS, e residui runtime **PARTIAL / BLOCKED_ENV** accettati (nuovo live `TASK090_*`, Android runtime fresh, import/export UI manuale). **TASK-091 TODO / Planning — non aperto**. Nessun claim production-ready globale 100%.
+**Progetto IDLE**. Nessun task attivo. **Ultimo completato:** **TASK-091 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-091-supabase-smart-semi-automatic-sync-ios.md`) — MVP iOS-first di sync semi-automatica intelligente sopra la card Release: foreground preview read-only bounded, cooldown 30 minuti, anti-reentrancy, guard auth/owner/sessione, staged plan volatile, review/confirm prima di qualunque apply/push/drain, localizzazioni e test PASS. **TASK-092 resta TODO / Planning — non aperto**. Nessun claim production-ready globale 100%; nessun write Supabase live eseguito in TASK-091.
 
-**Precedente completato:** **TASK-089 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`) — benchmark sintetico D89-M read-only/controllato; LG1-LG4 verificati in review, LG5 SKIPPED per gate; D89-L/device reale/Supabase live restano limitazioni documentate.
+**Precedente completato:** **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED** (`docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`) — evidenze privacy-safe, build/test mirati, ProductPrice/UI/copy PASS, residui runtime **PARTIAL / BLOCKED_ENV** accettati (`TASK090_*`, Android fresh, import/export UI).
 
 ## Stato globale
-**IDLE — nessun task attivo.** TASK-090 e' chiuso **DONE / Chiusura — PARTIAL_ACCEPTED** con residui espliciti; **TASK-091** resta **TODO / Planning — non aperto**.
+**IDLE — nessun task attivo.** **TASK-091** e' **DONE / Chiusura — REVIEW PASS** dopo review tecnica e fix mirati. **TASK-092** resta **TODO / Planning — non aperto**. **TASK-090** resta completato precedente **DONE / Chiusura — PARTIAL_ACCEPTED** *(non riaperto)* con residui documentati.
 
-**Ultimo completato:** **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED.** **TASK-089** resta il completato precedente; ancora **DONE / Chiusura**: **TASK-088**, **TASK-087**, **TASK-086**, **TASK-085 (PARTIAL_ACCEPTED)** — come da tabella backlog.
+**Ultimo completato:** **TASK-091 DONE / Chiusura — REVIEW PASS.** **TASK-090** resta il completato precedente; ancora **DONE / Chiusura**: **TASK-089**, **TASK-088**, **TASK-087**, **TASK-086**, **TASK-085 (PARTIAL_ACCEPTED)** — come da tabella backlog.
+
+> **2026-05-09 — REVIEW+FIX/CHIUSURA TASK-091 REVIEW PASS / DONE:** review tecnica completa eseguita su tracking, diff e codice Release sync. Fix mirati applicati: discard della review ora svuota davvero `lastSummary`/staging volatile e non lascia piani applicabili; cancellazione del foreground check dry-run non lascia più `semiAutomaticState == checking`; aggiunti XCTest regressivi. Confermati: policy cooldown 30 minuti, anti-reentrancy, blocco auth/owner/sessione, blocco staged plan non risolto, preview read-only bounded, nessun apply/push/drain silenzioso, UI card Release compatta con una CTA primaria e `confirmationDialog` solo per mutazioni/discard. Check PASS: `git status`, `git diff --check`, `plutil` Localizable IT/EN/ES/zh-Hans, duplicate localization scan, build Debug iPhone 16e iOS 26.2, XCTest mirati Release/ViewModel **95/0**, full XCTest **579/0**. Nessun write Supabase live, nessun dato `TASK091_EXEC_*`, nessun Android runtime, nessun TASK-092. **TASK-091 DONE / Chiusura — REVIEW PASS**; progetto **IDLE**.
+
+> **2026-05-09 — EXECUTION TASK-091 completata / handoff REVIEW:** implementato MVP iOS-first di sync semi-automatica intelligente sopra il flusso Release esistente: policy cooldown foreground 30 minuti, anti-reentrancy, guard auth/owner, stato semi-auto `idle/suggestedCheck/checking/noChanges/changesFound/reviewing/blockedAuth/staleOrConflict/recoverableError`, timestamp ultimo check, foreground read-only cancellabile, review sheet e `confirmationDialog` per mutazioni/discard, preview bounded a 5.000 righe catalogo/prezzi, localizzazioni IT/EN/ES/zh-Hans e test mirati. Check PASS: `xcodebuild build` Debug iPhone 16e iOS 26.2, XCTest mirati Release/ViewModel **93/0**, full XCTest **577/0**, `plutil`, `git diff --check`. Nessun write Supabase live, nessun dato `TASK091_EXEC_*`, nessun Android runtime, nessun TASK-092. **TASK-091 ACTIVE / REVIEW**, responsabile **Claude / Reviewer**, **NON DONE**.
+
+> **2026-05-09 — EXECUTION TASK-091 avviata (override utente):** TASK-091 promosso da **ACTIVE / PLANNING** a **ACTIVE / EXECUTION**, responsabile **Codex / Executor**. Override esplicito autorizza Swift/SwiftUI/SwiftData/Supabase iOS-first, localizzazioni, test/build/simulator dove consentito, Supabase live solo se necessario e sicuro con prefisso **`TASK091_EXEC_*`**. Perimetro: policy semi-auto leggera sopra servizi Release esistenti, cooldown foreground 30 minuti, anti-reentrancy, auth/owner guard, staged plan volatile, review/confirm prima di qualunque apply/push/drain, nessuna sync mutativa silenziosa. **TASK-091 NON DONE**; obiettivo handoff **READY FOR REVIEW**; **TASK-092 non aperto**; ultimo completato resta **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED**.
+
+> **2026-05-09 — PLANNING TASK-091 inizializzato (solo markdown — user override):** creato **`docs/TASKS/TASK-091-supabase-smart-semi-automatic-sync-ios.md`**; progetto **IDLE → ACTIVE** unicamente per **PLANNING TASK-091**. **TASK-091 ACTIVE / PLANNING**, responsabile **Claude / Planner**. **Ultimo completato invariato TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED**. **TASK-091 NON DONE**, **NON READY FOR EXECUTION**. **TASK-092 non aperto**. Vietati questo turno: Swift/Kotlin/SQL/migration/RLS/`Localizable.strings`/`project.pbxproj`, write Supabase live, seed/smoke runtime obbligatori, build/test obbligatori, cleanup distruttivo, sync automatica reale (Timer/BGTask/Realtime/polling/worker), claim DONE/production-ready globale 100%, apertura TASK-092+.
 
 > **2026-05-09 17:26 -0400 — REVIEW+CHIUSURA TASK-090 PARTIAL_ACCEPTED / DONE:** review severa completata su MASTER-PLAN, file TASK-090, evidence folder e diff corrente. Fix diretto solo documentale: chiarito che l'handoff planning-init e le sezioni "futura execution" sono storiche/superate, e aggiornata decisione finale a **DONE / Chiusura — PARTIAL_ACCEPTED**. Check review rieseguiti: `git status`, `git diff --check`, `xcodebuild -list`, build Debug, build Release, XCTest mirati manual sync/ProductPrice/pull/export/localization **314/0**, full XCTest **567/0**, `plutil`, grep `TASK090` source/test e Release binary, secret scan evidenze/tracking. Residui accettati: nuovo live `TASK090_*` **BLOCKED_ENV/PARTIAL**, Android runtime fresh **SKIPPED/PARTIAL**, import/export UI manuale **PARTIAL**. Nessun dato reale, segreto, cleanup distruttivo, patch Swift/Kotlin/SQL/RLS/Localizable o sync automatica/background. **Progetto IDLE**; **TASK-091 TODO / Planning — non aperto**; nessun claim production-ready globale 100%.
 
@@ -265,6 +273,50 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 - Import/export runtime e current/previous price sono verificati end-to-end.
 - La UI Release non promette “tutto sincronizzato” se non e' stato davvero applicato/inviato/verificato nel perimetro del task.
 - Nessun dato reale viene modificato senza consenso separato e tracciato.
+
+## Roadmap Supabase iOS — sync semi-automatica intelligente e parità Android
+
+**Ambito:** questa sezione è solo **backlog / pianificazione** nel MASTER-PLAN. **Non autorizza EXECUTION** né promuove alcun task ad ACTIVE da sola.
+
+- Questa roadmap **NON autorizza execution**.
+- Nessuno **Swift / Kotlin / SQL / Supabase live / write / smoke** viene eseguito da questo aggiornamento documentale al MASTER-PLAN.
+- Ogni task richiede **file task dedicato**, **planning separato** e **user override esplicito** prima di qualunque execution.
+- **Obiettivo:** passare dalla sync **manuale guidata** attuale a una sync **semi-automatica** efficiente, sicura e **resource-aware**, coerente con Android come riferimento funzionale ma implementata in modo **SwiftUI / SwiftData / Supabase** nativo su iOS.
+- La parte “automatica” deve essere **prudente**: niente loop, niente polling aggressivo, niente full reload, niente spam di messaggi, niente background costoso.
+- **Ordine:** prima **baseline runtime manuale** verificata, poi **automazione progressiva**.
+
+**Contesto sync iOS oggi:** il flusso Release è ancora principalmente **manuale guidato**: Controlla cloud → Rivedi → Aggiorna questo dispositivo → Invia modifiche al cloud → Registra attività sul cloud. Non è ancora presente una sync automatica intelligente equivalente alla filosofia Android. **Android** resta riferimento funzionale; **non** va copiato WorkManager 1:1 — su iOS valutare **ScenePhase**, **Task** in foreground, **retry manuale**, **BackgroundTasks** solo se davvero necessarie e sicure.
+
+| Priorità | Task ID | Stato | Obiettivo | Perimetro | Fuori perimetro |
+| --- | --- | --- | --- | --- | --- |
+| P0 | TASK-091 | **DONE / Chiusura — REVIEW PASS** | MVP iOS-first: sync semi-automatica intelligente sopra la sync manuale Release esistente | Implementati e verificati: inventario sync manuale Release, policy trigger con cooldown/anti-reentrancy/auth-owner/staged guard, UX check foreground/review, preflight stale/conflict, ProductPrice/outbox nel flusso review confermato, parity matrix ed evidenze privacy-safe | Nessun Kotlin/SQL/RLS/migration/backend live, nessun Timer/BGTask/Realtime/polling/worker, nessuna sync mutativa silenziosa, nessun claim production-ready globale 100%, **TASK-092 non aperto** |
+| P0 | TASK-092 | TODO / Planning — non aperto | Auto pull leggero all’apertura / foreground | Introdurre un controllo cloud opportunistico e leggero quando l’app entra in foreground o viene aperta: auth/session gate, cooldown, preview remota bounded, no UI bloccante, nessun apply automatico distruttivo, summary chiaro se ci sono dati da rivedere | Push automatico, drain outbox automatico, polling continuo, BGTask obbligatorio, apply silenzioso di conflitti, full reload |
+| P0 | TASK-093 | TODO / Planning — non aperto | Auto enqueue locale dopo modifiche SwiftData | Quando l’utente modifica prodotto/fornitore/categoria/prezzo, registrare in modo compatto una pending operation/outbox locale; dedupe, coalescing per barcode/product, changed count bounded, privacy-safe payload, idempotenza locale | Push remoto immediato, RPC live obbligatoria, schema nuovo se non necessario, sync background, cleanup outbox distruttivo |
+| P0 | TASK-094 | TODO / Planning — non aperto | Push intelligente aggregato e resource-aware | Invio locale → Supabase con batching bounded, coalescing, retry controllato, backoff/cooldown, owner/session recheck, stale baseline guard, ProductPrice dedupe/idempotenza, no N+1, no spam messaggi | Realtime, worker permanente, polling aggressivo, invio ogni singolo keystroke, merge conflitti avanzato campo-per-campo |
+| P1 | TASK-095 | TODO / Planning — non aperto | Policy lifecycle/background iOS | Decidere e implementare la policy iOS-native: ScenePhase/foreground Task, manual retry, eventuale BackgroundTasks solo con gate severi; UX per “sync in corso”, “rimanda”, “riprendi”, “annulla”, “riprova” | Copiare WorkManager Android 1:1, servizi sempre attivi, timer infinito, sync non cancellabile, consumo batteria non controllato |
+| P1 | TASK-096 | TODO / Planning — non aperto | Acceptance finale sync semi-automatica | Verifica finale dopo TASK-091…095: smoke fresh cross-platform, dataset medio sandbox, import/export UI, ProductPrice current/previous, outbox drain, retry/cancel, cold start/foreground, regressioni build/test, no segreti, no dati reali | Nuove feature, redesign globale, claim 100% senza prove runtime, cleanup distruttivo |
+
+### Definizione di “sync semi-automatica intelligente”
+
+- All’apertura o ritorno in foreground, iOS può controllare Supabase in modo leggero, bounded e cancellabile.
+- Le modifiche locali non devono partire tutte subito come richieste separate: devono essere accumulate, deduplicate e inviate in batch sicuri.
+- L’utente deve mantenere controllo su operazioni rischiose: conflitti, grandi quantità di modifiche, ProductPrice ambiguo, baseline stale.
+- L’automazione deve ridurre lavoro manuale senza introdurre consumo eccessivo, loop, race condition o messaggi duplicati.
+- La UI Release non deve promettere “tutto sincronizzato” se non sono stati davvero applicati/inviati/verificati i dati.
+- SwiftData resta cache/source locale operativa; Supabase è backend condiviso; la sync deve gestire offline, retry, timestamp, owner/session e idempotenza.
+- Android resta riferimento funzionale per dirty set, outbox, retry e batch, ma iOS deve usare architettura Apple-native.
+
+### Sequenza consigliata
+
+**TASK-091 → TASK-092 → TASK-093 → TASK-094 → TASK-095 → TASK-096**
+
+- TASK-091 implementa il primo MVP iOS-first della semi-automatica sopra la baseline manuale Release gia' documentata da TASK-072…090, senza aprire TASK-092 e senza mutazioni silenziose.
+- TASK-092 introduce solo auto-pull/preview leggero, non mutazioni rischiose.
+- TASK-093 prepara l’accumulo locale.
+- TASK-094 abilita il push intelligente.
+- TASK-095 decide la strategia lifecycle/background.
+- TASK-096 è la chiusura finale con evidenze.
+
 > **2026-05-07 23:15 -04 — REVIEW+FIX/CHIUSURA TASK-063/TASK-070/TASK-071 (user override controllato):** review completa eseguita e chiusura coerente. **TASK-063** approvato e chiuso **DONE / Chiusura** come planning/documentazione base architetturale production-safe, non come execution codice. **TASK-070** approvato e chiuso **DONE / Chiusura** come planning/gap analysis pull preview read-only; TASK-071 resta execution separata avviata con override utente. **TASK-071** approvato con fix diretto piccolo: se `remotePreviewProvider` e' presente, il coordinator esegue preview-only anche con pending locali zero e termina dopo `.remotePreview` + `.summary`; con provider `nil` resta invariato il comportamento TASK-069. Check PASS: build Debug iPhone 16e OS 26.2, build Release iPhone 16e OS 26.2, XCTest richiesti **86 test** con `-parallel-testing-enabled NO`, `git diff --check`, grep anti-scope produzione/Release path e no raw `SyncPreview` nella card Release. Warning residui preesistenti/out-of-scope in `SyncEventOutboxDrainService.swift`, `SupabaseProductPriceApplyService.swift` e test DEBUG outbox. Confermati: no `OptionsView`, no nuova UI/Localizable, no live sync, no apply/push/ProductPrice push/drain/enqueue/baseline writer, no backend/Supabase/SQL/Android, **nessun TASK-072 creato**. **Workspace IDLE**, nessun task attivo. Prossimo consigliato solo testuale: task separato futuro per UI/CTA «Controlla cloud» o integrazione preview remota nella Release UI, solo dopo nuovo planning/override.
 > **2026-05-07 23:04 -04 — EXECUTION TASK-071 completata / handoff REVIEW:** implementato strato preview remota read-only/fakeable: protocol/provider `SupabaseManualSyncRemotePreviewProviding`, DTO summary aggregato privacy-safe, mapper outcome, adapter opzionale su `SupabasePullPreviewService`, DI opzionale nel coordinator con default `nil` e Release factory invariata. Preview-only con provider presente termina dopo `.remotePreview` + `.summary` e non avvia confirmation/apply/push/drain/flush; il messaggio interno no-action evita di promettere "Tutto aggiornato" su un controllo read-only. Check PASS: XCTest mirati iniziali nuovi/coordinator **35 test**, regressioni richieste finali **85 test**, build Debug iPhone 16e OS 26.2, build Release iPhone 16e OS 26.2, `git diff --check`, grep statici anti-scope e no raw `SyncPreview` nella card Release. Nessuna UI/Localizable, nessuna live call obbligatoria, nessun apply/push/drain/enqueue/baseline writer, nessun backend/Android/SQL. **TASK-071 ACTIVE / REVIEW**, responsabile **Claude / Reviewer**, **non DONE**.
 > **2026-05-07 22:55 -04 — EXECUTION TASK-071 avviata (user override controllato):** creato **`docs/TASKS/TASK-071-supabase-manual-sync-remote-preview-readonly-adapter-ios.md`** e promosso a **ACTIVE / EXECUTION**, responsabile **Cursor / Executor**. Perimetro: adapter/protocol/DTO summary privacy-safe per preview remota read-only, mapper outcome, provider fakeable, wiring opzionale nel coordinator via DI con default `nil` e non attivo in Release. Vietati: **OptionsView**, nuova UI/CTA, `Localizable`, Supabase live obbligatorio, apply/push/drain/flush/enqueue, baseline writer, `record_sync_event`, SQL/backend/Android, Timer/BGTask/Realtime/worker/polling, TASK-072. **TASK-070** resta planning base precedente, non riaperto.
@@ -497,13 +549,17 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Workflow task attivo
 - **Task attivo:** Nessuno
+- **File task attivo:** N/A
 - **Stato globale:** **IDLE**
-- **Ultimo completato:** **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED**
-- **File task ultimo completato:** `docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`
+- **Ultimo completato:** **TASK-091 DONE / Chiusura — REVIEW PASS**
+- **File task ultimo completato:** `docs/TASKS/TASK-091-supabase-smart-semi-automatic-sync-ios.md`
+- **Stato TASK-091:** **DONE / Chiusura — REVIEW PASS** (MVP iOS-first semi-auto Release verificato; nessuna write silenziosa Supabase; TASK-092 non aperto)
+- **Precedente completato:** **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED**
+- **File task TASK-090:** `docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`
 - **Stato TASK-090:** **DONE / Chiusura — PARTIAL_ACCEPTED** (acceptance documentata con residui runtime accettati; nessun claim 100%)
-- **Precedente completato:** **TASK-089 DONE / Chiusura — REVIEW PASS**
+- **Completato precedente:** **TASK-089 DONE / Chiusura — REVIEW PASS**
 - **File task TASK-089:** `docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`
-- **Nota tracking:** **TASK-091 TODO / Planning — non aperto**; **TASK-090 DONE** non equivale a production-ready globale 100%.
+- **Nota tracking:** **TASK-092 non aperto**; **TASK-090 DONE** non equivale a production-ready globale 100%.
 
 ## Fonti di verità
 - Questo file = vista globale, backlog, task attivo, avanzamento generale
@@ -544,9 +600,10 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** Nessuno — progetto **IDLE**. **TASK-091** resta **TODO / Planning — non aperto**.
-- **Ultimo completato:** **TASK-090** (`docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`) — **DONE / Chiusura — PARTIAL_ACCEPTED** (acceptance finale documentata iOS-first: ProductPrice e UI/copy PASS, cross-platform/import-export/live `TASK090_*` PARTIAL/BLOCKED_ENV accettati; nessun claim production-ready globale 100%).
-- **Precedente completato:** **TASK-089** (`docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`) — **DONE / Chiusura — REVIEW PASS** (benchmark sintetico D89-M read-only/controllato: LG1-LG3 PARTIAL motivati, LG4 PASS, LG5 SKIPPED; harness DEBUG-only e Release binary clean; nessun claim production-ready globale).
+- **Task attivo corrente:** Nessuno — progetto **IDLE**. **TASK-092 non aperto**.
+- **Ultimo completato:** **TASK-091** (`docs/TASKS/TASK-091-supabase-smart-semi-automatic-sync-ios.md`) — **DONE / Chiusura — REVIEW PASS** (MVP iOS-first sync semi-automatica intelligente sopra Release; build/test PASS; nessuna write Supabase live o mutazione silenziosa; TASK-092 non aperto).
+- **Precedente completato:** **TASK-090** (`docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`) — **DONE / Chiusura — PARTIAL_ACCEPTED** (acceptance finale documentata iOS-first: ProductPrice e UI/copy PASS, cross-platform/import-export/live `TASK090_*` PARTIAL/BLOCKED_ENV accettati; nessun claim production-ready globale 100%).
+- **Completato precedente:** **TASK-089** (`docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`) — **DONE / Chiusura — REVIEW PASS** (benchmark sintetico D89-M read-only/controllato: LG1-LG3 PARTIAL motivati, LG4 PASS, LG5 SKIPPED; harness DEBUG-only e Release binary clean; nessun claim production-ready globale).
 - **Completato precedente:** **TASK-088** (`docs/TASKS/TASK-088-productprice-post-push-identity-ios.md`) — **DONE / Chiusura / PASS** (ProductPrice post-push identity reale: `remoteID` persistito dopo push e reload SwiftData/context, secondo push idempotente, Supabase read-back 4 righe / 0 duplicati, Android reference last/prev coerente; nessun claim production-ready globale).
 - **Completato precedente:** **TASK-087** (`docs/TASKS/TASK-087-android-ios-supabase-small-runtime-smoke.md`) — **DONE / Chiusura** (smoke sandbox `TASK087_*` VERIFIED_RUNTIME dopo review PATCHED_PASS; runner DEBUG-only dove documentato).
 - **TASK-086:** **DONE / Chiusura** (trigger additivi `updated_at` catalogo, drift migration history accettato come follow-up separato, nessun `migration repair` dentro il task).
@@ -828,10 +885,12 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-076 | Supabase mutative sync gap audit iOS | DONE | HIGH |
 | TASK-077 | Supabase mutative sync Release review sheet iOS | DONE | HIGH |
 | TASK-078 | Supabase pull apply locale guidato Release iOS | DONE | HIGH |
+| TASK-091 | Supabase iOS — sync semi-automatica intelligente e parità Android (MVP iOS-first) | DONE / Chiusura — REVIEW PASS | HIGH |
 
 ## Task completati
 | ID | Titolo | Data completamento |
 |----|--------|--------------------|
+| TASK-091 | Supabase iOS — sync semi-automatica intelligente e parità Android (MVP iOS-first) | 2026-05-09 |
 | TASK-001 | Gap Audit iOS vs Android — Censimento funzionalità mancanti | 2026-03-19 |
 | TASK-003 | PreGenerate append/reload parity | 2026-03-20 |
 | TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | 2026-03-20 |
