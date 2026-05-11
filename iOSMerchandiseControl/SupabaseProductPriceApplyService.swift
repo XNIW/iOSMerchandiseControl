@@ -321,15 +321,11 @@ nonisolated enum ProductPriceEffectiveAtCanonicalizer {
             return date
         }
 
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = fractional.date(from: value) {
+        if let date = fractionalISO8601Formatter().date(from: value) {
             return date
         }
 
-        let standard = ISO8601DateFormatter()
-        standard.formatOptions = [.withInternetDateTime]
-        return standard.date(from: value)
+        return standardISO8601Formatter().date(from: value)
     }
 
     static func canonicalString(from date: Date) -> String {
@@ -337,12 +333,42 @@ nonisolated enum ProductPriceEffectiveAtCanonicalizer {
     }
 
     private static func dateFormatter() -> DateFormatter {
+        let key = "ProductPriceEffectiveAtCanonicalizer.dateFormatter"
+        if let formatter = Thread.current.threadDictionary[key] as? DateFormatter {
+            return formatter
+        }
+
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         formatter.isLenient = false
+        Thread.current.threadDictionary[key] = formatter
+        return formatter
+    }
+
+    private static func fractionalISO8601Formatter() -> ISO8601DateFormatter {
+        let key = "ProductPriceEffectiveAtCanonicalizer.fractionalISO8601Formatter"
+        if let formatter = Thread.current.threadDictionary[key] as? ISO8601DateFormatter {
+            return formatter
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        Thread.current.threadDictionary[key] = formatter
+        return formatter
+    }
+
+    private static func standardISO8601Formatter() -> ISO8601DateFormatter {
+        let key = "ProductPriceEffectiveAtCanonicalizer.standardISO8601Formatter"
+        if let formatter = Thread.current.threadDictionary[key] as? ISO8601DateFormatter {
+            return formatter
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        Thread.current.threadDictionary[key] = formatter
         return formatter
     }
 }
