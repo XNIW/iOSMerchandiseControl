@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import SwiftData
 
@@ -189,7 +190,12 @@ extension SyncEventOutboxProducerOutcome {
         guard let fingerprint else { return nil }
         let trimmed = fingerprint.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
-        return "\(prefix):\(trimmed)"
+        return "\(prefix):\(sha256Hex(trimmed))"
+    }
+
+    private static func sha256Hex(_ value: String) -> String {
+        let digest = SHA256.hash(data: Data(value.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }
 

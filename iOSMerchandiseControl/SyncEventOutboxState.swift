@@ -392,7 +392,12 @@ nonisolated enum SyncEventOutboxPrivacySanitizer {
         )
         sanitized = replacingMatches(
             in: sanitized,
-            pattern: #"https?://[^\s]*\?[^\s]*"#,
+            pattern: #"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b"#,
+            with: "[redacted-email]"
+        )
+        sanitized = replacingMatches(
+            in: sanitized,
+            pattern: #"https?://[^\s]+"#,
             with: "[redacted-url]"
         )
         sanitized = replacingMatches(
@@ -448,7 +453,15 @@ nonisolated enum SyncEventOutboxPrivacySanitizer {
             return true
         }
 
-        if normalized.contains("?")
+        if normalized.range(
+            of: #"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil {
+            return true
+        }
+
+        if normalized.range(of: #"https?://"#, options: [.regularExpression, .caseInsensitive]) != nil
+            || normalized.contains("?")
             || normalized.range(of: #"[?&][A-Za-z0-9_.~-]+="#, options: .regularExpression) != nil {
             return true
         }

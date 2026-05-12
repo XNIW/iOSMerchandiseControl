@@ -996,9 +996,11 @@ struct GeneratedView: View {
             try context.save()
         } catch {
             entry.hasPersistedJSONDecodeFault = false
+            #if DEBUG
             debugPrint(
                 "[HistoryEntry JSON persist] uid=\(entry.uid.uuidString) id=\(entry.id) error=\(error)"
             )
+            #endif
         }
     }
 
@@ -1014,9 +1016,11 @@ struct GeneratedView: View {
             return true
         }
 
+        #if DEBUG
         debugPrint(
             "[GeneratedView] INVARIANT_FAIL data=\(dataCount) editable=\(editableCount) complete=\(completeCount) context=\(context)"
         )
+        #endif
         gridParallelArraysFault = true
         return false
     }
@@ -1797,7 +1801,9 @@ struct GeneratedView: View {
 
     private func makeRowDetailData(for rowIndex: Int, headerRow: [String], isComplete: Bool, autoFocusCounted: Bool, skipProductNameLookup: Bool = false) -> RowDetailData {
         guard data.indices.contains(rowIndex) else {
+            #if DEBUG
             debugPrint("[GeneratedView] ROW_DETAIL_SKIP rowIndex=\(rowIndex) context=makeRowDetailData")
+            #endif
             return RowDetailData(
                 rowIndex: rowIndex,
                 barcode: "",

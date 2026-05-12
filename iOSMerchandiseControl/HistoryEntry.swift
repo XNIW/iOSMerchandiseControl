@@ -180,11 +180,13 @@ final class HistoryEntry {
                 hasFault: false
             )
         } catch {
+            #if DEBUG
             if HistoryEntryJSONLogDedup.shared.shouldLog(entryUID: uid, field: field) {
                 debugPrint(
                     "[HistoryEntry JSON] uid=\(uid.uuidString) id=\(id) field=\(field.rawValue) error=\(error)"
                 )
             }
+            #endif
 
             return HistoryEntryJSONDecodeOutcome(value: defaultValue, hasFault: true)
         }

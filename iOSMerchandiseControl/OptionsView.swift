@@ -261,7 +261,7 @@ struct OptionsView: View {
                     DisclosureGroup(L("options.supabase.auth.debugDetails")) {
                         LabeledContent(
                             L("options.supabase.auth.debug.userId"),
-                            value: sessionInfo.userID.uuidString
+                            value: sessionInfo.privacySafeUserID
                         )
                         LabeledContent(
                             L("options.supabase.auth.debug.provider"),
@@ -269,7 +269,7 @@ struct OptionsView: View {
                         )
                         LabeledContent(
                             L("options.supabase.auth.debug.email"),
-                            value: sessionInfo.displayEmail ?? L("options.supabase.preview.valueMissing")
+                            value: sessionInfo.privacySafeDisplayEmail ?? L("options.supabase.preview.valueMissing")
                         )
                     }
                 }
@@ -1875,7 +1875,7 @@ struct OptionsView: View {
         case .signingIn:
             return L("options.supabase.auth.status.signingIn")
         case .signedIn:
-            if let email = supabaseAuthViewModel.sessionInfo?.displayEmail {
+            if let email = supabaseAuthViewModel.sessionInfo?.privacySafeDisplayEmail {
                 return L("options.supabase.auth.status.signedInEmail", email)
             }
             return L("options.supabase.auth.status.signedIn")

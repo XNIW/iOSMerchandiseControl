@@ -210,7 +210,9 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
     }
 
     func createSuppliers(_ payloads: [SupabaseManualPushSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
-        try await insert(payloads, table: Table.suppliers, columns: Table.supplierColumns)
+        let ownerUserID = try await requireAuthenticatedSession()
+        try validateCreatePayloadOwners(payloads.map(\.ownerUserID), ownerUserID: ownerUserID)
+        return try await insert(payloads, table: Table.suppliers, columns: Table.supplierColumns)
     }
 
     func updateSupplier(id: UUID, payload: SupabaseManualPushSupplierUpdatePayload) async throws -> RemoteInventorySupplierRow {
@@ -226,7 +228,9 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
     }
 
     func createCategories(_ payloads: [SupabaseManualPushCategoryCreatePayload]) async throws -> [RemoteInventoryCategoryRow] {
-        try await insert(payloads, table: Table.categories, columns: Table.categoryColumns)
+        let ownerUserID = try await requireAuthenticatedSession()
+        try validateCreatePayloadOwners(payloads.map(\.ownerUserID), ownerUserID: ownerUserID)
+        return try await insert(payloads, table: Table.categories, columns: Table.categoryColumns)
     }
 
     func updateCategory(id: UUID, payload: SupabaseManualPushCategoryUpdatePayload) async throws -> RemoteInventoryCategoryRow {
@@ -242,7 +246,9 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
     }
 
     func createProducts(_ payloads: [SupabaseManualPushProductCreatePayload]) async throws -> [RemoteInventoryProductRow] {
-        try await insert(payloads, table: Table.products, columns: Table.productColumns)
+        let ownerUserID = try await requireAuthenticatedSession()
+        try validateCreatePayloadOwners(payloads.map(\.ownerUserID), ownerUserID: ownerUserID)
+        return try await insert(payloads, table: Table.products, columns: Table.productColumns)
     }
 
     func updateProduct(id: UUID, payload: SupabaseManualPushProductUpdatePayload) async throws -> RemoteInventoryProductRow {
@@ -333,7 +339,6 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
         table: String,
         columns: String
     ) async throws -> [Row] {
-        try await requireAuthenticatedSession()
         do {
             return try await clientProvider.client
                 .from(table)
@@ -346,18 +351,29 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
         }
     }
 
+    private func validateCreatePayloadOwners(_ payloadOwnerIDs: [UUID], ownerUserID: UUID) throws {
+        guard payloadOwnerIDs.allSatisfy({ $0 == ownerUserID }) else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+                statusCode: nil,
+                code: nil,
+                message: "Owner mismatch."
+            )
+        }
+    }
+
     private func update<Row: Decodable & Sendable>(
         _ payload: some Encodable,
         table: String,
         columns: String,
         id: UUID
     ) async throws -> Row {
-        try await requireAuthenticatedSession()
+        let ownerUserID = try await requireAuthenticatedSession()
         do {
             return try await clientProvider.client
                 .from(table)
                 .update(payload)
                 .eq("id", value: id.uuidString)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
                 .select(columns)
                 .single()
                 .execute()
@@ -372,12 +388,13 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
         columns: String,
         id: UUID
     ) async throws -> Row {
-        try await requireAuthenticatedSession()
+        let ownerUserID = try await requireAuthenticatedSession()
         do {
             return try await clientProvider.client
                 .from(table)
                 .select(columns)
                 .eq("id", value: id.uuidString)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
                 .limit(1)
                 .single()
                 .execute()
@@ -392,11 +409,12 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
         columns: String,
         ids: Set<UUID>
     ) async throws -> [Row] {
-        try await requireAuthenticatedSession()
+        let ownerUserID = try await requireAuthenticatedSession()
         do {
             return try await clientProvider.client
                 .from(table)
                 .select(columns)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
                 .in("id", values: ids.sorted { $0.uuidString < $1.uuidString }.map(\.uuidString))
                 .execute()
                 .value
@@ -405,9 +423,10 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
         }
     }
 
-    private func requireAuthenticatedSession() async throws {
+    private func requireAuthenticatedSession() async throws -> UUID {
         do {
-            _ = try await clientProvider.client.auth.session
+            let session = try await clientProvider.client.auth.session
+            return session.user.id
         } catch {
             throw SupabaseInventoryServiceError.sessionMissing
         }

@@ -269,11 +269,15 @@ struct ContentView: View {
         Task(priority: .utility) {
             do {
                 let inserted = try await runner.runIfNeeded()
+                #if DEBUG
                 if inserted > 0 {
                     debugPrint("[Backfill] Inseriti \(inserted) record ProductPrice legacy.")
                 }
+                #endif
             } catch {
+                #if DEBUG
                 debugPrint("[Backfill] Errore durante il backfill prezzi: \(error)")
+                #endif
             }
         }
     }

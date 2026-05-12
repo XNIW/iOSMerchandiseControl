@@ -227,7 +227,9 @@ struct EditProductView: View {
             dismiss()
         } catch {
             context.rollback()
+            #if DEBUG
             print("Errore durante il salvataggio locale.")
+            #endif
         }
     }
 

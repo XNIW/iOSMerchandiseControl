@@ -725,12 +725,12 @@ nonisolated private enum DatabaseImportPipeline {
         do {
             rows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: sheetName)
         } catch {
-            debugPrint("Full import: impossibile leggere il foglio \(sheetName), skip.")
+            debugLogFullImport("impossibile leggere un foglio richiesto, skip.")
             return []
         }
 
         guard !rows.isEmpty else {
-            debugPrint("Full import: foglio \(sheetName) vuoto, skip.")
+            debugLogFullImport("foglio richiesto vuoto, skip.")
             return []
         }
 
@@ -738,12 +738,12 @@ nonisolated private enum DatabaseImportPipeline {
             $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }
         guard let nameIndex = header.firstIndex(of: "name") else {
-            debugPrint("Full import: foglio \(sheetName) senza colonna name, skip.")
+            debugLogFullImport("foglio richiesto senza colonna name, skip.")
             return []
         }
 
         guard rows.count > 1 else {
-            debugPrint("Full import: foglio \(sheetName) con soli header, skip.")
+            debugLogFullImport("foglio richiesto con soli header, skip.")
             return []
         }
 
@@ -856,6 +856,7 @@ nonisolated private enum DatabaseImportPipeline {
         rows: Int,
         extraFields: [String] = []
     ) {
+        #if DEBUG
         let formattedElapsed = String(format: "%.2f", elapsed)
         var fields = ["phase=\(phase)", "elapsed=\(formattedElapsed)s", "rows=\(rows)"]
         if let sheet {
@@ -863,9 +864,17 @@ nonisolated private enum DatabaseImportPipeline {
         }
         fields.append(contentsOf: extraFields)
         print("[TASK-011] \(fields.joined(separator: " "))")
+        #endif
+    }
+
+    private static func debugLogFullImport(_ message: @autoclosure () -> String) {
+        #if DEBUG
+        debugPrint("Full import: \(message())")
+        #endif
     }
 
     private static func logApplyResult(_ result: ImportApplyResult) {
+        #if DEBUG
         var fields = [
             "phase=apply_result",
             "productsInserted=\(result.productsInserted)",
@@ -878,6 +887,7 @@ nonisolated private enum DatabaseImportPipeline {
         ]
         fields.append("priceHistoryError=\(result.priceHistoryError ?? "nil")")
         print("[TASK-011] \(fields.joined(separator: " "))")
+        #endif
     }
 
     private static func applyImportAnalysis(
@@ -1032,7 +1042,7 @@ nonisolated private enum DatabaseImportPipeline {
         do {
             let rows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: sheetName)
             guard !rows.isEmpty else {
-                debugPrint("Full import: foglio \(sheetName) vuoto, skip.")
+                debugLogFullImport("foglio storico prezzi vuoto, skip.")
                 return nil
             }
 
@@ -1043,7 +1053,7 @@ nonisolated private enum DatabaseImportPipeline {
                   let timestampIndex = indexForPriceHistoryColumn("timestamp", in: header),
                   let typeIndex = indexForPriceHistoryColumn("type", in: header),
                   let newPriceIndex = indexForPriceHistoryColumn("newPrice", in: header) else {
-                debugPrint("Full import: foglio \(sheetName) con header non valido, skip.")
+                debugLogFullImport("foglio storico prezzi con header non valido, skip.")
                 return nil
             }
 
@@ -1084,7 +1094,7 @@ nonisolated private enum DatabaseImportPipeline {
 
             entries = parsedEntries
         } catch {
-            debugPrint("Full import: impossibile leggere il foglio \(sheetName), skip.")
+            debugLogFullImport("impossibile leggere il foglio storico prezzi, skip.")
             return nil
         }
 
@@ -2105,7 +2115,9 @@ struct DatabaseView: View {
             try context.save()
         } catch {
             context.rollback()
+            #if DEBUG
             print("Errore durante l'eliminazione.")
+            #endif
         }
     }
 

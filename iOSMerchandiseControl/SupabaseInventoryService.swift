@@ -42,7 +42,6 @@ nonisolated enum SupabaseInventoryServiceError: Error, Sendable {
         guard let text = message?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
             return nil
         }
-
         let lowercased = text.lowercased()
         if lowercased.contains("authorization")
             || lowercased.contains("bearer ")
@@ -51,11 +50,7 @@ nonisolated enum SupabaseInventoryServiceError: Error, Sendable {
             return nil
         }
 
-        if text.count > 240 {
-            return String(text.prefix(240)) + "..."
-        }
-
-        return text
+        return SyncEventOutboxPrivacySanitizer.sanitizeErrorMessage(text, maxLength: 240)
     }
 }
 
@@ -398,11 +393,11 @@ actor SupabaseInventoryService {
     }
 
     func fetchTask045RemoteCollisionSummary(limit: Int = 50) async throws -> SupabaseTask045RemoteCollisionSummary {
-        try await requireAuthenticatedSession()
+        let ownerUserID = try await requireAuthenticatedSession()
         let clampedLimit = max(1, min(limit, 50))
-        let suppliers = try await fetchTask045Suppliers(limit: clampedLimit)
-        let categories = try await fetchTask045Categories(limit: clampedLimit)
-        let products = try await fetchTask045Products(limit: clampedLimit)
+        let suppliers = try await fetchTask045Suppliers(ownerUserID: ownerUserID, limit: clampedLimit)
+        let categories = try await fetchTask045Categories(ownerUserID: ownerUserID, limit: clampedLimit)
+        let products = try await fetchTask045Products(ownerUserID: ownerUserID, limit: clampedLimit)
 
         return SupabaseTask045RemoteCollisionSummary(
             supplierCount: suppliers.count,
@@ -481,7 +476,7 @@ actor SupabaseInventoryService {
     }
 
     func fetchProductPricesPreviewPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {
-        try await requireAuthenticatedSession()
+        let ownerUserID = try await requireAuthenticatedSession()
         let client = clientProvider.client
         let start = max(0, from)
         let end = max(start, min(to, start + 999))
@@ -490,6 +485,7 @@ actor SupabaseInventoryService {
             let rows: [RemoteInventoryProductPriceRow] = try await client
                 .from("inventory_product_prices")
                 .select("id,owner_user_id,product_id,type,price,effective_at,created_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
                 .order("product_id", ascending: true)
                 .order("type", ascending: true)
                 .order("effective_at", ascending: true)
@@ -650,7 +646,7 @@ actor SupabaseInventoryService {
         columns: String,
         limit: Int
     ) async throws -> [Row] {
-        try await requireAuthenticatedSession()
+        let ownerUserID = try await requireAuthenticatedSession()
         let client = clientProvider.client
         let clampedLimit = max(1, min(limit, 1_000))
 
@@ -658,6 +654,7 @@ actor SupabaseInventoryService {
             let rows: [Row] = try await client
                 .from(table)
                 .select(columns)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
                 .order(Self.stablePageOrderColumn, ascending: true)
                 .limit(clampedLimit)
                 .execute()
@@ -683,7 +680,7 @@ actor SupabaseInventoryService {
         from: Int,
         to: Int
     ) async throws -> [Row] {
-        try await requireAuthenticatedSession()
+        let ownerUserID = try await requireAuthenticatedSession()
         let client = clientProvider.client
         let start = max(0, from)
         let end = max(start, min(to, start + 999))
@@ -692,6 +689,7 @@ actor SupabaseInventoryService {
             let rows: [Row] = try await client
                 .from(table)
                 .select(columns)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
                 .order(Self.stablePageOrderColumn, ascending: true)
                 .range(from: start, to: end)
                 .execute()
@@ -1116,11 +1114,12 @@ actor SupabaseInventoryService {
         }
     }
 
-    private func fetchTask045Suppliers(limit: Int) async throws -> [RemoteInventorySupplierRow] {
+    private func fetchTask045Suppliers(ownerUserID: UUID, limit: Int) async throws -> [RemoteInventorySupplierRow] {
         do {
             return try await clientProvider.client
                 .from("inventory_suppliers")
                 .select("id,owner_user_id,name,updated_at,deleted_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
                 .gte("name", value: Self.task045Prefix)
                 .lt("name", value: Self.task045UpperBound)
                 .order(Self.stablePageOrderColumn, ascending: true)
@@ -1141,11 +1140,12 @@ actor SupabaseInventoryService {
         }
     }
 
-    private func fetchTask045Categories(limit: Int) async throws -> [RemoteInventoryCategoryRow] {
+    private func fetchTask045Categories(ownerUserID: UUID, limit: Int) async throws -> [RemoteInventoryCategoryRow] {
         do {
             return try await clientProvider.client
                 .from("inventory_categories")
                 .select("id,owner_user_id,name,updated_at,deleted_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
                 .gte("name", value: Self.task045Prefix)
                 .lt("name", value: Self.task045UpperBound)
                 .order(Self.stablePageOrderColumn, ascending: true)
@@ -1166,9 +1166,9 @@ actor SupabaseInventoryService {
         }
     }
 
-    private func fetchTask045Products(limit: Int) async throws -> [RemoteInventoryProductRow] {
-        let barcodeMatches = try await fetchTask045Products(column: "barcode", limit: limit)
-        let nameMatches = try await fetchTask045Products(column: "product_name", limit: limit)
+    private func fetchTask045Products(ownerUserID: UUID, limit: Int) async throws -> [RemoteInventoryProductRow] {
+        let barcodeMatches = try await fetchTask045Products(ownerUserID: ownerUserID, column: "barcode", limit: limit)
+        let nameMatches = try await fetchTask045Products(ownerUserID: ownerUserID, column: "product_name", limit: limit)
         var seenIDs = Set<UUID>()
 
         return (barcodeMatches + nameMatches).filter { row in
@@ -1176,11 +1176,12 @@ actor SupabaseInventoryService {
         }
     }
 
-    private func fetchTask045Products(column: String, limit: Int) async throws -> [RemoteInventoryProductRow] {
+    private func fetchTask045Products(ownerUserID: UUID, column: String, limit: Int) async throws -> [RemoteInventoryProductRow] {
         do {
             return try await clientProvider.client
                 .from("inventory_products")
                 .select("id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
                 .gte(column, value: Self.task045Prefix)
                 .lt(column, value: Self.task045UpperBound)
                 .order(Self.stablePageOrderColumn, ascending: true)

@@ -2,6 +2,19 @@ import XCTest
 @testable import iOSMerchandiseControl
 
 final class SupabaseConfigSecurityTests: XCTestCase {
+    func testAuthSessionInfoPrivacySafeDisplayRedactsAccountIdentifiers() {
+        let sessionInfo = SupabaseAuthSessionInfo(
+            userID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+            email: "user@example.test",
+            provider: "google",
+            isExpired: false
+        )
+
+        XCTAssertEqual(sessionInfo.privacySafeUserID, "00000000-redacted")
+        XCTAssertEqual(sessionInfo.privacySafeDisplayEmail, "u***@example.test")
+        XCTAssertFalse(sessionInfo.privacySafeDisplayEmail?.contains("user@example.test") ?? true)
+    }
+
     func testRejectsLegacyServiceRoleJWTButAllowsAnonJWTShape() throws {
         let anonKey = makeJWT(role: "anon")
         let anonConfig = try SupabaseConfig.load(bundle: makeConfigBundle(publishableKey: anonKey))

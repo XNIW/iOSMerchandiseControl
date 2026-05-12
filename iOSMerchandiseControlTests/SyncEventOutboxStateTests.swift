@@ -250,15 +250,33 @@ final class SyncEventOutboxStateTests: XCTestCase {
 
     func testPrivacySanitizerRedactsURLsQueryStringsAndBusinessIDs() {
         let message = """
-        GET https://example.supabase.co/rest/v1/sync_events?select=*&barcode=1234567890123&product_id=00000000-0000-0000-0000-000000000001 failed
+        GET https://example.supabase.co/rest/v1/sync_events?select=*&barcode=1234567890123&product_id=00000000-0000-0000-0000-000000000001 email=user@example.test failed
         """
         let sanitized = SyncEventOutboxPrivacySanitizer.sanitizeErrorMessage(message)
 
         XCTAssertNotNil(sanitized)
-        XCTAssertFalse(sanitized?.contains("https://example.supabase.co/rest/v1/sync_events?select=*") ?? true)
+        XCTAssertFalse(sanitized?.contains("https://example.supabase.co") ?? true)
         XCTAssertFalse(sanitized?.contains("1234567890123") ?? true)
         XCTAssertFalse(sanitized?.contains("00000000-0000-0000-0000-000000000001") ?? true)
+        XCTAssertFalse(sanitized?.contains("user@example.test") ?? true)
         XCTAssertLessThanOrEqual(sanitized?.count ?? 0, SyncEventOutboxPrivacySanitizer.defaultMessageLimit)
+    }
+
+    func testPrivacySanitizerRedactsMultipleSensitiveShapesWithoutDroppingUsefulContext() {
+        let message = """
+        POST https://example.supabase.co/rest/v1/a?apikey=publishable123 failed for a@example.test and b@example.test ids 00000000-0000-0000-0000-000000000001 999999999999
+        """
+        let sanitized = SyncEventOutboxPrivacySanitizer.sanitizeErrorMessage(message, maxLength: 240)
+
+        XCTAssertNotNil(sanitized)
+        XCTAssertTrue(sanitized?.contains("POST") ?? false)
+        XCTAssertTrue(sanitized?.contains("failed") ?? false)
+        XCTAssertFalse(sanitized?.contains("https://example.supabase.co") ?? true)
+        XCTAssertFalse(sanitized?.contains("apikey=publishable123") ?? true)
+        XCTAssertFalse(sanitized?.contains("a@example.test") ?? true)
+        XCTAssertFalse(sanitized?.contains("b@example.test") ?? true)
+        XCTAssertFalse(sanitized?.contains("00000000-0000-0000-0000-000000000001") ?? true)
+        XCTAssertFalse(sanitized?.contains("999999999999") ?? true)
     }
 
     func testShapeHelpersDoNotPersistRawMassiveBusinessLists() throws {

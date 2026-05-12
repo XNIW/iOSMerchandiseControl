@@ -8,18 +8,20 @@
 | **Titolo** | **Production readiness privacy / RLS / security audit** |
 | **File task** | `docs/TASKS/TASK-101-production-readiness-privacy-rls-security-audit.md` |
 | **Stato task** | **ACTIVE** |
-| **Fase attuale** | **PLANNING** |
-| **Responsabile attuale** | **Claude / Planner** |
+| **Fase attuale** | **REVIEW** |
+| **Responsabile attuale** | **Claude / Reviewer** |
 | **Data creazione** | 2026-05-10 |
-| **Ultimo aggiornamento** | 2026-05-10 — **Inizializzazione planning** (solo markdown) |
+| **Ultimo aggiornamento** | 2026-05-11 00:03 -0400 — **Review/Fix Codex completata per override utente / resta handoff REVIEW** |
 
 **TASK-101 NON DONE.**
 
-**NON READY FOR EXECUTION** — nessuna autorizzazione implicita; execution (read/audit runtime, eventuali write Supabase, modifiche RLS/SQL) solo dopo Planning Review esplicita, consenso utente, Go/No-Go §10 e handoff verso **EXECUTION**.
+**EXECUTION ESEGUITA PER OVERRIDE ESPLICITO UTENTE** — il file era ancora in planning-init; l'utente ha autorizzato direttamente audit statico/runtime, lettura live Supabase e remediation completa. Deviazione registrata in §15.
 
-**Handoff turno corrente:** **READY FOR PLANNING REVIEW**
+**Handoff turno corrente:** **READY FOR REVIEW**
 
-**Flag:** **`TASK-101_PLANNING_INIT_ONLY`** — creato **solo** questo file task + tracking MASTER; **zero** Swift/Kotlin/SQL/backend/build/test/runtime/Supabase in questo turno; **nessuna** apertura **TASK-102**; **nessun** claim DONE o production-ready 100%.
+**Flag:** **`TASK-101_REVIEW_FIX_USER_OVERRIDE_PARTIAL_READY_FOR_REVIEW`** — execution e review/fix completate da Codex con evidenze, remediation iOS/backend mirate, build/test PASS; **TASK-101 NON DONE**; **nessuna** apertura **TASK-102**; **nessun** claim production-ready globale 100%.
+
+> **Nota di riconciliazione 2026-05-11 00:03 -0400:** le sezioni §3-§14 restano contesto storico del planning-init. Lo stato operativo reale post-override è documentato in §15 e nell'evidence pack `docs/TASKS/EVIDENCE/TASK-101/`.
 
 ---
 
@@ -221,4 +223,197 @@ Prima di autorizzare **EXECUTION** (audit attivo o mutazioni):
 
 ## 15. Execution / Review / Fix
 
-*Sezioni riservate a Codex / Reviewer — non compilate in questo init-only.*
+### Execution (Codex) — 2026-05-10 23:10 -0400
+
+#### Override operativo
+
+- Il task file e il MASTER-PLAN indicavano ancora **PLANNING / NON READY FOR EXECUTION**.
+- L'utente ha fornito override esplicito per procedere con TASK-101 in modalità **EXECUTION end-to-end**, includendo audit statico/runtime, query Supabase live, remediation e test.
+- Impatto processo: execution avviata senza handoff formale Claude -> Codex nel file task; deviazione documentata qui e nelle evidenze. Transizione finale applicata: **EXECUTION -> REVIEW**, senza marcare DONE.
+
+#### Obiettivo compreso
+
+Portare TASK-101 a una execution verificabile per audit privacy/RLS/security/readiness: inventario RLS/grants, scan privacy/segreti/log, owner scoping, auth/session, parity Android, finding routing, remediation ragionevoli e handoff finale review.
+
+#### File controllati
+
+- Tracking: `docs/MASTER-PLAN.md`, questo file task.
+- iOS core: `SupabaseConfig.swift`, `SupabaseClientProvider.swift`, `SupabaseAuthService.swift`, `SupabaseAuthViewModel.swift`, `SupabaseInventoryService.swift`, `SupabaseManualPushService.swift`, `SyncEventOutboxState.swift`, `OptionsView.swift`.
+- iOS logging/UI: `ContentView.swift`, `DatabaseView.swift`, `GeneratedView.swift`, `HistoryEntry.swift`, `HistoryView.swift`, `EditProductView.swift`.
+- iOS tests: `SupabaseConfigSecurityTests.swift`, `SyncEventOutboxStateTests.swift`, `SupabaseSyncEventDebugViewModelTests.swift`, `SupabaseManualPushServiceTests.swift`.
+- Supabase: local migrations in `/Users/minxiang/Desktop/MerchandiseControlSupabase/supabase/migrations/` and live metadata for RLS/grants/functions/migration list.
+- Android reference: auth/config/catalog/price/sync-event/session remote sources and local migration hardening file.
+
+#### Piano minimo eseguito
+
+1. Snapshot e manifest.
+2. Traceability seed S101 -> CA-T101 -> M101 -> evidence -> risk -> decision.
+3. Static scan iOS, evidence e Android reference.
+4. iOS local privacy/logging/auth audit.
+5. Supabase schema/RLS/grants/function inventory live.
+6. Threat model e data-flow.
+7. UX/privacy/accessibility audit statico.
+8. Runtime mirato con query live Supabase, lint schema, build/test Xcode.
+9. Findings routing con remediation diretta dove piccola e verificabile.
+10. Decisione finale PASS/PARTIAL/BLOCKED e handoff review.
+
+#### Modifiche fatte
+
+- iOS privacy sanitizer rafforzato: redazione email, URL HTTP(S), UUID e identificativi numerici lunghi.
+- `SupabaseInventoryServiceError.safeDiagnosticDetail` ora usa sanitizer condiviso.
+- Query iOS read/preview/read-back/update su inventario/prezzi rafforzate con filtro esplicito `owner_user_id == session.user.id` oltre a RLS.
+- Log iOS potenzialmente rumorosi o contestuali resi DEBUG-only/generici.
+- UI account Supabase iOS maschera email e owner UUID.
+- Test aggiunti/estesi per redazione diagnostica, sanitizer e display account privacy-safe.
+- Supabase live: revocato EXECUTE a `PUBLIC`, `anon`, `authenticated` su `public.rls_auto_enable()`, funzione SECURITY DEFINER usata da event trigger; verifica post-fix PASS.
+- Supabase locale: aggiunta migration no-op-safe `20260511030000_task101_revoke_rls_auto_enable_public_execute.sql` nel workspace backend.
+- Evidence pack TASK-101 creato in `docs/TASKS/EVIDENCE/TASK-101/`.
+
+#### Evidenze prodotte
+
+- `docs/TASKS/EVIDENCE/TASK-101/MANIFEST.md`
+- `docs/TASKS/EVIDENCE/TASK-101/TRACEABILITY-S101-CA-M101.md`
+- `docs/TASKS/EVIDENCE/TASK-101/MATRIX-M101-results.md`
+- `docs/TASKS/EVIDENCE/TASK-101/findings-register.md`
+- `docs/TASKS/EVIDENCE/TASK-101/data-flow-map.md`
+- `docs/TASKS/EVIDENCE/TASK-101/threat-model.md`
+- `docs/TASKS/EVIDENCE/TASK-101/ios-local-privacy-audit.md`
+- `docs/TASKS/EVIDENCE/TASK-101/rls-policy-inventory.md`
+- `docs/TASKS/EVIDENCE/TASK-101/grants-audit.md`
+- `docs/TASKS/EVIDENCE/TASK-101/auth-session-audit.md`
+- `docs/TASKS/EVIDENCE/TASK-101/secrets-scan-notes.md`
+- `docs/TASKS/EVIDENCE/TASK-101/logging-privacy-audit.md`
+- `docs/TASKS/EVIDENCE/TASK-101/owner-scope-matrix.md`
+- `docs/TASKS/EVIDENCE/TASK-101/live-write-safety-audit.md`
+- `docs/TASKS/EVIDENCE/TASK-101/cleanup-retention-policy.md`
+- `docs/TASKS/EVIDENCE/TASK-101/android-ios-security-parity.md`
+- `docs/TASKS/EVIDENCE/TASK-101/ux-privacy-accessibility-notes.md`
+- `docs/TASKS/EVIDENCE/TASK-101/test-build-runtime-report.md`
+- `docs/TASKS/EVIDENCE/TASK-101/PASS-PARTIAL-BLOCKED-rubric.md`
+- `docs/TASKS/EVIDENCE/TASK-101/decision-final.md`
+
+#### Check eseguiti
+
+- ✅ ESEGUITO — **Build compila**: `xcodebuild build -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Release -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4.1'` PASS.
+- ✅ ESEGUITO — **Nessun warning nuovo introdotto**: warning Swift introdotto inizialmente su `requireAuthenticatedSession()` corretto e build rerun PASS; resta solo warning AppIntents metadata toolchain/preesistente.
+- ✅ ESEGUITO — **Test mirati**: `SupabaseConfigSecurityTests`, `SyncEventOutboxStateTests`, `SupabaseSyncEventDebugViewModelTests`, `SupabaseManualPushServiceTests` PASS; xcresult `Test-iOSMerchandiseControl-2026.05.10_23-01-18--0400.xcresult`.
+- ✅ ESEGUITO — **Supabase live RLS/grants/function inventory**: query metadata PASS; remediation `rls_auto_enable()` verificata.
+- ✅ ESEGUITO — **Supabase schema lint execution**: `supabase db lint --linked --level warning` registrato PASS nella execution iniziale / no schema errors found.
+- ⚠️ NON ESEGUIBILE — **Supabase schema lint review rerun**: in review `supabase db lint --linked --level warning` non autenticabile verso Postgres linked senza `SUPABASE_DB_PASSWORD` disponibile/valido; non trattato come PASS fresco di review.
+- ✅ ESEGUITO — **Migration drift audit**: `supabase migration list --linked` eseguito, esito PARTIAL per drift documentato.
+- ✅ ESEGUITO — **Secret/evidence scan**: TASK-101 evidence scan senza email/token/connection string; solo termini policy nel codice/evidence.
+- ✅ ESEGUITO — **git diff whitespace**: `git diff --check` PASS.
+- ⚠️ NON ESEGUIBILE — **Supabase local Docker/status/dump**: Docker daemon non disponibile, quindi `supabase status`/dump locale non completabili.
+- ⚠️ NON ESEGUIBILE — **Simulator manuale completo / OAuth UI**: non ripetuto in questa execution; copertura tramite static audit, runtime metadata Supabase e XCTest/build.
+- ⚠️ NON ESEGUIBILE — **Android build/test runtime**: Android usato come riferimento statico; nessuna patch Android e nessun build/test Android nel perimetro effettivo.
+- ✅ ESEGUITO — **Criteri di accettazione verificati**: CA-T101-01..10 mappati in traceability/matrix; esito globale PARTIAL documentato.
+
+#### Findings principali
+
+- **F101-01 HIGH CLOSED**: `rls_auto_enable()` SECURITY DEFINER era eseguibile da ruoli client; revoca applicata e verificata.
+- **F101-02 MEDIUM OPEN**: drift locale/remoto migrations Supabase.
+- **F101-03 MEDIUM OPEN**: leaked password protection Supabase Auth da abilitare via dashboard.
+- **F101-04 LOW OPEN**: grants legacy ampi ma RLS fail-closed.
+- **F101-05 LOW OPEN**: Android reference logga raw `userId`.
+- **F101-06 LOW CLOSED**: iOS mostrava owner/email completi in UI account; mascherato.
+- **F101-07 NOTE CLOSED**: redazione diagnostica iOS rafforzata.
+- **F101-08 NOTE OPEN**: assente `PrivacyInfo.xcprivacy`, da validare prima di release App Store.
+- **F101-09 MEDIUM CLOSED**: `client_event_id` da plan fingerprint poteva persistere owner UUID/barcode/nome prodotto; ora usa hash SHA-256 e test regressivo.
+- **F101-10 LOW CLOSED**: collision scan DEBUG TASK-045 ora aggiunge owner filter esplicito oltre a RLS.
+
+#### Rischi rimasti
+
+- Migrazione Supabase locale/remota non allineata: non applicare `migration up` automatico senza review dedicata.
+- Retention/cleanup test data documentata ma non automatizzata.
+- Full manual OAuth/simulator/accessibility pass non eseguito in TASK-101.
+- Android privacy log raw userId resta fuori dalla patch iOS.
+- TASK-101 non deve essere considerato DONE o production-ready globale 100%.
+
+#### Decisione finale
+
+**TASK-101 Execution result: PARTIAL / READY FOR REVIEW.**
+
+PASS per iOS client privacy/security, RLS owner model, service_role in consumer app, logging redaction, evidence redaction, build/test mirati. PARTIAL per grants/migration drift, retention automation, Android parity runtime/log, full manual simulator/OAuth/accessibility.
+
+#### Handoff post-execution verso Claude
+
+| Campo | Valore |
+|-------|--------|
+| **Prossima fase** | **REVIEW** |
+| **Prossimo agente** | **Claude / Reviewer** |
+| **Stato task** | **ACTIVE / REVIEW** |
+| **Esito proposto** | **PARTIAL / READY FOR REVIEW** |
+| **TASK-102** | Non aperto |
+| **Azione richiesta** | Review del diff iOS, migration Supabase locale, DDL live applicata, evidence pack e finding aperti; decidere se accettare PARTIAL o richiedere FIX. |
+
+### Review/Fix (Codex) — 2026-05-11 00:03 -0400
+
+#### Obiettivo compreso
+
+Eseguire review professionale della execution TASK-101 senza fidarsi del report precedente, correggendo direttamente problemi reali e riallineando evidence/tracking senza trasformare PARTIAL in DONE se i check Supabase/release restano incompleti.
+
+#### File controllati
+
+- Tracking/evidence: `docs/MASTER-PLAN.md`, questo file task, tutti i file in `docs/TASKS/EVIDENCE/TASK-101/`.
+- iOS review/fix: `SupabaseInventoryService.swift`, `SupabaseManualPushService.swift`, `SyncEventOutboxEnqueueService.swift`, `SyncEventOutboxState.swift`, UI account/logging files modificati dalla execution.
+- Test review/fix: `SyncEventOutboxEnqueueServiceTests.swift`, `SyncEventOutboxStateTests.swift`, più suite TASK-101 mirata e full XCTest.
+- Supabase backend: migration locale `20260511030000_task101_revoke_rls_auto_enable_public_execute.sql`, `supabase migration list --linked`, lint linked/local dove possibile.
+
+#### Piano minimo
+
+1. Leggere task, MASTER, diff reale ed evidence pack.
+2. Verificare owner scoping, redazione, log, outbox/manual push, migration Supabase e coerenza evidence.
+3. Applicare solo fix moderni e tracciabili per problemi confermati.
+4. Rerun build/test/check rilevanti.
+5. Aggiornare evidence/tracking con esiti reali e rischi residui.
+
+#### Bug/problemi trovati
+
+- `client_event_id` derivato da `planFingerprint` manual push poteva persistere nel local outbox / remote sync event dati grezzi come owner UUID, barcode o nome prodotto.
+- Collision scan DEBUG TASK-045 usava RLS ma non aggiungeva filtro owner esplicito client-side.
+- Create manual push accettava payload con owner impostato dal chiamante senza validazione locale esplicita contro la sessione autenticata.
+- Evidence precedente dichiarava linked schema lint PASS senza distinguere che in review il rerun non è stato riproducibile per credenziali DB linked assenti/non valide.
+- Sezioni planning-only §3-§14 erano ancora leggibili come stato operativo corrente; ora sono marcate come contesto storico.
+
+#### Fix applicati
+
+- `SyncEventOutboxEnqueueService`: fingerprint non vuoti hashati con SHA-256 prima di costruire `client_event_id`.
+- `SupabaseInventoryService`: TASK-045 supplier/category/product collision scan ora passa `session.user.id` e filtra `owner_user_id`.
+- `SupabaseManualPushService`: create payload supplier/category/product validati contro owner della sessione prima dell'insert; update/read-back/read-many restano owner-scoped.
+- Test aggiunti/estesi per `client_event_id` hashato e sanitizer multi-shape.
+- Evidence aggiornata con F101-09/F101-10, stato lint linked review, full XCTest e scansione redazione.
+
+#### Check eseguiti
+
+- ✅ ESEGUITO — **Build compila**: Release simulator iPhone 17 Pro iOS 26.4.1 PASS.
+- ✅ ESEGUITO — **Nessun warning nuovo introdotto**: Release build PASS; resta solo warning AppIntents metadata toolchain/preesistente.
+- ✅ ESEGUITO — **Test mirati review**: `SyncEventOutboxEnqueueServiceTests` + `SyncEventOutboxStateTests` PASS.
+- ✅ ESEGUITO — **Suite TASK-101 mirata**: config/security, debug view model, manual push, outbox state/enqueue PASS.
+- ✅ ESEGUITO — **Full XCTest**: final review rerun PASS, 640 passed, 12 skipped, 0 failed.
+- ✅ ESEGUITO — **git diff whitespace**: `git diff --check` PASS.
+- ✅ ESEGUITO — **Evidence/task privacy scan**: nessun match per email/JWT/bearer/API key/connection string/raw Supabase REST URL; UUID/long-number scan solo timestamp migration.
+- ✅ ESEGUITO — **Supabase migration list linked**: eseguito, drift confermato e documentato.
+- ⚠️ NON ESEGUIBILE — **Supabase local Docker/start/status/lint**: Docker command/daemon non disponibile.
+- ⚠️ NON ESEGUIBILE — **Supabase linked lint review rerun**: autenticazione Postgres linked fallita senza `SUPABASE_DB_PASSWORD` disponibile/valido.
+- ⚠️ NON ESEGUIBILE — **Simulator manuale UI/OAuth/accessibility completo**: non ripetuto in review; copertura statica + XCTest/build.
+- ⚠️ NON ESEGUIBILE — **Android runtime/build**: Android resta riferimento statico, finding F101-05 aperto.
+
+#### Rischi rimasti
+
+- Drift migration Supabase locale/remoto ancora aperto.
+- Leaked password protection da abilitare in Supabase dashboard.
+- Grants legacy ampi restano LOW follow-up con RLS fail-closed.
+- Android raw `userId` log resta aperto fuori patch iOS.
+- Assenza `PrivacyInfo.xcprivacy` da validare prima di distribuzione App Store.
+- Retention/cleanup policy documentata ma non automatizzata.
+
+#### Handoff post-review/fix verso reviewer
+
+| Campo | Valore |
+|-------|--------|
+| **Prossima fase** | **REVIEW** |
+| **Prossimo agente** | **Claude / Reviewer o utente** |
+| **Stato task** | **ACTIVE / REVIEW** |
+| **Esito review Codex** | **PARTIAL / READY FOR REVIEW** |
+| **Motivo non-DONE** | Supabase drift, linked/local lint non completamente riproducibili in review, leaked-password protection dashboard, Android/release readiness residui. |
+| **Azione richiesta** | Accettare PARTIAL come follow-up routing o aprire FIX mirato per backend/Android/release-readiness. |

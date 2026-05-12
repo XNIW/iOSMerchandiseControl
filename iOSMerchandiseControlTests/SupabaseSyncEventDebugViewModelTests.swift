@@ -75,6 +75,18 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
         }
     }
 
+    func testInventoryServiceDiagnosticRedactsURLBusinessIDsAndEmail() {
+        let detail = SupabaseInventoryServiceError.sanitizedDiagnosticDetail(
+            "GET https://example.supabase.co/rest/v1/inventory_products?select=*&barcode=1234567890123 owner=00000000-0000-0000-0000-000000000001 email=user@example.test"
+        )
+
+        XCTAssertNotNil(detail)
+        XCTAssertFalse(detail?.contains("https://example.supabase.co") ?? true)
+        XCTAssertFalse(detail?.contains("1234567890123") ?? true)
+        XCTAssertFalse(detail?.contains("00000000-0000-0000-0000-000000000001") ?? true)
+        XCTAssertFalse(detail?.contains("user@example.test") ?? true)
+    }
+
     func testCancelDuringLoadingReturnsIdleAndIgnoresLateResult() async throws {
         let fetcher = ControlledSyncEventPreviewFetching()
         let viewModel = SupabaseSyncEventDebugViewModel(service: service(fetcher: fetcher))

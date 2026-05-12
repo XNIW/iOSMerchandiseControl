@@ -33,6 +33,26 @@ nonisolated struct SupabaseAuthSessionInfo: Equatable, Sendable {
         }
         return trimmed
     }
+
+    var privacySafeDisplayEmail: String? {
+        guard let displayEmail else { return nil }
+        return Self.redactedEmail(displayEmail)
+    }
+
+    var privacySafeUserID: String {
+        "\(userID.uuidString.prefix(8))-redacted"
+    }
+
+    private static func redactedEmail(_ email: String) -> String {
+        let parts = email.split(separator: "@", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2,
+              let firstCharacter = parts[0].first,
+              !parts[1].isEmpty else {
+            return "[redacted-email]"
+        }
+
+        return "\(firstCharacter)***@\(parts[1])"
+    }
 }
 
 nonisolated enum SupabaseAuthEvent: Sendable {

@@ -1,3 +1,4 @@
+import CryptoKit
 import SwiftData
 import XCTest
 @testable import iOSMerchandiseControl
@@ -47,7 +48,7 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
             entry.metadataPayloadJSON,
             #"{"baseline_refresh_failed":false,"failed_count":0,"partial":false,"skipped_count":0,"source":"ios_catalog_manual_push"}"#
         )
-        XCTAssertEqual(entry.clientEventID, "catalog-manual-push:catalog-fingerprint")
+        XCTAssertEqual(entry.clientEventID, "catalog-manual-push:\(sha256Hex("catalog-fingerprint"))")
         XCTAssertEqual(entry.sourceDeviceID, "device-1")
 
         let replayRequest = try entry.makeRecordRequestForReplay()
@@ -99,7 +100,46 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
             entry.metadataPayloadJSON,
             #"{"failed_count":0,"partial":false,"skipped_count":0,"source":"ios_prices_manual_push"}"#
         )
-        XCTAssertEqual(entry.clientEventID, "prices-manual-push:prices-fingerprint")
+        XCTAssertEqual(entry.clientEventID, "prices-manual-push:\(sha256Hex("prices-fingerprint"))")
+    }
+
+    func testPlanFingerprintDerivedClientEventIDDoesNotPersistRawCatalogFields() throws {
+        let context = try makeContext()
+        let service = makeService(context: context)
+        let rawFingerprint = """
+        owner=11111111-1111-1111-1111-111111111111||barcode=1234567890123||name=Private Catalog Item
+        """
+
+        let result = service.enqueue(
+            .catalogManualPush(
+                result: SupabaseManualPushResult(
+                    status: .completed,
+                    supplierCreates: 0,
+                    supplierUpdates: 0,
+                    supplierLinks: 0,
+                    categoryCreates: 0,
+                    categoryUpdates: 0,
+                    categoryLinks: 0,
+                    productCreates: 1,
+                    productUpdates: 0,
+                    productLinks: 0,
+                    baselineRunID: nil,
+                    message: nil
+                ),
+                ownerUserID: UUID(uuidString: ownerID),
+                currentOwnerUserID: UUID(uuidString: ownerID),
+                planFingerprint: rawFingerprint
+            )
+        )
+
+        let entry = try onlyEntry(in: context)
+        XCTAssertEqual(result.kind, .enqueued)
+        XCTAssertTrue(entry.clientEventID.hasPrefix("catalog-manual-push:"))
+        XCTAssertFalse(entry.clientEventID.contains("11111111-1111-1111-1111-111111111111"))
+        XCTAssertFalse(entry.clientEventID.contains("1234567890123"))
+        XCTAssertFalse(entry.clientEventID.contains("Private Catalog Item"))
+        XCTAssertEqual(entry.clientEventID, "catalog-manual-push:\(sha256Hex(rawFingerprint.trimmingCharacters(in: .whitespacesAndNewlines)))")
+        XCTAssertLessThanOrEqual(entry.clientEventID.count, 160)
     }
 
     func testPartialSuccessCountsOnlyConfirmedRecords() throws {
@@ -650,6 +690,11 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
             entryIDGenerator: entryIDGenerator,
             clock: { self.now }
         )
+    }
+
+    private func sha256Hex(_ value: String) -> String {
+        let digest = SHA256.hash(data: Data(value.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     private func catalogOutcome(

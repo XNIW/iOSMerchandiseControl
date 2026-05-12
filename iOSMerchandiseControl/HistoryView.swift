@@ -277,7 +277,9 @@ struct HistoryView: View {
         do {
             try context.save()
         } catch {
+            #if DEBUG
             print("Errore durante l'eliminazione della HistoryEntry: \(error)")
+            #endif
         }
     }
     
@@ -292,8 +294,9 @@ struct HistoryView: View {
         do {
             try context.save()
         } catch {
-            // per ora solo log, se vuoi puoi aggiungere un alert in futuro
+            #if DEBUG
             print("Errore durante l'eliminazione della HistoryEntry: \(error)")
+            #endif
         }
     }
     
@@ -311,7 +314,9 @@ struct HistoryView: View {
                 entry.wasExported = true
                 try? context.save()
             } catch {
+                #if DEBUG
                 print("Errore durante l'esportazione XLSX:", error)
+                #endif
             }
         }
     }
