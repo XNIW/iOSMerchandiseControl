@@ -1,7 +1,34 @@
 import XCTest
+import CryptoKit
 @testable import iOSMerchandiseControl
 
 final class SupabaseConfigSecurityTests: XCTestCase {
+    @MainActor
+    func testTask103IOSAuthPreflightWhenEnabled() async throws {
+        try XCTSkipUnless(
+            ProcessInfo.processInfo.environment["TASK103_IOS_AUTH_PREFLIGHT"] == "1",
+            "TASK-103 live auth preflight is gated."
+        )
+
+        let config = try SupabaseConfig.load(bundle: .main)
+        XCTAssertFalse(config.publishableKey.lowercased().contains("service_role"))
+        XCTAssertFalse(config.publishableKey.lowercased().contains("secret_key"))
+
+        let authService = SupabaseAuthService(provider: SupabaseClientProvider(config: config))
+        try await Task.sleep(nanoseconds: 2_000_000_000)
+
+        guard let session = authService.currentSession, !session.isExpired else {
+            XCTFail("TASK-103 iOS auth preflight requires an existing non-expired device session.")
+            return
+        }
+
+        print(
+            "TASK103_IOS_AUTH_PREFLIGHT project_hash=\(task103Hash(config.projectURL.absoluteString)) " +
+            "owner_hash=\(task103Hash(session.userID.uuidString.lowercased())) " +
+            "provider=\(session.provider ?? "unknown") signed_in=true"
+        )
+    }
+
     func testAuthSessionInfoPrivacySafeDisplayRedactsAccountIdentifiers() {
         let sessionInfo = SupabaseAuthSessionInfo(
             userID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
@@ -68,5 +95,13 @@ final class SupabaseConfigSecurityTests: XCTestCase {
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
+    }
+
+    private func task103Hash(_ value: String) -> String {
+        SHA256.hash(data: Data(value.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+            .prefix(12)
+            .description
     }
 }
