@@ -1,18 +1,20 @@
-# TASK-052: Supabase `sync_events` / `record_sync_event` / outbox — **foundation audit & roadmap iOS** *(planning documentale completato; **BLOCKED / superseded by TASK-053** — nessuna implementazione tecnica)*
+# TASK-052: Supabase `sync_events` / `record_sync_event` / outbox — **foundation audit & roadmap iOS** *(DONE / Chiusura — SUPERSEDED)*
 
 ## Informazioni generali *(metadata tracking)*
 - **Task ID**: TASK-052
 - **Titolo**: Supabase sync_events / record_sync_event / outbox foundation audit iOS — gap analysis vs Android/Supabase, roadmap a slice; superseded by TASK-053 (zero runtime)
 - **File task**: `docs/TASKS/TASK-052-supabase-sync-events-outbox-foundation-ios.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: N/A *(non attiva — superseded by TASK-053)*
-- **Responsabile attuale**: N/A *(tracking archiviato; task attivo corrente = TASK-053)*
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — SUPERSEDED
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-05-06
-- **Ultimo aggiornamento**: 2026-05-06 *(Riallineamento lifecycle post-review TASK-053: TASK-052 non attiva, non DONE, superseded by TASK-053 Slice A.)*
-- **Ultimo agente che ha operato**: Codex / Fixer
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy SUPERSEDED; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — SUPERSEDED`.
 
 ### Nota lifecycle
-TASK-052 ha completato il planning documentale e non richiede execution tecnica propria. Per evitare task ACTIVE concorrenti, l'esecuzione tecnica Slice A e' tracciata solo da **TASK-053**. TASK-052 resta **non DONE** e **non attiva**.
+TASK-052 ha completato il planning documentale e non richiede execution tecnica propria. Per evitare task ACTIVE concorrenti, l'esecuzione tecnica Slice A e' stata tracciata solo da **TASK-053**. Dal riallineamento legacy 2026-05-12, TASK-052 e' **DONE / Chiusura — SUPERSEDED**; le formulazioni storiche sotto restano archivio.
 
 ## Dipendenze
 - **Dipende da**:
@@ -23,7 +25,7 @@ TASK-052 ha completato il planning documentale e non richiede execution tecnica 
   - Slice future **A–G** sotto; nessuna attivazione automatica di sync, realtime o background.
 
 ## Scopo
-Definire, **solo a livello di documento operativo**, la foundation iOS per **`sync_events`** (lettura), **`record_sync_event`** (contratto RPC lato client futuro) e **outbox locale**, allineata semanticamente ad **Android + Supabase** documentati nel progetto, **senza** introdurre sync automatico, write remota o outbox attivo. Il **perimetro “solo PLANNING”** resta lo **storico vincolo** (mai codice in quella fase). **Planning: completato.** TASK-052 e' ora **BLOCKED / superseded by TASK-053** per il lifecycle operativo; **nessun** codice Swift, servizio, DTO o UI e' stato implementato in TASK-052.
+Definire, **solo a livello di documento operativo**, la foundation iOS per **`sync_events`** (lettura), **`record_sync_event`** (contratto RPC lato client futuro) e **outbox locale**, allineata semanticamente ad **Android + Supabase** documentati nel progetto, **senza** introdurre sync automatico, write remota o outbox attivo. Il **perimetro “solo PLANNING”** resta lo **storico vincolo** (mai codice in quella fase). **Planning: completato.** TASK-052 e' ora **DONE / Chiusura — SUPERSEDED** per il lifecycle operativo; **nessun** codice Swift, servizio, DTO o UI e' stato implementato in TASK-052.
 
 ## Contesto
 - iOS ha coperto progressivamente pull/apply, baseline, push manuale catalogo e pipeline ProductPrice fino al push live controllato (**TASK-051**), sempre con divieto esplicito di **`sync_events`**, **`record_sync_event`** e **outbox**.
@@ -177,7 +179,8 @@ Le future slice read-only devono essere progettate per dataset grandi e per non 
 
 ---
 
-## Criteri di accettazione *(contratto TASK-052 — lifecycle documentale)*
+## Criteri di accettazione *(contratto storico TASK-052 — superato)*
+> **Nota corrente 2026-05-12:** la lista sotto resta archivio del lifecycle originario. Non rappresenta blocker aperti dopo la chiusura legacy; lo stato corrente e' **DONE / Chiusura — SUPERSEDED**.
 - [ ] File task **TASK-052** **BLOCKED / superseded by TASK-053** con planning completato *(nessuna implementazione tecnica)*; non task attivo concorrente.
 - [ ] **`docs/MASTER-PLAN.md`** aggiornato: progetto **ACTIVE**, task attivo unico **TASK-053**, TASK-052 non attivo e non DONE.
 - [ ] Riferimenti **Android** (TASK-045/046/061/063/065/068/070/071) e **Supabase** (migrazioni/RPC/RLS) **espliciti** nel documento *(come indirizzi di lettura, non come assunzione di stato live)*.
@@ -202,6 +205,7 @@ La REVIEW di TASK-052 deve controllare solo qualità del planning, non compilazi
 - [ ] Il handoff finale richiede esplicitamente override utente prima di qualsiasi execution.
 
 ## Controllo coerenza MASTER-PLAN
+> **Nota corrente 2026-05-12:** questo controllo descriveva la transizione storica verso TASK-053. Il MASTER-PLAN corrente e' riallineato a **IDLE**, ultimo completato **TASK-103**, TASK-052 **DONE / Chiusura — SUPERSEDED**.
 
 - [ ] Stato globale progetto: **ACTIVE**.
 - [ ] Task attivo unico: **TASK-053**.

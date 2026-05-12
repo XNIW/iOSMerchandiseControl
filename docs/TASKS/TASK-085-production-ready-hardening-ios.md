@@ -8,14 +8,16 @@
 | **Titolo** | Hardening production-ready iOS / Supabase / cross-platform |
 | **File task** | `docs/TASKS/TASK-085-production-ready-hardening-ios.md` |
 | **Stato** | DONE |
-| **Fase attuale** | Chiusura |
-| **Responsabile attuale** | Utente / chiusura confermata da override |
+| **Fase attuale** | Chiusura — LATER_GAPS_CLOSED_BY_TASK086_103 |
+| **Responsabile attuale** | Nessuno / Chiuso |
 | **Data creazione** | 2026-05-08 |
-| **Ultimo aggiornamento** | 2026-05-09 — REVIEW completa post S85-A...S85-G conclusa con fix anti-duplicati ProductPrice; TASK-085 chiuso DONE come hardening PARTIAL_ACCEPTED, senza claim production-ready 100% |
+| **Ultimo aggiornamento** | 2026-05-12 19:18 -0400 — legacy alignment: historical PARTIAL_ACCEPTED gaps consumed by TASK-086...TASK-103 evidence; no global production-ready claim; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md` |
 | **Ultimo agente** | Codex / Reviewer |
 | **Repo iOS target** | `/Users/minxiang/Desktop/iOSMerchandiseControl` |
 | **Repo Android riferimento** | `/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView` |
 | **Supabase locale riferimento** | `/Users/minxiang/Desktop/MerchandiseControlSupabase` *(schema/reference; remoto `merchandisecontrol-dev` usato solo per seed controllato `TASK085_*` su override utente)* |
+
+> **Chiusura legacy 2026-05-12:** le sezioni storiche sottostanti restano archivio; la fonte di verita' corrente e' `Chiusura — LATER_GAPS_CLOSED_BY_TASK086_103` secondo `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`.
 
 ---
 

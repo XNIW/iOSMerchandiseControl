@@ -8,14 +8,16 @@
 | **Titolo** | Parità Android ↔ iOS (execution read-only cross-platform via Supabase) |
 | **File task** | `docs/TASKS/TASK-084-android-ios-cross-platform-parity.md` |
 | **Stato** | DONE |
-| **Fase attuale** | CHIUSURA |
+| **Fase attuale** | Chiusura — SUPERSEDED_BY_TASK098_TASK103 |
 | **Responsabile attuale** | Codex / Reviewer |
 | **Data creazione** | 2026-05-08 |
-| **Ultimo aggiornamento** | 2026-05-08 21:23 -0400 — REVIEW/CHIUSURA: TASK-084 chiuso DONE come review documentale della slice read-only P84-A/P84-B/P84-C; nessuna parità runtime dichiarata |
+| **Ultimo aggiornamento** | 2026-05-12 19:18 -0400 — legacy alignment: document-only parity superseded by runtime cross-platform TASK-098 and final TASK-103 evidence; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md` |
 | **Ultimo agente** | Codex / Reviewer |
 | **Repo iOS target** | `/Users/minxiang/Desktop/iOSMerchandiseControl` |
 | **Repo Android riferimento** | `/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView` |
 | **Supabase locale riferimento** | `/Users/minxiang/Desktop/MerchandiseControlSupabase` *(schema/contratti: solo lettura documentale in fase PLANNING; nessun write live in questo task)* |
+
+> **Chiusura legacy 2026-05-12:** le sezioni storiche sottostanti restano archivio; la fonte di verita' corrente e' `Chiusura — SUPERSEDED_BY_TASK098_TASK103` secondo `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`.
 
 ---
 

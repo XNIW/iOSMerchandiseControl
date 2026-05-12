@@ -4,12 +4,14 @@
 - **Task ID**: TASK-017
 - **Titolo**: PreGenerate: validazione esplicita colonne obbligatorie
 - **File task**: `docs/TASKS/TASK-017-pregenerate-validazione-esplicita-colonne-obbligatorie.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: REVIEW *(sospesa — task non attivo progetto; ultima fase operativa prima della sospensione)*
-- **Responsabile attuale**: UTENTE *(test manuali Simulator/device pendenti; se regressioni → segnalare per FIX/CODEX → REVIEW/CLAUDE)*
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-24
-- **Ultimo aggiornamento**: 2026-03-24 (**user override / tracking**) — review tecnica **APPROVED**; implementazione completata; **test manuali utente non eseguiti in questa fase**; task **BLOCKED** (non DONE); focus progetto spostato su **TASK-018**
-- **Ultimo agente che ha operato**: CLAUDE *(allineamento tracking workflow su richiesta utente)*
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 ## Dipendenze
 - **Dipende da**: nessun task bloccante duro; contesto da **TASK-003** (PreGenerate parity, DONE) e flusso inventario esistente. **TASK-016** e' **BLOCKED** (test manuali pendenti) e non e' prerequisito funzionale di questo task.
@@ -267,7 +269,8 @@ La copertura della matrice T-1..T-10 e' stata fatta tramite STATIC+BUILD. I test
 | Test manuali utente (matrice T-1..T-10 su Simulator/device) | **Pendenti** — non eseguiti adesso |
 | Chiusura **DONE** | **Rimandata** fino a test manuali futuri e conferma utente |
 
-- **Stato task**: **BLOCKED** (convenzione progetto: analogo a TASK-016 / TASK-009 — review OK, validazione manuale differita, **non** DONE).
+- **Stato storico 2026-03-24**: **BLOCKED** (review OK, validazione manuale differita, allora **non** DONE).
+- **Stato corrente 2026-05-12**: **DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE**; il blocco manuale e' stato superato dal riallineamento legacy e dalle evidenze successive (`docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`).
 - **Alla ripresa TASK-017**: eseguire test manuali; se OK → conferma utente → DONE; se regressioni → **FIX** (Codex) → **REVIEW** (Claude) → loop fino ad APPROVED + conferma.
 
 ### Handoff — focus progetto (dopo sospensione)

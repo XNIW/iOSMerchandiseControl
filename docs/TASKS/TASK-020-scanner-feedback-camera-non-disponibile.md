@@ -4,12 +4,14 @@
 - **Task ID**: TASK-020
 - **Titolo**: Scanner: feedback camera non disponibile
 - **File task**: `docs/TASKS/TASK-020-scanner-feedback-camera-non-disponibile.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: REVIEW *(sospesa — task non attivo progetto; review tecnica **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; task **non** DONE)*
-- **Responsabile attuale**: UTENTE *(test manuali T-1..T-6; se regressioni → **FIX** / CODEX → **REVIEW** finale → conferma utente → DONE)*
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE_WITH_HARDWARE_NOTE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-25
-- **Ultimo aggiornamento**: 2026-03-25 (**user override / tracking**) — review **APPROVED**; test manuali **non eseguiti**; **non** DONE; sospeso; focus progetto su **TASK-021**.
-- **Ultimo agente che ha operato**: CLAUDE *(tracking post-review + sospensione)*
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE_WITH_HARDWARE_NOTE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE_WITH_HARDWARE_NOTE`.
 
 ## Dipendenze
 - **Dipende da**: nessuno (TASK-014 gap N-10).

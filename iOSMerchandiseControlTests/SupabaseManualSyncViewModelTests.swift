@@ -280,11 +280,13 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
+        UserDefaults.standard.set("it", forKey: "appLanguage")
         SupabaseManualSyncViewModel.resetForegroundAutomaticGateForTests()
     }
 
     override func tearDown() async throws {
         SupabaseManualSyncViewModel.resetForegroundAutomaticGateForTests()
+        UserDefaults.standard.removeObject(forKey: "appLanguage")
         try await super.tearDown()
     }
 

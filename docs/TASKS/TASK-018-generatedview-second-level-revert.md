@@ -4,12 +4,14 @@
 - **Task ID**: TASK-018
 - **Titolo**: GeneratedView: secondo livello revert (ai dati originali import)
 - **File task**: `docs/TASKS/TASK-018-generatedview-second-level-revert.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: REVIEW *(sospesa — task non attivo progetto; ultima fase operativa prima della sospensione)*
-- **Responsabile attuale**: UTENTE *(test manuali CA-7 obbligatori pendenti: S-1, M-1..M-10, M-12; se regressioni → segnalare per FIX/CODEX)*
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-24
-- **Ultimo aggiornamento**: 2026-03-25 (**user override / tracking**) — review codice **APPROVED** (nessun fix richiesto); **test manuali non eseguiti**; task **non** DONE; focus progetto su **TASK-019**
-- **Ultimo agente che ha operato**: CLAUDE *(review + riallineamento tracking)*
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 ## Dipendenze
 - **Dipende da**: nessun blocco duro (nota TASK-014: idealmente post-TASK-008 DONE per ridurre conflitti su `GeneratedView`; TASK-008 resta BLOCKED per test manuali — non prerequisito formale nel MASTER-PLAN).
@@ -443,8 +445,9 @@ Allineata ai **vincoli** *Vincoli execution / review* e alla execution.
 
 ### Handoff post-review (sospensione su richiesta utente 2026-03-25)
 
-- **Stato task**: **BLOCKED** (non DONE).
-- **Motivo**: review **APPROVED**; **test manuali CA-7 non ancora eseguiti** dall’utente.
+- **Stato storico 2026-03-25**: **BLOCKED** (allora non DONE).
+- **Motivo storico**: review **APPROVED**; **test manuali CA-7 non ancora eseguiti** dall’utente.
+- **Stato corrente 2026-05-12**: **DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE**; il blocco manuale e' stato superato dal riallineamento legacy e dalle evidenze successive (`docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`).
 - **Alla ripresa**: eseguire S-1, M-1..M-10, M-12; se regressioni → **FIX** (Codex) → **REVIEW** (Claude); se OK → **conferma utente** → **DONE**.
 - **Focus progetto**: **TASK-019** (vedi `docs/MASTER-PLAN.md`).
 

@@ -11,8 +11,10 @@
 | **NON DONE** | No — chiuso dopo review severa TASK-086 con verdetto APPROVED. |
 | **READY FOR EXECUTION** | Eseguita e chiusa — S86-A…S86-F reviewate. |
 | **Data creazione** | 2026-05-08 |
-| **Ultimo aggiornamento** | 2026-05-09 — REVIEW TASK-086 APPROVED; backend `updated_at` catalogo PASS, migration history drift ACCEPTED/FOLLOW-UP, runtime cross-platform resta PARTIAL |
+| **Ultimo aggiornamento** | 2026-05-12 19:18 -0400 — legacy alignment: backend `updated_at` catalogo gia chiuso; runtime cross-platform partial successivamente coperto da TASK-087/TASK-098/TASK-103; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md` |
 | **Ultimo agente** | Codex / Reviewer |
+
+> **Chiusura legacy 2026-05-12:** il riferimento storico a runtime cross-platform `PARTIAL` e' superato dalle evidenze TASK-087/TASK-098/TASK-103; il task resta `DONE / Chiusura` senza claim production-ready globale.
 
 ---
 

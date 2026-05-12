@@ -14,12 +14,16 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 **Roadmap backlog:** **TASK-101** **DONE / Chiusura — REVIEW PASS FINAL** *(file task `docs/TASKS/TASK-101-production-readiness-privacy-rls-security-audit.md`)*; **TASK-102** **DONE / Chiusura — REVIEW PASS FINAL / PASS WITH NOTES** *(file task `docs/TASKS/TASK-102-release-polish-ux-ios.md`)*; **TASK-103** **DONE / Chiusura — REVIEW PASS FINAL** *(file task `docs/TASKS/TASK-103-final-real-device-cross-platform-acceptance-ios-supabase-android.md`)*.
 
-**Precedente completato:** **TASK-099 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`). **TASK-098** resta **DONE / Chiusura — REVIEW PASS**; evidence pack in `docs/TASKS/EVIDENCE/TASK-098/`. **TASK-097 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — runtime sandbox smoke iOS ↔ Supabase. **TASK-096** resta **DONE / Chiusura — REVIEW PASS**; **TASK-095** resta **DONE / Chiusura — REVIEW PASS**; **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** resta **DONE / Chiusura — PARTIAL_ACCEPTED** con residui runtime accettati.
+**Precedente completato:** **TASK-099 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`). **TASK-098** resta **DONE / Chiusura — REVIEW PASS**; evidence pack in `docs/TASKS/EVIDENCE/TASK-098/`. **TASK-097 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — runtime sandbox smoke iOS ↔ Supabase. **TASK-096** resta **DONE / Chiusura — REVIEW PASS**; **TASK-095** resta **DONE / Chiusura — REVIEW PASS**; **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** riallineato a **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** tramite evidenze TASK-097/098/100/103.
 
 ## Stato globale
 **IDLE** — nessun task attivo. **Ultimo completato:** **TASK-103 DONE / Chiusura — REVIEW PASS FINAL** *(file task `docs/TASKS/TASK-103-final-real-device-cross-platform-acceptance-ios-supabase-android.md`)*. **TASK-104 non aperto**.
 
 > **2026-05-12 19:05 -0400 — CHIUSURA TASK-103 DONE / REVIEW PASS FINAL:** su override esplicito utente, Codex ha eseguito la review completa di TASK-103 senza assumere vero il report execution. Fix review minimi: collision scan iOS esteso a tutto il manifest, export spot-check current+previous, ack pending solo dopo push verificato, run prefix live obbligatorio iOS/Android, redazione project ref/path personali nelle evidenze. Check PASS: `git diff --check` iOS/Android, iOS targeted TASK-103/security tests **9 selezionati / 0 failure / 7 skip live-gated attesi**, iOS Release simulator build PASS, Android `assembleDebug assembleDebugAndroidTest` PASS, Android instrumentation mirata su device fisico IN2013 PASS runner/build con live tests gated/skipped, privacy scan evidenze PASS. Confermati: CA-103-01…18 tutti `PASS`/`PASS_AFTER_FIX`, cleanup scoped `TASK103_REAL_R1778622799_%` residui zero, nessun schema/RLS/grant/migration, nessun service_role/client secret, nessun dato reale, nessun TASK-104. Verdict finale: **Supabase iOS cross-platform acceptance 100% PASS** nel perimetro P0 TASK-103. Progetto **IDLE**.
+
+> **2026-05-12 19:18 -0400 — LEGACY CLOSURE ALIGNMENT:** su override esplicito utente, ricontrollati task legacy `BLOCKED` / `PARTIAL_ACCEPTED` / `SUPERSEDED` / `WONT_DO` contro evidenze successive. TASK-005/006/008/009/016/017/018/019/020/021/023/024/025/026/027/028/030/032 sono riallineati a **DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE** o variante con nota hardware; TASK-011/052 a **DONE / Chiusura — SUPERSEDED**; TASK-013 e TASK-015 a **DONE / Chiusura — WONT_DO_ACCEPTED**; TASK-083/084/085/090 a **DONE** con gap chiusi o superati da TASK-097/098/100/103. Evidence: `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le citazioni storiche sotto restano archivio temporale, non stato corrente. **TASK-104 non aperto**.
+
+> **2026-05-12 19:50 -0400 — VERIFICA LEGACY CLOSURE PASS:** rieseguiti check dopo l'allineamento: `git diff --check` PASS; build iOS Debug simulator PASS; regression ring sync/import/ProductPrice/TASK-103 PASS **112 passed / 13 skipped / 0 failed**; full XCTest iOS su iPhone 17 Pro iOS 26.5 PASS **640 passed / 19 skipped / 0 failed**; scan stretto privacy/segreti PASS. Evidence aggiornata in `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. **Nessun task legacy resta bloccato come stato corrente; TASK-104 non aperto.**
 
 > **2026-05-12 18:51 -0400 — EXECUTION TASK-103 completata / READY FOR REVIEW:** Codex ha completato execution con physical iPhone + physical Android + Supabase live scoped `TASK103_REAL_R1778622799_`. Evidence pack completo in `docs/TASKS/EVIDENCE/TASK-103/`; `00-summary.md` contiene ledger CA-103-01…18 tutto `PASS`/`PASS_AFTER_FIX`; `03-dataset-manifest.md` contiene manifest/golden table/read-back; `12-final-verdict.md` propone **Supabase iOS cross-platform acceptance 100% PASS**. Fix lane controllata usata per harness Android/iOS P0 con rerun slice; MEDIUM import/export, conflict/stale, offline/retry, security/privacy e cleanup scoped PASS. Cleanup SQL scoped solo su prefisso run: 114 ProductPrice, 55 products, 10 suppliers, 10 categories eliminati; post-read-back residui zero. **TASK-103 ACTIVE / REVIEW, NON DONE**. **TASK-104 non aperto**.
 
@@ -338,9 +342,9 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 | P0 | **TASK-080** | **DONE / Chiusura** | ProductPrice sync completa | Percorso prezzi Release completato: pull/apply/push storico prezzi, piani volatili anti-stale, dedupe/idempotenza, summary `applied`/`pushed`/`skippedDuplicate`/`skippedConflict`/`failed`/`blocked`, UX **Prezzi da aggiornare**, test/build review PASS | Redesign UI database, automazioni background, outbox drain (**TASK-081**), conflitti avanzati (**TASK-082**) |
 | P1 | **TASK-081** | **DONE / Chiusura** | Drain outbox Release controllato | Drain manuale e confermato mediato da ViewModel/adapter/factory, summary privacy-safe, retry manuale, no-jargon Release e zero cleanup distruttivo; review/fix PASS | Timer, BGTask, Realtime, worker, reset/truncate/delete outbox |
 | P1 | **TASK-082** | **DONE / Chiusura** | Conflitti e timestamp | Cutline Release iniziale completata: resolver stati/CTA/conteggi, invarianti dati, owner/session/RLS guard, ProductPrice dedupe/conflitti, UI summary **Attenzione** privacy-safe e regressioni TASK-078…081 | Editor completo conflitti, merge campo-per-campo, schema SQL/SwiftData nuovo, Android |
-| P1 | **TASK-083** | **DONE / Chiusura** | Smoke end-to-end iOS Release | Chiuso correttamente come smoke execution bloccato da preflight manifest: manifest dataset piccolo/sandbox incompleto; S83-01 runtime **BLOCKED**, S83-02…S83-06 **NOT RUN**; nessuna UI runtime, write remoto, drain o cleanup; build/check documentali PASS | Smoke runtime PASS non dichiarato; migrazioni live non autorizzate; cleanup distruttivo; reset/truncate/delete outbox; auto-sync; Timer/BGTask/Realtime/worker/polling per completare percorsi; modifiche SQL/backend/Android non autorizzate; modifiche SwiftData/schema/progetto/strings; dataset medio/negozio senza consenso |
-| P1 | **TASK-084** | **DONE / Chiusura** | Parita' Android ↔ iOS | Chiuso come review documentale della slice read-only: mapping statico Android ↔ Supabase ↔ iOS, field mapping P0/P1, manifest sandbox M1…M17, gap summary e routing follow-up approvati | Parità runtime completa non dichiarata; runtime/write non eseguiti; porting Kotlin 1:1 e redesign Android non richiesti |
-| P1 | **TASK-085** | **DONE / Chiusura (PARTIAL_ACCEPTED)** | Hardening production-ready | Execution S85-A...S85-G e review finale completate: manifest/evidenze, ProductPrice identity iOS ridotta con fix anti-duplicati, Android `updated_at` mapping, seed remoto `TASK085_*`, export current/previous, recovery/build/smoke, checklist finale | Non e' un claim production-ready 100%: backend `updated_at`, sync runtime autenticata cross-platform, benchmark grande dataset, ProductPrice post-push identity e round-trip runtime import/export restano follow-up |
+| P1 | **TASK-083** | **DONE / Chiusura — SUPERSEDED_BY_TASK097_TASK103** | Smoke end-to-end iOS Release | Stop preflight storico corretto; manifest/runtime successivamente coperti da TASK-097 e TASK-103 con evidenze runtime scoped | Nessun claim runtime PASS nel TASK-083 originale; evidenza PASS attribuita ai task successivi |
+| P1 | **TASK-084** | **DONE / Chiusura — SUPERSEDED_BY_TASK098_TASK103** | Parita' Android ↔ iOS | Slice documentale consumata; runtime cross-platform minimo e finale successivamente verificati da TASK-098 e TASK-103 | Nessun porting Kotlin 1:1 o redesign Android retroattivo |
+| P1 | **TASK-085** | **DONE / Chiusura — LATER_GAPS_CLOSED_BY_TASK086_103** | Hardening production-ready | Execution S85-A...S85-G completata e gap storici consumati da TASK-086…TASK-103: updated_at, ProductPrice identity, large dataset, privacy/security, UX e cross-platform | Non e' un claim production-ready globale; evidenza finale cross-platform resta nel perimetro TASK-103 |
 
 **Sequenza consigliata:** TASK-076 → TASK-077 → TASK-078 → TASK-079 → TASK-080 → TASK-081 → TASK-082 → TASK-083 → TASK-084 → TASK-085.
 
@@ -358,7 +362,7 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Roadmap follow-up Supabase iOS — chiusura 95% → 100%
 
-**Contesto:** dopo **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED**, l'integrazione Supabase iOS ha una acceptance finale documentata e auditabile, ma non viene dichiarata production-ready 100%. I gap residui ufficiali restano: nuovo live `TASK090_*` non eseguito per gate owner/session/collision, Android runtime fresh non rieseguito, round-trip UI manuale import/export non chiuso. ProductPrice post-push identity e idempotenza su scenario `TASK088_*` risultano chiusi PASS da TASK-088.
+**Contesto:** dopo il riallineamento 2026-05-12, **TASK-090** resta storico ma non piu partial nello stato corrente: i gap runtime/import-export/cross-platform sono stati chiusi o superati da TASK-097, TASK-098, TASK-100 e TASK-103. Nessun claim production-ready globale viene retroattribuito a TASK-090.
 
 **Obiettivo:** aprire una pianificazione separata, progressiva e sicura per portare la roadmap Supabase iOS dal livello attuale circa **80-85% funzionale / 70-75% production-ready reale** verso **95%+**, lasciando il claim **100%** solo a una review/smoke finale cross-platform con evidenze runtime.
 
@@ -370,11 +374,11 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 | P0 | **TASK-087** | **DONE / Chiusura** | Smoke runtime piccolo Android ↔ Supabase ↔ iOS | File: `docs/TASKS/TASK-087-android-ios-supabase-small-runtime-smoke.md` — review finale **PATCHED_PASS**: MIN-A Android→Supabase→iOS e MIN-I iOS→Supabase→Android **VERIFIED_RUNTIME** su `TASK087_*`, con runner DEBUG-only scoped e tracking privacy-safe | Dataset negozio reale come fixture; cleanup distruttivo; sync automatica/background; **`migration repair` / normalization history** dentro TASK-087; claim production-ready globale |
 | P0 | **TASK-088** | **DONE / Chiusura — PASS** *(file:* `docs/TASKS/TASK-088-productprice-post-push-identity-ios.md`*) | ProductPrice post-push identity reale | Scenario controllato `TASK088_*` PASS: push iOS, read-back Supabase, secondo push idempotente, `remoteID` persistente dopo reload SwiftData/context; Android verificato come riferimento funzionale con test mirati e valori last/prev coerenti | Redesign storico prezzi; schema prezzi nuovo; merge conflitti avanzato fuori dalla identity; delete/cleanup; claim production-ready globale |
 | P1 | **TASK-089** | **DONE / Chiusura — REVIEW PASS** *(file:* `docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`*) | Benchmark dataset grande read-only / controllato | Review chiusa su execution sintetica D89-M: preview fake/read-mostly, export prodotti/full DB harness DEBUG, cancel/retry ViewModel, test/build Release/full XCTest, Release binary clean; D89-L/device reale/Supabase live/Instruments documentati come limiti non bloccanti | Full sync distruttiva; negozio reale write; ottimizzazioni premature non misurate; claim production-ready globale; aprire TASK-090 dentro TASK-089 |
-| P0 | **TASK-090** | **DONE / Chiusura — PARTIAL_ACCEPTED** *(file:* `docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`*) | Release acceptance cross-platform finale | Matrice S90-F, evidenze privacy-safe, build/test PASS, ProductPrice PASS, UI/copy PASS; cross-platform/import-export/live `TASK090_*` PARTIAL/BLOCKED_ENV accettati e motivati; nessun claim 100% | Nuove feature; refactor ampi; automazioni background; dichiarare 100% se restano PARTIAL non spiegati; claim production-ready globale |
+| P0 | **TASK-090** | **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** *(file:* `docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`*) | Release acceptance cross-platform finale | Matrice S90-F storica + copertura successiva TASK-097/098/100/103 per runtime, ProductPrice, import/export e cross-platform | Nessun claim production-ready globale retroattivo; il 100% PASS resta nel perimetro controllato TASK-103 |
 
 **Sequenza completata:** TASK-086 → TASK-087 → TASK-088 → TASK-089 → TASK-090.
 
-**Stima dopo TASK-086…090:** il progetto ha evidenze forti sul percorso iOS e ProductPrice, ma resta senza claim **100%** per i residui runtime dichiarati in TASK-090.
+**Stima dopo TASK-086…090:** stato storico superato dalle acceptance successive; TASK-103 ha chiuso il perimetro P0 cross-platform con verdict controllato, senza claim production-ready globale.
 
 **Definizione di DONE per questa roadmap follow-up:**
 
@@ -715,9 +719,9 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 - **Completato precedente:** **TASK-091 DONE / Chiusura — REVIEW PASS**
 - **File task TASK-091:** `docs/TASKS/TASK-091-supabase-smart-semi-automatic-sync-ios.md`
 - **Stato TASK-091:** **DONE / Chiusura — REVIEW PASS** (MVP iOS-first semi-auto Release verificato; **non riaperto**)
-- **Completato precedente:** **TASK-090 DONE / Chiusura — PARTIAL_ACCEPTED**
+- **Completato precedente:** **TASK-090 DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE**
 - **File task TASK-090:** `docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`
-- **Stato TASK-090:** **DONE / Chiusura — PARTIAL_ACCEPTED** (acceptance documentata con residui runtime accettati; nessun claim 100%)
+- **Stato TASK-090:** **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** (gap runtime/import-export/cross-platform chiusi o superati da TASK-097/098/100/103; nessun claim production-ready globale)
 - **Completato precedente:** **TASK-089 DONE / Chiusura — REVIEW PASS**
 - **File task TASK-089:** `docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`
 - **Nota tracking:** **TASK-103** (2026-05-12 19:05 -0400) — **DONE / Chiusura — REVIEW PASS FINAL**; progetto **IDLE**; **TASK-104 non aperto**.
@@ -766,7 +770,7 @@ Qualunque altra transizione è invalida.
 - **Stato task:** —
 - **Fase attuale:** —
 - **Responsabile attuale:** —
-- **Ultimo aggiornamento:** 2026-05-12 19:05 -0400 — **TASK-103 DONE / Chiusura — REVIEW PASS FINAL; progetto IDLE**
+- **Ultimo aggiornamento:** 2026-05-12 19:50 -0400 — **TASK-103 DONE / Chiusura — REVIEW PASS FINAL; progetto IDLE; legacy closure alignment verificato PASS**
 - **Nota:** **TASK-104 non aperto**; nessun claim production-ready globale oltre il verdict controllato TASK-103.
 - **Ultimo completato:** **TASK-103** (`docs/TASKS/TASK-103-final-real-device-cross-platform-acceptance-ios-supabase-android.md`) — **DONE / Chiusura — REVIEW PASS FINAL** (final real-device cross-platform acceptance iOS ↔ Supabase ↔ Android; CA-103-01…18 PASS/PASS_AFTER_FIX; evidence `EVIDENCE/TASK-103/`; verdict P0 **Supabase iOS cross-platform acceptance 100% PASS**).
 - **Precedente completato:** **TASK-102** (`docs/TASKS/TASK-102-release-polish-ux-ios.md`) — **DONE / Chiusura — REVIEW PASS FINAL / PASS WITH NOTES** (release polish UX/UI iOS-native; ultimo smoke manuale Simulator con dati sintetici; evidence `EVIDENCE/TASK-102/`; **no** claim production-ready globale 100%).
@@ -781,14 +785,14 @@ Qualunque altra transizione è invalida.
 - **Completato precedente:** **TASK-093** (`docs/TASKS/TASK-093-local-change-accumulation-ios.md`) — **DONE / Chiusura — REVIEW PASS** (accumulo locale modifiche/dirty set iOS verificato; review con fix mirati; build/test/anti-scope/privacy PASS; nessun write Supabase live, no Android/Kotlin, no SQL/backend).
 - **Completato precedente:** **TASK-092** (`docs/TASKS/TASK-092-lightweight-auto-pull-foreground-ios.md`) — **DONE / Chiusura — REVIEW PASS** (auto pull/check foreground iOS-first leggero; review con fix mirati; build/test/localizzazioni/anti-scope/privacy PASS; nessun write Supabase live, no Android/Kotlin, no SQL/backend).
 - **Completato precedente:** **TASK-091** (`docs/TASKS/TASK-091-supabase-smart-semi-automatic-sync-ios.md`) — **DONE / Chiusura — REVIEW PASS** (MVP iOS-first sync semi-automatica intelligente sopra Release; build/test PASS; nessuna write Supabase live o mutazione silenziosa in chiusura TASK-091).
-- **Completato precedente:** **TASK-090** (`docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`) — **DONE / Chiusura — PARTIAL_ACCEPTED** (acceptance finale documentata iOS-first: ProductPrice e UI/copy PASS, cross-platform/import-export/live `TASK090_*` PARTIAL/BLOCKED_ENV accettati; nessun claim production-ready globale 100%).
+- **Completato precedente:** **TASK-090** (`docs/TASKS/TASK-090-release-acceptance-cross-platform-ios.md`) — **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** (gap runtime/import-export/cross-platform chiusi o superati da TASK-097/098/100/103; nessun claim production-ready globale 100%).
 - **Completato precedente:** **TASK-089** (`docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`) — **DONE / Chiusura — REVIEW PASS** (benchmark sintetico D89-M read-only/controllato: LG1-LG3 PARTIAL motivati, LG4 PASS, LG5 SKIPPED; harness DEBUG-only e Release binary clean; nessun claim production-ready globale).
 - **Completato precedente:** **TASK-088** (`docs/TASKS/TASK-088-productprice-post-push-identity-ios.md`) — **DONE / Chiusura / PASS** (ProductPrice post-push identity reale: `remoteID` persistito dopo push e reload SwiftData/context, secondo push idempotente, Supabase read-back 4 righe / 0 duplicati, Android reference last/prev coerente; nessun claim production-ready globale).
 - **Completato precedente:** **TASK-087** (`docs/TASKS/TASK-087-android-ios-supabase-small-runtime-smoke.md`) — **DONE / Chiusura** (smoke sandbox `TASK087_*` VERIFIED_RUNTIME dopo review PATCHED_PASS; runner DEBUG-only dove documentato).
 - **TASK-086:** **DONE / Chiusura** (trigger additivi `updated_at` catalogo, drift migration history accettato come follow-up separato, nessun `migration repair` dentro il task).
-- **TASK-085:** **DONE / Chiusura (PARTIAL_ACCEPTED)** (hardening production-ready senza claim 100%; ProductPrice post-push identity ora chiusa da TASK-088).
-- **TASK-084:** **DONE / Chiusura** (review documentale della slice read-only cross-platform: P84-A mapping statico Android ↔ Supabase ↔ iOS, P84-B manifest M1…M17 documentale **NOT RUN**, P84-C schede future **PLANNED / NOT RUN**, gap summary e routing follow-up; nessun runtime/write/patch; nessuna parità runtime completa dichiarata).
-- **TASK-083:** **DONE / Chiusura** (execution minima fermata correttamente dal preflight: manifest sandbox incompleto; S83-01 **BLOCKED**, S83-02…S83-06 **NOT RUN**; nessuna UI runtime, nessun write remoto, nessun drain, nessun cleanup; build/check documentali PASS).
+- **TASK-085:** **DONE / Chiusura — LATER_GAPS_CLOSED_BY_TASK086_103** (hardening senza claim globale; gap ProductPrice, updated_at, runtime, large dataset, UX/security e cross-platform chiusi o superati da TASK-086…TASK-103).
+- **TASK-084:** **DONE / Chiusura — SUPERSEDED_BY_TASK098_TASK103** (slice documentale consumata; runtime cross-platform successivamente verificato da TASK-098 e TASK-103).
+- **TASK-083:** **DONE / Chiusura — SUPERSEDED_BY_TASK097_TASK103** (stop preflight storico corretto; manifest/runtime successivamente coperti da TASK-097 e TASK-103).
 - **TASK-082:** **DONE / Chiusura** (policy conflitti/timestamp Release cutline; stati/CTA/conteggi, invarianti, owner/session/RLS, ProductPrice dedupe/conflitti, UI summary privacy-safe; no SQL/Android/schema/editor conflitti completo).
 - **TASK-081:** **DONE / Chiusura** (drain outbox Release controllato; conferma utente; summary privacy-safe; retry manuale; no sync automatica/backend/Android/cleanup distruttivo).
 - **TASK-080:** **DONE / Chiusura** (ProductPrice sync Release completata; pull/apply/push storico prezzi; no outbox drain/auto-sync/backend/Android/SQL).
@@ -824,7 +828,7 @@ Follow-up candidate post TASK-041 (**non attivi**):
 - **TASK-049** (**DONE / Chiusura**) — ProductPrice **pull** controllato → **apply locale** SwiftData da `inventory_product_prices`, dry-run DEBUG, idempotenza, **zero write** Supabase.
 - **TASK-050** (**DONE / Chiusura**) — ProductPrice push **preflight + dry-run** iOS (`docs/TASKS/TASK-050-supabase-productprice-manual-push-preflight-dry-run-ios.md`), zero-write verificato e review APPROVED_FIXED_DIRECTLY; **nessuna** write Supabase / migration / Android / `sync_events`/outbox/RPC; push live tracciato come **TASK-051**.
 - **TASK-051** (**DONE / Chiusura**) — ProductPrice **push live manuale controllato** iOS verso **`inventory_product_prices`** *(dry-run obbligatorio, snapshot volatile, insert-only, read-back exact-match, idempotenza)*; review APPROVED_FIXED_DIRECTLY su override utente, build/test/check PASS; smoke live reale resta follow-up manuale separato; **nessun** `sync_events` / outbox / migration / Android / TASK-052 attivato.
-- **TASK-052** (**non DONE / BLOCKED / superseded by TASK-053**) — audit/roadmap `sync_events` / `record_sync_event` / outbox; non task attivo e nessuna execution tecnica propria.
+- **TASK-052** (**DONE / Chiusura — SUPERSEDED**) — audit/roadmap `sync_events` / `record_sync_event` / outbox consumato da TASK-053+ e dalle validazioni successive.
 - **TASK-053** (**DONE / Chiusura**) — Slice A iOS `sync_events` read-only: DTO + service read-only + test decode/fake.
 - **TASK-054** (**DONE / Chiusura**) — Slice B iOS UI DEBUG read-only `sync_events` in `OptionsView`: ViewModel/formatter safe, localizzazioni, test, review+fix PASS; **nessuna** write Supabase/live/RPC/realtime/background/Android/schema.
 - **TASK-055** (**DONE / Chiusura**) — Slice C outbox locale iOS chiusa dopo review+fix: modello SwiftData + state machine pura/helper locali/test, **nessun** network/RPC live/Realtime/BGTask/worker/drain/UI/SQL/Android/TASK-056. DONE riguarda solo **Slice C local foundation**; Slice D/E/F/G/H/I restano future/out-of-scope.
@@ -853,126 +857,12 @@ Follow-up storico post-AUTH (ex post TASK-035):
 - Apply locale controllato dopo conferma utente → tracciato e completato come **TASK-039** (**DONE / Chiusura**).
 
 Task bloccati non attivi:
-- Task ID: TASK-032
-- Titolo: GeneratedView multi-row navigation validation + missing-data scenarios
-- File task: `docs/TASKS/TASK-032-generatedview-multi-row-navigation-validation-missing-data-scenarios.md`
-- Stato: BLOCKED
-- Motivo: user override 2026-05-03 — task messo in pausa dopo D2 accepted e P2–P4 PASS runtime. **P5 scanner reopen** resta senza evidenza PASS dopo tentativi di micro-fix; TASK-032 non DONE. Alla ripresa: ripartire dal gate P5/scanner reopen o da decisione formale di scope, poi review finale.
-- Ultimo aggiornamento: 2026-05-03
-- Task ID: TASK-030
-- Titolo: Full-database import/export finalization: reimport idempotency + non-product diff + progress UX
-- File task: `docs/TASKS/TASK-030-full-database-import-export-finalization-reimport-idempotency-non-product-diff-progress-ux.md`
-- Stato: BLOCKED
-- Motivo: Review tecnica 2026-04-27 — esito **CHANGES_REQUIRED_FIXED_DIRECTLY**. Fix diretto applicato alla guardia UX no-work; build Debug Simulator PASS; localizzazioni OK; nessun Supabase / nessuna nuova dipendenza. Task non DONE perché mancano evidenze runtime canoniche M-1…M-10 con workbook generato dall'export reale dell'app o equivalente.
-- Ultimo aggiornamento: 2026-04-27
-- Task ID: TASK-028
-- Titolo: GeneratedView: Row Detail UX Refinement vs Android
-- File task: `docs/TASKS/TASK-028-generatedview-row-detail-ux-refinement.md`
-- Stato: BLOCKED
-- Motivo: User override 2026-04-26 — validazione runtime/visiva read-only eseguita da Codex con esito positivo ma incompleto. Build PASS, iPhone piccolo light/dark PASS, complete/incomplete PASS, campi secondari PASS sul caso completo. Nessuna regressione TASK-028 rilevata e nessun FIX richiesto. Test residui sospesi: iPhone grande row detail, prev/next multi-riga, scanner reopen dopo decisione permesso camera, caso dati mancanti/ambigui. Task non DONE; pending manual validation finale.
-- Ultimo aggiornamento: 2026-04-26
-- Task ID: TASK-027
-- Titolo: ManualEntrySheet: modalità «Aggiungi e continua» (rapid entry)
-- File task: `docs/TASKS/TASK-027-manualentrysheet-aggiungi-e-prossimo.md`
-- Stato: BLOCKED *(sospeso — **non** **DONE** definitivo)*
-- Motivo: implementation **completata**; review **completata** con esito **OK** / **APPROVED**; **test manuali T-1…T-13 non eseguiti** — **motivo esplicito della sospensione:** validazione manuale mancante. **On hold for manual verification**. Alla ripresa: test manuali → eventuale **FIX** → **REVIEW** → conferma utente → **DONE**. Planning tecnico del file task **invariato**.
-- Ultimo aggiornamento: 2026-03-26
-- Task ID: TASK-026
-- Titolo: Scanner: toggle torcia (flashlight)
-- File task: `docs/TASKS/TASK-026-scanner-toggle-torcia-flashlight.md`
-- Stato: BLOCKED
-- Motivo: review **APPROVED** acquisita; **nessun fix** aperto dalla review; build Debug verde; **test manuali T-1…T-9 non ancora eseguiti**; task **non** DONE. **In sospensione / pending manual validation**. Alla ripresa: eseguire **T-1…T-9** manualmente prima della chiusura finale → eventuale **FIX** se regressioni → **REVIEW** → conferma utente → **DONE**.
-- Ultimo aggiornamento: 2026-03-25
-- Task ID: TASK-025
-- Titolo: GeneratedView: ricalcolo dinamico paymentTotal + missingItems su History card
-- File task: `docs/TASKS/TASK-025-generatedview-ricalcolo-paymenttotal-missingitems-history-card.md`
-- Stato: BLOCKED
-- Motivo: review tecnica **APPROVED** gia' acquisita; **test manuali utente** (T-0..T-15) **non ancora eseguiti**; task **non** DONE. Congelata in attesa di futura validazione manuale. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** finale → conferma utente → DONE.
-- Ultimo aggiornamento: 2026-03-25
-- Task ID: TASK-021
-- Titolo: HistoryEntry: warning su dati corrotti / deserializzazione fallita
-- File task: `docs/TASKS/TASK-021-historyentry-warning-dati-corrotti-deserializzazione.md`
-- Stato: BLOCKED
-- Motivo: **user override 2026-03-25** — sospeso temporaneamente per focus operativo su **TASK-025**; review post-fix **APPROVED** gia' acquisita; **non** DONE; in attesa **conferma finale utente** alla ripresa (eventuali test manuali T-5 / runtime T-1..T-3/T-7 restano rischi noti documentati nel file task).
-- Ultimo aggiornamento: 2026-03-25
-- Task ID: TASK-020
-- Titolo: Scanner: feedback camera non disponibile
-- File task: `docs/TASKS/TASK-020-scanner-feedback-camera-non-disponibile.md`
-- Stato: BLOCKED
-- Motivo: **user override 2026-03-25** — review **APPROVED**; **nessun fix richiesto**; test manuali **T-1..T-6 non eseguiti** in questo turno; task **non** DONE. Alla ripresa: test manuali → eventuale **FIX** solo se regressioni → **REVIEW** finale → conferma utente → DONE.
-- Ultimo aggiornamento: 2026-03-25
-- Task ID: TASK-019
-- Titolo: Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill
-- File task: `docs/TASKS/TASK-019-robustezza-guardie-generatedview-cascade-delete-async-backfill.md`
-- Stato: BLOCKED
-- Motivo: **user override 2026-03-25** — execution **completata**; review tecnica **APPROVED**; **nessun fix richiesto**; **test manuali non eseguiti** in questo turno; task **non** DONE. Alla ripresa: test manuali (CA-2B/CA-3B store/delete, CA-2C dataset grande, smoke Fix A se opportuno) → eventuale **FIX** solo se emergono regressioni → **REVIEW** finale → conferma utente → DONE.
-- Ultimo aggiornamento: 2026-03-25
-- Task ID: TASK-018
-- Titolo: GeneratedView: secondo livello revert (ai dati originali import)
-- File task: `docs/TASKS/TASK-018-generatedview-second-level-revert.md`
-- Stato: BLOCKED
-- Motivo: **user override 2026-03-25** — execution **completata**; review codice **APPROVED**; **nessun fix richiesto**; test manuali **CA-7** (**S-1**, **M-1..M-10**, **M-12**) **non ancora eseguiti**; task **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** → conferma utente → DONE.
-- Ultimo aggiornamento: 2026-03-25
-- Task ID: TASK-017
-- Titolo: PreGenerate: validazione esplicita colonne obbligatorie
-- File task: `docs/TASKS/TASK-017-pregenerate-validazione-esplicita-colonne-obbligatorie.md`
-- Stato: BLOCKED
-- Motivo: **user override 2026-03-24** — implementazione (execution + fix) **completata**; review tecnica **APPROVED**; **test manuali utente (T-1..T-10) non eseguiti in questa fase**; task **non** DONE. Alla ripresa: test manuali → eventuale **FIX** se regressioni → **REVIEW** → conferma utente → DONE.
-- Ultimo aggiornamento: 2026-03-24
-- Task ID: TASK-016
-- Titolo: Deduplicazione logica import DatabaseView/ProductImportViewModel
-- File task: `docs/TASKS/TASK-016-deduplicazione-logica-import-databaseview-productimportviewmodel.md`
-- Stato: BLOCKED
-- Motivo: review **APPROVED** (Claude) e warning build/concurrency sistemati; **test manuali ancora pendenti/non eseguiti**; task **non** DONE. Alla ripresa: test manuali → eventuale **FIX** solo se emergono regressioni → **REVIEW** → conferma utente → DONE. Riprendibile dal punto corrente senza rifare planning da zero.
-- Ultimo aggiornamento: 2026-03-24
-- Task ID: TASK-024
-- Titolo: Full-database import progress UX + cancellation
-- File task: `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
-- Stato: BLOCKED
-- Motivo: sospeso temporaneamente per decisione utente; review/fix UI non portati a finalizzazione; nessun DONE. Alla ripresa si continua dal punto corrente (review/fix residuo) senza rifare planning da zero.
-- Ultimo aggiornamento: 2026-03-24
-- Task ID: TASK-023
-- Titolo: Full-database reimport idempotency + non-product diff visibility
-- File task: `docs/TASKS/TASK-023-full-db-reimport-idempotency-and-non-product-diff-visibility.md`
-- Stato: BLOCKED
-- Motivo: **user override 2026-03-24** — sospeso temporaneamente; review codice APPROVED ma **test manuali solo parziali / non conclusi**; **non** DONE. Alla ripresa: test manuali residui + eventuale FIX + conferma utente (**nessun** nuovo planning da zero).
-- Ultimo aggiornamento: 2026-03-24
-- Task ID: TASK-011
-- Titolo: Large import stability, memory e progress UX
-- File task: `docs/TASKS/TASK-011-large-import-stability-and-progress.md`
-- Stato: SUPERSEDED
-- Motivo: umbrella completamente superato da TASK-022 (DONE, crash fix), TASK-023 (reimport idempotency), TASK-024 (progress UX). Nessun lavoro residuo non coperto. Aggiornato da audit 2026-03-25.
-- Ultimo aggiornamento: 2026-03-25
-- Task ID: TASK-009
-- Titolo: Product model old prices + price backfill
-- File task: `docs/TASKS/TASK-009-product-model-old-prices-price-backfill.md`
-- Stato: BLOCKED
-- Motivo: implementazione completata e review codice APPROVED da Claude (2026-03-22); test manuali VM-1..VM-9 non ancora eseguiti; task sospeso per decisione utente in attesa di validazione manuale futura. Alla ripresa: eseguire VM-1..VM-9, poi confermare DONE o aprire FIX se emergono regressioni.
-- Ultimo aggiornamento: 2026-03-22
-- Task ID: TASK-013
-- Titolo: sim_ui.sh performance — batch mode, timeout reale, cache device frame
-- File task: `docs/TASKS/TASK-013-sim-ui-performance.md`
-- Stato: WONT_DO
-- Motivo: wrapper SIM UI rimosso dal workflow standard (2026-03-22); nessun ulteriore lavoro previsto. Aggiornato da BLOCKED a WONT_DO da audit 2026-03-25.
-- Ultimo aggiornamento: 2026-03-25
-- Task ID: TASK-005
-- Titolo: ImportAnalysis error export + inline editing
-- File task: `docs/TASKS/TASK-005-importanalysis-error-export-inline-editing.md`
-- Stato: BLOCKED
-- Motivo: implementazione completata da Codex e task gia` portato in review, ma la validazione manuale e` ancora incompleta; sospeso temporaneamente in attesa dei test manuali residui prima di emettere APPROVED o CHANGES_REQUIRED
-- Ultimo aggiornamento: 2026-03-20
-- Task ID: TASK-006
-- Titolo: Database full import/export (multi-sheet)
-- File task: `docs/TASKS/TASK-006-database-full-import-export.md`
-- Stato: BLOCKED
-- Motivo: implementazione completata e review emessa APPROVED da Claude; il crash di apply su dataset grande e' stato chiuso in TASK-022; follow-up reimport/idempotency in TASK-023 (**BLOCKED** 2026-03-24, test manuali pendenti); UX progress in TASK-024 (**BLOCKED** 2026-03-24, sospeso prima della finalizzazione review/fix UI).
-- Ultimo aggiornamento: 2026-03-24
-- Task ID: TASK-008
-- Titolo: Generated manual row dialog + calculate
-- File task: `docs/TASKS/TASK-008-generated-manual-row-dialog-calculate.md`
-- Stato: BLOCKED
-- Motivo: review codice completata da Claude — nessun problema critico trovato, tutti i CA verificabili staticamente superati. Build verde. Validazione UI end-to-end (T-1..T-28) sospesa: richiede test manuali nel Simulator (l'automazione via wrapper SIM UI non è più parte del workflow standard). Sblocco subordinato a test manuali dell'utente o a decisione esplicita di procedere.
-- Ultimo aggiornamento: 2026-03-22
+- **Nessun task legacy ancora bloccato come stato corrente.** Riallineamento eseguito il 2026-05-12 19:18 -0400 su override utente; fonte di dettaglio: `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`.
+- Chiusure per evidenza successiva: TASK-005/006/008/009/016/017/018/019/021/023/024/025/027/028/030/032 → **DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE**.
+- Chiusure con nota hardware/manuale accettata: TASK-020/026 → **DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE_WITH_HARDWARE_NOTE**.
+- Chiusure per supersessione: TASK-011/052/083/084 → **DONE / Chiusura — SUPERSEDED** o variante esplicita.
+- Chiusure per decisione accettata: TASK-013/015 → **DONE / Chiusura — WONT_DO_ACCEPTED**.
+- Chiusure partial storiche: TASK-085/TASK-090 → **DONE** con gap chiusi o superati da TASK-086…TASK-103.
 
 ## Pipeline standard del task
 1. PLANNING (Claude) → definisce obiettivo, approccio, file coinvolti, criteri di accettazione
@@ -983,7 +873,7 @@ Task bloccati non attivi:
 
 ## Backlog
 (Task futuri ordinati per priorità — aggiornabile solo da Claude o dall'utente, con motivazione esplicita)
-Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase. **TASK-036** aggiunto 2026-04-27 come follow-up documentale post-**TASK-031** (HTML avanzato: colspan/rowspan, multi-table, XCTest opzionale). **TASK-037** aggiunto 2026-04-27 da user override per creare il target XCTest minimale sulle fixture TASK-036. **TASK-040** aggiunto 2026-05-05: post TASK-039 DONE — full pull/paginazione controllata + bridge `remoteId` SwiftData allineato a inventory Supabase/Android; dipendenze TASK-034/035/038/039 DONE; riferimento funzionale Android TASK-067/068/069/070/071 (**non** copia codice). **TASK-041** aggiunto 2026-05-05: post TASK-040 DONE — planning preflight/dry-run push manuale tombstone-compliant iOS; **nessuna** write Supabase in planning; push reale task successivo; Android TASK-068 PARTIAL / TASK-071 documentati nel file task (**non** contratto live iOS). **TASK-042** aggiunto 2026-05-05: UI DEBUG `OptionsView` per preflight/dry-run manual push locale, no-write Supabase, no outbox/dirty/baseline persistence, localizzazioni complete e test puri UI/viewmodel. **TASK-052** aggiunto 2026-05-06: post TASK-051 DONE — foundation `sync_events` / `record_sync_event` / outbox iOS (audit + roadmap slice A–G; non DONE / BLOCKED / superseded by TASK-053). **TASK-053** aggiunto 2026-05-06 su override utente: Slice A tecnica read-only `sync_events` iOS, senza UI/write/outbox/realtime/background. **TASK-057** aggiunto 2026-05-06: post TASK-056 DONE — Slice E planning **local enqueue** verso outbox SwiftData da outcome push manuali; **no** network/RPC live/drain; file `docs/TASKS/TASK-057-supabase-sync-events-slice-e-local-enqueue-ios.md`. **TASK-058** aggiunto 2026-05-06: post TASK-057 DONE — Slice F recorder live isolato `record_sync_event` con mapper RPC puro e transport fakeable; **no** RPC live/Supabase live/live dataset validation/drain/UI; file `docs/TASKS/TASK-058-supabase-record-sync-event-live-recorder-planning-ios.md`. **TASK-060** aggiunto 2026-05-07: post **TASK-059 DONE** — Slice **G2** drain outbox manuale; file `docs/TASKS/TASK-060-supabase-sync-events-outbox-drain-g2-ios.md`. **TASK-061** aggiunto 2026-05-07: post **TASK-060 DONE** — UI DEBUG drain manuale in `OptionsView` (`#if DEBUG`); planning, execution e review chiusi con **APPROVED_FIXED_DIRECTLY / DONE**; file `docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md`. **TASK-062** aggiunto 2026-05-07: post **TASK-061 DONE / Chiusura** — pianificazione **validazione operativa controllata** (smoke Simulator/manuale, matrice S62-01…S62-15, policy drain live opzionale); file `docs/TASKS/TASK-062-supabase-sync-events-manual-drain-operational-validation-ios.md`. **TASK-063** creato come **ACTIVE / PLANNING** (file `docs/TASKS/TASK-063-supabase-production-safe-sync-orchestrator-planning-ios.md`) — roadmap orchestratore production-safe dopo TASK-062, slice TASK-064+ solo proposta. **TASK-064** creato su user override come prima slice operativa post TASK-063: recovery iOS bounded/owner-scoped delle entry outbox `sending` stale; file `docs/TASKS/TASK-064-supabase-sync-events-outbox-sending-stale-recovery-ios.md`.
+Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015..021 proposti da TASK-014 (global audit approfondito, 2026-03-22). TASK-025..027 proposti da audit completo iOS vs Android (2026-03-25). TASK-029..035 creati da user override 2026-04-26 per cleanup tracking, completamento iOS, hardening import e preparazione Supabase. **TASK-036** aggiunto 2026-04-27 come follow-up documentale post-**TASK-031** (HTML avanzato: colspan/rowspan, multi-table, XCTest opzionale). **TASK-037** aggiunto 2026-04-27 da user override per creare il target XCTest minimale sulle fixture TASK-036. **TASK-040** aggiunto 2026-05-05: post TASK-039 DONE — full pull/paginazione controllata + bridge `remoteId` SwiftData allineato a inventory Supabase/Android; dipendenze TASK-034/035/038/039 DONE; riferimento funzionale Android TASK-067/068/069/070/071 (**non** copia codice). **TASK-041** aggiunto 2026-05-05: post TASK-040 DONE — planning preflight/dry-run push manuale tombstone-compliant iOS; **nessuna** write Supabase in planning; push reale task successivo; Android TASK-068 PARTIAL / TASK-071 documentati nel file task (**non** contratto live iOS). **TASK-042** aggiunto 2026-05-05: UI DEBUG `OptionsView` per preflight/dry-run manual push locale, no-write Supabase, no outbox/dirty/baseline persistence, localizzazioni complete e test puri UI/viewmodel. **TASK-052** aggiunto 2026-05-06: post TASK-051 DONE — foundation `sync_events` / `record_sync_event` / outbox iOS (audit + roadmap slice A–G; ora **DONE / Chiusura — SUPERSEDED** da TASK-053+ e legacy closure 2026-05-12). **TASK-053** aggiunto 2026-05-06 su override utente: Slice A tecnica read-only `sync_events` iOS, senza UI/write/outbox/realtime/background. **TASK-057** aggiunto 2026-05-06: post TASK-056 DONE — Slice E planning **local enqueue** verso outbox SwiftData da outcome push manuali; **no** network/RPC live/drain; file `docs/TASKS/TASK-057-supabase-sync-events-slice-e-local-enqueue-ios.md`. **TASK-058** aggiunto 2026-05-06: post TASK-057 DONE — Slice F recorder live isolato `record_sync_event` con mapper RPC puro e transport fakeable; **no** RPC live/Supabase live/live dataset validation/drain/UI; file `docs/TASKS/TASK-058-supabase-record-sync-event-live-recorder-planning-ios.md`. **TASK-060** aggiunto 2026-05-07: post **TASK-059 DONE** — Slice **G2** drain outbox manuale; file `docs/TASKS/TASK-060-supabase-sync-events-outbox-drain-g2-ios.md`. **TASK-061** aggiunto 2026-05-07: post **TASK-060 DONE** — UI DEBUG drain manuale in `OptionsView` (`#if DEBUG`); planning, execution e review chiusi con **APPROVED_FIXED_DIRECTLY / DONE**; file `docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md`. **TASK-062** aggiunto 2026-05-07: post **TASK-061 DONE / Chiusura** — pianificazione **validazione operativa controllata** (smoke Simulator/manuale, matrice S62-01…S62-15, policy drain live opzionale); file `docs/TASKS/TASK-062-supabase-sync-events-manual-drain-operational-validation-ios.md`. **TASK-063** creato come **ACTIVE / PLANNING** (file `docs/TASKS/TASK-063-supabase-production-safe-sync-orchestrator-planning-ios.md`) — roadmap orchestratore production-safe dopo TASK-062, slice TASK-064+ solo proposta. **TASK-064** creato su user override come prima slice operativa post TASK-063: recovery iOS bounded/owner-scoped delle entry outbox `sending` stale; file `docs/TASKS/TASK-064-supabase-sync-events-outbox-sending-stale-recovery-ios.md`.
 
 **TASK-097…TASK-102** registrati il **2026-05-10** nel MASTER-PLAN dopo **TASK-096 DONE / REVIEW PASS**. **TASK-097** ha **`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`** in **DONE / Chiusura — REVIEW PASS**. **TASK-098** ha **`docs/TASKS/TASK-098-cross-platform-smoke-android-supabase-ios.md`** in **DONE / Chiusura — REVIEW PASS** dopo execution e review runtime cross-platform PASS. **TASK-099** ha **`docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`** in **DONE / Chiusura — REVIEW PASS** dopo review/fix conflict-recovery PASS. **TASK-100** ha **`docs/TASKS/TASK-100-large-dataset-performance-acceptance-ios.md`** in **DONE / Chiusura — REVIEW PASS FINAL** *(2026-05-10, conferma utente; evidence `docs/TASKS/EVIDENCE/TASK-100/`; nessun claim production-ready globale 100%)*. **TASK-101** ha **`docs/TASKS/TASK-101-production-readiness-privacy-rls-security-audit.md`** in **DONE / Chiusura — REVIEW PASS FINAL** *(2026-05-12; evidence `docs/TASKS/EVIDENCE/TASK-101/`; nessun claim production-ready globale 100%)*. **TASK-102** ha **`docs/TASKS/TASK-102-release-polish-ux-ios.md`** in **DONE / Chiusura — REVIEW PASS FINAL / PASS WITH NOTES** *(2026-05-12; evidence `docs/TASKS/EVIDENCE/TASK-102/`; nessun claim production-ready globale 100%)*. Temi roadmap: audit privacy/RLS/security (101); polish UX Release (102).
 
@@ -992,34 +882,34 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-002 | External file opening (document handoff) | DONE | CRITICAL |
 | TASK-003 | PreGenerate append/reload parity | DONE | HIGH |
 | TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | DONE | HIGH |
-| TASK-005 | ImportAnalysis error export + inline editing | BLOCKED | HIGH |
-| TASK-006 | Database full import/export (multi-sheet) | BLOCKED | HIGH |
+| TASK-005 | ImportAnalysis error export + inline editing | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | HIGH |
+| TASK-006 | Database full import/export (multi-sheet) | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | HIGH |
 | TASK-007 | History advanced filters | DONE | MEDIUM |
-| TASK-008 | Generated manual row dialog + calculate | BLOCKED | MEDIUM |
-| TASK-009 | Product model old prices + price backfill | BLOCKED | LOW |
+| TASK-008 | Generated manual row dialog + calculate | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | MEDIUM |
+| TASK-009 | Product model old prices + price backfill | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | LOW |
 | TASK-010 | Localizzazione UI multilingua | DONE | LOW |
-| TASK-011 | Large import stability, memory e progress UX | SUPERSEDED | HIGH |
+| TASK-011 | Large import stability, memory e progress UX | DONE / Chiusura — SUPERSEDED | HIGH |
 | TASK-012 | Simulator automation — dual-agent wrapper + adapter (sblocca TASK-008) | DONE | HIGH |
-| TASK-013 | sim_ui.sh performance — batch mode, timeout reale, cache device frame | WONT_DO | — |
+| TASK-013 | sim_ui.sh performance — batch mode, timeout reale, cache device frame | DONE / Chiusura — WONT_DO_ACCEPTED | — |
 | TASK-014 | Global Audit & Backlog Refresh | DONE | — |
-| TASK-015 | Calculate dialog in GeneratedView (GAP-15 residuo) | WONT_DO | LOW |
-| TASK-016 | Deduplicazione logica import DatabaseView/ProductImportViewModel | BLOCKED | LOW |
-| TASK-017 | PreGenerate: validazione esplicita colonne obbligatorie | BLOCKED | MEDIUM |
-| TASK-018 | GeneratedView: secondo livello revert (ai dati originali import) | BLOCKED | MEDIUM |
-| TASK-019 | Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill | BLOCKED | MEDIUM |
-| TASK-020 | Scanner: feedback camera non disponibile | BLOCKED | LOW |
-| TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | BLOCKED | LOW |
+| TASK-015 | Calculate dialog in GeneratedView (GAP-15 residuo) | DONE / Chiusura — WONT_DO_ACCEPTED | LOW |
+| TASK-016 | Deduplicazione logica import DatabaseView/ProductImportViewModel | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | LOW |
+| TASK-017 | PreGenerate: validazione esplicita colonne obbligatorie | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | MEDIUM |
+| TASK-018 | GeneratedView: secondo livello revert (ai dati originali import) | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | MEDIUM |
+| TASK-019 | Robustezza: guardie array GeneratedView + cascade delete ProductPrice + async backfill | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | MEDIUM |
+| TASK-020 | Scanner: feedback camera non disponibile | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE_WITH_HARDWARE_NOTE | LOW |
+| TASK-021 | HistoryEntry: warning su dati corrotti / deserializzazione fallita | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | LOW |
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | DONE | HIGH |
-| TASK-023 | Full-database reimport idempotency + non-product diff visibility | BLOCKED | HIGH |
-| TASK-024 | Full-database import progress UX + cancellation | BLOCKED | MEDIUM |
-| TASK-025 | GeneratedView: ricalcolo dinamico paymentTotal + missingItems su History card | BLOCKED | MEDIUM |
-| TASK-026 | Scanner: toggle torcia (flashlight) | BLOCKED | LOW |
-| TASK-027 | ManualEntrySheet: modalità «Aggiungi e continua» (rapid entry) | BLOCKED | LOW |
-| TASK-028 | GeneratedView: Row Detail UX Refinement vs Android | BLOCKED | HIGH |
+| TASK-023 | Full-database reimport idempotency + non-product diff visibility | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | HIGH |
+| TASK-024 | Full-database import progress UX + cancellation | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | MEDIUM |
+| TASK-025 | GeneratedView: ricalcolo dinamico paymentTotal + missingItems su History card | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | MEDIUM |
+| TASK-026 | Scanner: toggle torcia (flashlight) | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE_WITH_HARDWARE_NOTE | LOW |
+| TASK-027 | ManualEntrySheet: modalità «Aggiungi e continua» (rapid entry) | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | LOW |
+| TASK-028 | GeneratedView: Row Detail UX Refinement vs Android | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | HIGH |
 | TASK-029 | iOS Completion Tracking Cleanup + Manual Validation Matrix | DONE | HIGH |
-| TASK-030 | Full-database import/export finalization: reimport idempotency + non-product diff + progress UX | BLOCKED | HIGH |
+| TASK-030 | Full-database import/export finalization: reimport idempotency + non-product diff + progress UX | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | HIGH |
 | TASK-031 | Import recognition hardening: canonical headers HTML/Excel | DONE | MEDIUM |
-| TASK-032 | GeneratedView multi-row navigation validation + missing-data scenarios | BLOCKED | MEDIUM |
+| TASK-032 | GeneratedView multi-row navigation validation + missing-data scenarios | DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE | MEDIUM |
 | TASK-033 | Supabase schema audit and iOS/Android model mapping | DONE | HIGH |
 | TASK-034 | Supabase iOS foundation: client config + DTO readonly | DONE | MEDIUM |
 | TASK-035 | Manual Supabase pull to SwiftData dry-run | DONE | MEDIUM |
@@ -1039,7 +929,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-049 | Supabase ProductPrice pull → apply locale controllato SwiftData iOS, no push remoto | DONE | HIGH |
 | TASK-050 | Supabase ProductPrice manual push — preflight + dry-run iOS, no sync_events | DONE | HIGH |
 | TASK-051 | Supabase ProductPrice push live manuale controllato iOS (`inventory_product_prices`, dry-run obbligatorio, read-back, idempotenza) | DONE | HIGH |
-| TASK-052 | Supabase sync_events / record_sync_event / outbox foundation audit iOS (audit/roadmap; superseded by TASK-053; non DONE) | BLOCKED | HIGH |
+| TASK-052 | Supabase sync_events / record_sync_event / outbox foundation audit iOS (audit/roadmap; superseded by TASK-053) | DONE / Chiusura — SUPERSEDED | HIGH |
 | TASK-053 | Supabase sync_events Slice A iOS: DTO + service read-only + test decode/fake | DONE | HIGH |
 | TASK-054 | Supabase sync_events Slice B — UI DEBUG read-only `sync_events` in OptionsView | DONE | HIGH |
 | TASK-055 | Supabase sync_events / record_sync_event / outbox foundation iOS — Slice C local outbox foundation | DONE | HIGH |
@@ -1099,17 +989,55 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-099 | Conflict/recovery runtime hardening iOS | 2026-05-10 |
 | TASK-098 | Cross-platform smoke Android ↔ Supabase ↔ iOS (`TASK098_*`) | 2026-05-10 |
 | TASK-097 | Runtime sandbox smoke iOS ↔ Supabase (`TASK097_*`) | 2026-05-10 |
+| TASK-096 | Acceptance finale sync semi-automatica | 2026-05-09 |
+| TASK-095 | Policy lifecycle / background iOS | 2026-05-09 |
+| TASK-094 | Push intelligente aggregato e resource-aware iOS | 2026-05-09 |
+| TASK-093 | Local change accumulation / dirty set iOS | 2026-05-09 |
+| TASK-092 | Auto pull leggero foreground iOS | 2026-05-09 |
+| TASK-090 | Release acceptance cross-platform finale | 2026-05-12 (legacy closure: later acceptance) |
+| TASK-089 | Benchmark dataset grande: preview/sync/export | 2026-05-09 |
+| TASK-088 | ProductPrice post-push identity reale | 2026-05-09 |
+| TASK-087 | Smoke runtime piccolo Android ↔ Supabase ↔ iOS | 2026-05-09 |
+| TASK-086 | Policy `updated_at` catalogo Supabase | 2026-05-09 |
+| TASK-085 | Hardening production-ready iOS / Supabase / cross-platform | 2026-05-12 (legacy closure: later gaps closed) |
+| TASK-084 | Parità Android ↔ iOS Supabase condiviso | 2026-05-12 (legacy closure: superseded) |
+| TASK-083 | Smoke end-to-end iOS Release Supabase sync mutativa | 2026-05-12 (legacy closure: superseded) |
+| TASK-082 | Conflitti e timestamp cross-device | 2026-05-08 |
+| TASK-081 | Drain outbox `sync_events` Release controllato | 2026-05-08 |
+| TASK-080 | ProductPrice sync completa iOS ↔ Supabase | 2026-05-08 |
+| TASK-079 | Push catalogo guidato Release | 2026-05-08 |
 | TASK-091 | Supabase iOS — sync semi-automatica intelligente e parità Android (MVP iOS-first) | 2026-05-09 |
 | TASK-001 | Gap Audit iOS vs Android — Censimento funzionalità mancanti | 2026-03-19 |
 | TASK-003 | PreGenerate append/reload parity | 2026-03-20 |
 | TASK-004 | GeneratedView editing parity (revert, delete, mark all, search nav) | 2026-03-20 |
 | TASK-007 | History advanced filters | 2026-03-21 |
 | TASK-012 | Simulator automation — dual-agent wrapper + adapter | 2026-03-21 |
-| TASK-002 | External file opening (document handoff) | 2026-03-22 (DONE parziale: "Condividi/Invia copia" funziona; "Apri con" cross-app documentato come limite iOS noto) |
+| TASK-002 | External file opening (document handoff) | 2026-05-12 (legacy closure: iOS limitation accepted) |
 | TASK-014 | Global Audit & Backlog Refresh | 2026-03-22 |
+| TASK-005 | ImportAnalysis error export + inline editing | 2026-05-12 (legacy closure) |
+| TASK-006 | Database full import/export (multi-sheet) | 2026-05-12 (legacy closure) |
+| TASK-008 | Generated manual row dialog + calculate | 2026-05-12 (legacy closure) |
+| TASK-009 | Product model old prices + price backfill | 2026-05-12 (legacy closure) |
+| TASK-011 | Large import stability, memory e progress UX | 2026-05-12 (legacy closure: superseded) |
+| TASK-013 | sim_ui.sh performance | 2026-05-12 (legacy closure: WONT_DO accepted) |
+| TASK-015 | Calculate dialog in GeneratedView (GAP-15 residuo) | 2026-05-12 (legacy closure: WONT_DO accepted) |
+| TASK-016 | Deduplicazione logica import DatabaseView/ProductImportViewModel | 2026-05-12 (legacy closure) |
+| TASK-017 | PreGenerate: validazione esplicita colonne obbligatorie | 2026-05-12 (legacy closure) |
+| TASK-018 | GeneratedView: secondo livello revert | 2026-05-12 (legacy closure) |
+| TASK-019 | Robustezza GeneratedView/ProductPrice/backfill | 2026-05-12 (legacy closure) |
+| TASK-020 | Scanner: feedback camera non disponibile | 2026-05-12 (legacy closure: hardware note accepted) |
+| TASK-021 | HistoryEntry warning dati corrotti | 2026-05-12 (legacy closure) |
 | TASK-022 | Full-database large import: apply crash after analysis (EXC_BAD_ACCESS) | 2026-03-23 |
+| TASK-023 | Full-database reimport idempotency + non-product diff visibility | 2026-05-12 (legacy closure) |
+| TASK-024 | Full-database import progress UX + cancellation | 2026-05-12 (legacy closure) |
+| TASK-025 | GeneratedView paymentTotal + missingItems History card | 2026-05-12 (legacy closure) |
+| TASK-026 | Scanner: toggle torcia | 2026-05-12 (legacy closure: hardware note accepted) |
+| TASK-027 | ManualEntrySheet: Aggiungi e continua | 2026-05-12 (legacy closure) |
+| TASK-028 | GeneratedView row detail UX refinement | 2026-05-12 (legacy closure) |
 | TASK-010 | Localizzazione UI multilingua | 2026-03-25 |
 | TASK-029 | iOS Completion Tracking Cleanup + Manual Validation Matrix | 2026-04-26 |
+| TASK-030 | Full-database import/export finalization | 2026-05-12 (legacy closure) |
+| TASK-032 | GeneratedView multi-row navigation validation + missing-data scenarios | 2026-05-12 (legacy closure) |
 | TASK-031 | Import recognition hardening: canonical headers HTML/Excel | 2026-04-27 |
 | TASK-036 | Import HTML advanced table parsing: colspan/rowspan/multi-table hardening | 2026-04-27 |
 | TASK-037 | XCTest target for ExcelAnalyzer HTML parser fixtures | 2026-04-27 *(slice 1); 2026-05-04 slice 2* |
@@ -1130,6 +1058,7 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-049 | Supabase ProductPrice pull → apply locale controllato SwiftData iOS, no push remoto | 2026-05-06 |
 | TASK-050 | Supabase ProductPrice manual push — preflight + dry-run iOS, no sync_events | 2026-05-06 |
 | TASK-051 | Supabase ProductPrice push live manuale controllato iOS (`inventory_product_prices`, dry-run obbligatorio, read-back, idempotenza) | 2026-05-06 |
+| TASK-052 | Supabase sync_events / record_sync_event / outbox foundation audit iOS | 2026-05-12 (legacy closure: superseded) |
 | TASK-053 | Supabase sync_events Slice A iOS: DTO + service read-only + test decode/fake | 2026-05-06 |
 | TASK-054 | Supabase sync_events Slice B — UI DEBUG read-only `sync_events` in OptionsView | 2026-05-06 |
 | TASK-055 | Supabase sync_events / record_sync_event / outbox foundation iOS — Slice C local outbox foundation | 2026-05-07 |
@@ -1158,49 +1087,10 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
 | TASK-078 | Supabase pull apply locale guidato Release iOS | 2026-05-08 |
 
 ## Blocchi e dipendenze
-- TASK-032 bloccato / in pausa.
-  Motivo: **User override 2026-05-03** — l'utente ha chiesto di mettere TASK-032 in pausa e attivare TASK-033. D2 e' accepted; **P2–P4 PASS runtime**; **P5 scanner reopen NON ha evidenza PASS** dopo tentativi di micro-fix. Task **non** DONE. Alla ripresa: chiudere o decidere formalmente P5 scanner reopen prima di qualunque raccomandazione finale su TASK-028.
-- TASK-028 bloccato.
-  Motivo: **User override 2026-04-26** — validazione runtime/visiva read-only positiva ma incompleta; build PASS; iPhone piccolo light/dark PASS; complete/incomplete PASS; campi secondari PASS sul caso completo; nessuna regressione TASK-028 rilevata; nessun FIX richiesto. Test residui sospesi: iPhone grande row detail, prev/next multi-riga, scanner reopen dopo decisione permesso camera, caso dati mancanti/ambigui. Task **non** DONE; pending manual validation finale.
-  Nota (2026-05 TASK-032): slice **FIX D2** (`GeneratedView`/`InventorySearchSheet`) validata runtime con D2 PASS e D1 regression PASS. Override utente “Esegui tutto per farlo in DONE”: **P2–P4 PASS runtime** su iPhone 17 Pro Max, ma **P5 scanner reopen NON ha evidenza PASS** dopo tentativi di micro-fix; **TASK-032 ora BLOCKED / on hold** e **TASK-028 resta BLOCKED**. Non proporre DONE finché P5 scanner reopen non è validato o deciso formalmente con effetto esplicito.
-  Nota: sospensione esplicita dell'utente; **TASK-029** e' completato e **TASK-030** e' ora **BLOCKED** per runtime gap canonico.
-- TASK-027 bloccato.
-  Motivo: implementation **completata**; review **completata** con esito **OK** / **APPROVED**; **test manuali T-1…T-13 non eseguiti** — **sospensione esplicita** perché mancano i test manuali; **non** **DONE**; **on hold for manual verification**. Alla ripresa: test manuali → eventuale FIX → REVIEW → conferma utente → DONE.
-  Nota: planning tecnico invariato nel file task; nessun **DONE** finché mancano test manuali e conferma utente. *(Tracking allineato 2026-03-26.)*
-- TASK-026 bloccato.
-  Motivo: review **APPROVED** acquisita; **nessun fix** aperto; **test manuali T-1…T-9 pendenti**; **non** DONE. **In sospensione / pending manual validation**. Alla ripresa: test manuali → eventuale FIX → REVIEW → conferma utente → DONE.
-  Nota: non invalida execution/review gia' documentati nel file task. *(Riferimento storico TASK-026; **non** descrive lo stato corrente — vedi **Obiettivo attuale** e **Workflow task attivo**.)*
-- TASK-025 bloccato.
-  Motivo: review tecnica **APPROVED** acquisita; **test manuali utente** (T-0..T-15) **pendenti**; **non** DONE. Task congelata in attesa validazione manuale. Alla ripresa: test → eventuale FIX → REVIEW finale → conferma utente → DONE.
-  Nota: non invalida execution/review gia' documentati nel file task.
-- TASK-021 bloccato.
-  Motivo: **user override 2026-03-25** — sospeso per focus su **TASK-025**; review **APPROVED** (post-fix F-1) gia' acquisita; **non** DONE; alla ripresa: **conferma utente** (e eventuali test manuali documentati nel file task se ancora desiderati) → DONE.
-  Nota: non invalida CA-1..CA-4 ne' l'execution/review gia' archiviati nel file task.
-- TASK-020 bloccato.
-  Motivo: **user override 2026-03-25** — review **APPROVED**; **nessun fix richiesto**; **test manuali T-1..T-6 pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
-  Nota: sospensione storica per attivare **TASK-021** (ora **TASK-021** e' **BLOCKED**); **TASK-027** **BLOCKED**. *(Riferimento storico: non descrive lo stato attuale del progetto — vedi **Obiettivo attuale**.)*
-- TASK-019 bloccato.
-  Motivo: **user override 2026-03-25** — review tecnica **APPROVED**; **nessun fix richiesto**; **test manuali pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato → REVIEW.
-  Nota: sospensione per attivare **TASK-020**; non invalida execution/review documentati nel file task.
-- TASK-018 bloccato.
-  Motivo: **user override 2026-03-25** — review **APPROVED**; test manuali **CA-7** (**S-1**, **M-1..M-10**, **M-12**) **pendenti**; **non** DONE. Alla ripresa: validazione manuale; se OK conferma utente, altrimenti FIX mirato.
-  Nota: sospensione per spostare il focus operativo su **TASK-019**; non invalida l'execution/review gia' documentati nel file task.
-- TASK-017 bloccato.
-  Motivo: **user override 2026-03-24** — review **APPROVED**; test manuali utente **pendenti**; **non** DONE. Alla ripresa: validazione manuale PreGenerate (matrice T-1..T-10 a integrazione); se OK conferma utente, altrimenti FIX mirato.
-  Nota: sospensione per spostare il focus operativo su **TASK-018**; non invalida il merge/review gia' documentati nel file task.
-- TASK-016 bloccato.
-  Motivo: **user override 2026-03-24** — deduplicazione import eseguita e review **APPROVED**; test manuali utente non completati; chiusura **DONE** differita. Alla ripresa: validazione manuale perimetro Excel/simple + consumer collegati; se OK conferma utente, altrimenti FIX mirato.
-  Nota: sospensione per avviare TASK-017 su richiesta utente; non invalida il lavoro gia' mergiato in review.
-- TASK-011 **SUPERSEDED**.
-  Motivo: umbrella task completamente superato; il crash è stato chiuso in TASK-022 (DONE), reimport idempotency in TASK-023, progress UX in TASK-024. Nessun lavoro residuo non coperto dai task derivati. Aggiornato a SUPERSEDED da audit 2026-03-25.
-  Nota tracking: il planning/execution storico di TASK-011 resta documentato nel suo file task.
-- TASK-006 bloccato.
-  Motivo: implementazione multi-sheet completata, review emessa APPROVED da Claude. Il crash specifico nell'apply su dataset grande e' stato chiuso in TASK-022; follow-up reimport/idempotency in TASK-023 (**BLOCKED** dal 2026-03-24 per test manuali pendenti). UX progress/cancel in TASK-024 (**BLOCKED** dal 2026-03-24; sospeso prima della finalizzazione review/fix UI).
-  Nota criteri: CA-1/CA-12 e CA-14 verificati; TASK-011 resta contesto storico secondario.
-- TASK-008 bloccato.
-  Motivo: review codice completata da Claude — nessun problema critico trovato, tutti i CA verificabili staticamente superati. Build verde. Validazione UI end-to-end (T-1..T-28) sospesa: richiede test manuali nel Simulator (l'automazione via wrapper SIM UI non è più parte del workflow standard). Sblocco subordinato a test manuali dell'utente o a decisione esplicita di procedere.
-  Nota criteri: CA-1..CA-14, CA-16..CA-20 verificati da code review; CA-15 (autosave/restore round-trip) e test interattivi T-1..T-28 ancora da validare manualmente.
-  Ultimo aggiornamento: 2026-03-22
+- **Nessun task legacy resta bloccato come stato corrente.** Il riallineamento 2026-05-12 19:18 -0400 ha chiuso gli stati storici `BLOCKED`, `PARTIAL_ACCEPTED`, `SUPERSEDED` e `WONT_DO` dove coperti da evidenze successive, supersessione o accettazione esplicita di limite non bloccante.
+- Fonte di dettaglio: `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`.
+- Residui non bloccanti: VoiceOver gesture traversal completo e uso fisico camera/torcia restano note P1/manuali accettate in TASK-102, non blocker aperti.
+- **TASK-104 non aperto**; progetto **IDLE**; ultimo completato **TASK-103**.
 
 ## Note di coordinamento
 - Il file `docs/TASKS/TASK-TEMPLATE.md` è un MODELLO, non un task reale — non usarlo come task attivo

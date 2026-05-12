@@ -4,12 +4,14 @@
 - **Task ID**: TASK-013
 - **Titolo**: sim_ui.sh performance — batch mode, timeout reale, cache device frame
 - **File task**: `docs/TASKS/TASK-013-sim-ui-performance.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: —
-- **Responsabile attuale**: —
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — WONT_DO_ACCEPTED
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-21
-- **Ultimo aggiornamento**: 2026-03-22
-- **Ultimo agente che ha operato**: CLAUDE
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy WONT_DO_ACCEPTED; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — WONT_DO_ACCEPTED`.
 - **Nota**: task sospeso per decisione utente (2026-03-22). Il wrapper SIM UI è stato rimosso dal workflow standard del progetto. Nessun ulteriore lavoro di ottimizzazione previsto. Vedi sezione Decisioni.
 
 ## Dipendenze

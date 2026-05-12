@@ -4,12 +4,14 @@
 - **Task ID**: TASK-030
 - **Titolo**: Full-database import/export finalization: reimport idempotency + non-product diff + progress UX
 - **File task**: `docs/TASKS/TASK-030-full-database-import-export-finalization-reimport-idempotency-non-product-diff-progress-ux.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: REVIEW sospesa / pending runtime validation canonica
-- **Responsabile attuale**: UTENTE *(decidere nuova execution runtime con workbook canonico o accettare esplicitamente il gap residuo)*
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-04-26
-- **Ultimo aggiornamento**: 2026-04-27
-- **Ultimo agente che ha operato**: CLAUDE CODE *(review tecnica + fix diretto guard no-work UX)*
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 ## Dipendenze
 - **Dipende da**: TASK-023, TASK-024

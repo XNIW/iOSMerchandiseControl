@@ -4,12 +4,14 @@
 - **Task ID**: TASK-025
 - **Titolo**: GeneratedView: ricalcolo dinamico paymentTotal + missingItems su History card
 - **File task**: `docs/TASKS/TASK-025-generatedview-ricalcolo-paymenttotal-missingitems-history-card.md`
-- **Stato**: BLOCKED *(sospeso post-review; **non** DONE)*
-- **Fase attuale**: — *(task non ACTIVE; review tecnica **APPROVED** gia' acquisita — vedi sezione **Review**)*
-- **Responsabile attuale**: — *(nessuno operativo; congelato in attesa **test manuali utente** T-0..T-15)*
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-25
-- **Ultimo aggiornamento**: 2026-03-25 *(tracking: **BLOCKED** — review **APPROVED**; test manuali non eseguiti; ripresa = test → eventuale **FIX** → **REVIEW** finale → conferma utente → **DONE**)*
-- **Ultimo agente che ha operato**: CLAUDE
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 ## Dipendenze
 - **Dipende da**: nessuno (origine: audit iOS vs Android 2026-03-25, gap funzionale su totali cronologia).
@@ -299,7 +301,8 @@ Tutte le 8 clausole rispettate. Header esclusa, lunghezze disallineate gestite s
 
 ### Sospensione tracking (2026-03-25)
 - **Motivo**: review tecnica **APPROVED** acquisita; **test manuali utente** (T-0..T-15) **non ancora eseguiti**; task **non** chiusa in **DONE**.
-- **Stato task**: **BLOCKED** — congelata in attesa di futura validazione manuale.
+- **Stato storico 2026-03-25**: **BLOCKED** — congelata in attesa di futura validazione manuale.
+- **Stato corrente 2026-05-12**: **DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE**; il blocco manuale e' stato superato dal riallineamento legacy e dalle evidenze successive (`docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`).
 - **Alla ripresa**: eseguire test manuali → se regressioni → **FIX** (Codex) → **REVIEW** (Claude) → conferma utente → **DONE**. Se i test passano senza fix → **REVIEW** finale di chiusura (se necessario) → conferma utente → **DONE**.
 
 ---

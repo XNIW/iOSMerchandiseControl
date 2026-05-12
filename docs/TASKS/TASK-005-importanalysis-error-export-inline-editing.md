@@ -4,12 +4,14 @@
 - **Task ID**: TASK-005
 - **Titolo**: ImportAnalysis error export + inline editing
 - **File task**: `docs/TASKS/TASK-005-importanalysis-error-export-inline-editing.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: —
-- **Responsabile attuale**: —
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-20
-- **Ultimo aggiornamento**: 2026-03-20
-- **Ultimo agente che ha operato**: CLAUDE
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 > Stato sospeso: implementazione gia` esistente e tracking di execution completato; review finale temporaneamente rinviata finche' i test manuali non saranno completati.
 

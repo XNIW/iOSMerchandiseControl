@@ -4,12 +4,14 @@
 - **Task ID**: TASK-027
 - **Titolo**: ManualEntrySheet: modalità «Aggiungi e continua» (rapid entry)
 - **File task**: `docs/TASKS/TASK-027-manualentrysheet-aggiungi-e-prossimo.md`
-- **Stato**: BLOCKED *(sospeso — **non** **DONE** definitivo)*
-- **Fase attuale**: — *(workflow chiuso fino a validazione manuale: ultima fase completata **REVIEW** con esito **APPROVED** / OK; **DONE** solo dopo test manuali T-1…T-13 + conferma utente)*
-- **Responsabile attuale**: **UTENTE** *(test manuali T-1…T-13)*; alla ripresa post-test **CLAUDE** (review finale / verso DONE) o **CODEX** (**FIX** se necessario)
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-25
-- **Ultimo aggiornamento**: 2026-03-26 *(allineamento tracking ufficiale: implementation + review OK; test manuali **non eseguiti**; stato **on hold**; planning tecnico **invariato** — nessuna modifica alle sezioni Planning/Decisioni)*
-- **Ultimo agente che ha operato**: CLAUDE *(aggiornamento solo documentazione / piano)*
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 ## Stato ufficiale (riepilogo tracking)
 | Voce | Valore |
@@ -17,8 +19,8 @@
 | **Implementation** | **Completata** (conforme al planning nel file task) |
 | **Review** | **Completata** — esito **OK** / **APPROVED**; nessun **FIX** richiesto dalla review |
 | **Test manuali** (T-1…T-13) | **Non eseguiti** |
-| **Stato task** | **BLOCKED** — *pending manual test* / *on hold for manual verification* |
-| **DONE** | **No** — la chiusura è bloccata **finché mancano** i test manuali (e la conferma utente) |
+| **Stato task** | **DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE** |
+| **DONE** | **Si — chiuso da legacy alignment 2026-05-12** |
 
 ## Stato operativo e sospensione (dettaglio)
 - **Motivo della sospensione (esplicito):** mancano i **test manuali** del piano T-1…T-13; senza quelli il task **non** può essere dichiarato **DONE** anche se implementation e review sono chiuse con esito positivo.

@@ -2,12 +2,14 @@
 
 ## Stato
 
-- **Stato:** **DONE / Chiusura — PARTIAL_ACCEPTED**
-- **Responsabile:** Claude / Reviewer
-- **Tipo:** review finale acceptance cross-platform iOS-first, chiusa con residui runtime accettati
-- **Ultimo aggiornamento:** 2026-05-09 17:26 -0400 — REVIEW completata; TASK-090 chiuso DONE / Chiusura — PARTIAL_ACCEPTED
+- **Stato:** **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE**
+- **Responsabile:** Nessuno / Chiuso
+- **Tipo:** acceptance cross-platform iOS-first storica; residui runtime chiusi/superati da TASK-097/TASK-098/TASK-100/TASK-103
+- **Ultimo aggiornamento:** 2026-05-12 19:18 -0400 — legacy alignment: TASK-090 non resta piu PARTIAL_ACCEPTED nel tracking corrente; gap fresh runtime/import-export/cross-platform coperti da TASK-097/TASK-098/TASK-100/TASK-103; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
 - **Ultimo task completato:** **TASK-089 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-089-large-dataset-sync-preview-benchmark-ios.md`)
-- **Task successivi:** non aperti (**TASK-091** e oltre **non** inizializzati)
+- **Task successivi:** TASK-091...TASK-103 eseguiti e chiusi; TASK-104 non aperto
+
+> **Chiusura legacy 2026-05-12:** il precedente esito `PARTIAL_ACCEPTED` resta storico nelle evidenze originali, ma il tracking corrente considera i gap superati dalle acceptance successive indicate nella matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`.
 
 ---
 

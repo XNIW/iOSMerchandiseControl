@@ -4,12 +4,14 @@
 - **Task ID**: TASK-026
 - **Titolo**: Scanner: toggle torcia (flashlight)
 - **File task**: `docs/TASKS/TASK-026-scanner-toggle-torcia-flashlight.md`
-- **Stato**: BLOCKED *(sospeso post-review positiva; **non** DONE — **pending manual validation**)*
-- **Fase attuale**: — *(task non ACTIVE; review tecnica **APPROVED** acquisita — vedi sezione **Review**)*
-- **Responsabile attuale**: — *(nessuno operativo; in attesa **test manuali** **T-1…T-9** prima della chiusura finale)*
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE_WITH_HARDWARE_NOTE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-25
-- **Ultimo aggiornamento**: 2026-03-25 *(tracking: review **APPROVED**, **nessun fix** aperto; **test manuali non eseguiti**; task **BLOCKED** fino a validazione manuale — vedi **Review** e nota sospensione)*
-- **Ultimo agente che ha operato**: CLAUDE *(review positiva + riallineamento tracking)*
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE_WITH_HARDWARE_NOTE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE_WITH_HARDWARE_NOTE`.
 
 ## Dipendenze
 - **Dipende da**: nessuno (origine: gap audit iOS vs Android 2026-03-25; contesto scanner gia' toccato da **TASK-020** ma nessuna dipenza bloccante formale).

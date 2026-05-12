@@ -4,12 +4,14 @@
 - **Task ID**: TASK-009
 - **Titolo**: Product model old prices + price backfill
 - **File task**: `docs/TASKS/TASK-009-product-model-old-prices-price-backfill.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: — (sospeso dopo REVIEW)
-- **Responsabile attuale**: — (in attesa di test manuali da parte dell'utente)
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-22
-- **Ultimo aggiornamento**: 2026-03-22
-- **Ultimo agente che ha operato**: CLAUDE
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 ## Dipendenze
 - **Dipende da**: nessuno

@@ -4,12 +4,14 @@
 - **Task ID**: TASK-028
 - **Titolo**: GeneratedView: Row Detail UX Refinement vs Android
 - **File task**: `docs/TASKS/TASK-028-generatedview-row-detail-ux-refinement.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: REVIEW sospesa / pending manual validation
-- **Responsabile attuale**: UTENTE
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-26
-- **Ultimo aggiornamento**: 2026-04-26
-- **Ultimo agente che ha operato**: CODEX *(solo tracking documentale su user override)*
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 ## Dipendenze
 - **Dipende da**: nessuno

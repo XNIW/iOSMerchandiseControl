@@ -4,12 +4,14 @@
 - **Task ID**: TASK-016
 - **Titolo**: Deduplicazione logica import DatabaseView/ProductImportViewModel
 - **File task**: `docs/TASKS/TASK-016-deduplicazione-logica-import-databaseview-productimportviewmodel.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: REVIEW *(sospesa — task non attivo progetto; ultima fase operativa prima della sospensione)*
-- **Responsabile attuale**: UTENTE *(test manuali pendenti; se regressioni → segnalare per FIX/CODEX)*
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-24
-- **Ultimo aggiornamento**: 2026-03-24 (sospensione BLOCKED: review APPROVED, test manuali non eseguiti; TASK-017 attivato su richiesta utente)
-- **Ultimo agente che ha operato**: CLAUDE
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 ## Dipendenze
 - **Dipende da**: riferimento di backlog da TASK-014: follow-up collegato alla logica oggi condivisa tra `TASK-005` e `TASK-006`; dettaglio operativo da confermare nel planning senza assumere che i task correlati siano gia' chiusi.

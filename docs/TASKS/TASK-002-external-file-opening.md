@@ -4,12 +4,14 @@
 - **Task ID**: TASK-002
 - **Titolo**: External file opening (document handoff via CFBundleDocumentTypes)
 - **File task**: `docs/TASKS/TASK-002-external-file-opening.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: —
-- **Responsabile attuale**: —
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — ACCEPTED_LIMITATION
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-19
-- **Ultimo aggiornamento**: 2026-03-19
-- **Ultimo agente che ha operato**: CODEX
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy ACCEPTED_LIMITATION; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — ACCEPTED_LIMITATION`.
 
 ## Dipendenze
 - **Dipende da**: nessuno

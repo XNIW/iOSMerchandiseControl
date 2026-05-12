@@ -8,12 +8,14 @@
 | **Titolo** | Smoke end-to-end iOS Release — catalogo, prezzi, outbox drain, recovery |
 | **File task** | `docs/TASKS/TASK-083-supabase-end-to-end-release-smoke-ios.md` |
 | **Stato** | DONE |
-| **Fase attuale** | CHIUSURA |
+| **Fase attuale** | Chiusura — SUPERSEDED_BY_TASK097_TASK103 |
 | **Responsabile attuale** | Codex / Reviewer |
 | **Data creazione** | 2026-05-08 |
-| **Ultimo aggiornamento** | 2026-05-08 20:50 -0400 — REVIEW/CHIUSURA: task chiuso come DONE con esito BLOCKED preflight; manifest sandbox incompleto, runtime S83 non avviato, nessun write remoto, nessun drain, nessun cleanup |
+| **Ultimo aggiornamento** | 2026-05-12 19:18 -0400 — legacy alignment: runtime manifest/smoke gap superseded by TASK-097 and final TASK-103 evidence; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md` |
 | **Ultimo agente** | Codex / Reviewer |
 | **Repo iOS** | `/Users/minxiang/Desktop/iOSMerchandiseControl` |
+
+> **Chiusura legacy 2026-05-12:** le sezioni storiche sottostanti restano archivio; la fonte di verita' corrente e' `Chiusura — SUPERSEDED_BY_TASK097_TASK103` secondo `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`.
 
 ## Dipendenze
 

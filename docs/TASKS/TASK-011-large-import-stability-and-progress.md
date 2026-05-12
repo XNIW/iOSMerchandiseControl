@@ -4,12 +4,14 @@
 - **Task ID**: TASK-011
 - **Titolo**: Large import stability, memory e progress UX
 - **File task**: `docs/TASKS/TASK-011-large-import-stability-and-progress.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: REVIEW (sospeso in questa fase)
-- **Responsabile attuale**: — (task sospeso, nessun agente deve procedere)
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — SUPERSEDED
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-21
-- **Ultimo aggiornamento**: 2026-03-23
-- **Ultimo agente che ha operato**: CODEX
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy SUPERSEDED; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — SUPERSEDED`.
 
 ## Blocco (2026-03-23)
 

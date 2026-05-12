@@ -4,12 +4,14 @@
 - **Task ID**: TASK-032
 - **Titolo**: GeneratedView multi-row navigation validation + missing-data scenarios
 - **File task**: `docs/TASKS/TASK-032-generatedview-multi-row-navigation-validation-missing-data-scenarios.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: REVIEW — **in pausa / on hold; P2–P4 runtime eseguiti; P5 scanner reopen NON accettato**
-- **Responsabile attuale**: Utente / Planner — ripresa futura dal gate P5 scanner reopen o decisione formale di scope
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-04-26
-- **Ultimo aggiornamento**: 2026-05-03
-- **Ultimo agente che ha operato**: Codex / Tracking — user override “metti task 32 in pausa e attivami la task 33”
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 ## Nota — REVIEW corrente (FIX D2)
 

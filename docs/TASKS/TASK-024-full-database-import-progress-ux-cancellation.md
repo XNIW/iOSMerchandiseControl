@@ -4,12 +4,14 @@
 - **Task ID**: TASK-024
 - **Titolo**: Full-database import progress UX + cancellation
 - **File task**: `docs/TASKS/TASK-024-full-database-import-progress-ux-cancellation.md`
-- **Stato**: BLOCKED
-- **Fase attuale**: REVIEW (sospeso in questa fase)
-- **Responsabile attuale**: — (task sospeso, nessuna nuova execution in corso)
+- **Stato**: DONE
+- **Fase attuale**: Chiusura — VALIDATED_BY_LATER_ACCEPTANCE
+- **Responsabile attuale**: Nessuno / Chiuso
 - **Data creazione**: 2026-03-24
-- **Ultimo aggiornamento**: 2026-03-24
-- **Ultimo agente che ha operato**: CODEX
+- **Ultimo aggiornamento**: 2026-05-12 19:18 -0400 — chiusura legacy VALIDATED_BY_LATER_ACCEPTANCE; vedi `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`
+- **Ultimo agente che ha operato**: Codex / Reviewer
+
+> **Chiusura legacy 2026-05-12:** il precedente stato `BLOCKED`/sospeso e' superato dall'override utente e dalla matrice `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`. Le sezioni storiche sottostanti restano archivio, ma la fonte di verita' corrente per il tracking e' questo header: `DONE / Chiusura — VALIDATED_BY_LATER_ACCEPTANCE`.
 
 ## Blocco (2026-03-24)
 
