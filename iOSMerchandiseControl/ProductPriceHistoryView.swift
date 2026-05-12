@@ -3,6 +3,8 @@ import SwiftData
 
 /// Storico prezzi per singolo prodotto.
 struct ProductPriceHistoryView: View {
+    @Environment(\.dismiss) private var dismiss
+
     let product: Product
 
     /// Tipo di prezzo attualmente selezionato (come i tab Android)
@@ -28,8 +30,9 @@ struct ProductPriceHistoryView: View {
         List {
             if prices.isEmpty {
                 Section {
-                    Text(L("product.history.empty"))
-                        .foregroundStyle(.secondary)
+                    ContentUnavailableView(L("product.history.empty"), systemImage: "clock.badge.questionmark")
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
                 }
             } else {
                 // Picker in stile tab “Acquisto / Vendita”
@@ -45,20 +48,24 @@ struct ProductPriceHistoryView: View {
 
                 if currentList.isEmpty {
                     Section {
-                        Text(L("product.history.empty_type", label(for: selectedType).lowercased()))
-                            .foregroundStyle(.secondary)
+                        ContentUnavailableView(
+                            L("product.history.empty_type", label(for: selectedType).lowercased()),
+                            systemImage: "clock"
+                        )
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
                     }
                 } else {
                     Section(header: Text(label(for: selectedType))) {
                         ForEach(currentList) { price in
-                            HStack {
+                            HStack(alignment: .firstTextBaseline, spacing: 12) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(formatDate(price.effectiveAt))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
 
                                     if let source = price.source, !source.isEmpty {
-                                        Text(displaySource(source))
+                                        Label(displaySource(source), systemImage: "tag")
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
                                     }
@@ -68,8 +75,10 @@ struct ProductPriceHistoryView: View {
 
                                 Text(formatMoney(price.price))
                                     .font(.headline)
+                                    .monospacedDigit()
                             }
                             .padding(.vertical, 4)
+                            .accessibilityElement(children: .combine)
                         }
                     }
                 }
@@ -78,6 +87,13 @@ struct ProductPriceHistoryView: View {
         .id("product-price-history-list-\(resolvedLanguageCode)")
         .navigationTitle(L("product.history.title"))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(L("common.close")) {
+                    dismiss()
+                }
+            }
+        }
     }
 
     private func label(for type: PriceType) -> String {

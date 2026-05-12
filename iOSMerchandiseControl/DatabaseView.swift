@@ -1491,6 +1491,8 @@ struct DatabaseView: View {
     
     @State private var showScanner = false
     @State private var pendingBarcodeForNewProduct: String? = nil
+    @State private var productsPendingDeletion: [Product] = []
+    @State private var showingDeleteProductsConfirmation = false
 
     // Export / import
     @State private var exportURL: URL?
@@ -1677,6 +1679,25 @@ struct DatabaseView: View {
         let previous: Double?
     }
 
+    private struct DatabaseValueChip: View {
+        let title: String
+        let value: String
+
+        var body: some View {
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(title)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+    }
+
     // filtro in memoria sui prodotti, come facevi in Compose
     private var filteredProducts: [Product] {
         let trimmed = barcodeFilter.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1692,127 +1713,208 @@ struct DatabaseView: View {
         }
     }
 
+    private var resolvedLanguageCode: String {
+        Bundle.resolvedLanguageCode(for: appLanguage)
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 8) {
+            TextField(L("database.search_placeholder"), text: $barcodeFilter)
+                .textFieldStyle(.roundedBorder)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+
+            if !barcodeFilter.isEmpty {
+                Button {
+                    barcodeFilter = ""
+                } label: {
+                    Label(L("database.search.clear"), systemImage: "xmark.circle.fill")
+                        .labelStyle(.iconOnly)
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(L("database.search.clear"))
+            }
+
+            Button {
+                showScanner = true
+            } label: {
+                Label(L("database.action.scan"), systemImage: "camera.viewfinder")
+                    .labelStyle(.iconOnly)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.bordered)
+            .disabled(importProgress.isRunning)
+            .accessibilityLabel(L("database.action.scan"))
+        }
+        .padding(.horizontal)
+        .padding(.top)
+    }
+
+    private var databaseEmptyState: some View {
+        ContentUnavailableView {
+            Label(L("database.empty.title"), systemImage: "shippingbox")
+        } description: {
+            Text(L("database.empty.body"))
+        } actions: {
+            Button {
+                pendingBarcodeForNewProduct = nil
+                showAddSheet = true
+            } label: {
+                Label(L("product.title.new"), systemImage: "plus")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+
+    private var filteredProductsEmptyState: some View {
+        ContentUnavailableView {
+            Label(L("database.empty.filtered_title"), systemImage: "line.3.horizontal.decrease.circle")
+        } description: {
+            Text(L("database.empty.filtered_body"))
+        } actions: {
+            Button {
+                barcodeFilter = ""
+            } label: {
+                Label(L("database.search.clear"), systemImage: "xmark.circle")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+
+    @ViewBuilder
+    private func databaseSupplierCategoryLabels(for product: Product) -> some View {
+        if let supplierName = product.supplier?.name,
+           !supplierName.isEmpty {
+            Label(L("database.row.supplier", supplierName), systemImage: "building.2")
+                .lineLimit(1)
+        }
+
+        if let categoryName = product.category?.name,
+           !categoryName.isEmpty {
+            Label(L("database.row.category", categoryName), systemImage: "tag")
+                .lineLimit(1)
+        }
+    }
+
+    @ViewBuilder
+    private func databaseRowActions(for product: Product) -> some View {
+        Button {
+            productToEdit = product
+        } label: {
+            Label(L("common.edit"), systemImage: "pencil")
+        }
+        .buttonStyle(.borderless)
+
+        Button {
+            productForHistory = product
+        } label: {
+            Label(L("product.history.title"), systemImage: "clock.arrow.circlepath")
+        }
+        .buttonStyle(.borderless)
+    }
+
     var body: some View {
-        let resolvedLanguageCode = Bundle.resolvedLanguageCode(for: appLanguage)
-
         ZStack {
-            VStack {
-                // campo filtro barcode / nome / codice
-                HStack(spacing: 8) {
-                    TextField(L("database.search_placeholder"), text: $barcodeFilter)
-                        .textFieldStyle(.roundedBorder)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+            VStack(spacing: 0) {
+                searchBar
 
-                    if !barcodeFilter.isEmpty {
-                        Button {
-                            barcodeFilter = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                if products.isEmpty {
+                    databaseEmptyState
+                } else if filteredProducts.isEmpty {
+                    filteredProductsEmptyState
+                } else {
+                    List {
+                        ForEach(filteredProducts) { (product: Product) in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(alignment: .top, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(product.productName ?? L("product.no_name"))
+                                            .font(.headline)
+                                            .lineLimit(2)
+                                            .fixedSize(horizontal: false, vertical: true)
 
-                    Button {
-                        showScanner = true
-                    } label: {
-                        Image(systemName: "camera.viewfinder")
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.top)
+                                        if let second = product.secondProductName,
+                                           !second.isEmpty {
+                                            Text(second)
+                                                .font(.subheadline)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(2)
+                                        }
 
-                // lista prodotti
-                List {
-                    ForEach(filteredProducts) { (product: Product) in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(alignment: .top) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(product.productName ?? L("product.no_name"))
-                                        .font(.headline)
-
-                                    if let second = product.secondProductName,
-                                       !second.isEmpty {
-                                        Text(second)
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
-                                    }
-
-                                    Text(L("database.row.barcode", product.barcode))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-
-                                    if let item = product.itemNumber,
-                                       !item.isEmpty {
-                                        Text(L("database.row.code", item))
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-
-                                Spacer()
-
-                                VStack(alignment: .trailing, spacing: 2) {
-                                    if let purchase = product.purchasePrice {
-                                        Text(L("database.row.purchase", formatMoney(purchase)))
+                                        Label(product.barcode, systemImage: "barcode")
                                             .font(.caption)
-                                    }
-                                    if let retail = product.retailPrice {
-                                        Text(L("database.row.retail", formatMoney(retail)))
-                                            .font(.caption)
-                                    }
-                                    if let qty = product.stockQuantity {
-                                        Text(L("database.row.stock", formatQuantity(qty)))
-                                            .font(.caption2)
                                             .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+
+                                        if let item = product.itemNumber,
+                                           !item.isEmpty {
+                                            Label(item, systemImage: "number")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+
+                                    Spacer(minLength: 8)
+
+                                    VStack(alignment: .trailing, spacing: 4) {
+                                        if let purchase = product.purchasePrice {
+                                            DatabaseValueChip(title: L("product.history.purchase"), value: formatMoney(purchase))
+                                        }
+                                        if let retail = product.retailPrice {
+                                            DatabaseValueChip(title: L("product.history.retail"), value: formatMoney(retail))
+                                        }
+                                        if let qty = product.stockQuantity {
+                                            DatabaseValueChip(title: L("database.row.stock_label"), value: formatQuantity(qty))
+                                        }
                                     }
                                 }
-                            }
 
-                            HStack {
-                                if let supplierName = product.supplier?.name,
-                                   !supplierName.isEmpty {
-                                    Text(L("database.row.supplier", supplierName))
-                                }
-                                if let categoryName = product.category?.name,
-                                   !categoryName.isEmpty {
-                                    if product.supplier != nil {
-                                        Text("·")
+                                if product.supplier != nil || product.category != nil {
+                                    ViewThatFits(in: .horizontal) {
+                                        HStack(spacing: 12) {
+                                            databaseSupplierCategoryLabels(for: product)
+                                        }
+
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            databaseSupplierCategoryLabels(for: product)
+                                        }
                                     }
-                                    Text(L("database.row.category", categoryName))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
                                 }
+
+                                ViewThatFits(in: .horizontal) {
+                                    HStack {
+                                        databaseRowActions(for: product)
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        databaseRowActions(for: product)
+                                    }
+                                }
+                                .font(.footnote)
+                                .padding(.top, 2)
                             }
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-
-                            HStack {
-                                Button {
-                                    productToEdit = product
-                                } label: {
-                                    Label(L("common.edit"), systemImage: "pencil")
-                                }
-
-                                Spacer()
-
-                                Button {
-                                    productForHistory = product
-                                } label: {
-                                    Label(L("product.history.title"), systemImage: "clock.arrow.circlepath")
-                                }
-                                .buttonStyle(.borderless)
+                            .contentShape(Rectangle())
+                            .accessibilityElement(children: .contain)
+                            .onTapGesture {
+                                productToEdit = product
                             }
-                            .font(.footnote)
-                            .padding(.top, 2)
                         }
-                        .contentShape(Rectangle()) // tutta la riga tappabile
-                        .onTapGesture {
-                            productToEdit = product
-                        }
+                        .onDelete(perform: deleteProducts)
                     }
-                    .onDelete(perform: deleteProducts)
+                    .id("database-list-\(resolvedLanguageCode)")
+                    .listStyle(.plain)
                 }
-                .id("database-list-\(resolvedLanguageCode)")
-                .listStyle(.plain)
             }
             .disabled(importProgress.isRunning)
 
@@ -1830,24 +1932,30 @@ struct DatabaseView: View {
                         // Mostra dialog per scegliere Excel vs CSV
                         showingImportOptions = true
                     } label: {
-                        Image(systemName: "tray.and.arrow.down")
+                        Label(L("database.import.title"), systemImage: "tray.and.arrow.down")
+                            .labelStyle(.iconOnly)
                     }
                     .disabled(importProgress.isRunning)
+                    .accessibilityLabel(L("database.import.title"))
 
                     Button {
                         showingExportOptions = true
                     } label: {
-                        Image(systemName: "square.and.arrow.up")
+                        Label(L("database.export.title"), systemImage: "square.and.arrow.up")
+                            .labelStyle(.iconOnly)
                     }
                     .disabled(importProgress.isRunning)
+                    .accessibilityLabel(L("database.export.title"))
 
                     Button {
                         pendingBarcodeForNewProduct = nil
                         showAddSheet = true
                     } label: {
-                        Image(systemName: "plus")
+                        Label(L("product.title.new"), systemImage: "plus")
+                            .labelStyle(.iconOnly)
                     }
                     .disabled(importProgress.isRunning)
+                    .accessibilityLabel(L("product.title.new"))
                 }
             }
         }
@@ -1904,7 +2012,13 @@ struct DatabaseView: View {
         }
         // Sheet per scanner barcode
         .sheet(isPresented: $showScanner) {
-            ScannerView(title: L("database.scanner_title")) { code in
+            ScannerView(
+                title: L("database.scanner_title"),
+                fallbackActionTitle: L("scanner.action.enter_manually"),
+                onFallbackRequested: {
+                    showScanner = false
+                }
+            ) { code in
                 handleDatabaseScan(code)
             }
         }
@@ -1930,6 +2044,8 @@ struct DatabaseView: View {
                 exportFullDatabase()
             }
             Button(L("common.cancel"), role: .cancel) { }
+        } message: {
+            Text(L("database.export.message"))
         }
 
         // Dialog per scegliere il tipo di import
@@ -1948,6 +2064,23 @@ struct DatabaseView: View {
                 showingCSVImportPicker = true
             }
             Button(L("common.cancel"), role: .cancel) { }
+        } message: {
+            Text(L("database.import.message"))
+        }
+
+        .confirmationDialog(
+            L("database.delete.confirm_title"),
+            isPresented: $showingDeleteProductsConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L("common.delete"), role: .destructive) {
+                confirmDeleteProducts()
+            }
+            Button(L("common.cancel"), role: .cancel) {
+                productsPendingDeletion = []
+            }
+        } message: {
+            Text(L("database.delete.confirm_message", productsPendingDeletion.count))
         }
 
         // Import CSV (flow semplice esistente)
@@ -2046,7 +2179,7 @@ struct DatabaseView: View {
         )
         .foregroundCloudWorkflowActivity(
             .confirmationDialog,
-            isActive: showingImportOptions || showingExportOptions
+            isActive: showingImportOptions || showingExportOptions || showingDeleteProductsConfirmation
         )
         .foregroundCloudWorkflowActivity(
             .localProgress,
@@ -2096,13 +2229,22 @@ struct DatabaseView: View {
     }
     
     private func deleteProducts(at offsets: IndexSet) {
+        productsPendingDeletion = offsets.compactMap { index in
+            guard filteredProducts.indices.contains(index) else { return nil }
+            return filteredProducts[index]
+        }
+        showingDeleteProductsConfirmation = !productsPendingDeletion.isEmpty
+    }
+
+    private func confirmDeleteProducts() {
+        defer { productsPendingDeletion = [] }
+
         let accumulator = LocalPendingChangeAccumulator(
             context: context,
             ownerUserID: currentPendingOwnerUserID
         )
         do {
-            for index in offsets {
-                let product = filteredProducts[index]
+            for product in productsPendingDeletion {
                 try accumulator.recordProductChange(
                     product: product,
                     operation: .delete,

@@ -437,6 +437,8 @@ struct BarcodeScannerView: UIViewRepresentable {
 /// Schermata intera da usare come .sheet in SwiftUI
 struct ScannerView: View {
     let title: String
+    let fallbackActionTitle: String?
+    let onFallbackRequested: (() -> Void)?
     let onCodeScanned: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -450,9 +452,13 @@ struct ScannerView: View {
 
     init(
         title: String = L("scanner.default_title"),
+        fallbackActionTitle: String? = nil,
+        onFallbackRequested: (() -> Void)? = nil,
         onCodeScanned: @escaping (String) -> Void
     ) {
         self.title = title
+        self.fallbackActionTitle = fallbackActionTitle
+        self.onFallbackRequested = onFallbackRequested
         self.onCodeScanned = onCodeScanned
     }
 
@@ -506,22 +512,30 @@ struct ScannerView: View {
                     iconName: "camera.slash.fill",
                     message: L("scanner.fallback.permission_denied.message"),
                     actionTitle: L("scanner.action.open_settings"),
-                    action: openAppSettings
+                    action: openAppSettings,
+                    fallbackActionTitle: fallbackActionTitle,
+                    fallbackAction: handleFallbackRequested
                 )
             case .restricted:
                 ScannerFallbackView(
                     iconName: "hand.raised.fill",
-                    message: L("scanner.fallback.restricted.message")
+                    message: L("scanner.fallback.restricted.message"),
+                    fallbackActionTitle: fallbackActionTitle,
+                    fallbackAction: handleFallbackRequested
                 )
             case .cameraUnavailable:
                 ScannerFallbackView(
                     iconName: "video.slash.fill",
-                    message: L("scanner.fallback.camera_unavailable.message")
+                    message: L("scanner.fallback.camera_unavailable.message"),
+                    fallbackActionTitle: fallbackActionTitle,
+                    fallbackAction: handleFallbackRequested
                 )
             case .sessionSetupFailed:
                 ScannerFallbackView(
                     iconName: "exclamationmark.triangle.fill",
-                    message: L("scanner.fallback.session_failed.message")
+                    message: L("scanner.fallback.session_failed.message"),
+                    fallbackActionTitle: fallbackActionTitle,
+                    fallbackAction: handleFallbackRequested
                 )
             case .startingSession, .ready:
                 EmptyView()
@@ -704,6 +718,14 @@ struct ScannerView: View {
         }
     }
 
+    private func handleFallbackRequested() {
+        resetTorchUIState()
+        DispatchQueue.main.async {
+            dismiss()
+            onFallbackRequested?()
+        }
+    }
+
     private func handleTorchAvailabilityChanged(_ isAvailable: Bool) {
         isTorchAvailable = isAvailable
         if !isAvailable {
@@ -722,6 +744,8 @@ private struct ScannerFallbackView: View {
     let message: String
     var actionTitle: String? = nil
     var action: (() -> Void)? = nil
+    var fallbackActionTitle: String? = nil
+    var fallbackAction: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 18) {
@@ -737,6 +761,18 @@ private struct ScannerFallbackView: View {
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
                     .buttonStyle(.borderedProminent)
+            }
+
+            if let fallbackActionTitle, let fallbackAction {
+                if actionTitle == nil {
+                    Button(fallbackActionTitle, action: fallbackAction)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                } else {
+                    Button(fallbackActionTitle, action: fallbackAction)
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                }
             }
         }
         .padding(28)

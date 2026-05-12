@@ -1,0 +1,57 @@
+TASK-102 l10n status
+
+2026-05-12 13:50 -0400
+- Stato S102-A: PASS WITH NOTES.
+- Nessuna modifica Localizable.strings applicata in S102-A; la Home riusa chiavi esistenti `inventory.home.*` e `tab.*`.
+
+Comando:
+plutil -lint iOSMerchandiseControl/it.lproj/Localizable.strings iOSMerchandiseControl/en.lproj/Localizable.strings iOSMerchandiseControl/es.lproj/Localizable.strings iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings
+
+Output:
+iOSMerchandiseControl/it.lproj/Localizable.strings: OK
+iOSMerchandiseControl/en.lproj/Localizable.strings: OK
+iOSMerchandiseControl/es.lproj/Localizable.strings: OK
+iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings: OK
+
+Test:
+XcodeBuildMCP `test_sim -only-testing:iOSMerchandiseControlTests/LocalizationCoverageTests` in Debug: 8 passed / 0 failed / 0 skipped.
+
+S102-F:
+- Aggiunta chiave `scanner.action.enter_manually` in IT/EN/ES/zh-Hans.
+- `plutil -lint` IT/EN/ES/zh-Hans: PASS.
+- Duplicate-key scan su `*.lproj/Localizable.strings`: PASS (nessun output).
+
+S102-G:
+- Aggiunte chiavi `history.empty.filtered_title`, `history.empty.filtered_body`, `history.status.not_attempted`, `history.status.synced`, `history.status.errors` in IT/EN/ES/zh-Hans.
+- `plutil -lint` IT/EN/ES/zh-Hans: PASS.
+- Duplicate-key scan su `*.lproj/Localizable.strings`: PASS (nessun output).
+- `LocalizationCoverageTests` Debug: 8 passed / 0 failed / 0 skipped.
+
+S102-H:
+- Aggiunte chiavi database/product UI per empty/search/delete/import/export/validazione barcode in IT/EN/ES/zh-Hans.
+- `plutil -lint` IT/EN/ES/zh-Hans: PASS.
+- Duplicate-key scan su `*.lproj/Localizable.strings`: PASS (nessun output).
+- `LocalizationCoverageTests` Debug: 8 passed / 0 failed / 0 skipped.
+
+S102-I:
+- Nessuna nuova stringa introdotta.
+- `plutil -lint` IT/EN/ES/zh-Hans: PASS.
+- Duplicate-key scan su `*.lproj/Localizable.strings`: PASS (nessun output).
+
+Final validation:
+- `plutil -lint` IT/EN/ES/zh-Hans: PASS.
+- Duplicate-key scan per singolo file `Localizable.strings`: PASS (nessun output).
+- Full XCTest Debug: PASS 640 passed / 0 failed / 12 skipped.
+- `LocalizationCoverageTests`: PASS 8 passed / 0 failed / 0 skipped nelle run mirate S102-A/S102-G/S102-H.
+
+Review finale 2026-05-12 15:52 -0400:
+- Nessuna nuova chiave localizzazione aggiunta durante review-fix.
+- `plutil -lint iOSMerchandiseControl/it.lproj/Localizable.strings iOSMerchandiseControl/en.lproj/Localizable.strings iOSMerchandiseControl/es.lproj/Localizable.strings iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings`: PASS.
+- Duplicate-key scan per file con `awk` + `FILENAME`: PASS, nessun output.
+- Nota: un primo comando aggregato contava legittimamente ogni chiave 4 volte perché sommava le quattro lingue; non è stato usato come evidenza di duplicati.
+
+Chiusura finale 2026-05-12 16:46 -0400:
+- Nessuna nuova chiave localizzazione aggiunta nel pass finale; `ProductPriceHistoryView` riusa `common.close`.
+- `plutil -lint` IT/EN/ES/zh-Hans: PASS.
+- Duplicate-key scan per singolo file `Localizable.strings`: PASS, nessun output.
+- Full XCTest Debug finale: PASS 652 tests / 0 failed / 12 skipped.

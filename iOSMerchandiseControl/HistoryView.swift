@@ -198,6 +198,37 @@ struct HistoryView: View {
         selectedDateFilter.title
     }
 
+    private var emptyHistoryState: some View {
+        ContentUnavailableView {
+            Label(L("history.empty.title"), systemImage: "clock.arrow.circlepath")
+        } description: {
+            Text(L("history.empty.body"))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+
+    private var filteredEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+
+            Text(L("history.empty.filtered_title"))
+                .font(.headline)
+
+            Text(L("history.empty.filtered_body"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .accessibilityElement(children: .combine)
+    }
+
     private func customDateBinding(for field: CustomDateField) -> Binding<Date> {
         switch field {
         case .from:
@@ -329,19 +360,7 @@ struct HistoryView: View {
     var body: some View {
         Group {
             if entries.isEmpty {
-                // placeholder "Nessuna cronologia" (lascia com’era)
-                VStack(spacing: 12) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.secondary)
-                    Text(L("history.empty.title"))
-                        .font(.headline)
-                    Text(L("history.empty.body"))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                emptyHistoryState
             } else {
                 let errorEntriesCount = entries.filter { $0.syncStatus == .attemptedWithErrors }.count
                 let totalCount = entries.count
@@ -381,33 +400,35 @@ struct HistoryView: View {
 
                     // Lista cronologia filtrata
                     Section {
-                        ForEach(filteredEntries, id: \.id) { entry in
-                            NavigationLink(
-                                destination: GeneratedView(entry: entry)
-                            ) {
-                                HistoryRow(entry: entry, appLanguage: appLanguage)
-                            }
-                            // ✅ Leading: Modifica
-                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                Button {
-                                    editItem = EditItem(entry: entry)
-                                } label: {
-                                    Label(L("common.edit"), systemImage: "pencil")
+                        if filteredEntries.isEmpty {
+                            filteredEmptyState
+                        } else {
+                            ForEach(filteredEntries, id: \.id) { entry in
+                                NavigationLink(
+                                    destination: GeneratedView(entry: entry)
+                                ) {
+                                    HistoryRow(entry: entry, appLanguage: appLanguage)
                                 }
-                                .tint(.blue)
-                            }
-                            // ✅ Trailing: Condividi + Elimina
-                            .swipeActions(edge: .trailing) {
-                                Button {
-                                    exportHistoryEntry(entry)
-                                } label: {
-                                    Label(L("common.share"), systemImage: "square.and.arrow.up")
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    Button {
+                                        editItem = EditItem(entry: entry)
+                                    } label: {
+                                        Label(L("common.edit"), systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
                                 }
-                                
-                                Button(role: .destructive) {
-                                    activeAlert = .delete(entry)
-                                } label: {
-                                    Label(L("common.delete"), systemImage: "trash")
+                                .swipeActions(edge: .trailing) {
+                                    Button {
+                                        exportHistoryEntry(entry)
+                                    } label: {
+                                        Label(L("common.share"), systemImage: "square.and.arrow.up")
+                                    }
+
+                                    Button(role: .destructive) {
+                                        activeAlert = .delete(entry)
+                                    } label: {
+                                        Label(L("common.delete"), systemImage: "trash")
+                                    }
                                 }
                             }
                         }
@@ -513,21 +534,21 @@ private struct HistoryRow: View {
             return partial + (value.isEmpty ? 0 : 1)
         }
     }
+
+    private var summaryColumns: [GridItem] {
+        [
+            GridItem(.adaptive(minimum: 92), spacing: 8, alignment: .top)
+        ]
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
-                SyncStatusIcon(status: entry.syncStatus)
-
-                if entry.hasPersistedJSONDecodeFault {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                        .accessibilityLabel(L("history.json_fault.accessibility"))
-                        .help(L("history.json_fault.accessibility"))
-                }
-                
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(displayName).font(.headline).lineLimit(1)
+                    Text(displayName)
+                        .font(.headline)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     if !entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text(entry.id)
@@ -542,46 +563,71 @@ private struct HistoryRow: View {
                 }
                 
                 Spacer()
-                
+            }
+
+            HStack(alignment: .top, spacing: 8) {
+                HistoryStatusBadge(status: entry.syncStatus)
+
                 if entry.wasExported {
-                    Image(systemName: "square.and.arrow.up")
+                    Label(L("history.exported"), systemImage: "square.and.arrow.up")
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
-                        .help(L("history.exported"))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.thinMaterial, in: Capsule())
                 }
             }
-            
-            HStack(spacing: 12) {
-                if !entry.supplier.isEmpty {
-                    Label(entry.supplier, systemImage: "building.2")
-                }
-                if !entry.category.isEmpty {
-                    Label(entry.category, systemImage: "tag")
-                }
+
+            if entry.hasPersistedJSONDecodeFault {
+                Label(L("history.json_fault.accessibility"), systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
             
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .top, spacing: 12) {
-                    HistorySummaryChip(title: L("history.summary.items"), value: "\(entry.totalItems)")
-                    HistorySummaryChip(title: L("history.summary.order"), value: formatMoney(entry.orderTotal))
-                    HistorySummaryChip(title: L("history.summary.paid"), value: formatMoney(entry.paymentTotal))
-                }
-
-                HStack(alignment: .top, spacing: 12) {
-                    HistorySummaryChip(title: L("history.summary.missing"), value: "\(entry.missingItems)")
-
-                    if entry.syncStatus == .attemptedWithErrors && errorCount > 0 {
-                        HistorySummaryChip(title: L("history.summary.errors"), value: "\(errorCount)")
-                            .foregroundStyle(.red)
-                    } else {
-                        Spacer(minLength: 0)
+            if !entry.supplier.isEmpty || !entry.category.isEmpty {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        supplierCategoryLabels
                     }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        supplierCategoryLabels
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+
+            LazyVGrid(columns: summaryColumns, alignment: .leading, spacing: 8) {
+                HistorySummaryChip(title: L("history.summary.items"), value: "\(entry.totalItems)")
+                HistorySummaryChip(title: L("history.summary.order"), value: formatMoney(entry.orderTotal))
+                HistorySummaryChip(title: L("history.summary.paid"), value: formatMoney(entry.paymentTotal))
+                HistorySummaryChip(title: L("history.summary.missing"), value: "\(entry.missingItems)")
+
+                if entry.syncStatus == .attemptedWithErrors && errorCount > 0 {
+                    HistorySummaryChip(title: L("history.summary.errors"), value: "\(errorCount)")
+                        .foregroundStyle(.red)
                 }
             }
             .font(.caption2)
         }
         .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var supplierCategoryLabels: some View {
+        if !entry.supplier.isEmpty {
+            Label(entry.supplier, systemImage: "building.2")
+                .lineLimit(1)
+        }
+
+        if !entry.category.isEmpty {
+            Label(entry.category, systemImage: "tag")
+                .lineLimit(1)
+        }
     }
     
     private func formatMoney(_ value: Double) -> String {
@@ -589,24 +635,50 @@ private struct HistoryRow: View {
     }
 }
 
-// Icona piccola che rappresenta lo stato di sincronizzazione
-private struct SyncStatusIcon: View {
-    let status: HistorySyncStatus  // Assicurati che sia HistorySyncStatus e non SyncStatus
+private struct HistoryStatusBadge: View {
+    let status: HistorySyncStatus
+
+    private var title: String {
+        switch status {
+        case .notAttempted:
+            return L("history.status.not_attempted")
+        case .syncedSuccessfully:
+            return L("history.status.synced")
+        case .attemptedWithErrors:
+            return L("history.status.errors")
+        }
+    }
+
+    private var systemName: String {
+        switch status {
+        case .notAttempted:
+            return "arrow.triangle.2.circlepath"
+        case .syncedSuccessfully:
+            return "checkmark.seal.fill"
+        case .attemptedWithErrors:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var color: Color {
+        switch status {
+        case .notAttempted:
+            return .gray
+        case .syncedSuccessfully:
+            return .green
+        case .attemptedWithErrors:
+            return .orange
+        }
+    }
     
     var body: some View {
-        let (systemName, color): (String, Color) = {
-            switch status {
-            case .notAttempted:
-                return ("arrow.triangle.2.circlepath", .gray)
-            case .syncedSuccessfully:
-                return ("checkmark.seal.fill", .green)
-            case .attemptedWithErrors:
-                return ("exclamationmark.triangle.fill", .orange)
-            }
-        }()
-        
-        Image(systemName: systemName)
+        Label(title, systemImage: systemName)
+            .font(.caption2.weight(.semibold))
             .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.12), in: Capsule())
+            .accessibilityLabel(title)
     }
 }
 

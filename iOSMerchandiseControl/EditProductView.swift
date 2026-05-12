@@ -23,6 +23,7 @@ struct EditProductView: View {
     @State private var stockQuantity: String
     @State private var supplierName: String
     @State private var categoryName: String
+    @State private var validationMessage: String?
 
     init(product: Product? = nil, initialBarcode: String? = nil, pendingOwnerUserID: UUID? = nil) {
         self.existingProduct = product
@@ -50,59 +51,87 @@ struct EditProductView: View {
         }
     }
 
+    private var trimmedBarcode: String {
+        barcode.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     var body: some View {
         Form {
+            if let validationMessage {
+                Section {
+                    Label(validationMessage, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
             Section(L("product.section.main")) {
                 TextField(L("product.field.barcode"), text: $barcode)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .keyboardType(.numbersAndPunctuation)
+                    .submitLabel(.next)
 
                 TextField(L("product.field.item_number"), text: $itemNumber)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .submitLabel(.next)
 
                 TextField(L("product.field.name"), text: $name)
+                    .textInputAutocapitalization(.words)
+                    .submitLabel(.next)
 
                 TextField(L("product.field.second_name"), text: $secondName)
+                    .textInputAutocapitalization(.words)
+                    .submitLabel(.next)
             }
 
             Section(L("product.section.warehouse")) {
                 TextField(L("product.field.stock_quantity"), text: $stockQuantity)
                     .keyboardType(.decimalPad)
+                    .monospacedDigit()
             }
 
             Section(L("product.section.prices")) {
                 TextField(L("product.field.purchase_price"), text: $purchasePrice)
                     .keyboardType(.decimalPad)
+                    .monospacedDigit()
 
                 TextField(L("product.field.retail_price"), text: $retailPrice)
                     .keyboardType(.decimalPad)
+                    .monospacedDigit()
             }
 
             Section(L("product.section.supplier")) {
                 TextField(L("product.field.supplier_name"), text: $supplierName)
+                    .textInputAutocapitalization(.words)
 
                 if !suppliers.isEmpty {
-                    Menu(L("product.action.select_existing")) {
+                    Menu {
                         ForEach(suppliers) { supplier in
                             Button(supplier.name) {
                                 supplierName = supplier.name
                             }
                         }
+                    } label: {
+                        Label(L("product.action.select_existing"), systemImage: "building.2")
                     }
                 }
             }
 
             Section(L("product.section.category")) {
                 TextField(L("product.field.category_name"), text: $categoryName)
+                    .textInputAutocapitalization(.words)
 
                 if !categories.isEmpty {
-                    Menu(L("product.action.select_existing")) {
+                    Menu {
                         ForEach(categories) { category in
                             Button(category.name) {
                                 categoryName = category.name
                             }
                         }
+                    } label: {
+                        Label(L("product.action.select_existing"), systemImage: "tag")
                     }
                 }
             }
@@ -114,12 +143,21 @@ struct EditProductView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(L("common.save")) { save() }
+                    .fontWeight(.semibold)
+            }
+        }
+        .onChange(of: barcode) { _, _ in
+            if !trimmedBarcode.isEmpty {
+                validationMessage = nil
             }
         }
     }
 
     private func save() {
-        guard !barcode.isEmpty else { return }
+        guard !trimmedBarcode.isEmpty else {
+            validationMessage = L("product.validation.barcode_required")
+            return
+        }
 
         let purchase = Self.parseDouble(from: purchasePrice)
         let retail = Self.parseDouble(from: retailPrice)
@@ -141,7 +179,7 @@ struct EditProductView: View {
             operation = .create
         }
 
-        target.barcode = barcode
+        target.barcode = trimmedBarcode
         target.itemNumber = itemNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : itemNumber
         target.productName = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : name
         target.secondProductName = secondName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : secondName
@@ -227,6 +265,7 @@ struct EditProductView: View {
             dismiss()
         } catch {
             context.rollback()
+            validationMessage = L("product.validation.save_failed")
             #if DEBUG
             print("Errore durante il salvataggio locale.")
             #endif

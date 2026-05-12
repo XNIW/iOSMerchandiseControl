@@ -418,6 +418,7 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
 
     private func shouldShowRootBanner(_ state: SupabaseManualSyncRootPresentationState) -> Bool {
         guard state.kind != .hidden else { return false }
+        guard state.kind != .blockedAuth else { return false }
         guard state.primaryActionID != nil else { return false }
         guard selectedTab != 3 else { return false }
         guard !activityCenter.isBusy else { return false }

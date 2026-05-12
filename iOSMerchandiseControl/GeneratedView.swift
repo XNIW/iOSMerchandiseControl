@@ -416,7 +416,22 @@ struct GeneratedView: View {
         .sheet(isPresented: $showScanner, onDismiss: {
             reopenPendingRowDetailAfterScannerDismiss()
         }) {
-            ScannerView(title: L("scanner.default_title")) { code in
+            ScannerView(
+                title: L("scanner.default_title"),
+                fallbackActionTitle: L("scanner.action.enter_manually"),
+                onFallbackRequested: {
+                    guard !reopenRowDetailAfterScan else { return }
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        if entry.isManualEntry {
+                            manualEntryEditIndex = nil
+                            showManualEntrySheet = true
+                        } else {
+                            showSearch = true
+                        }
+                    }
+                }
+            ) { code in
                 let touchedRow = handleScannedBarcode(
                     code,
                     incrementExistingRow: !reopenRowDetailAfterScan
@@ -641,7 +656,24 @@ struct GeneratedView: View {
 
             Toggle(L("generated.inventory.only_errors"), isOn: $showOnlyErrorRows)
                 .font(.footnote)
+
+            inventoryBulkCompletionButton
         }
+    }
+
+    private var inventoryBulkCompletionButton: some View {
+        Button {
+            markAllComplete(!allRowsComplete)
+        } label: {
+            Label(
+                allRowsComplete ? L("generated.action.mark_all_incomplete") : L("generated.action.mark_all_complete"),
+                systemImage: allRowsComplete ? "circle" : "checkmark.circle.fill"
+            )
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .disabled(isBusy || inventoryAllRowIndices.isEmpty || gridParallelArraysFault)
     }
 
     private var inventoryProgressView: some View {
@@ -702,7 +734,9 @@ struct GeneratedView: View {
         }
         .padding(.vertical, 6)
         .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(L("generated.inventory.title"))
     }
 
     private func inventoryRowView(_ rowIndex: Int) -> some View {
@@ -732,7 +766,14 @@ struct GeneratedView: View {
         .contentShape(Rectangle())
         .onTapGesture { flashAndOpenRow(rowIndex, headerRow: headerRow) }
         .background(rowBackground(hasError: hasError, hasShortage: hasShortage, isDone: isDone, rowIndex: rowIndex))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(
+                    rowBorderColor(hasError: hasError, hasShortage: hasShortage, isDone: isDone, rowIndex: rowIndex),
+                    lineWidth: rowBorderWidth(hasError: hasError, hasShortage: hasShortage, isDone: isDone, rowIndex: rowIndex)
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .contextMenu {
             Button {
                 requestSetComplete(rowIndex: rowIndex, headerRow: headerRow, value: !isDone)
@@ -2311,6 +2352,26 @@ struct GeneratedView: View {
             Color.clear
         }
     }
+
+    private func rowBorderColor(hasError: Bool, hasShortage: Bool, isDone: Bool, rowIndex: Int) -> Color {
+        if hasError {
+            return .red.opacity(0.35)
+        }
+        if flashRowIndex == rowIndex {
+            return Color.accentColor.opacity(0.45)
+        }
+        if hasShortage {
+            return .orange.opacity(0.40)
+        }
+        if isDone {
+            return Color(uiColor: .systemGreen).opacity(0.30)
+        }
+        return .clear
+    }
+
+    private func rowBorderWidth(hasError: Bool, hasShortage: Bool, isDone: Bool, rowIndex: Int) -> CGFloat {
+        hasError || hasShortage || isDone || flashRowIndex == rowIndex ? 1 : 0
+    }
     
     @ViewBuilder
     private func rowDetailSheet(_ detail: RowDetailData) -> some View {
@@ -2577,28 +2638,38 @@ private struct ManualEntrySheet: View {
                         TextField(L("product.field.barcode"), text: $barcode)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
+                            .keyboardType(.numbersAndPunctuation)
                             .focused($isBarcodeFieldFocused)
+                            .submitLabel(.next)
 
                         Button {
                             showScannerInDialog = true
                         } label: {
                             Image(systemName: "barcode.viewfinder")
                                 .font(.title3)
+                                .frame(width: 44, height: 44)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.borderless)
                         .accessibilityLabel(L("scanner.default_title"))
                     }
 
                     TextField(L("product.field.name"), text: $productName)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.next)
 
                     TextField(L("product.field.retail_price"), text: $retailPrice)
                         .keyboardType(.decimalPad)
+                        .monospacedDigit()
+                        .submitLabel(.next)
 
                     TextField(L("product.field.purchase_price"), text: $purchasePrice)
                         .keyboardType(.decimalPad)
+                        .monospacedDigit()
+                        .submitLabel(.next)
 
                     TextField(L("common.quantity"), text: $quantity)
                         .keyboardType(.numbersAndPunctuation)
+                        .monospacedDigit()
 
                     Picker(L("common.category"), selection: $categoryPickerSelection) {
                         Text(L("generated.manual.category.none")).tag(Self.noCategoryToken)
@@ -2671,9 +2742,14 @@ private struct ManualEntrySheet: View {
 
                 if !isEditMode {
                     Section {
-                        Button(L("generated.manual.add_and_continue")) {
+                        Button {
                             confirmAddAndNext()
+                        } label: {
+                            Label(L("generated.manual.add_and_continue"), systemImage: "plus.circle")
+                                .frame(maxWidth: .infinity)
                         }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
                         .disabled(!canConfirm)
                     }
                 }
@@ -2700,7 +2776,15 @@ private struct ManualEntrySheet: View {
                 refreshBarcodeLookup()
             }
             .sheet(isPresented: $showScannerInDialog) {
-                ScannerView(title: L("scanner.default_title")) { code in
+                ScannerView(
+                    title: L("scanner.default_title"),
+                    fallbackActionTitle: L("scanner.action.enter_manually"),
+                    onFallbackRequested: {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            isBarcodeFieldFocused = true
+                        }
+                    }
+                ) { code in
                     barcode = code
                     showScannerInDialog = false
                 }
@@ -3360,6 +3444,7 @@ private struct RowDetailSheetView: View {
                         showEditRow = true
                     } label: {
                         Label(L("generated.detail.edit_row"), systemImage: "square.and.pencil")
+                            .fontWeight(.semibold)
                     }
 
                     Button {
@@ -5128,7 +5213,15 @@ private struct InventorySearchSheet: View {
             }
         }
         .sheet(isPresented: $showScanner) {
-            ScannerView(title: L("scanner.default_title")) { code in
+            ScannerView(
+                title: L("scanner.default_title"),
+                fallbackActionTitle: L("scanner.action.enter_manually"),
+                onFallbackRequested: {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        isSearchFocused = true
+                    }
+                }
+            ) { code in
                 searchText = code
                 showScanner = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {

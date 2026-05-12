@@ -3031,6 +3031,7 @@ private struct SupabaseManualSyncReleaseCard: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
+                .accessibilityElement(children: .combine)
             }
 
             if let primaryAction = presentation.primaryAction {
@@ -3040,6 +3041,7 @@ private struct SupabaseManualSyncReleaseCard: View {
                     actionLabel(primaryAction)
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.large)
                 .disabled(!primaryAction.isEnabled)
                 .accessibilityLabel(primaryAction.accessibilityLabel)
                 .accessibilityHint(primaryAction.accessibilityHint ?? "")
@@ -3052,6 +3054,7 @@ private struct SupabaseManualSyncReleaseCard: View {
                     actionLabel(secondaryAction)
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.large)
                 .disabled(!secondaryAction.isEnabled)
                 .accessibilityLabel(secondaryAction.accessibilityLabel)
                 .accessibilityHint(secondaryAction.accessibilityHint ?? "")
@@ -3410,14 +3413,18 @@ private struct SupabaseManualSyncReviewSheet: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
                     .disabled(!review.primaryActionIsEnabled)
+                    .accessibilityLabel(review.primaryActionTitle)
                 }
 
                 Button(review.secondaryActionTitle) {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.large)
                 .frame(maxWidth: .infinity)
+                .accessibilityLabel(review.secondaryActionTitle)
             }
             .padding(20)
         }

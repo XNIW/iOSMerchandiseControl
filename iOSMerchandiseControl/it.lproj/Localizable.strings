@@ -465,6 +465,7 @@
 "scanner.fallback.camera_unavailable.message" = "Nessuna fotocamera disponibile su questo dispositivo. Usa un iPhone o iPad con fotocamera per scansionare i codici a barre.";
 "scanner.fallback.session_failed.message" = "La fotocamera non può essere avviata in questo momento. Chiudi e riapri lo scanner per riprovare.";
 "scanner.action.open_settings" = "Apri impostazioni";
+"scanner.action.enter_manually" = "Inserisci manualmente";
 "scanner.torch.accessibility.label" = "Torcia";
 "scanner.torch.accessibility.value.on" = "Accesa";
 "scanner.torch.accessibility.value.off" = "Spenta";
@@ -498,6 +499,8 @@
 "product.action.select_existing" = "Seleziona esistente";
 "product.title.new" = "Nuovo prodotto";
 "product.title.edit" = "Modifica prodotto";
+"product.validation.barcode_required" = "Inserisci un barcode per salvare il prodotto.";
+"product.validation.save_failed" = "Impossibile salvare il prodotto. Controlla i dati e riprova.";
 
 /* Product price history */
 "product.history.empty" = "Nessuno storico prezzi disponibile.";
@@ -539,9 +542,14 @@
 "history.filter.no_error_entries" = "Nessuna entry con errori";
 "history.empty.title" = "Nessuna cronologia";
 "history.empty.body" = "Quando generi file di inventario, li vedrai qui.";
+"history.empty.filtered_title" = "Nessuna sessione per questo filtro";
+"history.empty.filtered_body" = "Cambia periodo o disattiva il filtro errori.";
 "history.toggle.errors_only" = "Mostra solo entry con errori";
 "history.action.select_period" = "Seleziona periodo";
 "history.title" = "Cronologia";
+"history.status.not_attempted" = "Da sincronizzare";
+"history.status.synced" = "Sincronizzato";
+"history.status.errors" = "Con errori";
 "history.delete.confirm_title" = "Eliminare questo inventario?";
 "history.delete.confirm_message" = "Questa operazione rimuoverà definitivamente l'inventario:\n%@";
 "history.exported" = "Esportato";
@@ -597,22 +605,33 @@
 /* Database */
 "database.title" = "Database";
 "database.search_placeholder" = "Cerca per barcode, nome o codice";
+"database.search.clear" = "Cancella ricerca";
+"database.action.scan" = "Scansiona barcode";
+"database.empty.title" = "Nessun prodotto";
+"database.empty.body" = "Aggiungi un prodotto o importa un file per iniziare.";
+"database.empty.filtered_title" = "Nessun prodotto trovato";
+"database.empty.filtered_body" = "Prova un altro barcode, nome o codice.";
 "database.row.barcode" = "Barcode: %@";
 "database.row.code" = "Codice: %@";
 "database.row.purchase" = "Acq: %@";
 "database.row.retail" = "Vend: %@";
 "database.row.stock" = "Stock: %@";
+"database.row.stock_label" = "Stock";
 "database.row.supplier" = "Fornitore: %@";
 "database.row.category" = "Categoria: %@";
 "database.no_file_to_share" = "Nessun file da condividere.";
 "database.scanner_title" = "Scanner prodotti";
 "database.export.title" = "Esporta prodotti";
+"database.export.message" = "Scegli cosa condividere come file Excel.";
 "database.export.products" = "Esporta prodotti";
 "database.export.full" = "Esporta database completo";
 "database.import.title" = "Importa prodotti";
+"database.import.message" = "Scegli il tipo di file da importare.";
 "database.import.excel_analysis" = "Importa da Excel (analisi)";
 "database.import.full" = "Importa database completo";
 "database.import.csv_simple" = "Importa da CSV (semplice)";
+"database.delete.confirm_title" = "Eliminare prodotti?";
+"database.delete.confirm_message" = "Verranno rimossi %d prodotti dal database locale.";
 "database.error.import_title" = "Errore import";
 "database.progress.preparing" = "Preparazione import...";
 "database.progress.parsing_excel" = "Lettura file di import";

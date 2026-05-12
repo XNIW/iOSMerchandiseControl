@@ -17,6 +17,34 @@ struct InventoryHomeView: View {
     private static let allowedUTTypes: Set<UTType> = [.spreadsheet, .html]
     private static let allowedExtensions: Set<String> = ["xlsx", "xls", "html", "htm"]
 
+    private var loadedDataRowCount: Int {
+        max(excelSession.rows.count - 1, 0)
+    }
+
+    private var homeStatusIcon: String {
+        if excelSession.isLoading {
+            return "hourglass"
+        }
+        return excelSession.hasData ? "checkmark.circle.fill" : "tray"
+    }
+
+    private var homeStatusTint: Color {
+        if excelSession.isLoading {
+            return .accentColor
+        }
+        return excelSession.hasData ? .green : .secondary
+    }
+
+    private var homeStatusTitle: String {
+        if excelSession.isLoading {
+            return L("inventory.home.loading")
+        }
+        if excelSession.hasData {
+            return L("inventory.home.file_loaded", loadedDataRowCount, excelSession.normalizedHeader.count)
+        }
+        return L("inventory.home.no_file")
+    }
+
     /// Valida il tipo file usando UTType (primario) con fallback su estensione.
     /// Gestisce file condivisi da altre app con nomi/estensioni poco affidabili.
     private func isFileTypeSupported(_ url: URL) -> Bool {
@@ -29,39 +57,79 @@ struct InventoryHomeView: View {
         return Self.allowedExtensions.contains(url.pathExtension.lowercased())
     }
 
-    private func loadExternalFile(_ url: URL) {
-        // Validazione tipo file (UTType primario, estensione come fallback)
-        guard isFileTypeSupported(url) else {
-            let fileDesc = url.pathExtension.isEmpty
-                ? "\"\(url.lastPathComponent)\""
-                : ".\(url.pathExtension)"
-            loadError = L("inventory.home.error.unsupported_format", fileDesc)
+    private func unsupportedFileDescription(for url: URL) -> String {
+        url.pathExtension.isEmpty
+            ? "\"\(url.lastPathComponent)\""
+            : ".\(url.pathExtension)"
+    }
+
+    private func handleImportFailure(_ error: Error) {
+        let nsError = error as NSError
+        if nsError.domain == NSCocoaErrorDomain, nsError.code == NSUserCancelledError {
             return
         }
 
-        // Blocco import concorrente — non avviare un secondo load se uno è già in corso
-        guard !excelSession.isLoading else {
-            loadError = L("inventory.home.error.import_in_progress")
-            return
-        }
+        loadError = excelSession.lastError ?? error.localizedDescription
+    }
 
-        // Reset stato navigazione locale per evitare conflitti
-        navigateToManualGenerated = false
-        autoOpenScannerInGenerated = false
-        showPreGenerate = false
+    private func loadSelectedFiles(_ urls: [URL], requiresSecurityScopedAccess: Bool) {
+        guard !urls.isEmpty else { return }
 
         Task {
-            // Accesso difensivo security-scoped (potrebbe non servire per Inbox, ma è sicuro)
-            let accessing = url.startAccessingSecurityScopedResource()
+            let accessFlags = requiresSecurityScopedAccess
+                ? urls.map { $0.startAccessingSecurityScopedResource() }
+                : Array(repeating: false, count: urls.count)
             defer {
-                if accessing { url.stopAccessingSecurityScopedResource() }
+                for (url, accessing) in zip(urls, accessFlags) where accessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
             }
 
+            if let unsupportedURL = urls.first(where: { !isFileTypeSupported($0) }) {
+                loadError = L("inventory.home.error.unsupported_format", unsupportedFileDescription(for: unsupportedURL))
+                return
+            }
+
+            guard !excelSession.isLoading else {
+                loadError = L("inventory.home.error.import_in_progress")
+                return
+            }
+
+            // Reset stato navigazione locale per evitare conflitti
+            navigateToManualGenerated = false
+            autoOpenScannerInGenerated = false
+            showPreGenerate = false
+
             do {
-                try await excelSession.load(from: [url], in: context)
+                try await excelSession.load(from: urls, in: context)
                 showPreGenerate = true
             } catch {
-                loadError = excelSession.lastError ?? error.localizedDescription
+                handleImportFailure(error)
+            }
+        }
+    }
+
+    private func loadExternalFile(_ url: URL) {
+        loadSelectedFiles([url], requiresSecurityScopedAccess: true)
+    }
+
+    private func startManualInventory(autoOpenScanner: Bool) {
+        Task {
+            do {
+                let entry: HistoryEntry
+                if autoOpenScanner,
+                   let current = excelSession.currentHistoryEntry,
+                   current.isManualEntry {
+                    entry = current
+                } else {
+                    entry = try excelSession.createManualHistoryEntry(in: context)
+                }
+
+                excelSession.currentHistoryEntry = entry
+                autoOpenScannerInGenerated = autoOpenScanner
+                navigateToManualGenerated = true
+            } catch {
+                loadError = error.localizedDescription
             }
         }
     }
@@ -70,87 +138,38 @@ struct InventoryHomeView: View {
         // Tiene questa root view reattiva ai cambi lingua anche se i testi passano da L(...).
         let _ = appLanguage
 
-        return VStack(spacing: 16) {
-            Image(systemName: "doc.badge.plus")
-                .font(.system(size: 40))
-                .foregroundColor(.accentColor)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                headerSection
 
-            Text(L("inventory.home.title"))
-                .font(.title2)
-                .bold()
+                Button {
+                    showFileImporter = true
+                } label: {
+                    Label(L("inventory.home.select_files"), systemImage: "doc.badge.plus")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(excelSession.isLoading)
+                .accessibilityHint(Text(L("inventory.home.subtitle")))
 
-            Text(L("inventory.home.subtitle"))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal)
+                statusSection
 
-            Button {
-                showFileImporter = true
-            } label: {
-                Label(L("inventory.home.select_files"), systemImage: "doc.badge.plus")
-            }
-            .buttonStyle(.borderedProminent)
-            
-            Button {
-                Task {
-                    do {
-                        let entry = try excelSession.createManualHistoryEntry(in: context)
-                        excelSession.currentHistoryEntry = entry
-                        autoOpenScannerInGenerated = false   // qui NON apriamo lo scanner in automatico
-                        navigateToManualGenerated = true
-                    } catch {
-                        loadError = error.localizedDescription
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        manualInventoryButton
+                        quickScannerButton
+                    }
+
+                    VStack(spacing: 12) {
+                        manualInventoryButton
+                        quickScannerButton
                     }
                 }
-            } label: {
-                Label(L("inventory.home.new_manual"), systemImage: "square.and.pencil")
             }
-            .buttonStyle(.bordered)
-            
-            Button {
-                Task {
-                    do {
-                        // 1. Prova a riusare una HistoryEntry manuale già attiva
-                        let entry: HistoryEntry
-                        if let current = excelSession.currentHistoryEntry,
-                           current.isManualEntry {
-                            entry = current
-                        } else {
-                            // 2. Altrimenti creane una nuova
-                            entry = try excelSession.createManualHistoryEntry(in: context)
-                        }
-
-                        // 3. Assicurati che sia l’entry corrente
-                        excelSession.currentHistoryEntry = entry
-
-                        // 4. Vai alla GeneratedView in modalità manuale + scanner auto-aperto
-                        autoOpenScannerInGenerated = true
-                        navigateToManualGenerated = true
-                    } catch {
-                        loadError = error.localizedDescription
-                    }
-                }
-            } label: {
-                Label(L("inventory.home.quick_scanner"), systemImage: "barcode.viewfinder")
-            }
-            .buttonStyle(.bordered)
-
-            if excelSession.isLoading {
-                ProgressView(value: excelSession.progress ?? 0) {
-                    Text(L("inventory.home.loading"))
-                }
-                .padding(.top)
-            } else if excelSession.hasData {
-                Text(L("inventory.home.file_loaded", excelSession.rows.count - 1, excelSession.normalizedHeader.count))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(L("inventory.home.no_file"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
+            .frame(maxWidth: 520, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(L("inventory.home.title"))
@@ -179,27 +198,10 @@ struct InventoryHomeView: View {
         ) { result in
             switch result {
             case .success(let urls):
-                guard !urls.isEmpty else { return }
-
-                Task {
-                    // Gestione security-scoped URLs
-                    let accessFlags = urls.map { $0.startAccessingSecurityScopedResource() }
-                    defer {
-                        for (url, accessing) in zip(urls, accessFlags) where accessing {
-                            url.stopAccessingSecurityScopedResource()
-                        }
-                    }
-
-                    do {
-                        try await excelSession.load(from: urls, in: context)
-                        showPreGenerate = true
-                    } catch {
-                        loadError = excelSession.lastError ?? error.localizedDescription
-                    }
-                }
+                loadSelectedFiles(urls, requiresSecurityScopedAccess: true)
 
             case .failure(let error):
-                loadError = error.localizedDescription
+                handleImportFailure(error)
             }
         }
         .alert(L("inventory.home.error.loading_title"), isPresented: Binding(
@@ -230,6 +232,82 @@ struct InventoryHomeView: View {
         .foregroundCloudWorkflowActivity(.importExcel, isActive: excelSession.isLoading || showFileImporter)
         .foregroundCloudWorkflowActivity(.scanner, isActive: navigateToManualGenerated && autoOpenScannerInGenerated)
         .foregroundCloudWorkflowActivity(.editing, isActive: showPreGenerate || navigateToManualGenerated)
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Image(systemName: "doc.badge.plus")
+                .font(.system(size: 40, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .accessibilityHidden(true)
+
+            Text(L("inventory.home.title"))
+                .font(.title2)
+                .fontWeight(.bold)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(L("inventory.home.subtitle"))
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var statusSection: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: homeStatusIcon)
+                .font(.title3)
+                .foregroundStyle(homeStatusTint)
+                .frame(width: 28, height: 28)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(homeStatusTitle)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if excelSession.isLoading {
+                    if let progress = excelSession.progress {
+                        ProgressView(value: progress)
+                    } else {
+                        ProgressView()
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Color.secondary.opacity(0.16), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+    }
+
+    private var manualInventoryButton: some View {
+        Button {
+            startManualInventory(autoOpenScanner: false)
+        } label: {
+            Label(L("inventory.home.new_manual"), systemImage: "square.and.pencil")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+    }
+
+    private var quickScannerButton: some View {
+        Button {
+            startManualInventory(autoOpenScanner: true)
+        } label: {
+            Label(L("inventory.home.quick_scanner"), systemImage: "barcode.viewfinder")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
     }
 }
 

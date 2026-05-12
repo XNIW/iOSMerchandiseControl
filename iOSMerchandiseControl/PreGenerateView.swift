@@ -132,6 +132,7 @@ struct PreGenerateView: View {
                             }
                             .padding(.vertical, 4)
                         }
+                        .accessibilityLabel(Text(L("pregenerate.preview.title")))
                         
                         Text(L("pregenerate.preview.rows_shown", previewRows.count, max(excelSession.rows.count - 1, 0)))
                             .font(.footnote)
@@ -213,12 +214,13 @@ struct PreGenerateView: View {
                         }
                         
                         
-                        HStack {
-                            Button(L("pregenerate.columns.select_all")) {
-                                excelSession.setAllColumns(selected: true, keepEssential: false)
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 12) {
+                                columnBulkActions
                             }
-                            Button(L("pregenerate.columns.deselect_all")) {
-                                excelSession.setAllColumns(selected: false, keepEssential: true)
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                columnBulkActions
                             }
                         }
                         .buttonStyle(.borderless)
@@ -331,12 +333,17 @@ struct PreGenerateView: View {
                                 ProgressView()
                                 Text(L("pregenerate.generating"))
                             }
+                            .frame(maxWidth: .infinity)
                         } else {
-                            Text(L("pregenerate.generate"))
+                            Label(L("pregenerate.generate"), systemImage: "wand.and.stars")
                                 .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
                         }
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
                     .disabled(!canGenerate || isGenerating)
+                    .accessibilityHint(Text(L("pregenerate.generated_will_appear")))
                     
                     if let lastID = lastGeneratedEntryID {
                         Text(L("pregenerate.last_generated", lastID))
@@ -510,6 +517,22 @@ struct PreGenerateView: View {
         .foregroundCloudWorkflowActivity(.confirmationDialog, isActive: showLowConfidenceConfirm)
     }
     
+    private var columnBulkActions: some View {
+        Group {
+            Button {
+                excelSession.setAllColumns(selected: true, keepEssential: false)
+            } label: {
+                Label(L("pregenerate.columns.select_all"), systemImage: "checkmark.circle")
+            }
+
+            Button {
+                excelSession.setAllColumns(selected: false, keepEssential: true)
+            } label: {
+                Label(L("pregenerate.columns.deselect_all"), systemImage: "circle")
+            }
+        }
+    }
+
     /// Righe di anteprima (esclude la riga 0 = header)
     private var previewRows: [[String]] {
         guard !excelSession.rows.isEmpty else { return [] }
@@ -629,15 +652,19 @@ struct ColumnRecognitionBadge: View {
             case .exactMatch:
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
+                    .accessibilityHidden(true)
             case .aliasMatch:
                 Image(systemName: "arrow.right.circle.fill")
                     .foregroundStyle(.blue)
+                    .accessibilityHidden(true)
             case .normalized:
                 Image(systemName: "wand.and.stars")
                     .foregroundStyle(.purple)
+                    .accessibilityHidden(true)
             case .generated, .emptyOriginal:
                 Image(systemName: "questionmark.circle")
                     .foregroundStyle(.orange)
+                    .accessibilityHidden(true)
             }
 
             if let confidence {

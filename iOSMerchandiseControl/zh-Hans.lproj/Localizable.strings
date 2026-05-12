@@ -466,6 +466,7 @@
 "scanner.fallback.camera_unavailable.message" = "此设备没有可用的相机。请使用带相机的 iPhone 或 iPad 扫描条码。";
 "scanner.fallback.session_failed.message" = "当前无法启动相机。请关闭扫描器后重试。";
 "scanner.action.open_settings" = "打开设置";
+"scanner.action.enter_manually" = "手动输入";
 "scanner.torch.accessibility.label" = "手电筒";
 "scanner.torch.accessibility.value.on" = "已打开";
 "scanner.torch.accessibility.value.off" = "已关闭";
@@ -499,6 +500,8 @@
 "product.action.select_existing" = "选择现有项";
 "product.title.new" = "新商品";
 "product.title.edit" = "编辑商品";
+"product.validation.barcode_required" = "请输入条码以保存商品。";
+"product.validation.save_failed" = "无法保存商品。请检查数据后重试。";
 
 /* Product price history */
 "product.history.empty" = "没有可用的价格历史。";
@@ -540,9 +543,14 @@
 "history.filter.no_error_entries" = "没有出错条目";
 "history.empty.title" = "没有历史记录";
 "history.empty.body" = "当你生成库存文件时，它们会显示在这里。";
+"history.empty.filtered_title" = "没有符合此筛选的会话";
+"history.empty.filtered_body" = "更改期间或关闭错误筛选。";
 "history.toggle.errors_only" = "只显示有错误的条目";
 "history.action.select_period" = "选择期间";
 "history.title" = "历史";
+"history.status.not_attempted" = "未同步";
+"history.status.synced" = "已同步";
+"history.status.errors" = "有错误";
 "history.delete.confirm_title" = "删除此库存？";
 "history.delete.confirm_message" = "此操作将永久删除该库存：\n%@";
 "history.exported" = "已导出";
@@ -598,22 +606,33 @@
 /* Database */
 "database.title" = "数据库";
 "database.search_placeholder" = "按条码、名称或代码搜索";
+"database.search.clear" = "清除搜索";
+"database.action.scan" = "扫描条码";
+"database.empty.title" = "没有商品";
+"database.empty.body" = "添加商品或导入文件以开始。";
+"database.empty.filtered_title" = "未找到商品";
+"database.empty.filtered_body" = "尝试其他条码、名称或代码。";
 "database.row.barcode" = "条码：%@";
 "database.row.code" = "代码：%@";
 "database.row.purchase" = "进货：%@";
 "database.row.retail" = "零售：%@";
 "database.row.stock" = "库存：%@";
+"database.row.stock_label" = "库存";
 "database.row.supplier" = "供应商：%@";
 "database.row.category" = "分类：%@";
 "database.no_file_to_share" = "没有可分享的文件。";
 "database.scanner_title" = "商品扫描器";
 "database.export.title" = "导出商品";
+"database.export.message" = "选择要作为 Excel 文件共享的内容。";
 "database.export.products" = "导出商品";
 "database.export.full" = "导出完整数据库";
 "database.import.title" = "导入商品";
+"database.import.message" = "选择要导入的文件类型。";
 "database.import.excel_analysis" = "从 Excel 导入（分析）";
 "database.import.full" = "导入完整数据库";
 "database.import.csv_simple" = "从 CSV 导入（简单）";
+"database.delete.confirm_title" = "删除商品？";
+"database.delete.confirm_message" = "将从本地数据库移除 %d 个商品。";
 "database.error.import_title" = "导入错误";
 "database.progress.preparing" = "正在准备导入...";
 "database.progress.parsing_excel" = "正在读取导入文件";
