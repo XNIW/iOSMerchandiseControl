@@ -1,0 +1,2 @@
+Picked up JAVA_TOOL_OPTIONS: -Djdk.attach.allowAttachSelf=true -XX:+StartAttachListener
+No Gradle daemons are running.

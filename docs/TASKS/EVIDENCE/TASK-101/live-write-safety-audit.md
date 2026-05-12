@@ -9,6 +9,8 @@
 
 No catalog/product/price/session/sync-event test rows were inserted, updated, deleted, truncated or exported in TASK-101.
 
+Final review also ran Supabase local/linked lint and read-only drift introspection; no destructive Supabase operation was performed.
+
 ## Current Policy
 
 - App live writes must use authenticated user session, publishable key, scoped prefix for synthetic datasets when tests are needed, collision scan before first write and redacted evidence.
@@ -23,4 +25,3 @@ If the function grant revocation needs rollback:
 grant execute on function public.rls_auto_enable()
   to public, anon, authenticated;
 ```
-

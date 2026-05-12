@@ -1,0 +1,16 @@
+Commands:
+plutil -lint iOSMerchandiseControl/PrivacyInfo.xcprivacy
+plutil -p iOSMerchandiseControl/PrivacyInfo.xcprivacy
+find /Users/minxiang/Library/Developer/Xcode/DerivedData -path '*iOSMerchandiseControl*.app*PrivacyInfo.xcprivacy' -print
+
+Result:
+PASS
+
+Observed:
+- Source manifest lint: OK.
+- Manifest declares NSPrivacyAccessedAPICategoryUserDefaults with reason CA92.1.
+- NSPrivacyCollectedDataTypes is empty.
+- NSPrivacyTracking is false.
+- NSPrivacyTrackingDomains is empty.
+- Release simulator app bundle contains the app-level PrivacyInfo.xcprivacy.
+- Release simulator app bundle also contains dependency manifests from ZIPFoundation and swift-crypto.

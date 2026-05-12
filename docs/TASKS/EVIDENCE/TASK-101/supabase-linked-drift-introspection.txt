@@ -1,0 +1,13 @@
+┌────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│           check_name           │                                                                    value                                                                    │
+├────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ shared_sheet_sessions_table    │ shared_sheet_sessions                                                                                                                       │
+│ sync_events_table              │ sync_events                                                                                                                                 │
+│ record_sync_event_function     │ record_sync_event(text,text,integer,jsonb,uuid,text,text,uuid,text,jsonb)                                                                   │
+│ updated_at_function            │ set_inventory_catalog_updated_at()                                                                                                          │
+│ rls_auto_enable_function       │ rls_auto_enable()                                                                                                                           │
+│ rls_auto_enable_grantees       │ postgres,service_role                                                                                                                       │
+│ sync_events_policies           │ sync_events_select_owner                                                                                                                    │
+│ shared_sheet_sessions_policies │ shared_sheet_sessions_delete_owner,shared_sheet_sessions_insert_owner,shared_sheet_sessions_select_owner,shared_sheet_sessions_update_owner │
+│ inventory_updated_at_triggers  │ trg_inventory_categories_set_updated_at,trg_inventory_products_set_updated_at,trg_inventory_suppliers_set_updated_at                        │
+└────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘

@@ -1,0 +1,10 @@
+Command:
+xcodebuild build -quiet -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Release -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+
+Result:
+PASS
+
+Notes:
+- The command completed with exit code 0.
+- Quiet build produced no warning/error output.
+- App-level PrivacyInfo.xcprivacy was present in the Release-iphonesimulator app bundle after build.

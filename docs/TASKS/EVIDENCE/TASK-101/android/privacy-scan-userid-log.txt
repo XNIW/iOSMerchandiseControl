@@ -1,0 +1,5 @@
+No matches for raw userId logging patterns after TASK-101 Android fix:
+Auth: sessione attiva \(userId
+userId=${
+Log.*userId
+println.*userId

@@ -1,0 +1,109 @@
+/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift:16:29: warning: main actor-isolated initializer 'init(config:redirectURL:)' cannot be called from outside of the actor; this is an error in the Swift 6 language mode
+            clientProvider: SupabaseClientProvider(config: config)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift:185:31: warning: converting non-Sendable function value to '@MainActor @Sendable (String, Date) async throws -> SyncEventOutboxCounts' may introduce data races
+            fetchCounts: fake.fetchCounts(ownerUserID:now:),
+                              ^
+/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift:186:29: warning: converting non-Sendable function value to '@MainActor @Sendable (String, Int, Int?) async throws -> SyncEventOutboxDrainOutcome' may introduce data races
+            drainOnce: fake.drainOnce(ownerUserID:limit:fetchScanLimit:)
+                            ^
+/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift:289:31: warning: converting non-Sendable function value to '@MainActor @Sendable (String, Date) async throws -> SyncEventOutboxCounts' may introduce data races
+            fetchCounts: fake.fetchCounts(ownerUserID:now:),
+                              ^
+/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift:290:29: warning: converting non-Sendable function value to '@MainActor @Sendable (String, Int, Int?) async throws -> SyncEventOutboxDrainOutcome' may introduce data races
+            drainOnce: fake.drainOnce(ownerUserID:limit:fetchScanLimit:)
+                            ^
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+2026-05-12 12:39:31.984 xcodebuild[17035:137587] [MT] IDETestOperationsObserverDebug: 26.645 elapsed -- Testing started completed.
+2026-05-12 12:39:31.984 xcodebuild[17035:137587] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-12 12:39:31.984 xcodebuild[17035:137587] [MT] IDETestOperationsObserverDebug: 26.645 sec, +26.645 sec -- end
+Testing started
+Test suite 'SupabaseManualPushServiceTests' started on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)'
+Test case 'SupabaseManualPushServiceTests.testBatchFallbackRetriesSmallerCreates()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.051 seconds)
+Test case 'SupabaseManualPushServiceTests.testCompletedWriteWithReadBackFailureReportsBaselineRefreshFailed()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.014 seconds)
+Test case 'SupabaseManualPushServiceTests.testCreateResponseMismatchReportsPartialAfterConfirmedRemoteWrite()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.010 seconds)
+Test case 'SupabaseManualPushServiceTests.testCreateSupplierCategoryProductUpdatesRemoteIDsAndBaselineAfterReadBack()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.110 seconds)
+Test case 'SupabaseManualPushServiceTests.testLinkedRemoteIDMissingOnVerifyFailsBeforeWriteConservatively()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.011 seconds)
+Test case 'SupabaseManualPushServiceTests.testPartialSuccessDoesNotCreateValidBaseline()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.012 seconds)
+Test case 'SupabaseManualPushServiceTests.testRetryAfterPartialDoesNotCreateAlreadyLinkedSupplierAgain()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.022 seconds)
+Test case 'SupabaseManualPushServiceTests.testScopedTask045GuardAllowsOutsideRemoteDependencyWithoutWritingLookup()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.013 seconds)
+Test case 'SupabaseManualPushServiceTests.testScopedTask045GuardBlocksOutsideLocalDependencyBeforeRemoteCall()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.197 seconds)
+Test case 'SupabaseManualPushServiceTests.testScopedTask045GuardBlocksOutsideSupplierBeforeRemoteCall()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.008 seconds)
+Test case 'SupabaseManualPushServiceTests.testUpdatePayloadDoesNotEncodeNullForUnmanagedOrNilFields()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test suite 'SyncEventOutboxEnqueueServiceTests' started on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)'
+Test case 'SyncEventOutboxEnqueueServiceTests.testAccountMismatchBlocksAuthWithoutEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.005 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testCatalogPushSuccessEnqueuesPendingCatalogEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.016 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testChangedCountAboveThousandCreatesBlockedContractNotPendingRetryable()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.007 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testChangedCountThousandPersistsPayloadForReplay()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.005 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testCompletedBaselineRefreshFailedWithConfirmedWriteEnqueuesWithMetadataFlag()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.005 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testDedupeMatchesExistingTerminalStatuses()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.012 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testDryRunAndPreflightOnlySkipWithoutEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.190 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testEntityIDsRawBusinessIdentifiersAreNotPersistedAsPayload()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.006 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testFactoryBlockedChangedCountDropsPayloadJSON()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testFailedPreflightSkipsWithoutEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.003 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testForbiddenMetadataKeyBlocksWithoutPersistingPayload()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.005 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testGeneratorAndClockAreDeterministic()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.005 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testInvalidGeneratedClientEventIDBlocksContractWithoutEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.003 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testMetadataBudgetFailureCreatesBlockedContract()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.005 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testNoOpSkipsWithoutEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.003 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testOwnerMissingBlocksAuthWithoutEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.003 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testPartialSuccessCountsOnlyConfirmedRecords()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.005 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testPlanFingerprintDerivedClientEventIDDoesNotPersistRawCatalogFields()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.230 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testPricesChangedCountUsesConfirmedPriceRows()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.004 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testProductionSourceHasNoLiveNetworkOrDrainTokens()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.046 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testProductPriceFailedVerificationSkipsFailedPreflightWithoutEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.004 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testProductPricePushSuccessEnqueuesPendingPricesEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.005 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testProductPriceZeroConfirmedRowsSkipsNoOpWithoutEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.003 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testReplayHelperRejectsCorruptedPayloadJSON()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testReplayHelperRejectsInvalidBatchID()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testReplayHelperRejectsLegacyEntryWithoutPayloadJSON()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testSameBlockedContractOutcomeTwiceCreatesOneBlockedEntryThenDuplicateNoOp()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.009 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testSameOutcomeTwiceCreatesOneEntryThenDuplicateNoOp()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.005 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testSaveFailureAfterConfirmedOutcomeReturnsLocalFailureWithoutRetryingRemote()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.002 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testUnsupportedSourceSkipsWithoutEntry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.003 seconds)
+Test case 'SyncEventOutboxEnqueueServiceTests.testValidEntityIDPayloadPersistsAndReplaysWithoutChangingShape()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.005 seconds)
+Test suite 'SupabaseSyncEventDebugViewModelTests' started on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)'
+Test case 'SupabaseSyncEventDebugViewModelTests.testCancelDuringLoadingReturnsIdleAndIgnoresLateResult()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.015 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testDisplayCapTwentyOnFiftyEvents()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.015 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testDisplayedCountFormulaForPlannedTotals()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.000 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testDoubleLoadDuringLoadingStartsOnlyOneFetch()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.013 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testEffectiveLimitIsDefaultFifty()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.028 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testFormatterShapeAndTopLevelCounts()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.000 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testIdleLoadingSuccessWithEvents()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.012 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testInventoryServiceDiagnosticRedactsURLBusinessIDsAndEmail()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testNoSession()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.002 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testNotConfigured()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testResetAfterSuccessReturnsIdleAndClearsBuffers()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testResetDuringLoadingReturnsIdleAndIgnoresLateResult()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.013 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testSanitizedPreviewMaxFortyEightAndRedactsSensitiveShapes()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testSchemaAndDecodingErrorsUseSanitizedErrorState()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.002 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testSuccessEmpty()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.002 seconds)
+Test case 'SupabaseSyncEventDebugViewModelTests.testViewModelExposesSafeDisplayRowsInsteadOfRawDTOs()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test suite 'SyncEventOutboxStateTests' started on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)'
+Test case 'SyncEventOutboxStateTests.testAuthMapsToBlockedAuth()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.002 seconds)
+Test case 'SyncEventOutboxStateTests.testChangedCountAboveThousandBlocksContract()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testChangedCountThousandIsAccepted()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testClientEventIDIsRequiredWhenProvidedExplicitly()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testClientEventIDIsStableAcrossRetry()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testContractMapsToBlockedContract()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testExhaustedSendingRecoveryMapsToDead()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testFreshSendingIsNotStale()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.000 seconds)
+Test case 'SyncEventOutboxStateTests.testMaxAttemptsMapsRetryableFailureToDead()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testNegativeChangedCountIsRejected()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.000 seconds)
+Test case 'SyncEventOutboxStateTests.testNetworkAndOfflineMapToFailedRetryable()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testNetworkTimeoutMapsToFailedRetryable()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testNewValidEntryStartsPending()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testOwnerUserIDIsRequired()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.000 seconds)
+Test case 'SyncEventOutboxStateTests.testPrivacySanitizerRedactsJWTAndTokenValues()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.000 seconds)
+Test case 'SyncEventOutboxStateTests.testPrivacySanitizerRedactsMultipleSensitiveShapesWithoutDroppingUsefulContext()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testPrivacySanitizerRedactsURLsQueryStringsAndBusinessIDs()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testRetryableExcludesBlockedTerminalSentLocalOnlyAndSendingStatuses()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testRetryableExcludesMaxAttempts()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testRetryableIncludesDuePendingEntryForCurrentOwner()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testSchemaMapsToBlockedSchema()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testSendingStaleRecoveryReturnsRetryableWithoutConsumingAttempt()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testShapeHelpersDoNotPersistRawMassiveBusinessLists()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SyncEventOutboxStateTests.testSuccessMapsToSent()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.011 seconds)
+Test suite 'SupabaseConfigSecurityTests' started on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)'
+Test case 'SupabaseConfigSecurityTests.testAuthSessionInfoPrivacySafeDisplayRedactsAccountIdentifiers()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.001 seconds)
+Test case 'SupabaseConfigSecurityTests.testRejectsLegacyServiceRoleJWTButAllowsAnonJWTShape()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (18167)' (0.003 seconds)

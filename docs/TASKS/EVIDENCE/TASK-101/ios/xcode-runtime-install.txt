@@ -1,0 +1,10 @@
+Command:
+xcodebuild -downloadPlatform iOS -buildVersion 26.5 -architectureVariant arm64
+
+Result:
+PASS
+
+Observed:
+- iOS 26.5 Simulator (23F77) was downloaded and installed.
+- xcodebuild destinations then included iPhone 17 Pro, OS 26.5.
+- This unblocked Release build, targeted XCTest and full XCTest on iOS Simulator.

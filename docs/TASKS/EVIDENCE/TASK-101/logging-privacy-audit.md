@@ -16,8 +16,8 @@
 ## Remaining Runtime Logs
 
 - DEBUG smoke/task logs still exist by design for developer-only paths and use privacy-safe summaries where reviewed.
-- Android reference has a raw auth `userId` log; registered as F101-05.
+- Android auth activation log no longer prints raw `userId`; F101-05 is closed.
 
 ## Verification
 
-Targeted XCTest passed for sanitizer, auth privacy display and hashed plan-derived sync identifiers. Final full XCTest rerun passed in review: 640 passed, 12 skipped, 0 failed. Release build passed with no new task-introduced warning; AppIntents metadata warning remains pre-existing/toolchain-generated.
+Targeted XCTest passed for sanitizer, auth privacy display and hashed plan-derived sync identifiers. Final full XCTest rerun passed in review on iOS 26.5: 640 passed, 12 skipped, 0 failed. Release build passed. Android unit/lint/debug/release build checks passed after the log fix.

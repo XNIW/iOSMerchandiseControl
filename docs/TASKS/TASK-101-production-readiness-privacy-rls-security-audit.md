@@ -7,21 +7,21 @@
 | **Task ID** | **TASK-101** |
 | **Titolo** | **Production readiness privacy / RLS / security audit** |
 | **File task** | `docs/TASKS/TASK-101-production-readiness-privacy-rls-security-audit.md` |
-| **Stato task** | **ACTIVE** |
-| **Fase attuale** | **REVIEW** |
-| **Responsabile attuale** | **Claude / Reviewer** |
+| **Stato task** | **DONE** |
+| **Fase attuale** | **Chiusura — REVIEW PASS FINAL** |
+| **Responsabile attuale** | **Utente / Chiusura** |
 | **Data creazione** | 2026-05-10 |
-| **Ultimo aggiornamento** | 2026-05-11 00:03 -0400 — **Review/Fix Codex completata per override utente / resta handoff REVIEW** |
+| **Ultimo aggiornamento** | 2026-05-12 12:50 -0400 — **Review finale Codex completata per override utente / TASK-101 DONE** |
 
-**TASK-101 NON DONE.**
+**TASK-101 DONE / REVIEW PASS FINAL.**
 
 **EXECUTION ESEGUITA PER OVERRIDE ESPLICITO UTENTE** — il file era ancora in planning-init; l'utente ha autorizzato direttamente audit statico/runtime, lettura live Supabase e remediation completa. Deviazione registrata in §15.
 
-**Handoff turno corrente:** **READY FOR REVIEW**
+**Handoff turno corrente:** **DONE / Nessun handoff tecnico bloccante**
 
-**Flag:** **`TASK-101_REVIEW_FIX_USER_OVERRIDE_PARTIAL_READY_FOR_REVIEW`** — execution e review/fix completate da Codex con evidenze, remediation iOS/backend mirate, build/test PASS; **TASK-101 NON DONE**; **nessuna** apertura **TASK-102**; **nessun** claim production-ready globale 100%.
+**Flag:** **`TASK-101_DONE_REVIEW_PASS_FINAL_USER_OVERRIDE`** — execution e review/fix completate da Codex con evidenze, remediation iOS/backend/Android mirate, build/test/lint PASS; **TASK-101 DONE**; **nessuna** apertura **TASK-102**; **nessun** claim production-ready globale 100%.
 
-> **Nota di riconciliazione 2026-05-11 00:03 -0400:** le sezioni §3-§14 restano contesto storico del planning-init. Lo stato operativo reale post-override è documentato in §15 e nell'evidence pack `docs/TASKS/EVIDENCE/TASK-101/`.
+> **Nota di riconciliazione 2026-05-12 12:50 -0400:** le sezioni §3-§14 restano contesto storico del planning-init. Lo stato operativo reale post-override è documentato in §15 e nell'evidence pack `docs/TASKS/EVIDENCE/TASK-101/`.
 
 ---
 
@@ -209,7 +209,7 @@ Prima di autorizzare **EXECUTION** (audit attivo o mutazioni):
 | **Prossimo agente** | **Claude / Reviewer** |
 | **Azione consigliata** | Validare coerenza §2–§12, priorità micro-slice, matrice M101, CA-T101, rischi; poi — solo con consenso utente — handoff verso **EXECUTION** con scope read/write esplicito |
 
-**TASK-101** resta **NON DONE** e **NON READY FOR EXECUTION** fino a chiusura Planning Review e consenso esplicito come da §10.
+**[STORICO PLANNING — SUPERATO DAL §15]** In questa fase iniziale, **TASK-101** restava **NON DONE** e **NON READY FOR EXECUTION** fino a chiusura Planning Review e consenso esplicito come da §10.
 
 ---
 
@@ -224,6 +224,8 @@ Prima di autorizzare **EXECUTION** (audit attivo o mutazioni):
 ## 15. Execution / Review / Fix
 
 ### Execution (Codex) — 2026-05-10 23:10 -0400
+
+> **Storico:** sezione superata dalla review finale 2026-05-12, che ha chiuso i finding residui e portato TASK-101 a DONE.
 
 #### Override operativo
 
@@ -299,7 +301,7 @@ Portare TASK-101 a una execution verificabile per audit privacy/RLS/security/rea
 - ✅ ESEGUITO — **Test mirati**: `SupabaseConfigSecurityTests`, `SyncEventOutboxStateTests`, `SupabaseSyncEventDebugViewModelTests`, `SupabaseManualPushServiceTests` PASS; xcresult `Test-iOSMerchandiseControl-2026.05.10_23-01-18--0400.xcresult`.
 - ✅ ESEGUITO — **Supabase live RLS/grants/function inventory**: query metadata PASS; remediation `rls_auto_enable()` verificata.
 - ✅ ESEGUITO — **Supabase schema lint execution**: `supabase db lint --linked --level warning` registrato PASS nella execution iniziale / no schema errors found.
-- ⚠️ NON ESEGUIBILE — **Supabase schema lint review rerun**: in review `supabase db lint --linked --level warning` non autenticabile verso Postgres linked senza `SUPABASE_DB_PASSWORD` disponibile/valido; non trattato come PASS fresco di review.
+- ⚠️ NON ESEGUIBILE — **Supabase schema lint review rerun storico**: in review 2026-05-11 `supabase db lint --linked --level warning` non era autenticabile verso Postgres linked senza credenziale DB valida; superato dal rerun finale 2026-05-12 PASS.
 - ✅ ESEGUITO — **Migration drift audit**: `supabase migration list --linked` eseguito, esito PARTIAL per drift documentato.
 - ✅ ESEGUITO — **Secret/evidence scan**: TASK-101 evidence scan senza email/token/connection string; solo termini policy nel codice/evidence.
 - ✅ ESEGUITO — **git diff whitespace**: `git diff --check` PASS.
@@ -348,6 +350,8 @@ PASS per iOS client privacy/security, RLS owner model, service_role in consumer 
 
 ### Review/Fix (Codex) — 2026-05-11 00:03 -0400
 
+> **Storico:** sezione superata dalla review finale 2026-05-12, che ha rieseguito Supabase local/linked, Android e iOS 26.5.
+
 #### Obiettivo compreso
 
 Eseguire review professionale della execution TASK-101 senza fidarsi del report precedente, correggendo direttamente problemi reali e riallineando evidence/tracking senza trasformare PARTIAL in DONE se i check Supabase/release restano incompleti.
@@ -394,7 +398,7 @@ Eseguire review professionale della execution TASK-101 senza fidarsi del report 
 - ✅ ESEGUITO — **Evidence/task privacy scan**: nessun match per email/JWT/bearer/API key/connection string/raw Supabase REST URL; UUID/long-number scan solo timestamp migration.
 - ✅ ESEGUITO — **Supabase migration list linked**: eseguito, drift confermato e documentato.
 - ⚠️ NON ESEGUIBILE — **Supabase local Docker/start/status/lint**: Docker command/daemon non disponibile.
-- ⚠️ NON ESEGUIBILE — **Supabase linked lint review rerun**: autenticazione Postgres linked fallita senza `SUPABASE_DB_PASSWORD` disponibile/valido.
+- ⚠️ NON ESEGUIBILE — **Supabase linked lint review rerun storico**: autenticazione Postgres linked fallita nel pass 2026-05-11; superato dal rerun finale 2026-05-12 PASS.
 - ⚠️ NON ESEGUIBILE — **Simulator manuale UI/OAuth/accessibility completo**: non ripetuto in review; copertura statica + XCTest/build.
 - ⚠️ NON ESEGUIBILE — **Android runtime/build**: Android resta riferimento statico, finding F101-05 aperto.
 
@@ -417,3 +421,58 @@ Eseguire review professionale della execution TASK-101 senza fidarsi del report 
 | **Esito review Codex** | **PARTIAL / READY FOR REVIEW** |
 | **Motivo non-DONE** | Supabase drift, linked/local lint non completamente riproducibili in review, leaked-password protection dashboard, Android/release readiness residui. |
 | **Azione richiesta** | Accettare PARTIAL come follow-up routing o aprire FIX mirato per backend/Android/release-readiness. |
+
+### Review finale / Chiusura (Codex) — 2026-05-12 12:50 -0400
+
+#### Override operativo
+
+- L'utente ha richiesto esplicitamente di portare TASK-101 a DONE reale se i criteri fossero verificabili, superando la regola standard del workflow che impedisce a Codex di marcare DONE.
+- L'override è stato applicato solo dopo rerun di iOS, Android, Supabase local/linked, privacy manifest, evidence scan e riconciliazione finding.
+
+#### Fix applicati
+
+- iOS: aggiunto `iOSMerchandiseControl/PrivacyInfo.xcprivacy` con UserDefaults required-reason API `CA92.1`, nessun tracking e nessuna data collection dichiarata.
+- Android: rimosso raw `userId` dal log runtime `Auth: sessione attiva` in `MerchandiseControlApplication.kt`.
+- Evidence: aggiunti output Android, iOS 26.5, Supabase local/linked, introspection drift e privacy manifest; aggiornati matrix, traceability, findings, decisione finale e report test.
+
+#### Check finali
+
+- ✅ ESEGUITO — `git diff --check` iOS PASS.
+- ✅ ESEGUITO — `git diff --check` Android PASS.
+- ✅ ESEGUITO — iOS runtime install: `xcodebuild -downloadPlatform iOS -buildVersion 26.5 -architectureVariant arm64` PASS.
+- ✅ ESEGUITO — iOS Release build: iPhone 17 Pro iOS 26.5 simulator PASS.
+- ✅ ESEGUITO — iOS TASK-101 targeted XCTest: 84 passed, 0 failed.
+- ✅ ESEGUITO — iOS full XCTest: 640 passed, 12 skipped, 0 failed.
+- ✅ ESEGUITO — iOS simulator launch smoke: install/launch/screenshot PASS.
+- ✅ ESEGUITO — iOS privacy manifest: `plutil -lint` PASS; Release simulator bundle contiene il manifest app-level.
+- ✅ ESEGUITO — Supabase local: `supabase status` PASS; `supabase db lint --local --level warning` PASS/no schema errors.
+- ✅ ESEGUITO — Supabase linked: `supabase migration list --linked` eseguito; `supabase db lint --linked --level warning` PASS/no schema errors.
+- ✅ ESEGUITO — Supabase drift: introspezione read-only PASS; oggetti live richiesti presenti; drift classificato registry/history non-blocking.
+- ✅ ESEGUITO — Android: `testDebugUnitTest`, `lintDebug`, `assembleDebug`, `assembleRelease` PASS con JBR Android Studio.
+- ✅ ESEGUITO — Evidence privacy scan: nessun segreto reale; match residui solo per nomi ruolo/policy o placeholder documentati.
+- ⚠️ NON ESEGUIBILE — OAuth manuale con account reale non ripetuto per evitare produzione di evidence sensibili; coperto da static/test/prior evidence e smoke app.
+
+#### Findings finali
+
+- F101-01 CLOSED.
+- F101-02 CLOSED_NON_BLOCKING_OPS: drift registry/history documentato, live schema coerente, nessun repair cieco.
+- F101-03 CLOSED_NON_BLOCKING_OPS: leaked-password protection è dashboard/Auth setting; client iOS/Android non hanno password login.
+- F101-04 CLOSED_NON_BLOCKING_OPS: legacy grants fail-closed sotto RLS, cleanup least-privilege futuro non bloccante.
+- F101-05 CLOSED: Android raw `userId` log corretto e verificato.
+- F101-06 CLOSED.
+- F101-07 CLOSED.
+- F101-08 CLOSED: privacy manifest aggiunto e verificato.
+- F101-09 CLOSED.
+- F101-10 CLOSED.
+
+#### Rischi residui
+
+- Eventuale repair della migration history Supabase va fatto come operazione Ops deliberata, non automatica.
+- Leaked-password protection va confermata in Dashboard se in futuro viene abilitato password login.
+- Full screen-by-screen accessibility/OAuth manual pass resta normale gate release-candidate, non blocker TASK-101.
+
+#### Decisione finale
+
+**TASK-101 DONE / REVIEW PASS FINAL.**
+
+Non è un claim "production-ready globale 100%"; è chiusura del perimetro TASK-101 con evidence completa, redatta e verificata, senza BLOCKER/HIGH aperti.
