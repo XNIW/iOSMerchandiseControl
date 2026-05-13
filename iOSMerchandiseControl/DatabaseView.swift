@@ -1490,9 +1490,11 @@ struct DatabaseView: View {
     @State private var productForHistory: Product?
     
     @State private var showScanner = false
+    @State private var scannerFallbackFocusTask: Task<Void, Never>?
     @State private var pendingBarcodeForNewProduct: String? = nil
     @State private var productsPendingDeletion: [Product] = []
     @State private var showingDeleteProductsConfirmation = false
+    @FocusState private var isSearchFocused: Bool
 
     // Export / import
     @State private var exportURL: URL?
@@ -1724,6 +1726,7 @@ struct DatabaseView: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
+                .focused($isSearchFocused)
 
             if !barcodeFilter.isEmpty {
                 Button {
@@ -1750,6 +1753,15 @@ struct DatabaseView: View {
         }
         .padding(.horizontal)
         .padding(.top)
+    }
+
+    private func focusSearchAfterScannerFallback() {
+        scannerFallbackFocusTask?.cancel()
+        scannerFallbackFocusTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            guard !Task.isCancelled, !showScanner else { return }
+            isSearchFocused = true
+        }
     }
 
     private var databaseEmptyState: some View {
@@ -2017,6 +2029,7 @@ struct DatabaseView: View {
                 fallbackActionTitle: L("scanner.action.enter_manually"),
                 onFallbackRequested: {
                     showScanner = false
+                    focusSearchAfterScannerFallback()
                 }
             ) { code in
                 handleDatabaseScan(code)

@@ -20,6 +20,13 @@ enum ColumnStatus {
 /// (equivalente concettuale di ExcelViewModel su Android)
 @MainActor
 final class ExcelSessionViewModel: ObservableObject {
+    private struct LoadedWorkbook: Sendable {
+        let originalHeader: [String]
+        let normalizedHeader: [String]
+        let rows: [[String]]
+        let analysisMetrics: AnalysisMetrics?
+    }
+
     // 🔹 Header originale (dopo rimozione colonne completamente vuote)
     @Published var originalHeader: [String] = []
 
@@ -116,6 +123,38 @@ final class ExcelSessionViewModel: ObservableObject {
         analysisMetrics = nil
     }
 
+    private nonisolated static func runDetached<Value: Sendable>(
+        _ operation: @escaping @Sendable () throws -> Value
+    ) async throws -> Value {
+        let task = Task.detached(priority: .userInitiated) {
+            try Task.checkCancellation()
+            let value = try operation()
+            try Task.checkCancellation()
+            return value
+        }
+
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
+    }
+
+    private nonisolated static func computeAnalysisMetricsInBackground(
+        header: [String],
+        rows: [[String]]
+    ) async -> AnalysisMetrics? {
+        let task = Task.detached(priority: .userInitiated) {
+            ExcelAnalyzer.computeAnalysisMetrics(header: header, rows: rows)
+        }
+
+        return await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
+    }
+
     // MARK: - Selezione colonne (equivalente di isColumnEssential)
 
     func isColumnEssential(at index: Int) -> Bool {
@@ -206,22 +245,28 @@ final class ExcelSessionViewModel: ObservableObject {
         progress = 0
 
         do {
-            // 🔹 NUOVO: ricevi anche l'header originale
-            let (originalHeader, normalizedHeader, allRows) =
-                try ExcelAnalyzer.loadFromMultipleURLs(urls)
+            let loaded = try await Self.runDetached {
+                let parsed = try ExcelAnalyzer.loadFromMultipleURLs(urls)
+                return LoadedWorkbook(
+                    originalHeader: parsed.originalHeader,
+                    normalizedHeader: parsed.normalizedHeader,
+                    rows: parsed.rows,
+                    analysisMetrics: ExcelAnalyzer.computeAnalysisMetrics(
+                        header: parsed.normalizedHeader,
+                        rows: parsed.rows
+                    )
+                )
+            }
 
             // Torniamo sul MainActor
-            self.originalHeader = originalHeader
-            self.normalizedHeader = normalizedHeader
-            self.initialNormalizedHeader = normalizedHeader
-            self.rows = allRows
-            self.selectedColumns = Array(repeating: true, count: normalizedHeader.count)
+            self.originalHeader = loaded.originalHeader
+            self.normalizedHeader = loaded.normalizedHeader
+            self.initialNormalizedHeader = loaded.normalizedHeader
+            self.rows = loaded.rows
+            self.selectedColumns = Array(repeating: true, count: loaded.normalizedHeader.count)
 
             // 🔹 calcolo metriche di analisi (usa l'header normalizzato)
-            if let metrics = ExcelAnalyzer.computeAnalysisMetrics(
-                header: normalizedHeader,
-                rows: allRows
-            ) {
+            if let metrics = loaded.analysisMetrics {
                 self.analysisMetrics = metrics
                 self.analysisConfidence = metrics.confidenceScore
             } else {
@@ -261,7 +306,9 @@ final class ExcelSessionViewModel: ObservableObject {
 
         do {
             for (index, url) in urls.enumerated() {
-                let (_, newHeader, newDataRows) = try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
+                let (_, newHeader, newDataRows) = try await Self.runDetached {
+                    try ExcelAnalyzer.readAndAnalyzeExcel(from: url)
+                }
 
                 if newHeader != initialNormalizedHeader {
                     throw ExcelLoadError.incompatibleHeader
@@ -271,7 +318,7 @@ final class ExcelSessionViewModel: ObservableObject {
                 progress = Double(index + 1) / Double(urls.count)
             }
 
-            if let metrics = ExcelAnalyzer.computeAnalysisMetrics(
+            if let metrics = await Self.computeAnalysisMetricsInBackground(
                 header: normalizedHeader,
                 rows: rows
             ) {
@@ -284,7 +331,7 @@ final class ExcelSessionViewModel: ObservableObject {
 
             progress = 1
         } catch {
-            if let metrics = ExcelAnalyzer.computeAnalysisMetrics(
+            if let metrics = await Self.computeAnalysisMetricsInBackground(
                 header: normalizedHeader,
                 rows: rows
             ) {
@@ -805,7 +852,7 @@ private extension ExcelSessionViewModel {
 
 // MARK: - Metriche di analisi
 
-struct AnalysisMetrics {
+struct AnalysisMetrics: Sendable {
     let essentialColumnsFound: Int
     let essentialColumnsTotal: Int
     let rowsWithValidBarcode: Int
