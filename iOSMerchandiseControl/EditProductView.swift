@@ -24,6 +24,7 @@ struct EditProductView: View {
     @State private var supplierName: String
     @State private var categoryName: String
     @State private var validationMessage: String?
+    @State private var productForHistory: Product?
 
     init(product: Product? = nil, initialBarcode: String? = nil, pendingOwnerUserID: UUID? = nil) {
         self.existingProduct = product
@@ -71,40 +72,56 @@ struct EditProductView: View {
                     .autocorrectionDisabled()
                     .keyboardType(.numbersAndPunctuation)
                     .submitLabel(.next)
+                    .accessibilityLabel(Text(L("product.field.barcode")))
 
                 TextField(L("product.field.item_number"), text: $itemNumber)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.next)
+                    .accessibilityLabel(Text(L("product.field.item_number")))
 
                 TextField(L("product.field.name"), text: $name)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.next)
+                    .accessibilityLabel(Text(L("product.field.name")))
 
                 TextField(L("product.field.second_name"), text: $secondName)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.next)
+                    .accessibilityLabel(Text(L("product.field.second_name")))
             }
 
             Section(L("product.section.warehouse")) {
                 TextField(L("product.field.stock_quantity"), text: $stockQuantity)
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
+                    .accessibilityLabel(Text(L("product.field.stock_quantity")))
             }
 
             Section(L("product.section.prices")) {
                 TextField(L("product.field.purchase_price"), text: $purchasePrice)
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
+                    .accessibilityLabel(Text(L("product.field.purchase_price")))
 
                 TextField(L("product.field.retail_price"), text: $retailPrice)
                     .keyboardType(.decimalPad)
                     .monospacedDigit()
+                    .accessibilityLabel(Text(L("product.field.retail_price")))
+
+                if let existingProduct {
+                    Button {
+                        productForHistory = existingProduct
+                    } label: {
+                        Label(L("product.history.action.open"), systemImage: "clock.arrow.circlepath")
+                    }
+                }
             }
 
             Section(L("product.section.supplier")) {
                 TextField(L("product.field.supplier_name"), text: $supplierName)
                     .textInputAutocapitalization(.words)
+                    .accessibilityLabel(Text(L("product.field.supplier_name")))
 
                 if !suppliers.isEmpty {
                     Menu {
@@ -122,6 +139,7 @@ struct EditProductView: View {
             Section(L("product.section.category")) {
                 TextField(L("product.field.category_name"), text: $categoryName)
                     .textInputAutocapitalization(.words)
+                    .accessibilityLabel(Text(L("product.field.category_name")))
 
                 if !categories.isEmpty {
                     Menu {
@@ -149,6 +167,22 @@ struct EditProductView: View {
         .onChange(of: barcode) { _, _ in
             if !trimmedBarcode.isEmpty {
                 validationMessage = nil
+            }
+        }
+        .sheet(item: $productForHistory) { product in
+            NavigationStack {
+                ProductPriceHistoryView(
+                    product: product,
+                    pendingOwnerUserID: pendingOwnerUserID,
+                    onCurrentPriceUpdated: { type, value in
+                        switch type {
+                        case .purchase:
+                            purchasePrice = Self.format(number: value)
+                        case .retail:
+                            retailPrice = Self.format(number: value)
+                        }
+                    }
+                )
             }
         }
     }

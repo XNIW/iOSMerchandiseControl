@@ -1484,8 +1484,17 @@ struct DatabaseView: View {
     @Query(sort: \Product.barcode, order: .forward)
     private var products: [Product]
 
+    @Query(sort: \Supplier.name, order: .forward)
+    private var suppliers: [Supplier]
+
+    @Query(sort: \ProductCategory.name, order: .forward)
+    private var categories: [ProductCategory]
+
+    @State private var selectedDatabaseSection: DatabaseSection = .products
     @State private var barcodeFilter: String = ""
+    @State private var namedEntityFilter: String = ""
     @State private var showAddSheet = false
+    @State private var namedEntityEditor: DatabaseNamedEntityEditorPresentation?
     @State private var productToEdit: Product?
     @State private var productForHistory: Product?
     
@@ -1681,22 +1690,1212 @@ struct DatabaseView: View {
         let previous: Double?
     }
 
-    private struct DatabaseValueChip: View {
+    private enum DatabaseSection: CaseIterable, Identifiable {
+        case products
+        case suppliers
+        case categories
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .products:
+                return L("database.tab.products")
+            case .suppliers:
+                return L("database.tab.suppliers")
+            case .categories:
+                return L("database.tab.categories")
+            }
+        }
+
+        var addTitle: String {
+            switch self {
+            case .products:
+                return L("product.title.new")
+            case .suppliers:
+                return L("database.entity.add_supplier")
+            case .categories:
+                return L("database.entity.add_category")
+            }
+        }
+    }
+
+    private enum DatabaseNamedEntityKind {
+        case supplier
+        case category
+
+        var entityKind: LocalPendingChangeEntityKind {
+            switch self {
+            case .supplier:
+                return .supplier
+            case .category:
+                return .productCategory
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .supplier:
+                return L("database.tab.suppliers")
+            case .category:
+                return L("database.tab.categories")
+            }
+        }
+
+        var addTitle: String {
+            switch self {
+            case .supplier:
+                return L("database.entity.add_supplier")
+            case .category:
+                return L("database.entity.add_category")
+            }
+        }
+
+        var editTitle: String {
+            switch self {
+            case .supplier:
+                return L("database.entity.edit_supplier")
+            case .category:
+                return L("database.entity.edit_category")
+            }
+        }
+
+        var nameFieldTitle: String {
+            switch self {
+            case .supplier:
+                return L("database.entity.supplier_name")
+            case .category:
+                return L("database.entity.category_name")
+            }
+        }
+
+        var deleteTitle: String {
+            switch self {
+            case .supplier:
+                return L("database.entity.delete_supplier_title")
+            case .category:
+                return L("database.entity.delete_category_title")
+            }
+        }
+
+        var deleteButtonTitle: String {
+            switch self {
+            case .supplier:
+                return L("database.entity.delete_supplier")
+            case .category:
+                return L("database.entity.delete_category")
+            }
+        }
+
+        var deleteInUseTitle: String {
+            switch self {
+            case .supplier:
+                return L("database.entity.delete_in_use_supplier_title")
+            case .category:
+                return L("database.entity.delete_in_use_category_title")
+            }
+        }
+
+        var replaceExistingTitle: String {
+            switch self {
+            case .supplier:
+                return L("database.entity.replace_existing_supplier")
+            case .category:
+                return L("database.entity.replace_existing_category")
+            }
+        }
+
+        var createReplacementTitle: String {
+            switch self {
+            case .supplier:
+                return L("database.entity.create_replacement_supplier")
+            case .category:
+                return L("database.entity.create_replacement_category")
+            }
+        }
+
+        var removeAssignmentTitle: String {
+            switch self {
+            case .supplier:
+                return L("database.entity.remove_assignment_supplier")
+            case .category:
+                return L("database.entity.remove_assignment_category")
+            }
+        }
+
+        var replacementPickerTitle: String {
+            switch self {
+            case .supplier:
+                return L("database.entity.replacement_picker_supplier_title")
+            case .category:
+                return L("database.entity.replacement_picker_category_title")
+            }
+        }
+
+        func deleteMessage(linkedProductCount: Int) -> String {
+            switch self {
+            case .supplier:
+                return L("database.entity.delete_supplier_message", linkedProductCount)
+            case .category:
+                return L("database.entity.delete_category_message", linkedProductCount)
+            }
+        }
+
+        func deleteInUseMessage(linkedProductCount: Int) -> String {
+            switch self {
+            case .supplier:
+                return L("database.entity.delete_in_use_supplier_message", linkedProductCount)
+            case .category:
+                return L("database.entity.delete_in_use_category_message", linkedProductCount)
+            }
+        }
+
+        func logicalKey(remoteID: UUID?, name: String) -> String {
+            switch self {
+            case .supplier:
+                return LocalPendingChangeLogicalKey.supplier(remoteID: remoteID, name: name)
+            case .category:
+                return LocalPendingChangeLogicalKey.category(remoteID: remoteID, name: name)
+            }
+        }
+
+        func fingerprintHash(name: String) -> String {
+            switch self {
+            case .supplier:
+                return LocalPendingChangeLogicalKey.privacyHash(
+                    ManualPushFingerprintNormalizer.supplier(name: name).canonicalString
+                )
+            case .category:
+                return LocalPendingChangeLogicalKey.privacyHash(
+                    ManualPushFingerprintNormalizer.category(name: name).canonicalString
+                )
+            }
+        }
+    }
+
+    private struct DatabaseNamedEntityEditorPresentation: Identifiable {
+        let id = UUID()
+        let kind: DatabaseNamedEntityKind
+        let supplier: Supplier?
+        let category: ProductCategory?
+
+        static func addSupplier() -> Self {
+            Self(kind: .supplier, supplier: nil, category: nil)
+        }
+
+        static func editSupplier(_ supplier: Supplier) -> Self {
+            Self(kind: .supplier, supplier: supplier, category: nil)
+        }
+
+        static func addCategory() -> Self {
+            Self(kind: .category, supplier: nil, category: nil)
+        }
+
+        static func editCategory(_ category: ProductCategory) -> Self {
+            Self(kind: .category, supplier: nil, category: category)
+        }
+    }
+
+    private enum DatabaseNamedEntityDeleteSheet: Identifiable {
+        case replaceExisting
+        case createReplacement
+
+        var id: String {
+            switch self {
+            case .replaceExisting:
+                return "replace-existing"
+            case .createReplacement:
+                return "create-replacement"
+            }
+        }
+    }
+
+    private enum DatabaseNamedEntityReplacementTarget {
+        case supplier(Supplier)
+        case category(ProductCategory)
+    }
+
+    private struct DatabaseMetricPill: View {
         let title: String
         let value: String
+        let systemImage: String
 
         var body: some View {
-            VStack(alignment: .trailing, spacing: 1) {
-                Text(title)
-                    .font(.caption2)
+            HStack(alignment: .center, spacing: 6) {
+                Image(systemName: systemImage)
+                    .imageScale(.small)
                     .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: true)
+                    Text(value)
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: true)
+                }
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .padding(.vertical, 5)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .fixedSize(horizontal: true, vertical: true)
+        }
+    }
+
+    private struct DatabaseInfoLabel: View {
+        let systemImage: String
+        let text: String
+        var lineLimit: Int = 1
+        var monospaced: Bool = false
+
+        var body: some View {
+            Label {
+                if monospaced {
+                    Text(text)
+                        .font(.caption.monospaced())
+                        .lineLimit(lineLimit)
+                        .truncationMode(.middle)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(text)
+                        .lineLimit(lineLimit)
+                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } icon: {
+                Image(systemName: systemImage)
+                    .imageScale(.small)
+            }
+        }
+    }
+
+    private struct DatabaseNamedEntityRow: View {
+        let name: String
+        let linkedProductsText: String
+        let systemImage: String
+        let onOpen: () -> Void
+
+        var body: some View {
+            Button(action: onOpen) {
+                HStack(spacing: 12) {
+                    Image(systemName: systemImage)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(name)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(linkedProductsText)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text(L("database.entity.row_hint")))
+        }
+    }
+
+    private struct DatabaseNamedEntityReplacementPickerView: View {
+        @Environment(\.dismiss) private var dismiss
+
+        let kind: DatabaseNamedEntityKind
+        let suppliers: [Supplier]
+        let categories: [ProductCategory]
+        let onSelect: (DatabaseNamedEntityReplacementTarget) -> Void
+
+        @State private var filter = ""
+
+        private var filteredSuppliers: [Supplier] {
+            let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return suppliers }
+
+            return suppliers.filter {
+                $0.name.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+            }
+        }
+
+        private var filteredCategories: [ProductCategory] {
+            let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return categories }
+
+            return categories.filter {
+                $0.name.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+            }
+        }
+
+        var body: some View {
+            List {
+                Section {
+                    TextField(L("database.entity.replacement_search"), text: $filter)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.search)
+                        .accessibilityLabel(Text(L("database.entity.replacement_search")))
+                }
+
+                switch kind {
+                case .supplier:
+                    replacementSupplierRows
+                case .category:
+                    replacementCategoryRows
+                }
+            }
+            .navigationTitle(kind.replacementPickerTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L("common.cancel")) { dismiss() }
+                }
+            }
+        }
+
+        @ViewBuilder
+        private var replacementSupplierRows: some View {
+            if filteredSuppliers.isEmpty {
+                Section {
+                    ContentUnavailableView(
+                        L("database.entity.replacement_empty"),
+                        systemImage: "building.2"
+                    )
+                }
+            } else {
+                Section {
+                    ForEach(filteredSuppliers) { supplier in
+                        Button {
+                            onSelect(.supplier(supplier))
+                            dismiss()
+                        } label: {
+                            Label(supplier.name, systemImage: "building.2")
+                        }
+                    }
+                }
+            }
+        }
+
+        @ViewBuilder
+        private var replacementCategoryRows: some View {
+            if filteredCategories.isEmpty {
+                Section {
+                    ContentUnavailableView(
+                        L("database.entity.replacement_empty"),
+                        systemImage: "folder"
+                    )
+                }
+            } else {
+                Section {
+                    ForEach(filteredCategories) { category in
+                        Button {
+                            onSelect(.category(category))
+                            dismiss()
+                        } label: {
+                            Label(category.name, systemImage: "folder")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private struct DatabaseNamedEntityReplacementCreateView: View {
+        @Environment(\.dismiss) private var dismiss
+
+        let kind: DatabaseNamedEntityKind
+        let existingNames: [String]
+        let onCreate: (String) -> Void
+
+        @State private var name = ""
+        @State private var validationMessage: String?
+
+        private var trimmedName: String {
+            name.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        var body: some View {
+            Form {
+                if let validationMessage {
+                    Section {
+                        Label(validationMessage, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Section {
+                    TextField(kind.nameFieldTitle, text: $name)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.done)
+                        .accessibilityLabel(Text(kind.nameFieldTitle))
+                } footer: {
+                    Text(L("database.entity.create_replacement_footer"))
+                }
+            }
+            .navigationTitle(kind.createReplacementTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L("common.cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L("common.save")) { save() }
+                        .fontWeight(.semibold)
+                }
+            }
+            .onChange(of: name) { _, _ in
+                validationMessage = nil
+            }
+        }
+
+        private func save() {
+            guard !trimmedName.isEmpty else {
+                validationMessage = L("database.entity.name_required")
+                return
+            }
+
+            guard !existingNames.contains(where: {
+                $0.compare(trimmedName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+            }) else {
+                validationMessage = L("database.entity.name_exists")
+                return
+            }
+
+            onCreate(trimmedName)
+            dismiss()
+        }
+    }
+
+    private struct DatabaseNamedEntityEditorView: View {
+        @Environment(\.modelContext) private var context
+        @Environment(\.dismiss) private var dismiss
+
+        let kind: DatabaseNamedEntityKind
+        let supplier: Supplier?
+        let category: ProductCategory?
+        let suppliers: [Supplier]
+        let categories: [ProductCategory]
+        let products: [Product]
+        let pendingOwnerUserID: UUID?
+
+        @State private var name: String
+        @State private var validationMessage: String?
+        @State private var showingDeleteConfirmation = false
+        @State private var showingRemoveAssignmentConfirmation = false
+        @State private var deleteSheet: DatabaseNamedEntityDeleteSheet?
+
+        init(
+            kind: DatabaseNamedEntityKind,
+            supplier: Supplier?,
+            category: ProductCategory?,
+            suppliers: [Supplier],
+            categories: [ProductCategory],
+            products: [Product],
+            pendingOwnerUserID: UUID?
+        ) {
+            self.kind = kind
+            self.supplier = supplier
+            self.category = category
+            self.suppliers = suppliers
+            self.categories = categories
+            self.products = products
+            self.pendingOwnerUserID = pendingOwnerUserID
+
+            let initialName: String
+            switch kind {
+            case .supplier:
+                initialName = supplier?.name ?? ""
+            case .category:
+                initialName = category?.name ?? ""
+            }
+            _name = State(initialValue: initialName)
+        }
+
+        private var isEditing: Bool {
+            supplier != nil || category != nil
+        }
+
+        private var navigationTitle: String {
+            isEditing ? kind.editTitle : kind.addTitle
+        }
+
+        private var trimmedName: String {
+            name.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        private var linkedProducts: [Product] {
+            switch kind {
+            case .supplier:
+                guard let supplier else { return [] }
+                return products.filter { product in
+                    product.supplier?.persistentModelID == supplier.persistentModelID
+                }
+            case .category:
+                guard let category else { return [] }
+                return products.filter { product in
+                    product.category?.persistentModelID == category.persistentModelID
+                }
+            }
+        }
+
+        private var replacementSuppliers: [Supplier] {
+            let currentID = supplier?.persistentModelID
+            return suppliers.filter { existing in
+                if let currentID, existing.persistentModelID == currentID {
+                    return false
+                }
+                return true
+            }
+        }
+
+        private var replacementCategories: [ProductCategory] {
+            let currentID = category?.persistentModelID
+            return categories.filter { existing in
+                if let currentID, existing.persistentModelID == currentID {
+                    return false
+                }
+                return true
+            }
+        }
+
+        private var hasExistingReplacement: Bool {
+            switch kind {
+            case .supplier:
+                return !replacementSuppliers.isEmpty
+            case .category:
+                return !replacementCategories.isEmpty
+            }
+        }
+
+        private var existingReplacementNames: [String] {
+            switch kind {
+            case .supplier:
+                return suppliers.map(\.name)
+            case .category:
+                return categories.map(\.name)
+            }
+        }
+
+        var body: some View {
+            Form {
+                if let validationMessage {
+                    Section {
+                        Label(validationMessage, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Section {
+                    TextField(kind.nameFieldTitle, text: $name)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.done)
+                        .accessibilityLabel(Text(kind.nameFieldTitle))
+                }
+
+                if isEditing {
+                    Section {
+                        LabeledContent(
+                            L("database.entity.linked_products"),
+                            value: DatabaseView.linkedProductsText(linkedProducts.count)
+                        )
+                    }
+
+                    Section {
+                        Button(role: .destructive) {
+                            showingDeleteConfirmation = true
+                        } label: {
+                            Label(kind.deleteButtonTitle, systemImage: "trash")
+                        }
+                    } footer: {
+                        Text(L("database.entity.delete_footer"))
+                    }
+                }
+            }
+            .navigationTitle(navigationTitle)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L("common.cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L("common.save")) { save() }
+                        .fontWeight(.semibold)
+                }
+            }
+            .onChange(of: name) { _, _ in
+                validationMessage = nil
+            }
+            .confirmationDialog(
+                linkedProducts.isEmpty ? kind.deleteTitle : kind.deleteInUseTitle,
+                isPresented: $showingDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                if linkedProducts.isEmpty {
+                    Button(kind.deleteButtonTitle, role: .destructive) {
+                        deleteEntity(replacement: nil)
+                    }
+                } else {
+                    if hasExistingReplacement {
+                        Button(kind.replaceExistingTitle) {
+                            deleteSheet = .replaceExisting
+                        }
+                    }
+                    Button(kind.createReplacementTitle) {
+                        deleteSheet = .createReplacement
+                    }
+                    Button(kind.removeAssignmentTitle, role: .destructive) {
+                        showingRemoveAssignmentConfirmation = true
+                    }
+                }
+                Button(L("common.cancel"), role: .cancel) { }
+            } message: {
+                Text(
+                    linkedProducts.isEmpty
+                        ? kind.deleteMessage(linkedProductCount: linkedProducts.count)
+                        : kind.deleteInUseMessage(linkedProductCount: linkedProducts.count)
+                )
+            }
+            .confirmationDialog(
+                kind.removeAssignmentTitle,
+                isPresented: $showingRemoveAssignmentConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button(kind.deleteButtonTitle, role: .destructive) {
+                    deleteEntity(replacement: nil)
+                }
+                Button(L("common.cancel"), role: .cancel) { }
+            } message: {
+                Text(kind.deleteMessage(linkedProductCount: linkedProducts.count))
+            }
+            .sheet(item: $deleteSheet) { sheet in
+                NavigationStack {
+                    switch sheet {
+                    case .replaceExisting:
+                        DatabaseNamedEntityReplacementPickerView(
+                            kind: kind,
+                            suppliers: replacementSuppliers,
+                            categories: replacementCategories,
+                            onSelect: { replacement in
+                                deleteEntity(replacement: replacement)
+                            }
+                        )
+                    case .createReplacement:
+                        DatabaseNamedEntityReplacementCreateView(
+                            kind: kind,
+                            existingNames: existingReplacementNames,
+                            onCreate: { replacementName in
+                                createReplacementAndDelete(named: replacementName)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        private func save() {
+            guard !trimmedName.isEmpty else {
+                validationMessage = L("database.entity.name_required")
+                return
+            }
+            guard !hasDuplicateName(trimmedName) else {
+                validationMessage = L("database.entity.name_exists")
+                return
+            }
+
+            let accumulator = LocalPendingChangeAccumulator(
+                context: context,
+                ownerUserID: pendingOwnerUserID
+            )
+
+            do {
+                switch kind {
+                case .supplier:
+                    try saveSupplier(accumulator: accumulator)
+                case .category:
+                    try saveCategory(accumulator: accumulator)
+                }
+                try context.save()
+                dismiss()
+            } catch {
+                context.rollback()
+                validationMessage = L("database.entity.save_failed")
+            }
+        }
+
+        private func saveSupplier(accumulator: LocalPendingChangeAccumulator) throws {
+            if let supplier {
+                let oldName = supplier.name
+                guard oldName != trimmedName else { return }
+                let baselineHash = kind.fingerprintHash(name: oldName)
+                supplier.name = trimmedName
+
+                if !(try retargetLocalOnlyCreateChange(oldName: oldName, newName: trimmedName, remoteID: supplier.remoteID)) {
+                    try accumulator.recordSupplierChange(
+                        supplier: supplier,
+                        operation: supplier.remoteID == nil ? .create : .update,
+                        origin: .manualCatalogSave,
+                        changedFields: ["name"],
+                        baselineFingerprintHash: baselineHash
+                    )
+                }
+            } else {
+                let supplier = Supplier(name: trimmedName)
+                context.insert(supplier)
+                try accumulator.recordSupplierChange(
+                    supplier: supplier,
+                    operation: .create,
+                    origin: .manualCatalogSave
+                )
+            }
+        }
+
+        private func saveCategory(accumulator: LocalPendingChangeAccumulator) throws {
+            if let category {
+                let oldName = category.name
+                guard oldName != trimmedName else { return }
+                let baselineHash = kind.fingerprintHash(name: oldName)
+                category.name = trimmedName
+
+                if !(try retargetLocalOnlyCreateChange(oldName: oldName, newName: trimmedName, remoteID: category.remoteID)) {
+                    try accumulator.recordCategoryChange(
+                        category: category,
+                        operation: category.remoteID == nil ? .create : .update,
+                        origin: .manualCatalogSave,
+                        changedFields: ["name"],
+                        baselineFingerprintHash: baselineHash
+                    )
+                }
+            } else {
+                let category = ProductCategory(name: trimmedName)
+                context.insert(category)
+                try accumulator.recordCategoryChange(
+                    category: category,
+                    operation: .create,
+                    origin: .manualCatalogSave
+                )
+            }
+        }
+
+        private func deleteEntity(replacement: DatabaseNamedEntityReplacementTarget?) {
+            let accumulator = LocalPendingChangeAccumulator(
+                context: context,
+                ownerUserID: pendingOwnerUserID
+            )
+
+            do {
+                switch kind {
+                case .supplier:
+                    guard let supplier else { return }
+                    let baselineHash = kind.fingerprintHash(name: supplier.name)
+                    let replacementSupplier: Supplier?
+                    if case .supplier(let supplier) = replacement {
+                        replacementSupplier = supplier
+                    } else {
+                        replacementSupplier = nil
+                    }
+                    try reassignProductsFromSupplier(
+                        supplier,
+                        to: replacementSupplier,
+                        accumulator: accumulator
+                    )
+                    try accumulator.recordSupplierChange(
+                        supplier: supplier,
+                        operation: .delete,
+                        origin: .manualCatalogSave,
+                        changedFields: ["tombstone"],
+                        baselineFingerprintHash: baselineHash
+                    )
+                    context.delete(supplier)
+                case .category:
+                    guard let category else { return }
+                    let baselineHash = kind.fingerprintHash(name: category.name)
+                    let replacementCategory: ProductCategory?
+                    if case .category(let category) = replacement {
+                        replacementCategory = category
+                    } else {
+                        replacementCategory = nil
+                    }
+                    try reassignProductsFromCategory(
+                        category,
+                        to: replacementCategory,
+                        accumulator: accumulator
+                    )
+                    try accumulator.recordCategoryChange(
+                        category: category,
+                        operation: .delete,
+                        origin: .manualCatalogSave,
+                        changedFields: ["tombstone"],
+                        baselineFingerprintHash: baselineHash
+                    )
+                    context.delete(category)
+                }
+
+                try context.save()
+                dismiss()
+            } catch {
+                context.rollback()
+                validationMessage = L("database.entity.save_failed")
+            }
+        }
+
+        private func createReplacementAndDelete(named replacementName: String) {
+            let accumulator = LocalPendingChangeAccumulator(
+                context: context,
+                ownerUserID: pendingOwnerUserID
+            )
+
+            do {
+                switch kind {
+                case .supplier:
+                    guard let supplier else { return }
+                    let replacement = Supplier(name: replacementName)
+                    context.insert(replacement)
+                    try accumulator.recordSupplierChange(
+                        supplier: replacement,
+                        operation: .create,
+                        origin: .manualCatalogSave
+                    )
+                    let baselineHash = kind.fingerprintHash(name: supplier.name)
+                    try reassignProductsFromSupplier(
+                        supplier,
+                        to: replacement,
+                        accumulator: accumulator
+                    )
+                    try accumulator.recordSupplierChange(
+                        supplier: supplier,
+                        operation: .delete,
+                        origin: .manualCatalogSave,
+                        changedFields: ["tombstone"],
+                        baselineFingerprintHash: baselineHash
+                    )
+                    context.delete(supplier)
+
+                case .category:
+                    guard let category else { return }
+                    let replacement = ProductCategory(name: replacementName)
+                    context.insert(replacement)
+                    try accumulator.recordCategoryChange(
+                        category: replacement,
+                        operation: .create,
+                        origin: .manualCatalogSave
+                    )
+                    let baselineHash = kind.fingerprintHash(name: category.name)
+                    try reassignProductsFromCategory(
+                        category,
+                        to: replacement,
+                        accumulator: accumulator
+                    )
+                    try accumulator.recordCategoryChange(
+                        category: category,
+                        operation: .delete,
+                        origin: .manualCatalogSave,
+                        changedFields: ["tombstone"],
+                        baselineFingerprintHash: baselineHash
+                    )
+                    context.delete(category)
+                }
+
+                try context.save()
+                dismiss()
+            } catch {
+                context.rollback()
+                validationMessage = L("database.entity.save_failed")
+            }
+        }
+
+        private func reassignProductsFromSupplier(
+            _ supplier: Supplier,
+            to replacement: Supplier?,
+            accumulator: LocalPendingChangeAccumulator
+        ) throws {
+            for product in products where product.supplier?.persistentModelID == supplier.persistentModelID {
+                let oldDraft = DatabaseView.makeDraft(product)
+                product.supplier = replacement
+                try accumulator.recordProductChange(
+                    product: product,
+                    operation: .update,
+                    origin: .manualCatalogSave,
+                    changedFields: ["supplierName"],
+                    baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(oldDraft)
+                )
+            }
+        }
+
+        private func reassignProductsFromCategory(
+            _ category: ProductCategory,
+            to replacement: ProductCategory?,
+            accumulator: LocalPendingChangeAccumulator
+        ) throws {
+            for product in products where product.category?.persistentModelID == category.persistentModelID {
+                let oldDraft = DatabaseView.makeDraft(product)
+                product.category = replacement
+                try accumulator.recordProductChange(
+                    product: product,
+                    operation: .update,
+                    origin: .manualCatalogSave,
+                    changedFields: ["categoryName"],
+                    baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(oldDraft)
+                )
+            }
+        }
+
+        private func retargetLocalOnlyCreateChange(
+            oldName: String,
+            newName: String,
+            remoteID: UUID?
+        ) throws -> Bool {
+            guard remoteID == nil else { return false }
+
+            let oldKey = kind.logicalKey(remoteID: nil, name: oldName)
+            let newKey = kind.logicalKey(remoteID: nil, name: newName)
+            let entityKindRaw = kind.entityKind.rawValue
+            let descriptor = FetchDescriptor<LocalPendingChange>(
+                predicate: #Predicate {
+                    $0.entityKindRaw == entityKindRaw && $0.logicalKey == oldKey
+                }
+            )
+
+            guard let change = try context.fetch(descriptor).first(where: { candidate in
+                candidate.operation == .create && !candidate.status.isTerminal
+            }) else {
+                return false
+            }
+
+            change.logicalKey = newKey
+            change.changedFields = ["name"]
+            change.intendedFingerprintHash = kind.fingerprintHash(name: newName)
+            change.updatedAt = Date()
+            return true
+        }
+
+        private func hasDuplicateName(_ candidate: String) -> Bool {
+            switch kind {
+            case .supplier:
+                let currentID = supplier?.persistentModelID
+                return suppliers.contains { existing in
+                    if let currentID, existing.persistentModelID == currentID {
+                        return false
+                    }
+                    return existing.name.compare(candidate, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+                }
+            case .category:
+                let currentID = category?.persistentModelID
+                return categories.contains { existing in
+                    if let currentID, existing.persistentModelID == currentID {
+                        return false
+                    }
+                    return existing.name.compare(candidate, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+                }
+            }
+        }
+    }
+
+    private struct DatabaseProductRow: View {
+        let product: Product
+        let onEdit: () -> Void
+        let onHistory: () -> Void
+
+        private var hasMetrics: Bool {
+            product.purchasePrice != nil || product.retailPrice != nil || product.stockQuantity != nil
+        }
+
+        private var hasMetadata: Bool {
+            hasText(product.supplier?.name) || hasText(product.category?.name)
+        }
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                titleBlock
+
+                metricsBlock
+
+                identityLabels
+
+                if hasMetadata {
+                    metadataLabels
+                }
+            }
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .contain)
+            .accessibilityAction(named: Text(L("common.edit"))) {
+                onEdit()
+            }
+            .onTapGesture(perform: onEdit)
+        }
+
+        private var titleBlock: some View {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(product.productName ?? L("product.no_name"))
+                    .font(.headline)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let second = product.secondProductName,
+                   !second.isEmpty {
+                    Text(second)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+
+        private var metricsBlock: some View {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 6) {
+                    if hasMetrics {
+                        metricPills
+                    }
+                    historyButton
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    if hasMetrics {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 6) {
+                                metricPills
+                            }
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                metricPills
+                            }
+                        }
+                    }
+                    historyButton
+                }
+            }
+        }
+
+        @ViewBuilder
+        private var metricPills: some View {
+            if let purchase = product.purchasePrice {
+                DatabaseMetricPill(
+                    title: L("product.history.purchase"),
+                    value: formatCLPMoney(purchase),
+                    systemImage: "cart"
+                )
+            }
+
+            if let retail = product.retailPrice {
+                DatabaseMetricPill(
+                    title: L("product.history.retail"),
+                    value: formatCLPMoney(retail),
+                    systemImage: "tag"
+                )
+            }
+
+            if let qty = product.stockQuantity {
+                DatabaseMetricPill(
+                    title: L("database.row.stock_label"),
+                    value: Self.formatQuantity(qty),
+                    systemImage: qty == 0 ? "exclamationmark.circle" : "shippingbox"
+                )
+            }
+        }
+
+        private var identityLabels: some View {
+            HStack(alignment: .firstTextBaseline, spacing: 14) {
+                DatabaseInfoLabel(systemImage: "barcode", text: product.barcode, monospaced: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(1)
+
+                if let item = product.itemNumber,
+                   !item.isEmpty {
+                    DatabaseInfoLabel(systemImage: "number", text: item, monospaced: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .layoutPriority(1)
+                }
+            }
+            .foregroundStyle(.secondary)
+        }
+
+        private var metadataLabels: some View {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    metadataLabelViews(lineLimit: 1)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    metadataLabelViews(lineLimit: 2)
+                }
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+        }
+
+        @ViewBuilder
+        private func metadataLabelViews(lineLimit: Int) -> some View {
+            if let supplierName = product.supplier?.name,
+               !supplierName.isEmpty {
+                DatabaseInfoLabel(
+                    systemImage: "building.2",
+                    text: supplierName,
+                    lineLimit: lineLimit
+                )
+            }
+
+            if let categoryName = product.category?.name,
+               !categoryName.isEmpty {
+                DatabaseInfoLabel(
+                    systemImage: "folder",
+                    text: categoryName,
+                    lineLimit: lineLimit
+                )
+            }
+        }
+
+        private var historyButton: some View {
+            Button(action: onHistory) {
+                HStack(spacing: 5) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .imageScale(.small)
+
+                    Text(L("product.history.title"))
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: true)
+                }
+                .padding(.horizontal, 8)
+                .frame(minWidth: 44, minHeight: 44, alignment: .center)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.tint)
+            .accessibilityLabel(Text(L("product.history.title")))
+        }
+
+        private func hasText(_ text: String?) -> Bool {
+            guard let text else { return false }
+            return !text.isEmpty
+        }
+
+        private static func formatQuantity(_ value: Double) -> String {
+            if value.rounded() == value {
+                return String(Int(value))
+            } else {
+                let formatter = NumberFormatter()
+                formatter.locale = appLocale()
+                formatter.minimumFractionDigits = 0
+                formatter.maximumFractionDigits = 3
+                formatter.usesGroupingSeparator = false
+                return formatter.string(from: value as NSNumber) ?? String(value)
+            }
         }
     }
 
@@ -1715,44 +2914,149 @@ struct DatabaseView: View {
         }
     }
 
+    private var filteredSuppliers: [Supplier] {
+        let trimmed = namedEntityFilter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return suppliers }
+
+        return suppliers.filter { entityNameMatches($0.name, filter: trimmed) }
+    }
+
+    private var filteredCategories: [ProductCategory] {
+        let trimmed = namedEntityFilter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return categories }
+
+        return categories.filter { entityNameMatches($0.name, filter: trimmed) }
+    }
+
+    private var supplierProductCounts: [PersistentIdentifier: Int] {
+        products.reduce(into: [:]) { counts, product in
+            if let supplierID = product.supplier?.persistentModelID {
+                counts[supplierID, default: 0] += 1
+            }
+        }
+    }
+
+    private var categoryProductCounts: [PersistentIdentifier: Int] {
+        products.reduce(into: [:]) { counts, product in
+            if let categoryID = product.category?.persistentModelID {
+                counts[categoryID, default: 0] += 1
+            }
+        }
+    }
+
     private var resolvedLanguageCode: String {
         Bundle.resolvedLanguageCode(for: appLanguage)
     }
 
-    private var searchBar: some View {
-        HStack(spacing: 8) {
-            TextField(L("database.search_placeholder"), text: $barcodeFilter)
-                .textFieldStyle(.roundedBorder)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-                .focused($isSearchFocused)
-
-            if !barcodeFilter.isEmpty {
-                Button {
-                    barcodeFilter = ""
-                } label: {
-                    Label(L("database.search.clear"), systemImage: "xmark.circle.fill")
-                        .labelStyle(.iconOnly)
+    private var activeSearchText: Binding<String> {
+        Binding(
+            get: {
+                selectedDatabaseSection == .products ? barcodeFilter : namedEntityFilter
+            },
+            set: { newValue in
+                if selectedDatabaseSection == .products {
+                    barcodeFilter = newValue
+                } else {
+                    namedEntityFilter = newValue
                 }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.secondary)
-                .accessibilityLabel(L("database.search.clear"))
             }
+        )
+    }
 
-            Button {
-                showScanner = true
-            } label: {
-                Label(L("database.action.scan"), systemImage: "camera.viewfinder")
-                    .labelStyle(.iconOnly)
-                    .frame(width: 44, height: 44)
+    private var activeSearchPlaceholder: String {
+        switch selectedDatabaseSection {
+        case .products:
+            return L("database.search_placeholder")
+        case .suppliers:
+            return L("database.search.suppliers_placeholder")
+        case .categories:
+            return L("database.search.categories_placeholder")
+        }
+    }
+
+    private var activeSearchIsEmpty: Bool {
+        switch selectedDatabaseSection {
+        case .products:
+            return barcodeFilter.isEmpty
+        case .suppliers, .categories:
+            return namedEntityFilter.isEmpty
+        }
+    }
+
+    private var databaseHeader: some View {
+        VStack(spacing: 10) {
+            Picker(L("database.title"), selection: $selectedDatabaseSection) {
+                ForEach(DatabaseSection.allCases) { section in
+                    Text(section.title).tag(section)
+                }
             }
-            .buttonStyle(.bordered)
-            .disabled(importProgress.isRunning)
-            .accessibilityLabel(L("database.action.scan"))
+            .pickerStyle(.segmented)
+            .accessibilityLabel(L("database.title"))
+
+            HStack(alignment: .center, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+
+                    TextField(activeSearchPlaceholder, text: activeSearchText)
+                        .textInputAutocapitalization(selectedDatabaseSection == .products ? .never : .words)
+                        .autocorrectionDisabled()
+                        .submitLabel(.search)
+                        .focused($isSearchFocused)
+                        .accessibilityLabel(activeSearchPlaceholder)
+
+                    if !activeSearchIsEmpty {
+                        Button {
+                            clearActiveSearch()
+                        } label: {
+                            Label(L("database.search.clear"), systemImage: "xmark.circle.fill")
+                                .labelStyle(.iconOnly)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel(L("database.search.clear"))
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .frame(minHeight: 44)
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                if selectedDatabaseSection == .products {
+                    Button {
+                        showScanner = true
+                    } label: {
+                        Label(L("database.action.scan"), systemImage: "camera.viewfinder")
+                            .labelStyle(.iconOnly)
+                            .font(.body.weight(.semibold))
+                            .frame(width: 48, height: 44)
+                            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tint)
+                    .disabled(importProgress.isRunning)
+                    .opacity(importProgress.isRunning ? 0.45 : 1)
+                    .accessibilityLabel(L("database.action.scan"))
+                }
+            }
         }
         .padding(.horizontal)
-        .padding(.top)
+        .padding(.top, 10)
+        .padding(.bottom, 4)
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func clearActiveSearch() {
+        switch selectedDatabaseSection {
+        case .products:
+            barcodeFilter = ""
+        case .suppliers, .categories:
+            namedEntityFilter = ""
+        }
+    }
+
+    private func entityNameMatches(_ name: String, filter: String) -> Bool {
+        name.range(of: filter, options: [.caseInsensitive, .diacriticInsensitive]) != nil
     }
 
     private func focusSearchAfterScannerFallback() {
@@ -1802,132 +3106,183 @@ struct DatabaseView: View {
     }
 
     @ViewBuilder
-    private func databaseSupplierCategoryLabels(for product: Product) -> some View {
-        if let supplierName = product.supplier?.name,
-           !supplierName.isEmpty {
-            Label(L("database.row.supplier", supplierName), systemImage: "building.2")
-                .lineLimit(1)
-        }
-
-        if let categoryName = product.category?.name,
-           !categoryName.isEmpty {
-            Label(L("database.row.category", categoryName), systemImage: "tag")
-                .lineLimit(1)
+    private var databaseContent: some View {
+        switch selectedDatabaseSection {
+        case .products:
+            productsContent
+        case .suppliers:
+            suppliersContent
+        case .categories:
+            categoriesContent
         }
     }
 
     @ViewBuilder
-    private func databaseRowActions(for product: Product) -> some View {
-        Button {
-            productToEdit = product
-        } label: {
-            Label(L("common.edit"), systemImage: "pencil")
+    private var productsContent: some View {
+        if products.isEmpty {
+            databaseEmptyState
+        } else if filteredProducts.isEmpty {
+            filteredProductsEmptyState
+        } else {
+            List {
+                ForEach(filteredProducts) { (product: Product) in
+                    DatabaseProductRow(
+                        product: product,
+                        onEdit: {
+                            productToEdit = product
+                        },
+                        onHistory: {
+                            productForHistory = product
+                        }
+                    )
+                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                }
+                .onDelete(perform: deleteProducts)
+            }
+            .id("database-products-\(resolvedLanguageCode)")
+            .listStyle(.insetGrouped)
+            .contentMargins(.top, 6, for: .scrollContent)
+            .contentMargins(.bottom, 12, for: .scrollContent)
         }
-        .buttonStyle(.borderless)
+    }
 
-        Button {
-            productForHistory = product
-        } label: {
-            Label(L("product.history.title"), systemImage: "clock.arrow.circlepath")
+    @ViewBuilder
+    private var suppliersContent: some View {
+        if suppliers.isEmpty {
+            namedEntityEmptyState(kind: .supplier, isFiltered: false)
+        } else if filteredSuppliers.isEmpty {
+            namedEntityEmptyState(kind: .supplier, isFiltered: true)
+        } else {
+            let counts = supplierProductCounts
+            List {
+                ForEach(filteredSuppliers) { supplier in
+                    DatabaseNamedEntityRow(
+                        name: supplier.name,
+                        linkedProductsText: Self.linkedProductsText(counts[supplier.persistentModelID, default: 0]),
+                        systemImage: "building.2"
+                    ) {
+                        namedEntityEditor = .editSupplier(supplier)
+                    }
+                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                }
+            }
+            .id("database-suppliers-\(resolvedLanguageCode)")
+            .listStyle(.insetGrouped)
+            .contentMargins(.top, 6, for: .scrollContent)
+            .contentMargins(.bottom, 12, for: .scrollContent)
         }
-        .buttonStyle(.borderless)
+    }
+
+    @ViewBuilder
+    private var categoriesContent: some View {
+        if categories.isEmpty {
+            namedEntityEmptyState(kind: .category, isFiltered: false)
+        } else if filteredCategories.isEmpty {
+            namedEntityEmptyState(kind: .category, isFiltered: true)
+        } else {
+            let counts = categoryProductCounts
+            List {
+                ForEach(filteredCategories) { category in
+                    DatabaseNamedEntityRow(
+                        name: category.name,
+                        linkedProductsText: Self.linkedProductsText(counts[category.persistentModelID, default: 0]),
+                        systemImage: "folder"
+                    ) {
+                        namedEntityEditor = .editCategory(category)
+                    }
+                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                }
+            }
+            .id("database-categories-\(resolvedLanguageCode)")
+            .listStyle(.insetGrouped)
+            .contentMargins(.top, 6, for: .scrollContent)
+            .contentMargins(.bottom, 12, for: .scrollContent)
+        }
+    }
+
+    private func namedEntityEmptyState(kind: DatabaseNamedEntityKind, isFiltered: Bool) -> some View {
+        let title: String
+        let body: String
+        let icon: String
+
+        switch (kind, isFiltered) {
+        case (.supplier, false):
+            title = L("database.entity.suppliers_empty_title")
+            body = L("database.entity.suppliers_empty_body")
+            icon = "building.2"
+        case (.supplier, true):
+            title = L("database.entity.suppliers_filtered_title")
+            body = L("database.entity.suppliers_filtered_body")
+            icon = "line.3.horizontal.decrease.circle"
+        case (.category, false):
+            title = L("database.entity.categories_empty_title")
+            body = L("database.entity.categories_empty_body")
+            icon = "folder"
+        case (.category, true):
+            title = L("database.entity.categories_filtered_title")
+            body = L("database.entity.categories_filtered_body")
+            icon = "line.3.horizontal.decrease.circle"
+        }
+
+        return ContentUnavailableView {
+            Label(title, systemImage: icon)
+        } description: {
+            Text(body)
+        } actions: {
+            if isFiltered {
+                Button {
+                    namedEntityFilter = ""
+                } label: {
+                    Label(L("database.search.clear"), systemImage: "xmark.circle")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+            } else {
+                Button {
+                    presentAdd(kind: kind)
+                } label: {
+                    Label(kind.addTitle, systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+
+    private static func linkedProductsText(_ count: Int) -> String {
+        L("database.entity.linked_products_count", count)
+    }
+
+    private func presentAdd(kind: DatabaseNamedEntityKind) {
+        switch kind {
+        case .supplier:
+            namedEntityEditor = .addSupplier()
+        case .category:
+            namedEntityEditor = .addCategory()
+        }
+    }
+
+    private func presentAddForSelectedSection() {
+        switch selectedDatabaseSection {
+        case .products:
+            pendingBarcodeForNewProduct = nil
+            showAddSheet = true
+        case .suppliers:
+            namedEntityEditor = .addSupplier()
+        case .categories:
+            namedEntityEditor = .addCategory()
+        }
     }
 
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                searchBar
-
-                if products.isEmpty {
-                    databaseEmptyState
-                } else if filteredProducts.isEmpty {
-                    filteredProductsEmptyState
-                } else {
-                    List {
-                        ForEach(filteredProducts) { (product: Product) in
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack(alignment: .top, spacing: 12) {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(product.productName ?? L("product.no_name"))
-                                            .font(.headline)
-                                            .lineLimit(2)
-                                            .fixedSize(horizontal: false, vertical: true)
-
-                                        if let second = product.secondProductName,
-                                           !second.isEmpty {
-                                            Text(second)
-                                                .font(.subheadline)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(2)
-                                        }
-
-                                        Label(product.barcode, systemImage: "barcode")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .lineLimit(1)
-
-                                        if let item = product.itemNumber,
-                                           !item.isEmpty {
-                                            Label(item, systemImage: "number")
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(1)
-                                        }
-                                    }
-
-                                    Spacer(minLength: 8)
-
-                                    VStack(alignment: .trailing, spacing: 4) {
-                                        if let purchase = product.purchasePrice {
-                                            DatabaseValueChip(title: L("product.history.purchase"), value: formatMoney(purchase))
-                                        }
-                                        if let retail = product.retailPrice {
-                                            DatabaseValueChip(title: L("product.history.retail"), value: formatMoney(retail))
-                                        }
-                                        if let qty = product.stockQuantity {
-                                            DatabaseValueChip(title: L("database.row.stock_label"), value: formatQuantity(qty))
-                                        }
-                                    }
-                                }
-
-                                if product.supplier != nil || product.category != nil {
-                                    ViewThatFits(in: .horizontal) {
-                                        HStack(spacing: 12) {
-                                            databaseSupplierCategoryLabels(for: product)
-                                        }
-
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            databaseSupplierCategoryLabels(for: product)
-                                        }
-                                    }
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                                }
-
-                                ViewThatFits(in: .horizontal) {
-                                    HStack {
-                                        databaseRowActions(for: product)
-                                    }
-
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        databaseRowActions(for: product)
-                                    }
-                                }
-                                .font(.footnote)
-                                .padding(.top, 2)
-                            }
-                            .contentShape(Rectangle())
-                            .accessibilityElement(children: .contain)
-                            .onTapGesture {
-                                productToEdit = product
-                            }
-                        }
-                        .onDelete(perform: deleteProducts)
-                    }
-                    .id("database-list-\(resolvedLanguageCode)")
-                    .listStyle(.plain)
-                }
+                databaseHeader
+                databaseContent
             }
+            .background(Color(.systemGroupedBackground))
             .disabled(importProgress.isRunning)
 
             if importProgress.showsOverlay {
@@ -1936,6 +3291,8 @@ struct DatabaseView: View {
 
         }
         .navigationTitle(L("database.title"))
+        .toolbarBackground(Color(.systemGroupedBackground), for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
         .toolbar {
             // import / export + nuovo prodotto
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -1960,14 +3317,13 @@ struct DatabaseView: View {
                     .accessibilityLabel(L("database.export.title"))
 
                     Button {
-                        pendingBarcodeForNewProduct = nil
-                        showAddSheet = true
+                        presentAddForSelectedSection()
                     } label: {
-                        Label(L("product.title.new"), systemImage: "plus")
+                        Label(selectedDatabaseSection.addTitle, systemImage: "plus")
                             .labelStyle(.iconOnly)
                     }
                     .disabled(importProgress.isRunning)
-                    .accessibilityLabel(L("product.title.new"))
+                    .accessibilityLabel(selectedDatabaseSection.addTitle)
                 }
             }
         }
@@ -1992,7 +3348,23 @@ struct DatabaseView: View {
         // Sheet per storico prezzi
         .sheet(item: $productForHistory) { (product: Product) in
             NavigationStack {
-                ProductPriceHistoryView(product: product)
+                ProductPriceHistoryView(
+                    product: product,
+                    pendingOwnerUserID: currentPendingOwnerUserID
+                )
+            }
+        }
+        .sheet(item: $namedEntityEditor) { presentation in
+            NavigationStack {
+                DatabaseNamedEntityEditorView(
+                    kind: presentation.kind,
+                    supplier: presentation.supplier,
+                    category: presentation.category,
+                    suppliers: suppliers,
+                    categories: categories,
+                    products: products,
+                    pendingOwnerUserID: currentPendingOwnerUserID
+                )
             }
         }
         // Sheet per condividere il CSV/XLSX export
@@ -2188,7 +3560,10 @@ struct DatabaseView: View {
         .foregroundCloudWorkflowActivity(.scanner, isActive: showScanner)
         .foregroundCloudWorkflowActivity(
             .editing,
-            isActive: showAddSheet || productToEdit != nil || productForHistory != nil
+            isActive: showAddSheet
+                || productToEdit != nil
+                || productForHistory != nil
+                || namedEntityEditor != nil
         )
         .foregroundCloudWorkflowActivity(
             .confirmationDialog,
@@ -3366,24 +4741,5 @@ struct DatabaseView: View {
         "supplierName",
         "categoryName"
     ]
-
-    // MARK: - Formattazione / parsing numeri
-
-    private func formatMoney(_ value: Double) -> String {
-        formatCLPMoney(value)
-    }
-
-    private func formatQuantity(_ value: Double) -> String {
-        if value.rounded() == value {
-            return String(Int(value))
-        } else {
-            let formatter = NumberFormatter()
-            formatter.locale = appLocale()
-            formatter.minimumFractionDigits = 0
-            formatter.maximumFractionDigits = 3
-            formatter.usesGroupingSeparator = false
-            return formatter.string(from: value as NSNumber) ?? String(value)
-        }
-    }
 
 }

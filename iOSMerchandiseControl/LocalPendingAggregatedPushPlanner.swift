@@ -113,7 +113,7 @@ nonisolated struct LocalPendingAggregatedPushPlan: Sendable, Equatable {
 }
 
 @MainActor
-final class LocalPendingAggregatedPushStateStore {
+struct LocalPendingAggregatedPushStateStore {
     private let context: ModelContext
     private let now: () -> Date
 

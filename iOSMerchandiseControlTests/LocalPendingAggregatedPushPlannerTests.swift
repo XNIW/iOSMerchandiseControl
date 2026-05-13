@@ -336,7 +336,8 @@ final class LocalPendingAggregatedPushPlannerTests: XCTestCase {
         [sent, retry, blocked, stale].forEach(context.insert)
         try context.save()
 
-        let store = LocalPendingAggregatedPushStateStore(context: context, now: { self.now })
+        let timestamp = now
+        let store = LocalPendingAggregatedPushStateStore(context: context, now: { timestamp })
         try store.markSent(changeIDs: [sent.changeID, retry.changeID, blocked.changeID], ownerUserID: ownerID, planFingerprint: "task-094")
         try store.markAcknowledged(changeIDs: [sent.changeID], ownerUserID: ownerID)
         try store.markRetryable(changeIDs: [retry.changeID], ownerUserID: ownerID)
