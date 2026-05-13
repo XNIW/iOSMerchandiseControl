@@ -5,14 +5,20 @@ import CryptoKit
 final class SupabaseConfigSecurityTests: XCTestCase {
     @MainActor
     func testTask103IOSAuthPreflightWhenEnabled() async throws {
+        let environment = ProcessInfo.processInfo.environment
+        let task103Enabled = isEnabled(environment["TASK103_IOS_AUTH_PREFLIGHT"])
+            || isEnabled(environment["TEST_RUNNER_TASK103_IOS_AUTH_PREFLIGHT"])
+        let task104Enabled = isEnabled(environment["TASK104_PASS2_IOS_AUTH_PREFLIGHT"])
+            || isEnabled(environment["TEST_RUNNER_TASK104_PASS2_IOS_AUTH_PREFLIGHT"])
         try XCTSkipUnless(
-            ProcessInfo.processInfo.environment["TASK103_IOS_AUTH_PREFLIGHT"] == "1",
-            "TASK-103 live auth preflight is gated."
+            task103Enabled || task104Enabled,
+            "Live auth preflight is gated."
         )
 
         let config = try SupabaseConfig.load(bundle: .main)
         XCTAssertFalse(config.publishableKey.lowercased().contains("service_role"))
         XCTAssertFalse(config.publishableKey.lowercased().contains("secret_key"))
+        XCTAssertFalse(config.publishableKey.lowercased().contains("sb_secret"))
 
         let authService = SupabaseAuthService(provider: SupabaseClientProvider(config: config))
         try await Task.sleep(nanoseconds: 2_000_000_000)
@@ -22,8 +28,9 @@ final class SupabaseConfigSecurityTests: XCTestCase {
             return
         }
 
+        let label = task104Enabled ? "TASK104_PASS2_IOS_AUTH_PREFLIGHT" : "TASK103_IOS_AUTH_PREFLIGHT"
         print(
-            "TASK103_IOS_AUTH_PREFLIGHT project_hash=\(task103Hash(config.projectURL.absoluteString)) " +
+            "\(label) project_hash=\(task103Hash(config.projectURL.absoluteString)) " +
             "owner_hash=\(task103Hash(session.userID.uuidString.lowercased())) " +
             "provider=\(session.provider ?? "unknown") signed_in=true"
         )
@@ -103,5 +110,10 @@ final class SupabaseConfigSecurityTests: XCTestCase {
             .joined()
             .prefix(12)
             .description
+    }
+
+    private func isEnabled(_ value: String?) -> Bool {
+        guard let normalized = value?.lowercased() else { return false }
+        return normalized == "1" || normalized == "true"
     }
 }

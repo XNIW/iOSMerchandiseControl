@@ -10,6 +10,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
     private struct Fixture {
         let prefix: String
         let tolerance = 0.005
+        var isTask104Pass2: Bool { prefix.hasPrefix("TASK104_PASS2_") }
+        var logPrefix: String { isTask104Pass2 ? "TASK104_PASS2" : "TASK103" }
 
         var supplierIOS: String { "\(prefix)SUP_IOS_01" }
         var categoryIOS: String { "\(prefix)CAT_IOS_01" }
@@ -70,6 +72,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
 
         XCTAssertFalse(runtime.config.publishableKey.lowercased().contains("service_role"))
         XCTAssertFalse(runtime.config.publishableKey.lowercased().contains("secret_key"))
+        XCTAssertFalse(runtime.config.publishableKey.lowercased().contains("sb_secret"))
         XCTAssertFalse(runtime.session.isExpired)
 
         XCTAssertEqual(activeSuppliers(in: snapshot, fixture: fixture).count, 0)
@@ -78,7 +81,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         XCTAssertTrue(snapshot.prices.isEmpty)
 
         print(
-            "TASK103_IOS_COLLISION project_hash=\(hash(runtime.config.projectURL.absoluteString)) " +
+            "\(fixture.logPrefix)_IOS_COLLISION project_hash=\(hash(runtime.config.projectURL.absoluteString)) " +
             "owner_hash=\(ownerHash(runtime.session.userID)) prefix_hash=\(hash(fixture.prefix)) collision=free"
         )
     }
@@ -170,7 +173,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         XCTAssertTrue(noOp.blockers.isEmpty)
 
         print(
-            "TASK103_IOS_WRITE_SMOKE owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "\(fixture.logPrefix)_IOS_WRITE_SMOKE owner_hash=\(ownerHash(runtime.session.userID)) " +
             "product_hash=\(hash(remote.id.uuidString.lowercased())) price_inserted=\(pricePush.insertedCount) no_op=true"
         )
     }
@@ -239,7 +242,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         XCTAssertEqual(priceNoOpPlan.summary.skippedExisting, 4)
 
         print(
-            "TASK103_IOS_PULL_ANDROID owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "\(fixture.logPrefix)_IOS_PULL_ANDROID owner_hash=\(ownerHash(runtime.session.userID)) " +
             "inserted_catalog=\(result.inserted) inserted_prices=\(priceResult.inserted) no_op=true"
         )
     }
@@ -364,7 +367,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
 
         let duration = Date().timeIntervalSince(catalogStarted)
         print(
-            "TASK103_IOS_MEDIUM_IMPORT_EXPORT owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "\(fixture.logPrefix)_IOS_MEDIUM_IMPORT_EXPORT owner_hash=\(ownerHash(runtime.session.userID)) " +
             "products=50 prices=102 catalog_status=\(catalogPush.status.rawValue) " +
             "price_inserted=\(pricePush.inserted) price_batches=\(pricePush.batches) " +
             "remote_medium_products=\(mediumProducts.count) export_spotcheck=true duration_s=\(String(format: "%.2f", duration))"
@@ -527,7 +530,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         assertRemotePrices(prices(in: after, productID: remoteG2After.id), expected: expectedConflictPrice(), fixture: fixture)
 
         print(
-            "TASK103_IOS_CONFLICT_RECOVERY owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "\(fixture.logPrefix)_IOS_CONFLICT_RECOVERY owner_hash=\(ownerHash(runtime.session.userID)) " +
             "catalog_stale=previewStale product_price_conflicts=\(priceConflictPlan.summary.conflictSameKeyDifferentPrice) " +
             "price_ready=\(priceConflictPlan.summary.readyCandidates) recovery_auth_action=\(recoveryPlan.primaryAction.rawValue) " +
             "recovery_stale_action=\(staleRecoveryPlan.primaryAction.rawValue) remote_unchanged=true"
@@ -618,9 +621,42 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         XCTAssertTrue(noOp.blockers.isEmpty)
 
         print(
-            "TASK103_IOS_OFFLINE_RETRY owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "\(fixture.logPrefix)_IOS_OFFLINE_RETRY owner_hash=\(ownerHash(runtime.session.userID)) " +
             "offline_status=\(offlineResult.status.rawValue) retry_status=\(retryResult.status.rawValue) " +
             "remote_products=1 no_duplicate=true no_op=true"
+        )
+    }
+
+    func test07Task104Pass2ResidueScanReadOnly() async throws {
+        try requireLiveAcceptanceEnabled()
+        let fixture = try makeFixture()
+        let runtime = try await makeRuntime()
+        let snapshot = try await fetchRemoteSnapshot(runtime, fixture: fixture)
+
+        let suppliers = activeSuppliers(in: snapshot, fixture: fixture)
+        let categories = activeCategories(in: snapshot, fixture: fixture)
+        let products = activeProducts(in: snapshot, barcodes: Set(fixture.allBarcodes))
+        let uniqueProductBarcodes = Set(products.map(\.barcode))
+
+        XCTAssertFalse(runtime.config.publishableKey.lowercased().contains("service_role"))
+        XCTAssertFalse(runtime.config.publishableKey.lowercased().contains("secret_key"))
+        XCTAssertFalse(runtime.config.publishableKey.lowercased().contains("sb_secret"))
+        XCTAssertFalse(runtime.session.isExpired)
+        XCTAssertEqual(uniqueProductBarcodes.count, products.count)
+        if fixture.isTask104Pass2 {
+            XCTAssertEqual(suppliers.count, 10)
+            XCTAssertEqual(categories.count, 10)
+            XCTAssertEqual(products.count, 55)
+            XCTAssertEqual(snapshot.prices.count, 114)
+        } else {
+            XCTAssertGreaterThanOrEqual(products.count, 1)
+        }
+
+        print(
+            "TASK104_PASS2_RESIDUE_SCAN owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "suppliers=\(suppliers.count) categories=\(categories.count) " +
+            "products=\(products.count) prices=\(snapshot.prices.count) " +
+            "duplicate_active_barcodes=\(products.count - uniqueProductBarcodes.count) retained_for_review=true"
         )
     }
 
@@ -994,19 +1030,23 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
 
     private func requireLiveAcceptanceEnabled() throws {
         let environment = ProcessInfo.processInfo.environment
-        let value = environment["TASK103_LIVE_ACCEPTANCE"]?.lowercased()
-        guard value == "1" || value == "true" else {
-            throw XCTSkip("TASK-103 live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1 in the xctestrun environment.")
+        let task103Value = (environment["TASK103_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK103_LIVE_ACCEPTANCE"])?.lowercased()
+        let task104Value = (environment["TASK104_PASS2_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK104_PASS2_LIVE_ACCEPTANCE"])?.lowercased()
+        guard task103Value == "1" || task103Value == "true" || task104Value == "1" || task104Value == "true" else {
+            throw XCTSkip("Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1 or TASK104_PASS2_LIVE_ACCEPTANCE=1 in the xctestrun environment.")
         }
     }
 
     private func makeFixture() throws -> Fixture {
         let environment = ProcessInfo.processInfo.environment
-        guard let prefix = environment["TASK103_RUN_PREFIX"] else {
-            throw XCTSkip("TASK103_RUN_PREFIX must be explicitly set for live TASK-103 acceptance.")
+        guard let prefix = environment["TASK104_PASS2_RUN_PREFIX"]
+            ?? environment["TEST_RUNNER_TASK104_PASS2_RUN_PREFIX"]
+            ?? environment["TASK103_RUN_PREFIX"]
+            ?? environment["TEST_RUNNER_TASK103_RUN_PREFIX"] else {
+            throw XCTSkip("TASK104_PASS2_RUN_PREFIX or TASK103_RUN_PREFIX must be explicitly set for live acceptance.")
         }
-        guard prefix.hasPrefix("TASK103_REAL_R"), prefix.hasSuffix("_") else {
-            throw XCTSkip("TASK103_RUN_PREFIX must be a run-scoped TASK103_REAL_R..._ prefix.")
+        guard (prefix.hasPrefix("TASK103_REAL_R") || prefix.hasPrefix("TASK104_PASS2_")), prefix.hasSuffix("_") else {
+            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._ or TASK104_PASS2_..._.")
         }
         return Fixture(prefix: prefix)
     }
