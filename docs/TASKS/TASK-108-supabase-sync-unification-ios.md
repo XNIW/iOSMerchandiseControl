@@ -8,7 +8,7 @@
 - **Fase attuale**: REVIEW
 - **Responsabile attuale**: CLAUDE
 - **Data creazione**: 2026-05-13
-- **Ultimo aggiornamento**: 2026-05-14 00:38 -0400
+- **Ultimo aggiornamento**: 2026-05-14 12:45 -0400
 - **Ultimo agente che ha operato**: CODEX
 
 ## Dipendenze
@@ -1624,17 +1624,88 @@ Estendi TASK-108 restando in PLANNING: crea la specifica completa per sync Histo
 - Aggiornate `06`, `07`, `09`, `17`, `18`, `20`, `21`, `31`, `33`, `34`, `35`.
 - Android `MASTER-PLAN.md` aggiornato con nota cross-repo sulla card `Local database status`.
 
+### 2026-05-14 — FIX ProductPrice keyset full pull/apply live
+
+**Override/contesto utente:** l'utente ha esplicitamente vietato di segnare TASK-108 come `BLOCKED` solo per il ProductPrice full pull incompleto. Il problema da isolare era il live iOS app-auth in cui il keyset entrava, `ProductPrice` remoto era circa `290.955`, `pageSize=900`, la UI tornava idle, baseline restava `0` e non appariva completion/error. Codex ha trattato il caso come bug client di flow/lifecycle/progress/error propagation.
+
+**Obiettivo compreso:**
+- ProductPrice keyset full pull/apply deve completare e scrivere baseline, oppure fallire con errore esplicito e diagnosticato.
+- Nessun PASS se baseline resta `0`.
+- Nessun idle silenzioso.
+- Nessun ritorno a limiti fissi o query illimitate.
+- Nessun `service_role`, token injection o bypass RLS.
+
+**File controllati/modificati:**
+- `SupabaseProductPriceApplyService.swift`
+- `SupabaseProductPricePreviewService.swift`
+- `SupabaseInventoryService.swift`
+- `SupabaseManualSyncViewModel.swift`
+- `SupabaseManualSyncBaselineCommitter.swift`
+- `OptionsView.swift`
+- Test: `SupabaseProductPriceApplyServiceTests.swift`, `SupabaseManualSyncViewModelTests.swift`, `SupabaseCatalogBaselineWriterReaderTests.swift`, `SupabaseProductPricePreviewServiceTests.swift`.
+- Evidence: `09`, `21`, `30`, `32`, nuove `40`, `47`, `48`, `51`.
+
+**Punto esatto del bug:**
+- Le failure ProductPrice venivano propagate internamente ma potevano essere sovrascritte da stati di presentazione successivi, producendo stato finale simile a idle/no-changes.
+- La canonicalizzazione date non accettava timestamp Postgres con timezone tipo `yyyy-MM-dd HH:mm:ss+00`.
+- Righe ProductPrice legate a prodotti remoti tombstoned venivano trattate come prodotti unmapped attivi.
+- Dopo baseline commit, `OptionsView` non rinfrescava il proprio `supabaseBaselineSummary`, quindi la card locale poteva restare visivamente "database non scaricato" anche con baseline valida.
+
+**Fix applicati:**
+- ProductPrice keyset fetch con ordering stabile `id ASC`, `id > lastID`, page size `900`.
+- Logging DEBUG privacy-safe su apply plan, keyset page request/return, page save/no-op/failure, row invalid/skip, cancellation, baseline commit e terminal state.
+- Error propagation esplicita verso failed/cancelled, senza overwrite da no-changes/push state.
+- Parser ProductPrice `effectiveAt/createdAt` esteso ai timestamp Postgres con spazio, timezone e frazioni.
+- ProductPrice tombstoned handling: prefetch remote deleted product IDs; skip esplicito dei prezzi collegati a prodotti tombstoned; prodotto mancante non tombstoned resta failure esplicita.
+- Baseline repair/commit resta consentita solo con catalogo localmente linkato e ProductPrice completo.
+- `OptionsView` rinfresca la baseline summary dopo manual sync apply completato.
+
+**Live app-auth iOS finale:**
+- Percorso pubblico: Options `Sincronizza ora` → review → `Aggiorna questo dispositivo`.
+- Remote ProductPrice total: `290.955`.
+- Page size: `900`.
+- UI progress osservato oltre `135.900`, `181.800`, `262.800`, `274.500`, fino al completamento.
+- Scroll Options verificato durante apply.
+- ProductPrice remote-linked finali: `290.953`.
+- Righe remote skipped: `2`, entrambe collegate a prodotti remoti tombstoned.
+- ProductPrice locali totali finali: `328.589` (include storico locale esistente oltre alle righe remote-linked).
+- Baseline finali: `1` run / `20.012` record (`19.886` prodotti, `79` fornitori, `47` categorie).
+- Options finale dopo rebuild/refresh: `Database locale aggiornato`, ultimo pull completo `14 mag 2026, 12:33`.
+
+**Performance live:**
+- Durata approssimativa apply confermato → idle: `~25m 50s`.
+- RSS simulator osservato: circa `2.0 GB` → picco circa `3.5 GB`, poi idle CPU.
+- Nessun crash/freeze; scroll responsive.
+- Rischio residuo: memory heavy su dataset grande; follow-up consigliato con context/importer SwiftData privato e bounded per liberare oggetti tra gruppi di pagine.
+
+**Check eseguiti:**
+- ✅ ESEGUITO — `git diff --check`: PASS.
+- ✅ ESEGUITO — iOS Debug build/run via XcodeBuildMCP dopo fix: PASS.
+- ✅ ESEGUITO — iOS Release simulator build: PASS.
+- ✅ ESEGUITO — ProductPrice/baseline/progress targeted tests: PASS (`SupabaseProductPriceApplyServiceTests`, 2 test mirati ViewModel cancellation/failure, `SupabaseCatalogBaselineWriterReaderTests`).
+- ✅ ESEGUITO — simulator live smoke Options/ProductPrice keyset full apply: PASS.
+- ✅ ESEGUITO — privacy scan: nessun token/JWT/email raw aggiunto; match `service_role` limitati a guard/documentazione esistente.
+- ❌ NON ESEGUITO — Android signed-in rerun in questo pass mirato.
+- ❌ NON ESEGUITO — cross-platform E2E iOS ↔ Supabase ↔ Android in questo pass mirato.
+- ❌ NON ESEGUITO — controlled incremental pull/push, Generated live e History/session live matrix finale in questo pass mirato.
+
+**Verdict tecnico:**
+- ProductPrice keyset/full pull/apply + baseline: **PASS live**.
+- Bug idle silenzioso: **risolto**.
+- TASK-108 globale: resta **ACTIVE / REVIEW, NON DONE**; non dichiarare PASS globale finché Android signed-in/cross-platform/incremental/Generated/History live non sono completati o accettati come blocker espliciti.
+
 ### Handoff post-fix targeted 2026-05-14
 
 **Prossima fase:** REVIEW (Claude / Reviewer), **non DONE**.
 
-**Verdict tecnico proposto:** `REVIEW_READY_WITH_BLOCKERS / PARTIAL_LIVE`.
+**Verdict tecnico proposto:** `REVIEW_READY_WITH_PRODUCTPRICE_FIXED / PARTIAL_GLOBAL_LIVE`.
 
 **Reviewer focus:**
 - Confermare che la pulizia UX History soddisfa la richiesta: nessun `Send` / `Download` pubblico primario, sync centralizzata in Options.
-- Investigare il blocker live History/session e baseline: prima ipotesi `shared_sheet_sessions` DML grant/policy live o baseline commit non completato.
-- Decidere se serve migration/grant backend separata o ulteriore FIX app dopo diagnosi live.
-- Non accettare `PASS_WITH_NOTES` come chiusura funzionale: cross-platform E2E e live push/pull incrementale restano non verificati.
+- Confermare il fix live ProductPrice: keyset full pull/apply completato, baseline `1/20.012`, Options `Database locale aggiornato`.
+- Investigare ancora History/session live se resta dirty in una matrice dedicata; la baseline non è più il blocker osservato in questo pass.
+- Decidere se serve ulteriore FIX per Android signed-in/cross-platform/incremental/Generated/History live matrix.
+- Non accettare `PASS_WITH_NOTES` come chiusura funzionale globale: cross-platform E2E e live push/pull incrementale restano non verificati.
 - Non marcare TASK-108 `DONE`.
 
 ---

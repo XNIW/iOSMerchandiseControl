@@ -83,7 +83,7 @@ nonisolated struct SupabaseTask087RemoteCatalogSnapshot: Sendable {
 
 actor SupabaseInventoryService {
     nonisolated static let stablePageOrderColumn = "id"
-    nonisolated static let productPriceStablePageOrderColumns = ["product_id", "type", "effective_at", "id"]
+    nonisolated static let productPriceStablePageOrderColumns = ["id"]
     nonisolated static let sharedSheetSessionColumns = "remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at"
 
     private let clientProvider: SupabaseClientProvider
@@ -505,6 +505,26 @@ actor SupabaseInventoryService {
         )
     }
 
+    func fetchDeletedProductIDs(pageSize: Int = 1_000) async throws -> Set<UUID> {
+        let limit = max(1, min(pageSize, 1_000))
+        var offset = 0
+        var deletedProductIDs = Set<UUID>()
+
+        while true {
+            try Task.checkCancellation()
+            let page = try await fetchProductsPage(from: offset, to: offset + limit - 1)
+            for product in page where SupabasePullPreviewNormalizer.semanticString(product.deletedAt) != nil {
+                deletedProductIDs.insert(product.id)
+            }
+            guard page.count == limit else {
+                break
+            }
+            offset += limit
+        }
+
+        return deletedProductIDs
+    }
+
     func fetchSuppliers(limit: Int = 100) async throws -> [RemoteInventorySupplierRow] {
         try await fetchRows(
             table: "inventory_suppliers",
@@ -567,11 +587,49 @@ actor SupabaseInventoryService {
                 .from("inventory_product_prices")
                 .select("id,owner_user_id,product_id,type,price,effective_at,created_at")
                 .eq("owner_user_id", value: ownerUserID.uuidString)
-                .order("product_id", ascending: true)
-                .order("type", ascending: true)
-                .order("effective_at", ascending: true)
                 .order("id", ascending: true)
                 .range(from: start, to: end)
+                .execute()
+                .value
+            return rows
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    func fetchProductPricesPreviewPage(afterID: UUID?, limit: Int) async throws -> [RemoteInventoryProductPriceRow] {
+        let ownerUserID = try await requireAuthenticatedSession()
+        let client = clientProvider.client
+        let pageLimit = max(1, min(limit, 1_000))
+
+        do {
+            if let afterID {
+                let rows: [RemoteInventoryProductPriceRow] = try await client
+                    .from("inventory_product_prices")
+                    .select("id,owner_user_id,product_id,type,price,effective_at,created_at")
+                    .eq("owner_user_id", value: ownerUserID.uuidString)
+                    .gt("id", value: afterID.uuidString)
+                    .order("id", ascending: true)
+                    .limit(pageLimit)
+                    .execute()
+                    .value
+                return rows
+            }
+            let rows: [RemoteInventoryProductPriceRow] = try await client
+                .from("inventory_product_prices")
+                .select("id,owner_user_id,product_id,type,price,effective_at,created_at")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .order("id", ascending: true)
+                .limit(pageLimit)
                 .execute()
                 .value
             return rows

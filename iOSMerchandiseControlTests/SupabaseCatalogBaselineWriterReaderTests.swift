@@ -181,6 +181,46 @@ final class SupabaseCatalogBaselineWriterReaderTests: XCTestCase {
         XCTAssertEqual(snapshot.baseline.productFingerprintsByRemoteID.count, productCount)
     }
 
+    func testCommitterRepairsMissingBaselineFromFullyLinkedLocalCatalog() throws {
+        let context = try makeContext()
+        let ownerID = UUID()
+        try insertCatalog(
+            context: context,
+            productRemoteID: UUID(),
+            supplierRemoteID: UUID(),
+            categoryRemoteID: UUID(),
+            productName: "Remote"
+        )
+
+        let committed = try SupabaseManualSyncLocalApplyBaselineCommitter()
+            .commitCurrentLocalCatalogIfNeeded(context: context, ownerUserID: ownerID)
+
+        XCTAssertTrue(committed)
+        guard case .available(let baseline) = try SupabaseCatalogBaselineReader()
+            .readManualPushBaseline(context: context, ownerUserUUID: ownerID) else {
+            return XCTFail("Expected repaired baseline")
+        }
+        XCTAssertEqual(baseline.baseline.productFingerprintsByRemoteID.count, 1)
+        XCTAssertEqual(baseline.baseline.supplierFingerprintsByRemoteID.count, 1)
+        XCTAssertEqual(baseline.baseline.categoryFingerprintsByRemoteID.count, 1)
+    }
+
+    func testCommitterDoesNotRepairBaselineWhenCatalogHasUnlinkedRows() throws {
+        let context = try makeContext()
+        let ownerID = UUID()
+        context.insert(Product(barcode: "TASK108_UNLINKED", remoteID: nil, productName: "Local only"))
+        try context.save()
+
+        let committed = try SupabaseManualSyncLocalApplyBaselineCommitter()
+            .commitCurrentLocalCatalogIfNeeded(context: context, ownerUserID: ownerID)
+
+        XCTAssertFalse(committed)
+        XCTAssertEqual(
+            try SupabaseCatalogBaselineReader().readManualPushBaseline(context: context, ownerUserUUID: ownerID),
+            .missing
+        )
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             Product.self,

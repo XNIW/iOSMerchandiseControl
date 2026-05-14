@@ -369,7 +369,10 @@ struct OptionsView: View {
                     manualPushService: supabaseManualPushService,
                     activityRecorder: syncEventOutboxDrainRecorder,
                     viewModel: manualSyncViewModel,
-                    cancelHandler: manualSyncCancelHandler
+                    cancelHandler: manualSyncCancelHandler,
+                    baselineDidChange: {
+                        refreshSupabaseBaselineSummary()
+                    }
                 )
             }
         }
@@ -3085,6 +3088,11 @@ struct OptionsView: View {
                 baseKey: "options.supabase.priceApply.error.remoteFetch",
                 detail: message
             )
+        case .invalidRemoteRow(let reason):
+            return detailMessage(
+                baseKey: "options.supabase.priceApply.block.invalidRows",
+                detail: reason
+            )
         case .saveFailed(let message):
             return detailMessage(
                 baseKey: "options.supabase.priceApply.error.saveFailed",
@@ -3252,6 +3260,7 @@ private struct SupabaseManualSyncReleaseCard: View {
     @State private var activeApplyTask: Task<Void, Never>?
     @State private var activeSendTask: Task<Void, Never>?
     @State private var activeActivityRegistrationTask: Task<Void, Never>?
+    private let baselineDidChange: () -> Void
 
     init(
         context: ModelContext,
@@ -3261,10 +3270,12 @@ private struct SupabaseManualSyncReleaseCard: View {
         manualPushService: SupabaseManualPushService?,
         activityRecorder: (any SyncEventRecording)?,
         viewModel: SupabaseManualSyncViewModel? = nil,
-        cancelHandler: (() -> Void)? = nil
+        cancelHandler: (() -> Void)? = nil,
+        baselineDidChange: @escaping () -> Void = {}
     ) {
         self.authViewModel = authViewModel
         self.cancelHandler = cancelHandler
+        self.baselineDidChange = baselineDidChange
         let resolvedViewModel = viewModel ?? SupabaseManualSyncReleaseFactory.makeViewModel(
             context: context,
             authViewModel: authViewModel,
@@ -3515,6 +3526,7 @@ private struct SupabaseManualSyncReleaseCard: View {
 
         activeApplyTask = Task { @MainActor in
             await viewModel.applyStagedLocalChanges()
+            baselineDidChange()
             activeApplyTask = nil
             if !viewModel.isApplyingLocalChanges,
                viewModel.presentationState.reviewSheet == nil {

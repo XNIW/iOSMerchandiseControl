@@ -91,3 +91,21 @@ Current E2E acceptance status:
 - REVIEW_READY_WITH_CHANGES_REMAINING.
 - TASK-108 remains ACTIVE / REVIEW, not DONE.
 - No `PASS_WITH_NOTES` is proposed for the live E2E surface because the live run exposed unresolved baseline/History blockers.
+
+Final ProductPrice keyset FIX update 2026-05-14 12:34 -0400:
+- ✅ LIVE PASS — iOS app-auth ProductPrice full pull/apply completed through public Options `Sincronizza ora`.
+- ✅ LIVE PASS — remote ProductPrice total `290,955`, page size `900`, keyset stream completed.
+- ✅ LIVE PASS — local ProductPrice remote-linked rows `290,953`; `2` remote rows skipped explicitly because linked products are tombstoned.
+- ✅ LIVE PASS — baseline written: `1` run / `20,012` records.
+- ✅ LIVE PASS — Options final state refreshed to `Database locale aggiornato`, not baseline absent.
+- ✅ LIVE PASS — UI progress visible and scroll responsive during apply.
+- ✅ TEST PASS — ProductPrice keyset/apply/progress/baseline targeted suite passed after fix.
+
+Remaining E2E status:
+- ❌ NOT EXECUTED in this focused pass — Android signed-in rerun.
+- ❌ NOT EXECUTED in this focused pass — iOS ↔ Supabase ↔ Android cross-platform scenarios.
+- ❌ NOT EXECUTED in this focused pass — controlled incremental pull/push and Generated/History live matrix.
+
+Updated acceptance status:
+- ProductPrice/bootstrap blocker is resolved.
+- TASK-108 remains ACTIVE / REVIEW and NON DONE until the remaining live E2E surfaces are completed or reviewed as explicit blockers.

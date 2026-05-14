@@ -125,6 +125,43 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         XCTAssertFalse(plan.isApplyAllowed)
     }
 
+    func testPostgresTimezoneEffectiveAtIsAccepted() throws {
+        let productID = uuid(216)
+        let plan = makePlan(
+            remoteRows: [
+                remotePrice(productID: productID, effectiveAt: "2026-05-01 10:00:00+00")
+            ],
+            localProducts: [
+                localProduct(remoteID: productID, barcode: "100")
+            ]
+        )
+
+        XCTAssertEqual(plan.summary.invalid, 0)
+        XCTAssertEqual(plan.summary.included, 1)
+        XCTAssertEqual(plan.linesToInsert.first?.effectiveAtCanonical, "2026-05-01 10:00:00")
+        XCTAssertTrue(plan.isApplyAllowed)
+    }
+
+    func testPostgresFractionalCreatedAtIsAccepted() throws {
+        let productID = uuid(217)
+        let plan = makePlan(
+            remoteRows: [
+                remotePrice(
+                    productID: productID,
+                    effectiveAt: "2026-05-01 10:00:00+00",
+                    createdAt: "2026-05-09 03:02:17.696948"
+                )
+            ],
+            localProducts: [
+                localProduct(remoteID: productID, barcode: "100")
+            ]
+        )
+
+        XCTAssertEqual(plan.summary.invalid, 0)
+        XCTAssertNotNil(plan.linesToInsert.first?.createdAt)
+        XCTAssertTrue(plan.isApplyAllowed)
+    }
+
     func testWrongOwnerRemoteRowsAreInvalidAccessData() {
         let plan = makePlan(remoteRows: [
             remotePrice(ownerUserID: uuid(888))
@@ -461,9 +498,76 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         XCTAssertEqual(second.skippedExisting, 30_000)
         XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 30_000)
         XCTAssertTrue(progress.contains { $0.stage == .completed && $0.processedRows == 30_000 && $0.totalRows == 30_000 })
-        let ranges = await fetcher.rangeLog()
-        XCTAssertTrue(ranges.contains("0...999"))
-        XCTAssertTrue(ranges.contains("29000...29999"))
+        let ranges = fetcher.rangeLog()
+        XCTAssertTrue(ranges.contains("0...899"))
+        XCTAssertTrue(ranges.contains("29700...30599"))
+    }
+
+    func testKeysetPagedFullPullCompletesThreePagesAndPublishesProgress() async throws {
+        let context = try makeContext()
+        let productIDs = (0..<30).map { uuid(970_000 + $0) }
+        for (index, productID) in productIDs.enumerated() {
+            context.insert(Product(barcode: "TASK108-KEYSET-\(index)", remoteID: productID, productName: "Local"))
+        }
+        try context.save()
+        let rows = makeRemotePriceRows(count: 2_700, productIDs: productIDs)
+        let fetcher = ProductPriceKeysetFetcherFake(rows: rows)
+        let pagedService = SupabaseProductPriceApplyService(fetcher: fetcher)
+        let samplePlan = try await pagedService.loadBootstrapPreviewSample(
+            context: context,
+            sessionSnapshot: session
+        )
+        var progress: [ProductPricePagedApplyProgress] = []
+
+        let result = try await pagedService.applyPagedFullPull(
+            plan: samplePlan,
+            context: context,
+            currentSessionSnapshot: session,
+            onProgress: { progress.append($0) }
+        )
+
+        XCTAssertEqual(result.inserted, 2_700)
+        XCTAssertEqual(result.totalConsidered, 2_700)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 2_700)
+        XCTAssertTrue(progress.contains { $0.stage == .applying && $0.processedRows == 900 && $0.totalRows == 2_700 })
+        XCTAssertTrue(progress.contains { $0.stage == .applying && $0.processedRows == 1_800 && $0.totalRows == 2_700 })
+        XCTAssertTrue(progress.contains { $0.stage == .completed && $0.processedRows == 2_700 && $0.totalRows == 2_700 })
+        let afterIDLog = fetcher.afterIDLog()
+        XCTAssertEqual(afterIDLog.count, 4)
+        XCTAssertEqual(afterIDLog.first!, "nil")
+        XCTAssertTrue(afterIDLog[1].hasPrefix("00000000"))
+    }
+
+    func testKeysetPagedFullPullSkipsTombstonedProductPrices() async throws {
+        let context = try makeContext()
+        let activeProductID = uuid(975_000)
+        let deletedProductID = uuid(975_001)
+        context.insert(Product(barcode: "TASK108-KEYSET-ACTIVE", remoteID: activeProductID, productName: "Local"))
+        try context.save()
+        let rows = [
+            remotePrice(id: uuid(975_100), productID: activeProductID),
+            remotePrice(id: uuid(975_101), productID: deletedProductID)
+        ]
+        let fetcher = ProductPriceKeysetFetcherFake(
+            rows: rows,
+            deletedProductIDs: [deletedProductID]
+        )
+        let pagedService = SupabaseProductPriceApplyService(fetcher: fetcher)
+        let samplePlan = try await pagedService.loadBootstrapPreviewSample(
+            context: context,
+            sessionSnapshot: session
+        )
+
+        let result = try await pagedService.applyPagedFullPull(
+            plan: samplePlan,
+            context: context,
+            currentSessionSnapshot: session
+        )
+
+        XCTAssertEqual(result.inserted, 1)
+        XCTAssertEqual(result.skippedExisting, 1)
+        XCTAssertEqual(result.totalConsidered, 2)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 1)
     }
 
     func testPagedFullPullCanCancelLargeProductPriceHistoryWithoutFixedTotalLimit() async throws {
@@ -494,9 +598,39 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         let appliedCount = try context.fetch(FetchDescriptor<ProductPrice>()).count
         XCTAssertGreaterThan(appliedCount, 0)
         XCTAssertLessThan(appliedCount, 120_000)
-        let ranges = await fetcher.rangeLog()
-        XCTAssertTrue(ranges.contains("0...999"))
-        XCTAssertTrue(ranges.contains("3000...3999"))
+        let ranges = fetcher.rangeLog()
+        XCTAssertTrue(ranges.contains("0...899"))
+        XCTAssertTrue(ranges.contains("3600...4499"))
+    }
+
+    func testPagedFullPullFailsWhenRemoteEndsBeforeReportedCount() async throws {
+        let context = try makeContext()
+        let productIDs = (0..<30).map { uuid(980_000 + $0) }
+        for (index, productID) in productIDs.enumerated() {
+            context.insert(Product(barcode: "TASK108-PAGED-TRUNCATED-\(index)", remoteID: productID, productName: "Local"))
+        }
+        try context.save()
+        let rows = makeRemotePriceRows(count: 1_800, productIDs: productIDs)
+        let fetcher = ProductPricePagedFetcherFake(rows: rows, reportedCount: 2_700)
+        let pagedService = SupabaseProductPriceApplyService(fetcher: fetcher)
+        let samplePlan = try await pagedService.loadBootstrapPreviewSample(
+            context: context,
+            sessionSnapshot: session
+        )
+
+        do {
+            _ = try await pagedService.applyPagedFullPull(
+                plan: samplePlan,
+                context: context,
+                currentSessionSnapshot: session
+            )
+            XCTFail("Expected remoteFetchFailed when the remote page stream ends before count")
+        } catch let error as ProductPriceApplyError {
+            XCTAssertEqual(
+                error,
+                .remoteFetchFailed(message: "inventory_product_prices ended before reported count")
+            )
+        }
     }
 
     private func makePlan(
@@ -630,13 +764,16 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
     }
 }
 
-private actor ProductPricePagedFetcherFake: SupabaseProductPricePreviewFetching {
+@MainActor
+private final class ProductPricePagedFetcherFake: SupabaseProductPricePreviewFetching {
     private let rows: [RemoteInventoryProductPriceRow]
+    private let reportedCount: Int?
     private let throwCancellationAtFrom: Int?
     private var ranges: [String] = []
 
-    init(rows: [RemoteInventoryProductPriceRow], throwCancellationAtFrom: Int? = nil) {
+    init(rows: [RemoteInventoryProductPriceRow], reportedCount: Int? = nil, throwCancellationAtFrom: Int? = nil) {
         self.rows = rows
+        self.reportedCount = reportedCount
         self.throwCancellationAtFrom = throwCancellationAtFrom
     }
 
@@ -645,7 +782,7 @@ private actor ProductPricePagedFetcherFake: SupabaseProductPricePreviewFetching 
     }
 
     func fetchProductPriceCount() async throws -> Int? {
-        rows.count
+        reportedCount ?? rows.count
     }
 
     func fetchProductPricesPreviewPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {
@@ -655,5 +792,47 @@ private actor ProductPricePagedFetcherFake: SupabaseProductPricePreviewFetching 
         }
         guard from < rows.count else { return [] }
         return Array(rows[from..<min(rows.count, to + 1)])
+    }
+}
+
+@MainActor
+private final class ProductPriceKeysetFetcherFake: SupabaseProductPriceKeysetFetching, SupabaseProductPriceDeletedProductFetching {
+    private let rows: [RemoteInventoryProductPriceRow]
+    private let deletedProductIDs: Set<UUID>
+    private var afterIDs: [String] = []
+
+    init(rows: [RemoteInventoryProductPriceRow], deletedProductIDs: Set<UUID> = []) {
+        self.rows = rows
+        self.deletedProductIDs = deletedProductIDs
+    }
+
+    func afterIDLog() -> [String] {
+        afterIDs
+    }
+
+    func fetchProductPriceCount() async throws -> Int? {
+        rows.count
+    }
+
+    func fetchDeletedProductIDs(pageSize: Int) async throws -> Set<UUID> {
+        deletedProductIDs
+    }
+
+    func fetchProductPricesPreviewPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {
+        guard from < rows.count else { return [] }
+        return Array(rows[from..<min(rows.count, to + 1)])
+    }
+
+    func fetchProductPricesPreviewPage(afterID: UUID?, limit: Int) async throws -> [RemoteInventoryProductPriceRow] {
+        afterIDs.append(afterID?.uuidString ?? "nil")
+        let startIndex: Int
+        if let afterID,
+           let index = rows.firstIndex(where: { $0.id == afterID }) {
+            startIndex = index + 1
+        } else {
+            startIndex = 0
+        }
+        guard startIndex < rows.count else { return [] }
+        return Array(rows[startIndex..<min(rows.count, startIndex + limit)])
     }
 }

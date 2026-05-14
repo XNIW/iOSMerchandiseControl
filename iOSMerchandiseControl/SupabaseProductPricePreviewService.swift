@@ -6,13 +6,22 @@ protocol SupabaseProductPricePreviewFetching: Sendable {
     func fetchProductPriceCount() async throws -> Int?
 }
 
+protocol SupabaseProductPriceKeysetFetching: SupabaseProductPricePreviewFetching {
+    func fetchProductPricesPreviewPage(afterID: UUID?, limit: Int) async throws -> [RemoteInventoryProductPriceRow]
+}
+
+protocol SupabaseProductPriceDeletedProductFetching: Sendable {
+    func fetchDeletedProductIDs(pageSize: Int) async throws -> Set<UUID>
+}
+
 extension SupabaseProductPricePreviewFetching {
     func fetchProductPriceCount() async throws -> Int? {
         nil
     }
 }
 
-extension SupabaseInventoryService: SupabaseProductPricePreviewFetching {}
+extension SupabaseInventoryService: SupabaseProductPriceKeysetFetching {}
+extension SupabaseInventoryService: SupabaseProductPriceDeletedProductFetching {}
 
 nonisolated struct ProductPricePreviewOptions: Sendable, Equatable {
     static let defaultPageSize = 200

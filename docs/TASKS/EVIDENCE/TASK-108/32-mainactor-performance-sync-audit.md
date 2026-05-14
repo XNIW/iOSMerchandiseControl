@@ -32,3 +32,26 @@ Verification status:
 - ✅ TEST — TASK-108 targeted tests passed.
 - ✅ SIM — qualitative scroll smoke passed during cloud count fetch.
 - ⚠️ NOT EXECUTABLE — live large authenticated apply jank was not re-run after this pass because app-auth was not available.
+
+## Final live performance update — 2026-05-14 12:34 -0400
+
+The large authenticated ProductPrice apply was rerun after the keyset/error-propagation fixes.
+
+Live observations:
+- UI progress stayed visible during full ProductPrice apply.
+- Scroll remained responsive while progress advanced from `135,900 / 290,955` to completion.
+- No crash occurred.
+- No idle-without-completion/error occurred.
+- Final Options local status refreshed to `Database locale aggiornato`.
+
+Performance samples:
+- `186,802` local ProductPrice rows at 12:12:44, RSS about `2.03 GB`.
+- `220,067` rows at 12:16:54, RSS about `2.58 GB`.
+- `252,439` rows at 12:21:01, RSS about `2.83 GB`.
+- `289,065` rows at 12:26:45, RSS about `3.26 GB`.
+- Completed at about 12:33:52 with `328,589` local rows and `290,953` remote-linked rows.
+
+Residual risk:
+- The simulator run completed, but RSS peaked above `3 GB`.
+- This is acceptable as evidence that the original silent cancellation bug is fixed, but it is not ideal for low-memory devices.
+- Recommended follow-up inside TASK-108 review/future performance pass: move ProductPrice full bootstrap to a private/bounded SwiftData context or chunked import strategy that releases inserted objects between pages.

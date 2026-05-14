@@ -2546,6 +2546,69 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(vm)
     }
 
+    func testTask108ProductPriceApplyCancellationShowsCancelledInsteadOfIdle() async throws {
+        let ownerID = UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")!
+        let applyPlan = makeProductPriceApplyPlan(ownerID: ownerID, lineCount: 1)
+        let provider = ManualSyncProductPriceProviderFake(
+            applyPlans: [applyPlan, applyPlan]
+        )
+        provider.applyError = CancellationError()
+        let vm = makeProductPriceReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                    remoteProductPriceCount: 1,
+                    priceHistorySignalCount: 1
+                ),
+                key: .cloudDataNeedsReview
+            )
+        ))
+        await vm.prepareProductPricePlansForReview()
+        await vm.applyStagedLocalChanges()
+
+        XCTAssertEqual(provider.applyCallCount, 1)
+        XCTAssertEqual(vm.presentationKind, .cancelledRun)
+        XCTAssertEqual(vm.progressState.phase, .cancelled)
+        XCTAssertFalse(vm.presentationKind == .successFullyUpToDate)
+        XCTAssertEqual(vm.presentationState.userFacingSummary?.kind, .cancelled)
+    }
+
+    func testTask108ProductPriceApplyFailureShowsFailedInsteadOfIdle() async throws {
+        let ownerID = UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")!
+        let applyPlan = makeProductPriceApplyPlan(ownerID: ownerID, lineCount: 1)
+        let provider = ManualSyncProductPriceProviderFake(
+            applyPlans: [applyPlan, applyPlan]
+        )
+        provider.applyError = ProductPriceApplyError.remoteFetchFailed(
+            message: "inventory_product_prices ended before reported count"
+        )
+        let vm = makeProductPriceReadyViewModel(provider: provider, ownerID: ownerID)
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                    remoteProductPriceCount: 1,
+                    priceHistorySignalCount: 1
+                ),
+                key: .cloudDataNeedsReview
+            )
+        ))
+        await vm.prepareProductPricePlansForReview()
+        await vm.applyStagedLocalChanges()
+
+        XCTAssertEqual(provider.applyCallCount, 1)
+        XCTAssertEqual(vm.presentationKind, .localApplyFailed)
+        XCTAssertEqual(vm.progressState.phase, .failed)
+        XCTAssertTrue(vm.subtitle?.contains("inventory_product_prices ended before reported count") ?? false)
+        XCTAssertEqual(vm.presentationState.userFacingSummary?.kind, .localApplyFailed)
+        XCTAssertTrue(vm.presentationState.userFacingSummary?.message.contains("inventory_product_prices ended before reported count") ?? false)
+    }
+
     func testTask080LocalProductPricesEnableCloudSendWithoutCatalogCandidates() async throws {
         let ownerID = UUID(uuidString: "CCCCCCCC-CCCC-4CCC-8CCC-CCCCCCCCCCCC")!
         let pushPlan = makeProductPricePushPlan(ownerID: ownerID, candidateCount: 2, alreadyPresent: 1)

@@ -242,7 +242,7 @@ nonisolated struct ProductPriceApplyPlan: Sendable {
         }
         if sourceState.sampled,
            summary.remoteRead > 0,
-           blockReasons.allSatisfy({ $0 == .noApplicableRows }) {
+           blockReasons.allSatisfy({ $0 == .noApplicableRows || $0 == .unmappedProducts }) {
             return true
         }
         return false
@@ -297,6 +297,7 @@ nonisolated enum ProductPriceApplyError: Error, Sendable, Equatable {
     case policyBlocked([ProductPriceApplyBlockReason])
     case localSnapshotFailed(message: String?)
     case remoteFetchFailed(message: String?)
+    case invalidRemoteRow(reason: String)
     case saveFailed(message: String?)
     case verificationFailed
 }
@@ -306,7 +307,7 @@ nonisolated struct ProductPriceApplyFetchOptions: Sendable, Equatable {
     let maxRows: Int
     let maxPages: Int
 
-    init(pageSize: Int = 1_000, maxRows: Int = 1_000, maxPages: Int = 1) {
+    init(pageSize: Int = 900, maxRows: Int = 1_000, maxPages: Int = 1) {
         self.pageSize = max(1, min(pageSize, 1_000))
         self.maxRows = max(1, maxRows)
         self.maxPages = max(1, maxPages)
@@ -356,11 +357,28 @@ nonisolated enum ProductPriceEffectiveAtCanonicalizer {
             return date
         }
 
+        for formatter in postgresTimestampFormatters() {
+            if let date = formatter.date(from: value) {
+                return date
+            }
+        }
+
         if let date = fractionalISO8601Formatter().date(from: value) {
             return date
         }
 
-        return standardISO8601Formatter().date(from: value)
+        if let date = standardISO8601Formatter().date(from: value) {
+            return date
+        }
+
+        if let isoCandidate = postgresISO8601Candidate(from: value) {
+            if let date = fractionalISO8601Formatter().date(from: isoCandidate) {
+                return date
+            }
+            return standardISO8601Formatter().date(from: isoCandidate)
+        }
+
+        return nil
     }
 
     static func canonicalString(from date: Date) -> String {
@@ -381,6 +399,55 @@ nonisolated enum ProductPriceEffectiveAtCanonicalizer {
         formatter.isLenient = false
         Thread.current.threadDictionary[key] = formatter
         return formatter
+    }
+
+    private static func postgresTimestampFormatters() -> [DateFormatter] {
+        let key = "ProductPriceEffectiveAtCanonicalizer.postgresTimestampFormatters"
+        if let formatters = Thread.current.threadDictionary[key] as? [DateFormatter] {
+            return formatters
+        }
+
+        let formats = [
+            "yyyy-MM-dd HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd HH:mm:ssX",
+            "yyyy-MM-dd HH:mm:ssXX",
+            "yyyy-MM-dd HH:mm:ssXXX",
+            "yyyy-MM-dd HH:mm:ss.SSSSSSX",
+            "yyyy-MM-dd HH:mm:ss.SSSSSSXX",
+            "yyyy-MM-dd HH:mm:ss.SSSSSSXXX"
+        ]
+        let formatters = formats.map { format -> DateFormatter in
+            let formatter = DateFormatter()
+            formatter.calendar = Calendar(identifier: .gregorian)
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.dateFormat = format
+            formatter.isLenient = false
+            return formatter
+        }
+        Thread.current.threadDictionary[key] = formatters
+        return formatters
+    }
+
+    private static func postgresISO8601Candidate(from value: String) -> String? {
+        guard let separator = value.firstIndex(of: " ") else {
+            return nil
+        }
+
+        var candidate = value
+        candidate.replaceSubrange(separator...separator, with: "T")
+        if candidate.hasSuffix("+00") {
+            candidate.replaceSubrange(candidate.index(candidate.endIndex, offsetBy: -3)..<candidate.endIndex, with: "Z")
+        } else if candidate.hasSuffix("-00") {
+            candidate.replaceSubrange(candidate.index(candidate.endIndex, offsetBy: -3)..<candidate.endIndex, with: "Z")
+        } else if let timezoneStart = candidate.lastIndex(where: { $0 == "+" || $0 == "-" }),
+                  timezoneStart > candidate.index(candidate.startIndex, offsetBy: 10) {
+            let suffix = candidate[timezoneStart...]
+            if suffix.count == 3 {
+                candidate.append(":00")
+            }
+        }
+        return candidate
     }
 
     private static func fractionalISO8601Formatter() -> ISO8601DateFormatter {
@@ -457,9 +524,10 @@ struct SupabaseProductPriceApplyService {
                 to: currentPageSize - 1
             )
             try Task.checkCancellation()
-            return try prepareApplyPlan(
+            let snapshot = try makeLocalSnapshot(context: context, includePrices: false)
+            return prepareApplyPlan(
                 remoteRows: rows,
-                context: context,
+                localSnapshot: snapshot,
                 sourceState: ProductPriceApplySourceState(sampled: rows.count == currentPageSize),
                 sessionSnapshot: sessionSnapshot
             )
@@ -520,7 +588,7 @@ struct SupabaseProductPriceApplyService {
         }
 
         let productsByRemoteID = try fetchUniqueProductsByRemoteID(context: context)
-        var currentPricesByKey = try fetchCurrentPricesByKey(context: context)
+        var currentPricesByKey = try fetchCurrentPriceInfosByKey(context: context)
         var inserted = 0
         var remoteIdentityLinked = 0
         var skippedExisting = 0
@@ -534,13 +602,14 @@ struct SupabaseProductPriceApplyService {
             guard let existingPrices = currentPricesByKey[key] else {
                 throw ProductPriceApplyError.verificationFailed
             }
-            let matchingPrices = existingPrices.filter {
-                PriceCanonicalizer.canonicalAmount(from: $0.price) == link.canonicalPrice
+            let matchingPrices = existingPrices.enumerated().filter {
+                $0.element.canonicalPrice == link.canonicalPrice
             }
             guard matchingPrices.count == 1,
-                  let existing = matchingPrices.first else {
+                  let match = matchingPrices.first else {
                 throw ProductPriceApplyError.policyBlocked([.conflicts])
             }
+            var existing = match.element
             if let existingRemoteID = existing.remoteID {
                 guard existingRemoteID == link.remoteRowID else {
                     throw ProductPriceApplyError.policyBlocked([.conflicts])
@@ -549,7 +618,14 @@ struct SupabaseProductPriceApplyService {
                 continue
             }
 
+            guard let productPriceID = existing.productPriceIDToLink,
+                  let productPrice = context.model(for: productPriceID) as? ProductPrice else {
+                throw ProductPriceApplyError.verificationFailed
+            }
+            productPrice.remoteID = link.remoteRowID
             existing.remoteID = link.remoteRowID
+            existing.productPriceIDToLink = nil
+            currentPricesByKey[key]?[match.offset] = existing
             remoteIdentityLinked += 1
             skippedExisting += 1
         }
@@ -568,7 +644,7 @@ struct SupabaseProductPriceApplyService {
                 guard existingPrices.count == 1 else {
                     throw ProductPriceApplyError.policyBlocked([.conflicts])
                 }
-                let existingAmounts = Set(existingPrices.compactMap { PriceCanonicalizer.canonicalAmount(from: $0.price) })
+                let existingAmounts = Set(existingPrices.map(\.canonicalPrice))
                 guard existingAmounts.count == 1, existingAmounts.contains(line.canonicalPrice) else {
                     throw ProductPriceApplyError.policyBlocked([.conflicts])
                 }
@@ -577,9 +653,16 @@ struct SupabaseProductPriceApplyService {
                     throw ProductPriceApplyError.policyBlocked([.conflicts])
                 }
                 if existingPrices.count == 1,
-                   let existing = existingPrices.first,
+                   var existing = existingPrices.first,
                    existing.remoteID == nil {
+                    guard let productPriceID = existing.productPriceIDToLink,
+                          let productPrice = context.model(for: productPriceID) as? ProductPrice else {
+                        throw ProductPriceApplyError.verificationFailed
+                    }
+                    productPrice.remoteID = line.remoteRowID
                     existing.remoteID = line.remoteRowID
+                    existing.productPriceIDToLink = nil
+                    currentPricesByKey[key] = [existing]
                     remoteIdentityLinked += 1
                 }
                 skippedExisting += 1
@@ -597,7 +680,12 @@ struct SupabaseProductPriceApplyService {
                 product: product
             )
             context.insert(newPrice)
-            currentPricesByKey[key, default: []].append(newPrice)
+            currentPricesByKey[key, default: []].append(
+                ProductPriceApplyCurrentPriceInfo(
+                    canonicalPrice: line.canonicalPrice,
+                    remoteID: line.remoteRowID
+                )
+            )
             inserted += 1
         }
 
@@ -637,6 +725,13 @@ struct SupabaseProductPriceApplyService {
         currentSessionSnapshot: ProductPriceApplySessionSnapshot,
         onProgress: @escaping @MainActor @Sendable (ProductPricePagedApplyProgress) -> Void = { _ in }
     ) async throws -> ProductPriceApplyResult {
+        var exitTotalConsidered = 0
+        var exitPageIndex = 0
+        defer {
+            debugPrint(
+                "[Task108ProductPrice] paged_apply_exit cancelled=\(Task.isCancelled) pages=\(exitPageIndex) total=\(exitTotalConsidered)"
+            )
+        }
         guard let fetcher else {
             throw ProductPriceApplyError.fetcherMissing
         }
@@ -644,8 +739,9 @@ struct SupabaseProductPriceApplyService {
             throw ProductPriceApplyError.sessionMismatch
         }
         let hardBlocks = plan.blockReasons.filter { $0 != .noApplicableRows }
-        guard hardBlocks.isEmpty else {
-            throw ProductPriceApplyError.policyBlocked(hardBlocks)
+        let fatalHardBlocks = hardBlocks.filter { $0 != .unmappedProducts }
+        guard fatalHardBlocks.isEmpty else {
+            throw ProductPriceApplyError.policyBlocked(fatalHardBlocks)
         }
 
         let remoteTotalRows: Int?
@@ -656,6 +752,9 @@ struct SupabaseProductPriceApplyService {
         } catch {
             remoteTotalRows = nil
         }
+        debugPrint(
+            "[Task108ProductPrice] paged_apply_start total=\(remoteTotalRows.map(String.init) ?? "unknown") pageSize=\(fetchOptions.pageSize) mode=\((fetcher as? any SupabaseProductPriceKeysetFetching) == nil ? "offset" : "keyset")"
+        )
 
         onProgress(
             ProductPricePagedApplyProgress(
@@ -668,7 +767,8 @@ struct SupabaseProductPriceApplyService {
         )
 
         var productsByRemoteID = try fetchUniqueProductsByRemoteID(context: context)
-        var currentPricesByKey = try fetchCurrentPricesByKey(context: context)
+        var currentPricesByKey = try fetchCurrentPriceInfosByKey(context: context)
+        let tombstonedProductIDs = try await fetchTombstonedProductIDsIfAvailable()
         var seenRemoteIDs = Set<UUID>()
         var inserted = 0
         var remoteIdentityLinked = 0
@@ -676,6 +776,8 @@ struct SupabaseProductPriceApplyService {
         var totalConsidered = 0
         var offset = 0
         var pageIndex = 0
+        var lastKeysetID: UUID?
+        let keysetFetcher = fetcher as? any SupabaseProductPriceKeysetFetching
 
         while true {
             try Task.checkCancellation()
@@ -691,16 +793,35 @@ struct SupabaseProductPriceApplyService {
 
             let page: [RemoteInventoryProductPriceRow]
             do {
-                page = try await fetcher.fetchProductPricesPreviewPage(
-                    from: offset,
-                    to: offset + fetchOptions.pageSize - 1
+                debugPrint(
+                    "[Task108ProductPrice] page_request index=\(pageIndex + 1) offset=\(offset) after=\(redactedUUID(lastKeysetID))"
                 )
+                if let keysetFetcher {
+                    page = try await keysetFetcher.fetchProductPricesPreviewPage(
+                        afterID: lastKeysetID,
+                        limit: fetchOptions.pageSize
+                    )
+                } else {
+                    page = try await fetcher.fetchProductPricesPreviewPage(
+                        from: offset,
+                        to: offset + fetchOptions.pageSize - 1
+                    )
+                }
             } catch is CancellationError {
+                debugPrint(
+                    "[Task108ProductPrice] page_cancelled index=\(pageIndex + 1) total=\(totalConsidered)"
+                )
                 throw CancellationError()
             } catch {
+                debugPrint(
+                    "[Task108ProductPrice] page_failed index=\(pageIndex + 1) total=\(totalConsidered) error=\(safeDiagnosticDetail(for: error) ?? "unknown")"
+                )
                 throw ProductPriceApplyError.remoteFetchFailed(message: safeDiagnosticDetail(for: error))
             }
             try Task.checkCancellation()
+            debugPrint(
+                "[Task108ProductPrice] page_return index=\(pageIndex + 1) count=\(page.count) first=\(redactedUUID(page.first?.id)) last=\(redactedUUID(page.last?.id))"
+            )
 
             guard page.count <= fetchOptions.pageSize else {
                 throw ProductPriceApplyError.remoteFetchFailed(
@@ -709,6 +830,10 @@ struct SupabaseProductPriceApplyService {
             }
 
             if page.isEmpty {
+                try validateRemoteProductPriceCompletion(
+                    totalConsidered: totalConsidered,
+                    remoteTotalRows: remoteTotalRows
+                )
                 break
             }
 
@@ -729,6 +854,7 @@ struct SupabaseProductPriceApplyService {
                     sessionSnapshot: currentSessionSnapshot,
                     productsByRemoteID: &productsByRemoteID,
                     currentPricesByKey: &currentPricesByKey,
+                    tombstonedProductIDs: tombstonedProductIDs,
                     seenRemoteIDs: &seenRemoteIDs,
                     context: context
                 )
@@ -739,6 +865,8 @@ struct SupabaseProductPriceApplyService {
             }
 
             totalConsidered += page.count
+            exitTotalConsidered = totalConsidered
+            lastKeysetID = page.last?.id
             if pageMutations > 0 {
                 onProgress(
                     ProductPricePagedApplyProgress(
@@ -752,12 +880,21 @@ struct SupabaseProductPriceApplyService {
                 do {
                     try context.save()
                     await Task.yield()
+                    debugPrint(
+                        "[Task108ProductPrice] page_save index=\(pageIndex + 1) mutations=\(pageMutations) total=\(totalConsidered)"
+                    )
                 } catch {
                     context.rollback()
+                    debugPrint(
+                        "[Task108ProductPrice] page_save_failed index=\(pageIndex + 1) mutations=\(pageMutations) total=\(totalConsidered)"
+                    )
                     throw ProductPriceApplyError.saveFailed(message: String(describing: error))
                 }
             } else {
                 await Task.yield()
+                debugPrint(
+                    "[Task108ProductPrice] page_noop index=\(pageIndex + 1) total=\(totalConsidered)"
+                )
             }
 
             onProgress(
@@ -771,11 +908,16 @@ struct SupabaseProductPriceApplyService {
             )
 
             if page.count < fetchOptions.pageSize {
+                try validateRemoteProductPriceCompletion(
+                    totalConsidered: totalConsidered,
+                    remoteTotalRows: remoteTotalRows
+                )
                 break
             }
 
             offset += fetchOptions.pageSize
             pageIndex += 1
+            exitPageIndex = pageIndex
         }
 
         onProgress(
@@ -787,6 +929,9 @@ struct SupabaseProductPriceApplyService {
                 totalRows: remoteTotalRows
             )
         )
+        debugPrint(
+            "[Task108ProductPrice] paged_apply_complete inserted=\(inserted) linked=\(remoteIdentityLinked) skipped=\(skippedExisting) total=\(totalConsidered)"
+        )
 
         return ProductPriceApplyResult(
             inserted: inserted,
@@ -794,6 +939,35 @@ struct SupabaseProductPriceApplyService {
             skippedExisting: skippedExisting,
             totalConsidered: totalConsidered
         )
+    }
+
+    private func validateRemoteProductPriceCompletion(
+        totalConsidered: Int,
+        remoteTotalRows: Int?
+    ) throws {
+        guard let remoteTotalRows,
+              totalConsidered < remoteTotalRows else {
+            return
+        }
+        throw ProductPriceApplyError.remoteFetchFailed(
+            message: "inventory_product_prices ended before reported count"
+        )
+    }
+
+    private func fetchTombstonedProductIDsIfAvailable() async throws -> Set<UUID> {
+        guard let tombstoneFetcher = fetcher as? any SupabaseProductPriceDeletedProductFetching else {
+            return []
+        }
+        do {
+            let ids = try await tombstoneFetcher.fetchDeletedProductIDs(pageSize: 1_000)
+            debugPrint("[Task108ProductPrice] tombstoned_products count=\(ids.count)")
+            return ids
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            debugPrint("[Task108ProductPrice] tombstoned_products_failed error=\(safeDiagnosticDetail(for: error) ?? "unknown")")
+            throw ProductPriceApplyError.remoteFetchFailed(message: safeDiagnosticDetail(for: error))
+        }
     }
 
     private func fetchRemoteRows(
@@ -865,15 +1039,10 @@ struct SupabaseProductPriceApplyService {
         return (rows, ProductPriceApplySourceState(truncated: true))
     }
 
-    private func makeLocalSnapshot(context: ModelContext) throws -> ProductPriceApplyLocalSnapshot {
+    private func makeLocalSnapshot(context: ModelContext, includePrices: Bool = true) throws -> ProductPriceApplyLocalSnapshot {
         let products = try context.fetch(
             FetchDescriptor<Product>(
                 sortBy: [SortDescriptor(\Product.barcode)]
-            )
-        )
-        let prices = try context.fetch(
-            FetchDescriptor<ProductPrice>(
-                sortBy: [SortDescriptor(\ProductPrice.effectiveAt)]
             )
         )
 
@@ -886,6 +1055,16 @@ struct SupabaseProductPriceApplyService {
                 retailPrice: $0.retailPrice
             )
         }
+
+        guard includePrices else {
+            return ProductPriceApplyLocalSnapshot(products: localProducts, prices: [])
+        }
+
+        let prices = try context.fetch(
+            FetchDescriptor<ProductPrice>(
+                sortBy: [SortDescriptor(\ProductPrice.effectiveAt)]
+            )
+        )
 
         let localPrices = prices.compactMap { price -> ProductPriceApplyLocalPrice? in
             guard let product = price.product else {
@@ -930,27 +1109,48 @@ struct SupabaseProductPriceApplyService {
         return result
     }
 
-    private func fetchCurrentPricesByKey(context: ModelContext) throws -> [ProductPriceApplyLogicalKey: [ProductPrice]] {
-        let prices = try context.fetch(
-            FetchDescriptor<ProductPrice>(
+    private func fetchCurrentPriceInfosByKey(context: ModelContext) throws -> [ProductPriceApplyLogicalKey: [ProductPriceApplyCurrentPriceInfo]] {
+        let lookupContext = ModelContext(context.container)
+        let batchSize = 5_000
+        var offset = 0
+        var result: [ProductPriceApplyLogicalKey: [ProductPriceApplyCurrentPriceInfo]] = [:]
+
+        while true {
+            var descriptor = FetchDescriptor<ProductPrice>(
                 sortBy: [SortDescriptor(\ProductPrice.effectiveAt)]
             )
-        )
-        var result: [ProductPriceApplyLogicalKey: [ProductPrice]] = [:]
-
-        for price in prices {
-            guard let product = price.product,
-                  let productID = product.remoteID,
-                  PriceCanonicalizer.canonicalAmount(from: price.price) != nil else {
-                continue
+            descriptor.fetchLimit = batchSize
+            descriptor.fetchOffset = offset
+            let prices = try lookupContext.fetch(descriptor)
+            guard !prices.isEmpty else {
+                break
             }
 
-            let key = ProductPriceApplyLogicalKey(
-                productID: productID,
-                type: price.type.rawValue,
-                effectiveAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(from: price.effectiveAt)
-            )
-            result[key, default: []].append(price)
+            for price in prices {
+                guard let product = price.product,
+                      let productID = product.remoteID,
+                      let canonicalPrice = PriceCanonicalizer.canonicalAmount(from: price.price) else {
+                    continue
+                }
+
+                let key = ProductPriceApplyLogicalKey(
+                    productID: productID,
+                    type: price.type.rawValue,
+                    effectiveAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(from: price.effectiveAt)
+                )
+                result[key, default: []].append(
+                    ProductPriceApplyCurrentPriceInfo(
+                        canonicalPrice: canonicalPrice,
+                        remoteID: price.remoteID,
+                        productPriceIDToLink: price.remoteID == nil ? price.persistentModelID : nil
+                    )
+                )
+            }
+
+            guard prices.count == batchSize else {
+                break
+            }
+            offset += batchSize
         }
 
         return result
@@ -964,26 +1164,37 @@ struct SupabaseProductPriceApplyService {
         _ row: RemoteInventoryProductPriceRow,
         sessionSnapshot: ProductPriceApplySessionSnapshot,
         productsByRemoteID: inout [UUID: Product],
-        currentPricesByKey: inout [ProductPriceApplyLogicalKey: [ProductPrice]],
+        currentPricesByKey: inout [ProductPriceApplyLogicalKey: [ProductPriceApplyCurrentPriceInfo]],
+        tombstonedProductIDs: Set<UUID> = [],
         seenRemoteIDs: inout Set<UUID>,
         context: ModelContext
     ) throws -> ProductPriceApplyResult {
         guard row.ownerUserID == sessionSnapshot.userID else {
-            throw ProductPriceApplyError.policyBlocked([.sourceError, .invalidRows])
+            debugPrint("[Task108ProductPrice] row_invalid id=\(redactedUUID(row.id)) reason=owner_mismatch")
+            throw ProductPriceApplyError.invalidRemoteRow(reason: "owner_mismatch")
         }
         guard seenRemoteIDs.insert(row.id).inserted else {
+            debugPrint("[Task108ProductPrice] row_invalid id=\(redactedUUID(row.id)) reason=duplicate_remote_id")
             throw ProductPriceApplyError.policyBlocked([.conflicts])
         }
         guard let type = SupabasePullPreviewNormalizer.normalizedPriceType(row.type) else {
-            throw ProductPriceApplyError.policyBlocked([.invalidRows])
+            debugPrint("[Task108ProductPrice] row_invalid id=\(redactedUUID(row.id)) reason=invalid_type")
+            throw ProductPriceApplyError.invalidRemoteRow(reason: "invalid_type")
         }
         guard let canonicalPrice = PriceCanonicalizer.canonicalAmount(from: row.price) else {
-            throw ProductPriceApplyError.policyBlocked([.invalidRows])
+            debugPrint("[Task108ProductPrice] row_invalid id=\(redactedUUID(row.id)) reason=invalid_price")
+            throw ProductPriceApplyError.invalidRemoteRow(reason: "invalid_price")
         }
         guard let effectiveAt = ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: row.effectiveAt) else {
-            throw ProductPriceApplyError.policyBlocked([.invalidRows])
+            debugPrint("[Task108ProductPrice] row_invalid id=\(redactedUUID(row.id)) reason=invalid_effective_at")
+            throw ProductPriceApplyError.invalidRemoteRow(reason: "invalid_effective_at")
         }
         guard let product = productsByRemoteID[row.productID] else {
+            if tombstonedProductIDs.contains(row.productID) {
+                debugPrint("[Task108ProductPrice] row_skip id=\(redactedUUID(row.id)) reason=tombstoned_product")
+                return ProductPriceApplyResult(inserted: 0, skippedExisting: 1, totalConsidered: 1)
+            }
+            debugPrint("[Task108ProductPrice] row_invalid id=\(redactedUUID(row.id)) reason=unmapped_product")
             throw ProductPriceApplyError.policyBlocked([.unmappedProducts])
         }
 
@@ -996,10 +1207,10 @@ struct SupabaseProductPriceApplyService {
 
         if let existingPrices = currentPricesByKey[key] {
             guard existingPrices.count == 1,
-                  let existing = existingPrices.first else {
+                  var existing = existingPrices.first else {
                 throw ProductPriceApplyError.policyBlocked([.conflicts])
             }
-            guard PriceCanonicalizer.canonicalAmount(from: existing.price) == canonicalPrice else {
+            guard existing.canonicalPrice == canonicalPrice else {
                 throw ProductPriceApplyError.policyBlocked([.conflicts])
             }
             if let existingRemoteID = existing.remoteID {
@@ -1008,7 +1219,14 @@ struct SupabaseProductPriceApplyService {
                 }
                 return ProductPriceApplyResult(inserted: 0, skippedExisting: 1, totalConsidered: 1)
             }
+            guard let productPriceID = existing.productPriceIDToLink,
+                  let productPrice = context.model(for: productPriceID) as? ProductPrice else {
+                throw ProductPriceApplyError.verificationFailed
+            }
+            productPrice.remoteID = row.id
             existing.remoteID = row.id
+            existing.productPriceIDToLink = nil
+            currentPricesByKey[key] = [existing]
             return ProductPriceApplyResult(
                 inserted: 0,
                 remoteIdentityLinked: 1,
@@ -1028,7 +1246,12 @@ struct SupabaseProductPriceApplyService {
             product: product
         )
         context.insert(newPrice)
-        currentPricesByKey[key] = [newPrice]
+        currentPricesByKey[key] = [
+            ProductPriceApplyCurrentPriceInfo(
+                canonicalPrice: canonicalPrice,
+                remoteID: row.id
+            )
+        ]
         return ProductPriceApplyResult(inserted: 1, skippedExisting: 0, totalConsidered: 1)
     }
 
@@ -1039,12 +1262,33 @@ struct SupabaseProductPriceApplyService {
         return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(String(describing: error))
             ?? "inventory_product_prices"
     }
+
+    private func redactedUUID(_ value: UUID?) -> String {
+        guard let value else { return "nil" }
+        return "\(value.uuidString.prefix(8))-redacted"
+    }
 }
 
 nonisolated private struct ProductPriceApplyLogicalKey: Hashable {
     let productID: UUID
     let type: String
     let effectiveAt: String
+}
+
+private struct ProductPriceApplyCurrentPriceInfo {
+    let canonicalPrice: ProductPriceCanonicalAmount
+    var remoteID: UUID?
+    var productPriceIDToLink: PersistentIdentifier?
+
+    init(
+        canonicalPrice: ProductPriceCanonicalAmount,
+        remoteID: UUID?,
+        productPriceIDToLink: PersistentIdentifier? = nil
+    ) {
+        self.canonicalPrice = canonicalPrice
+        self.remoteID = remoteID
+        self.productPriceIDToLink = productPriceIDToLink
+    }
 }
 
 nonisolated private struct ProductPriceApplyLocalPriceInfo: Sendable, Equatable {

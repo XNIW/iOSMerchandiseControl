@@ -87,3 +87,20 @@ Current targeted post-pass verdict:
 - iOS live app-auth sync: PARTIAL; catalog/ProductPrice local data populated, but baseline stayed invalid and History/session dirty entries remained dirty.
 - Android local database status parity: PASS by build/test/device smoke.
 - Cross-platform E2E/performance: BLOCKED / NOT VERIFIED.
+
+Final ProductPrice keyset FIX update 2026-05-14 12:34 -0400:
+
+| Wave | Implemented | Fixed during keyset pass | Not implemented yet | Blocked | Evidence |
+|------|-------------|--------------------------|---------------------|---------|----------|
+| Wave 1 | Options public sync surface remains implemented | Baseline status refresh after manual apply; final card shows `Database locale aggiornato` | Full signed-in visual matrix | — | `51`, `40` |
+| Wave 2 | Bootstrap/full pull code path implemented | ProductPrice keyset flow completes live, no silent idle; baseline writes after full apply | Physical iOS smoke | — | `30`, `40`, `48`, `51` |
+| Wave 3 | Auto foreground/incremental pull code/tests remain implemented | Failure/cancel state no longer collapses to idle | Controlled remote delta incremental pull | NOT VERIFIED in this focused pass | `17`, `51` |
+| Wave 4 | Pending/push architecture remains implemented | ProductPrice tombstoned remote rows skipped explicitly during pull | Controlled Database/ProductPrice push/read-back | NOT VERIFIED | `18`, `51` |
+| Wave 5 | Generated code path remains implemented | No change in this focused pass | Live Generated push/read-back | NOT VERIFIED | `19` |
+| Wave 6 | History/session core code remains wired into global sync | No change in this focused pass | Live History push/pull/read-back clears dirty entries | NOT VERIFIED | `20`, `21` |
+| Wave 7 | Debug/Release build, targeted tests, iOS live ProductPrice performance evidence | Large ProductPrice live performance measured | Android signed-in performance rerun, cross-platform E2E | NOT VERIFIED | `47`, `48`, `51` |
+
+Current keyset pass verdict:
+- iOS ProductPrice full pull/apply/baseline: PASS live.
+- Silent idle bug: FIXED.
+- TASK-108 global cross-platform/live E2E: still not DONE / not PASS.

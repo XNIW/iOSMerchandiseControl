@@ -75,3 +75,26 @@ Current live verdict:
 - Full live bootstrap PASS: NOT CLAIMED because baseline commit with the new batched writer was not re-run under a completed app-auth session.
 - Required next live step: sign in again, run `Scarica database dal cloud`, and verify baseline records become valid after the paged apply completes.
 
+## Final keyset/apply live update — 2026-05-14 12:34 -0400
+
+The missing app-auth rerun was completed through the public Options flow.
+
+Changes since the previous partial evidence:
+- ProductPrice full apply now uses keyset paging by `id` with page size `900`.
+- The UI no longer returns idle without a terminal result.
+- Postgres timestamp variants are decoded.
+- Tombstoned-product ProductPrice rows are skipped explicitly.
+- Baseline is refreshed in Options after manual sync completion.
+
+Live result:
+- Remote ProductPrice total: `290,955`.
+- ProductPrice rows with remote IDs in local SwiftData after completion: `290,953`.
+- Skipped remote ProductPrice rows: `2`, both tied to tombstoned remote products.
+- Total local ProductPrice rows after completion: `328,589` because local history includes existing/local rows in addition to remote-linked rows.
+- Baseline runs: `1`.
+- Baseline records: `20,012` (`19,886 product`, `79 supplier`, `47 productCategory`).
+- Final Options card: `Database locale aggiornato`, `Ultimo pull completo: 14 mag 2026, 12:33`.
+
+Verdict:
+- Large ProductPrice fixed-cap and silent-exit bug: **PASS live**.
+- Global TASK-108 live E2E: **not claimed** in this file.

@@ -298,7 +298,7 @@ final class SupabaseProductPricePreviewServiceTests: XCTestCase {
     func testPreviewFetchOrderContractIsStableForPagedPrices() {
         XCTAssertEqual(
             SupabaseInventoryService.productPriceStablePageOrderColumns,
-            ["product_id", "type", "effective_at", "id"]
+            ["id"]
         )
     }
 
