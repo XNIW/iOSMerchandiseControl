@@ -44,6 +44,7 @@ nonisolated enum SyncPreviewWarningCode: String, Sendable {
     case remoteDuplicateName
     case localDuplicateName
     case priceHistoryIncomplete
+    case priceHistoryPagedApplyRequired
     case priceHistoryUnmatchedProduct
     case priceHistoryInvalidType
     case priceHistoryInvalidEffectiveAt
@@ -294,6 +295,7 @@ nonisolated struct RemoteInventorySnapshot: Sendable {
     let tombstonedProducts: [RemoteInventoryProductRow]
     let duplicateBarcodeGroups: [String: [RemoteInventoryProductRow]]
     let sourceErrors: [SyncPreviewWarning]
+    let previewWarnings: [SyncPreviewWarning]
     let counts: RemoteInventorySnapshotCounts
 
     init(
@@ -301,7 +303,8 @@ nonisolated struct RemoteInventorySnapshot: Sendable {
         suppliers: [RemoteInventorySupplierRow],
         categories: [RemoteInventoryCategoryRow],
         productPrices: [RemoteInventoryProductPriceRow],
-        sourceErrors: [SyncPreviewWarning] = []
+        sourceErrors: [SyncPreviewWarning] = [],
+        previewWarnings: [SyncPreviewWarning] = []
     ) {
         self.products = products
         self.suppliersByID = Dictionary(uniqueKeysWithValues: suppliers.map { ($0.id, $0) })
@@ -319,6 +322,7 @@ nonisolated struct RemoteInventorySnapshot: Sendable {
         }
         self.duplicateBarcodeGroups = groups.filter { $0.value.count > 1 }
         self.sourceErrors = sourceErrors
+        self.previewWarnings = previewWarnings
         self.counts = RemoteInventorySnapshotCounts(
             products: products.count,
             activeProducts: activeProducts.count,

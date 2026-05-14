@@ -79,6 +79,38 @@ final class SupabaseManualSyncCoordinatorTests: XCTestCase {
         assertNoForbiddenUserFacingJargon(summary)
     }
 
+    func testDryRunBaselineMissingWithRemotePreviewProviderAllowsBootstrapPreview() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        fake.baselineResult = .missingOrInvalid
+        fake.snapshot = SupabaseManualSyncPrivacyCounts()
+        fake.remotePreviewSummary = SupabaseManualSyncRemotePreviewSummary(
+            hasRemoteSignals: true,
+            isComplete: true,
+            isPartial: false,
+            wasCancelled: false,
+            safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 2),
+            recommendedUserMessageKey: .cloudDataNeedsReview,
+            failureCategory: nil
+        )
+        let coordinator = SupabaseManualSyncCoordinator(
+            dependencies: .init(
+                authGate: fake,
+                baselineGate: fake,
+                pendingSnapshot: fake,
+                phaseSimulation: fake,
+                remotePreviewProvider: fake
+            )
+        )
+
+        let summary = await coordinator.run(mode: .dryRun)
+
+        XCTAssertEqual(summary.remotePreviewSummary, fake.remotePreviewSummary)
+        XCTAssertEqual(summary.executedPhases, [.authCheck, .baselineCheck, .localPendingCheck, .remotePreview, .summary])
+        XCTAssertEqual(fake.calls, [.authGate, .baselineGate, .pendingSnapshot, .remotePreview])
+        XCTAssertTrue(summary.skippedPhases.contains(.catalogPush))
+        assertNoForbiddenUserFacingJargon(summary)
+    }
+
     func testDryRunZeroPendingAllUpToDateSkipsPushConfirmationFlushPath() async {
         let fake = SupabaseManualSyncCoordinatorDryRunFake()
         fake.snapshot = SupabaseManualSyncPrivacyCounts()

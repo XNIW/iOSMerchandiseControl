@@ -146,6 +146,41 @@ final class SupabaseCatalogBaselineWriterReaderTests: XCTestCase {
         XCTAssertNotEqual(first.baselineRunID, second.baselineRunID)
     }
 
+    func testLargeCommitWritesBaselineRecordsInBatches() throws {
+        let context = try makeContext()
+        let ownerID = UUID()
+        let productCount = 1_200
+
+        for index in 0..<productCount {
+            context.insert(Product(
+                barcode: "TASK108_BASELINE_\(index)",
+                remoteID: UUID(),
+                productName: "Baseline product \(index)"
+            ))
+        }
+        try context.save()
+
+        let result = try SupabaseCatalogBaselineWriter(
+            now: clock(),
+            recordBatchSize: 75
+        ).commitLatestBaseline(
+            context: context,
+            ownerUserUUID: ownerID
+        )
+
+        XCTAssertEqual(result.productCount, productCount)
+        let recordCount = try context.fetchCount(FetchDescriptor<SupabaseCatalogBaselineRecord>())
+        XCTAssertEqual(recordCount, productCount)
+        let read = try SupabaseCatalogBaselineReader().readManualPushBaseline(
+            context: context,
+            ownerUserUUID: ownerID
+        )
+        guard case .available(let snapshot) = read else {
+            return XCTFail("Expected available baseline, got \(read)")
+        }
+        XCTAssertEqual(snapshot.baseline.productFingerprintsByRemoteID.count, productCount)
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             Product.self,

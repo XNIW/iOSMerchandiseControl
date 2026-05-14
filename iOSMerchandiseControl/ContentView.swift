@@ -119,6 +119,7 @@ struct ContentView: View {
     private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
     private let supabaseManualPushService: SupabaseManualPushService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
+    private let historySessionSyncService: HistorySessionSyncService?
 
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
@@ -144,6 +145,9 @@ struct ContentView: View {
         self.supabaseSyncEventPreviewService = supabaseSyncEventPreviewService
         self.supabaseManualPushService = supabaseManualPushService
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
+        self.historySessionSyncService = supabaseInventoryService.map {
+            HistorySessionSyncService(remote: $0)
+        }
     }
 
     private var resolvedColorScheme: ColorScheme? {
@@ -234,7 +238,7 @@ struct ContentView: View {
 
             // TAB 3: Cronologia
             NavigationStack {
-                HistoryView()
+                HistoryView(historySessionSyncService: historySessionSyncService)
             }
             .tabItem {
                 Label(L("tab.history"), systemImage: "clock.arrow.circlepath")
@@ -419,7 +423,7 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
     private func shouldShowRootBanner(_ state: SupabaseManualSyncRootPresentationState) -> Bool {
         guard state.kind != .hidden else { return false }
         guard state.kind != .blockedAuth else { return false }
-        guard state.primaryActionID != nil else { return false }
+        guard state.primaryActionID != nil || state.kind == .checking else { return false }
         guard selectedTab != 3 else { return false }
         guard !activityCenter.isBusy else { return false }
         return true
@@ -463,7 +467,7 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
                 await viewModel.start(with: mode)
                 foregroundTask = nil
             }
-        case .checkCloud:
+        case .checkCloud, .downloadCloudDatabase:
             startRootForegroundCheckIfAllowed()
         case .realignData, .syncNow, .sendCloudChanges, .cancel, .none:
             selectedTab = 3
@@ -490,7 +494,27 @@ private struct SupabaseManualSyncRootForegroundBanner: View {
                     .fontWeight(.semibold)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let detail = state.detail,
+                if let progress = state.progressState {
+                    Text(progress.message)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let countText = progress.countText {
+                        Text(countText)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let percentage = progress.percentage {
+                        ProgressView(value: percentage)
+                            .progressViewStyle(.linear)
+                            .frame(maxWidth: 180)
+                    } else if progress.isActive {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                } else if let detail = state.detail,
                    !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(detail)
                         .font(.footnote)

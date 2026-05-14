@@ -88,6 +88,50 @@ final class SupabaseManualSyncLocalPendingSnapshotProviderTests: XCTestCase {
         XCTAssertTrue(catalog.ownerCalls.isEmpty)
     }
 
+    func testHistorySessionLocalPendingIsReportedAsQueuedCloudOperation() async throws {
+        let session = ManualSyncSessionFake(isSignedIn: true, ownerUserID: ownerA)
+        let local = LocalPendingCounterFake(snapshot: LocalPendingChangeSnapshot(
+            pendingHistorySessionChangeCount: 2
+        ))
+        let catalog = CatalogPendingCounterFake(countsByOwner: [ownerA: 0])
+        let outbox = OutboxPendingCounterFake(countsByOwner: [ownerA: 1])
+        let provider = makeProvider(session: session, local: local, catalog: catalog, outbox: outbox)
+
+        let snapshot = try await provider.loadLocalPendingSnapshot()
+
+        XCTAssertEqual(snapshot.pendingCatalogChangeCount, 0)
+        XCTAssertEqual(snapshot.pendingPriceChangeCount, 0)
+        XCTAssertEqual(snapshot.pendingQueuedCloudOperationCount, 3)
+    }
+
+    func testDirtyHistoryEntriesAreReportedAsQueuedCloudOperationsWithoutPendingRows() async throws {
+        let context = try makeLocalPendingContext()
+        let dirty = HistoryEntry(id: "history-dirty")
+        let clean = HistoryEntry(
+            id: "history-clean",
+            remoteID: UUID(),
+            remotePayloadFingerprint: "clean-fingerprint",
+            localChangeRevision: 1,
+            lastSyncedLocalRevision: 1
+        )
+        context.insert(dirty)
+        context.insert(clean)
+        try context.save()
+
+        let session = ManualSyncSessionFake(isSignedIn: true, ownerUserID: ownerA)
+        let adapter = LocalPendingChangePendingAdapter(context: context)
+        let catalog = CatalogPendingCounterFake(countsByOwner: [ownerA: 0])
+        let outbox = OutboxPendingCounterFake(countsByOwner: [ownerA: 0])
+        let provider = makeProvider(session: session, local: adapter, catalog: catalog, outbox: outbox)
+
+        let localSnapshot = try await adapter.pendingLocalChangeSnapshot(ownerUserID: ownerA)
+        let snapshot = try await provider.loadLocalPendingSnapshot()
+
+        XCTAssertEqual(localSnapshot.pendingHistorySessionChangeCount, 1)
+        XCTAssertEqual(snapshot.pendingQueuedCloudOperationCount, 1)
+        XCTAssertTrue(snapshot.hasAnyPendingWork)
+    }
+
     func testMissingAuthSessionReturnsZeroWithoutCallingCounters() async throws {
         let session = ManualSyncSessionFake(isSignedIn: false, ownerUserID: nil)
         let catalog = CatalogPendingCounterFake(countsByOwner: [ownerA: 9])
@@ -251,7 +295,7 @@ final class SupabaseManualSyncLocalPendingSnapshotProviderTests: XCTestCase {
 
     private func makeProvider(
         session: ManualSyncSessionFake,
-        local: LocalPendingCounterFake? = nil,
+        local: (any SupabaseManualSyncLocalPendingChangeCounting)? = nil,
         catalog: CatalogPendingCounterFake,
         price: ProductPricePendingCounterFake? = nil,
         outbox: OutboxPendingCounterFake
@@ -303,6 +347,14 @@ final class SupabaseManualSyncLocalPendingSnapshotProviderTests: XCTestCase {
 
     private func makeOutboxContext() throws -> ModelContext {
         let schema = Schema([SyncEventOutboxEntry.self])
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [configuration])
+        Self.retainedContainers.append(container)
+        return ModelContext(container)
+    }
+
+    private func makeLocalPendingContext() throws -> ModelContext {
+        let schema = Schema([LocalPendingChange.self, HistoryEntry.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         Self.retainedContainers.append(container)

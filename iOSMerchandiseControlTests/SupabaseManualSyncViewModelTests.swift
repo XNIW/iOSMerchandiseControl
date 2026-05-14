@@ -512,7 +512,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertFalse(withoutProvider.supportsGuidedManualSync)
     }
 
-    func testPresentationStateRemoteCapabilityShowsCheckCloudWithoutSyncNow() async {
+    func testPresentationStateRemoteCapabilityShowsSyncNowOnly() async {
         let fake = ClosureSupabaseManualSyncCoordinatorFake()
         let vm = SupabaseManualSyncViewModel(
             coordinator: fake,
@@ -523,15 +523,15 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         )
         let state = vm.presentationState
 
-        XCTAssertEqual(state.primaryAction?.id, .checkCloud)
+        XCTAssertEqual(state.primaryAction?.id, .syncNow)
         XCTAssertNil(state.secondaryAction)
-        XCTAssertFalse(actionIDs(state).contains(.syncNow))
-        XCTAssertEqual(vm.runMode(for: .checkCloud), .dryRun)
+        XCTAssertEqual(actionIDs(state), [.syncNow])
+        XCTAssertEqual(vm.runMode(for: .syncNow), .dryRun)
         assertSinglePrimaryAction(state)
         assertNoForbiddenUserFacingJargon(vm)
     }
 
-    func testPresentationStateGuidedCapabilityShowsSyncNowAndOptionalCloudSecondary() async {
+    func testPresentationStateGuidedCapabilityShowsSingleSyncNowAction() async {
         let fake = ClosureSupabaseManualSyncCoordinatorFake()
         let vm = SupabaseManualSyncViewModel(
             coordinator: fake,
@@ -543,8 +543,9 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let state = vm.presentationState
 
         XCTAssertEqual(state.primaryAction?.id, .syncNow)
-        XCTAssertEqual(state.secondaryAction?.id, .checkCloud)
-        XCTAssertEqual(vm.runMode(for: .syncNow), .guidedManual)
+        XCTAssertNil(state.secondaryAction)
+        XCTAssertEqual(actionIDs(state), [.syncNow])
+        XCTAssertEqual(vm.runMode(for: .syncNow), .dryRun)
         XCTAssertEqual(vm.runMode(for: .checkCloud), .dryRun)
         assertSinglePrimaryAction(state)
         assertNoForbiddenUserFacingJargon(vm)
@@ -639,8 +640,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let state = vm.rootPresentationState
         XCTAssertFalse(didStart)
         XCTAssertEqual(vm.semiAutomaticState, .blockedAuth)
-        XCTAssertEqual(state.kind, .blockedAuth)
-        XCTAssertEqual(state.primaryActionID, .signIn)
+        XCTAssertEqual(state.kind, .recoverableError)
+        XCTAssertEqual(state.primaryActionID, .checkCloud)
         XCTAssertTrue(fake.calls.isEmpty)
         assertRootPresentationPrivacySafe(state)
     }
@@ -813,7 +814,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertFalse(didStart)
         XCTAssertEqual(vm.semiAutomaticState, .blockedAuth)
         XCTAssertTrue(fake.calls.isEmpty)
-        XCTAssertEqual(vm.presentationState.primaryAction?.id, .signIn)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .checkCloud)
         assertNoForbiddenUserFacingJargon(vm)
     }
 
@@ -825,7 +826,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         vm.suggestSemiAutomaticCheckIfAllowed(now: now)
 
         XCTAssertEqual(vm.semiAutomaticState, .suggestedCheck)
-        XCTAssertEqual(vm.presentationState.primaryAction?.id, .checkCloud)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .syncNow)
         XCTAssertNil(vm.presentationState.secondaryAction)
         assertSinglePrimaryAction(vm.presentationState)
 
@@ -1000,7 +1001,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         vm.suggestSemiAutomaticCheckIfAllowed(now: now.addingTimeInterval(1_800))
 
         XCTAssertEqual(vm.semiAutomaticState, .suggestedCheck)
-        XCTAssertEqual(vm.presentationState.primaryAction?.id, .checkCloud)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .syncNow)
         assertNoForbiddenUserFacingJargon(vm)
     }
 
@@ -1594,8 +1595,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.semiAutomaticState, .blockedAuth)
         XCTAssertEqual(vm.presentationKind, .blockedNeedsSignIn)
-        XCTAssertEqual(vm.presentationState.primaryAction?.id, .signIn)
-        XCTAssertEqual(vm.rootPresentationState.primaryActionID, .signIn)
+        XCTAssertEqual(vm.presentationState.primaryAction?.id, .checkCloud)
+        XCTAssertEqual(vm.rootPresentationState.primaryActionID, .checkCloud)
         assertNoForbiddenUserFacingJargon(vm)
     }
 
@@ -1739,9 +1740,9 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let vm = makeTask075SmallDatasetViewModel(coordinator: coordinator)
 
         let idle = vm.presentationState
-        XCTAssertEqual(idle.primaryAction?.id, .checkCloud)
+        XCTAssertEqual(idle.primaryAction?.id, .syncNow)
         XCTAssertNil(idle.secondaryAction)
-        XCTAssertFalse(actionIDs(idle).contains(.syncNow))
+        XCTAssertEqual(actionIDs(idle), [.syncNow])
 
         let run = Task { await vm.start(with: .dryRun) }
         try await Task.sleep(for: .milliseconds(10))
@@ -1950,6 +1951,38 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertTrue(vm.presentationState.userFacingSummary?.message.contains("prodotti aggiunti: 1") ?? false)
         XCTAssertEqual(vm.rootPresentationState.kind, .hidden)
         assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask108BaselineAbsentUsesUnifiedSyncCopyForApplicableReviewCTA() async throws {
+        let context = try makeContext()
+        let staging = ManualSyncPreviewStagingFake()
+        staging.stagedPreviewForLocalApply = makeApplicablePreview(
+            newProducts: [
+                makeApplicableProductSummary(
+                    barcode: "100",
+                    productName: "Remote item"
+                )
+            ]
+        )
+        let vm = makeApplyReadyViewModel(
+            context: context,
+            staging: staging,
+            baselineStatusProvider: { .absent }
+        )
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(newProductCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+
+        let state = vm.presentationState
+        XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
+        XCTAssertEqual(state.primaryAction?.title, "Sincronizza ora")
+        XCTAssertNotNil(state.reviewSheet)
     }
 
     func testTask078PartialPreviewBlocksLocalApplyWithNaturalCopy() async throws {
@@ -3090,7 +3123,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         context: ModelContext,
         staging: ManualSyncPreviewStagingFake,
         isAuthenticated: @MainActor @Sendable @escaping () -> Bool = { true },
-        currentOwnerID: (@MainActor @Sendable () -> UUID?)? = nil
+        currentOwnerID: (@MainActor @Sendable () -> UUID?)? = nil,
+        baselineStatusProvider: (@MainActor @Sendable () -> SupabaseCatalogBaselineDebugSummary?)? = nil
     ) -> SupabaseManualSyncViewModel {
         SupabaseManualSyncViewModel(
             coordinator: ClosureSupabaseManualSyncCoordinatorFake(),
@@ -3102,7 +3136,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             localApplyService: SupabasePullApplyService(),
             localApplyContext: context,
             isLocalApplyAuthenticated: isAuthenticated,
-            currentLocalApplyOwnerID: currentOwnerID
+            currentLocalApplyOwnerID: currentOwnerID,
+            baselineStatusProvider: baselineStatusProvider
         )
     }
 

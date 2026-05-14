@@ -3,6 +3,13 @@ import SwiftData
 
 protocol SupabaseProductPricePreviewFetching: Sendable {
     func fetchProductPricesPreviewPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow]
+    func fetchProductPriceCount() async throws -> Int?
+}
+
+extension SupabaseProductPricePreviewFetching {
+    func fetchProductPriceCount() async throws -> Int? {
+        nil
+    }
 }
 
 extension SupabaseInventoryService: SupabaseProductPricePreviewFetching {}

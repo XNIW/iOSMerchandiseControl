@@ -82,6 +82,14 @@ final class HistoryEntry {
     
     /// UID interno (tipo il `uid: Long` in Room)
     var uid: UUID
+
+    /// Bridge remoto verso public.shared_sheet_sessions.remote_id.
+    var remoteID: UUID?
+    var remoteUpdatedAt: Date?
+    var remoteDeletedAt: Date?
+    var remotePayloadFingerprint: String?
+    var localChangeRevision: Int = 0
+    var lastSyncedLocalRevision: Int = 0
     
     // Proprietà calcolate per accedere ai dati in formato array
     var data: [[String]] {
@@ -128,7 +136,13 @@ final class HistoryEntry {
         missingItems: Int = 0,
         syncStatus: HistorySyncStatus = .notAttempted,
         wasExported: Bool = false,
-        uid: UUID = UUID()
+        uid: UUID = UUID(),
+        remoteID: UUID? = nil,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil,
+        remotePayloadFingerprint: String? = nil,
+        localChangeRevision: Int = 0,
+        lastSyncedLocalRevision: Int = 0
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -147,6 +161,12 @@ final class HistoryEntry {
         self.syncStatus = syncStatus
         self.wasExported = wasExported
         self.uid = uid
+        self.remoteID = remoteID
+        self.remoteUpdatedAt = remoteUpdatedAt
+        self.remoteDeletedAt = remoteDeletedAt
+        self.remotePayloadFingerprint = remotePayloadFingerprint
+        self.localChangeRevision = localChangeRevision
+        self.lastSyncedLocalRevision = lastSyncedLocalRevision
     }
 
     func evaluateJSONDecodeSnapshot() -> HistoryEntryJSONDecodeSnapshot {
@@ -190,5 +210,37 @@ final class HistoryEntry {
 
             return HistoryEntryJSONDecodeOutcome(value: defaultValue, hasFault: true)
         }
+    }
+}
+
+extension HistoryEntry {
+    var isHistorySessionDirtyForCloud: Bool {
+        remotePayloadFingerprint == nil || localChangeRevision > lastSyncedLocalRevision
+    }
+
+    func ensureHistorySessionRemoteID() -> UUID {
+        if let remoteID {
+            return remoteID
+        }
+        remoteID = uid
+        return uid
+    }
+
+    func markHistorySessionLocalMutation() {
+        localChangeRevision += 1
+        remoteDeletedAt = nil
+    }
+
+    func markHistorySessionRemoteApplied(
+        remoteID: UUID,
+        remoteUpdatedAt: Date?,
+        fingerprint: String,
+        syncedRevision: Int
+    ) {
+        self.remoteID = remoteID
+        self.remoteUpdatedAt = remoteUpdatedAt
+        self.remoteDeletedAt = nil
+        self.remotePayloadFingerprint = fingerprint
+        self.lastSyncedLocalRevision = syncedRevision
     }
 }

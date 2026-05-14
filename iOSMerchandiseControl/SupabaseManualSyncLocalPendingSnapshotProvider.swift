@@ -72,13 +72,14 @@ final class SupabaseManualSyncLocalPendingSnapshotProvider: SupabaseManualSyncLo
             priceCount = try await productPricePendingCounter?.pendingProductPriceChangeCount(ownerUserID: ownerUserID) ?? 0
         }
         try Task.checkCancellation()
-        let queuedOperationCount = try await outboxPendingCounter.pendingQueuedCloudOperationCount(ownerUserID: ownerUserID)
+        let outboxQueuedOperationCount = try await outboxPendingCounter.pendingQueuedCloudOperationCount(ownerUserID: ownerUserID)
+        let historySessionQueuedOperationCount = localSnapshot?.pendingHistorySessionChangeCount ?? 0
         try Task.checkCancellation()
 
         return SupabaseManualSyncPrivacyCounts(
             pendingCatalogChangeCount: max(0, max(localSnapshot?.pendingCatalogChangeCount ?? 0, fallbackCatalogCount)),
             pendingPriceChangeCount: max(0, priceCount),
-            pendingQueuedCloudOperationCount: max(0, queuedOperationCount)
+            pendingQueuedCloudOperationCount: max(0, outboxQueuedOperationCount + historySessionQueuedOperationCount)
         )
     }
 }

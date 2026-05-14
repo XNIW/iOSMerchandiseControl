@@ -117,13 +117,15 @@ final class SupabaseManualSyncCoordinator {
                 }
             }
             if ledger[.baselineCheck] == .blocked {
-                Self.appendSkippedAfterBlocked(startingAt: .localPendingCheck, skipped: &skipped)
-                return Self.finalizeBlockedBaseline(
-                    executed: executed,
-                    skipped: skipped,
-                    counts: counts,
-                    ledger: ledger
-                )
+                if dependencies.remotePreviewProvider == nil {
+                    Self.appendSkippedAfterBlocked(startingAt: .localPendingCheck, skipped: &skipped)
+                    return Self.finalizeBlockedBaseline(
+                        executed: executed,
+                        skipped: skipped,
+                        counts: counts,
+                        ledger: ledger
+                    )
+                }
             }
 
             // localPendingCheck

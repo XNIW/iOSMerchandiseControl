@@ -55,8 +55,9 @@ struct iOSMerchandiseControlApp: App {
             let inventoryService = SupabaseInventoryService(clientProvider: provider)
             let previewService = SupabasePullPreviewService(
                 inventoryService: inventoryService,
-                catalogRowBudget: 5_000,
-                productPriceRowBudget: 5_000
+                pageSize: 1_000,
+                catalogRowBudget: nil,
+                productPricePreviewSampleLimit: 1_000
             )
             let syncEventReader = SupabaseSyncEventRemoteReader(clientProvider: provider)
             let syncEventPreviewService = SupabaseSyncEventPreviewService(fetcher: syncEventReader)

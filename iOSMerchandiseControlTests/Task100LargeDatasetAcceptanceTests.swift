@@ -325,7 +325,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
             inventoryService: fetcher,
             pageSize: spec.pageSize,
             catalogRowBudget: nil,
-            productPriceRowBudget: nil
+            productPricePreviewSampleLimit: nil
         )
 
         let started = DispatchTime.now().uptimeNanoseconds
@@ -370,7 +370,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
             inventoryService: fetcher,
             pageSize: spec.pageSize,
             catalogRowBudget: nil,
-            productPriceRowBudget: nil
+            productPricePreviewSampleLimit: nil
         )
 
         let started = DispatchTime.now().uptimeNanoseconds
@@ -793,7 +793,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
                 inventoryService: scopedPreviewFetcher,
                 pageSize: 50,
                 catalogRowBudget: nil,
-                productPriceRowBudget: nil
+                productPricePreviewSampleLimit: nil
             ).generatePreview(context: try makeContext())
             guard case .success(let preview) = previewState else {
                 throw Task100LiveValidationError.blocked("Expected successful scoped live preview, got \(previewState).")
@@ -985,7 +985,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
             inventoryService: scopedPreviewFetcher,
             pageSize: 50,
             catalogRowBudget: nil,
-            productPriceRowBudget: nil
+            productPricePreviewSampleLimit: nil
         ).generatePreview(context: try makeContext())
         guard case .success(let preview) = previewState else {
             throw Task100LiveValidationError.blocked("Expected successful read-only live preview, got \(previewState).")

@@ -29,6 +29,8 @@ private func historyDisplayLocale(for appLanguage: String) -> Locale {
 struct HistoryView: View {
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     @Environment(\.modelContext) private var context
+    @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
+    private let historySessionSyncService: HistorySessionSyncService?
     
     // Legge tutte le HistoryEntry ordinate per timestamp decrescente
     @Query(
@@ -61,12 +63,15 @@ struct HistoryView: View {
     }
     @State private var shareItem: ShareItem?
     @State private var activeAlert: ActiveAlert?
-
     private struct EditItem: Identifiable {
         let id = UUID()
         let entry: HistoryEntry
     }
     @State private var editItem: EditItem?
+
+    init(historySessionSyncService: HistorySessionSyncService? = nil) {
+        self.historySessionSyncService = historySessionSyncService
+    }
 
     private var resolvedLanguageCode: String {
         historyResolvedLanguageCode(for: appLanguage)
@@ -229,6 +234,86 @@ struct HistoryView: View {
         .accessibilityElement(children: .combine)
     }
 
+    private var isHistoryCloudAvailable: Bool {
+        historySessionSyncService != nil && supabaseAuthViewModel.isSignedIn && supabaseAuthViewModel.sessionInfo?.userID != nil
+    }
+
+    private var pendingHistorySessionCount: Int {
+        entries.filter(\.isHistorySessionDirtyForCloud).count
+    }
+
+    private var latestHistorySyncedAt: Date? {
+        entries.compactMap(\.remoteUpdatedAt).max()
+    }
+
+    private var historyCloudStatusText: String {
+        if !supabaseAuthViewModel.isSignedIn {
+            return L("history.cloud.status.sign_in")
+        }
+        if historySessionSyncService == nil {
+            return L("history.cloud.status.unavailable")
+        }
+        if pendingHistorySessionCount > 0 {
+            return L("history.cloud.status.pending", pendingHistorySessionCount)
+        }
+        if let latestHistorySyncedAt {
+            return L(
+                "history.cloud.status.synced_at",
+                latestHistorySyncedAt.formatted(date: .abbreviated, time: .shortened)
+            )
+        }
+        return L("history.cloud.status.ready")
+    }
+
+    private var historyCloudSystemImage: String {
+        if !supabaseAuthViewModel.isSignedIn || historySessionSyncService == nil {
+            return "icloud.slash"
+        }
+        if pendingHistorySessionCount > 0 {
+            return "icloud.and.arrow.up"
+        }
+        return "icloud"
+    }
+
+    private var historyCloudColor: Color {
+        if pendingHistorySessionCount > 0 {
+            return .orange
+        }
+        if isHistoryCloudAvailable {
+            return .blue
+        }
+        return .secondary
+    }
+
+    private var historyCloudSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: historyCloudSystemImage)
+                        .foregroundStyle(historyCloudColor)
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(L("history.cloud.title"))
+                            .font(.subheadline.weight(.semibold))
+                        Text(historyCloudStatusText)
+                            .font(.footnote)
+                            .foregroundStyle(pendingHistorySessionCount > 0 ? .orange : .secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
+                }
+
+                Text(L("history.cloud.sync_hint"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
     private func customDateBinding(for field: CustomDateField) -> Binding<Date> {
         switch field {
         case .from:
@@ -313,7 +398,7 @@ struct HistoryView: View {
             #endif
         }
     }
-    
+
     private func deleteEntries(at offsets: IndexSet) {
         // offsets si riferisce agli indici in filteredEntries, non in entries
         for index in offsets {
@@ -360,12 +445,19 @@ struct HistoryView: View {
     var body: some View {
         Group {
             if entries.isEmpty {
-                emptyHistoryState
+                List {
+                    historyCloudSection
+                    Section {
+                        emptyHistoryState
+                    }
+                }
             } else {
                 let errorEntriesCount = entries.filter { $0.syncStatus == .attemptedWithErrors }.count
                 let totalCount = entries.count
 
                 List {
+                        historyCloudSection
+
                         // Barra filtri in cima alla lista
                         Section {
                             VStack(alignment: .leading, spacing: 8) {

@@ -8,11 +8,13 @@ nonisolated struct ProductPriceApplySessionSnapshot: Sendable, Equatable {
 nonisolated struct ProductPriceApplySourceState: Sendable, Equatable {
     let partial: Bool
     let truncated: Bool
+    let sampled: Bool
     let sourceError: String?
 
-    init(partial: Bool = false, truncated: Bool = false, sourceError: String? = nil) {
+    init(partial: Bool = false, truncated: Bool = false, sampled: Bool = false, sourceError: String? = nil) {
         self.partial = partial
         self.truncated = truncated
+        self.sampled = sampled
         self.sourceError = SupabasePullPreviewNormalizer.semanticString(sourceError)
     }
 }
@@ -235,7 +237,15 @@ nonisolated struct ProductPriceApplyPlan: Sendable {
     }
 
     var isApplyAllowed: Bool {
-        blockReasons.isEmpty && (!linesToInsert.isEmpty || !remoteIdentityLinks.isEmpty)
+        if blockReasons.isEmpty && (!linesToInsert.isEmpty || !remoteIdentityLinks.isEmpty) {
+            return true
+        }
+        if sourceState.sampled,
+           summary.remoteRead > 0,
+           blockReasons.allSatisfy({ $0 == .noApplicableRows }) {
+            return true
+        }
+        return false
     }
 
     var hasHardBlocks: Bool {
@@ -257,11 +267,36 @@ nonisolated struct ProductPriceApplyResult: Sendable, Equatable {
     }
 }
 
+nonisolated struct ProductPricePagedApplyProgress: Sendable, Equatable {
+    enum Stage: String, Sendable, Equatable {
+        case preparing
+        case fetching
+        case applying
+        case saving
+        case completed
+    }
+
+    let stage: Stage
+    let processedRows: Int
+    let pageIndex: Int
+    let pageSize: Int
+    let totalRows: Int?
+
+    init(stage: Stage, processedRows: Int, pageIndex: Int, pageSize: Int, totalRows: Int? = nil) {
+        self.stage = stage
+        self.processedRows = processedRows
+        self.pageIndex = pageIndex
+        self.pageSize = pageSize
+        self.totalRows = totalRows
+    }
+}
+
 nonisolated enum ProductPriceApplyError: Error, Sendable, Equatable {
     case fetcherMissing
     case sessionMismatch
     case policyBlocked([ProductPriceApplyBlockReason])
     case localSnapshotFailed(message: String?)
+    case remoteFetchFailed(message: String?)
     case saveFailed(message: String?)
     case verificationFailed
 }
@@ -271,7 +306,7 @@ nonisolated struct ProductPriceApplyFetchOptions: Sendable, Equatable {
     let maxRows: Int
     let maxPages: Int
 
-    init(pageSize: Int = 500, maxRows: Int = 50_000, maxPages: Int = 100) {
+    init(pageSize: Int = 1_000, maxRows: Int = 1_000, maxPages: Int = 1) {
         self.pageSize = max(1, min(pageSize, 1_000))
         self.maxRows = max(1, maxRows)
         self.maxPages = max(1, maxPages)
@@ -404,6 +439,35 @@ struct SupabaseProductPriceApplyService {
             sourceState: fetchResult.sourceState,
             sessionSnapshot: sessionSnapshot
         )
+    }
+
+    func loadBootstrapPreviewSample(
+        context: ModelContext,
+        sessionSnapshot: ProductPriceApplySessionSnapshot
+    ) async throws -> ProductPriceApplyPlan {
+        guard let fetcher else {
+            throw ProductPriceApplyError.fetcherMissing
+        }
+
+        let currentPageSize = fetchOptions.pageSize
+        do {
+            try Task.checkCancellation()
+            let rows = try await fetcher.fetchProductPricesPreviewPage(
+                from: 0,
+                to: currentPageSize - 1
+            )
+            try Task.checkCancellation()
+            return try prepareApplyPlan(
+                remoteRows: rows,
+                context: context,
+                sourceState: ProductPriceApplySourceState(sampled: rows.count == currentPageSize),
+                sessionSnapshot: sessionSnapshot
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw ProductPriceApplyError.remoteFetchFailed(message: safeDiagnosticDetail(for: error))
+        }
     }
 
     func prepareApplyPlan(
@@ -564,6 +628,171 @@ struct SupabaseProductPriceApplyService {
             remoteIdentityLinked: remoteIdentityLinked,
             skippedExisting: skippedExisting,
             totalConsidered: verificationPlan.summary.remoteRead
+        )
+    }
+
+    func applyPagedFullPull(
+        plan: ProductPriceApplyPlan,
+        context: ModelContext,
+        currentSessionSnapshot: ProductPriceApplySessionSnapshot,
+        onProgress: @escaping @MainActor @Sendable (ProductPricePagedApplyProgress) -> Void = { _ in }
+    ) async throws -> ProductPriceApplyResult {
+        guard let fetcher else {
+            throw ProductPriceApplyError.fetcherMissing
+        }
+        guard plan.sessionSnapshot == currentSessionSnapshot else {
+            throw ProductPriceApplyError.sessionMismatch
+        }
+        let hardBlocks = plan.blockReasons.filter { $0 != .noApplicableRows }
+        guard hardBlocks.isEmpty else {
+            throw ProductPriceApplyError.policyBlocked(hardBlocks)
+        }
+
+        let remoteTotalRows: Int?
+        do {
+            remoteTotalRows = try await fetcher.fetchProductPriceCount()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            remoteTotalRows = nil
+        }
+
+        onProgress(
+            ProductPricePagedApplyProgress(
+                stage: .preparing,
+                processedRows: 0,
+                pageIndex: 0,
+                pageSize: fetchOptions.pageSize,
+                totalRows: remoteTotalRows
+            )
+        )
+
+        var productsByRemoteID = try fetchUniqueProductsByRemoteID(context: context)
+        var currentPricesByKey = try fetchCurrentPricesByKey(context: context)
+        var seenRemoteIDs = Set<UUID>()
+        var inserted = 0
+        var remoteIdentityLinked = 0
+        var skippedExisting = 0
+        var totalConsidered = 0
+        var offset = 0
+        var pageIndex = 0
+
+        while true {
+            try Task.checkCancellation()
+            onProgress(
+                ProductPricePagedApplyProgress(
+                    stage: .fetching,
+                    processedRows: totalConsidered,
+                    pageIndex: pageIndex + 1,
+                    pageSize: fetchOptions.pageSize,
+                    totalRows: remoteTotalRows
+                )
+            )
+
+            let page: [RemoteInventoryProductPriceRow]
+            do {
+                page = try await fetcher.fetchProductPricesPreviewPage(
+                    from: offset,
+                    to: offset + fetchOptions.pageSize - 1
+                )
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                throw ProductPriceApplyError.remoteFetchFailed(message: safeDiagnosticDetail(for: error))
+            }
+            try Task.checkCancellation()
+
+            guard page.count <= fetchOptions.pageSize else {
+                throw ProductPriceApplyError.remoteFetchFailed(
+                    message: "inventory_product_prices range returned too many rows"
+                )
+            }
+
+            if page.isEmpty {
+                break
+            }
+
+            onProgress(
+                ProductPricePagedApplyProgress(
+                    stage: .applying,
+                    processedRows: totalConsidered,
+                    pageIndex: pageIndex + 1,
+                    pageSize: fetchOptions.pageSize,
+                    totalRows: remoteTotalRows
+                )
+            )
+
+            var pageMutations = 0
+            for row in page {
+                let outcome = try applyRemotePriceRow(
+                    row,
+                    sessionSnapshot: currentSessionSnapshot,
+                    productsByRemoteID: &productsByRemoteID,
+                    currentPricesByKey: &currentPricesByKey,
+                    seenRemoteIDs: &seenRemoteIDs,
+                    context: context
+                )
+                inserted += outcome.inserted
+                remoteIdentityLinked += outcome.remoteIdentityLinked
+                skippedExisting += outcome.skippedExisting
+                pageMutations += outcome.inserted + outcome.remoteIdentityLinked
+            }
+
+            totalConsidered += page.count
+            if pageMutations > 0 {
+                onProgress(
+                    ProductPricePagedApplyProgress(
+                        stage: .saving,
+                        processedRows: totalConsidered,
+                        pageIndex: pageIndex + 1,
+                        pageSize: fetchOptions.pageSize,
+                        totalRows: remoteTotalRows
+                    )
+                )
+                do {
+                    try context.save()
+                    await Task.yield()
+                } catch {
+                    context.rollback()
+                    throw ProductPriceApplyError.saveFailed(message: String(describing: error))
+                }
+            } else {
+                await Task.yield()
+            }
+
+            onProgress(
+                ProductPricePagedApplyProgress(
+                    stage: .applying,
+                    processedRows: totalConsidered,
+                    pageIndex: pageIndex + 1,
+                    pageSize: fetchOptions.pageSize,
+                    totalRows: remoteTotalRows
+                )
+            )
+
+            if page.count < fetchOptions.pageSize {
+                break
+            }
+
+            offset += fetchOptions.pageSize
+            pageIndex += 1
+        }
+
+        onProgress(
+            ProductPricePagedApplyProgress(
+                stage: .completed,
+                processedRows: totalConsidered,
+                pageIndex: pageIndex + 1,
+                pageSize: fetchOptions.pageSize,
+                totalRows: remoteTotalRows
+            )
+        )
+
+        return ProductPriceApplyResult(
+            inserted: inserted,
+            remoteIdentityLinked: remoteIdentityLinked,
+            skippedExisting: skippedExisting,
+            totalConsidered: totalConsidered
         )
     }
 
@@ -729,6 +958,78 @@ struct SupabaseProductPriceApplyService {
 
     private func priceType(from normalizedType: String) -> PriceType {
         normalizedType == PriceType.retail.rawValue ? .retail : .purchase
+    }
+
+    private func applyRemotePriceRow(
+        _ row: RemoteInventoryProductPriceRow,
+        sessionSnapshot: ProductPriceApplySessionSnapshot,
+        productsByRemoteID: inout [UUID: Product],
+        currentPricesByKey: inout [ProductPriceApplyLogicalKey: [ProductPrice]],
+        seenRemoteIDs: inout Set<UUID>,
+        context: ModelContext
+    ) throws -> ProductPriceApplyResult {
+        guard row.ownerUserID == sessionSnapshot.userID else {
+            throw ProductPriceApplyError.policyBlocked([.sourceError, .invalidRows])
+        }
+        guard seenRemoteIDs.insert(row.id).inserted else {
+            throw ProductPriceApplyError.policyBlocked([.conflicts])
+        }
+        guard let type = SupabasePullPreviewNormalizer.normalizedPriceType(row.type) else {
+            throw ProductPriceApplyError.policyBlocked([.invalidRows])
+        }
+        guard let canonicalPrice = PriceCanonicalizer.canonicalAmount(from: row.price) else {
+            throw ProductPriceApplyError.policyBlocked([.invalidRows])
+        }
+        guard let effectiveAt = ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: row.effectiveAt) else {
+            throw ProductPriceApplyError.policyBlocked([.invalidRows])
+        }
+        guard let product = productsByRemoteID[row.productID] else {
+            throw ProductPriceApplyError.policyBlocked([.unmappedProducts])
+        }
+
+        let effectiveAtCanonical = ProductPriceEffectiveAtCanonicalizer.canonicalString(from: effectiveAt)
+        let key = ProductPriceApplyLogicalKey(
+            productID: row.productID,
+            type: type,
+            effectiveAt: effectiveAtCanonical
+        )
+
+        if let existingPrices = currentPricesByKey[key] {
+            guard existingPrices.count == 1,
+                  let existing = existingPrices.first else {
+                throw ProductPriceApplyError.policyBlocked([.conflicts])
+            }
+            guard PriceCanonicalizer.canonicalAmount(from: existing.price) == canonicalPrice else {
+                throw ProductPriceApplyError.policyBlocked([.conflicts])
+            }
+            if let existingRemoteID = existing.remoteID {
+                guard existingRemoteID == row.id else {
+                    throw ProductPriceApplyError.policyBlocked([.conflicts])
+                }
+                return ProductPriceApplyResult(inserted: 0, skippedExisting: 1, totalConsidered: 1)
+            }
+            existing.remoteID = row.id
+            return ProductPriceApplyResult(
+                inserted: 0,
+                remoteIdentityLinked: 1,
+                skippedExisting: 1,
+                totalConsidered: 1
+            )
+        }
+
+        let newPrice = ProductPrice(
+            remoteID: row.id,
+            type: priceType(from: type),
+            price: canonicalPrice.doubleValue,
+            effectiveAt: effectiveAt,
+            source: Self.localSource,
+            note: nil,
+            createdAt: ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: row.createdAt) ?? Date(),
+            product: product
+        )
+        context.insert(newPrice)
+        currentPricesByKey[key] = [newPrice]
+        return ProductPriceApplyResult(inserted: 1, skippedExisting: 0, totalConsidered: 1)
     }
 
     private func safeDiagnosticDetail(for error: Error) -> String? {

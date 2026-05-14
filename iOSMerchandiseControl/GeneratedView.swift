@@ -21,6 +21,26 @@ private enum RevertImportDecodeError: Error {
     case missingSnapshot
 }
 
+private struct GeneratedDatabaseApplyPreview: Equatable {
+    var validRows: Int
+    var skippedRows: Int
+    var newProducts: Int
+    var updatedProducts: Int
+    var importWarnings: Int
+    var importErrors: Int
+    var quantityRows: Int
+
+    static let empty = GeneratedDatabaseApplyPreview(
+        validRows: 0,
+        skippedRows: 0,
+        newProducts: 0,
+        updatedProducts: 0,
+        importWarnings: 0,
+        importErrors: 0,
+        quantityRows: 0
+    )
+}
+
 /// Schermata di editing inventario (equivalente base di GeneratedScreen su Android).
 /// - Mostra la griglia salvata in HistoryEntry.data
 /// - Permette di:
@@ -75,6 +95,8 @@ struct GeneratedView: View {
     /// Motore per l'import prodotti (Excel → DB)
     @State private var productImportVM: ProductImportViewModel?
     @State private var importAnalysisSession: ImportAnalysisSession?
+    @State private var generatedApplyPreview: GeneratedDatabaseApplyPreview?
+    @State private var isShowingGeneratedApplySheet = false
 
     /// filtro righe solo con errori
     @State private var showOnlyErrorRows: Bool = false
@@ -496,6 +518,25 @@ struct GeneratedView: View {
                 )
             }
         }
+        .sheet(isPresented: $isShowingGeneratedApplySheet) {
+            NavigationStack {
+                generatedDatabaseApplySheet
+                    .navigationTitle(L("generated.apply.sheet.title"))
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(L("common.cancel")) {
+                                isShowingGeneratedApplySheet = false
+                            }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(L("generated.apply.sheet.confirm")) {
+                                runUnifiedDatabaseUpdate()
+                            }
+                            .disabled(isSaving || isSyncing || (generatedApplyPreview?.validRows ?? 0) == 0)
+                        }
+                    }
+            }
+        }
         .sheet(isPresented: $showSearch) {
             NavigationStack {
                 InventorySearchSheet(
@@ -876,14 +917,7 @@ struct GeneratedView: View {
         Section {
             if !entry.isManualEntry {
                 Button {
-                    startProductImportAnalysis()
-                } label: {
-                    Text(L("generated.action.update_products"))
-                }
-                .disabled(isSaving || isSyncing)
-
-                Button {
-                    syncWithDatabase()
+                    openGeneratedDatabaseApplySheet()
                 } label: {
                     if isSyncing {
                         HStack {
@@ -891,10 +925,26 @@ struct GeneratedView: View {
                             Text(L("generated.syncing"))
                         }
                     } else {
-                        Text(L("generated.action.apply_inventory_db"))
+                        Label(L("generated.action.update_database_from_sheet"), systemImage: "arrow.triangle.2.circlepath.circle.fill")
                     }
                 }
                 .disabled(isSaving || isSyncing || gridParallelArraysFault)
+
+                DisclosureGroup(L("generated.action.advanced_database_actions")) {
+                    Button {
+                        startProductImportAnalysis()
+                    } label: {
+                        Text(L("generated.action.update_products"))
+                    }
+                    .disabled(isSaving || isSyncing)
+
+                    Button {
+                        syncWithDatabase()
+                    } label: {
+                        Text(L("generated.action.apply_inventory_db"))
+                    }
+                    .disabled(isSaving || isSyncing || gridParallelArraysFault)
+                }
             } else {
                 Text(L("generated.autosave.active"))
                     .foregroundStyle(.secondary)
@@ -909,6 +959,43 @@ struct GeneratedView: View {
                 Text(L("generated.autosave.saved_at", savedAt))
             } else {
                 Text(L("generated.autosave.active"))
+            }
+        }
+    }
+
+    private var generatedDatabaseApplySheet: some View {
+        let preview = generatedApplyPreview ?? .empty
+        return Form {
+            Section {
+                LabeledContent(L("generated.apply.preview.new_products")) {
+                    Text("\(preview.newProducts)")
+                }
+                LabeledContent(L("generated.apply.preview.updated_products")) {
+                    Text("\(preview.updatedProducts)")
+                }
+                LabeledContent(L("generated.apply.preview.quantity_rows")) {
+                    Text("\(preview.quantityRows)")
+                }
+                LabeledContent(L("generated.apply.preview.skipped_rows")) {
+                    Text("\(preview.skippedRows + preview.importErrors)")
+                        .foregroundStyle((preview.skippedRows + preview.importErrors) > 0 ? .orange : .secondary)
+                }
+                LabeledContent(L("generated.apply.preview.pending_cloud")) {
+                    Text(currentPendingOwnerUserID == nil ? L("generated.apply.preview.pending_cloud.offline") : L("generated.apply.preview.pending_cloud.ready"))
+                }
+            } header: {
+                Text(L("generated.apply.sheet.subtitle"))
+            }
+
+            if preview.importWarnings > 0 || preview.importErrors > 0 {
+                Section {
+                    if preview.importWarnings > 0 {
+                        Label(L("generated.apply.preview.warnings", preview.importWarnings), systemImage: "exclamationmark.triangle")
+                    }
+                    if preview.importErrors > 0 {
+                        Label(L("generated.apply.preview.errors", preview.importErrors), systemImage: "xmark.octagon")
+                    }
+                }
             }
         }
     }
@@ -2033,6 +2120,7 @@ struct GeneratedView: View {
 
         isSaving = true
         saveError = nil
+        let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: entry)
 
         let mergedSnapshot = mergedGridSnapshot(
             dataGrid: data,
@@ -2046,6 +2134,10 @@ struct GeneratedView: View {
         entry.editable = editable
         entry.complete = complete
         applyRuntimeSummary(mergedSnapshot.runtimeSummary)
+        let nextHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: entry)
+        if nextHistoryFingerprint != previousHistoryFingerprint {
+            recordHistorySessionPending(changedFields: ["data", "editable", "complete"])
+        }
 
         do {
             try context.save()
@@ -2062,6 +2154,24 @@ struct GeneratedView: View {
         // aggiorna anche il buffer locale, così rimane in sync
         data = newData
         return saveError == nil
+    }
+
+    private func recordHistorySessionPending(changedFields: [String]) {
+        entry.markHistorySessionLocalMutation()
+        do {
+            _ = try LocalPendingChangeAccumulator(
+                context: context,
+                ownerUserID: currentPendingOwnerUserID
+            ).recordHistorySessionChange(
+                entry: entry,
+                operation: .upsert,
+                changedFields: changedFields
+            )
+        } catch {
+            #if DEBUG
+            debugPrint("[HistorySession] pending record failed:", error)
+            #endif
+        }
     }
 
     /// Applica i dati dell'inventario al database prodotti e aggiorna la griglia con gli errori.
@@ -2082,7 +2192,12 @@ struct GeneratedView: View {
         // 2) Esegui la sincronizzazione vera e propria
         do {
             let service = InventorySyncService(context: context)
-            let result = try service.sync(entry: entry)
+            let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: entry)
+            let result = try service.sync(entry: entry, ownerUserID: currentPendingOwnerUserID)
+            if HistorySessionPayloadCodec.fingerprintHash(for: entry) != previousHistoryFingerprint {
+                recordHistorySessionPending(changedFields: ["data", "syncStatus"])
+                try context.save()
+            }
 
             // Ricarichiamo la griglia dall'entry,
             // così la nuova colonna "SyncError" e i messaggi vengono mostrati
@@ -2096,6 +2211,161 @@ struct GeneratedView: View {
         }
 
         isSyncing = false
+    }
+
+    private func openGeneratedDatabaseApplySheet() {
+        guard !gridParallelArraysFault else { return }
+        generatedApplyPreview = makeGeneratedDatabaseApplyPreview()
+        isShowingGeneratedApplySheet = true
+    }
+
+    private func runUnifiedDatabaseUpdate() {
+        guard !isSyncing, !gridParallelArraysFault else { return }
+
+        isShowingGeneratedApplySheet = false
+        isSyncing = true
+        saveError = nil
+        syncSummaryMessage = nil
+
+        guard saveChanges() else {
+            isSyncing = false
+            return
+        }
+
+        do {
+            let importResult = analyzeProductsForCurrentGrid()
+            var newProducts = 0
+            var updatedProducts = 0
+            var skippedRows = importResult.analysis?.errors.count ?? 0
+            var warnings = importResult.analysis?.warnings.count ?? 0
+
+            if let vm = importResult.viewModel,
+               let analysis = importResult.analysis,
+               analysis.hasChanges {
+                newProducts = analysis.newProducts.count
+                updatedProducts = analysis.updatedProducts.count
+                warnings = analysis.warnings.count
+                skippedRows = analysis.errors.count
+                vm.applyImport()
+                if let error = vm.lastError {
+                    throw GeneratedDatabaseApplyError.productImportFailed(error)
+                }
+            }
+
+            let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: entry)
+            let inventoryResult = try InventorySyncService(context: context).sync(
+                entry: entry,
+                ownerUserID: currentPendingOwnerUserID
+            )
+            if HistorySessionPayloadCodec.fingerprintHash(for: entry) != previousHistoryFingerprint {
+                recordHistorySessionPending(changedFields: ["data", "syncStatus"])
+                try context.save()
+            }
+
+            data = entry.data
+            evaluateParallelGridConsistency(context: "runUnifiedDatabaseUpdate")
+
+            syncSummaryMessage = L(
+                "generated.apply.sheet.completed",
+                newProducts,
+                updatedProducts,
+                inventoryResult.priceRowsInserted,
+                inventoryResult.succeeded,
+                skippedRows,
+                warnings,
+                inventoryResult.pendingCloudChanges
+            )
+        } catch GeneratedDatabaseApplyError.productImportFailed(let message) {
+            saveError = message
+        } catch {
+            saveError = error.localizedDescription
+        }
+
+        isSyncing = false
+    }
+
+    private enum GeneratedDatabaseApplyError: Error {
+        case productImportFailed(String)
+    }
+
+    private func makeGeneratedDatabaseApplyPreview() -> GeneratedDatabaseApplyPreview {
+        let importResult = analyzeProductsForCurrentGrid()
+        let analysis = importResult.analysis
+        let header = data.first ?? []
+        let rows = Array(data.dropFirst())
+        let barcodeIndex = header.firstIndex(of: "barcode")
+        let quantityIndex = header.firstIndex(of: "quantity")
+        let realQuantityIndex = header.firstIndex(of: "realQuantity")
+        var validRows = 0
+        var quantityRows = 0
+        var skippedRows = 0
+
+        for row in rows {
+            guard let barcodeIndex, barcodeIndex < row.count else {
+                skippedRows += 1
+                continue
+            }
+            let barcode = row[barcodeIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !barcode.isEmpty else {
+                skippedRows += 1
+                continue
+            }
+            validRows += 1
+            let quantityText: String
+            if let realQuantityIndex, realQuantityIndex < row.count {
+                quantityText = row[realQuantityIndex]
+            } else if let quantityIndex, quantityIndex < row.count {
+                quantityText = row[quantityIndex]
+            } else {
+                quantityText = ""
+            }
+            if !quantityText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                quantityRows += 1
+            }
+        }
+
+        return GeneratedDatabaseApplyPreview(
+            validRows: validRows,
+            skippedRows: skippedRows,
+            newProducts: analysis?.newProducts.count ?? 0,
+            updatedProducts: analysis?.updatedProducts.count ?? 0,
+            importWarnings: analysis?.warnings.count ?? 0,
+            importErrors: analysis?.errors.count ?? 0,
+            quantityRows: quantityRows
+        )
+    }
+
+    private func analyzeProductsForCurrentGrid() -> (
+        viewModel: ProductImportViewModel?,
+        analysis: ProductImportAnalysisResult?
+    ) {
+        guard !data.isEmpty else { return (nil, nil) }
+        let headerRow = data[0]
+        let rows = Array(data.dropFirst())
+        var mapped: [[String: String]] = []
+
+        for row in rows {
+            var dict: [String: String] = [:]
+            for (index, key) in headerRow.enumerated() {
+                guard index < row.count else { continue }
+                let value = row[index].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty {
+                    dict[key] = value
+                }
+            }
+            let barcode = (dict["barcode"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !barcode.isEmpty {
+                mapped.append(dict)
+            }
+        }
+
+        guard !mapped.isEmpty else { return (nil, nil) }
+        let vm = ProductImportViewModel(
+            context: context,
+            ownerUserID: currentPendingOwnerUserID
+        )
+        vm.analyzeMappedRows(mapped)
+        return (vm, vm.analysis)
     }
     
     // MARK: - Import prodotti (via ProductImportViewModel)

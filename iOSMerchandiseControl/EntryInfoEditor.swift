@@ -7,6 +7,7 @@ import UIKit
 struct EntryInfoEditor: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
 
     @Bindable var entry: HistoryEntry
 
@@ -149,6 +150,11 @@ struct EntryInfoEditor: View {
         let newTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let newSupplier = draftSupplier.trimmingCharacters(in: .whitespacesAndNewlines)
         let newCategory = draftCategory.trimmingCharacters(in: .whitespacesAndNewlines)
+        let changedFields = historyChangedFields(
+            newTitle: newTitle,
+            newSupplier: newSupplier,
+            newCategory: newCategory
+        )
 
         entry.title = newTitle
         entry.supplier = newSupplier
@@ -159,8 +165,42 @@ struct EntryInfoEditor: View {
         if !newSupplier.isEmpty { _ = findOrCreateSupplier(named: newSupplier) }
         if !newCategory.isEmpty { _ = findOrCreateCategory(named: newCategory) }
 
+        if !changedFields.isEmpty {
+            recordHistorySessionPending(changedFields: changedFields)
+        }
+
         try? modelContext.save()
         dismiss()
+    }
+
+    private func historyChangedFields(
+        newTitle: String,
+        newSupplier: String,
+        newCategory: String
+    ) -> [String] {
+        var fields: [String] = []
+        if entry.title != newTitle { fields.append("title") }
+        if entry.supplier != newSupplier { fields.append("supplier") }
+        if entry.category != newCategory { fields.append("category") }
+        return fields
+    }
+
+    private func recordHistorySessionPending(changedFields: [String]) {
+        entry.markHistorySessionLocalMutation()
+        do {
+            _ = try LocalPendingChangeAccumulator(
+                context: modelContext,
+                ownerUserID: supabaseAuthViewModel.isSignedIn ? supabaseAuthViewModel.sessionInfo?.userID : nil
+            ).recordHistorySessionChange(
+                entry: entry,
+                operation: .upsert,
+                changedFields: changedFields
+            )
+        } catch {
+            #if DEBUG
+            debugPrint("[HistorySession] pending record failed:", error)
+            #endif
+        }
     }
 
     // MARK: - DB helpers (replica la logica di ExcelSessionViewModel)

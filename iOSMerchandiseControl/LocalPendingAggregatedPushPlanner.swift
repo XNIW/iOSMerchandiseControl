@@ -518,6 +518,8 @@ final class LocalPendingAggregatedPushPlanner {
                 counts.unsupportedCount += 1
             case .productPrice:
                 continue
+            case .historySession:
+                continue
             }
         }
 

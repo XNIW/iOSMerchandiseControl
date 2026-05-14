@@ -255,7 +255,14 @@ final class SupabaseManualSyncPullPreviewAdapter: SupabaseManualSyncRemotePrevie
             let viewState = await service.generatePreview(context: context)
             try Task.checkCancellation()
             stagePreviewIfComplete(viewState)
-            return SupabaseManualSyncRemotePreviewOutcomeMapper.summary(from: viewState)
+            let summary = SupabaseManualSyncRemotePreviewOutcomeMapper.summary(from: viewState)
+#if DEBUG
+            let counts = summary.safeAggregateCounts
+            debugPrint(
+                "[Task108PullPreview] summary complete=\(summary.isComplete) partial=\(summary.isPartial) signals=\(summary.hasRemoteSignals) failure=\(summary.failureCategory?.rawValue ?? "none") remoteProducts=\(counts.remoteProductCount) remoteSuppliers=\(counts.remoteSupplierCount) remoteCategories=\(counts.remoteCategoryCount) remotePrices=\(counts.remoteProductPriceCount) new=\(counts.newProductCount) updates=\(counts.updateCandidateCount) conflicts=\(counts.conflictCount) tombstones=\(counts.tombstoneCount) warnings=\(counts.warningCount) sourceErrors=\(counts.sourceErrorCount) supplierDiffs=\(counts.supplierDiffCount) categoryDiffs=\(counts.categoryDiffCount) priceSignals=\(counts.priceHistorySignalCount)"
+            )
+#endif
+            return summary
         } catch is CancellationError {
             clearStagedPreviewForLocalApply()
             return SupabaseManualSyncRemotePreviewOutcomeMapper.cancelledSummary()

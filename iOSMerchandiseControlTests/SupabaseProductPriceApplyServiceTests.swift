@@ -427,6 +427,78 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         }
     }
 
+    func testPagedFullPullAppliesLargeProductPriceHistoryWithoutFixedTotalLimit() async throws {
+        let context = try makeContext()
+        let productIDs = (0..<300).map { uuid(901_000 + $0) }
+        for (index, productID) in productIDs.enumerated() {
+            context.insert(Product(barcode: "TASK108-PAGED-\(index)", remoteID: productID, productName: "Local"))
+        }
+        try context.save()
+        let rows = makeRemotePriceRows(count: 30_000, productIDs: productIDs)
+        let fetcher = ProductPricePagedFetcherFake(rows: rows)
+        let pagedService = SupabaseProductPriceApplyService(fetcher: fetcher)
+        let samplePlan = try await pagedService.loadBootstrapPreviewSample(
+            context: context,
+            sessionSnapshot: session
+        )
+        var progress: [ProductPricePagedApplyProgress] = []
+
+        let first = try await pagedService.applyPagedFullPull(
+            plan: samplePlan,
+            context: context,
+            currentSessionSnapshot: session,
+            onProgress: { progress.append($0) }
+        )
+        let second = try await pagedService.applyPagedFullPull(
+            plan: samplePlan,
+            context: context,
+            currentSessionSnapshot: session
+        )
+
+        XCTAssertEqual(first.inserted, 30_000)
+        XCTAssertEqual(first.totalConsidered, 30_000)
+        XCTAssertEqual(second.inserted, 0)
+        XCTAssertEqual(second.skippedExisting, 30_000)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 30_000)
+        XCTAssertTrue(progress.contains { $0.stage == .completed && $0.processedRows == 30_000 && $0.totalRows == 30_000 })
+        let ranges = await fetcher.rangeLog()
+        XCTAssertTrue(ranges.contains("0...999"))
+        XCTAssertTrue(ranges.contains("29000...29999"))
+    }
+
+    func testPagedFullPullCanCancelLargeProductPriceHistoryWithoutFixedTotalLimit() async throws {
+        let context = try makeContext()
+        let productIDs = (0..<400).map { uuid(902_000 + $0) }
+        for (index, productID) in productIDs.enumerated() {
+            context.insert(Product(barcode: "TASK108-CANCEL-\(index)", remoteID: productID, productName: "Local"))
+        }
+        try context.save()
+        let rows = makeRemotePriceRows(count: 120_000, productIDs: productIDs)
+        let fetcher = ProductPricePagedFetcherFake(rows: rows, throwCancellationAtFrom: 3_000)
+        let pagedService = SupabaseProductPriceApplyService(fetcher: fetcher)
+        let samplePlan = try await pagedService.loadBootstrapPreviewSample(
+            context: context,
+            sessionSnapshot: session
+        )
+
+        do {
+            _ = try await pagedService.applyPagedFullPull(
+                plan: samplePlan,
+                context: context,
+                currentSessionSnapshot: session
+            )
+            XCTFail("Expected paged full pull cancellation")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        let appliedCount = try context.fetch(FetchDescriptor<ProductPrice>()).count
+        XCTAssertGreaterThan(appliedCount, 0)
+        XCTAssertLessThan(appliedCount, 120_000)
+        let ranges = await fetcher.rangeLog()
+        XCTAssertTrue(ranges.contains("0...999"))
+        XCTAssertTrue(ranges.contains("3000...3999"))
+    }
+
     private func makePlan(
         remoteRows: [RemoteInventoryProductPriceRow]? = nil,
         localProducts: [ProductPriceApplyLocalProduct]? = nil,
@@ -530,11 +602,58 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         )
     }
 
+    private func makeRemotePriceRows(count: Int, productIDs: [UUID]) -> [RemoteInventoryProductPriceRow] {
+        let baseDate = Date(timeIntervalSince1970: 1_779_000_000)
+        precondition(!productIDs.isEmpty)
+        return (0..<count).map { index in
+            let productID = productIDs[index % productIDs.count]
+            return remotePrice(
+                id: uuid(1_000_000 + index),
+                productID: productID,
+                price: 2.5 + Double(index % 100) / 100,
+                effectiveAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(
+                    from: baseDate.addingTimeInterval(TimeInterval(index))
+                ),
+                createdAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(
+                    from: baseDate.addingTimeInterval(TimeInterval(index + 1))
+                )
+            )
+        }
+    }
+
     private func date(_ value: String) throws -> Date {
         try XCTUnwrap(ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: value))
     }
 
     private func uuid(_ value: Int) -> UUID {
         UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", value))")!
+    }
+}
+
+private actor ProductPricePagedFetcherFake: SupabaseProductPricePreviewFetching {
+    private let rows: [RemoteInventoryProductPriceRow]
+    private let throwCancellationAtFrom: Int?
+    private var ranges: [String] = []
+
+    init(rows: [RemoteInventoryProductPriceRow], throwCancellationAtFrom: Int? = nil) {
+        self.rows = rows
+        self.throwCancellationAtFrom = throwCancellationAtFrom
+    }
+
+    func rangeLog() -> [String] {
+        ranges
+    }
+
+    func fetchProductPriceCount() async throws -> Int? {
+        rows.count
+    }
+
+    func fetchProductPricesPreviewPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {
+        ranges.append("\(from)...\(to)")
+        if let throwCancellationAtFrom, from >= throwCancellationAtFrom {
+            throw CancellationError()
+        }
+        guard from < rows.count else { return [] }
+        return Array(rows[from..<min(rows.count, to + 1)])
     }
 }

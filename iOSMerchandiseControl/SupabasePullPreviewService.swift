@@ -14,18 +14,18 @@ nonisolated struct SupabasePullPreviewService: Sendable {
     private let inventoryService: any SupabaseInventoryFetching
     private let pageSize: Int
     private let catalogRowBudget: Int?
-    private let productPriceRowBudget: Int?
+    private let productPricePreviewSampleLimit: Int?
 
     init(
         inventoryService: any SupabaseInventoryFetching,
         pageSize: Int = 500,
         catalogRowBudget: Int? = nil,
-        productPriceRowBudget: Int? = nil
+        productPricePreviewSampleLimit: Int? = 1_000
     ) {
         self.inventoryService = inventoryService
         self.pageSize = max(1, min(pageSize, 1_000))
         self.catalogRowBudget = catalogRowBudget.map { max(0, $0) }
-        self.productPriceRowBudget = productPriceRowBudget.map { max(0, $0) }
+        self.productPricePreviewSampleLimit = productPricePreviewSampleLimit.map { max(0, $0) }
     }
 
     @MainActor
@@ -67,6 +67,7 @@ nonisolated struct SupabasePullPreviewService: Sendable {
 
     private func fetchRemoteSnapshot() async throws -> RemoteFetchOutcome {
         var sourceErrors: [SyncPreviewWarning] = []
+        var previewWarnings: [SyncPreviewWarning] = []
         var partialCatalog = false
 
         let products: [RemoteInventoryProductRow]
@@ -91,7 +92,7 @@ nonisolated struct SupabasePullPreviewService: Sendable {
         async let categoriesFetch = fetchPaged(rowBudget: catalogRowBudget) { from, to in
             try await inventoryService.fetchCategoriesPage(from: from, to: to)
         }
-        async let productPricesFetch = fetchPaged(rowBudget: productPriceRowBudget) { from, to in
+        async let productPricesFetch = fetchPaged(rowBudget: productPricePreviewSampleLimit) { from, to in
             try await inventoryService.fetchProductPricesPage(from: from, to: to)
         }
 
@@ -128,9 +129,9 @@ nonisolated struct SupabasePullPreviewService: Sendable {
             let result = try await productPricesFetch
             productPrices = result.rows
             if result.isPartial {
-                sourceErrors.append(
+                previewWarnings.append(
                     SyncPreviewWarning(
-                        code: .priceHistoryIncomplete,
+                        code: .priceHistoryPagedApplyRequired,
                         detail: "inventory_product_prices",
                         relatedKey: "inventory_product_prices"
                     )
@@ -154,7 +155,8 @@ nonisolated struct SupabasePullPreviewService: Sendable {
                 suppliers: suppliers,
                 categories: categories,
                 productPrices: productPrices,
-                sourceErrors: sourceErrors
+                sourceErrors: sourceErrors,
+                previewWarnings: previewWarnings
             ),
             partialCatalog: partialCatalog
         )
@@ -172,7 +174,11 @@ nonisolated struct SupabasePullPreviewService: Sendable {
     }
 
     private func partialBudgetWarning(for table: String) -> SyncPreviewWarning {
-        SyncPreviewWarning(
+#if DEBUG
+        debugPrint("[Task108PullPreview] row_budget table=\(table)")
+#endif
+
+        return SyncPreviewWarning(
             code: .sourceError,
             detail: table,
             relatedKey: table
@@ -264,6 +270,10 @@ extension SupabasePullPreviewService {
             detail = table
         }
 
+#if DEBUG
+        debugPrint("[Task108PullPreview] source_error table=\(table) detail=\(detail ?? "redacted")")
+#endif
+
         return SyncPreviewWarning(
             code: .sourceError,
             detail: detail,
@@ -279,7 +289,7 @@ nonisolated enum SupabasePullPreviewDiffEngine {
         outcome: SyncPreviewOutcome
     ) -> SyncPreview {
         var conflicts: [SyncPreviewConflict] = []
-        var warnings: [SyncPreviewWarning] = []
+        var warnings: [SyncPreviewWarning] = remote.previewWarnings
         var newProducts: [SyncPreviewProductSummary] = []
         var updateCandidates: [SyncPreviewProductSummary] = []
         var unchangedProducts: [SyncPreviewProductSummary] = []

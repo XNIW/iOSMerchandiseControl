@@ -23,9 +23,14 @@ nonisolated struct SupabaseCatalogBaselineCommitResult: Sendable, Equatable {
 @MainActor
 struct SupabaseCatalogBaselineWriter {
     private let now: () -> Date
+    private let recordBatchSize: Int
 
-    init(now: @escaping () -> Date = Date.init) {
+    init(
+        now: @escaping () -> Date = Date.init,
+        recordBatchSize: Int = 1_000
+    ) {
         self.now = now
+        self.recordBatchSize = max(1, recordBatchSize)
     }
 
     func commitAfterSuccessfulFullPullApply(
@@ -76,6 +81,8 @@ struct SupabaseCatalogBaselineWriter {
         context.insert(run)
 
         do {
+            try context.save()
+
             let seeds = try makeRecordSeeds(
                 context: context,
                 baselineRunID: runID,
@@ -89,22 +96,27 @@ struct SupabaseCatalogBaselineWriter {
             run.categoryCount = seeds.filter { $0.entityType == .productCategory }.count
             run.tombstoneCount = seeds.filter { $0.remoteDeletedAt != nil }.count
             run.updatedAt = now()
-
-            for seed in seeds {
-                context.insert(seed.makeRecord())
-            }
-
             try context.save()
 
-            let persistedRecords = try context.fetch(
+            var nextIndex = seeds.startIndex
+            while nextIndex < seeds.endIndex {
+                let upperBound = min(nextIndex + recordBatchSize, seeds.endIndex)
+                for seed in seeds[nextIndex..<upperBound] {
+                    context.insert(seed.makeRecord())
+                }
+                try context.save()
+                nextIndex = upperBound
+            }
+
+            let persistedRecordCount = try context.fetchCount(
                 FetchDescriptor<SupabaseCatalogBaselineRecord>(
                     predicate: #Predicate { $0.baselineRunID == runID }
                 )
             )
-            guard persistedRecords.count == seeds.count else {
+            guard persistedRecordCount == seeds.count else {
                 throw SupabaseCatalogBaselineWriterError.recordCountMismatch(
                     expected: seeds.count,
-                    actual: persistedRecords.count
+                    actual: persistedRecordCount
                 )
             }
 
@@ -124,6 +136,7 @@ struct SupabaseCatalogBaselineWriter {
                 tombstoneCount: run.tombstoneCount ?? 0
             )
         } catch {
+            context.rollback()
             run.status = SupabaseCatalogBaselineStatus.partialRejected.rawValue
             run.updatedAt = now()
             try? context.save()

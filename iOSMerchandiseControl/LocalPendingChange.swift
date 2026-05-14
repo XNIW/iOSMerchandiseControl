@@ -8,12 +8,13 @@ nonisolated enum LocalPendingChangeEntityKind: String, CaseIterable, Sendable {
     case productCategory
     case productPrice
     case importBatch
+    case historySession
 
     var isCatalogKind: Bool {
         switch self {
         case .product, .supplier, .productCategory, .importBatch:
             return true
-        case .productPrice:
+        case .productPrice, .historySession:
             return false
         }
     }
@@ -43,6 +44,7 @@ nonisolated enum LocalPendingChangeOrigin: String, CaseIterable, Sendable {
     case manualCatalogSave
     case confirmedImport
     case productPriceSave
+    case historySessionSave
     case reconciliation
 }
 
@@ -156,15 +158,37 @@ final class LocalPendingChange {
 nonisolated struct LocalPendingChangeSnapshot: Equatable, Sendable {
     var pendingCatalogChangeCount: Int
     var pendingProductPriceChangeCount: Int
+    var pendingHistorySessionChangeCount: Int
     var blockedCount: Int
     var staleBaselineCount: Int
     var sentCount: Int
     var supersededRetainedCount: Int
     var isCapped: Bool
 
+    init(
+        pendingCatalogChangeCount: Int = 0,
+        pendingProductPriceChangeCount: Int = 0,
+        pendingHistorySessionChangeCount: Int = 0,
+        blockedCount: Int = 0,
+        staleBaselineCount: Int = 0,
+        sentCount: Int = 0,
+        supersededRetainedCount: Int = 0,
+        isCapped: Bool = false
+    ) {
+        self.pendingCatalogChangeCount = pendingCatalogChangeCount
+        self.pendingProductPriceChangeCount = pendingProductPriceChangeCount
+        self.pendingHistorySessionChangeCount = pendingHistorySessionChangeCount
+        self.blockedCount = blockedCount
+        self.staleBaselineCount = staleBaselineCount
+        self.sentCount = sentCount
+        self.supersededRetainedCount = supersededRetainedCount
+        self.isCapped = isCapped
+    }
+
     static let empty = LocalPendingChangeSnapshot(
         pendingCatalogChangeCount: 0,
         pendingProductPriceChangeCount: 0,
+        pendingHistorySessionChangeCount: 0,
         blockedCount: 0,
         staleBaselineCount: 0,
         sentCount: 0,
@@ -319,6 +343,43 @@ nonisolated final class LocalPendingChangeAccumulator {
             intendedFingerprintHash: LocalPendingChangeLogicalKey.productPriceFingerprintHash(price),
             entityRemoteID: price.remoteID
         )
+    }
+
+    @discardableResult
+    func recordHistorySessionChange(
+        entry: HistoryEntry,
+        operation: LocalPendingChangeOperation,
+        origin: LocalPendingChangeOrigin = .historySessionSave,
+        changedFields: [String]
+    ) throws -> LocalPendingChange? {
+        let remoteID = entry.ensureHistorySessionRemoteID()
+        let key = LocalPendingChangeLogicalKey.historySession(
+            remoteID: remoteID,
+            uid: entry.uid
+        )
+        return try recordChange(
+            entityKind: .historySession,
+            operation: operation,
+            origin: origin,
+            logicalKey: key,
+            changedFields: changedFields,
+            baselineFingerprintHash: nil,
+            intendedFingerprintHash: HistorySessionPayloadCodec.fingerprintHash(for: entry),
+            entityRemoteID: remoteID
+        )
+    }
+
+    func acknowledgeHistorySessionChange(entry: HistoryEntry) throws {
+        let key = LocalPendingChangeLogicalKey.historySession(
+            remoteID: entry.remoteID,
+            uid: entry.uid
+        )
+        let timestamp = now()
+        for change in try fetchChanges(entityKind: .historySession, logicalKey: key)
+            where !change.status.isTerminal {
+            change.status = .acknowledged
+            change.updatedAt = timestamp
+        }
     }
 
     @discardableResult
@@ -617,6 +678,8 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
                     snapshot.pendingCatalogChangeCount += 1
                 } else if change.entityKind == .productPrice {
                     snapshot.pendingProductPriceChangeCount += 1
+                } else if change.entityKind == .historySession {
+                    snapshot.pendingHistorySessionChangeCount += 1
                 }
             case .blocked:
                 snapshot.blockedCount += 1
@@ -624,6 +687,8 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
                     snapshot.pendingCatalogChangeCount += 1
                 } else if change.entityKind == .productPrice {
                     snapshot.pendingProductPriceChangeCount += 1
+                } else if change.entityKind == .historySession {
+                    snapshot.pendingHistorySessionChangeCount += 1
                 }
             case .staleBaseline:
                 snapshot.staleBaselineCount += 1
@@ -631,6 +696,8 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
                     snapshot.pendingCatalogChangeCount += 1
                 } else if change.entityKind == .productPrice {
                     snapshot.pendingProductPriceChangeCount += 1
+                } else if change.entityKind == .historySession {
+                    snapshot.pendingHistorySessionChangeCount += 1
                 }
             case .sent:
                 snapshot.sentCount += 1
@@ -638,6 +705,8 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
                     snapshot.pendingCatalogChangeCount += 1
                 } else if change.entityKind == .productPrice {
                     snapshot.pendingProductPriceChangeCount += 1
+                } else if change.entityKind == .historySession {
+                    snapshot.pendingHistorySessionChangeCount += 1
                 }
             case .superseded:
                 snapshot.supersededRetainedCount += 1
@@ -645,7 +714,18 @@ nonisolated final class LocalPendingChangeSnapshotProvider {
                 continue
             }
         }
+        snapshot.pendingHistorySessionChangeCount = max(
+            snapshot.pendingHistorySessionChangeCount,
+            try dirtyHistorySessionCount()
+        )
         return snapshot
+    }
+
+    private func dirtyHistorySessionCount() throws -> Int {
+        let descriptor = FetchDescriptor<HistoryEntry>(
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        return try context.fetch(descriptor).filter(\.isHistorySessionDirtyForCloud).count
     }
 }
 
@@ -718,6 +798,13 @@ nonisolated enum LocalPendingChangeLogicalKey {
         }
         let effectiveAtKey = effectiveAtMicrosecondKey(effectiveAt)
         return "price:\(privacyHash("\(productPart)|\(type.rawValue)|\(effectiveAtKey)"))"
+    }
+
+    static func historySession(remoteID: UUID?, uid: UUID) -> String {
+        if let remoteID {
+            return remoteEntity(kind: .historySession, remoteID: remoteID)
+        }
+        return "history:local:\(privacyHash(uid.uuidString.lowercased()))"
     }
 
     static func remoteEntity(

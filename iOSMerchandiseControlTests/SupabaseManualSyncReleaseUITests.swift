@@ -523,12 +523,13 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertFalse(releaseCardSource.contains(".alert("))
     }
 
-    func testTask091AppWiresBoundedReleasePreview() throws {
+    func testTask091AppWiresFullCatalogPreviewWithBoundedPriceHistory() throws {
         let source = try readSource("iOSMerchandiseControl/iOSMerchandiseControlApp.swift")
 
         XCTAssertTrue(source.contains("SupabasePullPreviewService("))
-        XCTAssertTrue(source.contains("catalogRowBudget: 5_000"))
-        XCTAssertTrue(source.contains("productPriceRowBudget: 5_000"))
+        XCTAssertTrue(source.contains("pageSize: 1_000"))
+        XCTAssertTrue(source.contains("catalogRowBudget: nil"))
+        XCTAssertTrue(source.contains("productPricePreviewSampleLimit: 1_000"))
     }
 
     func testTask092RootForegroundHostUsesPresenterSharedViewModelAndBusyGating() throws {

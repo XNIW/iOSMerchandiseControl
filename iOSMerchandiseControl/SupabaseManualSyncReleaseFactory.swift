@@ -30,6 +30,12 @@ enum SupabaseManualSyncReleaseFactory {
         let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = activityRecorder.map {
             SupabaseManualSyncReleaseActivityRegistrationAdapter(context: context, recorder: $0)
         }
+        let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = inventoryService.map {
+            SupabaseManualSyncReleaseHistorySessionAdapter(
+                context: context,
+                remote: $0
+            )
+        }
         let localPendingChangeCounter = LocalPendingChangePendingAdapter(context: context)
 
         let dependencies = SupabaseManualSyncCoordinator.Dependencies(
@@ -68,7 +74,65 @@ enum SupabaseManualSyncReleaseFactory {
             productPriceProvider: productPriceProvider,
             currentProductPriceOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
             activityRegistrationProvider: activityRegistrationProvider,
-            currentActivityRegistrationOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil }
+            currentActivityRegistrationOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
+            historySessionProvider: historySessionProvider,
+            currentHistorySessionOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
+            baselineStatusProvider: {
+                do {
+                    return try SupabaseCatalogBaselineReader().debugSummary(
+                        context: context,
+                        currentUserUUID: authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil
+                    )
+                } catch {
+                    return .absent
+                }
+            }
+        )
+    }
+}
+
+@MainActor
+private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHistorySessionSyncProviding {
+    private let context: ModelContext
+    private let service: HistorySessionSyncService
+
+    init(
+        context: ModelContext,
+        remote: SupabaseInventoryService
+    ) {
+        self.context = context
+        self.service = HistorySessionSyncService(remote: remote)
+    }
+
+    func syncHistorySessions(
+        ownerUserID: UUID,
+        onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
+    ) async throws -> SupabaseManualSyncHistorySessionSummary {
+        let entries = try context.fetch(
+            FetchDescriptor<HistoryEntry>(
+                sortBy: [SortDescriptor(\HistoryEntry.timestamp, order: .reverse)]
+            )
+        )
+        let push = try await service.pushPendingHistorySessions(
+            entries: entries,
+            ownerUserID: ownerUserID,
+            context: context,
+            onProgress: onProgress
+        )
+        try context.save()
+        let pull = try await service.pullHistorySessionsFromCloud(
+            ownerUserID: ownerUserID,
+            context: context,
+            onProgress: onProgress
+        )
+        try context.save()
+        return SupabaseManualSyncHistorySessionSummary(
+            uploaded: push.uploadedCount,
+            inserted: pull.insertedCount,
+            updated: pull.updatedCount,
+            skippedClean: push.skippedCleanCount + pull.skippedCleanCount,
+            skippedDirtyLocal: pull.skippedDirtyLocalCount,
+            skippedOversized: push.skippedOversizedCount
         )
     }
 }
@@ -88,17 +152,26 @@ private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManual
     }
 
     func makeApplyPlan(ownerUserID: UUID) async throws -> ProductPriceApplyPlan {
-        try await SupabaseProductPriceApplyService(fetcher: remote).loadDryRun(
+        try await SupabaseProductPriceApplyService(fetcher: remote).loadBootstrapPreviewSample(
             context: context,
             sessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerUserID)
         )
     }
 
     func apply(plan: ProductPriceApplyPlan, ownerUserID: UUID) async throws -> ProductPriceApplyResult {
-        try SupabaseProductPriceApplyService().apply(
+        try await apply(plan: plan, ownerUserID: ownerUserID, onProgress: { _ in })
+    }
+
+    func apply(
+        plan: ProductPriceApplyPlan,
+        ownerUserID: UUID,
+        onProgress: @escaping @MainActor @Sendable (ProductPricePagedApplyProgress) -> Void
+    ) async throws -> ProductPriceApplyResult {
+        try await SupabaseProductPriceApplyService(fetcher: remote).applyPagedFullPull(
             plan: plan,
             context: context,
-            currentSessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerUserID)
+            currentSessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerUserID),
+            onProgress: onProgress
         )
     }
 

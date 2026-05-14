@@ -30,12 +30,17 @@ struct OptionsView: View {
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
+    @Query private var localProducts: [Product]
+    @Query private var localSuppliers: [Supplier]
+    @Query private var localCategories: [ProductCategory]
+    @Query private var localProductPrices: [ProductPrice]
+    @Query private var localPendingChanges: [LocalPendingChange]
+    @State private var supabaseBaselineSummary: SupabaseCatalogBaselineDebugSummary = .absent
 #if DEBUG
     @AppStorage("supabaseLastLinkedUserID") private var supabaseLastLinkedUserID: String = ""
     @State private var isRunningSupabaseDiagnostic = false
     @State private var supabaseDiagnosticMessage: String?
     @State private var supabaseDiagnosticIsError = false
-    @State private var supabaseBaselineSummary: SupabaseCatalogBaselineDebugSummary = .absent
     @State private var isShowingSupabasePullPreview = false
     @State private var supabasePullPreviewState: SupabasePullPreviewViewState = .idle
     @State private var productPricePreviewState: ProductPricePreviewViewState = .idle
@@ -185,352 +190,40 @@ struct OptionsView: View {
             }
 
             Section {
-                SupabaseManualSyncReleaseCard(
-                    context: modelContext,
-                    authViewModel: supabaseAuthViewModel,
-                    inventoryService: supabaseInventoryService,
-                    pullPreviewService: supabasePullPreviewService,
-                    manualPushService: supabaseManualPushService,
-                    activityRecorder: syncEventOutboxDrainRecorder,
-                    viewModel: manualSyncViewModel,
-                    cancelHandler: manualSyncCancelHandler
-                )
+                cloudAccountAndSyncPublicCard
             } header: {
-                SectionHeader(title: L("options.supabase.manualSync.header"), systemImage: "icloud")
+                SectionHeader(title: L("options.cloud.section.header"), systemImage: "icloud")
             } footer: {
-                Text(L("options.supabase.manualSync.footer"))
+                Text(L("options.cloud.section.footer"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                localDatabaseStatusPublicCard
+            } header: {
+                SectionHeader(title: L("options.localDatabase.header"), systemImage: "externaldrive")
+            } footer: {
+                Text(L("options.localDatabase.footer"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
 
 #if DEBUG
             Section {
-                supabaseAuthStatusRow
-
-                if supabaseAuthViewModel.isTransitioning {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text(L("options.supabase.auth.transitioning"))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if supabaseAuthViewModel.isSignedIn {
-                    Button(role: .destructive) {
-                        supabaseAuthViewModel.signOut()
-                    } label: {
-                        Label(L("options.supabase.auth.signOut"), systemImage: "rectangle.portrait.and.arrow.right")
-                    }
-                    .disabled(!supabaseAuthViewModel.canSignOut)
-                } else {
-                    Button {
-                        supabaseAuthViewModel.signInWithGoogle()
-                    } label: {
-                        Label(L("options.supabase.auth.signInGoogle"), systemImage: "person.crop.circle.badge.plus")
-                    }
-                    .disabled(!supabaseAuthViewModel.canSignIn)
-                }
-
-                Button {
-                    runSupabaseDiagnostic()
-                } label: {
-                    Label(L("options.supabase.diagnostic.button"), systemImage: "network")
-                }
-                .disabled(!canRunAuthenticatedSupabaseActions || isRunningSupabaseDiagnostic)
-
-                Button {
-                    runSupabasePullPreview()
-                } label: {
-                    Label(L("options.supabase.preview.button"), systemImage: "doc.text.magnifyingglass")
-                }
-                .disabled(!canRunAuthenticatedSupabaseActions || isSupabasePullPreviewLoading)
-
-                if !supabaseAuthViewModel.isSignedIn {
-                    Label {
-                        Text(L("options.supabase.auth.sessionRequired"))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } icon: {
-                        Image(systemName: "lock.fill")
-                            .foregroundStyle(Color.orange)
-                    }
-                }
-
-                if supabaseAuthViewModel.isSignedIn,
-                   let sessionInfo = supabaseAuthViewModel.sessionInfo {
-                    DisclosureGroup(L("options.supabase.auth.debugDetails")) {
-                        LabeledContent(
-                            L("options.supabase.auth.debug.userId"),
-                            value: sessionInfo.privacySafeUserID
-                        )
-                        LabeledContent(
-                            L("options.supabase.auth.debug.provider"),
-                            value: sessionInfo.provider ?? L("options.supabase.auth.providerUnknown")
-                        )
-                        LabeledContent(
-                            L("options.supabase.auth.debug.email"),
-                            value: sessionInfo.privacySafeDisplayEmail ?? L("options.supabase.preview.valueMissing")
-                        )
-                    }
-                }
-
-                if isRunningSupabaseDiagnostic {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text(L("options.supabase.diagnostic.running"))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if let supabaseDiagnosticMessage {
-                    Label {
-                        Text(supabaseDiagnosticMessage)
-                            .font(.footnote)
-                            .foregroundStyle(supabaseDiagnosticIsError ? Color.red : Color.secondary)
-                    } icon: {
-                        Image(systemName: supabaseDiagnosticIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                            .foregroundStyle(supabaseDiagnosticIsError ? Color.orange : Color.green)
-                    }
-                }
-
-                productPricePreviewCard
-                productPriceApplyCard
-            } header: {
-                SectionHeader(title: L("options.supabase.auth.header"), systemImage: "person.crop.circle.badge.checkmark")
-            } footer: {
-                Text(L("options.supabase.auth.footer"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
                 DisclosureGroup {
-                    productPriceManualPushCard
+                    developerDiagnosticsContent
                 } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(L("options.supabase.priceManualPush.title"))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Spacer()
-                        productPriceApplyBadge("options.supabase.priceManualPush.badge.manual", color: .blue)
-                            .accessibilityLabel(L("options.supabase.priceManualPush.accessibility.manual"))
-                        productPriceApplyBadge("options.supabase.priceManualPush.badge.debug", color: .orange)
-                            .accessibilityLabel(L("options.supabase.priceManualPush.accessibility.debug"))
-                    }
+                    Label(L("options.developerDiagnostics.title"), systemImage: "ladybug")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                 }
-
-                SyncEventOutboxDrainDebugCard(
-                    context: modelContext,
-                    recorder: syncEventOutboxDrainRecorder,
-                    isAuthenticated: hasSyncEventsSession,
-                    ownerUserID: supabaseAuthViewModel.sessionInfo?.userID.uuidString
-                )
             } header: {
-                SectionHeader(title: L("options.advanced.header"), systemImage: "wrench.and.screwdriver.fill")
+                SectionHeader(title: L("options.developerDiagnostics.header"), systemImage: "wrench.and.screwdriver.fill")
             } footer: {
-                Text(L("options.supabase.priceManualPush.footer"))
+                Text(L("options.developerDiagnostics.footer"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-            }
-
-            Section {
-                baselineStatusRow
-                if supabaseBaselineSummary.status != .absent {
-                    if let appliedAt = supabaseBaselineSummary.appliedAt {
-                        LabeledContent(
-                            L("options.supabase.baseline.lastPull"),
-                            value: appliedAt.formatted(date: .abbreviated, time: .shortened)
-                        )
-                    }
-                    LabeledContent(
-                        L("options.supabase.baseline.account"),
-                        value: supabaseBaselineSummary.accountAbbreviation ?? L("options.supabase.preview.valueMissing")
-                    )
-                    LabeledContent(
-                        L("options.supabase.baseline.counts.products"),
-                        value: "\(supabaseBaselineSummary.productCount ?? 0)"
-                    )
-                    LabeledContent(
-                        L("options.supabase.baseline.counts.suppliers"),
-                        value: "\(supabaseBaselineSummary.supplierCount ?? 0)"
-                    )
-                    LabeledContent(
-                        L("options.supabase.baseline.counts.categories"),
-                        value: "\(supabaseBaselineSummary.categoryCount ?? 0)"
-                    )
-                    LabeledContent(
-                        L("options.supabase.baseline.schemaVersion"),
-                        value: "\(supabaseBaselineSummary.fingerprintSchemaVersion ?? 0)"
-                    )
-                    LabeledContent(
-                        L("options.supabase.baseline.tombstones"),
-                        value: "\(supabaseBaselineSummary.tombstoneCount ?? 0)"
-                    )
-                }
-            } header: {
-                SectionHeader(title: L("options.supabase.baseline.header"), systemImage: "externaldrive.badge.checkmark")
-            } footer: {
-                Text(L("options.supabase.baseline.footer"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            syncEventsSection
-
-            Section {
-                preflightStateRow
-
-                Picker(
-                    L("options.supabase.pushpreflight.scope.label"),
-                    selection: $selectedPushPreflightScope
-                ) {
-                    Text(L("options.supabase.pushpreflight.scope.global"))
-                        .tag(ManualPushPreflightScope.global)
-                    Text(L("options.supabase.pushpreflight.scope.task045"))
-                        .tag(ManualPushPreflightScope.scopedTask045)
-                }
-                .pickerStyle(.segmented)
-                .disabled(pushPreflightViewModel.isRunning)
-
-                if selectedPushPreflightScope == .scopedTask045 {
-                    Button {
-                        runTask045RemoteCollisionCheck()
-                    } label: {
-                        Label(
-                            L("options.supabase.pushpreflight.collision.task045.button"),
-                            systemImage: "magnifyingglass.circle"
-                        )
-                    }
-                    .disabled(
-                        isRunningTask045RemoteCollisionCheck
-                            || pushPreflightViewModel.isRunning
-                            || !isPushPreflightAccountReady
-                            || supabaseInventoryService == nil
-                    )
-                }
-
-                if isRunningTask045RemoteCollisionCheck {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text(L("options.supabase.pushpreflight.collision.task045.running"))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if let task045RemoteCollisionMessage {
-                    Label {
-                        Text(task045RemoteCollisionMessage)
-                            .font(.footnote)
-                            .foregroundStyle(task045RemoteCollisionIsError ? Color.red : Color.secondary)
-                    } icon: {
-                        Image(systemName: task045RemoteCollisionIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                            .foregroundStyle(task045RemoteCollisionIsError ? Color.orange : Color.green)
-                    }
-                }
-
-                if isTask087SmokeEnabled {
-                    Divider()
-
-                    Button {
-                        runTask087SandboxSmoke()
-                    } label: {
-                        Label("TASK087 sandbox smoke", systemImage: "checkmark.shield")
-                    }
-                    .disabled(!canRunAuthenticatedSupabaseActions || task087SmokeState.isRunning)
-
-                    task087SmokeStatusRow
-                }
-
-                Button {
-                    runSupabasePushPreflight()
-                } label: {
-                    Label(
-                        L(pushPreflightRunButtonKey),
-                        systemImage: selectedPushPreflightScope == .scopedTask045
-                            ? "line.3.horizontal.decrease.circle"
-                            : "checklist"
-                    )
-                }
-                .disabled(pushPreflightViewModel.isRunning || !canRunSelectedPushPreflight)
-
-                if canRunManualPush {
-                    Button(role: .destructive) {
-                        prepareManualPushConfirmation()
-                    } label: {
-                        Label(L("options.supabase.manualpush.button"), systemImage: "arrow.up.circle.fill")
-                    }
-                    .accessibilityLabel(L("options.supabase.manualpush.accessibility"))
-                }
-
-                if pushPreflightViewModel.isRunning {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text(L("options.supabase.pushpreflight.running"))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if isPushPreflightAccountReady {
-                    if case .completedSafe(let summary) = pushPreflightViewModel.state {
-                        preflightSummaryCard(
-                            titleKey: "options.supabase.pushpreflight.state.completedSafe",
-                            icon: "checkmark.shield.fill",
-                            color: .green,
-                            summary: summary
-                        )
-                    } else if case .completedScopedSafe(let summary) = pushPreflightViewModel.state {
-                        preflightSummaryCard(
-                            titleKey: "options.supabase.pushpreflight.state.completedScopedSafe",
-                            icon: "checkmark.shield.fill",
-                            color: .green,
-                            summary: summary
-                        )
-                    } else if case .completedScopedBlocked(let summary) = pushPreflightViewModel.state {
-                        preflightSummaryCard(
-                            titleKey: "options.supabase.pushpreflight.state.completedScopedBlocked",
-                            icon: "xmark.shield.fill",
-                            color: .orange,
-                            summary: summary
-                        )
-                    } else if case .completedNoWork(let summary) = pushPreflightViewModel.state {
-                        preflightSummaryCard(
-                            titleKey: "options.supabase.pushpreflight.state.completedNoWork",
-                            icon: "checkmark.circle.fill",
-                            color: .green,
-                            summary: summary
-                        )
-                    } else if case .completedBlocked(let summary) = pushPreflightViewModel.state {
-                        preflightSummaryCard(
-                            titleKey: "options.supabase.pushpreflight.state.completedBlocked",
-                            icon: "exclamationmark.triangle.fill",
-                            color: .orange,
-                            summary: summary
-                        )
-                    } else if let execution = manualPushExecutionSummary {
-                        manualPushResultCard(execution)
-                    } else if case .failedLocalError = pushPreflightViewModel.state {
-                        Label {
-                            Text(L("options.supabase.pushpreflight.state.failedLocalError"))
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        } icon: {
-                            Image(systemName: "xmark.octagon.fill")
-                                .foregroundStyle(.red)
-                        }
-                    }
-                }
-            } header: {
-                SectionHeader(title: L("options.supabase.pushpreflight.header"), systemImage: "shippingbox")
-            } footer: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(L("options.supabase.pushpreflight.copy.dryRun"))
-                    Text(L("options.supabase.pushpreflight.copy.scopedTask045"))
-                    Text(L("options.supabase.manualpush.copy.noProductPrice"))
-                    Text(L("options.supabase.manualpush.copy.noRemoteDelete"))
-                    Text(L("options.supabase.manualpush.copy.noAutomaticSync"))
-                }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
             }
 #endif
 
@@ -548,6 +241,9 @@ struct OptionsView: View {
             }
         }
         .navigationTitle(L("options.title"))
+        .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
+            refreshSupabaseBaselineSummary()
+        }
 #if DEBUG
         .onDisappear {
             resetProductPricePreview()
@@ -558,9 +254,6 @@ struct OptionsView: View {
             task087SmokeTask?.cancel()
             task087SmokeTask = nil
             task087SmokeRunID = nil
-        }
-        .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
-            refreshSupabaseBaselineSummary()
         }
         .task(id: task087SmokeAutoRunTrigger) {
             runTask087SandboxSmokeIfRequested()
@@ -661,7 +354,470 @@ struct OptionsView: View {
 #endif
     }
 
+    private var cloudAccountAndSyncPublicCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            cloudAccountPublicHeader
+
+            if supabaseAuthViewModel.isSignedIn || supabaseAuthViewModel.isTransitioning {
+                Divider()
+
+                SupabaseManualSyncReleaseCard(
+                    context: modelContext,
+                    authViewModel: supabaseAuthViewModel,
+                    inventoryService: supabaseInventoryService,
+                    pullPreviewService: supabasePullPreviewService,
+                    manualPushService: supabaseManualPushService,
+                    activityRecorder: syncEventOutboxDrainRecorder,
+                    viewModel: manualSyncViewModel,
+                    cancelHandler: manualSyncCancelHandler
+                )
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var cloudAccountPublicHeader: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 12) {
+                cloudAccountStatusLabel
+                Spacer(minLength: 12)
+                cloudAccountActionButton
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                cloudAccountStatusLabel
+                cloudAccountActionButton
+            }
+        }
+    }
+
+    private var cloudAccountStatusLabel: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(cloudAccountTitle)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(cloudAccountDetail)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } icon: {
+            Image(systemName: cloudAccountSystemImage)
+                .foregroundStyle(cloudAccountColor)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var cloudAccountActionButton: some View {
+        if supabaseAuthViewModel.isSignedIn {
+            Button(role: .destructive) {
+                supabaseAuthViewModel.signOut()
+            } label: {
+                Label(L("options.supabase.auth.signOut"), systemImage: "rectangle.portrait.and.arrow.right")
+            }
+            .buttonStyle(.borderless)
+            .font(.subheadline.weight(.semibold))
+            .disabled(!supabaseAuthViewModel.canSignOut)
+        } else if supabaseAuthViewModel.isTransitioning {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text(L("options.cloud.account.transitioning"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Button {
+                supabaseAuthViewModel.signInWithGoogle()
+            } label: {
+                Label(L("options.supabase.manualSync.action.signIn"), systemImage: "person.crop.circle.badge.plus")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(!supabaseAuthViewModel.canSignIn)
+        }
+    }
+
+    private var localDatabaseStatusPublicCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(localDatabaseTitle)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text(localDatabaseDetail)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } icon: {
+                Image(systemName: localDatabaseSystemImage)
+                    .foregroundStyle(localDatabaseColor)
+            }
+            .accessibilityElement(children: .combine)
+
+            VStack(alignment: .leading, spacing: 8) {
+                LabeledContent(L("options.localDatabase.products"), value: "\(localProducts.count)")
+                LabeledContent(L("options.localDatabase.suppliers"), value: "\(localSuppliers.count)")
+                LabeledContent(L("options.localDatabase.categories"), value: "\(localCategories.count)")
+                LabeledContent(L("options.localDatabase.prices"), value: "\(localProductPrices.count)")
+
+                if localPendingAttentionCount > 0 {
+                    LabeledContent(
+                        L("options.localDatabase.pending"),
+                        value: "\(localPendingAttentionCount)"
+                    )
+                }
+
+                if let appliedAt = supabaseBaselineSummary.appliedAt {
+                    LabeledContent(
+                        L("options.supabase.baseline.lastPull"),
+                        value: appliedAt.formatted(date: .abbreviated, time: .shortened)
+                    )
+                }
+            }
+            .font(.footnote)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var cloudAccountTitle: String {
+        switch supabaseAuthViewModel.state {
+        case .unconfigured:
+            return L("options.cloud.account.unconfigured.title")
+        case .signedOut:
+            return L("options.cloud.account.signedOut.title")
+        case .signingIn:
+            return L("options.cloud.account.signingIn.title")
+        case .signedIn:
+            return L("options.cloud.account.signedIn.title")
+        case .signingOut:
+            return L("options.cloud.account.signingOut.title")
+        case .failed:
+            return L("options.cloud.account.failed.title")
+        }
+    }
+
+    private var cloudAccountDetail: String {
+        switch supabaseAuthViewModel.state {
+        case .unconfigured:
+            return L("options.cloud.account.unconfigured.detail")
+        case .signedOut:
+            return L("options.cloud.account.signedOut.detail")
+        case .signingIn:
+            return L("options.cloud.account.signingIn.detail")
+        case .signedIn:
+            if let email = supabaseAuthViewModel.sessionInfo?.privacySafeDisplayEmail {
+                return L("options.cloud.account.signedIn.email", email)
+            }
+            return L("options.cloud.account.signedIn.detail")
+        case .signingOut:
+            return L("options.cloud.account.signingOut.detail")
+        case .failed:
+            return L("options.cloud.account.failed.detail")
+        }
+    }
+
+    private var cloudAccountSystemImage: String {
+        switch supabaseAuthViewModel.state {
+        case .unconfigured, .failed:
+            return "exclamationmark.triangle.fill"
+        case .signedOut:
+            return "person.crop.circle.badge.xmark"
+        case .signingIn, .signingOut:
+            return "hourglass"
+        case .signedIn:
+            return "person.crop.circle.badge.checkmark"
+        }
+    }
+
+    private var cloudAccountColor: Color {
+        switch supabaseAuthViewModel.state {
+        case .signedIn:
+            return .green
+        case .failed, .unconfigured:
+            return .orange
+        case .signedOut, .signingIn, .signingOut:
+            return .secondary
+        }
+    }
+
+    private var localDatabaseTitle: String {
+        if localProducts.isEmpty && localSuppliers.isEmpty && localCategories.isEmpty {
+            return L("options.localDatabase.empty.title")
+        }
+        if localPendingAttentionCount > 0 {
+            return L("options.localDatabase.pending.title")
+        }
+        switch supabaseBaselineSummary.status {
+        case .absent:
+            return L("options.localDatabase.needsDownload.title")
+        case .valid:
+            return L("options.localDatabase.ready.title")
+        case .stale, .accountMismatch, .incomplete:
+            return L("options.localDatabase.needsCheck.title")
+        }
+    }
+
+    private var localDatabaseDetail: String {
+        if localProducts.isEmpty && localSuppliers.isEmpty && localCategories.isEmpty {
+            return L("options.localDatabase.empty.detail")
+        }
+        if localPendingAttentionCount > 0 {
+            return L("options.localDatabase.pending.detail")
+        }
+        switch supabaseBaselineSummary.status {
+        case .absent:
+            return L("options.localDatabase.needsDownload.detail")
+        case .valid:
+            return L("options.localDatabase.ready.detail")
+        case .stale, .accountMismatch, .incomplete:
+            return L("options.localDatabase.needsCheck.detail")
+        }
+    }
+
+    private var localDatabaseSystemImage: String {
+        if localProducts.isEmpty && localSuppliers.isEmpty && localCategories.isEmpty {
+            return "tray"
+        }
+        switch supabaseBaselineSummary.status {
+        case .valid where localPendingAttentionCount == 0:
+            return "checkmark.seal.fill"
+        case .absent:
+            return "arrow.down.circle.fill"
+        case .stale, .accountMismatch, .incomplete:
+            return "exclamationmark.triangle.fill"
+        case .valid:
+            return "paperplane.circle.fill"
+        }
+    }
+
+    private var localDatabaseColor: Color {
+        if localProducts.isEmpty && localSuppliers.isEmpty && localCategories.isEmpty {
+            return .secondary
+        }
+        if localPendingAttentionCount > 0 {
+            return .orange
+        }
+        switch supabaseBaselineSummary.status {
+        case .valid:
+            return .green
+        case .absent:
+            return .secondary
+        case .stale, .accountMismatch, .incomplete:
+            return .orange
+        }
+    }
+
+    private var localPendingAttentionCount: Int {
+        localPendingChanges.filter(isLocalPendingChangeRelevantToCurrentAccount).count
+    }
+
+    private func isLocalPendingChangeRelevantToCurrentAccount(_ change: LocalPendingChange) -> Bool {
+        guard !change.status.isTerminal else { return false }
+        guard let currentOwner = supabaseAuthViewModel.sessionInfo?.userID.uuidString.lowercased() else {
+            return change.ownerUserID == nil
+        }
+        return change.ownerUserID == currentOwner
+    }
+
+    private func refreshSupabaseBaselineSummary() {
+        do {
+            supabaseBaselineSummary = try SupabaseCatalogBaselineReader().debugSummary(
+                context: modelContext,
+                currentUserUUID: supabaseAuthViewModel.sessionInfo?.userID
+            )
+        } catch {
+            supabaseBaselineSummary = .absent
+        }
+    }
+
 #if DEBUG
+    private var developerDiagnosticsContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            diagnosticGroup(
+                titleKey: "options.supabase.auth.header",
+                systemImage: "person.crop.circle.badge.checkmark"
+            ) {
+                supabaseAuthStatusRow
+
+                if supabaseAuthViewModel.isTransitioning {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(L("options.supabase.auth.transitioning"))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Button {
+                    runSupabaseDiagnostic()
+                } label: {
+                    Label(L("options.supabase.diagnostic.button"), systemImage: "network")
+                }
+                .disabled(!canRunAuthenticatedSupabaseActions || isRunningSupabaseDiagnostic)
+
+                Button {
+                    runSupabasePullPreview()
+                } label: {
+                    Label(L("options.supabase.preview.button"), systemImage: "doc.text.magnifyingglass")
+                }
+                .disabled(!canRunAuthenticatedSupabaseActions || isSupabasePullPreviewLoading)
+
+                if !supabaseAuthViewModel.isSignedIn {
+                    Label {
+                        Text(L("options.supabase.auth.sessionRequired"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "lock.fill")
+                            .foregroundStyle(Color.orange)
+                    }
+                }
+
+                if supabaseAuthViewModel.isSignedIn,
+                   let sessionInfo = supabaseAuthViewModel.sessionInfo {
+                    DisclosureGroup(L("options.supabase.auth.debugDetails")) {
+                        LabeledContent(
+                            L("options.supabase.auth.debug.userId"),
+                            value: sessionInfo.privacySafeUserID
+                        )
+                        LabeledContent(
+                            L("options.supabase.auth.debug.provider"),
+                            value: sessionInfo.provider ?? L("options.supabase.auth.providerUnknown")
+                        )
+                        LabeledContent(
+                            L("options.supabase.auth.debug.email"),
+                            value: sessionInfo.privacySafeDisplayEmail ?? L("options.supabase.preview.valueMissing")
+                        )
+                    }
+                }
+
+                if isRunningSupabaseDiagnostic {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(L("options.supabase.diagnostic.running"))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let supabaseDiagnosticMessage {
+                    Label {
+                        Text(supabaseDiagnosticMessage)
+                            .font(.footnote)
+                            .foregroundStyle(supabaseDiagnosticIsError ? Color.red : Color.secondary)
+                    } icon: {
+                        Image(systemName: supabaseDiagnosticIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                            .foregroundStyle(supabaseDiagnosticIsError ? Color.orange : Color.green)
+                    }
+                }
+
+                productPricePreviewCard
+                productPriceApplyCard
+            }
+
+            diagnosticGroup(
+                titleKey: "options.advanced.header",
+                systemImage: "wrench.and.screwdriver.fill"
+            ) {
+                DisclosureGroup {
+                    productPriceManualPushCard
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(L("options.supabase.priceManualPush.title"))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Spacer()
+                        productPriceApplyBadge("options.supabase.priceManualPush.badge.manual", color: .blue)
+                            .accessibilityLabel(L("options.supabase.priceManualPush.accessibility.manual"))
+                        productPriceApplyBadge("options.supabase.priceManualPush.badge.debug", color: .orange)
+                            .accessibilityLabel(L("options.supabase.priceManualPush.accessibility.debug"))
+                    }
+                }
+
+                SyncEventOutboxDrainDebugCard(
+                    context: modelContext,
+                    recorder: syncEventOutboxDrainRecorder,
+                    isAuthenticated: hasSyncEventsSession,
+                    ownerUserID: supabaseAuthViewModel.sessionInfo?.userID.uuidString
+                )
+            }
+
+            diagnosticGroup(
+                titleKey: "options.supabase.baseline.header",
+                systemImage: "externaldrive.badge.checkmark"
+            ) {
+                baselineStatusRow
+
+                if supabaseBaselineSummary.status != .absent {
+                    if let appliedAt = supabaseBaselineSummary.appliedAt {
+                        LabeledContent(
+                            L("options.supabase.baseline.lastPull"),
+                            value: appliedAt.formatted(date: .abbreviated, time: .shortened)
+                        )
+                    }
+                    LabeledContent(
+                        L("options.supabase.baseline.account"),
+                        value: supabaseBaselineSummary.accountAbbreviation ?? L("options.supabase.preview.valueMissing")
+                    )
+                    LabeledContent(
+                        L("options.supabase.baseline.counts.products"),
+                        value: "\(supabaseBaselineSummary.productCount ?? 0)"
+                    )
+                    LabeledContent(
+                        L("options.supabase.baseline.counts.suppliers"),
+                        value: "\(supabaseBaselineSummary.supplierCount ?? 0)"
+                    )
+                    LabeledContent(
+                        L("options.supabase.baseline.counts.categories"),
+                        value: "\(supabaseBaselineSummary.categoryCount ?? 0)"
+                    )
+                    LabeledContent(
+                        L("options.supabase.baseline.schemaVersion"),
+                        value: "\(supabaseBaselineSummary.fingerprintSchemaVersion ?? 0)"
+                    )
+                    LabeledContent(
+                        L("options.supabase.baseline.tombstones"),
+                        value: "\(supabaseBaselineSummary.tombstoneCount ?? 0)"
+                    )
+                }
+            }
+
+            diagnosticGroup(
+                titleKey: "options.supabase.syncEvents.header",
+                systemImage: "clock.arrow.circlepath"
+            ) {
+                syncEventsDiagnosticsCard
+            }
+
+            diagnosticGroup(
+                titleKey: "options.supabase.pushpreflight.header",
+                systemImage: "shippingbox"
+            ) {
+                pushPreflightDiagnosticsCard
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func diagnosticGroup<Content: View>(
+        titleKey: String,
+        systemImage: String,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 10) {
+                content()
+            }
+            .padding(.top, 6)
+        } label: {
+            Label(L(titleKey), systemImage: systemImage)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+        }
+    }
+
     private var canRunAuthenticatedSupabaseActions: Bool {
         supabaseAuthViewModel.isSignedIn
             && !supabaseAuthViewModel.isTransitioning
@@ -939,68 +1095,60 @@ struct OptionsView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var syncEventsSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    productPriceApplyBadge("options.supabase.syncEvents.badge.readOnly", color: .orange)
-                    Spacer()
-                }
-
-                if displayedSyncEventsState == .idle {
-                    Text(L("options.supabase.syncEvents.state.idle"))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-
-                Button {
-                    Task {
-                        await syncEventDebugViewModel.loadLatestEvents()
-                    }
-                } label: {
-                    Label(L(syncEventsButtonKey), systemImage: "arrow.clockwise.circle")
-                }
-                .disabled(!canRunSyncEventsDebugActions)
-                .accessibilityLabel(L(syncEventsButtonKey))
-                .accessibilityHint(L("options.supabase.syncEvents.button.hint"))
-
-                syncEventsStatusRow
-
-                if let summary = syncEventDebugViewModel.summary,
-                   displayedSyncEventsState == .successEmpty || displayedSyncEventsState == .successWithEvents {
-                    syncEventsSummaryRows(summary)
-                }
-
-                if displayedSyncEventsState == .successWithEvents {
-                    DisclosureGroup {
-                        VStack(alignment: .leading, spacing: 10) {
-                            ForEach(syncEventDebugViewModel.displayRows) { row in
-                                syncEventDisplayRow(row)
-                            }
-                            Text(L(
-                                "options.supabase.syncEvents.summary.displayedCount",
-                                syncEventDebugViewModel.summary?.displayedCount ?? 0,
-                                syncEventDebugViewModel.summary?.loadedCount ?? 0
-                            ))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        }
-                        .padding(.top, 4)
-                    } label: {
-                        Label(L("options.supabase.syncEvents.list.title"), systemImage: "list.bullet.rectangle")
-                    }
-                    .accessibilityLabel(L("options.supabase.syncEvents.list.title"))
-                }
+    private var syncEventsDiagnosticsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                productPriceApplyBadge("options.supabase.syncEvents.badge.readOnly", color: .orange)
+                Spacer()
             }
-            .padding(.vertical, 4)
-            .accessibilityElement(children: .contain)
-        } header: {
-            SectionHeader(title: L("options.supabase.syncEvents.header"), systemImage: "clock.arrow.circlepath")
-        } footer: {
-            Text(L("options.supabase.syncEvents.footer"))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+
+            if displayedSyncEventsState == .idle {
+                Text(L("options.supabase.syncEvents.state.idle"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                Task {
+                    await syncEventDebugViewModel.loadLatestEvents()
+                }
+            } label: {
+                Label(L(syncEventsButtonKey), systemImage: "arrow.clockwise.circle")
+            }
+            .disabled(!canRunSyncEventsDebugActions)
+            .accessibilityLabel(L(syncEventsButtonKey))
+            .accessibilityHint(L("options.supabase.syncEvents.button.hint"))
+
+            syncEventsStatusRow
+
+            if let summary = syncEventDebugViewModel.summary,
+               displayedSyncEventsState == .successEmpty || displayedSyncEventsState == .successWithEvents {
+                syncEventsSummaryRows(summary)
+            }
+
+            if displayedSyncEventsState == .successWithEvents {
+                DisclosureGroup {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(syncEventDebugViewModel.displayRows) { row in
+                            syncEventDisplayRow(row)
+                        }
+                        Text(L(
+                            "options.supabase.syncEvents.summary.displayedCount",
+                            syncEventDebugViewModel.summary?.displayedCount ?? 0,
+                            syncEventDebugViewModel.summary?.loadedCount ?? 0
+                        ))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 4)
+                } label: {
+                    Label(L("options.supabase.syncEvents.list.title"), systemImage: "list.bullet.rectangle")
+                }
+                .accessibilityLabel(L("options.supabase.syncEvents.list.title"))
+            }
         }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
     }
 
     @ViewBuilder
@@ -2344,15 +2492,162 @@ struct OptionsView: View {
         pendingManualPushPlan = nil
     }
 
-    private func refreshSupabaseBaselineSummary() {
-        do {
-            supabaseBaselineSummary = try SupabaseCatalogBaselineReader().debugSummary(
-                context: modelContext,
-                currentUserUUID: supabaseAuthViewModel.sessionInfo?.userID
-            )
-        } catch {
-            supabaseBaselineSummary = .absent
+    private var pushPreflightDiagnosticsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            preflightStateRow
+
+            Picker(
+                L("options.supabase.pushpreflight.scope.label"),
+                selection: $selectedPushPreflightScope
+            ) {
+                Text(L("options.supabase.pushpreflight.scope.global"))
+                    .tag(ManualPushPreflightScope.global)
+                Text(L("options.supabase.pushpreflight.scope.task045"))
+                    .tag(ManualPushPreflightScope.scopedTask045)
+            }
+            .pickerStyle(.segmented)
+            .disabled(pushPreflightViewModel.isRunning)
+
+            if selectedPushPreflightScope == .scopedTask045 {
+                Button {
+                    runTask045RemoteCollisionCheck()
+                } label: {
+                    Label(
+                        L("options.supabase.pushpreflight.collision.task045.button"),
+                        systemImage: "magnifyingglass.circle"
+                    )
+                }
+                .disabled(
+                    isRunningTask045RemoteCollisionCheck
+                        || pushPreflightViewModel.isRunning
+                        || !isPushPreflightAccountReady
+                        || supabaseInventoryService == nil
+                )
+            }
+
+            if isRunningTask045RemoteCollisionCheck {
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text(L("options.supabase.pushpreflight.collision.task045.running"))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let task045RemoteCollisionMessage {
+                Label {
+                    Text(task045RemoteCollisionMessage)
+                        .font(.footnote)
+                        .foregroundStyle(task045RemoteCollisionIsError ? Color.red : Color.secondary)
+                } icon: {
+                    Image(systemName: task045RemoteCollisionIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                        .foregroundStyle(task045RemoteCollisionIsError ? Color.orange : Color.green)
+                }
+            }
+
+            if isTask087SmokeEnabled {
+                Divider()
+
+                Button {
+                    runTask087SandboxSmoke()
+                } label: {
+                    Label("TASK087 sandbox smoke", systemImage: "checkmark.shield")
+                }
+                .disabled(!canRunAuthenticatedSupabaseActions || task087SmokeState.isRunning)
+
+                task087SmokeStatusRow
+            }
+
+            Button {
+                runSupabasePushPreflight()
+            } label: {
+                Label(
+                    L(pushPreflightRunButtonKey),
+                    systemImage: selectedPushPreflightScope == .scopedTask045
+                        ? "line.3.horizontal.decrease.circle"
+                        : "checklist"
+                )
+            }
+            .disabled(pushPreflightViewModel.isRunning || !canRunSelectedPushPreflight)
+
+            if canRunManualPush {
+                Button(role: .destructive) {
+                    prepareManualPushConfirmation()
+                } label: {
+                    Label(L("options.supabase.manualpush.button"), systemImage: "arrow.up.circle.fill")
+                }
+                .accessibilityLabel(L("options.supabase.manualpush.accessibility"))
+            }
+
+            if pushPreflightViewModel.isRunning {
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text(L("options.supabase.pushpreflight.running"))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if isPushPreflightAccountReady {
+                if case .completedSafe(let summary) = pushPreflightViewModel.state {
+                    preflightSummaryCard(
+                        titleKey: "options.supabase.pushpreflight.state.completedSafe",
+                        icon: "checkmark.shield.fill",
+                        color: .green,
+                        summary: summary
+                    )
+                } else if case .completedScopedSafe(let summary) = pushPreflightViewModel.state {
+                    preflightSummaryCard(
+                        titleKey: "options.supabase.pushpreflight.state.completedScopedSafe",
+                        icon: "checkmark.shield.fill",
+                        color: .green,
+                        summary: summary
+                    )
+                } else if case .completedScopedBlocked(let summary) = pushPreflightViewModel.state {
+                    preflightSummaryCard(
+                        titleKey: "options.supabase.pushpreflight.state.completedScopedBlocked",
+                        icon: "xmark.shield.fill",
+                        color: .orange,
+                        summary: summary
+                    )
+                } else if case .completedNoWork(let summary) = pushPreflightViewModel.state {
+                    preflightSummaryCard(
+                        titleKey: "options.supabase.pushpreflight.state.completedNoWork",
+                        icon: "checkmark.circle.fill",
+                        color: .green,
+                        summary: summary
+                    )
+                } else if case .completedBlocked(let summary) = pushPreflightViewModel.state {
+                    preflightSummaryCard(
+                        titleKey: "options.supabase.pushpreflight.state.completedBlocked",
+                        icon: "exclamationmark.triangle.fill",
+                        color: .orange,
+                        summary: summary
+                    )
+                } else if let execution = manualPushExecutionSummary {
+                    manualPushResultCard(execution)
+                } else if case .failedLocalError = pushPreflightViewModel.state {
+                    Label {
+                        Text(L("options.supabase.pushpreflight.state.failedLocalError"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "xmark.octagon.fill")
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L("options.supabase.pushpreflight.copy.dryRun"))
+                Text(L("options.supabase.pushpreflight.copy.scopedTask045"))
+                Text(L("options.supabase.manualpush.copy.noProductPrice"))
+                Text(L("options.supabase.manualpush.copy.noRemoteDelete"))
+                Text(L("options.supabase.manualpush.copy.noAutomaticSync"))
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
     }
 
     @ViewBuilder
@@ -2785,6 +3080,11 @@ struct OptionsView: View {
                 baseKey: "options.supabase.priceApply.error.localSnapshot",
                 detail: message
             )
+        case .remoteFetchFailed(let message):
+            return detailMessage(
+                baseKey: "options.supabase.priceApply.error.remoteFetch",
+                detail: message
+            )
         case .saveFailed(let message):
             return detailMessage(
                 baseKey: "options.supabase.priceApply.error.saveFailed",
@@ -3024,7 +3324,9 @@ private struct SupabaseManualSyncReleaseCard: View {
                     .accessibilityHidden(true)
             }
 
-            if presentation.isRunning {
+            if presentation.progressState.isActive || presentation.progressState.phase == .completedWithWarnings {
+                CloudSyncProgressInlineView(state: presentation.progressState)
+            } else if presentation.isRunning {
                 HStack(spacing: 10) {
                     ProgressView()
                     Text(L("options.supabase.manualSync.state.running.inline"))
@@ -3110,6 +3412,11 @@ private struct SupabaseManualSyncReleaseCard: View {
                         handle(reviewPrimaryAction: review.primaryActionID)
                     },
                     dismiss: {
+                        if viewModel.isApplyingLocalChanges {
+                            activeApplyTask?.cancel()
+                            activeApplyTask = nil
+                            return
+                        }
                         if viewModel.requiresReviewDiscardConfirmation {
                             isDiscardConfirmationPresented = true
                         } else {
@@ -3380,6 +3687,10 @@ private struct SupabaseManualSyncReviewSheet: View {
 
                     summaryCard
 
+                    if let progress = review.progressState {
+                        CloudSyncProgressInlineView(state: progress)
+                    }
+
                     ForEach(review.sections) { section in
                         reviewSection(section)
                     }
@@ -3493,6 +3804,48 @@ private struct SupabaseManualSyncReviewSheet: View {
         case .blocked:
             return .red
         }
+    }
+}
+
+private struct CloudSyncProgressInlineView: View {
+    let state: CloudSyncProgressState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(state.message)
+                    .font(.footnote.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 8)
+
+                if let countText = state.countText {
+                    Text(countText)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let percentage = state.percentage {
+                ProgressView(value: percentage)
+                    .progressViewStyle(.linear)
+            } else if state.isActive {
+                ProgressView()
+                    .controlSize(.small)
+            }
+
+            if let detail = state.detailMessage,
+               !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -4308,7 +4661,11 @@ private struct SupabasePullPreviewSheet: View {
             await Task.yield()
 
             do {
-                let result = try SupabasePullApplyService().apply(plan: plan, context: modelContext)
+                let result = try await SupabasePullApplyService().applyBatched(
+                    plan: plan,
+                    context: modelContext,
+                    onProgress: { _ in }
+                )
                 var statusMessage = L("options.supabase.apply.success", result.inserted, result.updated)
                 if let currentUserID, let preview {
                     do {

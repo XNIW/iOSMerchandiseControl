@@ -74,6 +74,40 @@ final class SupabasePullPreviewPaginationTests: XCTestCase {
         XCTAssertEqual(SupabaseInventoryService.stablePageOrderColumn, "id")
     }
 
+    func testLargeProductPriceHistorySampleDoesNotMakePreviewPartialOrSourceError() async throws {
+        let productID = UUID()
+        let mock = MockSupabaseInventoryFetching(
+            products: [
+                remoteProduct(id: productID, barcode: "TASK108-LARGE", name: "Large history")
+            ],
+            productPrices: (0..<120_000).map {
+                remotePrice(
+                    id: UUID(uuidString: "00000000-0000-0000-0001-\(String(format: "%012d", $0))")!,
+                    productID: productID,
+                    effectiveAt: ProductPriceEffectiveAtCanonicalizer.canonicalString(
+                        from: Date(timeIntervalSince1970: 1_779_000_000 + TimeInterval($0))
+                    )
+                )
+            }
+        )
+        let service = SupabasePullPreviewService(
+            inventoryService: mock,
+            pageSize: 1_000,
+            productPricePreviewSampleLimit: 1_000
+        )
+
+        let state = await service.generatePreview(context: try makeContext())
+
+        guard case .success(let preview) = state else {
+            return XCTFail("Expected success preview for sampled large price history, got \(state)")
+        }
+        XCTAssertEqual(preview.remoteCounts.productPrices, 1_000)
+        XCTAssertFalse(preview.sourceErrors.contains { $0.relatedKey == "inventory_product_prices" })
+        XCTAssertTrue(preview.warnings.contains { $0.code == .priceHistoryPagedApplyRequired })
+        let ranges = await mock.productPriceRangeLog()
+        XCTAssertEqual(ranges, ["0...999"])
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             Product.self,
@@ -110,18 +144,46 @@ final class SupabasePullPreviewPaginationTests: XCTestCase {
             deletedAt: nil
         )
     }
+
+    private func remotePrice(
+        id: UUID = UUID(),
+        productID: UUID,
+        effectiveAt: String
+    ) -> RemoteInventoryProductPriceRow {
+        RemoteInventoryProductPriceRow(
+            id: id,
+            ownerUserID: ownerID,
+            productID: productID,
+            type: "purchase",
+            price: 2.5,
+            effectiveAt: effectiveAt,
+            source: "TEST",
+            note: nil,
+            createdAt: effectiveAt
+        )
+    }
 }
 
 private actor MockSupabaseInventoryFetching: SupabaseInventoryFetching {
     private let products: [RemoteInventoryProductRow]
+    private let productPrices: [RemoteInventoryProductPriceRow]
     private var productRanges: [String] = []
+    private var productPriceRanges: [String] = []
 
-    init(products: [RemoteInventoryProductRow]) {
+    init(
+        products: [RemoteInventoryProductRow],
+        productPrices: [RemoteInventoryProductPriceRow] = []
+    ) {
         self.products = products
+        self.productPrices = productPrices
     }
 
     func productRangeLog() -> [String] {
         productRanges
+    }
+
+    func productPriceRangeLog() -> [String] {
+        productPriceRanges
     }
 
     func fetchProductsPage(from: Int, to: Int) async throws -> [RemoteInventoryProductRow] {
@@ -138,7 +200,8 @@ private actor MockSupabaseInventoryFetching: SupabaseInventoryFetching {
     }
 
     func fetchProductPricesPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {
-        []
+        productPriceRanges.append("\(from)...\(to)")
+        return page(productPrices, from: from, to: to)
     }
 
     private func page<Row>(_ rows: [Row], from: Int, to: Int) -> [Row] {

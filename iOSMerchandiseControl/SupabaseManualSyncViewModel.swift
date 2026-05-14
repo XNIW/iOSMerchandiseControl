@@ -176,6 +176,7 @@ nonisolated struct SupabaseManualSyncRootPresentationState: Equatable, Sendable 
     var kind: SupabaseManualSyncRootPresentationKind
     var title: String
     var detail: String?
+    var progressState: CloudSyncProgressState?
     var primaryActionTitle: String?
     var primaryActionID: SupabaseManualSyncPresentationActionID?
     var systemImage: String
@@ -185,6 +186,7 @@ nonisolated struct SupabaseManualSyncRootPresentationState: Equatable, Sendable 
         kind: .hidden,
         title: "",
         detail: nil,
+        progressState: nil,
         primaryActionTitle: nil,
         primaryActionID: nil,
         systemImage: "icloud",
@@ -208,6 +210,7 @@ nonisolated enum SupabaseManualSyncPresentationActionID: Equatable, Sendable {
     case signIn
     case realignData
     case checkCloud
+    case downloadCloudDatabase
     case reviewChanges
     case syncNow
     case sendCloudChanges
@@ -264,6 +267,8 @@ nonisolated struct SupabaseManualSyncLocalApplySummary: Equatable, Sendable {
     var suppliersCreated: Int
     var categoriesCreated: Int
     var priceSummary: SupabaseManualSyncProductPriceSummary = .empty
+    var baselineCommitted: Bool = false
+    var baselineCommitFailed: Bool = false
 }
 
 nonisolated enum SupabaseManualSyncReviewSectionTone: Equatable, Sendable {
@@ -310,6 +315,7 @@ nonisolated struct SupabaseManualSyncReviewSheetState: Equatable, Sendable {
     var summaryMessage: String = ""
     var summarySystemImage: String = "checkmark.circle.fill"
     var summaryTone: SupabaseManualSyncReviewSectionTone = .neutral
+    var progressState: CloudSyncProgressState? = nil
     var sections: [SupabaseManualSyncReviewSectionState]
     var footerMessage: String
     var primaryActionID: SupabaseManualSyncReviewPrimaryActionID
@@ -327,6 +333,7 @@ nonisolated struct SupabaseManualSyncPresentationState: Equatable, Sendable {
     var statusDetailText: String?
     var userFacingSummary: SupabaseManualSyncUserFacingSummary?
     var reviewSheet: SupabaseManualSyncReviewSheetState?
+    var progressState: CloudSyncProgressState
     var statusBadgeText: String
     var statusBadgeSystemImage: String?
     var primaryAction: SupabaseManualSyncPresentationAction?
@@ -487,14 +494,54 @@ protocol SupabaseManualSyncCatalogPushProviding: AnyObject {
 protocol SupabaseManualSyncProductPriceSyncProviding: AnyObject {
     func makeApplyPlan(ownerUserID: UUID) async throws -> ProductPriceApplyPlan
     func apply(plan: ProductPriceApplyPlan, ownerUserID: UUID) async throws -> ProductPriceApplyResult
+    func apply(
+        plan: ProductPriceApplyPlan,
+        ownerUserID: UUID,
+        onProgress: @escaping @MainActor @Sendable (ProductPricePagedApplyProgress) -> Void
+    ) async throws -> ProductPriceApplyResult
     func makePushPlan(ownerUserID: UUID) async throws -> ProductPricePushDryRunPlan
     func push(plan: ProductPricePushDryRunPlan, ownerUserID: UUID) async throws -> ProductPriceManualPushResult
+}
+
+extension SupabaseManualSyncProductPriceSyncProviding {
+    func apply(
+        plan: ProductPriceApplyPlan,
+        ownerUserID: UUID,
+        onProgress: @escaping @MainActor @Sendable (ProductPricePagedApplyProgress) -> Void
+    ) async throws -> ProductPriceApplyResult {
+        try await apply(plan: plan, ownerUserID: ownerUserID)
+    }
 }
 
 @MainActor
 protocol SupabaseManualSyncActivityRegistrationProviding: AnyObject {
     func loadActivityRegistrationSnapshot(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationSnapshot
     func registerActivities(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationResult
+}
+
+nonisolated struct SupabaseManualSyncHistorySessionSummary: Equatable, Sendable {
+    var uploaded: Int = 0
+    var inserted: Int = 0
+    var updated: Int = 0
+    var skippedClean: Int = 0
+    var skippedDirtyLocal: Int = 0
+    var skippedOversized: Int = 0
+
+    var totalChanged: Int {
+        uploaded + inserted + updated
+    }
+
+    var hasWarnings: Bool {
+        skippedDirtyLocal > 0 || skippedOversized > 0
+    }
+}
+
+@MainActor
+protocol SupabaseManualSyncHistorySessionSyncProviding: AnyObject {
+    func syncHistorySessions(
+        ownerUserID: UUID,
+        onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
+    ) async throws -> SupabaseManualSyncHistorySessionSummary
 }
 
 @MainActor
@@ -519,6 +566,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private let remotePreviewStaging: (any SupabaseManualSyncRemotePreviewStaging)?
     private let localApplyService: SupabasePullApplyService?
     private let localApplyContext: ModelContext?
+    private let localApplyBaselineCommitter: any SupabaseManualSyncLocalApplyBaselineCommitting
     private let isLocalApplyAuthenticated: (@MainActor () -> Bool)?
     private let currentLocalApplyOwnerID: (@MainActor () -> UUID?)?
     private let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)?
@@ -527,6 +575,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private let currentProductPriceOwnerID: (@MainActor () -> UUID?)?
     private let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)?
     private let currentActivityRegistrationOwnerID: (@MainActor () -> UUID?)?
+    private let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)?
+    private let currentHistorySessionOwnerID: (@MainActor () -> UUID?)?
+    private let baselineStatusProvider: (@MainActor () -> SupabaseCatalogBaselineDebugSummary?)?
     private let semiAutomaticPolicy: SupabaseManualSyncSemiAutomaticPolicy
     private let lifecycleRunGate: SupabaseManualSyncLifecycleRunGate
     private let defaultLifecyclePreflight: SupabaseManualSyncLifecyclePreflight?
@@ -557,12 +608,15 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     @Published private(set) var canApplyLocalChanges = false
     @Published private(set) var applyBlockedReason: String?
     @Published private(set) var isApplyingLocalChanges = false
+    @Published private(set) var localApplyProgressMessage: String?
     @Published private(set) var lastLocalApplySummary: SupabaseManualSyncLocalApplySummary?
     @Published private(set) var catalogPushPhase: SupabaseManualSyncCatalogPushPhase = .idle
     @Published private(set) var productPricePushPhase: SupabaseManualSyncProductPricePushPhase = .idle
     @Published private(set) var productPriceSummary: SupabaseManualSyncProductPriceSummary = .empty
     @Published private(set) var activityRegistrationPhase: SupabaseManualSyncActivityRegistrationPhase = .idle
     @Published private(set) var isRegisteringActivities = false
+    @Published private(set) var historySessionSummary: SupabaseManualSyncHistorySessionSummary?
+    @Published private(set) var progressState: CloudSyncProgressState = .idle()
     @Published private(set) var semiAutomaticState: SupabaseManualSyncSemiAutomaticState = .idle
     @Published private(set) var lastCloudCheckAt: Date?
     @Published private(set) var lastForegroundObservationEvent: SupabaseManualSyncForegroundObservationEvent?
@@ -575,6 +629,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         remotePreviewStaging: (any SupabaseManualSyncRemotePreviewStaging)? = nil,
         localApplyService: SupabasePullApplyService? = nil,
         localApplyContext: ModelContext? = nil,
+        localApplyBaselineCommitter: (any SupabaseManualSyncLocalApplyBaselineCommitting)? = nil,
         isLocalApplyAuthenticated: (@MainActor () -> Bool)? = nil,
         currentLocalApplyOwnerID: (@MainActor () -> UUID?)? = nil,
         catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = nil,
@@ -583,6 +638,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         currentProductPriceOwnerID: (@MainActor () -> UUID?)? = nil,
         activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = nil,
         currentActivityRegistrationOwnerID: (@MainActor () -> UUID?)? = nil,
+        historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = nil,
+        currentHistorySessionOwnerID: (@MainActor () -> UUID?)? = nil,
+        baselineStatusProvider: (@MainActor () -> SupabaseCatalogBaselineDebugSummary?)? = nil,
         semiAutomaticPolicy: SupabaseManualSyncSemiAutomaticPolicy = SupabaseManualSyncSemiAutomaticPolicy(),
         lifecycleRunGate: SupabaseManualSyncLifecycleRunGate? = nil,
         lifecycleNetworkIsAvailable: @escaping @MainActor () -> Bool = { true },
@@ -596,6 +654,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         self.remotePreviewStaging = remotePreviewStaging
         self.localApplyService = localApplyService
         self.localApplyContext = localApplyContext
+        self.localApplyBaselineCommitter = localApplyBaselineCommitter ?? SupabaseManualSyncLocalApplyBaselineCommitter()
         self.isLocalApplyAuthenticated = isLocalApplyAuthenticated
         self.currentLocalApplyOwnerID = currentLocalApplyOwnerID
         self.catalogPushProvider = catalogPushProvider
@@ -604,6 +663,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         self.currentProductPriceOwnerID = currentProductPriceOwnerID
         self.activityRegistrationProvider = activityRegistrationProvider
         self.currentActivityRegistrationOwnerID = currentActivityRegistrationOwnerID
+        self.historySessionProvider = historySessionProvider
+        self.currentHistorySessionOwnerID = currentHistorySessionOwnerID
+        self.baselineStatusProvider = baselineStatusProvider
         self.semiAutomaticPolicy = semiAutomaticPolicy
         self.lifecycleNetworkIsAvailable = lifecycleNetworkIsAvailable
         self.lifecycleAppContextIsSafe = lifecycleAppContextIsSafe
@@ -690,6 +752,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             ?? currentCatalogPushOwnerID?()
             ?? currentProductPriceOwnerID?()
             ?? currentActivityRegistrationOwnerID?()
+            ?? currentHistorySessionOwnerID?()
     }
 
     private var hasLifecycleOwnerProvider: Bool {
@@ -697,6 +760,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             || currentCatalogPushOwnerID != nil
             || currentProductPriceOwnerID != nil
             || currentActivityRegistrationOwnerID != nil
+            || currentHistorySessionOwnerID != nil
     }
 
     private var currentLifecycleOwnerID: UUID? {
@@ -907,10 +971,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             || remotePreviewSummary.safeAggregateCounts.tombstoneCount > 0
             || remotePreviewSummary.safeAggregateCounts.sourceErrorCount > 0 {
             semiAutomaticState = .staleOrConflict
+            presentationKind = .partialSync
             clearRecoverableError()
             lastForegroundObservationEvent = .foreground_check_completed_changes
         } else if remotePreviewSummary.hasRemoteSignals || summary.countsSnapshot.hasAnyPendingWork || hasUnresolvedStagedPlan {
             semiAutomaticState = .changesFound
+            presentationKind = .partialSync
             clearRecoverableError()
             lastForegroundObservationEvent = .foreground_check_completed_changes
         } else {
@@ -970,6 +1036,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 )
             }
             await start(with: .dryRun, checkStartedAt: now, lifecycleRunID: lifecycleRunID)
+            if source == .rootForeground, shouldAutoApplyForegroundPreviewAfterLastCheck {
+                await applyStagedLocalChanges()
+            }
             return true
         case .blocked(.authOrOwnerMissing):
             semiAutomaticState = .blockedAuth
@@ -1037,6 +1106,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
         transitionToRunning()
 
+        updateProgress(
+            phase: .fetchingRemoteCounts,
+            domain: .catalog,
+            message: L("options.supabase.manualSync.progress.fetchingRemoteCounts"),
+            detailMessage: L("options.supabase.manualSync.progress.allowsLocalWork")
+        )
         let summary = await coordinator.run(mode: mode, sessionID: UUID())
 
         guard !Task.isCancelled else {
@@ -1045,6 +1120,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 ? summary
                 : cancelledFallbackSummary(previous: summary)
             apply(summary: cancelledSummary)
+            cancelProgress()
             markLifecycleInterrupted(runID: activeLifecycleRunID, reason: .cancelledBeforeWrite)
             if mode == .dryRun {
                 semiAutomaticState = .idle
@@ -1058,12 +1134,23 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         }
 
         apply(summary: summary)
+        updateProgress(
+            phase: .reviewingChanges,
+            domain: .catalog,
+            message: L("options.supabase.manualSync.progress.reviewingChanges"),
+            detailMessage: progressDetail(after: summary)
+        )
         await prepareCatalogPushPlanIfNeeded(after: summary)
         await prepareProductPricePlansIfNeeded(after: summary)
         await prepareActivityRegistrationIfNeeded(after: summary)
         if mode == .dryRun {
             recordCloudCheckResult(summary, at: checkStartedAt)
         }
+        finishProgress(
+            warnings: shouldFinishProgressWithWarnings(summary),
+            message: progressCompletionMessage(after: summary),
+            detailMessage: progressDetail(after: summary)
+        )
         switch summary.finalState {
         case .allUpToDate, .completedSuccessfully:
             completeLifecycleRunIfVerified(activeLifecycleRunID)
@@ -1079,6 +1166,51 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .partialSync, .connectivityIssue, .technicalReviewNeeded, .concurrentRunNotAllowed, .modeNotSupportedInThisSlice:
             completeLifecycleRunIfVerified(activeLifecycleRunID)
         }
+    }
+
+    private func shouldFinishProgressWithWarnings(_ summary: SupabaseManualSyncRunSummary) -> Bool {
+        switch summary.finalState {
+        case .allUpToDate, .completedSuccessfully:
+            return summary.hasIncompleteRemotePreview
+                || summary.countsSnapshot.hasAnyPendingWork
+                || summary.remotePreviewSummary?.hasRemoteSignals == true
+        case .partialSync,
+             .blocked,
+             .connectivityIssue,
+             .technicalReviewNeeded,
+             .concurrentRunNotAllowed,
+             .modeNotSupportedInThisSlice,
+             .cancelled:
+            return true
+        }
+    }
+
+    private func progressCompletionMessage(after summary: SupabaseManualSyncRunSummary) -> String {
+        if summary.finalState == .cancelled {
+            return L("options.supabase.manualSync.progress.cancelled")
+        }
+        if summary.remotePreviewSummary?.hasRemoteSignals == true
+            || summary.countsSnapshot.hasAnyPendingWork
+            || hasUnresolvedStagedPlan {
+            return L("options.supabase.manualSync.progress.readyToReview")
+        }
+        if shouldFinishProgressWithWarnings(summary) {
+            return L("options.supabase.manualSync.progress.completedWithWarnings")
+        }
+        return L("options.supabase.manualSync.progress.completed")
+    }
+
+    private func progressDetail(after summary: SupabaseManualSyncRunSummary) -> String? {
+        guard let remotePreviewSummary = summary.remotePreviewSummary else {
+            return nonEmpty(summary.suggestedNextStep)
+        }
+        let counts = remotePreviewSummary.safeAggregateCounts
+        let pieces = [
+            counts.newProductCount > 0 ? L("options.supabase.manualSync.progress.detail.products", counts.newProductCount) : nil,
+            counts.priceHistorySignalCount > 0 ? L("options.supabase.manualSync.progress.detail.prices", counts.priceHistorySignalCount) : nil,
+            summary.countsSnapshot.pendingQueuedCloudOperationCount > 0 ? L("options.supabase.manualSync.progress.detail.pending", summary.countsSnapshot.pendingQueuedCloudOperationCount) : nil
+        ].compactMap { $0 }
+        return pieces.isEmpty ? nil : pieces.joined(separator: " · ")
     }
 
     private func cancelledFallbackSummary(previous: SupabaseManualSyncRunSummary) -> SupabaseManualSyncRunSummary {
@@ -1098,6 +1230,99 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         title = Copy.runningTitle
         subtitle = nil
         primaryActionTitle = Copy.startAction
+        updateProgress(
+            phase: .checkingCloud,
+            domain: .catalog,
+            message: L("options.supabase.manualSync.progress.checkingCloud"),
+            detailMessage: L("options.supabase.manualSync.progress.allowsLocalWork"),
+            canCancel: true,
+            isBlockingApply: false,
+            allowsLocalWork: true
+        )
+    }
+
+    private func updateProgress(
+        phase: CloudSyncProgressPhase,
+        domain: CloudSyncProgressDomain?,
+        current: Int? = nil,
+        total: Int? = nil,
+        message: String,
+        detailMessage: String? = nil,
+        canCancel: Bool = true,
+        isBlockingApply: Bool = false,
+        allowsLocalWork: Bool = true
+    ) {
+        let startedAt = progressState.isActive ? progressState.startedAt : nil
+        progressState = CloudSyncProgressState.running(
+            phase: phase,
+            domain: domain,
+            current: current,
+            total: total,
+            message: message,
+            detailMessage: detailMessage,
+            startedAt: startedAt,
+            canCancel: canCancel,
+            isBlockingApply: isBlockingApply,
+            allowsLocalWork: allowsLocalWork
+        )
+    }
+
+    private func finishProgress(
+        warnings: Bool = false,
+        message: String? = nil,
+        detailMessage: String? = nil
+    ) {
+        let now = Date()
+        progressState = CloudSyncProgressState(
+            phase: warnings ? .completedWithWarnings : .completed,
+            domain: nil,
+            current: nil,
+            total: nil,
+            message: message ?? L(warnings
+                ? "options.supabase.manualSync.progress.completedWithWarnings"
+                : "options.supabase.manualSync.progress.completed"
+            ),
+            detailMessage: detailMessage,
+            startedAt: progressState.startedAt,
+            lastUpdatedAt: now,
+            canCancel: false,
+            isBlockingApply: false,
+            allowsLocalWork: true
+        )
+    }
+
+    private func failProgress(message: String? = nil) {
+        let now = Date()
+        progressState = CloudSyncProgressState(
+            phase: .failed,
+            domain: progressState.domain,
+            current: progressState.current,
+            total: progressState.total,
+            message: message ?? L("options.supabase.manualSync.progress.failed"),
+            detailMessage: progressState.detailMessage,
+            startedAt: progressState.startedAt,
+            lastUpdatedAt: now,
+            canCancel: false,
+            isBlockingApply: false,
+            allowsLocalWork: true
+        )
+    }
+
+    private func cancelProgress() {
+        let now = Date()
+        progressState = CloudSyncProgressState(
+            phase: .cancelled,
+            domain: progressState.domain,
+            current: progressState.current,
+            total: progressState.total,
+            message: L("options.supabase.manualSync.progress.cancelled"),
+            detailMessage: nil,
+            startedAt: progressState.startedAt,
+            lastUpdatedAt: now,
+            canCancel: false,
+            isBlockingApply: false,
+            allowsLocalWork: true
+        )
     }
 
     func apply(summary: SupabaseManualSyncRunSummary) {
@@ -1214,6 +1439,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         }
         lastSummary = nil
         lastLocalApplySummary = nil
+        progressState = .idle()
         cannotStartConcurrently = false
         presentationKind = .idleReady
         title = Copy.idleTitle
@@ -1234,6 +1460,15 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         }
 
         isApplyingLocalChanges = true
+        localApplyProgressMessage = L("options.supabase.manualSync.progress.preparing")
+        updateProgress(
+            phase: .applyingLocalDatabase,
+            domain: .catalog,
+            message: L("options.supabase.manualSync.progress.preparing"),
+            detailMessage: L("options.supabase.manualSync.progress.allowsLocalWork"),
+            isBlockingApply: true,
+            allowsLocalWork: true
+        )
         canApplyLocalChanges = false
         canApplyCatalogChanges = false
         canApplyProductPriceChanges = false
@@ -1242,6 +1477,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
         guard !Task.isCancelled else {
             isApplyingLocalChanges = false
+            localApplyProgressMessage = nil
+            cancelProgress()
             invalidateLocalApplyStaging(clearSummary: true)
             markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
             return
@@ -1257,12 +1494,19 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             if let preview, remotePreviewStaging?.stagedPreviewForLocalApply != nil {
                 do {
                     try validateLocalApplyOwnerStillCurrent()
+                    localApplyProgressMessage = L("options.supabase.manualSync.progress.applyingCatalog")
                     let plan = try prepareLocalApplyPlan(from: preview)
                     guard let context = localApplyContext,
                           let service = localApplyService else {
                         throw LocalApplyInternalError.dependenciesUnavailable
                     }
-                    catalogResult = try service.apply(plan: plan, context: context)
+                    catalogResult = try await service.applyBatched(
+                        plan: plan,
+                        context: context,
+                        onProgress: { [weak self] progress in
+                            self?.applyCatalogProgress(progress)
+                        }
+                    )
                 } catch let error as SupabasePullApplyError where error.disabledReason == .noApplicableChanges {
                     catalogResult = SupabasePullApplyResult(
                         inserted: 0,
@@ -1273,13 +1517,50 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 }
             }
 
+            localApplyProgressMessage = L("options.supabase.manualSync.progress.downloadingPrices")
+            updateProgress(
+                phase: .downloadingPriceHistory,
+                domain: .prices,
+                message: L("options.supabase.manualSync.progress.downloadingPrices"),
+                detailMessage: nil,
+                isBlockingApply: true,
+                allowsLocalWork: true
+            )
             let priceSummary = try await applyProductPricesIfNeeded()
+            let historySummary = await syncHistorySessionsIfAvailable()
+            var baselineCommitted = false
+            var baselineCommitFailed = false
+            if let preview,
+               let context = localApplyContext,
+               let ownerID = currentLocalApplyOwnerID?() {
+                do {
+                    updateProgress(
+                        phase: .applyingLocalDatabase,
+                        domain: .catalog,
+                        message: L("options.supabase.manualSync.progress.savingBaseline"),
+                        detailMessage: nil,
+                        canCancel: false,
+                        isBlockingApply: true,
+                        allowsLocalWork: true
+                    )
+                    try localApplyBaselineCommitter.commitSuccessfulFullPullApply(
+                        preview: preview,
+                        context: context,
+                        ownerUserID: ownerID
+                    )
+                    baselineCommitted = true
+                } catch {
+                    baselineCommitFailed = true
+                }
+            }
             let summary = SupabaseManualSyncLocalApplySummary(
                 productsAdded: catalogResult.inserted,
                 productsUpdated: catalogResult.updated,
                 suppliersCreated: catalogResult.suppliersCreated,
                 categoriesCreated: catalogResult.categoriesCreated,
-                priceSummary: priceSummary
+                priceSummary: priceSummary,
+                baselineCommitted: baselineCommitted,
+                baselineCommitFailed: baselineCommitFailed
             )
 
             invalidateLocalApplyStaging(clearSummary: false)
@@ -1287,6 +1568,13 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             invalidateProductPriceApplyPlan(clearSummary: false)
             invalidateProductPricePushPlan(clearSummary: false)
             isApplyingLocalChanges = false
+            localApplyProgressMessage = nil
+            finishProgress(
+                warnings: baselineCommitFailed || historySummary.hasWarnings,
+                detailMessage: historySummary.totalChanged > 0
+                    ? L("options.supabase.manualSync.progress.detail.historyChanged", historySummary.totalChanged)
+                    : nil
+            )
             lastSummary = nil
             lastLocalApplySummary = summary
             presentationKind = .localApplyCompleted
@@ -1299,12 +1587,16 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         } catch is CancellationError {
             invalidateLocalApplyStaging(reason: L("options.supabase.manualSync.lifecycle.interrupted.subtitle"), clearSummary: true)
             isApplyingLocalChanges = false
+            localApplyProgressMessage = nil
+            cancelProgress()
             lastSummary = nil
             markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
         } catch {
             let reason = localApplyBlockedMessage(for: error, failureContext: true)
             invalidateLocalApplyStaging(reason: reason, clearSummary: true)
             isApplyingLocalChanges = false
+            localApplyProgressMessage = nil
+            failProgress(message: reason)
             lastSummary = nil
             presentationKind = .localApplyFailed
             title = L("options.supabase.manualSync.state.applyFailed.title")
@@ -1572,6 +1864,16 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         isRegisteringActivities = true
         let snapshot = activityRegistrationSnapshotForCurrentPhase()
         activityRegistrationPhase = .registering(snapshot)
+        updateProgress(
+            phase: .drainingSyncEvents,
+            domain: .outbox,
+            current: 0,
+            total: snapshot.readyToRegister,
+            message: L("options.supabase.manualSync.progress.drainingSyncEvents"),
+            detailMessage: nil,
+            isBlockingApply: false,
+            allowsLocalWork: true
+        )
         await Task.yield()
 
         do {
@@ -1579,6 +1881,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             guard !Task.isCancelled else { throw CancellationError() }
             isRegisteringActivities = false
             applyActivityRegistrationResult(result)
+            finishProgress(
+                warnings: result.status != .success && result.status != .empty,
+                message: L("options.supabase.manualSync.progress.completed")
+            )
             if result.status == .success || result.status == .empty {
                 completeLifecycleRunIfVerified(lifecycleRunID)
             } else {
@@ -1586,6 +1892,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             }
         } catch is CancellationError {
             isRegisteringActivities = false
+            cancelProgress()
             applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
                 status: .cancelled,
                 summary: activityRegistrationSummaryForCurrentPhase()
@@ -1593,6 +1900,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
         } catch {
             isRegisteringActivities = false
+            failProgress()
             applyActivityRegistrationResult(SupabaseManualSyncActivityRegistrationResult(
                 status: .retryableFailure,
                 summary: activityRegistrationSummaryForCurrentPhase()
@@ -1802,9 +2110,16 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
             stagedProductPriceApplyPlan = plan
             stagedProductPriceApplyFingerprint = productPriceApplyFingerprint(plan)
-            let applySummary = makeProductPriceSummary(applyPlan: plan)
+            let canDeferUnmappedPrices = canDeferUnmappedProductPricesUntilCatalogApply(
+                plan,
+                after: summary
+            )
+            let applySummary = makeProductPriceSummary(
+                applyPlan: plan,
+                deferUnmappedProductsUntilCatalogApply: canDeferUnmappedPrices
+            )
             productPriceSummary = productPriceSummary.merging(applySummary)
-            canApplyProductPriceChanges = plan.isApplyAllowed
+            canApplyProductPriceChanges = plan.isApplyAllowed || canDeferUnmappedPrices
             refreshCombinedLocalApplyEligibility()
             if canApplyProductPriceChanges {
                 presentationKind = .partialSync
@@ -1901,7 +2216,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
         let currentPlan = try await productPriceProvider.makeApplyPlan(ownerUserID: ownerUserID)
         let stagedFingerprint = stagedProductPriceApplyFingerprint ?? productPriceApplyFingerprint(stagedPlan)
-        guard productPriceApplyFingerprint(currentPlan) == stagedFingerprint,
+        let currentFingerprint = productPriceApplyFingerprint(currentPlan)
+        let canRefreshAfterCatalogApply = stagedPlan.blockReasons.contains(.unmappedProducts)
+            && currentPlan.isApplyAllowed
+        guard (currentFingerprint == stagedFingerprint || canRefreshAfterCatalogApply),
               currentPlan.isApplyAllowed else {
             var summary = productPriceSummary
             summary.readyToApply = 0
@@ -1910,7 +2228,14 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return summary
         }
 
-        let result = try await productPriceProvider.apply(plan: currentPlan, ownerUserID: ownerUserID)
+        productPriceSummary = makeProductPriceSummary(applyPlan: currentPlan)
+        let result = try await productPriceProvider.apply(
+            plan: currentPlan,
+            ownerUserID: ownerUserID,
+            onProgress: { [weak self] progress in
+                self?.applyProductPriceProgress(progress)
+            }
+        )
         var summary = productPriceSummary.merging(makeProductPriceSummary(applyResult: result))
         summary.readyToApply = 0
         productPriceSummary = summary
@@ -2037,7 +2362,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         } else {
             stagedCatalogPushPlan = nil
             catalogPushPhase = .noChanges(summary)
-            if !canApplyLocalChanges {
+            if !canApplyLocalChanges,
+               lastSummary?.hasCompletedRemotePreviewSignals != true {
                 presentationKind = .catalogPushNoChanges
             }
         }
@@ -2097,6 +2423,16 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             productPricePushPhase = .sending(productPriceSummary)
         }
         presentationKind = .catalogPushSending
+        updateProgress(
+            phase: .sendingLocalChanges,
+            domain: .pending,
+            current: 0,
+            total: sendingSummary.readyCount + productPriceSummary.readyToPush,
+            message: L("options.supabase.manualSync.progress.sendingLocalChanges"),
+            detailMessage: nil,
+            isBlockingApply: false,
+            allowsLocalWork: true
+        )
         await Task.yield()
 
         do {
@@ -2134,6 +2470,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             } else {
                 applyPriceOnlyPushPresentationAfterSend()
             }
+            finishProgress(
+                warnings: productPricePushPhase.needsAttentionAfterSend || catalogPushPhase.needsAttentionAfterSend,
+                message: L("options.supabase.manualSync.progress.completed")
+            )
             completeLifecycleAfterSendIfVerified(lifecycleRunID)
             await prepareActivityRegistrationAfterDataStep()
         } catch CatalogPushInternalError.stale {
@@ -2143,6 +2483,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             presentationKind = .catalogPushStale
             markLifecycleInterrupted(runID: lifecycleRunID, reason: .cancelledBeforeWrite)
         } catch is CancellationError {
+            cancelProgress()
             markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
         } catch {
             guard !Task.isCancelled else {
@@ -2158,6 +2499,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             catalogPushPhase = .sendFailed(makeCatalogPushSummary(from: stagedPlan, result: result))
             productPricePushPhase = .sendFailed(productPriceSummary.withFailedIncrement())
             presentationKind = .catalogPushFailed
+            failProgress(message: L("options.supabase.manualSync.progress.failed"))
             markLifecycleInterrupted(runID: lifecycleRunID, reason: .remoteWriteUnverified)
         }
     }
@@ -2366,21 +2708,41 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         )
     }
 
-    private func makeProductPriceSummary(applyPlan plan: ProductPriceApplyPlan) -> SupabaseManualSyncProductPriceSummary {
+    private func canDeferUnmappedProductPricesUntilCatalogApply(
+        _ plan: ProductPriceApplyPlan,
+        after summary: SupabaseManualSyncRunSummary
+    ) -> Bool {
+        guard plan.sourceState.sampled,
+              let aggregateCounts = summary.remotePreviewSummary?.safeAggregateCounts,
+              aggregateCounts.newProductCount + aggregateCounts.updateCandidateCount > 0 else {
+            return false
+        }
+        let blockingReasons = Set(plan.blockReasons.filter { $0 != .noApplicableRows })
+        return blockingReasons == [.unmappedProducts]
+    }
+
+    private func makeProductPriceSummary(
+        applyPlan plan: ProductPriceApplyPlan,
+        deferUnmappedProductsUntilCatalogApply: Bool = false
+    ) -> SupabaseManualSyncProductPriceSummary {
         let sourceBlocked = (plan.summary.partial ? 1 : 0)
             + (plan.summary.truncated ? 1 : 0)
         let accessOrSyncFailed = plan.summary.sourceError == nil ? 0 : 1
+        let readyToApply = (plan.isApplyAllowed || deferUnmappedProductsUntilCatalogApply)
+            ? max(plan.linesToInsert.count + plan.remoteIdentityLinks.count, plan.sourceState.sampled ? 1 : 0)
+            : 0
+        let unmappedBlocked = deferUnmappedProductsUntilCatalogApply ? 0 : plan.summary.unmapped
         return SupabaseManualSyncProductPriceSummary(
             remoteFound: plan.summary.remoteRead,
             localFound: productPriceSummary.localFound,
-            readyToApply: plan.isApplyAllowed ? plan.linesToInsert.count : 0,
+            readyToApply: readyToApply,
             readyToPush: productPriceSummary.readyToPush,
             applied: 0,
             pushed: 0,
             skippedDuplicate: plan.summary.skippedExisting,
             skippedConflict: plan.summary.conflicts,
             failed: accessOrSyncFailed,
-            blocked: plan.summary.unmapped + plan.summary.invalid + sourceBlocked
+            blocked: unmappedBlocked + plan.summary.invalid + sourceBlocked
         )
     }
 
@@ -2436,9 +2798,165 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             "mapping:\(plan.summary.mappingConflicts)",
             "partial:\(plan.summary.partial)",
             "truncated:\(plan.summary.truncated)",
+            "sampled:\(plan.sourceState.sampled)",
             "source:\(plan.summary.sourceError ?? "")"
         ]
         return (lines + blockReasons + summary).joined(separator: "\n")
+    }
+
+    private func productPriceProgressMessage(_ progress: ProductPricePagedApplyProgress) -> String {
+        switch progress.stage {
+        case .preparing:
+            return L("options.supabase.manualSync.progress.preparing")
+        case .fetching:
+            if let totalRows = progress.totalRows {
+                return L("options.supabase.manualSync.progress.fetchingPricesWithTotal", progress.processedRows, totalRows)
+            }
+            return L("options.supabase.manualSync.progress.fetchingPrices", progress.processedRows)
+        case .applying:
+            if let totalRows = progress.totalRows {
+                return L("options.supabase.manualSync.progress.applyingPricesWithTotal", progress.processedRows, totalRows)
+            }
+            return L("options.supabase.manualSync.progress.applyingPrices", progress.processedRows)
+        case .saving:
+            if let totalRows = progress.totalRows {
+                return L("options.supabase.manualSync.progress.savingPricesWithTotal", progress.processedRows, totalRows)
+            }
+            return L("options.supabase.manualSync.progress.savingPrices", progress.processedRows)
+        case .completed:
+            if let totalRows = progress.totalRows {
+                return L("options.supabase.manualSync.progress.completedPricesWithTotal", progress.processedRows, totalRows)
+            }
+            return L("options.supabase.manualSync.progress.completedPrices", progress.processedRows)
+        }
+    }
+
+    private func applyCatalogProgress(_ progress: SupabasePullApplyProgress) {
+        let phase: CloudSyncProgressPhase
+        let message: String
+        switch progress.stage {
+        case .suppliers:
+            phase = .downloadingSuppliers
+            message = L("options.supabase.manualSync.progress.catalogSuppliers")
+        case .categories:
+            phase = .downloadingCategories
+            message = L("options.supabase.manualSync.progress.catalogCategories")
+        case .products:
+            phase = .downloadingProducts
+            message = L("options.supabase.manualSync.progress.catalogProducts")
+        case .saving:
+            phase = .applyingLocalDatabase
+            message = L("options.supabase.manualSync.progress.savingCatalog")
+        case .completed:
+            phase = .applyingLocalDatabase
+            message = L("options.supabase.manualSync.progress.catalogCompleted")
+        }
+        localApplyProgressMessage = progress.total > 0
+            ? L("options.supabase.manualSync.progress.catalogCount", message, progress.current, progress.total)
+            : message
+        updateProgress(
+            phase: phase,
+            domain: .catalog,
+            current: progress.current,
+            total: progress.total > 0 ? progress.total : nil,
+            message: message,
+            detailMessage: progress.total > 0
+                ? L("options.supabase.manualSync.progress.countDetail", progress.current, progress.total)
+                : nil,
+            isBlockingApply: true,
+            allowsLocalWork: true
+        )
+    }
+
+    private func applyProductPriceProgress(_ progress: ProductPricePagedApplyProgress) {
+        let message = productPriceProgressMessage(progress)
+        localApplyProgressMessage = message
+        updateProgress(
+            phase: .downloadingPriceHistory,
+            domain: .prices,
+            current: progress.processedRows,
+            total: progress.totalRows,
+            message: message,
+            detailMessage: progress.totalRows.map {
+                L("options.supabase.manualSync.progress.countDetail", progress.processedRows, $0)
+            },
+            isBlockingApply: true,
+            allowsLocalWork: true
+        )
+    }
+
+    private func syncHistorySessionsIfAvailable() async -> SupabaseManualSyncHistorySessionSummary {
+        guard let historySessionProvider else {
+            return SupabaseManualSyncHistorySessionSummary()
+        }
+        guard authPresentationContext.isSignedIn,
+              let ownerUserID = currentHistorySessionOwnerID?() else {
+            return SupabaseManualSyncHistorySessionSummary(skippedDirtyLocal: 1)
+        }
+
+        updateProgress(
+            phase: .syncingHistorySessions,
+            domain: .history,
+            message: L("options.supabase.manualSync.progress.syncingHistory"),
+            detailMessage: nil,
+            isBlockingApply: true,
+            allowsLocalWork: true
+        )
+        do {
+            let summary = try await historySessionProvider.syncHistorySessions(
+                ownerUserID: ownerUserID,
+                onProgress: { [weak self] progress in
+                    self?.applyHistoryProgress(progress)
+                }
+            )
+            historySessionSummary = summary
+            return summary
+        } catch {
+            var summary = SupabaseManualSyncHistorySessionSummary()
+            summary.skippedDirtyLocal = 1
+            historySessionSummary = summary
+            updateProgress(
+                phase: .completedWithWarnings,
+                domain: .history,
+                message: L("options.supabase.manualSync.progress.historyWarning"),
+                detailMessage: nil,
+                canCancel: false,
+                isBlockingApply: false,
+                allowsLocalWork: true
+            )
+            return summary
+        }
+    }
+
+    private func applyHistoryProgress(_ progress: HistorySessionSyncProgress) {
+        let message: String
+        switch progress.stage {
+        case .pushing:
+            message = L("options.supabase.manualSync.progress.historyPushing")
+        case .fetching:
+            message = L("options.supabase.manualSync.progress.historyFetching")
+        case .applying:
+            message = L("options.supabase.manualSync.progress.historyApplying")
+        case .saving:
+            message = L("options.supabase.manualSync.progress.historySaving")
+        case .completed:
+            message = L("options.supabase.manualSync.progress.historyCompleted")
+        }
+        localApplyProgressMessage = progress.total.map {
+            L("options.supabase.manualSync.progress.catalogCount", message, progress.current, $0)
+        } ?? L("options.supabase.manualSync.progress.currentOnly", message, progress.current)
+        updateProgress(
+            phase: .syncingHistorySessions,
+            domain: .history,
+            current: progress.current,
+            total: progress.total,
+            message: message,
+            detailMessage: progress.total.map {
+                L("options.supabase.manualSync.progress.countDetail", progress.current, $0)
+            },
+            isBlockingApply: true,
+            allowsLocalWork: true
+        )
     }
 
     private func productPricePushFingerprint(_ plan: ProductPricePushDryRunPlan) -> String {
@@ -2568,6 +3086,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         invalidateCatalogPushPlan(clearSummary: true)
         invalidateProductPricePlans(clearSummary: true)
         invalidateActivityRegistration(clearSummary: true)
+        historySessionSummary = nil
+        progressState = .idle()
         presentationKind = .idleReady
         semiAutomaticState = .idle
         title = Copy.idleTitle
@@ -2584,6 +3104,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             invalidateCatalogPushPlan(clearSummary: true)
             invalidateProductPricePlans(clearSummary: true)
             invalidateActivityRegistration(clearSummary: true)
+            historySessionSummary = nil
+            progressState = .idle()
             lastRecoverableForegroundErrorAt = nil
             SupabaseManualSyncForegroundAutomaticGate.clearRecoverableError()
             semiAutomaticState = .blockedAuth
@@ -2596,12 +3118,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
     func runMode(for actionID: SupabaseManualSyncPresentationActionID) -> SupabaseManualSyncRunMode? {
         switch actionID {
-        case .checkCloud:
+        case .checkCloud, .downloadCloudDatabase, .syncNow:
             return capabilities.supportsRemoteCloudCheck ? .dryRun : nil
         case .reviewChanges:
             return nil
-        case .syncNow:
-            return capabilities.supportsGuidedManualSync ? .guidedManual : nil
         case .sendCloudChanges:
             return nil
         case .retry, .realignData:
@@ -2616,6 +3136,26 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             && capabilities.supportsRemoteCloudCheck
     }
 
+    private var currentCloudOverviewBaselineStatus: CloudSyncBaselineStatus {
+        CloudSyncOverviewReducer.baselineStatus(from: baselineStatusProvider?())
+    }
+
+    private var shouldAutoApplyForegroundPreviewAfterLastCheck: Bool {
+        guard currentCloudOverviewBaselineStatus == .valid else { return false }
+        guard let summary = lastSummary,
+              summary.countsSnapshot.hasAnyPendingWork == false,
+              let remotePreviewSummary = summary.remotePreviewSummary,
+              remotePreviewSummary.failureCategory == nil,
+              remotePreviewSummary.isComplete,
+              !remotePreviewSummary.isPartial,
+              !remotePreviewSummary.wasCancelled,
+              remotePreviewSummary.hasRemoteSignals,
+              canApplyLocalChanges else {
+            return false
+        }
+        return true
+    }
+
     private func makeRootPresentationState() -> SupabaseManualSyncRootPresentationState {
         if isRunning || semiAutomaticState == .checking {
             return rootState(
@@ -2623,7 +3163,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 titleKey: "options.supabase.manualSync.root.checking.title",
                 detailKey: "options.supabase.manualSync.root.checking.detail",
                 actionID: nil,
-                systemImage: "arrow.triangle.2.circlepath"
+                systemImage: "arrow.triangle.2.circlepath",
+                progressState: progressState.isActive ? progressState : nil
             )
         }
 
@@ -2644,9 +3185,19 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 titleKey: "options.supabase.manualSync.root.changes.title",
                 detailKey: "options.supabase.manualSync.root.changes.detail",
                 actionID: .reviewChanges,
-                systemImage: "icloud.and.arrow.down"
+                systemImage: "icloud.and.arrow.down",
+                progressState: progressState.phase == .completedWithWarnings ? progressState : nil
             )
         case .blockedAuth:
+            if authPresentationContext.isSignedIn {
+                return rootState(
+                    kind: .recoverableError,
+                    titleKey: "options.supabase.manualSync.root.accountCheck.title",
+                    detailKey: "options.supabase.manualSync.root.accountCheck.detail",
+                    actionID: capabilities.supportsRemoteCloudCheck ? .checkCloud : nil,
+                    systemImage: "person.crop.circle.badge.exclamationmark"
+                )
+            }
             return rootState(
                 kind: .blockedAuth,
                 titleKey: "options.supabase.manualSync.root.auth.title",
@@ -2671,7 +3222,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 titleKey: "options.supabase.manualSync.root.checking.title",
                 detailKey: "options.supabase.manualSync.root.checking.detail",
                 actionID: nil,
-                systemImage: "arrow.triangle.2.circlepath"
+                systemImage: "arrow.triangle.2.circlepath",
+                progressState: progressState.isActive ? progressState : nil
             )
         }
     }
@@ -2681,12 +3233,14 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         titleKey: String,
         detailKey: String?,
         actionID: SupabaseManualSyncPresentationActionID?,
-        systemImage: String
+        systemImage: String,
+        progressState: CloudSyncProgressState? = nil
     ) -> SupabaseManualSyncRootPresentationState {
         let title = L(titleKey)
         let detail = detailKey.map { L($0) }
         let actionTitle = actionID.map { rootActionTitle(for: $0) }
-        let accessibilityLabel = [title, detail, actionTitle]
+        let progressLabel = progressState.map { [$0.message, $0.countText].compactMap { $0 }.joined(separator: " ") }
+        let accessibilityLabel = [title, detail, progressLabel, actionTitle]
             .compactMap { $0 }
             .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             .joined(separator: ". ")
@@ -2694,6 +3248,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             kind: kind,
             title: title,
             detail: detail,
+            progressState: progressState,
             primaryActionTitle: actionTitle,
             primaryActionID: actionID,
             systemImage: systemImage,
@@ -2710,7 +3265,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .retry:
             return L("options.supabase.manualSync.root.action.retry")
         case .checkCloud:
-            return L("options.supabase.manualSync.action.checkCloud")
+            return L("options.supabase.manualSync.action.syncNow")
+        case .downloadCloudDatabase:
+            return L("options.supabase.manualSync.action.downloadCloudDatabase")
         case .realignData:
             return L("options.supabase.manualSync.action.realign")
         case .syncNow:
@@ -2783,6 +3340,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         }
 
         if semiAutomaticState == .blockedAuth {
+            if authPresentationContext.isSignedIn {
+                return signedInCloudAccessIssueState()
+            }
             return state(
                 titleKey: "options.supabase.manualSync.state.auth.title",
                 subtitleKey: "options.supabase.manualSync.state.auth.subtitle",
@@ -2797,13 +3357,16 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
         switch presentationKind {
         case .idleReady:
+            if let baselineState = baselinePresentationStateIfNeeded() {
+                return baselineState
+            }
             if semiAutomaticState == .suggestedCheck {
                 return state(
                     titleKey: "options.supabase.manualSync.state.suggested.title",
                     subtitleKey: "options.supabase.manualSync.state.suggested.subtitle",
                     badgeKey: "options.supabase.manualSync.badge.suggested",
                     badgeSystemImage: "icloud",
-                    primaryAction: action(.checkCloud),
+                    primaryAction: action(.syncNow),
                     secondaryAction: nil,
                     isRunning: false,
                     isLoading: false
@@ -2853,6 +3416,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .partialSync:
             let reviewSheet = reviewSheetForCurrentState()
             let actions = capabilityActionsForWork()
+            let reviewAction = action(
+                .reviewChanges,
+                titleKey: "options.supabase.manualSync.action.syncNow"
+            )
             return state(
                 titleKey: "options.supabase.manualSync.state.partial.title",
                 subtitleKey: "options.supabase.manualSync.state.partial.subtitle",
@@ -2860,13 +3427,16 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 reviewSheet: reviewSheet,
                 badgeKey: "options.supabase.manualSync.badge.localChanges",
                 badgeSystemImage: "exclamationmark.circle.fill",
-                primaryAction: reviewSheet == nil ? actions.primary : action(.reviewChanges),
+                primaryAction: reviewSheet == nil ? actions.primary : reviewAction,
                 secondaryAction: reviewSheet == nil ? actions.secondary : nil,
                 isRunning: false,
                 isLoading: false
             )
 
         case .blockedNeedsSignIn:
+            if authPresentationContext.isSignedIn {
+                return signedInCloudAccessIssueState()
+            }
             return state(
                 titleKey: "options.supabase.manualSync.state.auth.title",
                 subtitleKey: "options.supabase.manualSync.state.auth.subtitle",
@@ -2910,8 +3480,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .technicalFollowUpNeeded:
             if shouldRecoverPermissionFailureWithCloudCheck {
                 return state(
-                    titleKey: "options.supabase.manualSync.state.technical.title",
-                    subtitleKey: "options.supabase.manualSync.state.technical.subtitle",
+                    titleKey: "options.supabase.manualSync.state.cloudPermission.title",
+                    subtitleKey: "options.supabase.manualSync.state.cloudPermission.subtitle",
                     summary: userFacingSummaryForCurrentState(),
                     badgeKey: "options.supabase.manualSync.badge.retry",
                     badgeSystemImage: "exclamationmark.triangle.fill",
@@ -3083,6 +3653,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 isLoading: false
             )
         case .noChanges:
+            if lastSummary?.hasCompletedRemotePreviewSignals == true {
+                return nil
+            }
             if let priceOnlyState = productPriceOnlyPushPresentationState() {
                 return priceOnlyState
             }
@@ -3383,18 +3956,80 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         )
     }
 
+    private func baselinePresentationStateIfNeeded() -> SupabaseManualSyncPresentationState? {
+        guard authPresentationContext.isSignedIn else { return nil }
+        guard semiAutomaticState == .idle || semiAutomaticState == .noChanges else { return nil }
+
+        let overview = CloudSyncOverviewReducer.reduce(
+            CloudSyncOverviewInput(
+                oauthStatus: .signedIn,
+                remoteAccessStatus: lastSummary.map {
+                    CloudSyncOverviewReducer.remoteAccessStatus(
+                        from: $0.remotePreviewSummary?.failureCategory
+                    )
+                } ?? .unknown,
+                baselineStatus: currentCloudOverviewBaselineStatus,
+                hasLocalPending: false,
+                reviewItemCount: 0,
+                isRunning: false
+            )
+        )
+
+        switch overview.category {
+        case .localNeedsDownload:
+            return state(
+                titleKey: "options.supabase.manualSync.state.download.title",
+                subtitleKey: "options.supabase.manualSync.state.download.subtitle",
+                badgeKey: "options.supabase.manualSync.badge.download",
+                badgeSystemImage: "icloud.and.arrow.down",
+                primaryAction: action(.syncNow),
+                secondaryAction: nil,
+                isRunning: false,
+                isLoading: false
+            )
+        case .accountNeedsCheck:
+            return signedInCloudAccessIssueState()
+        case .accountRequired, .cloudPermission, .networkOffline, .localPending, .needsReview, .ready:
+            return nil
+        }
+    }
+
+    private func signedInCloudAccessIssueState() -> SupabaseManualSyncPresentationState {
+        let failureCategory = lastSummary?.remotePreviewSummary?.failureCategory
+        let titleKey: String
+        let subtitleKey: String
+        let badgeSystemImage: String
+        if failureCategory == .permission || failureCategory == .schemaOrDecode {
+            titleKey = "options.supabase.manualSync.state.cloudPermission.title"
+            subtitleKey = "options.supabase.manualSync.state.cloudPermission.subtitle"
+            badgeSystemImage = "exclamationmark.icloud"
+        } else {
+            titleKey = "options.supabase.manualSync.state.accountCheck.title"
+            subtitleKey = "options.supabase.manualSync.state.accountCheck.subtitle"
+            badgeSystemImage = "person.crop.circle.badge.exclamationmark"
+        }
+        return state(
+            titleKey: titleKey,
+            subtitleKey: subtitleKey,
+            summary: userFacingSummaryForCurrentState(),
+            badgeKey: "options.supabase.manualSync.badge.needsAction",
+            badgeSystemImage: badgeSystemImage,
+            primaryAction: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil,
+            secondaryAction: nil,
+            isRunning: false,
+            isLoading: false
+        )
+    }
+
     private func capabilityActionsForWork() -> (
         primary: SupabaseManualSyncPresentationAction?,
         secondary: SupabaseManualSyncPresentationAction?
     ) {
         if capabilities.supportsGuidedManualSync {
-            return (
-                primary: action(.syncNow),
-                secondary: capabilities.supportsRemoteCloudCheck ? action(.checkCloud) : nil
-            )
+            return (primary: action(.syncNow), secondary: nil)
         }
         if capabilities.supportsRemoteCloudCheck {
-            return (primary: action(.checkCloud), secondary: nil)
+            return (primary: action(.syncNow), secondary: nil)
         }
         return (primary: nil, secondary: nil)
     }
@@ -3718,7 +4353,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
         let title = L("options.supabase.manualSync.review.title")
         let subtitle = L("options.supabase.manualSync.review.subtitle")
-        let footerMessage = reviewFooterMessage(remotePreviewSummary: remotePreviewSummary)
+        let footerMessage = isApplyingLocalChanges
+            ? (localApplyProgressMessage ?? L("options.supabase.manualSync.progress.preparing"))
+            : reviewFooterMessage(remotePreviewSummary: remotePreviewSummary)
         let preferredPrimaryActionID: SupabaseManualSyncReviewPrimaryActionID
         if canApplyLocalChanges || isApplyingLocalChanges {
             preferredPrimaryActionID = .updateDevice
@@ -3741,6 +4378,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             summaryMessage: syncPlanSummaryMessage(plan),
             summarySystemImage: syncPlanSummarySystemImage(plan),
             summaryTone: syncPlanSummaryTone(plan),
+            progressState: progressState.isActive ? progressState : nil,
             sections: sections,
             footerMessage: footerMessage,
             primaryActionID: primaryActionID,
@@ -3779,6 +4417,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             summaryMessage: syncPlanSummaryMessage(plan),
             summarySystemImage: syncPlanSummarySystemImage(plan),
             summaryTone: syncPlanSummaryTone(plan),
+            progressState: progressState.isActive ? progressState : nil,
             sections: sections,
             footerMessage: footerMessage,
             primaryActionID: primaryID,
@@ -3995,6 +4634,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             summaryMessage: syncPlanSummaryMessage(plan),
             summarySystemImage: syncPlanSummarySystemImage(plan),
             summaryTone: syncPlanSummaryTone(plan),
+            progressState: progressState.isActive ? progressState : nil,
             sections: sections,
             footerMessage: footerMessage,
             primaryActionID: primaryID,
@@ -4102,9 +4742,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 : 0,
             skipped: productPriceSummary.skippedDuplicate,
             reviewNeeded: aggregateCounts.conflictCount
-                + aggregateCounts.tombstoneCount
-                + aggregateCounts.sourceErrorCount
-                + productPriceSummary.skippedConflict,
+                + aggregateCounts.sourceErrorCount,
             blocked: productPriceSummary.blocked,
             failed: productPriceSummary.failed
         )
@@ -4557,7 +5195,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private func action(
         _ id: SupabaseManualSyncPresentationActionID,
         isEnabled: Bool = true,
-        hintKey: String? = nil
+        hintKey: String? = nil,
+        titleKey: String? = nil
     ) -> SupabaseManualSyncPresentationAction {
         let key: String
         let systemImage: String
@@ -4570,8 +5209,11 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             key = "realign"
             systemImage = "arrow.down.circle.fill"
         case .checkCloud:
-            key = "checkCloud"
+            key = "syncNow"
             systemImage = "icloud"
+        case .downloadCloudDatabase:
+            key = "downloadCloudDatabase"
+            systemImage = "icloud.and.arrow.down"
         case .reviewChanges:
             key = "review"
             systemImage = "doc.text.magnifyingglass"
@@ -4589,7 +5231,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             systemImage = "xmark.circle.fill"
         }
 
-        let title = L("options.supabase.manualSync.action.\(key)")
+        let title = L(titleKey ?? "options.supabase.manualSync.action.\(key)")
         return SupabaseManualSyncPresentationAction(
             id: id,
             title: title,
@@ -4630,6 +5272,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             statusDetailText: statusDetailText,
             userFacingSummary: userFacingSummary,
             reviewSheet: reviewSheet,
+            progressState: progressState,
             statusBadgeText: badgeText,
             statusBadgeSystemImage: badgeSystemImage,
             primaryAction: primaryAction,
@@ -4642,6 +5285,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     private func makeStatusDetailText(isRunning: Bool) -> String? {
+        if progressState.isActive || progressState.phase == .completedWithWarnings {
+            return progressState.message
+        }
         if isRunning || semiAutomaticState == .checking {
             return L("options.supabase.manualSync.semiAuto.checking")
         }
@@ -4744,6 +5390,15 @@ private extension SupabaseManualSyncCatalogPushPhase {
             return summary.hasReadyChanges
         }
         return false
+    }
+
+    var needsAttentionAfterSend: Bool {
+        switch self {
+        case .partial, .sendBlocked, .sendFailed, .stale:
+            return true
+        case .idle, .checking, .ready, .noChanges, .blocked, .failed, .sending, .succeeded, .succeededNeedsCheck:
+            return false
+        }
     }
 }
 

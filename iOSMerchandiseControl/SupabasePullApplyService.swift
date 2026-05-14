@@ -87,6 +87,26 @@ nonisolated struct SupabasePullApplyResult: Sendable, Equatable {
     let categoriesCreated: Int
 }
 
+nonisolated struct SupabasePullApplyProgress: Sendable, Equatable {
+    enum Stage: String, Sendable, Equatable {
+        case suppliers
+        case categories
+        case products
+        case saving
+        case completed
+    }
+
+    let stage: Stage
+    let current: Int
+    let total: Int
+
+    init(stage: Stage, current: Int, total: Int) {
+        self.stage = stage
+        self.current = max(0, current)
+        self.total = max(0, total)
+    }
+}
+
 nonisolated struct SupabasePullApplyPlan: Sendable, Equatable {
     let generatedAt: Date
     let options: SupabasePullApplyOptions
@@ -443,6 +463,183 @@ struct SupabasePullApplyService {
             context.rollback()
             throw SupabasePullApplyError.saveFailed(message: String(describing: error))
         }
+
+        return SupabasePullApplyResult(
+            inserted: inserted,
+            updated: updated,
+            suppliersCreated: suppliersCreated,
+            categoriesCreated: categoriesCreated
+        )
+    }
+
+    func applyBatched(
+        plan: SupabasePullApplyPlan,
+        context: ModelContext,
+        onProgress: @escaping @MainActor @Sendable (SupabasePullApplyProgress) -> Void = { _ in }
+    ) async throws -> SupabasePullApplyResult {
+        guard !plan.productInserts.isEmpty || !plan.productUpdates.isEmpty else {
+            throw SupabasePullApplyError.noApplicableChanges
+        }
+
+        try Task.checkCancellation()
+        try validateNotStale(plan: plan, context: context)
+
+        var productsByBarcode = try fetchProductsByBarcode(context: context)
+        var suppliersByName = try fetchSuppliersByNormalizedName(context: context)
+        var categoriesByName = try fetchCategoriesByNormalizedName(context: context)
+
+        var inserted = 0
+        var updated = 0
+        var suppliersCreated = 0
+        var categoriesCreated = 0
+        var mutationsSinceSave = 0
+        let batchSize = 500
+
+        func saveBatchIfNeeded(force: Bool = false) throws {
+            guard mutationsSinceSave > 0, force || mutationsSinceSave >= batchSize else { return }
+            onProgress(SupabasePullApplyProgress(stage: .saving, current: inserted + updated, total: plan.plannedInsertedCount + plan.plannedUpdatedCount))
+            do {
+                try context.save()
+                mutationsSinceSave = 0
+            } catch {
+                context.rollback()
+                throw SupabasePullApplyError.saveFailed(message: String(describing: error))
+            }
+        }
+
+        onProgress(SupabasePullApplyProgress(stage: .suppliers, current: 0, total: plan.suppliersToCreate.count))
+        for (index, supplier) in plan.suppliersToCreate.enumerated() {
+            try Task.checkCancellation()
+            let before = suppliersCreated
+            _ = try resolveSupplier(
+                named: supplier.displayName,
+                remoteID: supplier.remoteID,
+                remoteUpdatedAt: supplier.remoteUpdatedAt,
+                remoteDeletedAt: supplier.remoteDeletedAt,
+                context: context,
+                cache: &suppliersByName,
+                createdCount: &suppliersCreated
+            )
+            if suppliersCreated > before {
+                mutationsSinceSave += 1
+            }
+            onProgress(SupabasePullApplyProgress(stage: .suppliers, current: index + 1, total: plan.suppliersToCreate.count))
+            try saveBatchIfNeeded()
+            if (index + 1).isMultiple(of: batchSize) {
+                await Task.yield()
+            }
+        }
+
+        onProgress(SupabasePullApplyProgress(stage: .categories, current: 0, total: plan.categoriesToCreate.count))
+        for (index, category) in plan.categoriesToCreate.enumerated() {
+            try Task.checkCancellation()
+            let before = categoriesCreated
+            _ = try resolveCategory(
+                named: category.displayName,
+                remoteID: category.remoteID,
+                remoteUpdatedAt: category.remoteUpdatedAt,
+                remoteDeletedAt: category.remoteDeletedAt,
+                context: context,
+                cache: &categoriesByName,
+                createdCount: &categoriesCreated
+            )
+            if categoriesCreated > before {
+                mutationsSinceSave += 1
+            }
+            onProgress(SupabasePullApplyProgress(stage: .categories, current: index + 1, total: plan.categoriesToCreate.count))
+            try saveBatchIfNeeded()
+            if (index + 1).isMultiple(of: batchSize) {
+                await Task.yield()
+            }
+        }
+
+        let productTotal = plan.plannedInsertedCount + plan.plannedUpdatedCount
+        var processedProducts = 0
+        onProgress(SupabasePullApplyProgress(stage: .products, current: 0, total: productTotal))
+        for insert in plan.productInserts {
+            try Task.checkCancellation()
+            guard productsByBarcode[insert.barcode] == nil else {
+                throw SupabasePullApplyError.previewStale
+            }
+
+            let supplier = try resolveSupplier(
+                named: insert.payload.supplierName,
+                remoteID: insert.payload.supplierRemoteID,
+                remoteUpdatedAt: insert.payload.supplierRemoteUpdatedAt,
+                remoteDeletedAt: insert.payload.supplierRemoteDeletedAt,
+                context: context,
+                cache: &suppliersByName,
+                createdCount: &suppliersCreated
+            )
+            let category = try resolveCategory(
+                named: insert.payload.categoryName,
+                remoteID: insert.payload.categoryRemoteID,
+                remoteUpdatedAt: insert.payload.categoryRemoteUpdatedAt,
+                remoteDeletedAt: insert.payload.categoryRemoteDeletedAt,
+                context: context,
+                cache: &categoriesByName,
+                createdCount: &categoriesCreated
+            )
+            let product = Product(
+                barcode: insert.barcode,
+                remoteID: insert.payload.remoteID,
+                remoteUpdatedAt: insert.payload.remoteUpdatedAt,
+                remoteDeletedAt: insert.payload.remoteDeletedAt,
+                itemNumber: SupabasePullPreviewNormalizer.semanticString(insert.payload.itemNumber),
+                productName: SupabasePullPreviewNormalizer.semanticString(insert.payload.productName),
+                secondProductName: SupabasePullPreviewNormalizer.semanticString(insert.payload.secondProductName),
+                purchasePrice: insert.payload.purchasePrice,
+                retailPrice: insert.payload.retailPrice,
+                stockQuantity: plan.options.applyStockQuantity ? insert.payload.stockQuantity : nil,
+                supplier: supplier,
+                category: category
+            )
+
+            context.insert(product)
+            productsByBarcode[insert.barcode] = product
+            inserted += 1
+            processedProducts += 1
+            mutationsSinceSave += 1
+            onProgress(SupabasePullApplyProgress(stage: .products, current: processedProducts, total: productTotal))
+            try saveBatchIfNeeded()
+            if processedProducts.isMultiple(of: batchSize) {
+                await Task.yield()
+            }
+        }
+
+        for update in plan.productUpdates {
+            try Task.checkCancellation()
+            guard let product = productsByBarcode[update.barcode] else {
+                throw SupabasePullApplyError.previewStale
+            }
+
+            var didMutate = false
+            try applyPayload(
+                update.payload,
+                to: product,
+                options: plan.options,
+                context: context,
+                suppliersByName: &suppliersByName,
+                categoriesByName: &categoriesByName,
+                suppliersCreated: &suppliersCreated,
+                categoriesCreated: &categoriesCreated,
+                didMutate: &didMutate
+            )
+
+            if didMutate {
+                updated += 1
+                mutationsSinceSave += 1
+            }
+            processedProducts += 1
+            onProgress(SupabasePullApplyProgress(stage: .products, current: processedProducts, total: productTotal))
+            try saveBatchIfNeeded()
+            if processedProducts.isMultiple(of: batchSize) {
+                await Task.yield()
+            }
+        }
+
+        try saveBatchIfNeeded(force: true)
+        onProgress(SupabasePullApplyProgress(stage: .completed, current: productTotal, total: productTotal))
 
         return SupabasePullApplyResult(
             inserted: inserted,
