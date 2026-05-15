@@ -4,11 +4,11 @@
 - **Task ID**: TASK-108
 - **Titolo**: Supabase sync unification iOS: auth state, full/incremental pull, local apply, push eventi e Generated/History parity Android
 - **File task**: `docs/TASKS/TASK-108-supabase-sync-unification-ios.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE
+- **Stato**: DONE
+- **Fase attuale**: CHIUSURA
+- **Responsabile attuale**: UTENTE
 - **Data creazione**: 2026-05-13
-- **Ultimo aggiornamento**: 2026-05-14 12:45 -0400
+- **Ultimo aggiornamento**: 2026-05-14 22:20 -0400
 - **Ultimo agente che ha operato**: CODEX
 
 ## Dipendenze
@@ -1708,10 +1708,680 @@ Estendi TASK-108 restando in PLANNING: crea la specifica completa per sync Histo
 - Non accettare `PASS_WITH_NOTES` come chiusura funzionale globale: cross-platform E2E e live push/pull incrementale restano non verificati.
 - Non marcare TASK-108 `DONE`.
 
+### 2026-05-14 — FIX performance/memory ProductPrice iOS + Android page streaming
+
+**Override/contesto utente:** l'utente ha richiesto un pass finale di REVIEW + FIX mirato su memory, performance e velocita' della sync iOS/Android, usando Android come riferimento tecnico dove utile. Il task era in `ACTIVE / REVIEW`; Codex ha eseguito un FIX mirato e lo restituisce a `REVIEW`, **NON DONE**.
+
+**Obiettivo compreso:**
+- Verificare il path ProductPrice iOS full pull/apply live appena corretto e cercare retention/memory heavy.
+- Non dichiarare "ottimizzato" o "piu' veloce" senza misure.
+- Allineare Android se il path Android risulta meno efficiente.
+- Non usare `service_role`, non bypassare RLS, non loggare token/JWT/email/UUID completi.
+- Non dichiarare TASK-108 `DONE`: incremental pull/push, Generated, History/session e cross-platform E2E live restano requisiti aperti se non verificati.
+
+**File controllati:**
+- iOS: `SupabaseProductPriceApplyService.swift`, `SupabaseProductPricePreviewService.swift`, `SupabaseInventoryService.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncBaselineCommitter.swift`, `OptionsView.swift`, test ProductPrice/keyset/baseline.
+- Android: `InventoryRepository.kt`, `ProductPriceRemoteDataSource.kt`, `SupabaseProductPriceRemoteDataSource.kt`, `CatalogSyncViewModel.kt`, DAO ProductPrice, sync events/outbox, History/session, Options status.
+- Tracking/evidence: `52`...`60`, iOS `MASTER-PLAN.md`, Android `MASTER-PLAN.md`.
+
+**Piano minimo:**
+- Ridurre la retention iOS nel full ProductPrice apply senza cambiare API pubbliche.
+- Evitare su Android il materialize completo della tabella ProductPrice remota prima dell'apply.
+- Verificare con test mirati, build, diff check e misure RSS/PSS disponibili.
+- Documentare separatamente cio' che resta non eseguito live.
+
+**Modifiche fatte iOS:**
+- `applyPagedFullPull` non mantiene piu' globalmente `productsByRemoteID` con model object, `currentPricesByKey` completo e `seenRemoteIDs` da tutto il run.
+- Aggiunta mappa globale leggera `remote product UUID -> PersistentIdentifier`, costruita con lookup context separato dal context app.
+- Aggiunto `ModelContext` page-scoped per ogni pagina ProductPrice.
+- Aggiunto lookup page-local dei prodotti referenziati dalla pagina e del relativo storico prezzi.
+- `seenRemoteIDs` ridotto a guard page-local.
+- Save e `Task.yield()` restano per pagina.
+
+**Modifiche fatte Android:**
+- Aggiunto `fetchProductPricesPage(afterId, limit)` a `ProductPriceRemoteDataSource`.
+- Implementato ProductPrice keyset page fetch Supabase con `id > afterId`, `id ASC`, `range(0, limit - 1)`.
+- `InventoryRepository.pullProductPricesFromRemote` ora streamma pagine da `900`, applica per pagina e avanza `lastRemoteId`, invece di ricevere l'intera lista remota.
+- Aggiunto test repository che verifica `905` righe remote in 2 pagine (`900 + 5`) e `afterId` corretto.
+
+**Misure disponibili:**
+- iOS live precedente (pre-patch memory): ProductPrice remoto `290.955`, applicate/link `290.953`, skipped `2`, durata `~25m50s`, `~187,7 righe/sec`, RSS osservato circa `2.0GB -> 3.5GB peak`.
+- iOS post-patch targeted XCTest: 3 test ProductPrice, `0` failure, `133.470s` dopo il micro-fix lookup-context; include 30k insert + secondo pass idempotente 30k.
+- iOS idle launch RSS post-patch: `307.440 KB` su iPhone 17 Pro simulator.
+- Android post-patch targeted ProductPrice paging test: PASS in `36s`.
+- Android `DefaultInventoryRepositoryTest`: PASS in `17s`.
+- Android idle launch memory: TOTAL PSS `151.044 KB`, TOTAL RSS `233.876 KB`, swap PSS `248 KB`.
+
+**Check eseguiti:**
+- ✅ ESEGUITO — iOS `git fetch`, status/log/allineamento origin: `main` allineato a `origin/main` prima delle patch locali.
+- ✅ ESEGUITO — Android `git fetch`, status/log/allineamento origin: `main` allineato a `origin/main` prima delle patch locali.
+- ✅ ESEGUITO — iOS `git diff --check`: PASS.
+- ✅ ESEGUITO — Android `git diff --check`: PASS.
+- ✅ ESEGUITO — iOS Debug build: PASS dopo rerun sequenziale; il primo tentativo parallelo era fallito per build DB lock.
+- ✅ ESEGUITO — iOS Release build: PASS.
+- ✅ ESEGUITO — iOS targeted ProductPrice/keyset tests: PASS (`3/0`).
+- ✅ ESEGUITO — Android `assembleDebug`: PASS.
+- ✅ ESEGUITO — Android ProductPrice paging test: PASS.
+- ✅ ESEGUITO — Android `DefaultInventoryRepositoryTest`: PASS.
+- ✅ ESEGUITO — Android install/launch su OnePlus IN2013: PASS.
+- ✅ ESEGUITO — `plutil` localizzazioni iOS: PASS.
+- ✅ ESEGUITO — privacy scan diff iOS/Android/logcat: PASS; nessun token/JWT/email/service_role aggiunto o loggato.
+- ⚠️ NON ESEGUIBILE — iOS physical smoke: device fisico offline.
+- ⚠️ NON ESEGUIBILE — `CatalogSyncViewModelTest` Android full class: fallisce per `AttachNotSupportedException` / MockK attach in ambiente, non per assert ProductPrice.
+- ❌ NON ESEGUITO — nuovo full live iOS 290k post-patch con checkpoint RSS 0/9k/53k/90k/150k/250k/completion.
+- ❌ NON ESEGUITO — Android signed-in app-auth live ProductPrice sync.
+- ❌ NON ESEGUITO — incremental pull/push live.
+- ❌ NON ESEGUITO — Generated live matrix.
+- ❌ NON ESEGUITO — History/session live matrix.
+- ❌ NON ESEGUITO — cross-platform E2E live.
+
+**Rischi rimasti:**
+- Non c'e' ancora un numero live post-patch per peak RSS o durata ProductPrice iOS; il fix riduce retention per codice/test, ma il miglioramento live va misurato.
+- Android ora streamma pagine remote, ma dentro la pagina restano lookup DAO per riga; bounded, ma non bulk-indexed.
+- TASK-108 resta incompleto per gap live funzionali: Android app-auth, cross-platform E2E, incremental pull/push, Generated e History/session.
+
+**Aggiornamenti file di tracking/evidence:**
+- Aggiunte evidence `52-performance-preflight-repo-state.md` ... `60-final-performance-test-run.md`.
+- iOS `MASTER-PLAN.md` aggiornato.
+- Android `MASTER-PLAN.md` aggiornato con nota cross-repo performance/page streaming.
+
+### Handoff post-fix performance 2026-05-14
+
+**Prossima fase:** REVIEW (Claude / Reviewer), **non DONE**.
+
+**Verdict tecnico proposto:** `REVIEW_READY_WITH_PERFORMANCE_FIXES_AND_LIVE_GAPS`.
+
+**Reviewer focus:**
+- Verificare che la riduzione retention iOS sia coerente con SwiftData e non cambi contratto di apply/idempotenza.
+- Verificare che il nuovo keyset paging Android sia accettabile per il client Supabase Kotlin e non rompa fakes/test esistenti.
+- Richiedere solo un FIX successivo se serve completare le matrici live mancanti; non marcare DONE finche' incremental, Generated, History/session e cross-platform E2E non hanno evidence o blocker esplicito accettato.
+
+### 2026-05-14 — FIX responsiveness Options/MainActor + UI polish
+
+**Override/contesto utente:** l'utente ha richiesto un FIX reale e misurato su blocchi UI/scroll jank in Options, verifica MainActor/threading, polish della card signed-out e bottone `Riprova`, piu' rerun performance live iOS/Android. Il task era in `ACTIVE / REVIEW`; Codex ha eseguito un FIX mirato e lo restituisce a `REVIEW`, **NON DONE**.
+
+**Obiettivo compreso:**
+- Ridurre jank Options senza dichiarare ottimizzazioni non misurate.
+- Verificare se il lavoro pesante ProductPrice/SwiftData/progress vive su MainActor.
+- Applicare fix diretto per progress spam / auto-check immediato / loop ProductPrice.
+- Rifinire icona `Accedi` signed-out e centratura bottoni.
+- Verificare Android page streaming e device smoke dove disponibile.
+- Non usare `service_role`, non bypassare RLS, non loggare token/JWT/email raw.
+
+**File controllati:**
+- iOS tracking/evidence: `docs/MASTER-PLAN.md`, questo task, `09`, `21`, nuove evidence `61`...`68`.
+- iOS codice: `SupabaseProductPriceApplyService.swift`, `SupabaseManualSyncViewModel.swift`, `OptionsView.swift`, `CloudSyncOverviewState.swift`, `SupabasePullApplyService.swift`, `HistorySessionSyncService.swift`.
+- Android codice: `InventoryRepository.kt`, `ProductPriceRemoteDataSource.kt`, `SupabaseProductPriceRemoteDataSource.kt`, `CatalogSyncViewModel.kt`, `OptionsScreen.kt`.
+- Supabase repo: changelog/doc scan leggero e repo locale letto; nessuna migration/grant/RLS applicata.
+
+**Piano minimo eseguito:**
+1. Audit MainActor/statico dei servizi sync e progress.
+2. Throttle progress UI catalog/ProductPrice/History a frequenza bounded.
+3. Delay del controllo automatico Options dopo render iniziale.
+4. Yield dentro ProductPrice page loop e logging timing pagina.
+5. Polish signed-out cloud account e label azioni Release.
+6. Build/smoke iOS, build/test/device smoke Android, evidence/tracking.
+
+**Causa jank identificata:**
+- `SupabaseProductPriceApplyService`, `SupabasePullApplyService` e parti History/session sono `@MainActor` perche' lavorano con `ModelContext` SwiftData della UI.
+- Il fetch remoto e' `await` e non dovrebbe bloccare CPU main durante rete, ma apply/save SwiftData e i loop ProductPrice restano actor-bound.
+- Options veniva invalidata da progress update frequenti; ProductPrice poteva pubblicare piu' stati per pagina.
+- `onAppear` e `scenePhase.active` potevano chiedere il check subito durante render iniziale; il gate evitava duplicati, ma non dava quiet window allo scroll iniziale.
+
+**Fix applicati iOS:**
+- `SupabaseManualSyncViewModel.updateProgress(... throttleUI:)` aggiunto.
+- Progress catalog/ProductPrice/History throttled: update UI al massimo circa ogni 0,35s o ogni delta 9.000 righe; completion/failure/cancel restano immediati.
+- `SupabaseProductPriceApplyService.applyPagedFullPull` fa `Task.yield()` ogni 150 righe dentro pagina da 900 e mantiene `Task.checkCancellation()`.
+- Logging privacy-safe per pagina ProductPrice: `fetchMs`, `applyMs`, `saveMs`.
+- `SupabaseManualSyncReleaseCard` differisce l'auto check di 700 ms dopo appear/active e risincronizza auth context prima di partire.
+- `OptionsView` signed-out: icona `person.crop.circle.badge.plus` blu in box 36x36, CTA `Accedi` piu' leggibile.
+- `OptionsView.actionLabel` ora usa `HStack` centrato con testo multiline, stabilizzando `Riprova` e le altre azioni Release.
+
+**Android:**
+- Nessun nuovo fix Android applicato in questo pass: la worktree Android conteneva gia' page streaming ProductPrice (`id > afterId`, `id ASC`, page size `900`).
+- Verificato `assembleDebug`, test ProductPrice paging, install/launch device e memory.
+
+**Misure / smoke post-fix:**
+- iOS Debug build/run XcodeBuildMCP: PASS, warning 0, durata 12.966s.
+- iOS Release build simulator: PASS.
+- iOS idle post-run: RSS `330.288 KB`, CPU `0.0%`.
+- iOS Options signed-out scroll smoke: PASS; screenshot `docs/TASKS/EVIDENCE/TASK-108/screenshots/2026-05-14-options-account-polish-after.jpg`.
+- Android `assembleDebug`: PASS, 14s.
+- Android ProductPrice paging test: PASS, 8s.
+- Android install/launch OnePlus IN2013: PASS.
+- Android memory: TOTAL PSS `182.569 KB`, TOTAL RSS `281.960 KB`.
+
+**Check eseguiti:**
+- ✅ ESEGUITO — iOS `git fetch origin`: PASS.
+- ✅ ESEGUITO — Android `git fetch origin`: PASS.
+- ✅ ESEGUITO — iOS `git diff --check`: PASS.
+- ✅ ESEGUITO — Android `git diff --check`: PASS.
+- ✅ ESEGUITO — iOS Debug build/run: PASS, warning 0.
+- ✅ ESEGUITO — iOS Release build: PASS.
+- ⚠️ NON ESEGUIBILE — iOS targeted XCTest ProductPrice/ViewModel: il runner simulator ha fallito launch clone con `FBSOpenApplicationServiceErrorDomain Code=1 RequestDenied`; processi `xcodebuild` appesi terminati.
+- ✅ ESEGUITO — `plutil` localizzazioni EN/IT/ES/ZH: PASS.
+- ✅ ESEGUITO — iOS Options simulator smoke + scroll: PASS.
+- ✅ ESEGUITO — Android `assembleDebug`: PASS.
+- ✅ ESEGUITO — Android ProductPrice paging targeted test: PASS.
+- ✅ ESEGUITO — Android install/launch device: PASS.
+- ✅ ESEGUITO — Android memory `dumpsys meminfo`: PASS raccolta metriche.
+- ✅ ESEGUITO — privacy scan diff iOS/Android: PASS; nessun token/JWT/email/service_role raw aggiunto.
+- ❌ NON ESEGUITO — nuovo full live iOS app-auth post-patch con checkpoint 0/9k/53k/90k/150k/completion: app iOS signed-out dopo rebuild, nessun test account/OAuth umano completato.
+- ❌ NON ESEGUITO — incremental pull/push live, Generated live, History/session live e cross-platform E2E.
+- ⚠️ NON ESEGUIBILE — cleanup Supabase scoped: nessun dato `TASK108_PERF_*` / `TASK108_E2E_*` / `TASK108_SYNC_*` creato in questo pass.
+
+**Rischi rimasti:**
+- SwiftData apply/save resta su actor del `ModelContext`; il fix riduce jank e progress spam ma non sposta l'intera apply su `ModelActor` dedicato.
+- Serve ancora full live app-auth post-patch per numeri reali durata/RSS peak/save per pagina.
+- Incremental pull/push, Generated, History/session e cross-platform E2E restano non verificati in questo pass.
+- Android app-auth live non eseguito; device smoke e paging test passano.
+
+**Aggiornamenti file di tracking/evidence:**
+- Aggiunte evidence `61-ui-freeze-mainactor-audit.md` ... `68-final-test-cleanup.md`.
+- Aggiornate `09-wave-gates.md` e `21-end-to-end-sync-acceptance.md`.
+- Aggiunti screenshot `2026-05-14-options-account-polish-after.jpg` e `2026-05-14-android-launch-smoke.png`.
+
+### Handoff post-fix responsiveness 2026-05-14
+
+**Prossima fase:** REVIEW (Claude / Reviewer), **non DONE**.
+
+**Verdict tecnico proposto:** `REVIEW_READY_WITH_RESPONSIVENESS_FIXES_AND_LIVE_GAPS`.
+
+**Reviewer focus:**
+- Validare che throttling progress + delay 700 ms + yield ogni 150 righe siano accettabili come fix misurato e minimo per jank Options/ProductPrice.
+- Richiedere run live firmato se serve dimostrare peak RSS/durata post-patch; questo pass non lo dichiara.
+- Non marcare DONE finche' full live post-patch, incremental pull/push, Generated/History live e cross-platform E2E non sono completati o accettati come blocker espliciti.
+
+### 2026-05-14 14:53 -0400 — FIX definitivo thread/MainActor avviato
+
+**Override/contesto utente:** l'utente ha segnalato che il problema reale persiste: durante auto-check/sync i tap sui tab vengono messi in coda, Options scroll si impunta e i fix precedenti sono mitigazioni. Il task era `ACTIVE / REVIEW`; Codex lo riporta a `ACTIVE / FIX`, responsabile `CODEX`, senza dichiarare `DONE`.
+
+**Obiettivo compreso:**
+- Rimuovere la causa strutturale del blocco UI, non solo throttling/yield.
+- Spostare apply/save pesanti fuori dal MainActor e dal `ModelContext` usato dalla UI quando possibile.
+- Mantenere ViewModel su MainActor solo per stato UI/progress.
+- Dimostrare il risultato con build, smoke UI, log/timing, CPU/RSS e live sync dove l'ambiente autenticato lo consente.
+
+**Preflight iniziale:**
+- iOS branch `main`, HEAD `74480c20c654a07174ba99dede2458d914426ab2`, worktree gia' sporca con modifiche/evidence precedenti TASK-108.
+- Android branch `main`, HEAD `7cfc536b7200a7e2e4a2224800650d2e0b7f7ac0`, worktree gia' sporca con page streaming ProductPrice e tracking.
+- Supabase workspace `/Users/minxiang/Desktop/MerchandiseControlSupabase`: non e' un git repository; MCP Supabase vede progetto `jpgoimipbothfgkokyvm` / `merchandisecontrol-dev`, Postgres `17.6.1.104`, stato `ACTIVE_HEALTHY`.
+- Simulator disponibile/booted: iPhone 15 Pro Max iOS 26.1 (`459C668B-7CE8-443B-BAB3-7D3D5FFC9143`); device fisico iPhone offline; `adb` non disponibile nel PATH corrente.
+- Changelog Supabase controllato: breaking recenti su Data API/table exposure e OAuth token endpoint non richiedono schema/client key change in questo FIX.
+
+**File controllati prima di modifiche codice:**
+- Tracking/master/evidence: `docs/MASTER-PLAN.md`, questo file, evidence `61`...`68`.
+- iOS: `SupabaseProductPriceApplyService.swift`, `SupabasePullApplyService.swift`, `HistorySessionSyncService.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncCoordinator.swift`, `SupabaseManualSyncBaselineCommitter.swift`, `OptionsView.swift`, `ContentView.swift`, `CloudSyncOverviewState.swift`, `SupabaseManualSyncReleaseFactory.swift`.
+- Android: `InventoryRepository.kt`, `ProductPriceRemoteDataSource.kt`, `SupabaseProductPriceRemoteDataSource.kt`, `CatalogSyncViewModel.kt`, `OptionsScreen.kt` via audit statico/grep.
+
+**Piano minimo di intervento:**
+1. Misurare/riprodurre il comportamento corrente con build Debug e smoke UI/log.
+2. Introdurre worker/actor SwiftData dedicato per ProductPrice full apply e spostare l'adapter Release fuori dal `ModelContext` UI.
+3. Limitare auto-check/apply mutativo all'avvio: preflight leggero e/o apply cancellabile non legato alla View.
+4. Aggiornare progress/cancel/result in modo actor-safe e non invasivo.
+5. Rerun build/test/smoke/live possibile e aggiornare evidence `69`...`74`, `09`, `21`.
+
+**Evidence aperte:** `69-main-thread-freeze-root-cause.md`, `70-background-sync-worker-refactor.md`, `71-ui-responsiveness-live-proof.md`, `72-final-thread-performance-regression.md`.
+
+### 2026-05-14 15:25 -0400 — FIX definitivo thread/MainActor completato per REVIEW
+
+**Override/contesto utente:** l'utente ha chiesto di correggere il problema reale di tap accodati / MainActor / UI freeze, non una nuova mitigazione. Codex ha eseguito un FIX strutturale e lo passa a `REVIEW`, **NON DONE**. Le matrici full live/E2E restano aperte se non elencate come eseguite sotto.
+
+**Obiettivo compreso:**
+- Rimuovere il lavoro pesante dal MainActor e dal `ModelContext` UI durante launch/foreground auto-check.
+- Non lasciare task mutativi pesanti agganciati al ciclo di vita della View.
+- Dimostrare il miglioramento con profiler, CPU/RSS, build/test e smoke UI.
+- Non dichiarare PASS globale di TASK-108 senza full live post-patch, incremental, Generated/History e cross-platform E2E.
+
+**File controllati:**
+- Tracking/evidence: `docs/MASTER-PLAN.md`, questo file, `09-wave-gates.md`, `21-end-to-end-sync-acceptance.md`, evidence `61`...`68`, nuove evidence `69`...`74`.
+- iOS codice: `SupabaseProductPriceApplyService.swift`, `SupabasePullApplyService.swift`, `HistorySessionSyncService.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncCoordinator.swift`, `SupabaseManualSyncBaselineCommitter.swift`, `SupabaseManualSyncReleaseFactory.swift`, `SupabaseManualSyncRemotePreview.swift`, `SupabasePullPreviewService.swift`, `SwiftDataInventorySnapshotService.swift`, `PriceHistoryBackfillService.swift`, `HistoryEntryRuntimeSummary.swift`, `OptionsView.swift`, `ContentView.swift`, `CloudSyncProgressState`.
+- Android codice: `InventoryRepository.kt`, `ProductPriceRemoteDataSource.kt`, `SupabaseProductPriceRemoteDataSource.kt`, `CatalogSyncViewModel.kt`, `OptionsScreen.kt` e test repository/ViewModel.
+
+**Piano minimo eseguito:**
+1. Riprodurre e misurare il freeze prima del fix.
+2. Identificare la funzione/file che blocca il main thread.
+3. Spostare preview/apply pesanti su worker/background `ModelContext` creati da `ModelContainer`.
+4. Rimuovere lavoro mutativo automatico dal lifecycle della View.
+5. Rerun build/test/smoke/profiler e aggiornare evidence/tracking.
+
+**Causa precisa del blocco UI:**
+- `ContentView` / root foreground auto-check chiamava `SupabaseManualSyncViewModel.startForegroundSemiAutomaticCheckIfAllowed`.
+- Il coordinator entrava in `SupabasePullPreviewService.generatePreview(context:)`.
+- La preview costruiva `SwiftDataInventorySnapshotService.makeSnapshot()` usando il `ModelContext` della UI.
+- Il loop ProductPrice creava `DateFormatter` per riga in `canonicalDateString`, saturando il main thread.
+- Dopo il primo spostamento off-main, e' emerso un secondo blocco: `PriceHistoryBackfillRunner.runIfNeeded()` lanciato da `ContentView` con `MainActor.run` e UI context.
+
+**Modifiche fatte iOS:**
+- `SwiftDataInventorySnapshotService` non e' piu' main-actor-bound e usa formattazione UTC con `gmtime_r` invece di `DateFormatter` per riga.
+- `SupabasePullPreviewService` aggiunge `generatePreview(modelContainer:)` e costruisce snapshot locale in `Task.detached` con background `ModelContext`.
+- `SupabaseManualSyncPullPreviewAdapter` conserva `ModelContainer`, non il `ModelContext` UI.
+- `SupabaseManualSyncReleaseFactory` passa container agli adapter e crea worker contexts per ProductPrice/History/apply.
+- `SupabaseManualSyncViewModel` sposta apply catalogo e baseline commit in detached worker contexts; il ViewModel resta MainActor per stato UI/progress.
+- `SupabasePullApplyService`, `SupabaseProductPriceApplyService`, `HistorySessionSyncService`, baseline reader/writer/committer e summary runtime non sono piu' isolati al MainActor per il lavoro pesante.
+- ProductPrice mantiene progress actor-safe, page-scoped apply/lookup/save, timing pagina e cancellation checks.
+- `ContentView` non schedula piu' automaticamente il price-history backfill al launch.
+
+**Modifiche Android:**
+- Nessuna nuova patch Android in questo pass definitivo. Android era gia' allineato sul page streaming ProductPrice da pass precedente; sono stati eseguiti build/test dove disponibili.
+
+**Misure before/after:**
+- Before: tab tap su Options durante auto-check impiegava circa `3.6s` e non cambiava tab subito; CPU osservata `100%`; RSS circa `1.45GB` -> `2.18GB`; sample main thread in `SwiftDataInventorySnapshotService.makeSnapshot()`.
+- After finale: sample pid `94292`, main thread `3822/3822` campioni in run loop idle, nessun simbolo snapshot/backfill/ProductPrice pesante sul main.
+- After finale: Options tab tap `0.3708s`; nessun freeze > `500ms` osservato nello smoke finale.
+- After finale: footprint sample `49.6M`, peak `57.2M`; CPU idle `0.0%` ai checkpoint.
+
+**Check eseguiti:**
+- ✅ ESEGUITO — iOS `git diff --check`: PASS.
+- ✅ ESEGUITO — iOS Debug build: PASS, warnings `[]`.
+- ✅ ESEGUITO — iOS Debug run/smoke: PASS, pid `94292`.
+- ✅ ESEGUITO — iOS Release build: PASS.
+- ✅ ESEGUITO — iOS targeted `SupabaseProductPriceApplyServiceTests`: PASS via direct `xcodebuild test`.
+- ✅ ESEGUITO — iOS targeted preview/apply/history/baseline/ViewModel tests: PASS via direct `xcodebuild test`.
+- ✅ ESEGUITO — iOS profiler before/after: PASS, root cause e main-idle proof salvati in `profiles/`.
+- ✅ ESEGUITO — iOS simulator UI smoke: PASS, Options tab tap `0.3708s`, screenshot salvato.
+- ✅ ESEGUITO — `plutil`: PASS.
+- ✅ ESEGUITO — privacy scan: PASS; nessun token/JWT/email raw, nessun `service_role` client.
+- ✅ ESEGUITO — Android `git diff --check`: PASS.
+- ✅ ESEGUITO — Android `assembleDebug`: PASS.
+- ✅ ESEGUITO — Android `DefaultInventoryRepositoryTest`: PASS.
+- ⚠️ NON ESEGUIBILE — XcodeBuildMCP `test_sim`: simulator clone/launch infrastructure stuck; direct `xcodebuild test` usato con successo.
+- ⚠️ NON ESEGUIBILE — Android `CatalogSyncViewModelTest` combined: MockK/attach `AttachNotSupportedException`, non fallimento assert sync.
+- ⚠️ NON ESEGUIBILE — Android device/logcat smoke: `adb` non nel PATH.
+- ⚠️ NON ESEGUIBILE — iOS physical smoke: device fisico offline.
+- ❌ NON ESEGUITO — full live ProductPrice post-patch 290k/idempotent rerun.
+- ❌ NON ESEGUITO — incremental pull/push live.
+- ❌ NON ESEGUITO — Generated live.
+- ❌ NON ESEGUITO — History/session live.
+- ❌ NON ESEGUITO — cross-platform E2E live.
+
+**Rischi rimasti:**
+- Full live post-patch ProductPrice 290k non e' stato rieseguito dopo questo fix strutturale; quindi durata totale/RSS peak/righe-sec definitive restano aperte.
+- Incremental pull/push, Generated, History/session e cross-platform E2E restano requisiti TASK-108 aperti.
+- Android device/logcat non verificato per mancanza di `adb`.
+- Il price-history backfill automatico e' stato rimosso dal lifecycle View; se serve ancora come migrazione, va reintrodotto come job esplicito/background con evidence separata.
+
+**Aggiornamenti file di tracking/evidence:**
+- Aggiornate/compilate evidence `69-main-thread-freeze-root-cause.md`, `70-background-sync-worker-refactor.md`, `71-ui-responsiveness-live-proof.md`, `72-final-thread-performance-regression.md`.
+- Aggiunte evidence `73-final-live-sync-e2e.md` e `74-final-cross-platform-e2e.md` con stato esplicito NOT EXECUTED per le matrici non completate.
+- Aggiornate `09-wave-gates.md` e `21-end-to-end-sync-acceptance.md`.
+- Copiati profili sotto `docs/TASKS/EVIDENCE/TASK-108/profiles/` e screenshot finale sotto `docs/TASKS/EVIDENCE/TASK-108/screenshots/`.
+
+### Handoff post-fix definitivo thread/MainActor 2026-05-14
+
+**Prossima fase:** REVIEW (Claude / Reviewer), **non DONE**.
+
+**Verdict tecnico proposto:** `REVIEW_READY_THREAD_FREEZE_FIXED_WITH_GLOBAL_LIVE_GAPS`.
+
+**Reviewer focus:**
+- Validare che il root cause misurato sia coperto: preview SwiftData snapshot off-main, `DateFormatter` per riga rimosso, backfill automatico fuori dal View lifecycle.
+- Confermare che la rimozione del backfill automatico e' accettabile o richiedere un task separato/job esplicito.
+- Non marcare TASK-108 DONE: full live post-patch, incremental pull/push, Generated/History live e cross-platform E2E restano non eseguiti in questo pass.
+
+### 2026-05-14 17:10 -0400 — FIX sync reset/clean seed preflight parziale, BLOCKED su email test
+
+**Override/contesto utente:** l'utente ha chiesto di completare TASK-108/FIX sync iOS ↔ Android ↔ Supabase con reset dati Supabase owner-scoped, seed pulito da Excel e test full/incrementali cross-platform. Codex ha eseguito solo passaggi non distruttivi e patch iOS minime; il reset Supabase e' bloccato per mancanza dell'email Gmail test esatta richiesta dalle regole operative. TASK-108 resta **NON DONE**.
+
+**Obiettivo compreso:**
+- Mettere in sicurezza prima i path iOS sospetti di ProductPrice full pull/apply e lavoro pesante off-main.
+- Contare davvero il file Excel sorgente prima del seed.
+- Non cancellare nulla su Supabase senza identificazione certa di `auth.users` e backup SQL owner-scoped.
+- Non dichiarare eseguiti reset, seed, full pull, no-op o incrementali finche' non sono stati realmente provati.
+
+**File controllati:**
+- Tracking/protocollo: `docs/MASTER-PLAN.md`, questo file, `docs/CODEX-EXECUTION-PROTOCOL.md`.
+- iOS: `ContentView.swift`, `OptionsView.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncReleaseFactory.swift`, `SupabaseManualSyncRemotePreview.swift`, `SupabaseManualSyncBaselineCommitter.swift`, `SupabaseCatalogBaselineReader.swift`, `SupabaseCatalogBaselineWriter.swift`, `SupabasePullPreviewService.swift`, `SupabasePullApplyService.swift`, `SupabaseProductPriceApplyService.swift`, `SupabaseProductPricePreviewService.swift`, `SwiftDataInventorySnapshotService.swift`, `PriceHistoryBackfillService.swift`, `HistorySessionSyncService.swift`, `HistoryEntryRuntimeSummary.swift`, model SwiftData principali.
+- Android: `AppDatabase.kt`, `InventoryRepository.kt`, `PriceBackfillWorker.kt`, `ProductPriceSummary.kt`, `DatabaseViewModel.kt`, `ExcelViewModel.kt`, `ImportAnalysis.kt`, `ProductPrice.kt`, `ProductPriceDao.kt`, data source Supabase ProductPrice.
+- Supabase locale: migrations/schema/RLS in `/Users/minxiang/Desktop/MerchandiseControlSupabase/supabase/migrations`.
+
+**Piano minimo eseguito:**
+1. Preflight git e branch dedicato `task108-sync-reset-clean-seed`.
+2. Audit statico iOS/Android/Supabase richiesto dal brief.
+3. Patch iOS mirata: safety gate full pull ProductPrice, background contexts in Options, snapshot logging/diagnostica, test safety.
+4. Build/test non distruttivi iOS/Android.
+5. Conteggio reale Excel sorgente.
+6. Stop prima di Supabase reset per mancanza email Gmail test.
+
+**Modifiche fatte:**
+- `SupabaseProductPriceApplyService`: aggiunto `fullPullSafetyLimit` default `75_000`; remote ProductPrice sopra limite blocca `applyPagedFullPull` prima del fetch/apply paginato, con log `[Task108ProductPrice] blocked_full_pull`.
+- `SupabaseProductPriceApplyService`: completamento paged full pull logga `elapsedMs`.
+- `SupabaseProductPricePreviewService`: lookup locale non piu' `@MainActor`.
+- `OptionsView`: preview/apply ProductPrice e apply pull preview usano `ModelContext` dedicati da `modelContext.container` invece del context UI per lavori pesanti.
+- `SwiftDataInventorySnapshotService`: snapshot non main-actor-bound, logging `[Task108Snapshot] start/done`, canonicalizzazione UTC via `gmtime_r`, diagnostica `Task108LocalInventoryDiagnostics` per raw/logical counts e duplicati ProductPrice.
+- `SupabaseProductPriceApplyServiceTests`: cancellation test aggiornato per disattivare esplicitamente il safety gate; nuovo test verifica blocco default sopra 75.000 righe.
+- Android: nessuna patch applicata; audit statico conferma indice unico Room, `insertIfChanged`, backfill skip prodotti gia' prezzati e pull ProductPrice idempotente locale.
+
+**Check eseguiti:**
+- ✅ ESEGUITO — `git fetch origin`: PASS.
+- ✅ ESEGUITO — `xcodebuild -list`: PASS.
+- ✅ ESEGUITO — iOS Debug simulator build: PASS; unico warning AppIntents metadata non legato al sync.
+- ✅ ESEGUITO — iOS Release simulator build: PASS; unico warning AppIntents metadata non legato al sync.
+- ✅ ESEGUITO — iOS targeted safety tests ProductPrice: PASS (`testPagedFullPullCanCancelLargeProductPriceHistoryWithoutFixedTotalLimit`, `testPagedFullPullBlocksRemoteAboveDefaultSafetyLimit`).
+- ⚠️ NON ESEGUIBILE — full iOS XCTest suite green: eseguita ma fallisce su test preesistenti/stale di copy/benchmark e launch clone simulator; non dichiarata PASS.
+- ✅ ESEGUITO — `git diff --check`: PASS.
+- ✅ ESEGUITO — Android `assembleDebug`: PASS.
+- ⚠️ NON ESEGUIBILE — Android `./gradlew test`: fallisce per ByteBuddy/MockK attach (`AttachNotSupportedException`) su runtime locale; non dichiarato PASS.
+- ✅ ESEGUITO — conteggio Excel sorgente: Products `19.695`, Suppliers `57`, Categories `27`, PriceHistory `41.108`.
+- ❌ NON ESEGUITO — backup/reset Supabase: bloccato da email Gmail test mancante.
+- ❌ NON ESEGUITO — reset locali, seed iOS da Excel, full pull iOS/Android, secondo sync no-op, incrementali iOS→Android e Android→iOS, performance/UI live, query duplicati finali.
+
+**Rischi rimasti:**
+- TASK-108 non chiudibile: mancano reset Supabase verificato, seed pulito, full pull iOS/Android, no-op, incrementali cross-platform e query duplicati finali.
+- Android push ProductPrice senza bridge locale resta da provare live; audit statico non sostituisce no-op end-to-end.
+- Full iOS suite non e' green in questo ambiente per failure non risolte in questo pass; i test safety mirati passano.
+- Nessun SQL Supabase distruttivo e nessun backup remoto sono stati eseguiti in assenza dell'email test.
+
+**Aggiornamenti file di tracking/evidence:**
+- Aggiunta evidence `docs/TASKS/EVIDENCE/TASK-108/75-reset-clean-seed-preflight.md`.
+- TASK-108 impostato a `BLOCKED / FIX`, responsabile `USER`, in attesa dell'email Gmail test esatta.
+
+### Handoff bloccato verso utente 2026-05-14
+
+**Prossima azione:** USER deve fornire l'email esatta dell'account Gmail test. Dopo quel dato Codex potra' cercare `auth.users`, procedere solo con match esatto a 1 riga, creare backup SQL owner-scoped e poi eseguire delete filtrate per `owner_user_id` / `user_id`.
+
+**Non procedere oltre:** nessun reset, seed, sync live o delete Supabase deve partire finche' l'email non e' nota e verificata.
+
+### 2026-05-14 18:07 -0400 — FIX reset/clean seed + iOS harness completato per REVIEW
+
+**Override/contesto utente:** l'utente ha fornito `EMAIL_GMAIL_TEST = xniw97@gmail.com` e autorizzazione esplicita al reset owner-scoped sul progetto dev `merchandisecontrol-dev` / `jpgoimipbothfgkokyvm`. Codex ha eseguito reset e seed remoto, piu' verifiche iOS real-dataset via harness. TASK-108 passa da `FIX` a `REVIEW`, **NON DONE**: app-auth iOS push/pull e incrementali reali non sono stati eseguiti senza sessione Gmail/Supabase interattiva.
+
+**Obiettivo compreso:**
+- Pulire Supabase dall'account Gmail test senza toccare `auth.users`.
+- Ripartire da file Excel reale e remoto pulito con conteggi coerenti.
+- Dimostrare che iOS non gonfia ProductPrice da Excel e che ProductPrice full pull/no-op e' idempotente con 41.108 righe.
+- Non dichiarare eseguiti document picker, app-auth push/pull o incrementali se non provati.
+
+**File controllati/modificati in questo pass:**
+- iOS codice gia' patchato TASK-108: `SupabaseProductPriceApplyService.swift`, `OptionsView.swift`, `SwiftDataInventorySnapshotService.swift`, `SupabaseManualSyncViewModel.swift`, servizi pull/baseline/history e `ContentView.swift`.
+- Test iOS: `SupabaseProductPriceApplyServiceTests.swift`, `SupabaseManualSyncViewModelTests.swift`, `Task100LargeDatasetAcceptanceTests.swift`.
+- Tracking/evidence: `docs/MASTER-PLAN.md`, questo file, nuova evidence `76-supabase-reset-clean-seed-ios-live.md`.
+- Android riferimento: `ProductPrice.kt`, `ProductPriceDao.kt`, `PriceBackfillWorker.kt`; nessuna patch Android.
+
+**Modifiche fatte aggiuntive:**
+- `SupabaseManualSyncViewModel`: staging local apply ora distingue conflitti (`needsAttention`) da preview incompleta/source errors (`incompleteCheck`), invece di usare sempre refresh required.
+- `SupabaseManualSyncViewModelTests`: assert copy aggiornato alla CTA corrente unificata.
+- `Task100LargeDatasetAcceptanceTests`: aggiunti due harness test-only TASK-108:
+  - import Excel reale con `ExcelAnalyzer`/`ProductImportCore` in SwiftData in-memory;
+  - ProductPrice paged full pull/no-op con `SupabaseProductPriceApplyService.applyPagedFullPull` e dataset reale 41.108 righe.
+
+**Supabase eseguito:**
+- Progetto confermato: `merchandisecontrol-dev` / `jpgoimipbothfgkokyvm`.
+- USER_UUID risolto con match esatto 1 riga su `auth.users`; email/UUID redatti in evidence.
+- Backup tables create: `backup_task108_*_20260514173049`.
+- Reset owner-scoped eseguito su `sync_events`, `shared_sheet_sessions`, `inventory_product_prices`, `inventory_products`, `inventory_suppliers`, `inventory_categories`.
+- Conteggi post-reset: tutte 0.
+- Indici anti-duplicazione verificati gia' presenti; nessuna nuova migration.
+- Seed remoto da Excel: 63 chunk SQL, elapsed 401 s.
+- Conteggi post-seed: suppliers 57, categories 27, products 19.695, product_prices 41.108.
+- Query duplicati ProductPrice finale: 0 righe.
+- No-op remoto MCP/SQL `insert ... select ... on conflict do nothing`: inserted rows 0 su tutte le quattro tabelle catalog/prices; conteggi invariati.
+
+**Excel sorgente:**
+- Path usato: `/Users/minxiang/Downloads/Database_2026_04_21_14-06-26.xlsx`.
+- Sheet names: `Products`, `Suppliers`, `Categories`, `PriceHistory`.
+- Conteggi reali: Products 19.695, Suppliers 57, Categories 27, PriceHistory 41.108.
+- Duplicati file: 0 barcode prodotto, 0 chiavi `(barcode,type,timestamp)` PriceHistory; riferimenti mancanti 0.
+
+**Check eseguiti:**
+- ✅ ESEGUITO — Supabase backup owner-scoped: PASS, backup row counts coerenti con pre-reset.
+- ✅ ESEGUITO — Supabase reset owner-scoped: PASS, post-reset 0 per tutte le tabelle app.
+- ✅ ESEGUITO — Supabase seed remoto SQL-backed da Excel reale: PASS, 57/27/19.695/41.108.
+- ✅ ESEGUITO — Supabase duplicate query ProductPrice finale: PASS, 0 righe.
+- ✅ ESEGUITO — Supabase no-op SQL-backed: PASS, inserted rows 0 e conteggi invariati.
+- ✅ ESEGUITO — iOS real Excel import harness: PASS, 16,119 s, ProductPrice raw/logical 41.108/41.108, duplicati 0.
+- ✅ ESEGUITO — iOS ProductPrice full pull harness: PASS, 46 pagine da 900; primo pull inserted 41.108 in 11,487 s; secondo pull inserted 0/skipped 41.108 in 7,228 s.
+- ✅ ESEGUITO — iOS safety gate ProductPrice > 75.000: PASS via test mirato; remoto sporco 292.989 sarebbe bloccato, remoto pulito 41.108 passa.
+- ✅ ESEGUITO — iOS Debug build: PASS, solo warning AppIntents metadata noto.
+- ✅ ESEGUITO — iOS Release build: PASS, solo warning AppIntents metadata noto.
+- ✅ ESEGUITO — iOS targeted tests finali: PASS, 169 test / 0 failure.
+- ✅ ESEGUITO — `git diff --check`: PASS.
+- ✅ ESEGUITO — Android `assembleDebug`: PASS.
+- ✅ ESEGUITO — Android `./gradlew test`: PASS.
+- ✅ ESEGUITO — Android static audit ProductPrice/backfill: PASS.
+- ⚠️ NON ESEGUIBILE — iOS document picker/login/push app-auth: nessuna sessione Gmail/Supabase interattiva disponibile in questa sessione.
+- ⚠️ NON ESEGUIBILE — Android emulator live pull/no-op: non eseguito; focus iOS/Supabase completato con build/test statici Android.
+- ❌ NON ESEGUITO — incrementale reale iOS -> Supabase -> iOS da app.
+- ❌ NON ESEGUITO — incrementale reale Android -> iOS.
+
+**Performance/UI:**
+- Sample simulator locale `/tmp/task108-ios-launch-sample.txt`: main thread quasi interamente in `mach_msg`/run loop; nessun marker per snapshot/backfill/ProductPrice/DateFormatter massivo sul main.
+- Tap latency durante cloud check app-auth reale non rieseguita in questo pass.
+
+**Rischi rimasti:**
+- Il seed remoto e' SQL-backed, non un push app-auth iOS; quindi non chiude da solo il writer iOS reale.
+- Gli harness iOS coprono importer core e ProductPrice full pull/no-op con dataset reale, ma non RLS/network Supabase dal client app.
+- Incrementali cross-platform restano da eseguire appena e' disponibile una sessione app-auth o credenziali manuali.
+
+**Aggiornamenti file di tracking/evidence:**
+- Aggiunta evidence `docs/TASKS/EVIDENCE/TASK-108/76-supabase-reset-clean-seed-ios-live.md`.
+- TASK-108 impostato a `ACTIVE / REVIEW`, responsabile `CLAUDE`, **NON DONE**.
+
+### Handoff post-fix reset/clean seed 2026-05-14
+
+**Prossima fase:** REVIEW (Claude / Reviewer), **non DONE**.
+
+**Verdict tecnico proposto:** `REVIEW_READY_RESET_CLEAN_SEED_SQL_AND_IOS_HARNESS_WITH_APP_AUTH_GAPS`.
+
+**Reviewer focus:**
+- Accettare o rifiutare la deviazione SQL-backed per il seed remoto in assenza di sessione app-auth interattiva.
+- Validare che gli harness iOS real-dataset siano sufficienti come prova locale/import e ProductPrice apply/no-op, oppure richiedere login manuale e rerun app-auth.
+- Non marcare TASK-108 DONE finche' push/pull app-auth e incrementali cross-platform non sono eseguiti o formalmente accettati come follow-up separato.
+
+### 2026-05-14 19:22 -0400 — FIX app-auth iOS reale + cleanup Advanced diagnostics
+
+**Override/contesto utente:** l'utente ha confermato che l'app iOS e' stata disinstallata/reinstallata sul simulatore `iPhone 15 Pro Max` iOS 26.1, quindi il database locale era pulito. Dopo il live app-auth iOS, l'utente ha richiesto anche una pulizia della sezione Advanced diagnostics/Developer diagnostics, rimuovendo test e tool storici ormai non necessari. Codex mantiene TASK-108 **ACTIVE / REVIEW**, **NON DONE** secondo policy AGENTS.
+
+**Obiettivo compreso:**
+- Non rifare reset/seed Supabase se il remoto e' gia' pulito.
+- Usare la sessione Gmail/Supabase reale dell'app per pull/no-op/push/repull iOS.
+- Pulire Options rimuovendo la superficie diagnostica storica e i relativi hook inutilizzati.
+- Non usare SQL-backed seed come sostituto del push app-auth iOS.
+
+**File controllati/modificati in questo pass:**
+- UI/runtime iOS: `OptionsView.swift`, `ContentView.swift`, `iOSMerchandiseControlApp.swift`.
+- Planner push: `LocalPendingAggregatedPushPlanner.swift`.
+- Debug-only hardening: `ProductPriceManualPushDebugViewModel.swift`, `SupabasePushPreflightViewModel.swift`, `SupabaseSyncEventDebugFormatting.swift`, `SupabaseSyncEventDebugViewModel.swift`.
+- Localizzazioni: `en.lproj/Localizable.strings`, `it.lproj/Localizable.strings`, `es.lproj/Localizable.strings`, `zh-Hans.lproj/Localizable.strings`.
+- Evidence: `docs/TASKS/EVIDENCE/TASK-108/77-app-auth-ios-live-and-diagnostics-cleanup.md`.
+
+**App-auth iOS live eseguito:**
+- Simulatore: `iPhone 15 Pro Max` iOS 26.1 (`459C668B-7CE8-443B-BAB3-7D3D5FFC9143`).
+- Sessione reale app: Gmail test `x***@gmail.com`, Supabase user `6425adb0-...-e8257e`.
+- Remote before: suppliers `57`, categories `27`, products `19.695`, product_prices `41.108`, duplicati ProductPrice `0`.
+- Primo pull app-auth su locale pulito: suppliers `57`, categories `27`, products `19.695`, product_prices `41.108`, logical `41.108`, duplicati locali `0`; tempo totale `132.109 ms`.
+- Secondo pull no-op: ProductPrice inserted `0`, linked `0`, skipped `41.108`, conteggi invariati; tempo totale `49.859 ms`.
+- Incrementale iOS: modifica purchase price `320.00 -> 320.01` su prodotto esistente; push app-auth con catalog product updates `1`, ProductPrice inserted/verified/linked `1`.
+- Supabase dopo push: suppliers `57`, categories `27`, products `19.695`, product_prices `41.109`; duplicati ProductPrice `0`.
+- Repull iOS dopo reset locale harness: product_prices `41.109`, logical `41.109`, duplicati `0`; tempo totale `136.091 ms`.
+- Secondo repull no-op: ProductPrice inserted `0`, skipped `41.109`, conteggi invariati; tempo totale `49.967 ms`.
+
+**Fix planner applicato:**
+- `LocalPendingAggregatedPushPlanner` non usa piu' snapshot catalogo pieno per ogni pending, ma mantiene fetch mirata e risolve anche remoteID ricavati dal logical key.
+- Aggiunto fallback per local-key legacy non reversibili: confronta le pending keys calcolate sugli oggetti locali, cosi' un pending barcode-only registrato prima del link remoto non diventa falsamente `missingLiveModel`.
+- Questo fix ha sbloccato il push incrementale app-auth del test reale.
+
+**Cleanup Advanced diagnostics applicato:**
+- Rimossa l'intera sezione `Developer diagnostics` / Advanced diagnostics da `OptionsView`.
+- Rimossi dalla UI: preview/apply ProductPrice manuali, manual push debug, outbox debug, recent sync events, push preflight debug, smoke UI TASK087/TASK088.
+- Rimosso `supabaseSyncEventPreviewService` dalla dependency graph runtime.
+- Rimossi hook di launch DEBUG storici da `ContentView`, incluso il temporaneo `--task108-app-auth-live-run`.
+- Rimosso il file temporaneo `Task108AppAuthLiveHarness.swift`.
+- Rimossi i testi `options.developerDiagnostics.*` e `options.supabase.auth.debugDiagnostics` dalle localizzazioni.
+- Corretto il footer cloud per non rimandare piu' a Developer diagnostics dopo la rimozione della sezione.
+- Wrappati i ViewModel/formatter diagnostici rimasti con `#if DEBUG` per non includerli nel binario Release.
+
+**Check eseguiti:**
+- ✅ ESEGUITO — iOS app-auth pull da Supabase pulito: PASS, conteggi locali = remoto.
+- ✅ ESEGUITO — iOS app-auth secondo pull no-op: PASS, conteggi invariati e ProductPrice inserted `0`.
+- ✅ ESEGUITO — iOS app-auth push incrementale: PASS, ProductPrice remoto `41.108 -> 41.109`, duplicati `0`.
+- ✅ ESEGUITO — iOS app-auth repull dopo reset locale harness: PASS, modifica rientrata e conteggi coerenti.
+- ✅ ESEGUITO — iOS secondo repull no-op: PASS, conteggi invariati.
+- ✅ ESEGUITO — `LocalPendingAggregatedPushPlannerTests`: PASS, `11/0`.
+- ✅ ESEGUITO — iOS Debug build simulator generic: PASS; warning noto AppIntents metadata.
+- ✅ ESEGUITO — iOS Release build simulator generic: PASS; warning noto AppIntents metadata.
+- ✅ ESEGUITO — XcodeBuildMCP `build_run_sim`: PASS, warnings `[]`.
+- ✅ ESEGUITO — Options simulator smoke: PASS; Advanced diagnostics/Developer diagnostics non visibile e footer cloud coerente.
+- ✅ ESEGUITO — `git diff --check`: PASS.
+- ✅ ESEGUITO — `plutil -lint` Localizable EN/IT/ES/ZH: PASS.
+- ✅ ESEGUITO — sorgenti scan: nessun riferimento a `Task108AppAuth`, `--task108`, `TASK108_APP_AUTH`, `options.developerDiagnostics`, `developerDiagnosticsContent`, `syncEventPreviewService`.
+- ✅ ESEGUITO — Release binary strings scan: nessun match per tool/stringhe diagnostiche rimosse.
+- ⚠️ NON ESEGUIBILE — Android app-auth/emulator live: `adb` non disponibile nel PATH in questo pass; Android build/test minimi gia' eseguiti nella evidence `76`.
+
+**Rischi rimasti:**
+- Android app-auth cross-device non e' stato rieseguito live; resta nota/follow-up se il reviewer richiede prova Android nello stesso task.
+- Alcuni file smoke/debug storici restano nel target ma sono `#if DEBUG`; la superficie utente Options e il binario Release non li espongono.
+- Il fallback local-key legacy del planner puo' scansionare catalogo solo per chiavi locali non reversibili; e' intenzionale per compatibilita' con pending storici, mentre il path comune remoteID resta mirato.
+
+**Aggiornamenti file di tracking/evidence:**
+- Aggiunta evidence `docs/TASKS/EVIDENCE/TASK-108/77-app-auth-ios-live-and-diagnostics-cleanup.md`.
+- TASK-108 resta `ACTIVE / REVIEW`, responsabile `CLAUDE`, **NON DONE**.
+
+### Handoff post-fix app-auth iOS + diagnostics cleanup 2026-05-14
+
+**Prossima fase:** REVIEW (Claude / Reviewer), **non DONE**.
+
+**Verdict tecnico proposto:** `READY_FOR_REVIEW_AFTER_APP_AUTH_IOS_AND_DIAGNOSTICS_CLEANUP`.
+
+**Reviewer focus:**
+- Validare che il live app-auth iOS copra pull/no-op/push incrementale/repull richiesti per chiudere il gap principale rimasto.
+- Decidere se Android app-auth live e Android -> iOS devono restare dentro TASK-108 o diventare follow-up separato, visto che `adb` non era disponibile in questo pass.
+- Verificare che la rimozione completa della sezione Advanced diagnostics da Options sia accettata come cleanup definitivo della superficie utente.
+
+### 2026-05-14 20:22 -0400 — REVIEW finale codebase completa + fix diretti
+
+**Override/contesto utente:** l'utente ha richiesto una review completa, severa e professionale dell'intera codebase post TASK-108, autorizzando fix diretti. Codex ha rispettato il perimetro del task attivo e non ha marcato DONE: il core iOS/Supabase e' verde, ma Android app-auth cross-device live non e' stato completato per stall del test strumentato e la policy locale richiede conferma utente.
+
+**Obiettivo compreso:**
+- Validare integrita' dati SwiftData/Supabase e idempotenza ProductPrice dopo TASK-108.
+- Cercare residui diagnostici/harness/task-specific in app e Release.
+- Verificare UI/UX Options/Database/History e copertura Generated tramite test, dato che non esiste una tab runtime separata.
+- Rieseguire build/test/scan principali e rivalutare Android come riferimento funzionale.
+- Aggiornare evidence/tracking senza dichiarare PASS non provati.
+
+**File controllati:**
+- Tracking/evidence: `docs/MASTER-PLAN.md`, questo file, `docs/TASKS/EVIDENCE/TASK-108/README.md`, evidence `75`...`77`.
+- iOS: `OptionsView.swift`, `ContentView.swift`, `iOSMerchandiseControlApp.swift`, `LocalPendingAggregatedPushPlanner.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncReleaseFactory.swift`, `SupabasePullPreviewService.swift`, `SupabasePullApplyService.swift`, `SupabaseProductPriceApplyService.swift`, `SwiftDataInventorySnapshotService.swift`, `HistorySessionSyncService.swift`, baseline reader/writer/committer, debug ViewModel rimasti, localizzazioni EN/IT/ES/ZH.
+- Android: `AppDatabase.kt`, `InventoryRepository.kt`, `PriceBackfillWorker.kt`, `DatabaseViewModel.kt`, `ExcelViewModel.kt`, ProductPrice DAO e data source Supabase.
+- Supabase locale/remoto: migrations/RLS/indexes, progetto remoto dev `jpgoimipbothfgkokyvm`.
+
+**Piano minimo eseguito:**
+1. Preflight git/tracking/evidence e review diff.
+2. Review architetturale iOS sync/SwiftData/MainActor/diagnostiche.
+3. Fix diretti mirati, senza refactor ampio o nuove dipendenze.
+4. Regressione iOS build/test/scan/smoke.
+5. Review Android + build/test e tentativo app-auth live se ambiente disponibile.
+6. Query Supabase non distruttive finali.
+7. Evidence finale e verdict.
+
+**Modifiche fatte:**
+- `OptionsView`: rimossi `@Query` massivi usati solo per conteggi locali; introdotto summary locale via `fetchCount`, aggiornato su appear/session/baseline change.
+- Sorgenti app: rimossi/neutralizzati residui `Task108` in log/types diagnostici, diagnostica snapshot `#if DEBUG`, scan app senza harness/launch args TASK-108.
+- `SupabaseSyncEventPreviewService`: intero file escluso dal Release con `#if DEBUG`.
+- `PriceHistoryBackfillService`: helper morto rimosso dopo verifica assenza chiamanti.
+- `InventorySyncService`: convertito da `@MainActor final class` a `@MainActor struct` per eliminare crash XCTest deinit nel path Generated sync; servizio senza stato identitario.
+- `InventorySyncServiceTests`: mantenimento container/context in test per lifetime SwiftData coerente.
+- `SupabaseManualSyncReleaseUITests`: assertion riallineate a factory e cleanup diagnostiche attuali.
+- Tracking/evidence: aggiunta `docs/TASKS/EVIDENCE/TASK-108/78-final-codebase-review-and-regression.md`, README evidence e Master Plan aggiornati.
+
+**Check eseguiti:**
+- ✅ ESEGUITO — `git fetch origin`, branch/HEAD/status preflight: PASS; branch `task108-sync-reset-clean-seed`, HEAD `74480c20c654a07174ba99dede2458d914426ab2`.
+- ✅ ESEGUITO — `git diff --check`: PASS.
+- ✅ ESEGUITO — iOS Debug build generic simulator: PASS; warning noto AppIntents metadata extraction.
+- ✅ ESEGUITO — iOS Release build generic simulator: PASS; warning noto AppIntents metadata extraction.
+- ✅ ESEGUITO — regressione mirata iOS sync/import/database/generated/history: PASS, `215` test eseguiti, `8` skip, `0` failure.
+- ✅ ESEGUITO — `plutil -lint` Localizable EN/ES/IT/ZH: PASS.
+- ✅ ESEGUITO — sorgenti scan per `TASK108`, harness, launch args temporanei, `Developer diagnostics`, `Advanced diagnostics`, `syncEventPreviewService`: PASS, nessun match app.
+- ✅ ESEGUITO — scan Release binary filtrato per diagnostiche storiche: PASS, nessun match non legato a path build/SourcePackages.
+- ✅ ESEGUITO — Simulator smoke Inventory/Options/Database/History: PASS; Options mostra conteggi locali `19.695/57/27/41.109` e nessuna diagnostica pubblica storica.
+- ✅ ESEGUITO — Supabase project/ref: PASS, `merchandisecontrol-dev` / `jpgoimipbothfgkokyvm`.
+- ✅ ESEGUITO — Supabase conteggi finali non distruttivi: suppliers `57`, categories `27`, products `19.695`, product_prices `41.109`.
+- ✅ ESEGUITO — Supabase duplicate query ProductPrice finale: PASS, `0` righe.
+- ✅ ESEGUITO — Supabase owner mismatch checks: PASS, ProductPrice/Product/Supplier/Category mismatch `0`.
+- ✅ ESEGUITO — Android static review ProductPrice/sync: PASS, unique key Room e keyset/idempotenza coerenti.
+- ✅ ESEGUITO — Android `./gradlew assembleDebug`: PASS.
+- ✅ ESEGUITO — Android `./gradlew test`: PASS.
+- ⚠️ NON ESEGUIBILE — Android app-auth cross-device live: `adb` e device disponibili, ma il test strumentato read-only e' rimasto in stall su `connectedDebugAndroidTest`; interrotto e non dichiarato PASS.
+- ⚠️ NON ESEGUIBILE — Generated tab smoke separato: la tab bar runtime espone `Inventory`, `Database`, `History`, `Options`; Generated e' coperto da test import/generated, non da tab autonoma.
+- ❌ NON ESEGUITO — full XCTest iOS completa post-review: non dichiarata green; sostituita da regressione mirata ampia sulle aree richieste.
+
+**Rischi rimasti:**
+- Android app-auth live/cross-device resta gap ambientale-funzionale documentato; non impatta il target principale iOS/Supabase ma impedisce un `REVIEW_PASS_FINAL` pieno cross-platform.
+- Il warning AppIntents metadata extraction rimane noto e fuori scope; non e' stato introdotto dalla review finale.
+- Worktree resta dirty con modifiche TASK-108 preesistenti e nuova evidence; non e' stato creato commit.
+
+**Aggiornamenti file di tracking/evidence:**
+- Aggiunta evidence `docs/TASKS/EVIDENCE/TASK-108/78-final-codebase-review-and-regression.md`.
+- Aggiornati `docs/TASKS/EVIDENCE/TASK-108/README.md`, `docs/MASTER-PLAN.md` e questo file.
+- TASK-108 resta `ACTIVE / REVIEW`, responsabile `UTENTE / CLAUDE`, **NON DONE** fino a conferma esplicita dell'utente.
+
+### Handoff post-review finale 2026-05-14
+
+**Prossima fase:** REVIEW / USER ACCEPTANCE, **non DONE**.
+
+**Verdict tecnico proposto:** `PASS_WITH_NOTES`.
+
+**Motivo verdict:** iOS/Supabase core e' verificato e non mostra blocker: app-auth iOS live da evidence `77` valido, Supabase finale coerente, ProductPrice duplicati `0`, build/test/smoke/scan principali PASS, UX pubblica pulita. La nota residua e' Android app-auth cross-device live non completato per stall del test strumentato, con Android build/test/static review comunque PASS.
+
+**Reviewer / utente focus:**
+- Accettare `PASS_WITH_NOTES` come chiusura TASK-108 iOS-first oppure richiedere rerun Android app-auth cross-device prima della chiusura.
+- Non marcare DONE senza conferma utente esplicita.
+- Se serve Android live pieno, ripartire dal device `8ac48ff0` o da un emulator pulito e investigare lo stall di `connectedDebugAndroidTest`.
+
+### 2026-05-14 20:27 -0400 — USER ACCEPTANCE / CHIUSURA TASK-108
+
+**Override/decisione utente:** l'utente ha richiesto esplicitamente di mettere la review in **DONE** e tornare su `main` con tutte le modifiche. Questo viene registrato come conferma di accettazione del verdict `PASS_WITH_NOTES`, con il gap Android app-auth cross-device live mantenuto come nota/follow-up documentato.
+
+**Esito finale TASK-108:** `DONE / Chiusura — PASS_WITH_NOTES`.
+
+**Motivo chiusura:** iOS/Supabase core verificato con app-auth pull/no-op/push/repull PASS, ProductPrice duplicati `0`, build/test/smoke/scan principali PASS, UX pubblica pulita. Android build/test/static review PASS; Android app-auth live resta non completato per stall strumentato ma accettato come nota non bloccante dall'utente.
+
+**Azione git richiesta:** dopo questo aggiornamento, spostare il worktree dal branch `task108-sync-reset-clean-seed` a `main` mantenendo tutte le modifiche non committate.
+
+### 2026-05-14 21:20 -0400 — POST-CHIUSURA / ANDROID APP-AUTH LIVE RERUN
+
+**Motivo:** dopo la chiusura, l'utente ha confermato login Android su dispositivo fisico ed emulatore e ha richiesto di riprovare i test Android.
+
+**Evidence:** `docs/TASKS/EVIDENCE/TASK-108/79-android-app-auth-live-rerun.md`.
+
+**Esito Android aggiornato:** PASS per app-auth non mutativo su entrambi i device:
+- fisico `8ac48ff0`: auth preflight PASS; `Task108AndroidAppAuthLiveTest#fullPullNoOpAndPushNoOpWhenEnabled` PASS finale in `237,516s`;
+- emulatore `emulator-5554`: auth preflight PASS; stesso test PASS finale in `39,33s`;
+- conteggi locali finali su entrambi: products `19.695`, suppliers `57`, categories `27`, product_prices `41.109`, product refs `19.695`, price refs `41.109`, duplicati `0`, pending price bridge `0`;
+- Supabase finale non distruttivo: suppliers `57`, categories `27`, products `19.695`, product_prices `41.109`, duplicate ProductPrice `0`, owner mismatch `0`, ProductPrice orfani `0`.
+
+**Fix Android applicati durante il rerun:** redazione log `SupabaseAuthManager` per evitare sessioni raw in logcat, batch apply ProductPrice Android con chunk Room `IN (...)`, timeout Supabase client `90.seconds`, test live gated TASK-108 corretto su push incrementale no-op.
+
+**Nota residua:** non e' stato rieseguito il mutativo Android prezzo `+1` -> Supabase -> iOS per non alterare nuovamente il remote dev pulito senza richiesta esplicita. Il verdict TASK-108 resta `DONE / PASS_WITH_NOTES`, ma il gap Android live indicato in evidence `78` e' migliorato da "non completato" a "pull/no-op/push-no-op PASS".
+
+### 2026-05-14 22:20 -0400 — REVIEW PROFESSIONALE FINALE / PASS_WITH_NOTES CONFERMATO
+
+**Motivo:** l'utente ha richiesto una review finale completa dopo TASK-108 per verificare se il precedente verdict `DONE / PASS_WITH_NOTES` fosse realmente meritato, correggere direttamente problemi sicuri e aggiornare tracking/evidence senza inventare risultati mancanti.
+
+**Evidence:** `docs/TASKS/EVIDENCE/TASK-108/80-final-professional-codebase-review.md`.
+
+**Fix applicati in questa review:**
+- `SupabaseManualSyncViewModel`: progress publish corretto da cambio `phase && domain` a `phase || domain`, cosi' la UI riceve subito cambi fase/dominio senza perdere il throttling su hot path.
+- `Task100LargeDatasetAcceptanceTests`: test Excel reale resi esplicitamente opt-in tramite `TASK108_EXCEL_PATH`, rimuovendo il path locale hardcoded che poteva far partire test costosi in modo implicito.
+- Android `Task108AndroidAppAuthLiveTest`: timeout live alzati e timing privacy-safe aggiunto per full pull, secondo pull e push no-op.
+
+**Check principali rieseguiti:**
+- iOS Debug build PASS; iOS Release build PASS.
+- Regressione mirata iOS sync/import/database/generated/history PASS: `217` test eseguiti, `9` skip, `0` failure.
+- `git diff --check` iOS/Android PASS; `plutil` localizzazioni EN/ES/IT/ZH PASS.
+- Source scan e Release binary scan iOS PASS per harness TASK-108/diagnostiche storiche.
+- Simulator smoke Home/Options/Database/History PASS; Generated non esposto come tab autonoma runtime e coperto da test.
+- Supabase remoto `merchandisecontrol-dev` / `jpgoimipbothfgkokyvm` riconfermato: suppliers `57`, categories `27`, products `19.695`, product_prices `41.109`, duplicati ProductPrice `0`, orfani `0`, owner mismatch `0`, RLS/indexes coerenti.
+- Android `assembleDebug assembleDebugAndroidTest` PASS; `./gradlew test` PASS; `assembleDebugAndroidTest` post-fix harness PASS.
+- Android app-auth live: emulatore `emulator-5554` PASS nel run corrente; fisico `8ac48ff0` non riconfermato nel run corrente dopo timeout pre-fix e retry post-fix in stato app `SignedOut`. Evidence `79` resta il PASS storico fisico+emulatore.
+
+**Verdict tecnico aggiornato:** `PASS_WITH_NOTES` confermato. Non viene promosso a `REVIEW_PASS_FINAL` per due note residue: mutativo Android prezzo `+1` -> Supabase -> iOS non rieseguito per non alterare il remote dev pulito, e rerun fisico Android corrente non riconfermato senza nuova sessione app-auth.
+
+**Stato task:** resta `DONE / Chiusura — PASS_WITH_NOTES` per conferma utente gia' registrata; nessun blocker dati o regressione iOS/Supabase rilevato.
+
 ---
 
 ## Chiusura
-- [ ] Utente ha confermato il completamento
+- [x] Utente ha confermato il completamento
 
 ### Follow-up candidate
 - **TASK-109** o successori: **solo** migration/schema/RLS/RPC, polish performance/UX o Realtime/background **dopo** sync core, quando una wave TASK-108 è **BLOCKED_SCHEMA_OR_POLICY** — **non** contenitore delle funzioni parity (auto/pull/push/Generated/History) già dentro TASK-108.
@@ -1720,9 +2390,9 @@ Estendi TASK-108 restando in PLANNING: crea la specifica completa per sync Histo
 - Cleanup dati remoti/locali scoped se emergono fixture o conflitti residui da test; non mischiare con execution funzionale.
 
 ### Riepilogo finale
-*(Da compilare a chiusura.)*
+TASK-108 chiuso come `DONE / PASS_WITH_NOTES` su conferma utente e riconfermato dalla review professionale finale. Evidence finale corrente: `docs/TASKS/EVIDENCE/TASK-108/80-final-professional-codebase-review.md`. Note residue accettate: mutativo Android prezzo `+1` -> Supabase -> iOS non rieseguito per non alterare il remote dev pulito; rerun fisico Android corrente non riconfermato dopo timeout/sign-out, mentre evidence `79` resta PASS storico fisico+emulatore per pull/no-op/push-no-op.
 
 ### Data completamento
-—
+2026-05-14 22:20 -0400
 
 > **Nota**: i “Prompt consigliati” per estendere il planning sono sopra la sezione **Execution (Codex)**.

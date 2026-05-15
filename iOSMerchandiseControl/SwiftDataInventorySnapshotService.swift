@@ -1,8 +1,8 @@
 import Foundation
 import SwiftData
+import Darwin
 
-@MainActor
-struct SwiftDataInventorySnapshotService {
+nonisolated struct SwiftDataInventorySnapshotService {
     private let context: ModelContext
 
     init(context: ModelContext) {
@@ -10,6 +10,7 @@ struct SwiftDataInventorySnapshotService {
     }
 
     func makeSnapshot() throws -> LocalInventorySnapshot {
+        let startedAt = Date()
         let products = try context.fetch(
             FetchDescriptor<Product>(
                 sortBy: [SortDescriptor(\Product.barcode)]
@@ -30,6 +31,11 @@ struct SwiftDataInventorySnapshotService {
                 sortBy: [SortDescriptor(\ProductPrice.effectiveAt)]
             )
         )
+#if DEBUG
+        debugPrint(
+            "[InventorySnapshot] start products=\(products.count) suppliers=\(suppliers.count) categories=\(categories.count) prices=\(prices.count)"
+        )
+#endif
 
         var productsByBarcode: [String: LocalProductSnapshot] = [:]
         var productsByRemoteID: [UUID: LocalProductSnapshot] = [:]
@@ -105,7 +111,7 @@ struct SwiftDataInventorySnapshotService {
             }
         }
 
-        return LocalInventorySnapshot(
+        let snapshot = LocalInventorySnapshot(
             productsByBarcode: productsByBarcode,
             productsByRemoteID: productsByRemoteID,
             suppliersByNormalizedName: supplierNames.values,
@@ -137,6 +143,13 @@ struct SwiftDataInventorySnapshotService {
             invalidSupplierNames: supplierNames.invalidCount,
             invalidCategoryNames: categoryNames.invalidCount
         )
+        let elapsedMS = Int(Date().timeIntervalSince(startedAt) * 1_000)
+#if DEBUG
+        debugPrint(
+            "[InventorySnapshot] done elapsedMs=\(elapsedMS) products=\(products.count) suppliers=\(suppliers.count) categories=\(categories.count) prices=\(prices.count)"
+        )
+#endif
+        return snapshot
     }
 
     func makeManualPushPreflightProductStates() throws -> [ManualPushProductState] {
@@ -311,11 +324,17 @@ struct SwiftDataInventorySnapshotService {
     }
 
     private static func canonicalDateString(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter.string(from: date)
+        var timestamp = time_t(date.timeIntervalSince1970.rounded(.towardZero))
+        var components = tm()
+        gmtime_r(&timestamp, &components)
+        return String(
+            format: "%04d-%02d-%02d %02d:%02d:%02d",
+            components.tm_year + 1900,
+            components.tm_mon + 1,
+            components.tm_mday,
+            components.tm_hour,
+            components.tm_min,
+            components.tm_sec
+        )
     }
 }

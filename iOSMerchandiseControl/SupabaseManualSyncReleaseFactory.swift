@@ -11,8 +11,9 @@ enum SupabaseManualSyncReleaseFactory {
         manualPushService: SupabaseManualPushService? = nil,
         activityRecorder: (any SyncEventRecording)? = nil
     ) -> SupabaseManualSyncViewModel {
+        let modelContainer = context.container
         let remotePreviewAdapter = pullPreviewService.map {
-            SupabaseManualSyncPullPreviewAdapter(service: $0, context: context)
+            SupabaseManualSyncPullPreviewAdapter(service: $0, modelContainer: modelContainer)
         }
         let remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)? = remotePreviewAdapter.map { $0 }
         let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = manualPushService.map {
@@ -23,7 +24,7 @@ enum SupabaseManualSyncReleaseFactory {
         }
         let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = inventoryService.map {
             SupabaseManualSyncReleaseProductPriceAdapter(
-                context: context,
+                modelContainer: modelContainer,
                 remote: $0
             )
         }
@@ -32,7 +33,7 @@ enum SupabaseManualSyncReleaseFactory {
         }
         let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = inventoryService.map {
             SupabaseManualSyncReleaseHistorySessionAdapter(
-                context: context,
+                modelContainer: modelContainer,
                 remote: $0
             )
         }
@@ -67,6 +68,7 @@ enum SupabaseManualSyncReleaseFactory {
             remotePreviewStaging: remotePreviewAdapter,
             localApplyService: SupabasePullApplyService(),
             localApplyContext: context,
+            localApplyModelContainer: modelContainer,
             isLocalApplyAuthenticated: { authViewModel.isSignedIn },
             currentLocalApplyOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
             catalogPushProvider: catalogPushProvider,
@@ -93,69 +95,80 @@ enum SupabaseManualSyncReleaseFactory {
 
 @MainActor
 private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHistorySessionSyncProviding {
-    private let context: ModelContext
-    private let service: HistorySessionSyncService
+    private let modelContainer: ModelContainer
+    private let remote: SupabaseInventoryService
 
     init(
-        context: ModelContext,
+        modelContainer: ModelContainer,
         remote: SupabaseInventoryService
     ) {
-        self.context = context
-        self.service = HistorySessionSyncService(remote: remote)
+        self.modelContainer = modelContainer
+        self.remote = remote
     }
 
     func syncHistorySessions(
         ownerUserID: UUID,
         onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
     ) async throws -> SupabaseManualSyncHistorySessionSummary {
-        let entries = try context.fetch(
-            FetchDescriptor<HistoryEntry>(
-                sortBy: [SortDescriptor(\HistoryEntry.timestamp, order: .reverse)]
+        let modelContainer = self.modelContainer
+        let remote = self.remote
+        return try await Task.detached(priority: .utility) {
+            let context = ModelContext(modelContainer)
+            let service = HistorySessionSyncService(remote: remote)
+            let entries = try context.fetch(
+                FetchDescriptor<HistoryEntry>(
+                    sortBy: [SortDescriptor(\HistoryEntry.timestamp, order: .reverse)]
+                )
             )
-        )
-        let push = try await service.pushPendingHistorySessions(
-            entries: entries,
-            ownerUserID: ownerUserID,
-            context: context,
-            onProgress: onProgress
-        )
-        try context.save()
-        let pull = try await service.pullHistorySessionsFromCloud(
-            ownerUserID: ownerUserID,
-            context: context,
-            onProgress: onProgress
-        )
-        try context.save()
-        return SupabaseManualSyncHistorySessionSummary(
-            uploaded: push.uploadedCount,
-            inserted: pull.insertedCount,
-            updated: pull.updatedCount,
-            skippedClean: push.skippedCleanCount + pull.skippedCleanCount,
-            skippedDirtyLocal: pull.skippedDirtyLocalCount,
-            skippedOversized: push.skippedOversizedCount
-        )
+            let push = try await service.pushPendingHistorySessions(
+                entries: entries,
+                ownerUserID: ownerUserID,
+                context: context,
+                onProgress: onProgress
+            )
+            try context.save()
+            let pull = try await service.pullHistorySessionsFromCloud(
+                ownerUserID: ownerUserID,
+                context: context,
+                onProgress: onProgress
+            )
+            try context.save()
+            return SupabaseManualSyncHistorySessionSummary(
+                uploaded: push.uploadedCount,
+                inserted: pull.insertedCount,
+                updated: pull.updatedCount,
+                skippedClean: push.skippedCleanCount + pull.skippedCleanCount,
+                skippedDirtyLocal: pull.skippedDirtyLocalCount,
+                skippedOversized: push.skippedOversizedCount
+            )
+        }.value
     }
 }
 
 @MainActor
 private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding {
-    private let context: ModelContext
+    private let modelContainer: ModelContainer
     private let remote: SupabaseInventoryService
     private var stagedPendingBatchesByFingerprint: [String: LocalPendingAggregatedProductPriceBatch] = [:]
 
     init(
-        context: ModelContext,
+        modelContainer: ModelContainer,
         remote: SupabaseInventoryService
     ) {
-        self.context = context
+        self.modelContainer = modelContainer
         self.remote = remote
     }
 
     func makeApplyPlan(ownerUserID: UUID) async throws -> ProductPriceApplyPlan {
-        try await SupabaseProductPriceApplyService(fetcher: remote).loadBootstrapPreviewSample(
-            context: context,
-            sessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerUserID)
-        )
+        let modelContainer = self.modelContainer
+        let remote = self.remote
+        return try await Task.detached(priority: .userInitiated) {
+            let context = ModelContext(modelContainer)
+            return try await SupabaseProductPriceApplyService(fetcher: remote).loadBootstrapPreviewSample(
+                context: context,
+                sessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerUserID)
+            )
+        }.value
     }
 
     func apply(plan: ProductPriceApplyPlan, ownerUserID: UUID) async throws -> ProductPriceApplyResult {
@@ -167,15 +180,21 @@ private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManual
         ownerUserID: UUID,
         onProgress: @escaping @MainActor @Sendable (ProductPricePagedApplyProgress) -> Void
     ) async throws -> ProductPriceApplyResult {
-        try await SupabaseProductPriceApplyService(fetcher: remote).applyPagedFullPull(
-            plan: plan,
-            context: context,
-            currentSessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerUserID),
-            onProgress: onProgress
-        )
+        let modelContainer = self.modelContainer
+        let remote = self.remote
+        return try await Task.detached(priority: .userInitiated) {
+            let context = ModelContext(modelContainer)
+            return try await SupabaseProductPriceApplyService(fetcher: remote).applyPagedFullPull(
+                plan: plan,
+                context: context,
+                currentSessionSnapshot: ProductPriceApplySessionSnapshot(userID: ownerUserID),
+                onProgress: onProgress
+            )
+        }.value
     }
 
     func makePushPlan(ownerUserID: UUID) async throws -> ProductPricePushDryRunPlan {
+        let context = ModelContext(modelContainer)
         let aggregatedPlan = try await LocalPendingAggregatedPushPlanner(
             context: context,
             priceRemoteFetcher: remote,
@@ -199,6 +218,7 @@ private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManual
     }
 
     func push(plan: ProductPricePushDryRunPlan, ownerUserID: UUID) async throws -> ProductPriceManualPushResult {
+        let context = ModelContext(modelContainer)
         let batchFingerprint = productPricePushFingerprint(plan)
         let pendingBatch = stagedPendingBatchesByFingerprint[batchFingerprint]
         if let pendingBatch {

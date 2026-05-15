@@ -1,8 +1,7 @@
 import Foundation
 import SwiftData
 
-@MainActor
-protocol SupabaseManualSyncLocalApplyBaselineCommitting: AnyObject {
+nonisolated protocol SupabaseManualSyncLocalApplyBaselineCommitting: AnyObject, Sendable {
     func commitSuccessfulFullPullApply(
         preview: SyncPreview,
         context: ModelContext,
@@ -15,8 +14,7 @@ protocol SupabaseManualSyncLocalApplyBaselineCommitting: AnyObject {
     ) throws -> Bool
 }
 
-@MainActor
-final class SupabaseManualSyncLocalApplyBaselineCommitter: SupabaseManualSyncLocalApplyBaselineCommitting {
+nonisolated final class SupabaseManualSyncLocalApplyBaselineCommitter: SupabaseManualSyncLocalApplyBaselineCommitting, @unchecked Sendable {
     func commitSuccessfulFullPullApply(
         preview: SyncPreview,
         context: ModelContext,

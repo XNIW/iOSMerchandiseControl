@@ -3,7 +3,7 @@ import SwiftData
 
 /// Servizio che applica un inventario (HistoryEntry) al database prodotti.
 @MainActor
-final class InventorySyncService {
+struct InventorySyncService {
 
     private let context: ModelContext
 

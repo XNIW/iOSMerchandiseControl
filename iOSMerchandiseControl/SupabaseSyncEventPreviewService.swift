@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 import Supabase
 
@@ -25,7 +26,6 @@ nonisolated struct SyncEventPreviewOptions: Sendable, Equatable {
         max(1, min(requestedLimit ?? defaultLimit, maximumLimit))
     }
 }
-
 nonisolated struct SyncEventPreviewSummary: Sendable, Equatable {
     let requestedLimit: Int?
     let effectiveLimit: Int
@@ -144,3 +144,4 @@ actor SupabaseSyncEventRemoteReader: SupabaseSyncEventPreviewFetching {
         }
     }
 }
+#endif

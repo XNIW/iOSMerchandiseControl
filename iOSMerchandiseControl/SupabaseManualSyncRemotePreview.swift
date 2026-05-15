@@ -236,15 +236,22 @@ nonisolated enum SupabaseManualSyncRemotePreviewOutcomeMapper {
 @MainActor
 final class SupabaseManualSyncPullPreviewAdapter: SupabaseManualSyncRemotePreviewProviding, SupabaseManualSyncRemotePreviewStaging {
     private let service: SupabasePullPreviewService
-    private let context: ModelContext
+    private let modelContainer: ModelContainer
     private(set) var stagedPreviewForLocalApply: SyncPreview?
 
     init(
         service: SupabasePullPreviewService,
-        context: ModelContext
+        modelContainer: ModelContainer
     ) {
         self.service = service
-        self.context = context
+        self.modelContainer = modelContainer
+    }
+
+    convenience init(
+        service: SupabasePullPreviewService,
+        context: ModelContext
+    ) {
+        self.init(service: service, modelContainer: context.container)
     }
 
     func loadRemotePreviewSummary() async -> SupabaseManualSyncRemotePreviewSummary {
@@ -252,14 +259,14 @@ final class SupabaseManualSyncPullPreviewAdapter: SupabaseManualSyncRemotePrevie
 
         do {
             try Task.checkCancellation()
-            let viewState = await service.generatePreview(context: context)
+            let viewState = await service.generatePreview(modelContainer: modelContainer)
             try Task.checkCancellation()
             stagePreviewIfComplete(viewState)
             let summary = SupabaseManualSyncRemotePreviewOutcomeMapper.summary(from: viewState)
 #if DEBUG
             let counts = summary.safeAggregateCounts
             debugPrint(
-                "[Task108PullPreview] summary complete=\(summary.isComplete) partial=\(summary.isPartial) signals=\(summary.hasRemoteSignals) failure=\(summary.failureCategory?.rawValue ?? "none") remoteProducts=\(counts.remoteProductCount) remoteSuppliers=\(counts.remoteSupplierCount) remoteCategories=\(counts.remoteCategoryCount) remotePrices=\(counts.remoteProductPriceCount) new=\(counts.newProductCount) updates=\(counts.updateCandidateCount) conflicts=\(counts.conflictCount) tombstones=\(counts.tombstoneCount) warnings=\(counts.warningCount) sourceErrors=\(counts.sourceErrorCount) supplierDiffs=\(counts.supplierDiffCount) categoryDiffs=\(counts.categoryDiffCount) priceSignals=\(counts.priceHistorySignalCount)"
+                "[PullPreview] summary complete=\(summary.isComplete) partial=\(summary.isPartial) signals=\(summary.hasRemoteSignals) failure=\(summary.failureCategory?.rawValue ?? "none") remoteProducts=\(counts.remoteProductCount) remoteSuppliers=\(counts.remoteSupplierCount) remoteCategories=\(counts.remoteCategoryCount) remotePrices=\(counts.remoteProductPriceCount) new=\(counts.newProductCount) updates=\(counts.updateCandidateCount) conflicts=\(counts.conflictCount) tombstones=\(counts.tombstoneCount) warnings=\(counts.warningCount) sourceErrors=\(counts.sourceErrorCount) supplierDiffs=\(counts.supplierDiffCount) categoryDiffs=\(counts.categoryDiffCount) priceSignals=\(counts.priceHistorySignalCount)"
             )
 #endif
             return summary

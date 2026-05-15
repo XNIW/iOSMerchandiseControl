@@ -1929,7 +1929,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertTrue(review.primaryActionIsEnabled)
         XCTAssertFalse(review.primaryActionIsLoading)
         XCTAssertEqual(review.primaryActionTitle, "Aggiorna questo dispositivo")
-        XCTAssertEqual(review.footerMessage, "Aggiornerò solo questo dispositivo. I dati nel cloud non verranno modificati.")
+        XCTAssertEqual(review.footerMessage, "Aggiornerò questo dispositivo e sincronizzerò la cronologia se necessario. Le scritture catalogo/prezzi sul cloud richiedono conferma separata.")
 
         await vm.applyStagedLocalChanges()
 

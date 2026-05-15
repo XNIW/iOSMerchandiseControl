@@ -30,6 +30,10 @@ nonisolated struct SupabasePullPreviewService: Sendable {
 
     @MainActor
     func generatePreview(context: ModelContext) async -> SupabasePullPreviewViewState {
+        await generatePreview(modelContainer: context.container)
+    }
+
+    func generatePreview(modelContainer: ModelContainer) async -> SupabasePullPreviewViewState {
         let remoteOutcome: RemoteFetchOutcome
         do {
             remoteOutcome = try await fetchRemoteSnapshot()
@@ -41,7 +45,10 @@ nonisolated struct SupabasePullPreviewService: Sendable {
 
         let localSnapshot: LocalInventorySnapshot
         do {
-            localSnapshot = try SwiftDataInventorySnapshotService(context: context).makeSnapshot()
+            localSnapshot = try await Task.detached(priority: .userInitiated) {
+                let context = ModelContext(modelContainer)
+                return try SwiftDataInventorySnapshotService(context: context).makeSnapshot()
+            }.value
         } catch {
             return .failed(.localSnapshot(message: String(describing: error)))
         }
@@ -175,7 +182,7 @@ nonisolated struct SupabasePullPreviewService: Sendable {
 
     private func partialBudgetWarning(for table: String) -> SyncPreviewWarning {
 #if DEBUG
-        debugPrint("[Task108PullPreview] row_budget table=\(table)")
+        debugPrint("[PullPreview] row_budget table=\(table)")
 #endif
 
         return SyncPreviewWarning(
@@ -271,7 +278,7 @@ extension SupabasePullPreviewService {
         }
 
 #if DEBUG
-        debugPrint("[Task108PullPreview] source_error table=\(table) detail=\(detail ?? "redacted")")
+        debugPrint("[PullPreview] source_error table=\(table) detail=\(detail ?? "redacted")")
 #endif
 
         return SyncPreviewWarning(

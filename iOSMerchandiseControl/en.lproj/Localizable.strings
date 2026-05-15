@@ -79,7 +79,6 @@
 "options.supabase.auth.signOut" = "Sign out";
 "options.supabase.auth.sessionRequired" = "Sign in before running Supabase preview or diagnostics.";
 "options.supabase.auth.debugDetails" = "DEBUG";
-"options.supabase.auth.debugDiagnostics" = "Developer diagnostics";
 "options.supabase.auth.debug.userId" = "User ID";
 "options.supabase.auth.debug.provider" = "Provider";
 "options.supabase.auth.debug.email" = "Email";
@@ -1098,12 +1097,9 @@
 "options.supabase.manualSync.header" = "Cloud synchronization";
 "options.supabase.manualSync.footer" = "Cloud synchronization stays manual and under your control.";
 "options.cloud.section.header" = "Cloud account & synchronization";
-"options.cloud.section.footer" = "Account and cloud actions stay here. Advanced tools are under Developer diagnostics.";
+"options.cloud.section.footer" = "Account and cloud actions stay here.";
 "options.localDatabase.header" = "Local database status";
 "options.localDatabase.footer" = "This is the database stored on this device.";
-"options.developerDiagnostics.header" = "Advanced diagnostics";
-"options.developerDiagnostics.title" = "Developer diagnostics";
-"options.developerDiagnostics.footer" = "Raw Supabase checks and manual tools stay collapsed unless you are debugging.";
 "options.cloud.account.transitioning" = "Updating account state…";
 "options.cloud.account.unconfigured.title" = "Cloud is not configured";
 "options.cloud.account.unconfigured.detail" = "Cloud sync is unavailable on this build.";

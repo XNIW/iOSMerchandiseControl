@@ -72,6 +72,190 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         )
     }
 
+    func testTask108RealExcelCleanSeedImportCountsWhenEnabled() throws {
+        let url = try task108RealExcelURL()
+        let context = try makeContext()
+        let started = DispatchTime.now().uptimeNanoseconds
+
+        let productRows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: "Products")
+        let (_, normalizedHeader, dataRows) = ExcelAnalyzer.analyzeSheetRows(productRows)
+        let analysis = ProductImportCore.analyzeImport(
+            header: normalizedHeader,
+            dataRows: dataRows,
+            existingProductsByBarcode: [:]
+        )
+
+        XCTAssertEqual(analysis.newProducts.count, 19_695)
+        XCTAssertTrue(analysis.updatedProducts.isEmpty)
+        XCTAssertTrue(analysis.errors.isEmpty)
+
+        let resolver = try ProductImportNamedEntityResolver(context: context)
+        var insertedProducts = 0
+        for draft in analysis.newProducts {
+            ProductImportCore.insertProduct(
+                from: draft,
+                in: context,
+                resolver: resolver,
+                recordPriceHistory: false
+            )
+            insertedProducts += 1
+            try saveIfNeeded(context, after: insertedProducts)
+        }
+        try context.save()
+
+        let priceRows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: "PriceHistory")
+        let parsedPrices = try parsePriceHistoryRows(priceRows)
+        XCTAssertEqual(parsedPrices.count, 41_108)
+
+        let productsByBarcode = Dictionary(
+            uniqueKeysWithValues: try context.fetch(FetchDescriptor<Product>()).map { ($0.barcode, $0) }
+        )
+
+        var insertedPrices = 0
+        for entry in parsedPrices {
+            let product = try XCTUnwrap(productsByBarcode[entry.barcode])
+            context.insert(
+                ProductPrice(
+                    type: entry.type,
+                    price: entry.price,
+                    effectiveAt: entry.effectiveAt,
+                    source: entry.source,
+                    createdAt: entry.effectiveAt,
+                    product: product
+                )
+            )
+            insertedPrices += 1
+            try saveIfNeeded(context, after: insertedPrices)
+        }
+        try context.save()
+
+        let products = try context.fetch(FetchDescriptor<Product>())
+        let suppliers = try context.fetch(FetchDescriptor<Supplier>())
+        let categories = try context.fetch(FetchDescriptor<ProductCategory>())
+        let prices = try context.fetch(FetchDescriptor<ProductPrice>())
+
+        XCTAssertEqual(products.count, 19_695)
+        XCTAssertEqual(suppliers.count, 57)
+        XCTAssertEqual(categories.count, 27)
+        XCTAssertEqual(prices.count, 41_108)
+
+        let logicalKeys = Set(prices.compactMap { price -> String? in
+            guard let barcode = price.product?.barcode else { return nil }
+            return [
+                barcode,
+                price.type.rawValue,
+                Self.fullDatabaseFormatter.string(from: price.effectiveAt)
+            ].joined(separator: "|")
+        })
+        XCTAssertEqual(logicalKeys.count, prices.count)
+
+        let elapsed = seconds(since: started)
+        print(
+            "[Task108ExcelImport] elapsedSeconds=\(String(format: "%.3f", elapsed)) " +
+            "products=\(products.count) suppliers=\(suppliers.count) categories=\(categories.count) " +
+            "productPricesRaw=\(prices.count) productPricesLogical=\(logicalKeys.count) duplicates=\(prices.count - logicalKeys.count)"
+        )
+    }
+
+    func testTask108RealExcelProductPricePagedFullPullNoopWhenEnabled() async throws {
+        let url = try task108RealExcelURL()
+        let context = try makeContext()
+        let session = ProductPriceApplySessionSnapshot(userID: task108UUID(base: 0x300000000000, index: 1))
+
+        let productRows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: "Products")
+        let (_, normalizedHeader, dataRows) = ExcelAnalyzer.analyzeSheetRows(productRows)
+        let analysis = ProductImportCore.analyzeImport(
+            header: normalizedHeader,
+            dataRows: dataRows,
+            existingProductsByBarcode: [:]
+        )
+        XCTAssertEqual(analysis.newProducts.count, 19_695)
+
+        let resolver = try ProductImportNamedEntityResolver(context: context)
+        var productIDByBarcode: [String: UUID] = [:]
+        var insertedProducts = 0
+        for (index, draft) in analysis.newProducts.enumerated() {
+            let product = ProductImportCore.insertProduct(
+                from: draft,
+                in: context,
+                resolver: resolver,
+                recordPriceHistory: false
+            )
+            let remoteID = task108UUID(base: 0x100000000000, index: index + 1)
+            product.remoteID = remoteID
+            productIDByBarcode[draft.barcode] = remoteID
+            insertedProducts += 1
+            try saveIfNeeded(context, after: insertedProducts)
+        }
+        try context.save()
+
+        let priceRows = try ExcelAnalyzer.readSheetByName(at: url, sheetName: "PriceHistory")
+        let parsedPrices = try parsePriceHistoryRows(priceRows)
+        XCTAssertEqual(parsedPrices.count, 41_108)
+
+        let remoteRows = try parsedPrices.enumerated().map { index, entry -> RemoteInventoryProductPriceRow in
+            let productID = try XCTUnwrap(productIDByBarcode[entry.barcode])
+            let canonicalEffectiveAt = Self.fullDatabaseFormatter.string(from: entry.effectiveAt)
+            return RemoteInventoryProductPriceRow(
+                id: task108UUID(base: 0x200000000000, index: index + 1),
+                ownerUserID: session.userID,
+                productID: productID,
+                type: entry.type.rawValue.uppercased(),
+                price: entry.price,
+                effectiveAt: canonicalEffectiveAt,
+                source: entry.source,
+                note: nil,
+                createdAt: canonicalEffectiveAt
+            )
+        }
+
+        let fetcher = Task108ArrayProductPriceFetcher(rows: remoteRows)
+        let service = SupabaseProductPriceApplyService(
+            fetcher: fetcher,
+            fetchOptions: ProductPriceApplyFetchOptions(pageSize: 900, maxRows: 900, maxPages: 1)
+        )
+
+        let firstStarted = DispatchTime.now().uptimeNanoseconds
+        let firstPlan = try await service.loadBootstrapPreviewSample(context: context, sessionSnapshot: session)
+        let firstResult = try await service.applyPagedFullPull(
+            plan: firstPlan,
+            context: context,
+            currentSessionSnapshot: session
+        )
+        let firstElapsed = seconds(since: firstStarted)
+        XCTAssertEqual(firstResult.inserted, 41_108)
+        XCTAssertEqual(firstResult.remoteIdentityLinked, 0)
+        XCTAssertEqual(firstResult.totalConsidered, 41_108)
+
+        let pricesAfterFirstPull = try context.fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertEqual(pricesAfterFirstPull.count, 41_108)
+        XCTAssertEqual(task108LogicalPriceCount(pricesAfterFirstPull), 41_108)
+
+        let secondStarted = DispatchTime.now().uptimeNanoseconds
+        let secondPlan = try await service.loadBootstrapPreviewSample(context: context, sessionSnapshot: session)
+        let secondResult = try await service.applyPagedFullPull(
+            plan: secondPlan,
+            context: context,
+            currentSessionSnapshot: session
+        )
+        let secondElapsed = seconds(since: secondStarted)
+        XCTAssertEqual(secondResult.inserted, 0)
+        XCTAssertEqual(secondResult.remoteIdentityLinked, 0)
+        XCTAssertEqual(secondResult.totalConsidered, 41_108)
+
+        let pricesAfterSecondPull = try context.fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertEqual(pricesAfterSecondPull.count, 41_108)
+        XCTAssertEqual(task108LogicalPriceCount(pricesAfterSecondPull), 41_108)
+
+        print(
+            "[Task108ProductPriceFullPullHarness] " +
+            "firstElapsedSeconds=\(String(format: "%.3f", firstElapsed)) firstInserted=\(firstResult.inserted) " +
+            "secondElapsedSeconds=\(String(format: "%.3f", secondElapsed)) secondInserted=\(secondResult.inserted) " +
+            "rows=\(pricesAfterSecondPull.count) logical=\(task108LogicalPriceCount(pricesAfterSecondPull)) " +
+            "pageSize=900 pages=46"
+        )
+    }
+
     func testS100CImportExcelLargeDatasetMediumCoreBenchmark() throws {
         let spec = Task100DatasetSpec.medium
         let dataset = Task100SyntheticDataset(spec: spec)
@@ -1601,6 +1785,35 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000_000.0
     }
 
+    private func task108UUID(base: UInt64, index: Int) -> UUID {
+        UUID(uuidString: String(format: "00000000-0000-4000-8000-%012llX", base + UInt64(index)))!
+    }
+
+    private func task108RealExcelURL() throws -> URL {
+        let environment = ProcessInfo.processInfo.environment
+        let configuredExcelPath = environment["TASK108_EXCEL_PATH"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let excelPath = configuredExcelPath,
+              !excelPath.isEmpty else {
+            throw XCTSkip("Set TASK108_EXCEL_PATH to run the TASK-108 real Excel harness.")
+        }
+        guard FileManager.default.fileExists(atPath: excelPath) else {
+            throw XCTSkip("TASK108_EXCEL_PATH does not point to an existing file.")
+        }
+        return URL(fileURLWithPath: excelPath)
+    }
+
+    private func task108LogicalPriceCount(_ prices: [ProductPrice]) -> Int {
+        Set(prices.compactMap { price -> String? in
+            guard let barcode = price.product?.barcode else { return nil }
+            return [
+                barcode,
+                price.type.rawValue,
+                Self.fullDatabaseFormatter.string(from: price.effectiveAt)
+            ].joined(separator: "|")
+        }).count
+    }
+
     private func expectedPagedFetchCalls(rowCount: Int, pageSize: Int) -> Int {
         rowCount / pageSize + 1
     }
@@ -1668,6 +1881,26 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
 private extension Array {
     subscript(safe index: Index) -> Element? {
         indices.contains(index) ? self[index] : nil
+    }
+}
+
+private struct Task108ArrayProductPriceFetcher: SupabaseProductPricePreviewFetching, SupabaseProductPriceDeletedProductFetching {
+    let rows: [RemoteInventoryProductPriceRow]
+
+    func fetchProductPricesPreviewPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {
+        guard from < rows.count, to >= from else { return [] }
+        let lowerBound = max(0, from)
+        let upperBound = min(rows.count - 1, to)
+        guard lowerBound <= upperBound else { return [] }
+        return Array(rows[lowerBound...upperBound])
+    }
+
+    func fetchProductPriceCount() async throws -> Int? {
+        rows.count
+    }
+
+    func fetchDeletedProductIDs(pageSize: Int) async throws -> Set<UUID> {
+        []
     }
 }
 

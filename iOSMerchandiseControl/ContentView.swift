@@ -97,26 +97,9 @@ extension View {
     }
 }
 
-private actor PriceHistoryBackfillRunner {
-    private let modelContainer: ModelContainer
-
-    init(modelContainer: ModelContainer) {
-        self.modelContainer = modelContainer
-    }
-
-    func runIfNeeded() async throws -> Int {
-        let modelContainer = self.modelContainer
-        return try await MainActor.run {
-            let backgroundContext = ModelContext(modelContainer)
-            return try PriceHistoryBackfillService.backfillIfNeeded(context: backgroundContext)
-        }
-    }
-}
-
 struct ContentView: View {
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
-    private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
     private let supabaseManualPushService: SupabaseManualPushService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     private let historySessionSyncService: HistorySessionSyncService?
@@ -128,21 +111,15 @@ struct ContentView: View {
     @StateObject private var excelSession = ExcelSessionViewModel()
     @StateObject private var foregroundActivityCenter = ForegroundCloudWorkflowActivityCenter()
     @State private var selectedTab = 0
-    @State private var didSchedulePriceHistoryBackfillThisLaunch = false
-#if DEBUG
-    @State private var didRunTask088ProductPriceSmoke = false
-#endif
 
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
-        supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService? = nil,
         supabaseManualPushService: SupabaseManualPushService? = nil,
         syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
-        self.supabaseSyncEventPreviewService = supabaseSyncEventPreviewService
         self.supabaseManualPushService = supabaseManualPushService
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         self.historySessionSyncService = supabaseInventoryService.map {
@@ -181,18 +158,6 @@ struct ContentView: View {
         .foregroundCloudWorkflowActivity(.importExcel, isActive: excelSession.isLoading)
         .localeOverride(for: appLanguage)
         .preferredColorScheme(resolvedColorScheme)
-        .task {
-            schedulePriceHistoryBackfillIfNeeded()
-#if DEBUG
-            if isTask087SmokeLaunchRequested {
-                selectedTab = 3
-            }
-            if isTask088ProductPriceSmokeLaunchRequested {
-                selectedTab = 3
-                runTask088ProductPriceSmokeIfRequested()
-            }
-#endif
-        }
         .onReceive(NotificationCenter.default.publisher(for: .openDatabaseTabRequested)) { _ in
             selectedTab = 1
         }
@@ -250,7 +215,6 @@ struct ContentView: View {
                 OptionsView(
                     supabaseInventoryService: supabaseInventoryService,
                     supabasePullPreviewService: supabasePullPreviewService,
-                    supabaseSyncEventPreviewService: supabaseSyncEventPreviewService,
                     supabaseManualPushService: supabaseManualPushService,
                     syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
                     manualSyncViewModel: manualSyncViewModel,
@@ -263,73 +227,6 @@ struct ContentView: View {
             .tag(3)
         }
     }
-
-    @MainActor
-    private func schedulePriceHistoryBackfillIfNeeded() {
-        guard !didSchedulePriceHistoryBackfillThisLaunch else { return }
-        didSchedulePriceHistoryBackfillThisLaunch = true
-
-        let runner = PriceHistoryBackfillRunner(modelContainer: modelContext.container)
-        Task(priority: .utility) {
-            do {
-                let inserted = try await runner.runIfNeeded()
-                #if DEBUG
-                if inserted > 0 {
-                    debugPrint("[Backfill] Inseriti \(inserted) record ProductPrice legacy.")
-                }
-                #endif
-            } catch {
-                #if DEBUG
-                debugPrint("[Backfill] Errore durante il backfill prezzi: \(error)")
-                #endif
-            }
-        }
-    }
-
-#if DEBUG
-    private var isTask087SmokeLaunchRequested: Bool {
-        ProcessInfo.processInfo.arguments.contains("--task087-smoke")
-            || ProcessInfo.processInfo.arguments.contains("--task087-smoke-run")
-            || ProcessInfo.processInfo.environment["TASK087_SMOKE"] == "1"
-            || ProcessInfo.processInfo.environment["TASK087_SMOKE_RUN"] == "1"
-    }
-
-    private var isTask088ProductPriceSmokeLaunchRequested: Bool {
-        ProcessInfo.processInfo.arguments.contains("--task088-price-smoke-run")
-            || ProcessInfo.processInfo.environment["TASK088_PRICE_SMOKE_RUN"] == "1"
-    }
-
-    @MainActor
-    private func runTask088ProductPriceSmokeIfRequested() {
-        guard isTask088ProductPriceSmokeLaunchRequested,
-              !didRunTask088ProductPriceSmoke else {
-            return
-        }
-        didRunTask088ProductPriceSmoke = true
-
-        guard let supabaseInventoryService else {
-            debugPrint("[Task088Smoke] outcome=blocked reason=inventory_service_missing")
-            return
-        }
-
-        Task { @MainActor in
-            do {
-                let result = try await SupabaseTask088ProductPriceSmokeService(
-                    inventoryService: supabaseInventoryService
-                ).run()
-                debugPrint("[Task088Smoke] outcome=ok \(result.privacySafeSummary)")
-            } catch let error as SupabaseTask088ProductPriceSmokeError {
-                debugPrint("[Task088Smoke] outcome=blocked \(error.safeMessage)")
-            } catch SupabaseInventoryServiceError.sessionMissing {
-                debugPrint("[Task088Smoke] outcome=blocked reason=session_missing")
-            } catch let error as SupabaseInventoryServiceError {
-                debugPrint("[Task088Smoke] outcome=blocked reason=\(error.safeDiagnosticDetail ?? "inventory_service_error")")
-            } catch {
-                debugPrint("[Task088Smoke] outcome=blocked reason=unexpected_error")
-            }
-        }
-    }
-#endif
 }
 
 private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {

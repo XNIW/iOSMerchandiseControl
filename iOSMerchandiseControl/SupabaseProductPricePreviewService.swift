@@ -124,7 +124,6 @@ nonisolated struct ProductPricePreviewLocalProduct: Sendable, Equatable {
 }
 
 nonisolated enum ProductPricePreviewLocalLookupBuilder {
-    @MainActor
     static func makeLookup(context: ModelContext) throws -> [UUID: String] {
         let products = try context.fetch(
             FetchDescriptor<Product>(

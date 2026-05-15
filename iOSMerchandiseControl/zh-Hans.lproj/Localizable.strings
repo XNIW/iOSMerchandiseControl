@@ -79,7 +79,6 @@
 "options.supabase.auth.signOut" = "退出";
 "options.supabase.auth.sessionRequired" = "请先登录，再运行 Supabase 预览或诊断。";
 "options.supabase.auth.debugDetails" = "DEBUG";
-"options.supabase.auth.debugDiagnostics" = "开发者诊断";
 "options.supabase.auth.debug.userId" = "User ID";
 "options.supabase.auth.debug.provider" = "Provider";
 "options.supabase.auth.debug.email" = "Email";
@@ -1098,12 +1097,9 @@
 "options.supabase.manualSync.header" = "云端同步";
 "options.supabase.manualSync.footer" = "云端同步始终由你手动控制。";
 "options.cloud.section.header" = "云账号与同步";
-"options.cloud.section.footer" = "账号和云端操作集中在这里。高级工具在开发者诊断中。";
+"options.cloud.section.footer" = "账号和云端操作集中在这里。";
 "options.localDatabase.header" = "本地数据库状态";
 "options.localDatabase.footer" = "这里显示此设备上保存的数据。";
-"options.developerDiagnostics.header" = "高级诊断";
-"options.developerDiagnostics.title" = "开发者诊断";
-"options.developerDiagnostics.footer" = "原始 Supabase 检查和手动工具默认折叠，仅在调试时展开。";
 "options.cloud.account.transitioning" = "正在更新账号状态…";
 "options.cloud.account.unconfigured.title" = "未配置云端";
 "options.cloud.account.unconfigured.detail" = "此构建无法使用云端同步。";

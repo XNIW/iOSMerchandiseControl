@@ -579,7 +579,10 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         try context.save()
         let rows = makeRemotePriceRows(count: 120_000, productIDs: productIDs)
         let fetcher = ProductPricePagedFetcherFake(rows: rows, throwCancellationAtFrom: 3_000)
-        let pagedService = SupabaseProductPriceApplyService(fetcher: fetcher)
+        let pagedService = SupabaseProductPriceApplyService(
+            fetcher: fetcher,
+            fetchOptions: ProductPriceApplyFetchOptions(fullPullSafetyLimit: nil)
+        )
         let samplePlan = try await pagedService.loadBootstrapPreviewSample(
             context: context,
             sessionSnapshot: session
@@ -601,6 +604,40 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         let ranges = fetcher.rangeLog()
         XCTAssertTrue(ranges.contains("0...899"))
         XCTAssertTrue(ranges.contains("3600...4499"))
+    }
+
+    func testPagedFullPullBlocksRemoteAboveDefaultSafetyLimit() async throws {
+        let context = try makeContext()
+        let productID = uuid(903_000)
+        context.insert(Product(barcode: "TASK108-SAFETY", remoteID: productID, productName: "Local"))
+        try context.save()
+        let rows = makeRemotePriceRows(count: 75_001, productIDs: [productID])
+        let fetcher = ProductPricePagedFetcherFake(rows: rows)
+        let pagedService = SupabaseProductPriceApplyService(fetcher: fetcher)
+        let samplePlan = try await pagedService.loadBootstrapPreviewSample(
+            context: context,
+            sessionSnapshot: session
+        )
+        let rangesBeforeApply = fetcher.rangeLog()
+
+        do {
+            _ = try await pagedService.applyPagedFullPull(
+                plan: samplePlan,
+                context: context,
+                currentSessionSnapshot: session
+            )
+            XCTFail("Expected safety gate to block suspicious remote product price count")
+        } catch let error as ProductPriceApplyError {
+            guard case .remoteFetchFailed(let message) = error else {
+                return XCTFail("Expected remoteFetchFailed, got \(error)")
+            }
+            let detail = try XCTUnwrap(message)
+            XCTAssertTrue(detail.contains("75.001") || detail.contains("75001"))
+            XCTAssertTrue(detail.contains("75.000") || detail.contains("75000"))
+        }
+
+        XCTAssertEqual(fetcher.rangeLog(), rangesBeforeApply)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 0)
     }
 
     func testPagedFullPullFailsWhenRemoteEndsBeforeReportedCount() async throws {

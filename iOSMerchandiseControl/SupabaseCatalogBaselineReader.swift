@@ -48,10 +48,9 @@ nonisolated struct SupabaseCatalogBaselineDebugSummary: Sendable, Equatable {
     )
 }
 
-struct SupabaseCatalogBaselineReader {
+nonisolated struct SupabaseCatalogBaselineReader {
     nonisolated init() {}
 
-    @MainActor
     func readManualPushBaseline(
         context: ModelContext,
         ownerUserUUID: UUID
@@ -87,7 +86,6 @@ struct SupabaseCatalogBaselineReader {
         )
     }
 
-    @MainActor
     func debugSummary(
         context: ModelContext,
         currentUserUUID: UUID?

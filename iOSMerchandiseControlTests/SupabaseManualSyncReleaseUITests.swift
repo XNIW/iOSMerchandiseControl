@@ -439,14 +439,16 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
 
         XCTAssertTrue(factorySource.contains("pullPreviewService: SupabasePullPreviewService? = nil"))
         XCTAssertTrue(factorySource.contains("manualPushService: SupabaseManualPushService? = nil"))
+        XCTAssertTrue(factorySource.contains("let modelContainer = context.container"))
         XCTAssertTrue(factorySource.contains("remotePreviewAdapter = pullPreviewService.map"))
-        XCTAssertTrue(factorySource.contains("SupabaseManualSyncPullPreviewAdapter(service: $0, context: context)"))
+        XCTAssertTrue(factorySource.contains("SupabaseManualSyncPullPreviewAdapter(service: $0, modelContainer: modelContainer)"))
         XCTAssertTrue(factorySource.contains("SupabaseManualSyncReleasePushAdapter"))
         XCTAssertTrue(factorySource.contains("remotePreviewProvider: remotePreviewProvider"))
         XCTAssertTrue(factorySource.contains("catalogPushProvider: catalogPushProvider"))
         XCTAssertTrue(factorySource.contains("remotePreviewStaging: remotePreviewAdapter"))
         XCTAssertTrue(factorySource.contains("localApplyService: SupabasePullApplyService()"))
         XCTAssertTrue(factorySource.contains("localApplyContext: context"))
+        XCTAssertTrue(factorySource.contains("localApplyModelContainer: modelContainer"))
         XCTAssertTrue(factorySource.contains("activityRecorder: (any SyncEventRecording)? = nil"))
         XCTAssertTrue(factorySource.contains("activityRegistrationProvider"))
         XCTAssertTrue(factorySource.contains("SupabaseManualSyncReleaseActivityRegistrationAdapter"))
@@ -619,10 +621,13 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
 
     func testTask067DebugOutboxCardRemainsDebugOnlyAndSeparateFromReleaseCard() throws {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
-        let releaseCardRange = try XCTUnwrap(source.range(of: "private struct SupabaseManualSyncReleaseCard"))
-        let debugCardRange = try XCTUnwrap(source.range(of: "#if DEBUG\nprivate struct SyncEventOutboxDrainDebugCard"))
+        let releaseCardSource = try extractReleaseCardSource(from: source)
 
-        XCTAssertLessThan(releaseCardRange.lowerBound, debugCardRange.lowerBound)
+        XCTAssertTrue(source.contains("private struct SupabaseManualSyncReleaseCard"))
+        XCTAssertFalse(source.contains("SyncEventOutboxDrainDebugCard"))
+        XCTAssertFalse(source.contains("Developer diagnostics"))
+        XCTAssertFalse(source.contains("Advanced diagnostics"))
+        XCTAssertFalse(releaseCardSource.contains("sync_events"))
     }
 
     private func extractReleaseCardSource(from source: String) throws -> String {

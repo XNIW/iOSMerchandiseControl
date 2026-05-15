@@ -20,8 +20,7 @@ nonisolated struct SupabaseCatalogBaselineCommitResult: Sendable, Equatable {
     let tombstoneCount: Int
 }
 
-@MainActor
-struct SupabaseCatalogBaselineWriter {
+nonisolated struct SupabaseCatalogBaselineWriter {
     private let now: () -> Date
     private let recordBatchSize: Int
 
@@ -262,7 +261,7 @@ struct SupabaseCatalogBaselineWriter {
     }
 }
 
-private struct BaselineRecordSeed {
+nonisolated private struct BaselineRecordSeed {
     let baselineRunID: UUID
     let ownerUserUUID: UUID
     let entityType: SupabaseCatalogBaselineEntityType

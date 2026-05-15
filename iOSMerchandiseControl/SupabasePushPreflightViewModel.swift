@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 import SwiftData
 import Combine
@@ -439,3 +440,4 @@ final class SupabasePushPreflightViewModel: ObservableObject {
 private enum SupabasePushPreflightInputError: Error {
     case missingUserID
 }
+#endif

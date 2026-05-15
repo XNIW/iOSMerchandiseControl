@@ -523,9 +523,9 @@ final class LocalPendingAggregatedPushPlanner {
             }
         }
 
-        let suppliers = try fetchSuppliers(limit: hardCap + 1)
-        let categories = try fetchCategories(limit: hardCap + 1)
-        let products = try fetchProducts(limit: hardCap + 1)
+        let suppliers = try fetchSuppliers(matching: supplierKeys, changes: changes, limit: hardCap + 1)
+        let categories = try fetchCategories(matching: categoryKeys, changes: changes, limit: hardCap + 1)
+        let products = try fetchProducts(matching: productKeys, changes: changes, limit: hardCap + 1)
         if suppliers.exceeded || categories.exceeded || products.exceeded {
             blockers.insert(.localSnapshotExceeded)
         }
@@ -583,7 +583,7 @@ final class LocalPendingAggregatedPushPlanner {
         blockers: inout Set<LocalPendingAggregatedPushBlocker>
     ) async throws -> LocalPendingAggregatedProductPriceBatch? {
         let changeKeys = Set(changes.map(\.logicalKey))
-        let prices = try fetchProductPrices(limit: hardCap + 1)
+        let prices = try fetchProductPrices(matching: changeKeys, limit: hardCap + 1)
         if prices.exceeded {
             blockers.insert(.localSnapshotExceeded)
         }
@@ -704,29 +704,133 @@ final class LocalPendingAggregatedPushPlanner {
         }
     }
 
-    private func fetchSuppliers(limit: Int) throws -> (values: [Supplier], exceeded: Bool) {
-        var descriptor = FetchDescriptor<Supplier>(sortBy: [SortDescriptor(\.name, order: .forward)])
-        descriptor.fetchLimit = limit
-        let values = try context.fetch(descriptor)
-        return (Array(values.prefix(max(0, limit - 1))), values.count >= limit)
+    private func fetchSuppliers(
+        matching keys: Set<String>,
+        changes: [LocalPendingChange],
+        limit _: Int
+    ) throws -> (values: [Supplier], exceeded: Bool) {
+        guard !keys.isEmpty else { return ([], false) }
+
+        var values: [Supplier] = []
+        var seen = Set<String>()
+        let remoteIDs = catalogRemoteIDs(
+            in: keys,
+            changes: changes,
+            kind: .supplier
+        )
+        for remoteID in remoteIDs {
+            var descriptor = FetchDescriptor<Supplier>(
+                predicate: #Predicate<Supplier> { supplier in
+                    supplier.remoteID == remoteID
+                },
+                sortBy: [SortDescriptor(\.name, order: .forward)]
+            )
+            descriptor.fetchLimit = 1
+            try context.fetch(descriptor).forEach { appendUnique($0, to: &values, seen: &seen) }
+        }
+
+        let localKeys = localEntityKeys(in: keys)
+        if !localKeys.isEmpty {
+            let descriptor = FetchDescriptor<Supplier>(
+                sortBy: [SortDescriptor(\.name, order: .forward)]
+            )
+            let localValues = try context.fetch(descriptor).filter {
+                !localKeys.isDisjoint(with: pendingKeys(for: $0))
+            }
+            localValues.forEach { appendUnique($0, to: &values, seen: &seen) }
+        }
+
+        return (values.sorted { $0.name < $1.name }, false)
     }
 
-    private func fetchCategories(limit: Int) throws -> (values: [ProductCategory], exceeded: Bool) {
-        var descriptor = FetchDescriptor<ProductCategory>(sortBy: [SortDescriptor(\.name, order: .forward)])
-        descriptor.fetchLimit = limit
-        let values = try context.fetch(descriptor)
-        return (Array(values.prefix(max(0, limit - 1))), values.count >= limit)
+    private func fetchCategories(
+        matching keys: Set<String>,
+        changes: [LocalPendingChange],
+        limit _: Int
+    ) throws -> (values: [ProductCategory], exceeded: Bool) {
+        guard !keys.isEmpty else { return ([], false) }
+
+        var values: [ProductCategory] = []
+        var seen = Set<String>()
+        let remoteIDs = catalogRemoteIDs(
+            in: keys,
+            changes: changes,
+            kind: .productCategory
+        )
+        for remoteID in remoteIDs {
+            var descriptor = FetchDescriptor<ProductCategory>(
+                predicate: #Predicate<ProductCategory> { category in
+                    category.remoteID == remoteID
+                },
+                sortBy: [SortDescriptor(\.name, order: .forward)]
+            )
+            descriptor.fetchLimit = 1
+            try context.fetch(descriptor).forEach { appendUnique($0, to: &values, seen: &seen) }
+        }
+
+        let localKeys = localEntityKeys(in: keys)
+        if !localKeys.isEmpty {
+            let descriptor = FetchDescriptor<ProductCategory>(
+                sortBy: [SortDescriptor(\.name, order: .forward)]
+            )
+            let localValues = try context.fetch(descriptor).filter {
+                !localKeys.isDisjoint(with: pendingKeys(for: $0))
+            }
+            localValues.forEach { appendUnique($0, to: &values, seen: &seen) }
+        }
+
+        return (values.sorted { $0.name < $1.name }, false)
     }
 
-    private func fetchProducts(limit: Int) throws -> (values: [Product], exceeded: Bool) {
-        var descriptor = FetchDescriptor<Product>(sortBy: [SortDescriptor(\.barcode, order: .forward)])
-        descriptor.fetchLimit = limit
-        let values = try context.fetch(descriptor)
-        return (Array(values.prefix(max(0, limit - 1))), values.count >= limit)
+    private func fetchProducts(
+        matching keys: Set<String>,
+        changes: [LocalPendingChange],
+        limit _: Int
+    ) throws -> (values: [Product], exceeded: Bool) {
+        guard !keys.isEmpty else { return ([], false) }
+
+        var values: [Product] = []
+        var seen = Set<String>()
+        let remoteIDs = catalogRemoteIDs(
+            in: keys,
+            changes: changes,
+            kind: .product
+        )
+        for remoteID in remoteIDs {
+            var descriptor = FetchDescriptor<Product>(
+                predicate: #Predicate<Product> { product in
+                    product.remoteID == remoteID
+                },
+                sortBy: [SortDescriptor(\.barcode, order: .forward)]
+            )
+            descriptor.fetchLimit = 1
+            try context.fetch(descriptor).forEach { appendUnique($0, to: &values, seen: &seen) }
+        }
+
+        let localKeys = localEntityKeys(in: keys)
+        if !localKeys.isEmpty {
+            let descriptor = FetchDescriptor<Product>(
+                sortBy: [SortDescriptor(\.barcode, order: .forward)]
+            )
+            let localValues = try context.fetch(descriptor).filter {
+                !localKeys.isDisjoint(with: pendingKeys(for: $0))
+            }
+            localValues.forEach { appendUnique($0, to: &values, seen: &seen) }
+        }
+
+        return (values.sorted { $0.barcode < $1.barcode }, false)
     }
 
-    private func fetchProductPrices(limit: Int) throws -> (values: [ProductPrice], exceeded: Bool) {
+    private func fetchProductPrices(
+        matching keys: Set<String>,
+        limit: Int
+    ) throws -> (values: [ProductPrice], exceeded: Bool) {
+        guard !keys.isEmpty else { return ([], false) }
+
         var descriptor = FetchDescriptor<ProductPrice>(
+            predicate: #Predicate<ProductPrice> { price in
+                price.remoteID == nil
+            },
             sortBy: [
                 SortDescriptor(\.effectiveAt, order: .forward),
                 SortDescriptor(\.createdAt, order: .forward)
@@ -734,7 +838,49 @@ final class LocalPendingAggregatedPushPlanner {
         )
         descriptor.fetchLimit = limit
         let values = try context.fetch(descriptor)
-        return (Array(values.prefix(max(0, limit - 1))), values.count >= limit)
+        let selected = values
+            .prefix(max(0, limit - 1))
+            .filter { !keys.isDisjoint(with: pendingKeys(for: $0)) }
+        return (Array(selected), values.count >= limit)
+    }
+
+    private func catalogRemoteIDs(
+        in keys: Set<String>,
+        changes: [LocalPendingChange],
+        kind: LocalPendingChangeEntityKind
+    ) -> [UUID] {
+        let fromChanges = changes.compactMap { change -> UUID? in
+            guard change.entityKind == kind else { return nil }
+            return change.entityRemoteID
+        }
+        let prefix = "\(kind.rawValue):remote:"
+        let fromKeys = keys.compactMap { key -> UUID? in
+            guard key.hasPrefix(prefix) else { return nil }
+            return UUID(uuidString: String(key.dropFirst(prefix.count)))
+        }
+        return Array(Set(fromChanges + fromKeys)).sorted { $0.uuidString < $1.uuidString }
+    }
+
+    private func localEntityKeys(in keys: Set<String>) -> Set<String> {
+        Set(keys.filter { $0.contains(":local:") })
+    }
+
+    private func appendUnique(_ supplier: Supplier, to values: inout [Supplier], seen: inout Set<String>) {
+        let key = supplier.remoteID?.uuidString.lowercased() ?? "local:\(supplier.name)"
+        guard seen.insert("supplier:\(key)").inserted else { return }
+        values.append(supplier)
+    }
+
+    private func appendUnique(_ category: ProductCategory, to values: inout [ProductCategory], seen: inout Set<String>) {
+        let key = category.remoteID?.uuidString.lowercased() ?? "local:\(category.name)"
+        guard seen.insert("category:\(key)").inserted else { return }
+        values.append(category)
+    }
+
+    private func appendUnique(_ product: Product, to values: inout [Product], seen: inout Set<String>) {
+        let key = product.remoteID?.uuidString.lowercased() ?? "local:\(product.barcode)"
+        guard seen.insert("product:\(key)").inserted else { return }
+        values.append(product)
     }
 
     private func pendingKeys(for supplier: Supplier) -> Set<String> {

@@ -4,6 +4,15 @@ import XCTest
 
 @MainActor
 final class InventorySyncServiceTests: XCTestCase {
+    private static var retainedContainers: [ModelContainer] = []
+    private static var retainedContexts: [ModelContext] = []
+
+    override func tearDownWithError() throws {
+        Self.retainedContexts.removeAll()
+        Self.retainedContainers.removeAll()
+        try super.tearDownWithError()
+    }
+
     func testGeneratedInventorySyncRecordsPendingAndAvoidsDuplicatePriceOnRetry() throws {
         let context = try makeContext()
         let ownerID = UUID(uuidString: "10800000-0000-4000-8000-000000000001")!
@@ -61,6 +70,9 @@ final class InventorySyncServiceTests: XCTestCase {
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
-        return ModelContext(container)
+        let context = ModelContext(container)
+        Self.retainedContainers.append(container)
+        Self.retainedContexts.append(context)
+        return context
     }
 }

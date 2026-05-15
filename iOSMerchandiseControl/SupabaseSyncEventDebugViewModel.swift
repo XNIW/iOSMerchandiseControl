@@ -1,3 +1,4 @@
+#if DEBUG
 import Combine
 import Foundation
 
@@ -167,3 +168,4 @@ final class SupabaseSyncEventDebugViewModel: ObservableObject {
         return SyncEventDebugFormatter.sanitizedPreview(from: detail, maxLength: 160)
     }
 }
+#endif

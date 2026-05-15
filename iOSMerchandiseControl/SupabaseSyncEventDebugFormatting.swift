@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 
 nonisolated enum SyncEventDebugValueShape: String, Sendable, Equatable {
@@ -202,3 +203,4 @@ nonisolated enum SyncEventDebugFormatter {
         value.range(of: #"\b\d{8,}\b"#, options: .regularExpression) != nil
     }
 }
+#endif

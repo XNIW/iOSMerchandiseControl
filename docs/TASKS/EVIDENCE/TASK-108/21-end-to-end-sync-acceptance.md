@@ -109,3 +109,34 @@ Remaining E2E status:
 Updated acceptance status:
 - ProductPrice/bootstrap blocker is resolved.
 - TASK-108 remains ACTIVE / REVIEW and NON DONE until the remaining live E2E surfaces are completed or reviewed as explicit blockers.
+
+UI responsiveness FIX update 2026-05-14 14:24 -0400:
+- ✅ STATIC/FIX — ProductPrice apply remains `@MainActor` because SwiftData `ModelContext` is actor-bound, but page-local loop now yields every 150 rows and records `fetchMs` / `applyMs` / `saveMs`.
+- ✅ STATIC/FIX — `SupabaseManualSyncViewModel` throttles catalog/ProductPrice/History progress UI publishing; completion/failure/cancel remain immediate.
+- ✅ STATIC/FIX — Options automatic check waits 700 ms after appear/active before starting, so first render and initial scroll get a quiet window.
+- ✅ UI/SMOKE — Options signed-out account card polished; after screenshot saved as `screenshots/2026-05-14-options-account-polish-after.jpg`.
+- ✅ BUILD — iOS Debug build/run PASS; iOS Release build PASS; Android `assembleDebug` PASS; Android ProductPrice paging test PASS.
+- ✅ DEVICE — Android install/launch PASS; memory TOTAL PSS `182,569 KB`, TOTAL RSS `281,960 KB`.
+- ⚠️ TEST_RUNNER_BLOCKED — iOS targeted XCTest runner failed to launch simulator clone with `FBSOpenApplicationServiceErrorDomain Code=1 RequestDenied`; build itself passes.
+- ❌ NOT EXECUTED — new full iOS app-auth post-patch run with checkpoints 0/9k/53k/90k/150k/completion.
+- ❌ NOT EXECUTED — incremental pull/push live, Generated live, History/session live and cross-platform E2E.
+
+Current acceptance status:
+- REVIEW_READY_WITH_RESPONSIVENESS_FIXES.
+- TASK-108 remains NON DONE.
+
+Definitive thread/MainActor FIX update 2026-05-14 15:25 -0400:
+- ✅ PROFILE/ROOT_CAUSE — Before sample reproduced queued tab taps and showed main thread busy in `SwiftDataInventorySnapshotService.makeSnapshot()` through launch/foreground auto-check.
+- ✅ PROFILE/ROOT_CAUSE — Second sample found automatic `PriceHistoryBackfillRunner` / `PriceHistoryBackfillService` running from `ContentView` lifecycle on the UI context.
+- ✅ FIX — Preview local snapshot now runs in a detached worker context created from `ModelContainer`.
+- ✅ FIX — ProductPrice/catalog/history apply paths are no longer wired to the View/UI `ModelContext` through the Release adapter for heavy work.
+- ✅ FIX — Automatic launch price-history backfill was removed from View lifecycle.
+- ✅ PROFILE/AFTER — Final sample shows main thread idle: `3822/3822` samples in run loop / `mach_msg2_trap`, no snapshot/backfill/ProductPrice heavy symbols on main.
+- ✅ UI/SMOKE — Final Options tab tap returned in `0.3708s`; no multi-second queued input observed.
+- ✅ BUILD/TEST — iOS Debug build PASS; iOS Release build PASS; targeted iOS tests PASS via direct `xcodebuild`; Android `assembleDebug` PASS; Android repository tests PASS.
+- ⚠️ ANDROID_ENV — Android ViewModel test group hit MockK/attach infrastructure failure; `adb` not found, so device/logcat smoke was not executable in this pass.
+- ❌ NOT EXECUTED — full ProductPrice live post-patch rerun, incremental pull/push live, Generated live, History/session live, and cross-platform E2E.
+
+Updated acceptance status:
+- Thread/MainActor responsiveness fix: PASS for the measured launch/foreground freeze path.
+- Full TASK-108 E2E acceptance: still NOT DONE / NOT PASS.

@@ -241,7 +241,7 @@ protocol HistorySessionRemoteSyncing: Sendable {
     ) async throws -> [RemoteSharedSheetSessionRow]
 }
 
-final class HistorySessionSyncService {
+nonisolated final class HistorySessionSyncService {
     private let remote: any HistorySessionRemoteSyncing
     private let pageSize: Int
 
@@ -250,7 +250,6 @@ final class HistorySessionSyncService {
         self.pageSize = max(1, pageSize)
     }
 
-    @MainActor
     func pushPendingHistorySessions(
         entries: [HistoryEntry],
         ownerUserID: UUID,
@@ -260,7 +259,8 @@ final class HistorySessionSyncService {
         var result = HistorySessionPushResult()
         let dirtyEntries = entries.filter(\.isHistorySessionDirtyForCloud)
         result.skippedCleanCount = max(0, entries.count - dirtyEntries.count)
-        onProgress(HistorySessionSyncProgress(stage: .pushing, current: 0, total: dirtyEntries.count))
+        let dirtyEntryCount = dirtyEntries.count
+        await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: 0, total: dirtyEntryCount), onProgress: onProgress)
         guard !dirtyEntries.isEmpty else { return result }
 
         let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
@@ -289,7 +289,7 @@ final class HistorySessionSyncService {
             ownerUserID: ownerUserID
         )
         try Task.checkCancellation()
-        onProgress(HistorySessionSyncProgress(stage: .pushing, current: uploadPairs.count, total: dirtyEntries.count))
+        await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: uploadPairs.count, total: dirtyEntryCount), onProgress: onProgress)
         let readBackByRemoteID = Dictionary(uniqueKeysWithValues: readBackRows.map { ($0.remoteID, $0) })
 
         for (index, pair) in uploadPairs.enumerated() {
@@ -308,13 +308,12 @@ final class HistorySessionSyncService {
             pair.entry.syncStatus = .syncedSuccessfully
             try accumulator.acknowledgeHistorySessionChange(entry: pair.entry)
             result.uploadedCount += 1
-            onProgress(HistorySessionSyncProgress(stage: .pushing, current: index + 1, total: dirtyEntries.count))
+            await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: index + 1, total: dirtyEntryCount), onProgress: onProgress)
         }
 
         return result
     }
 
-    @MainActor
     func pullHistorySessionsFromCloud(
         ownerUserID: UUID,
         context: ModelContext,
@@ -322,7 +321,7 @@ final class HistorySessionSyncService {
     ) async throws -> HistorySessionPullResult {
         var allRows: [RemoteSharedSheetSessionRow] = []
         var start = 0
-        onProgress(HistorySessionSyncProgress(stage: .fetching, current: 0))
+        await publishProgress(HistorySessionSyncProgress(stage: .fetching, current: 0), onProgress: onProgress)
         while true {
             let end = start + pageSize - 1
             let page = try await remote.fetchSharedSheetSessionsPage(
@@ -332,7 +331,8 @@ final class HistorySessionSyncService {
             )
             try Task.checkCancellation()
             allRows.append(contentsOf: page)
-            onProgress(HistorySessionSyncProgress(stage: .fetching, current: allRows.count))
+            let fetchedCount = allRows.count
+            await publishProgress(HistorySessionSyncProgress(stage: .fetching, current: fetchedCount), onProgress: onProgress)
             guard page.count == pageSize else { break }
             start += pageSize
             await Task.yield()
@@ -344,11 +344,11 @@ final class HistorySessionSyncService {
             context: context,
             onProgress: onProgress
         )
-        onProgress(HistorySessionSyncProgress(stage: .completed, current: allRows.count, total: allRows.count))
+        let totalRows = allRows.count
+        await publishProgress(HistorySessionSyncProgress(stage: .completed, current: totalRows, total: totalRows), onProgress: onProgress)
         return result
     }
 
-    @MainActor
     func applyRemoteSharedSheetSessions(
         _ rows: [RemoteSharedSheetSessionRow],
         ownerUserID: UUID,
@@ -398,7 +398,6 @@ final class HistorySessionSyncService {
         return result
     }
 
-    @MainActor
     private func applyRemoteSharedSheetSessionsAsync(
         _ rows: [RemoteSharedSheetSessionRow],
         ownerUserID: UUID,
@@ -420,7 +419,8 @@ final class HistorySessionSyncService {
 
         var mutationsSinceSave = 0
         let batchSize = max(1, pageSize)
-        onProgress(HistorySessionSyncProgress(stage: .applying, current: 0, total: rows.count))
+        let rowCount = rows.count
+        await publishProgress(HistorySessionSyncProgress(stage: .applying, current: 0, total: rowCount), onProgress: onProgress)
 
         for (index, row) in rows.enumerated() {
             try Task.checkCancellation()
@@ -448,9 +448,9 @@ final class HistorySessionSyncService {
                 mutationsSinceSave += 1
             }
 
-            onProgress(HistorySessionSyncProgress(stage: .applying, current: index + 1, total: rows.count))
+            await publishProgress(HistorySessionSyncProgress(stage: .applying, current: index + 1, total: rowCount), onProgress: onProgress)
             if mutationsSinceSave >= batchSize {
-                onProgress(HistorySessionSyncProgress(stage: .saving, current: index + 1, total: rows.count))
+                await publishProgress(HistorySessionSyncProgress(stage: .saving, current: index + 1, total: rowCount), onProgress: onProgress)
                 try context.save()
                 mutationsSinceSave = 0
                 await Task.yield()
@@ -460,7 +460,7 @@ final class HistorySessionSyncService {
         }
 
         if mutationsSinceSave > 0 {
-            onProgress(HistorySessionSyncProgress(stage: .saving, current: rows.count, total: rows.count))
+            await publishProgress(HistorySessionSyncProgress(stage: .saving, current: rowCount, total: rowCount), onProgress: onProgress)
             try context.save()
             await Task.yield()
         }
@@ -495,6 +495,15 @@ final class HistorySessionSyncService {
         entry.remoteDeletedAt = nil
         entry.lastSyncedLocalRevision = entry.localChangeRevision
         entry.syncStatus = .syncedSuccessfully
+    }
+
+    private func publishProgress(
+        _ progress: HistorySessionSyncProgress,
+        onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
+    ) async {
+        await MainActor.run {
+            onProgress(progress)
+        }
     }
 
     private func makeEntry(

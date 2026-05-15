@@ -1,6 +1,6 @@
 import Foundation
 
-struct HistoryEntryRuntimeSummary {
+nonisolated struct HistoryEntryRuntimeSummary {
     let totalItems: Int
     let missingItems: Int
     let paymentTotal: Double

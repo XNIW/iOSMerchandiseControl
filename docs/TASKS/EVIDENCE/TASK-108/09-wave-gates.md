@@ -104,3 +104,38 @@ Current keyset pass verdict:
 - iOS ProductPrice full pull/apply/baseline: PASS live.
 - Silent idle bug: FIXED.
 - TASK-108 global cross-platform/live E2E: still not DONE / not PASS.
+
+UI responsiveness FIX update 2026-05-14 14:24 -0400:
+
+| Wave | Implemented | Fixed during responsiveness pass | Not implemented yet | Blocked | Evidence |
+|------|-------------|----------------------------------|---------------------|---------|----------|
+| Wave 1 | Options public sync surface remains implemented | Signed-out account icon/CTA polished; Release action labels centered | Full signed-in visual matrix | App-auth session needed | `61`, `62` |
+| Wave 2 | Bootstrap/full pull code path implemented | ProductPrice page loop yields every 150 rows; per-page fetch/apply/save timings logged | Fresh full app-auth post-patch duration/RSS | APP_AUTH_REQUIRED | `61`, `63` |
+| Wave 3 | Auto foreground/incremental pull code/tests remain implemented | Options auto check delayed 700 ms after render and deduped by active task | Controlled remote delta incremental pull | NOT VERIFIED | `61`, `64` |
+| Wave 4 | Pending/push architecture remains implemented | Progress publication throttled to reduce Options invalidation | Controlled Database/ProductPrice push/read-back | NOT VERIFIED | `61`, `64` |
+| Wave 5 | Generated code path remains implemented | No direct Generated code change | Live Generated push/read-back | NOT VERIFIED | `65` |
+| Wave 6 | History/session core code remains wired into global sync | History progress throttled | Live History push/pull/read-back clears dirty entries | NOT VERIFIED | `61`, `65` |
+| Wave 7 | iOS Debug/Release build, Options smoke, Android build/test/device smoke | Evidence `61`...`68` added | Full iOS XCTest due simulator test-runner launch denial; cross-platform E2E | APP_AUTH_REQUIRED / TEST_RUNNER_BLOCKED | `63`, `66`, `67`, `68` |
+
+Current responsiveness pass verdict:
+- UI progress spam: MITIGATED.
+- MainActor ProductPrice apply/save: still constrained by SwiftData `ModelContext`, but page loop now yields and logs timings.
+- Options signed-out polish: PASS by screenshot/smoke.
+- Full live post-patch and cross-platform E2E: NOT PASS / NOT RUN.
+
+Definitive thread/MainActor FIX update 2026-05-14 15:25 -0400:
+
+| Wave | Implemented | Fixed during thread pass | Not implemented yet | Blocked | Evidence |
+|------|-------------|--------------------------|---------------------|---------|----------|
+| Wave 1 | Options public sync surface remains implemented | Measured launch tab queuing root cause removed; auto-check preview local snapshot no longer uses UI `ModelContext`; automatic launch price-history backfill removed from View lifecycle | Full signed-in visual matrix after new worker path | App-auth/live matrix not rerun | `69`, `70`, `71`, `72` |
+| Wave 2 | Bootstrap/full pull code path remains implemented | ProductPrice/catalog apply adapters now create worker/background `ModelContext` instances from `ModelContainer` instead of retaining UI context | Fresh full ProductPrice 290k post-patch duration/RSS/idempotent rerun | NOT EXECUTED | `70`, `72`, `73` |
+| Wave 3 | Auto foreground/incremental pull code/tests remain implemented | Foreground preview's local snapshot is off-main; measured main thread idle after launch | Controlled remote delta incremental pull | NOT EXECUTED | `69`, `71`, `73` |
+| Wave 4 | Pending/push architecture remains implemented | No direct push behavior change; background apply context reduces UI actor contention | Controlled Database/ProductPrice push/read-back | NOT EXECUTED | `72`, `73` |
+| Wave 5 | Generated code path remains implemented | No direct Generated behavior change in this thread fix | Live Generated push/read-back | NOT EXECUTED | `73` |
+| Wave 6 | History/session core code remains wired into global sync | History/session service no longer main-actor isolated for heavy sync path; release adapter uses background context | Live History push/pull/read-back clears dirty entries | NOT EXECUTED | `70`, `73` |
+| Wave 7 | iOS Debug/Release build, targeted iOS tests, profiler before/after, simulator smoke, Android build/repository tests | Main thread sample after fix shows `3822/3822` samples idle; Options tap returned in `0.3708s` instead of multi-second queue | Cross-platform live E2E and Android device smoke/logcat after this pass | `adb` unavailable; live E2E not run | `71`, `72`, `74` |
+
+Current definitive thread verdict:
+- Root UI freeze path: FIXED BY MEASUREMENT.
+- MainActor/UI `ModelContext` leak in launch preview/backfill: FIXED for measured paths.
+- TASK-108 global live E2E: NOT DONE / NOT PASS.

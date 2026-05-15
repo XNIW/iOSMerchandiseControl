@@ -223,8 +223,7 @@ nonisolated struct SupabasePullApplyAccountGuard: Sendable, Equatable {
     }
 }
 
-@MainActor
-struct SupabasePullApplyService {
+nonisolated struct SupabasePullApplyService: Sendable {
     init() {}
 
     /// Not re-entrant on the same ModelContext; the DEBUG UI serializes calls with isApplyingLocalPreview.
@@ -495,9 +494,12 @@ struct SupabasePullApplyService {
         var mutationsSinceSave = 0
         let batchSize = 500
 
-        func saveBatchIfNeeded(force: Bool = false) throws {
+        func saveBatchIfNeeded(force: Bool = false) async throws {
             guard mutationsSinceSave > 0, force || mutationsSinceSave >= batchSize else { return }
-            onProgress(SupabasePullApplyProgress(stage: .saving, current: inserted + updated, total: plan.plannedInsertedCount + plan.plannedUpdatedCount))
+            await publishProgress(
+                SupabasePullApplyProgress(stage: .saving, current: inserted + updated, total: plan.plannedInsertedCount + plan.plannedUpdatedCount),
+                onProgress: onProgress
+            )
             do {
                 try context.save()
                 mutationsSinceSave = 0
@@ -507,7 +509,7 @@ struct SupabasePullApplyService {
             }
         }
 
-        onProgress(SupabasePullApplyProgress(stage: .suppliers, current: 0, total: plan.suppliersToCreate.count))
+        await publishProgress(SupabasePullApplyProgress(stage: .suppliers, current: 0, total: plan.suppliersToCreate.count), onProgress: onProgress)
         for (index, supplier) in plan.suppliersToCreate.enumerated() {
             try Task.checkCancellation()
             let before = suppliersCreated
@@ -523,14 +525,14 @@ struct SupabasePullApplyService {
             if suppliersCreated > before {
                 mutationsSinceSave += 1
             }
-            onProgress(SupabasePullApplyProgress(stage: .suppliers, current: index + 1, total: plan.suppliersToCreate.count))
-            try saveBatchIfNeeded()
+            await publishProgress(SupabasePullApplyProgress(stage: .suppliers, current: index + 1, total: plan.suppliersToCreate.count), onProgress: onProgress)
+            try await saveBatchIfNeeded()
             if (index + 1).isMultiple(of: batchSize) {
                 await Task.yield()
             }
         }
 
-        onProgress(SupabasePullApplyProgress(stage: .categories, current: 0, total: plan.categoriesToCreate.count))
+        await publishProgress(SupabasePullApplyProgress(stage: .categories, current: 0, total: plan.categoriesToCreate.count), onProgress: onProgress)
         for (index, category) in plan.categoriesToCreate.enumerated() {
             try Task.checkCancellation()
             let before = categoriesCreated
@@ -546,8 +548,8 @@ struct SupabasePullApplyService {
             if categoriesCreated > before {
                 mutationsSinceSave += 1
             }
-            onProgress(SupabasePullApplyProgress(stage: .categories, current: index + 1, total: plan.categoriesToCreate.count))
-            try saveBatchIfNeeded()
+            await publishProgress(SupabasePullApplyProgress(stage: .categories, current: index + 1, total: plan.categoriesToCreate.count), onProgress: onProgress)
+            try await saveBatchIfNeeded()
             if (index + 1).isMultiple(of: batchSize) {
                 await Task.yield()
             }
@@ -555,7 +557,7 @@ struct SupabasePullApplyService {
 
         let productTotal = plan.plannedInsertedCount + plan.plannedUpdatedCount
         var processedProducts = 0
-        onProgress(SupabasePullApplyProgress(stage: .products, current: 0, total: productTotal))
+        await publishProgress(SupabasePullApplyProgress(stage: .products, current: 0, total: productTotal), onProgress: onProgress)
         for insert in plan.productInserts {
             try Task.checkCancellation()
             guard productsByBarcode[insert.barcode] == nil else {
@@ -600,8 +602,8 @@ struct SupabasePullApplyService {
             inserted += 1
             processedProducts += 1
             mutationsSinceSave += 1
-            onProgress(SupabasePullApplyProgress(stage: .products, current: processedProducts, total: productTotal))
-            try saveBatchIfNeeded()
+            await publishProgress(SupabasePullApplyProgress(stage: .products, current: processedProducts, total: productTotal), onProgress: onProgress)
+            try await saveBatchIfNeeded()
             if processedProducts.isMultiple(of: batchSize) {
                 await Task.yield()
             }
@@ -631,15 +633,15 @@ struct SupabasePullApplyService {
                 mutationsSinceSave += 1
             }
             processedProducts += 1
-            onProgress(SupabasePullApplyProgress(stage: .products, current: processedProducts, total: productTotal))
-            try saveBatchIfNeeded()
+            await publishProgress(SupabasePullApplyProgress(stage: .products, current: processedProducts, total: productTotal), onProgress: onProgress)
+            try await saveBatchIfNeeded()
             if processedProducts.isMultiple(of: batchSize) {
                 await Task.yield()
             }
         }
 
-        try saveBatchIfNeeded(force: true)
-        onProgress(SupabasePullApplyProgress(stage: .completed, current: productTotal, total: productTotal))
+        try await saveBatchIfNeeded(force: true)
+        await publishProgress(SupabasePullApplyProgress(stage: .completed, current: productTotal, total: productTotal), onProgress: onProgress)
 
         return SupabasePullApplyResult(
             inserted: inserted,
@@ -1159,5 +1161,14 @@ struct SupabasePullApplyService {
         rhs: SyncPreviewProductSummary
     ) -> Bool {
         lhs.sortKey < rhs.sortKey
+    }
+
+    private func publishProgress(
+        _ progress: SupabasePullApplyProgress,
+        onProgress: @escaping @MainActor @Sendable (SupabasePullApplyProgress) -> Void
+    ) async {
+        await MainActor.run {
+            onProgress(progress)
+        }
     }
 }

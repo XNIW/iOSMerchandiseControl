@@ -6,7 +6,6 @@ struct iOSMerchandiseControlApp: App {
     @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
-    private let supabaseSyncEventPreviewService: SupabaseSyncEventPreviewService?
     private let supabaseManualPushService: SupabaseManualPushService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
 
@@ -15,7 +14,6 @@ struct iOSMerchandiseControlApp: App {
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
         supabaseInventoryService = dependencies.inventoryService
         supabasePullPreviewService = dependencies.pullPreviewService
-        supabaseSyncEventPreviewService = dependencies.syncEventPreviewService
         supabaseManualPushService = dependencies.manualPushService
         syncEventOutboxDrainRecorder = dependencies.syncEventOutboxDrainRecorder
     }
@@ -25,7 +23,6 @@ struct iOSMerchandiseControlApp: App {
             ContentView(
                 supabaseInventoryService: supabaseInventoryService,
                 supabasePullPreviewService: supabasePullPreviewService,
-                supabaseSyncEventPreviewService: supabaseSyncEventPreviewService,
                 supabaseManualPushService: supabaseManualPushService,
                 syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder
             )
@@ -59,8 +56,6 @@ struct iOSMerchandiseControlApp: App {
                 catalogRowBudget: nil,
                 productPricePreviewSampleLimit: 1_000
             )
-            let syncEventReader = SupabaseSyncEventRemoteReader(clientProvider: provider)
-            let syncEventPreviewService = SupabaseSyncEventPreviewService(fetcher: syncEventReader)
             let manualPushService = SupabaseManualPushService(clientProvider: provider)
             let syncEventOutboxDrainRecorder: (any SyncEventRecording)? = SupabaseSyncEventLiveRecorder(
                 configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
@@ -71,7 +66,6 @@ struct iOSMerchandiseControlApp: App {
                 authViewModel: SupabaseAuthViewModel(authService: authService),
                 inventoryService: inventoryService,
                 pullPreviewService: previewService,
-                syncEventPreviewService: syncEventPreviewService,
                 manualPushService: manualPushService,
                 syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder
             )
@@ -80,7 +74,6 @@ struct iOSMerchandiseControlApp: App {
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .configMissing),
                 inventoryService: nil,
                 pullPreviewService: nil,
-                syncEventPreviewService: nil,
                 manualPushService: nil,
                 syncEventOutboxDrainRecorder: nil
             )
@@ -89,7 +82,6 @@ struct iOSMerchandiseControlApp: App {
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .invalidConfig),
                 inventoryService: nil,
                 pullPreviewService: nil,
-                syncEventPreviewService: nil,
                 manualPushService: nil,
                 syncEventOutboxDrainRecorder: nil
             )
@@ -98,7 +90,6 @@ struct iOSMerchandiseControlApp: App {
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .unknown(message: String(describing: error))),
                 inventoryService: nil,
                 pullPreviewService: nil,
-                syncEventPreviewService: nil,
                 manualPushService: nil,
                 syncEventOutboxDrainRecorder: nil
             )
@@ -110,7 +101,6 @@ private struct SupabaseAppDependencies {
     let authViewModel: SupabaseAuthViewModel
     let inventoryService: SupabaseInventoryService?
     let pullPreviewService: SupabasePullPreviewService?
-    let syncEventPreviewService: SupabaseSyncEventPreviewService?
     let manualPushService: SupabaseManualPushService?
     let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
 }

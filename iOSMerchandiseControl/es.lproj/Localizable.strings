@@ -79,7 +79,6 @@
 "options.supabase.auth.signOut" = "Salir";
 "options.supabase.auth.sessionRequired" = "Accede antes de ejecutar preview o diagnóstico Supabase.";
 "options.supabase.auth.debugDetails" = "DEBUG";
-"options.supabase.auth.debugDiagnostics" = "Diagnóstico de desarrollo";
 "options.supabase.auth.debug.userId" = "User ID";
 "options.supabase.auth.debug.provider" = "Provider";
 "options.supabase.auth.debug.email" = "Email";
@@ -1098,12 +1097,9 @@
 "options.supabase.manualSync.header" = "Sincronización en la nube";
 "options.supabase.manualSync.footer" = "La sincronización en la nube sigue siendo manual y bajo tu control.";
 "options.cloud.section.header" = "Cuenta cloud y sincronización";
-"options.cloud.section.footer" = "La cuenta y las acciones cloud están aquí. Las herramientas avanzadas están en Diagnóstico de desarrollador.";
+"options.cloud.section.footer" = "La cuenta y las acciones cloud están aquí.";
 "options.localDatabase.header" = "Estado de la base local";
 "options.localDatabase.footer" = "Estos son los datos guardados en este dispositivo.";
-"options.developerDiagnostics.header" = "Diagnóstico avanzado";
-"options.developerDiagnostics.title" = "Diagnóstico de desarrollador";
-"options.developerDiagnostics.footer" = "Las comprobaciones Supabase sin procesar y las herramientas manuales quedan cerradas salvo para depuración.";
 "options.cloud.account.transitioning" = "Actualizando estado de la cuenta…";
 "options.cloud.account.unconfigured.title" = "Cloud no configurado";
 "options.cloud.account.unconfigured.detail" = "La sincronización cloud no está disponible en esta build.";

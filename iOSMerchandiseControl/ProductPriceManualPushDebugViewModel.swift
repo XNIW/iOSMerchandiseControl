@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 import SwiftData
 import Combine
@@ -368,3 +369,4 @@ final class ProductPriceManualPushDebugViewModel: ObservableObject {
         }
     }
 }
+#endif
