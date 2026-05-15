@@ -218,6 +218,10 @@ extension HistoryEntry {
         remotePayloadFingerprint == nil || localChangeRevision > lastSyncedLocalRevision
     }
 
+    var isHistorySessionDeletedPendingCloud: Bool {
+        remoteDeletedAt != nil && localChangeRevision > lastSyncedLocalRevision
+    }
+
     func ensureHistorySessionRemoteID() -> UUID {
         if let remoteID {
             return remoteID
@@ -231,15 +235,23 @@ extension HistoryEntry {
         remoteDeletedAt = nil
     }
 
+    func markHistorySessionLocalDeletion(at deletedAt: Date = Date()) {
+        _ = ensureHistorySessionRemoteID()
+        remoteDeletedAt = deletedAt
+        localChangeRevision += 1
+        syncStatus = .notAttempted
+    }
+
     func markHistorySessionRemoteApplied(
         remoteID: UUID,
         remoteUpdatedAt: Date?,
+        remoteDeletedAt: Date? = nil,
         fingerprint: String,
         syncedRevision: Int
     ) {
         self.remoteID = remoteID
         self.remoteUpdatedAt = remoteUpdatedAt
-        self.remoteDeletedAt = nil
+        self.remoteDeletedAt = remoteDeletedAt
         self.remotePayloadFingerprint = fingerprint
         self.lastSyncedLocalRevision = syncedRevision
     }

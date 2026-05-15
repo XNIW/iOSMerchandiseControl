@@ -10,6 +10,7 @@ protocol SupabaseProductPriceManualPushRemoteAccessing: Sendable {
         from: Int,
         to: Int
     ) async throws -> [RemoteInventoryProductPriceRow]
+    func updateProduct(id: UUID, payload: SupabaseManualPushProductUpdatePayload) async throws -> RemoteInventoryProductRow
 }
 
 extension SupabaseInventoryService: SupabaseProductPriceManualPushRemoteAccessing {}
@@ -438,6 +439,181 @@ struct SupabaseProductPriceManualPushService: Sendable {
         }
         return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(String(describing: error))
             ?? "inventory_product_prices"
+    }
+}
+
+@MainActor
+struct ProductPriceCoveredProductChangeReconciler {
+    private static let productPriceFieldNames: Set<String> = [
+        "purchaseprice",
+        "retailprice"
+    ]
+
+    func syncRemoteProductsAndAcknowledgeCoveredProductPriceFieldChanges(
+        payloads: [ProductPriceManualPushPayload],
+        ownerUserID: UUID,
+        remote: any SupabaseProductPriceManualPushRemoteAccessing,
+        context: ModelContext
+    ) async throws -> Int {
+        guard !payloads.isEmpty else { return 0 }
+
+        let owner = ownerUserID.uuidString.lowercased()
+        let productIDs = Set(payloads.map { $0.productID.uuidString.lowercased() })
+        let productsByRemoteID = Dictionary(
+            try context.fetch(FetchDescriptor<Product>())
+                .compactMap { product -> (String, Product)? in
+                    guard let remoteID = product.remoteID?.uuidString.lowercased() else { return nil }
+                    return (remoteID, product)
+                },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let timestamp = Date()
+        var acknowledged = 0
+
+        for change in try pendingProductPriceOnlyChanges(owner: owner, context: context) {
+            guard isProductPriceOnlyChange(change),
+                  let remoteID = change.entityRemoteID?.uuidString.lowercased(),
+                  productIDs.contains(remoteID),
+                  let product = productsByRemoteID[remoteID],
+                  let productRemoteID = product.remoteID,
+                  isCoveredByLinkedProductPrice(change, product: product),
+                  let payload = productUpdatePayload(for: change, product: product) else {
+                continue
+            }
+            let updated = try await remote.updateProduct(id: productRemoteID, payload: payload)
+            guard updated.id == productRemoteID,
+                  updated.ownerUserID == ownerUserID,
+                  remoteProductMatchesPriceFields(updated, change: change, product: product) else {
+                throw ProductPriceManualPushError.network(message: "product price mirror verification failed")
+            }
+            product.remoteUpdatedAt = SupabaseRemoteDateParser.parse(updated.updatedAt)
+            product.remoteDeletedAt = SupabaseRemoteDateParser.parse(updated.deletedAt)
+            change.status = .acknowledged
+            change.updatedAt = timestamp
+            acknowledged += 1
+        }
+
+        if acknowledged > 0 {
+            do {
+                try context.save()
+            } catch {
+                context.rollback()
+                throw error
+            }
+        }
+        return acknowledged
+    }
+
+    private func pendingProductPriceOnlyChanges(
+        owner: String,
+        context: ModelContext
+    ) throws -> [LocalPendingChange] {
+        let productKind = LocalPendingChangeEntityKind.product.rawValue
+        let pendingStatus = LocalPendingChangeStatus.pending.rawValue
+        let descriptor = FetchDescriptor<LocalPendingChange>(
+            predicate: #Predicate<LocalPendingChange> { change in
+                change.ownerUserID == owner
+                    && change.entityKindRaw == productKind
+                    && change.statusRaw == pendingStatus
+            },
+            sortBy: [SortDescriptor(\.updatedAt, order: .forward)]
+        )
+        return try context.fetch(descriptor).filter(isProductPriceOnlyChange)
+    }
+
+    private func isProductPriceOnlyChange(_ change: LocalPendingChange) -> Bool {
+        let fields = change.changedFields.map {
+            $0.replacingOccurrences(of: "_", with: "").lowercased()
+        }
+        guard !fields.isEmpty else { return false }
+        return fields.allSatisfy { field in
+            Self.productPriceFieldNames.contains(field)
+        }
+    }
+
+    private func isCoveredByLinkedProductPrice(_ change: LocalPendingChange, product: Product) -> Bool {
+        let fields = Set(change.changedFields.map {
+            $0.replacingOccurrences(of: "_", with: "").lowercased()
+        })
+        if fields.contains("purchaseprice"),
+           !isLatestLinkedPrice(product: product, type: .purchase, amount: product.purchasePrice) {
+            return false
+        }
+        if fields.contains("retailprice"),
+           !isLatestLinkedPrice(product: product, type: .retail, amount: product.retailPrice) {
+            return false
+        }
+        return true
+    }
+
+    private func productUpdatePayload(
+        for change: LocalPendingChange,
+        product: Product
+    ) -> SupabaseManualPushProductUpdatePayload? {
+        let fields = Set(change.changedFields.map {
+            $0.replacingOccurrences(of: "_", with: "").lowercased()
+        })
+        let purchasePrice = fields.contains("purchaseprice") ? product.purchasePrice : nil
+        let retailPrice = fields.contains("retailprice") ? product.retailPrice : nil
+        guard purchasePrice != nil || retailPrice != nil else { return nil }
+        return SupabaseManualPushProductUpdatePayload(
+            barcode: nil,
+            itemNumber: nil,
+            productName: nil,
+            secondProductName: nil,
+            purchasePrice: purchasePrice,
+            retailPrice: retailPrice,
+            supplierID: nil,
+            categoryID: nil,
+            stockQuantity: nil
+        )
+    }
+
+    private func remoteProductMatchesPriceFields(
+        _ row: RemoteInventoryProductRow,
+        change: LocalPendingChange,
+        product: Product
+    ) -> Bool {
+        let fields = Set(change.changedFields.map {
+            $0.replacingOccurrences(of: "_", with: "").lowercased()
+        })
+        if fields.contains("purchaseprice"),
+           !canonicalAmountsMatch(row.purchasePrice, product.purchasePrice) {
+            return false
+        }
+        if fields.contains("retailprice"),
+           !canonicalAmountsMatch(row.retailPrice, product.retailPrice) {
+            return false
+        }
+        return true
+    }
+
+    private func canonicalAmountsMatch(_ lhs: Double?, _ rhs: Double?) -> Bool {
+        guard let lhs, let rhs else { return lhs == nil && rhs == nil }
+        return PriceCanonicalizer.canonicalAmount(from: lhs)?.value
+            == PriceCanonicalizer.canonicalAmount(from: rhs)?.value
+    }
+
+    private func isLatestLinkedPrice(product: Product, type: PriceType, amount: Double?) -> Bool {
+        guard let amount,
+              let expected = PriceCanonicalizer.canonicalAmount(from: amount)?.value else {
+            return false
+        }
+        let latest = product.priceHistory
+            .filter { $0.type == type }
+            .sorted {
+                if $0.effectiveAt != $1.effectiveAt {
+                    return $0.effectiveAt > $1.effectiveAt
+                }
+                return $0.createdAt > $1.createdAt
+            }
+            .first
+        guard let latest,
+              latest.remoteID != nil,
+              let actual = PriceCanonicalizer.canonicalAmount(from: latest.price)?.value else {
+            return false
+        }
+        return actual == expected
     }
 }
 

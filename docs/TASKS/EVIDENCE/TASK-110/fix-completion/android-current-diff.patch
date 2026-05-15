@@ -1,0 +1,269 @@
+diff --git a/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt b/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt
+index 21a4ff6..4306548 100644
+--- a/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt
++++ b/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt
+@@ -25,6 +25,7 @@ class HistorySessionPushCoordinator(
+     companion object {
+         const val DEBOUNCE_MS = 10_000L
+         private const val LOG_SAMPLE_LIMIT = 5
++        private const val REASON_LOGIN_FRESH_TICK = "login_fresh_tick"
+     }
+ 
+     private val dirtyHints = LinkedHashSet<Long>()
+@@ -46,7 +47,7 @@ class HistorySessionPushCoordinator(
+                     synchronized(dirtyLock) { dirtyHints.clear() }
+                     logger("cycle=push outcome=skip reason=skipped_signed_out")
+                 } else {
+-                    schedule("login_fresh_tick")
++                    schedule(REASON_LOGIN_FRESH_TICK)
+                 }
+             }
+         }
+@@ -111,37 +112,57 @@ class HistorySessionPushCoordinator(
+         var pendingSize = 0
+         var pendingUidSample = ""
+         var coalesced = hinted.size > 1
++        val fullReconciliation = reason == REASON_LOGIN_FRESH_TICK
++        val dirtySetMode = if (fullReconciliation) "full_reconcile" else "precise"
+         try {
+             var summary: HistorySessionBackupPushSummary? = null
++            var bootstrap: RemoteSessionBatchResult? = null
+             var emptyPending = false
+             var durationMs = 0L
+             flightOwner.withSessionFlight(SessionCloudFlightOwner.AutoPush) {
+-                val pending = repository.getPendingHistorySessionPushUids().toSet()
+-                pendingSize = pending.size
+-                pendingUidSample = pending.take(LOG_SAMPLE_LIMIT).joinToString(",")
+-                coalesced = coalesced || pending.size > 1
+-                if (pending.isEmpty()) {
+-                    emptyPending = true
+-                    return@withSessionFlight
+-                }
+                 durationMs = measureTimeMillis {
+-                    summary = repository
+-                        .pushHistorySessionsToRemote(remote, auth.userId, pending)
+-                        .getOrThrow()
++                    if (fullReconciliation) {
++                        bootstrap = repository.bootstrapHistorySessionsFromRemote(remote).getOrThrow()
++                        summary = repository
++                            .pushHistorySessionsToRemote(remote, auth.userId, candidateUids = null)
++                            .getOrThrow()
++                        pendingSize = summary?.attempted ?: 0
++                        coalesced = coalesced || pendingSize > 1
++                    } else {
++                        val pending = repository.getPendingHistorySessionPushUids().toSet()
++                        pendingSize = pending.size
++                        pendingUidSample = pending.take(LOG_SAMPLE_LIMIT).joinToString(",")
++                        coalesced = coalesced || pending.size > 1
++                        if (pending.isEmpty()) {
++                            emptyPending = true
++                        } else {
++                            summary = repository
++                                .pushHistorySessionsToRemote(remote, auth.userId, pending)
++                                .getOrThrow()
++                        }
++                    }
+                 }
+             }
+             if (emptyPending) {
+                 logger(
+                     "cycle=push outcome=ok reason=$reason sessionsAttempted=0 sessionsUploaded=0 " +
+-                        "skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=precise owner=auto_push"
++                        "skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=$dirtySetMode owner=auto_push"
+                 )
+                 return
+             }
+             val s = summary
++            val b = bootstrap
++            val bootstrapSummary = if (b != null) {
++                " bootstrapInserted=${b.inserted} bootstrapUpdated=${b.updated} " +
++                    "bootstrapSkipped=${b.skipped} bootstrapFailed=${b.failed} bootstrapUnsupported=${b.unsupported}"
++            } else {
++                ""
++            }
+             logger(
+                 "cycle=push outcome=ok reason=$reason durationMs=$durationMs " +
+                     "sessionsAttempted=${s?.attempted ?: pendingSize} sessionsUploaded=${s?.uploaded ?: 0} " +
+-                    "skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=precise owner=auto_push"
++                    "skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=$dirtySetMode owner=auto_push" +
++                    bootstrapSummary
+             )
+         } catch (cancelled: CancellationException) {
+             throw cancelled
+@@ -149,7 +170,7 @@ class HistorySessionPushCoordinator(
+             val classification = SyncErrorClassifier.classify(t)
+             logger(
+                 "cycle=push outcome=fail reason=$reason durationMs=0 sessionsAttempted=$pendingSize " +
+-                    "sessionsUploaded=0 skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=precise " +
++                    "sessionsUploaded=0 skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=$dirtySetMode " +
+                     "owner=auto_push errKind=${classification.category} httpStatus=${classification.httpStatus} " +
+                     "postgrestCode=${classification.postgrestCode} pendingUidSample=$pendingUidSample"
+             )
+diff --git a/app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt b/app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt
+index f8f91cb..df41a83 100644
+--- a/app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt
++++ b/app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt
+@@ -245,8 +245,11 @@ interface InventoryRepository {
+     // --- Backup sessioni cloud (task 023/040): Room-first, payload v1 reader + v2 writer ---
+ 
+     /**
+-     * Upload conservativo delle sole entry user-visible con bridge in stato “da inviare”
+-     * ([HistoryEntryRemoteRef.lastRemoteAppliedAt] assente o revisione locale avanti).
++     * Upload History verso cloud.
++     *
++     * - [candidateUids] non-null: push preciso delle sole entry dirty/pending indicate.
++     * - [candidateUids] null: full reconciliation user-visible, usata dopo bootstrap/manual sync
++     *   per riparare local-only/clean-stale già marcate synced ma assenti da Supabase.
+      */
+     suspend fun pushHistorySessionsToRemote(
+         remote: SessionBackupRemoteDataSource,
+@@ -2169,24 +2172,25 @@ class DefaultInventoryRepository(private val db: AppDatabase) :
+         }
+         try {
+             val candidates = mutableListOf<HistorySessionPushCandidate>()
+-            val candidateUidList = candidateUids
+-                ?.filter { it > 0L }
+-                ?.distinct()
+-                ?: historyDao.getUserVisibleSessionPushCandidateUids()
+-            val entries = if (candidateUidList.isEmpty()) {
+-                emptyList()
+-            } else {
+-                historyDao.getUserVisibleSnapshotByUids(candidateUidList)
+-            }
+-            val skippedAlreadySynced = if (candidateUids == null) {
+-                (historyDao.countUserVisible() - entries.size).coerceAtLeast(0)
++            val fullReconciliation = candidateUids == null
++            val entries = if (fullReconciliation) {
++                historyDao.getAllUserVisibleSnapshot()
+             } else {
+-                0
++                val candidateUidList = candidateUids
++                    .filter { it > 0L }
++                    .distinct()
++                if (candidateUidList.isEmpty()) {
++                    emptyList()
++                } else {
++                    historyDao.getUserVisibleSnapshotByUids(candidateUidList)
++                }
+             }
++            var skippedAlreadySynced = 0
+             for (entry in entries) {
+                 val remoteId = getOrCreateRemoteId(entry.uid) ?: continue
+                 val ref = remoteRefDao.getByHistoryEntryUid(entry.uid) ?: continue
+-                if (!historySessionNeedsPush(ref)) {
++                if (!fullReconciliation && !historySessionNeedsPush(ref)) {
++                    skippedAlreadySynced++
+                     continue
+                 }
+                 val payload = entry.toRemotePayload(remoteId)
+diff --git a/app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt b/app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt
+index b81f788..9de3377 100644
+--- a/app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt
++++ b/app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt
+@@ -5101,7 +5101,7 @@ class DefaultInventoryRepositoryTest {
+     }
+ 
+     @Test
+-    fun `023 push skips already synced sessions`() = runTest {
++    fun `023 precise push skips already synced sessions`() = runTest {
+         val uid = repository.insertHistoryEntry(buildMinimalHistoryEntry())
+         repository.getOrCreateRemoteId(uid)
+         val entry = repository.getHistoryEntryByUid(uid)!!
+@@ -5109,11 +5109,31 @@ class DefaultInventoryRepositoryTest {
+         val fake = FakeSessionBackupRemote023()
+         val owner = "00000000-0000-4000-8000-0000000000cc"
+         assertEquals(1, repository.pushHistorySessionsToRemote(fake, owner).getOrThrow().uploaded)
+-        val second = repository.pushHistorySessionsToRemote(fake, owner).getOrThrow()
++        val second = repository.pushHistorySessionsToRemote(fake, owner, setOf(uid)).getOrThrow()
+         assertEquals(0, second.uploaded)
+         assertEquals(1, second.skippedAlreadySynced)
+     }
+ 
++    @Test
++    fun `110 full reconciliation reuploads clean session with stable remote id`() = runTest {
++        val uid = repository.insertHistoryEntry(buildMinimalHistoryEntry("stale_clean.xlsx"))
++        val remoteId = repository.getOrCreateRemoteId(uid)
++        val entry = repository.getHistoryEntryByUid(uid)!!
++        repository.updateHistoryEntry(entry.copy(supplier = "CleanButRemoteMissing"))
++        val owner = "00000000-0000-4000-8000-000000000110"
++
++        val firstFake = FakeSessionBackupRemote023()
++        assertEquals(1, repository.pushHistorySessionsToRemote(firstFake, owner).getOrThrow().uploaded)
++        assertFalse(repository.getPendingHistorySessionPushUids().contains(uid))
++
++        val repairFake = FakeSessionBackupRemote023()
++        val repair = repository.pushHistorySessionsToRemote(repairFake, owner).getOrThrow()
++
++        assertEquals(1, repair.uploaded)
++        assertEquals(remoteId, repairFake.upsertedChunks.single().single().remoteId)
++        assertEquals("CleanButRemoteMissing", repairFake.upsertedChunks.single().single().supplier)
++    }
++
+     @Test
+     fun `040 push blocks overlay above soft cap and keeps session pending`() = runTest {
+         val tooLargeCell = "x".repeat(SESSION_OVERLAY_MAX_BYTES + 1)
+diff --git a/app/src/test/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinatorTest.kt b/app/src/test/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinatorTest.kt
+index 1e57483..c502160 100644
+--- a/app/src/test/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinatorTest.kt
++++ b/app/src/test/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinatorTest.kt
+@@ -51,6 +51,60 @@ class HistorySessionPushCoordinatorTest {
+         assertTrue(logs.any { it.contains("cycle=push outcome=ok") && it.contains("dirtySetMode=precise") })
+     }
+ 
++    @Test
++    fun `110 login fresh tick bootstraps then runs full reconciliation push`() = runTest {
++        val repository = mockk<InventoryRepository>()
++        val logs = mutableListOf<String>()
++        val owner = "00000000-0000-4000-8000-000000000110"
++        val auth = MutableStateFlow<AuthState>(
++            AuthState.SignedIn(
++                userId = owner,
++                email = "user@example.test"
++            )
++        )
++        coEvery { repository.bootstrapHistorySessionsFromRemote(any()) } returns Result.success(
++            RemoteSessionBatchResult(
++                inserted = 1,
++                updated = 0,
++                skipped = 0,
++                failed = 0,
++                unsupported = 0
++            )
++        )
++        coEvery {
++            repository.pushHistorySessionsToRemote(any(), owner, null)
++        } returns Result.success(
++            HistorySessionBackupPushSummary(
++                uploaded = 2,
++                skippedAlreadySynced = 0,
++                attempted = 2
++            )
++        )
++        val coordinator = HistorySessionPushCoordinator(
++            repository = repository,
++            remote = FakeConfiguredSessionRemote040(),
++            authFlow = auth,
++            flightOwner = SessionCloudSessionFlightOwner(logger = logs::add),
++            scope = backgroundScope,
++            debounceMs = 1L,
++            logger = logs::add
++        )
++
++        coordinator.runPushCycle("login_fresh_tick")
++
++        coVerify(exactly = 1) { repository.bootstrapHistorySessionsFromRemote(any()) }
++        coVerify(exactly = 1) { repository.pushHistorySessionsToRemote(any(), owner, null) }
++        coVerify(exactly = 0) { repository.getPendingHistorySessionPushUids() }
++        assertTrue(
++            logs.any {
++                it.contains("cycle=push outcome=ok") &&
++                    it.contains("dirtySetMode=full_reconcile") &&
++                    it.contains("bootstrapInserted=1") &&
++                    it.contains("sessionsUploaded=2")
++            }
++        )
++    }
++
+     @Test
+     fun `040 signed out push cycle skips without querying repository`() = runTest {
+         val repository = mockk<InventoryRepository>()

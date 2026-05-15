@@ -82,11 +82,9 @@ final class SupabaseAuthViewModel: ObservableObject {
                 sessionInfo = info
                 state = info.isExpired ? .signedOut : .signedIn
             } catch let error as SupabaseAuthServiceError {
-                sessionInfo = authService.currentSession
-                state = .failed(error)
+                await applySignInFailure(error, authService: authService)
             } catch {
-                sessionInfo = authService.currentSession
-                state = .failed(.unknown(message: String(describing: error)))
+                await applySignInFailure(.unknown(message: String(describing: error)), authService: authService)
             }
         }
     }
@@ -112,7 +110,15 @@ final class SupabaseAuthViewModel: ObservableObject {
     }
 
     func handleOpenURL(_ url: URL) -> Bool {
-        authService?.handleOpenURL(url) ?? false
+        guard url.scheme?.lowercased() == SupabaseOAuthRedirect.scheme.lowercased() else {
+            return false
+        }
+
+        if case .signingIn = state {
+            return true
+        }
+
+        return authService?.handleOpenURL(url) ?? false
     }
 
     private func startAuthListener() {
@@ -140,6 +146,55 @@ final class SupabaseAuthViewModel: ObservableObject {
         case .signedOut:
             sessionInfo = nil
             state = .signedOut
+        }
+    }
+
+    private func applySignInFailure(
+        _ error: SupabaseAuthServiceError,
+        authService: SupabaseAuthService
+    ) async {
+        if let currentSession = await recoveredSessionAfterSignInFailure(error, authService: authService) {
+            sessionInfo = currentSession
+            state = .signedIn
+            return
+        }
+
+        sessionInfo = authService.currentSession
+        state = .failed(error)
+    }
+
+    private func recoveredSessionAfterSignInFailure(
+        _ error: SupabaseAuthServiceError,
+        authService: SupabaseAuthService
+    ) async -> SupabaseAuthSessionInfo? {
+        if let currentSession = authService.currentSession, !currentSession.isExpired {
+            return currentSession
+        }
+
+        guard shouldWaitForPostOAuthSession(error) else {
+            return nil
+        }
+
+        for _ in 0..<10 {
+            if Task.isCancelled {
+                return nil
+            }
+
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if let currentSession = authService.currentSession, !currentSession.isExpired {
+                return currentSession
+            }
+        }
+
+        return nil
+    }
+
+    private func shouldWaitForPostOAuthSession(_ error: SupabaseAuthServiceError) -> Bool {
+        switch error {
+        case .sessionMissing, .callbackFailed, .unknown:
+            return true
+        case .configMissing, .invalidConfig, .oauthCancelled:
+            return false
         }
     }
 }

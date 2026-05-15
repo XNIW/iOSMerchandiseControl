@@ -1,0 +1,916 @@
+diff --git a/app/src/main/java/com/example/merchandisecontrolsplitview/data/AppDatabase.kt b/app/src/main/java/com/example/merchandisecontrolsplitview/data/AppDatabase.kt
+index 1dc8aba..b985e88 100644
+--- a/app/src/main/java/com/example/merchandisecontrolsplitview/data/AppDatabase.kt
++++ b/app/src/main/java/com/example/merchandisecontrolsplitview/data/AppDatabase.kt
+@@ -28,7 +28,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
+         SyncEventOutboxEntry::class
+     ],
+     views = [ProductPriceSummary::class],
+-    version = 16,
++    version = 17,
+     exportSchema = true
+ )
+ @TypeConverters(HistoryEntryConverters::class)
+@@ -350,6 +350,13 @@ abstract class AppDatabase : RoomDatabase() {
+             }
+         }
+ 
++        // 16 -> 17: tombstone locale History per propagare delete cloud.
++        val MIGRATION_16_17 = object : Migration(16, 17) {
++            override fun migrate(db: SupportSQLiteDatabase) {
++                db.execSQL("ALTER TABLE history_entries ADD COLUMN deletedAt TEXT")
++            }
++        }
++
+         fun getDatabase(context: Context): AppDatabase =
+             INSTANCE ?: synchronized(this) {
+                 INSTANCE ?: Room.databaseBuilder(
+@@ -372,7 +379,8 @@ abstract class AppDatabase : RoomDatabase() {
+                         MIGRATION_12_13,
+                         MIGRATION_13_14,
+                         MIGRATION_14_15,
+-                        MIGRATION_15_16
++                        MIGRATION_15_16,
++                        MIGRATION_16_17
+                     )
+                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
+                     .build().also { INSTANCE = it }
+diff --git a/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistoryEntry.kt b/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistoryEntry.kt
+index 0f478e6..dd9bda7 100644
+--- a/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistoryEntry.kt
++++ b/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistoryEntry.kt
+@@ -22,7 +22,8 @@ data class HistoryEntry(
+     val paymentTotal: Double = 0.0,
+     val missingItems: Int = 0,
+     val totalItems: Int = 0,
+-    val isManualEntry: Boolean = false
++    val isManualEntry: Boolean = false,
++    val deletedAt: String? = null
+ )
+ 
+ data class HistoryEntryListItem(
+@@ -38,5 +39,6 @@ data class HistoryEntryListItem(
+     val paymentTotal: Double = 0.0,
+     val missingItems: Int = 0,
+     val totalItems: Int = 0,
+-    val isManualEntry: Boolean = false
++    val isManualEntry: Boolean = false,
++    val deletedAt: String? = null
+ )
+diff --git a/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistoryEntryDao.kt b/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistoryEntryDao.kt
+index 7ff1fdd..397350b 100644
+--- a/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistoryEntryDao.kt
++++ b/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistoryEntryDao.kt
+@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
+ internal const val USER_VISIBLE_HISTORY_WHERE_CLAUSE = """
+     id NOT LIKE 'APPLY_IMPORT_%'
+     AND id NOT LIKE 'FULL_IMPORT_%'
++    AND (deletedAt IS NULL OR syncStatus = 'NOT_ATTEMPTED')
+ """
+ 
+ @Dao
+@@ -21,7 +22,7 @@ interface HistoryEntryDao {
+     @Query(
+         """
+         SELECT uid, id, displayName, timestamp, supplier, category, wasExported, syncStatus,
+-               orderTotal, paymentTotal, missingItems, totalItems, isManualEntry
++               orderTotal, paymentTotal, missingItems, totalItems, isManualEntry, deletedAt
+         FROM history_entries
+         WHERE """ +
+             USER_VISIBLE_HISTORY_WHERE_CLAUSE +
+@@ -44,7 +45,7 @@ interface HistoryEntryDao {
+     @Query(
+         """
+         SELECT uid, id, displayName, timestamp, supplier, category, wasExported, syncStatus,
+-               orderTotal, paymentTotal, missingItems, totalItems, isManualEntry
++               orderTotal, paymentTotal, missingItems, totalItems, isManualEntry, deletedAt
+         FROM history_entries
+         WHERE timestamp >= :startDate AND timestamp <= :endDate
+           AND """ +
+@@ -101,6 +102,39 @@ interface HistoryEntryDao {
+     )
+     suspend fun getUserVisibleSnapshotByUids(uids: List<Long>): List<HistoryEntry>
+ 
++    @Query(
++        """
++        SELECT h.*
++        FROM history_entries h
++        LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid
++        WHERE h.id NOT LIKE 'APPLY_IMPORT_%'
++          AND h.id NOT LIKE 'FULL_IMPORT_%'
++          AND (
++            h.deletedAt IS NULL
++            OR r.localChangeRevision > r.lastSyncedLocalRevision
++          )
++        ORDER BY h.timestamp DESC
++        """
++    )
++    suspend fun getHistorySessionPushSnapshot(): List<HistoryEntry>
++
++    @Query(
++        """
++        SELECT h.*
++        FROM history_entries h
++        LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid
++        WHERE h.uid IN (:uids)
++          AND h.id NOT LIKE 'APPLY_IMPORT_%'
++          AND h.id NOT LIKE 'FULL_IMPORT_%'
++          AND (
++            h.deletedAt IS NULL
++            OR r.localChangeRevision > r.lastSyncedLocalRevision
++          )
++        ORDER BY h.timestamp DESC
++        """
++    )
++    suspend fun getHistorySessionPushSnapshotByUids(uids: List<Long>): List<HistoryEntry>
++
+     @Query(
+         """
+         SELECT h.uid
+diff --git a/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt b/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt
+index 21a4ff6..4306548 100644
+--- a/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt
++++ b/app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt
+@@ -25,6 +25,7 @@ class HistorySessionPushCoordinator(
+     companion object {
+         const val DEBOUNCE_MS = 10_000L
+         private const val LOG_SAMPLE_LIMIT = 5
++        private const val REASON_LOGIN_FRESH_TICK = "login_fresh_tick"
+     }
+ 
+     private val dirtyHints = LinkedHashSet<Long>()
+@@ -46,7 +47,7 @@ class HistorySessionPushCoordinator(
+                     synchronized(dirtyLock) { dirtyHints.clear() }
+                     logger("cycle=push outcome=skip reason=skipped_signed_out")
+                 } else {
+-                    schedule("login_fresh_tick")
++                    schedule(REASON_LOGIN_FRESH_TICK)
+                 }
+             }
+         }
+@@ -111,37 +112,57 @@ class HistorySessionPushCoordinator(
+         var pendingSize = 0
+         var pendingUidSample = ""
+         var coalesced = hinted.size > 1
++        val fullReconciliation = reason == REASON_LOGIN_FRESH_TICK
++        val dirtySetMode = if (fullReconciliation) "full_reconcile" else "precise"
+         try {
+             var summary: HistorySessionBackupPushSummary? = null
++            var bootstrap: RemoteSessionBatchResult? = null
+             var emptyPending = false
+             var durationMs = 0L
+             flightOwner.withSessionFlight(SessionCloudFlightOwner.AutoPush) {
+-                val pending = repository.getPendingHistorySessionPushUids().toSet()
+-                pendingSize = pending.size
+-                pendingUidSample = pending.take(LOG_SAMPLE_LIMIT).joinToString(",")
+-                coalesced = coalesced || pending.size > 1
+-                if (pending.isEmpty()) {
+-                    emptyPending = true
+-                    return@withSessionFlight
+-                }
+                 durationMs = measureTimeMillis {
+-                    summary = repository
+-                        .pushHistorySessionsToRemote(remote, auth.userId, pending)
+-                        .getOrThrow()
++                    if (fullReconciliation) {
++                        bootstrap = repository.bootstrapHistorySessionsFromRemote(remote).getOrThrow()
++                        summary = repository
++                            .pushHistorySessionsToRemote(remote, auth.userId, candidateUids = null)
++                            .getOrThrow()
++                        pendingSize = summary?.attempted ?: 0
++                        coalesced = coalesced || pendingSize > 1
++                    } else {
++                        val pending = repository.getPendingHistorySessionPushUids().toSet()
++                        pendingSize = pending.size
++                        pendingUidSample = pending.take(LOG_SAMPLE_LIMIT).joinToString(",")
++                        coalesced = coalesced || pending.size > 1
++                        if (pending.isEmpty()) {
++                            emptyPending = true
++                        } else {
++                            summary = repository
++                                .pushHistorySessionsToRemote(remote, auth.userId, pending)
++                                .getOrThrow()
++                        }
++                    }
+                 }
+             }
+             if (emptyPending) {
+                 logger(
+                     "cycle=push outcome=ok reason=$reason sessionsAttempted=0 sessionsUploaded=0 " +
+-                        "skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=precise owner=auto_push"
++                        "skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=$dirtySetMode owner=auto_push"
+                 )
+                 return
+             }
+             val s = summary
++            val b = bootstrap
++            val bootstrapSummary = if (b != null) {
++                " bootstrapInserted=${b.inserted} bootstrapUpdated=${b.updated} " +
++                    "bootstrapSkipped=${b.skipped} bootstrapFailed=${b.failed} bootstrapUnsupported=${b.unsupported}"
++            } else {
++                ""
++            }
+             logger(
+                 "cycle=push outcome=ok reason=$reason durationMs=$durationMs " +
+                     "sessionsAttempted=${s?.attempted ?: pendingSize} sessionsUploaded=${s?.uploaded ?: 0} " +
+-                    "skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=precise owner=auto_push"
++                    "skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=$dirtySetMode owner=auto_push" +
++                    bootstrapSummary
+             )
+         } catch (cancelled: CancellationException) {
+             throw cancelled
+@@ -149,7 +170,7 @@ class HistorySessionPushCoordinator(
+             val classification = SyncErrorClassifier.classify(t)
+             logger(
+                 "cycle=push outcome=fail reason=$reason durationMs=0 sessionsAttempted=$pendingSize " +
+-                    "sessionsUploaded=0 skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=precise " +
++                    "sessionsUploaded=0 skippedDirtyLocal=0 coalesced=$coalesced dirtySetMode=$dirtySetMode " +
+                     "owner=auto_push errKind=${classification.category} httpStatus=${classification.httpStatus} " +
+                     "postgrestCode=${classification.postgrestCode} pendingUidSample=$pendingUidSample"
+             )
+diff --git a/app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt b/app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt
+index f8f91cb..3885c64 100644
+--- a/app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt
++++ b/app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt
+@@ -245,8 +245,11 @@ interface InventoryRepository {
+     // --- Backup sessioni cloud (task 023/040): Room-first, payload v1 reader + v2 writer ---
+ 
+     /**
+-     * Upload conservativo delle sole entry user-visible con bridge in stato “da inviare”
+-     * ([HistoryEntryRemoteRef.lastRemoteAppliedAt] assente o revisione locale avanti).
++     * Upload History verso cloud.
++     *
++     * - [candidateUids] non-null: push preciso delle sole entry dirty/pending indicate.
++     * - [candidateUids] null: full reconciliation user-visible, usata dopo bootstrap/manual sync
++     *   per riparare local-only/clean-stale già marcate synced ma assenti da Supabase.
+      */
+     suspend fun pushHistorySessionsToRemote(
+         remote: SessionBackupRemoteDataSource,
+@@ -473,6 +476,9 @@ class DefaultInventoryRepository(private val db: AppDatabase) :
+     private val _remoteAppliedProductIds = MutableSharedFlow<Set<Long>>(extraBufferCapacity = 64)
+     override val remoteAppliedProductIds: Flow<Set<Long>> = _remoteAppliedProductIds.asSharedFlow()
+ 
++    private fun historyTombstoneTimestamp(): String =
++        LocalDateTime.now().format(tSFMT)
++
+     @Volatile
+     var onHistorySessionPayloadChanged: ((Long) -> Unit)? = null
+ 
+@@ -1013,8 +1019,33 @@ class DefaultInventoryRepository(private val db: AppDatabase) :
+ 
+     override suspend fun deleteHistoryEntry(entry: HistoryEntry) = withContext(Dispatchers.IO) {
+         db.withTransaction {
+-            remoteRefDao.deleteByHistoryEntryUid(entry.uid)
+-            historyDao.delete(entry)
++            val existingRemoteId = remoteRefDao.getByHistoryEntryUid(entry.uid)?.remoteId
++            val remoteId = existingRemoteId ?: run {
++                historyDao.getByUid(entry.uid) ?: return@withTransaction
++                val inserted = remoteRefDao.insert(
++                    HistoryEntryRemoteRef(
++                        historyEntryUid = entry.uid,
++                        remoteId = java.util.UUID.randomUUID().toString()
++                    )
++                )
++                if (inserted > 0L) {
++                    remoteRefDao.getByHistoryEntryUid(entry.uid)?.remoteId
++                } else {
++                    remoteRefDao.getByHistoryEntryUid(entry.uid)?.remoteId
++                }
++            }
++            if (remoteId == null) {
++                historyDao.delete(entry)
++                return@withTransaction
++            }
++            val tombstone = historyTombstoneTimestamp()
++            historyDao.update(
++                entry.copy(
++                    deletedAt = tombstone,
++                    syncStatus = SyncStatus.NOT_ATTEMPTED
++                )
++            )
++            remoteRefDao.incrementLocalRevision(entry.uid)
+         }
+     }
+     // ⬇️ in DefaultInventoryRepository, aggiungi l'implementazione:
+@@ -1134,6 +1165,27 @@ class DefaultInventoryRepository(private val db: AppDatabase) :
+         val overlayState = buildOverlayStateForPayload(payload)
+         val existingRef = remoteRefDao.getByRemoteId(payload.remoteId)
+         if (existingRef != null) {
++            if (payload.deletedAt != null) {
++                val existingEntry = historyDao.getByUid(existingRef.historyEntryUid)
++                    ?: return RemoteSessionApplyOutcome.Failed(
++                        IllegalStateException("Bridge esiste ma HistoryEntry uid=${existingRef.historyEntryUid} mancante")
++                    )
++                if (existingEntry.deletedAt != payload.deletedAt) {
++                    historyDao.update(
++                        existingEntry.copy(
++                            deletedAt = payload.deletedAt,
++                            syncStatus = SyncStatus.SYNCED_SUCCESSFULLY
++                        )
++                    )
++                }
++                remoteRefDao.updateRemoteApplyState(
++                    uid = existingRef.historyEntryUid,
++                    rev = existingRef.localChangeRevision,
++                    appliedAt = System.currentTimeMillis(),
++                    fingerprint = fp
++                )
++                return RemoteSessionApplyOutcome.Updated
++            }
+             // Policy anti-overwrite (task 023): mai applicare inbound se ci sono modifiche payload
+             // non ancora sincronizzate verso remoto o consolidate via apply precedente.
+             if (existingRef.localChangeRevision > existingRef.lastSyncedLocalRevision) {
+@@ -1192,7 +1244,8 @@ class DefaultInventoryRepository(private val db: AppDatabase) :
+                     totalItems = refreshedLocalState?.totalItems ?: existingEntry.totalItems,
+                     orderTotal = refreshedLocalState?.orderTotal ?: existingEntry.orderTotal,
+                     paymentTotal = refreshedLocalState?.paymentTotal ?: existingEntry.paymentTotal,
+-                    missingItems = refreshedLocalState?.missingItems ?: existingEntry.missingItems
++                    missingItems = refreshedLocalState?.missingItems ?: existingEntry.missingItems,
++                    deletedAt = null
+                 )
+             )
+             // Allinea la revisione: dopo l'apply remoto l'entry è di nuovo allineata.
+@@ -1204,6 +1257,9 @@ class DefaultInventoryRepository(private val db: AppDatabase) :
+             )
+             return RemoteSessionApplyOutcome.Updated
+         }
++        if (payload.deletedAt != null) {
++            return RemoteSessionApplyOutcome.Skipped
++        }
+         // Insert path: remoteId sconosciuto → nuova entry + bridge con sync state inizializzato.
+         val localState = when (overlayState) {
+             is OverlayApplyState.Valid -> overlayState.localState
+@@ -1224,7 +1280,8 @@ class DefaultInventoryRepository(private val db: AppDatabase) :
+             totalItems = localState.totalItems,
+             orderTotal = localState.orderTotal,
+             paymentTotal = localState.paymentTotal,
+-            missingItems = localState.missingItems
++            missingItems = localState.missingItems,
++            deletedAt = null
+         )
+         val newUid = historyDao.insert(newEntry)
+         if (newUid <= 0L) {
+@@ -2169,24 +2226,25 @@ class DefaultInventoryRepository(private val db: AppDatabase) :
+         }
+         try {
+             val candidates = mutableListOf<HistorySessionPushCandidate>()
+-            val candidateUidList = candidateUids
+-                ?.filter { it > 0L }
+-                ?.distinct()
+-                ?: historyDao.getUserVisibleSessionPushCandidateUids()
+-            val entries = if (candidateUidList.isEmpty()) {
+-                emptyList()
+-            } else {
+-                historyDao.getUserVisibleSnapshotByUids(candidateUidList)
+-            }
+-            val skippedAlreadySynced = if (candidateUids == null) {
+-                (historyDao.countUserVisible() - entries.size).coerceAtLeast(0)
++            val fullReconciliation = candidateUids == null
++            val entries = if (fullReconciliation) {
++                historyDao.getHistorySessionPushSnapshot()
+             } else {
+-                0
++                val candidateUidList = candidateUids
++                    .filter { it > 0L }
++                    .distinct()
++                if (candidateUidList.isEmpty()) {
++                    emptyList()
++                } else {
++                    historyDao.getHistorySessionPushSnapshotByUids(candidateUidList)
++                }
+             }
++            var skippedAlreadySynced = 0
+             for (entry in entries) {
+                 val remoteId = getOrCreateRemoteId(entry.uid) ?: continue
+                 val ref = remoteRefDao.getByHistoryEntryUid(entry.uid) ?: continue
+-                if (!historySessionNeedsPush(ref)) {
++                if (!fullReconciliation && !historySessionNeedsPush(ref)) {
++                    skippedAlreadySynced++
+                     continue
+                 }
+                 val payload = entry.toRemotePayload(remoteId)
+@@ -2212,7 +2270,6 @@ class DefaultInventoryRepository(private val db: AppDatabase) :
+                 }
+                 db.withTransaction {
+                     for (c in chunk) {
+-                        remoteRefDao.getByHistoryEntryUid(c.entry.uid) ?: continue
+                         val fp = c.payload.payloadFingerprint()
+                         remoteRefDao.updateRemoteApplyState(
+                             uid = c.entry.uid,
+@@ -2223,6 +2280,14 @@ class DefaultInventoryRepository(private val db: AppDatabase) :
+                             appliedAt = System.currentTimeMillis(),
+                             fingerprint = fp
+                         )
++                        val latestRef = remoteRefDao.getByHistoryEntryUid(c.entry.uid) ?: continue
++                        val latestEntry = historyDao.getByUid(c.entry.uid) ?: continue
++                        if (latestEntry.deletedAt != null &&
++                            latestEntry.deletedAt == c.entry.deletedAt &&
++                            latestRef.localChangeRevision == c.ref.localChangeRevision
++                        ) {
++                            historyDao.update(latestEntry.copy(syncStatus = SyncStatus.SYNCED_SUCCESSFULLY))
++                        }
+                     }
+                 }
+                 uploaded += chunk.size
+diff --git a/app/src/main/java/com/example/merchandisecontrolsplitview/data/SessionRemotePayload.kt b/app/src/main/java/com/example/merchandisecontrolsplitview/data/SessionRemotePayload.kt
+index 79bdad1..5d49a7e 100644
+--- a/app/src/main/java/com/example/merchandisecontrolsplitview/data/SessionRemotePayload.kt
++++ b/app/src/main/java/com/example/merchandisecontrolsplitview/data/SessionRemotePayload.kt
+@@ -34,7 +34,8 @@ data class SessionRemotePayload(
+     val isManualEntry: Boolean,
+     val data: List<List<String>>,
+     val displayName: String? = null,
+-    val sessionOverlay: SessionOverlay? = null
++    val sessionOverlay: SessionOverlay? = null,
++    val deletedAt: String? = null
+ )
+ 
+ @Serializable
+@@ -87,6 +88,7 @@ internal fun SessionRemotePayload.canonicalSessionPayloadString(): String =
+         append("|manual=").append(isManualEntry)
+         append("|data=").append(canonicalNestedStrings(data))
+         append("|overlay=").append(sessionOverlay?.canonicalString() ?: "null")
++        append("|deleted=").append(canonicalNullable(deletedAt))
+     }
+ 
+ internal fun SessionOverlay.canonicalString(): String =
+@@ -128,5 +130,6 @@ fun HistoryEntry.toRemotePayload(remoteId: String): SessionRemotePayload =
+             overlaySchema = SESSION_OVERLAY_SCHEMA,
+             editable = editable,
+             complete = complete
+-        )
++        ),
++        deletedAt = deletedAt
+     )
+diff --git a/app/src/main/java/com/example/merchandisecontrolsplitview/data/SharedSheetSessionRecord.kt b/app/src/main/java/com/example/merchandisecontrolsplitview/data/SharedSheetSessionRecord.kt
+index 88eca0d..c23b357 100644
+--- a/app/src/main/java/com/example/merchandisecontrolsplitview/data/SharedSheetSessionRecord.kt
++++ b/app/src/main/java/com/example/merchandisecontrolsplitview/data/SharedSheetSessionRecord.kt
+@@ -30,7 +30,10 @@ data class SharedSheetSessionRecord(
+     val ownerUserId: String? = null,
+     /** Opzionale: column server-side (task 010/012). */
+     @SerialName("updated_at")
+-    val updatedAt: String? = null
++    val updatedAt: String? = null,
++    /** Tombstone remoto per delete History cross-device. */
++    @SerialName("deleted_at")
++    val deletedAt: String? = null
+ )
+ 
+ /**
+@@ -48,7 +51,8 @@ data class SharedSheetSessionUpsertRow(
+     @SerialName("is_manual_entry") val isManualEntry: Boolean,
+     val data: List<List<String>>,
+     @SerialName("session_overlay") val sessionOverlay: SessionOverlay,
+-    @SerialName("owner_user_id") val ownerUserId: String
++    @SerialName("owner_user_id") val ownerUserId: String,
++    @SerialName("deleted_at") val deletedAt: String? = null
+ )
+ 
+ fun SessionRemotePayload.toSharedSheetSessionUpsertRow(ownerUserId: String): SharedSheetSessionUpsertRow =
+@@ -64,7 +68,8 @@ fun SessionRemotePayload.toSharedSheetSessionUpsertRow(ownerUserId: String): Sha
+         sessionOverlay = requireNotNull(sessionOverlay) {
+             "payload v2 writer requires session_overlay"
+         },
+-        ownerUserId = ownerUserId
++        ownerUserId = ownerUserId,
++        deletedAt = deletedAt
+     )
+ 
+ fun SharedSheetSessionRecord.toSessionRemotePayload(): SessionRemotePayload =
+@@ -77,5 +82,6 @@ fun SharedSheetSessionRecord.toSessionRemotePayload(): SessionRemotePayload =
+         category = category,
+         isManualEntry = isManualEntry,
+         data = data,
+-        sessionOverlay = sessionOverlay
++        sessionOverlay = sessionOverlay,
++        deletedAt = deletedAt
+     )
+diff --git a/app/src/main/java/com/example/merchandisecontrolsplitview/ui/screens/HistoryScreen.kt b/app/src/main/java/com/example/merchandisecontrolsplitview/ui/screens/HistoryScreen.kt
+index e9de761..e4acdcf 100644
+--- a/app/src/main/java/com/example/merchandisecontrolsplitview/ui/screens/HistoryScreen.kt
++++ b/app/src/main/java/com/example/merchandisecontrolsplitview/ui/screens/HistoryScreen.kt
+@@ -973,15 +973,23 @@ private fun HistoryRow(
+                         .padding(end = spacing.md, bottom = spacing.sm),
+                     horizontalArrangement = Arrangement.spacedBy(spacing.sm)
+                 ) {
+-                    StatusIcon(
+-                        baseIcon = Icons.Default.Sync,
+-                        badgeType = when (entry.syncStatus) {
+-                            SyncStatus.SYNCED_SUCCESSFULLY -> BadgeType.SUCCESS
+-                            SyncStatus.ATTEMPTED_WITH_ERRORS -> BadgeType.WARNING
+-                            SyncStatus.NOT_ATTEMPTED -> BadgeType.NONE
+-                        },
+-                        contentDescription = stringResource(R.string.sync_status)
+-                    )
++                    if (entry.deletedAt != null) {
++                        StatusIcon(
++                            baseIcon = Icons.Default.Delete,
++                            badgeType = BadgeType.WARNING,
++                            contentDescription = stringResource(R.string.history_deleted_pending_status)
++                        )
++                    } else {
++                        StatusIcon(
++                            baseIcon = Icons.Default.Sync,
++                            badgeType = when (entry.syncStatus) {
++                                SyncStatus.SYNCED_SUCCESSFULLY -> BadgeType.SUCCESS
++                                SyncStatus.ATTEMPTED_WITH_ERRORS -> BadgeType.WARNING
++                                SyncStatus.NOT_ATTEMPTED -> BadgeType.NONE
++                            },
++                            contentDescription = stringResource(R.string.sync_status)
++                        )
++                    }
+                     StatusIcon(
+                         baseIcon = Icons.Default.FileDownload,
+                         badgeType = if (entry.wasExported) BadgeType.SUCCESS else BadgeType.NONE,
+diff --git a/app/src/main/res/values-en/strings.xml b/app/src/main/res/values-en/strings.xml
+index c027c42..c4ac6e4 100644
+--- a/app/src/main/res/values-en/strings.xml
++++ b/app/src/main/res/values-en/strings.xml
+@@ -218,6 +218,7 @@
+     <string name="date_label">Date:</string>
+     <string name="sync_status">Sync Status</string>
+     <string name="export_status">Export Status</string>
++    <string name="history_deleted_pending_status">Deleted pending sync</string>
+     <string name="generated_column_prefix">Column</string>
+     <string name="default_export_filename">products.xlsx</string>
+     <string name="supplier_id_prefix">ID:</string>
+diff --git a/app/src/main/res/values-es/strings.xml b/app/src/main/res/values-es/strings.xml
+index 0b6b59e..6939257 100644
+--- a/app/src/main/res/values-es/strings.xml
++++ b/app/src/main/res/values-es/strings.xml
+@@ -217,6 +217,7 @@
+     <string name="date_label">Fecha:</string>
+     <string name="sync_status">Estado de Sincronización</string>
+     <string name="export_status">Estado de Exportación</string>
++    <string name="history_deleted_pending_status">Eliminación pendiente de sincronización</string>
+     <string name="generated_column_prefix">Columna</string>
+     <string name="default_export_filename">productos.xlsx</string>
+     <string name="supplier_id_prefix">ID:</string>
+diff --git a/app/src/main/res/values-zh/strings.xml b/app/src/main/res/values-zh/strings.xml
+index 6fb3214..dc010b6 100644
+--- a/app/src/main/res/values-zh/strings.xml
++++ b/app/src/main/res/values-zh/strings.xml
+@@ -217,6 +217,7 @@
+     <string name="date_label">日期：</string>
+     <string name="sync_status">同步状态</string>
+     <string name="export_status">导出状态</string>
++    <string name="history_deleted_pending_status">删除等待同步</string>
+     <string name="generated_column_prefix">列</string>
+     <string name="default_export_filename">products.xlsx</string>
+     <string name="supplier_id_prefix">ID：</string>
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index a87fb57..4489e90 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -223,6 +223,7 @@
+     <string name="date_label">Data:</string>
+     <string name="sync_status">Stato Sincronizzazione</string>
+     <string name="export_status">Stato Esportazione</string>
++    <string name="history_deleted_pending_status">Eliminazione in attesa di sincronizzazione</string>
+ 
+     <string name="generated_column_prefix">Colonna</string>
+ 
+diff --git a/app/src/test/java/com/example/merchandisecontrolsplitview/data/AppDatabaseMigrationTest.kt b/app/src/test/java/com/example/merchandisecontrolsplitview/data/AppDatabaseMigrationTest.kt
+index d1dce51..5edb271 100644
+--- a/app/src/test/java/com/example/merchandisecontrolsplitview/data/AppDatabaseMigrationTest.kt
++++ b/app/src/test/java/com/example/merchandisecontrolsplitview/data/AppDatabaseMigrationTest.kt
+@@ -180,7 +180,7 @@ class AppDatabaseMigrationTest {
+         val migrated = openMigratedDatabase(migratedName)
+         val fresh = openFreshDatabase(freshName)
+ 
+-        assertEquals("16", querySingleValue(migrated, "PRAGMA user_version"))
++        assertEquals("17", querySingleValue(migrated, "PRAGMA user_version"))
+ 
+         val product = migrated.productDao().findByBarcode("8050000000012")
+         assertNotNull(product)
+@@ -525,7 +525,7 @@ class AppDatabaseMigrationTest {
+         val migrated = openMigratedDatabase(migratedName)
+         val fresh = openFreshDatabase(freshName)
+ 
+-        assertEquals("16", querySingleValue(migrated, "PRAGMA user_version"))
++        assertEquals("17", querySingleValue(migrated, "PRAGMA user_version"))
+ 
+         val product = migrated.productDao().findByBarcode("8050000000077")
+         assertNotNull(product)
+@@ -681,7 +681,7 @@ class AppDatabaseMigrationTest {
+         val fresh = openFreshDatabase(freshName)
+ 
+         // Versione aggiornata allo schema corrente
+-        assertEquals("16", querySingleValue(migrated, "PRAGMA user_version"))
++        assertEquals("17", querySingleValue(migrated, "PRAGMA user_version"))
+ 
+         // La nuova tabella bridge è stata creata
+         assertTrue(tableExists(migrated, "history_entry_remote_refs"))
+@@ -932,7 +932,7 @@ class AppDatabaseMigrationTest {
+         val fresh = openFreshDatabase(freshName)
+ 
+         // Versione aggiornata allo schema Room corrente
+-        assertEquals("16", querySingleValue(migrated, "PRAGMA user_version"))
++        assertEquals("17", querySingleValue(migrated, "PRAGMA user_version"))
+ 
+         // L'indice unico su remoteId ora esiste
+         val bridgeIndexes = indexInfo(migrated, "history_entry_remote_refs")
+@@ -1116,7 +1116,7 @@ class AppDatabaseMigrationTest {
+         val fresh = openFreshDatabase(freshName)
+ 
+         // Versione aggiornata allo schema Room corrente
+-        assertEquals("16", querySingleValue(migrated, "PRAGMA user_version"))
++        assertEquals("17", querySingleValue(migrated, "PRAGMA user_version"))
+ 
+         // Schema bridge allineato con fresh install (schema Room corrente)
+         assertEquals(
+@@ -1573,6 +1573,59 @@ class AppDatabaseMigrationTest {
+         migrated.close()
+     }
+ 
++    @Test
++    fun `migration 16 to 17 adds history deletedAt tombstone column`() = runTest {
++        val dbName = "task110-migration-16-17.db"
++        createLegacyDatabase(dbName, version = 16) { db ->
++            db.execSQL(
++                """
++                CREATE TABLE IF NOT EXISTS history_entries(
++                    uid INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
++                    id TEXT NOT NULL,
++                    displayName TEXT,
++                    timestamp TEXT NOT NULL,
++                    data TEXT NOT NULL,
++                    editable TEXT NOT NULL,
++                    complete TEXT NOT NULL,
++                    supplier TEXT NOT NULL,
++                    category TEXT NOT NULL,
++                    wasExported INTEGER NOT NULL,
++                    syncStatus TEXT NOT NULL,
++                    orderTotal REAL NOT NULL,
++                    paymentTotal REAL NOT NULL,
++                    missingItems INTEGER NOT NULL,
++                    totalItems INTEGER NOT NULL,
++                    isManualEntry INTEGER NOT NULL
++                )
++                """.trimIndent()
++            )
++            db.execSQL(
++                """
++                INSERT INTO history_entries(
++                    uid, id, displayName, timestamp, data, editable, complete,
++                    supplier, category, wasExported, syncStatus, orderTotal,
++                    paymentTotal, missingItems, totalItems, isManualEntry
++                ) VALUES (
++                    1, 'task110.xlsx', 'Task 110', '2026-05-15 14:00:00',
++                    '[["barcode"]]', '[[""]]', '[false]', '', '', 0,
++                    'NOT_ATTEMPTED', 0, 0, 0, 0, 0
++                )
++                """.trimIndent()
++            )
++        }
++
++        val migrated = openSupportMigratedDatabase(dbName, targetVersion = 17) { database, oldVersion, newVersion ->
++            assertEquals(16, oldVersion)
++            assertEquals(17, newVersion)
++            AppDatabase.MIGRATION_16_17.migrate(database)
++        }
++
++        assertEquals("17", querySingleValue(migrated, "PRAGMA user_version"))
++        assertTrue(columnExists(migrated, "history_entries", "deletedAt"))
++        assertEquals(1, queryCount(migrated, "SELECT COUNT(*) FROM history_entries WHERE uid = 1 AND deletedAt IS NULL"))
++        migrated.close()
++    }
++
+     private fun openMigratedDatabase(name: String): AppDatabase =
+         openDatabase(name) {
+             addMigrations(
+@@ -1590,7 +1643,8 @@ class AppDatabaseMigrationTest {
+                 AppDatabase.MIGRATION_12_13,
+                 AppDatabase.MIGRATION_13_14,
+                 AppDatabase.MIGRATION_14_15,
+-                AppDatabase.MIGRATION_15_16
++                AppDatabase.MIGRATION_15_16,
++                AppDatabase.MIGRATION_16_17
+             )
+         }
+ 
+diff --git a/app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt b/app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt
+index b81f788..0abb3df 100644
+--- a/app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt
++++ b/app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt
+@@ -1789,17 +1789,26 @@ class DefaultInventoryRepositoryTest {
+     }
+ 
+     @Test
+-    fun `deleteHistoryEntry also removes the bridge row`() = runTest {
++    fun `deleteHistoryEntry marks tombstone and keeps bridge row for cloud push`() = runTest {
+         val uid = repository.insertHistoryEntry(buildMinimalHistoryEntry())
+         repository.getOrCreateRemoteId(uid) // crea il bridge
+ 
+         val entry = repository.getHistoryEntryByUid(uid)!!
+-        assertNotNull(repository.getRemoteRef(uid))
++        val refBefore = repository.getRemoteRef(uid)
++        assertNotNull(refBefore)
+ 
+         repository.deleteHistoryEntry(entry)
+ 
+-        assertNull(repository.getHistoryEntryByUid(uid))
+-        assertNull(repository.getRemoteRef(uid))
++        val deleted = repository.getHistoryEntryByUid(uid)
++        assertNotNull(deleted)
++        assertNotNull(deleted!!.deletedAt)
++        assertEquals(1, db.historyEntryDao().countUserVisible())
++        assertTrue(repository.getPendingHistorySessionPushUids().contains(uid))
++
++        val refAfter = repository.getRemoteRef(uid)
++        assertNotNull(refAfter)
++        assertEquals(refBefore!!.remoteId, refAfter!!.remoteId)
++        assertTrue(refAfter.localChangeRevision > refBefore.localChangeRevision)
+     }
+ 
+     @Test
+@@ -1869,7 +1878,8 @@ class DefaultInventoryRepositoryTest {
+         category: String = "RemoteCat",
+         isManualEntry: Boolean = false,
+         data: List<List<String>> = listOf(listOf("barcode", "qty"), listOf("111", "2")),
+-        sessionOverlay: SessionOverlay? = null
++        sessionOverlay: SessionOverlay? = null,
++        deletedAt: String? = null
+     ) = SessionRemotePayload(
+         remoteId = remoteId,
+         payloadVersion = payloadVersion,
+@@ -1879,7 +1889,8 @@ class DefaultInventoryRepositoryTest {
+         category = category,
+         isManualEntry = isManualEntry,
+         data = data,
+-        sessionOverlay = sessionOverlay
++        sessionOverlay = sessionOverlay,
++        deletedAt = deletedAt
+     )
+ 
+     @Test
+@@ -1956,6 +1967,38 @@ class DefaultInventoryRepositoryTest {
+         assertEquals(ref.historyEntryUid, entry.uid)
+     }
+ 
++    @Test
++    fun `110 applyRemoteSessionPayload applies remote tombstone to existing entry`() = runTest {
++        val remoteId = java.util.UUID.randomUUID().toString()
++        repository.applyRemoteSessionPayload(remotePayload(remoteId = remoteId, supplier = "Active"))
++        val ref = db.historyEntryRemoteRefDao().getByRemoteId(remoteId)!!
++
++        val outcome = repository.applyRemoteSessionPayload(
++            remotePayload(
++                remoteId = remoteId,
++                supplier = "DeletedRemote",
++                deletedAt = "2026-05-15 14:00:00"
++            )
++        )
++
++        assertEquals(RemoteSessionApplyOutcome.Updated, outcome)
++        val entry = repository.getHistoryEntryByUid(ref.historyEntryUid)!!
++        assertEquals("2026-05-15 14:00:00", entry.deletedAt)
++        assertEquals(0, db.historyEntryDao().countUserVisible())
++        val updatedRef = db.historyEntryRemoteRefDao().getByRemoteId(remoteId)!!
++        assertEquals(updatedRef.localChangeRevision, updatedRef.lastSyncedLocalRevision)
++    }
++
++    @Test
++    fun `110 applyRemoteSessionPayload skips unknown remote tombstone`() = runTest {
++        val outcome = repository.applyRemoteSessionPayload(
++            remotePayload(deletedAt = "2026-05-15 14:01:00")
++        )
++
++        assertEquals(RemoteSessionApplyOutcome.Skipped, outcome)
++        assertEquals(0, db.historyEntryDao().countUserVisible())
++    }
++
+     @Test
+     fun `applyRemoteSessionPayload returns UnsupportedVersion for unknown payloadVersion`() = runTest {
+         val payload = remotePayload().copy(payloadVersion = 99)
+@@ -5101,7 +5144,7 @@ class DefaultInventoryRepositoryTest {
+     }
+ 
+     @Test
+-    fun `023 push skips already synced sessions`() = runTest {
++    fun `023 precise push skips already synced sessions`() = runTest {
+         val uid = repository.insertHistoryEntry(buildMinimalHistoryEntry())
+         repository.getOrCreateRemoteId(uid)
+         val entry = repository.getHistoryEntryByUid(uid)!!
+@@ -5109,11 +5152,54 @@ class DefaultInventoryRepositoryTest {
+         val fake = FakeSessionBackupRemote023()
+         val owner = "00000000-0000-4000-8000-0000000000cc"
+         assertEquals(1, repository.pushHistorySessionsToRemote(fake, owner).getOrThrow().uploaded)
+-        val second = repository.pushHistorySessionsToRemote(fake, owner).getOrThrow()
++        val second = repository.pushHistorySessionsToRemote(fake, owner, setOf(uid)).getOrThrow()
+         assertEquals(0, second.uploaded)
+         assertEquals(1, second.skippedAlreadySynced)
+     }
+ 
++    @Test
++    fun `110 full reconciliation reuploads clean session with stable remote id`() = runTest {
++        val uid = repository.insertHistoryEntry(buildMinimalHistoryEntry("stale_clean.xlsx"))
++        val remoteId = repository.getOrCreateRemoteId(uid)
++        val entry = repository.getHistoryEntryByUid(uid)!!
++        repository.updateHistoryEntry(entry.copy(supplier = "CleanButRemoteMissing"))
++        val owner = "00000000-0000-4000-8000-000000000110"
++
++        val firstFake = FakeSessionBackupRemote023()
++        assertEquals(1, repository.pushHistorySessionsToRemote(firstFake, owner).getOrThrow().uploaded)
++        assertFalse(repository.getPendingHistorySessionPushUids().contains(uid))
++
++        val repairFake = FakeSessionBackupRemote023()
++        val repair = repository.pushHistorySessionsToRemote(repairFake, owner).getOrThrow()
++
++        assertEquals(1, repair.uploaded)
++        assertEquals(remoteId, repairFake.upsertedChunks.single().single().remoteId)
++        assertEquals("CleanButRemoteMissing", repairFake.upsertedChunks.single().single().supplier)
++    }
++
++    @Test
++    fun `110 push uploads deleted history session tombstone`() = runTest {
++        val uid = repository.insertHistoryEntry(buildMinimalHistoryEntry("delete_me.xlsx"))
++        val remoteId = repository.getOrCreateRemoteId(uid)
++        val entry = repository.getHistoryEntryByUid(uid)!!
++        repository.pushHistorySessionsToRemote(FakeSessionBackupRemote023(), "00000000-0000-4000-8000-000000000110")
++
++        repository.deleteHistoryEntry(entry)
++        val fake = FakeSessionBackupRemote023()
++        val summary = repository.pushHistorySessionsToRemote(
++            fake,
++            "00000000-0000-4000-8000-000000000110",
++            setOf(uid)
++        ).getOrThrow()
++
++        assertEquals(1, summary.uploaded)
++        val row = fake.upsertedChunks.single().single()
++        assertEquals(remoteId, row.remoteId)
++        assertNotNull(row.deletedAt)
++        assertFalse(repository.getPendingHistorySessionPushUids().contains(uid))
++        assertEquals(0, db.historyEntryDao().countUserVisible())
++    }
++
+     @Test
+     fun `040 push blocks overlay above soft cap and keeps session pending`() = runTest {
+         val tooLargeCell = "x".repeat(SESSION_OVERLAY_MAX_BYTES + 1)
+diff --git a/app/src/test/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinatorTest.kt b/app/src/test/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinatorTest.kt
+index 1e57483..c502160 100644
+--- a/app/src/test/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinatorTest.kt
++++ b/app/src/test/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinatorTest.kt
+@@ -51,6 +51,60 @@ class HistorySessionPushCoordinatorTest {
+         assertTrue(logs.any { it.contains("cycle=push outcome=ok") && it.contains("dirtySetMode=precise") })
+     }
+ 
++    @Test
++    fun `110 login fresh tick bootstraps then runs full reconciliation push`() = runTest {
++        val repository = mockk<InventoryRepository>()
++        val logs = mutableListOf<String>()
++        val owner = "00000000-0000-4000-8000-000000000110"
++        val auth = MutableStateFlow<AuthState>(
++            AuthState.SignedIn(
++                userId = owner,
++                email = "user@example.test"
++            )
++        )
++        coEvery { repository.bootstrapHistorySessionsFromRemote(any()) } returns Result.success(
++            RemoteSessionBatchResult(
++                inserted = 1,
++                updated = 0,
++                skipped = 0,
++                failed = 0,
++                unsupported = 0
++            )
++        )
++        coEvery {
++            repository.pushHistorySessionsToRemote(any(), owner, null)
++        } returns Result.success(
++            HistorySessionBackupPushSummary(
++                uploaded = 2,
++                skippedAlreadySynced = 0,
++                attempted = 2
++            )
++        )
++        val coordinator = HistorySessionPushCoordinator(
++            repository = repository,
++            remote = FakeConfiguredSessionRemote040(),
++            authFlow = auth,
++            flightOwner = SessionCloudSessionFlightOwner(logger = logs::add),
++            scope = backgroundScope,
++            debounceMs = 1L,
++            logger = logs::add
++        )
++
++        coordinator.runPushCycle("login_fresh_tick")
++
++        coVerify(exactly = 1) { repository.bootstrapHistorySessionsFromRemote(any()) }
++        coVerify(exactly = 1) { repository.pushHistorySessionsToRemote(any(), owner, null) }
++        coVerify(exactly = 0) { repository.getPendingHistorySessionPushUids() }
++        assertTrue(
++            logs.any {
++                it.contains("cycle=push outcome=ok") &&
++                    it.contains("dirtySetMode=full_reconcile") &&
++                    it.contains("bootstrapInserted=1") &&
++                    it.contains("sessionsUploaded=2")
++            }
++        )
++    }
++
+     @Test
+     fun `040 signed out push cycle skips without querying repository`() = runTest {
+         val repository = mockk<InventoryRepository>()

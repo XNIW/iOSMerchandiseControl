@@ -251,6 +251,10 @@ nonisolated struct SupabasePullApplyService: Sendable {
             throw SupabasePullApplyError.localDuplicateBarcode
         }
         try validateLocalInvariants(snapshot)
+        let pendingProductChanges = try pendingProductChanges(
+            context: context,
+            ownerUserID: accountGuard?.currentUserID
+        )
 
         var inserts: [SupabasePullApplyProductInsert] = []
         var updates: [SupabasePullApplyProductUpdate] = []
@@ -299,6 +303,14 @@ nonisolated struct SupabasePullApplyService: Sendable {
             if let localRemoteID = localProduct.remoteID,
                localRemoteID != payload.remoteID {
                 throw SupabasePullApplyError.previewStale
+            }
+
+            if hasPendingLocalProductChange(
+                payload: payload,
+                barcode: barcode,
+                pendingChanges: pendingProductChanges
+            ) {
+                continue
             }
 
             guard hasApplicableUpdate(payload: payload, local: localProduct, options: options) else {
@@ -469,6 +481,49 @@ nonisolated struct SupabasePullApplyService: Sendable {
             suppliersCreated: suppliersCreated,
             categoriesCreated: categoriesCreated
         )
+    }
+
+    private func pendingProductChanges(
+        context: ModelContext,
+        ownerUserID: UUID?
+    ) throws -> SupabasePullApplyPendingProductChanges {
+        guard let ownerUserID else {
+            return .empty
+        }
+        let owner = ownerUserID.uuidString.lowercased()
+        let productKind = LocalPendingChangeEntityKind.product.rawValue
+        let descriptor = FetchDescriptor<LocalPendingChange>(
+            predicate: #Predicate<LocalPendingChange> { change in
+                change.ownerUserID == owner && change.entityKindRaw == productKind
+            }
+        )
+        let activeChanges = try context.fetch(descriptor).filter { !$0.status.isTerminal }
+        return SupabasePullApplyPendingProductChanges(
+            logicalKeys: Set(activeChanges.map(\.logicalKey)),
+            remoteIDs: Set(activeChanges.compactMap(\.entityRemoteID))
+        )
+    }
+
+    private func hasPendingLocalProductChange(
+        payload: SyncPreviewProductApplyPayload,
+        barcode: String,
+        pendingChanges: SupabasePullApplyPendingProductChanges
+    ) -> Bool {
+        guard !pendingChanges.isEmpty else {
+            return false
+        }
+
+        let remoteID = payload.remoteID
+        if pendingChanges.remoteIDs.contains(remoteID) {
+            return true
+        }
+        let remoteKey = LocalPendingChangeLogicalKey.remoteEntity(kind: .product, remoteID: remoteID)
+        if pendingChanges.logicalKeys.contains(remoteKey) {
+            return true
+        }
+
+        let localKey = LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: barcode)
+        return pendingChanges.logicalKeys.contains(localKey)
     }
 
     func applyBatched(
@@ -1171,4 +1226,15 @@ nonisolated struct SupabasePullApplyService: Sendable {
             onProgress(progress)
         }
     }
+}
+
+nonisolated struct SupabasePullApplyPendingProductChanges {
+    let logicalKeys: Set<String>
+    let remoteIDs: Set<UUID>
+
+    var isEmpty: Bool {
+        logicalKeys.isEmpty && remoteIDs.isEmpty
+    }
+
+    static let empty = SupabasePullApplyPendingProductChanges(logicalKeys: [], remoteIDs: [])
 }

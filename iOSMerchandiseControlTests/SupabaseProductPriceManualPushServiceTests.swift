@@ -320,6 +320,159 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
     }
 
     @MainActor
+    func testVerifiedPricePushMirrorsProductPriceFieldsBeforeAcknowledgingCoveredProductChange() async throws {
+        let context = try makeContext()
+        let productID = uuid(201)
+        let owner = ownerID
+        let product = Product(
+            barcode: "TASK110_PRICE_ONLY",
+            remoteID: productID,
+            retailPrice: 34.56
+        )
+        context.insert(product)
+        let covered = LocalPendingChange(
+            ownerUserID: owner,
+            entityKind: .product,
+            operation: .update,
+            origin: .manualCatalogSave,
+            logicalKey: LocalPendingChangeLogicalKey.product(remoteID: productID, barcode: "TASK110_PRICE_ONLY"),
+            changedFields: ["retailPrice"],
+            entityRemoteID: productID
+        )
+        let notCovered = LocalPendingChange(
+            ownerUserID: owner,
+            entityKind: .product,
+            operation: .update,
+            origin: .manualCatalogSave,
+            logicalKey: LocalPendingChangeLogicalKey.product(remoteID: uuid(202), barcode: "TASK110_NAME"),
+            changedFields: ["productName"],
+            entityRemoteID: uuid(202)
+        )
+        context.insert(covered)
+        context.insert(notCovered)
+        try context.save()
+
+        let payload = ProductPriceManualPushPayload(
+            id: uuid(301),
+            ownerUserID: owner,
+            productID: productID,
+            type: "RETAIL",
+            price: 34.56,
+            priceCanonical: "34.56",
+            effectiveAt: "2026-05-15 20:00:00",
+            source: "TASK110",
+            note: nil,
+            createdAt: "2026-05-15 20:00:00"
+        )
+        context.insert(
+            ProductPrice(
+                remoteID: payload.id,
+                type: .retail,
+                price: 34.56,
+                effectiveAt: try date("2026-05-15 20:00:00"),
+                createdAt: try date("2026-05-15 20:00:00"),
+                product: product
+            )
+        )
+        try context.save()
+        let remote = MockProductPriceManualPushRemote(productUpdateOwnerUserID: owner)
+
+        let acknowledged = try await ProductPriceCoveredProductChangeReconciler()
+            .syncRemoteProductsAndAcknowledgeCoveredProductPriceFieldChanges(
+                payloads: [payload],
+                ownerUserID: owner,
+                remote: remote,
+                context: context
+            )
+        XCTAssertEqual(acknowledged, 1)
+        XCTAssertEqual(covered.status, .acknowledged)
+        XCTAssertEqual(notCovered.status, .pending)
+        let updates = await remote.updatedProducts()
+        XCTAssertEqual(updates.count, 1)
+        XCTAssertEqual(updates.first?.id, productID)
+        XCTAssertNil(updates.first?.payload.purchasePrice)
+        XCTAssertEqual(updates.first?.payload.retailPrice, 34.56)
+    }
+
+    @MainActor
+    func testCoveredProductPriceChangeRemainsPendingWhenRemoteProductMirrorCannotBeVerified() async throws {
+        let context = try makeContext()
+        let productID = uuid(201)
+        let product = Product(
+            barcode: "TASK110_PRICE_ONLY",
+            remoteID: productID,
+            retailPrice: 34.56
+        )
+        context.insert(product)
+        context.insert(
+            ProductPrice(
+                remoteID: uuid(301),
+                type: .retail,
+                price: 34.56,
+                effectiveAt: try date("2026-05-15 20:00:00"),
+                createdAt: try date("2026-05-15 20:00:00"),
+                product: product
+            )
+        )
+        let residual = LocalPendingChange(
+            ownerUserID: ownerID,
+            entityKind: .product,
+            operation: .update,
+            origin: .manualCatalogSave,
+            logicalKey: LocalPendingChangeLogicalKey.product(remoteID: productID, barcode: product.barcode),
+            changedFields: ["retailPrice"],
+            entityRemoteID: productID
+        )
+        context.insert(residual)
+        try context.save()
+        let payload = ProductPriceManualPushPayload(
+            id: uuid(301),
+            ownerUserID: ownerID,
+            productID: productID,
+            type: "RETAIL",
+            price: 34.56,
+            priceCanonical: "34.56",
+            effectiveAt: "2026-05-15 20:00:00",
+            source: "TASK110",
+            note: nil,
+            createdAt: "2026-05-15 20:00:00"
+        )
+        let remote = MockProductPriceManualPushRemote(
+            productUpdateOverride: RemoteInventoryProductRow(
+                id: productID,
+                ownerUserID: ownerID,
+                barcode: "TASK110_PRICE_ONLY",
+                itemNumber: nil,
+                productName: nil,
+                secondProductName: nil,
+                purchasePrice: nil,
+                retailPrice: 23.45,
+                supplierID: nil,
+                categoryID: nil,
+                stockQuantity: nil,
+                updatedAt: "2026-05-15T20:00:00Z",
+                deletedAt: nil
+            )
+        )
+
+        do {
+            _ = try await ProductPriceCoveredProductChangeReconciler()
+                .syncRemoteProductsAndAcknowledgeCoveredProductPriceFieldChanges(
+                    payloads: [payload],
+                    ownerUserID: ownerID,
+                    remote: remote,
+                    context: context
+                )
+            XCTFail("Expected product mirror mismatch to fail closed.")
+        } catch let error as ProductPriceManualPushError {
+            guard case .network = error else {
+                return XCTFail("Expected network verification failure, got \(error).")
+            }
+        }
+        XCTAssertEqual(residual.status, .pending)
+    }
+
+    @MainActor
     func testViewModelDoubleTapRunsSingleInsert() async throws {
         let context = try makeContextWithOnePrice()
         let remote = MockProductPriceManualPushRemote(
@@ -496,6 +649,7 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
             Supplier.self,
             ProductCategory.self,
             ProductPrice.self,
+            LocalPendingChange.self,
             SupabaseCatalogBaselineRun.self,
             SupabaseCatalogBaselineRecord.self
         ])
@@ -603,8 +757,11 @@ private actor MockProductPriceManualPushRemote: ProductPriceManualPushRemote {
     private var readBackRows: [RemoteInventoryProductPriceRow]
     private let insertError: Error?
     private let readBackError: Error?
+    private let productUpdateOverride: RemoteInventoryProductRow?
+    private let productUpdateOwnerUserID: UUID
     private let insertDelayNanoseconds: UInt64
     private let echoInsertedRowsToReadBack: Bool
+    private var productUpdates: [(id: UUID, payload: SupabaseManualPushProductUpdatePayload)] = []
 
     private(set) var insertCalls = 0
     private(set) var readBackCalls = 0
@@ -616,12 +773,16 @@ private actor MockProductPriceManualPushRemote: ProductPriceManualPushRemote {
         readBackRows: [RemoteInventoryProductPriceRow] = [],
         insertError: Error? = nil,
         readBackError: Error? = nil,
+        productUpdateOverride: RemoteInventoryProductRow? = nil,
+        productUpdateOwnerUserID: UUID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
         insertDelayNanoseconds: UInt64 = 0,
         echoInsertedRowsToReadBack: Bool = false
     ) {
         self.readBackRows = readBackRows
         self.insertError = insertError
         self.readBackError = readBackError
+        self.productUpdateOverride = productUpdateOverride
+        self.productUpdateOwnerUserID = productUpdateOwnerUserID
         self.insertDelayNanoseconds = insertDelayNanoseconds
         self.echoInsertedRowsToReadBack = echoInsertedRowsToReadBack
     }
@@ -670,5 +831,31 @@ private actor MockProductPriceManualPushRemote: ProductPriceManualPushRemote {
         }
         let end = min(to, filtered.count - 1)
         return Array(filtered[from...end])
+    }
+
+    func updateProduct(id: UUID, payload: SupabaseManualPushProductUpdatePayload) async throws -> RemoteInventoryProductRow {
+        productUpdates.append((id, payload))
+        if let productUpdateOverride {
+            return productUpdateOverride
+        }
+        return RemoteInventoryProductRow(
+            id: id,
+            ownerUserID: productUpdateOwnerUserID,
+            barcode: payload.barcode ?? "TASK110_PRICE_ONLY",
+            itemNumber: payload.itemNumber,
+            productName: payload.productName,
+            secondProductName: payload.secondProductName,
+            purchasePrice: payload.purchasePrice,
+            retailPrice: payload.retailPrice,
+            supplierID: payload.supplierID,
+            categoryID: payload.categoryID,
+            stockQuantity: payload.stockQuantity,
+            updatedAt: "2026-05-15T20:00:00Z",
+            deletedAt: nil
+        )
+    }
+
+    func updatedProducts() -> [(id: UUID, payload: SupabaseManualPushProductUpdatePayload)] {
+        productUpdates
     }
 }

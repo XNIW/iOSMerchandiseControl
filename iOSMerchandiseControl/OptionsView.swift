@@ -678,6 +678,11 @@ private struct SupabaseManualSyncReleaseCard: View {
         .onChange(of: authViewModel.isSignedIn) { _, _ in
             resetAfterAccountChange()
         }
+        .onChange(of: viewModel.presentationState.reviewSheet) { _, reviewSheet in
+            if reviewSheet == nil {
+                isReviewSheetPresented = false
+            }
+        }
         .onDisappear {
             activeRunTask?.cancel()
             activeRunTask = nil
@@ -872,10 +877,19 @@ private struct SupabaseManualSyncReleaseCard: View {
 
         activeRunTask?.cancel()
         activeRunTask = Task { @MainActor in
-            let directSync = actionID == .syncNow || actionID == .downloadCloudDatabase
+            let directSync = actionID == .syncNow || actionID == .checkCloud || actionID == .downloadCloudDatabase
             await viewModel.start(with: mode, syncHistoryAfterRun: directSync)
             if directSync {
-                await viewModel.applyStagedLocalChangesIfNeeded()
+                let hasPendingLocalWork = viewModel.privacySafeAggregatesSnapshot?.hasAnyPendingWork == true
+                if !hasPendingLocalWork {
+                    await viewModel.applyStagedLocalChangesIfNeeded()
+                }
+                await viewModel.prepareCatalogPushPlanForReview()
+                await viewModel.prepareProductPricePlansForReview()
+                if hasPendingLocalWork,
+                   viewModel.presentationState.reviewSheet != nil {
+                    isReviewSheetPresented = true
+                }
                 if !viewModel.isApplyingLocalChanges,
                    viewModel.presentationState.reviewSheet == nil {
                     isReviewSheetPresented = false

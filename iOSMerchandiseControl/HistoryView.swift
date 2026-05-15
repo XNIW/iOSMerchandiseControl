@@ -131,7 +131,9 @@ struct HistoryView: View {
     
     /// Applica i filtri (periodo + solo errori) alle entry.
     private var filteredEntries: [HistoryEntry] {
-        var result = entries
+        var result = entries.filter { entry in
+            entry.remoteDeletedAt == nil || entry.isHistorySessionDeletedPendingCloud
+        }
 
         let now = Date()
         let calendar = Calendar.current
@@ -166,8 +168,9 @@ struct HistoryView: View {
         }
 
         if showOnlyErrorEntries {
-            // Consideriamo "con errori" le entry marcate come attemptedWithErrors
-            result = result.filter { $0.syncStatus == .attemptedWithErrors }
+            result = result.filter {
+                $0.syncStatus == .attemptedWithErrors || $0.isHistorySessionDeletedPendingCloud
+            }
         }
 
         return result
@@ -242,6 +245,10 @@ struct HistoryView: View {
         entries.filter(\.isHistorySessionDirtyForCloud).count
     }
 
+    private var deletedPendingHistorySessionCount: Int {
+        entries.filter(\.isHistorySessionDeletedPendingCloud).count
+    }
+
     private var latestHistorySyncedAt: Date? {
         entries.compactMap(\.remoteUpdatedAt).max()
     }
@@ -252,6 +259,9 @@ struct HistoryView: View {
         }
         if historySessionSyncService == nil {
             return L("history.cloud.status.unavailable")
+        }
+        if deletedPendingHistorySessionCount > 0 {
+            return L("history.cloud.status.deleted_pending", deletedPendingHistorySessionCount)
         }
         if pendingHistorySessionCount > 0 {
             return L("history.cloud.status.pending", pendingHistorySessionCount)
@@ -269,6 +279,9 @@ struct HistoryView: View {
         if !supabaseAuthViewModel.isSignedIn || historySessionSyncService == nil {
             return "icloud.slash"
         }
+        if deletedPendingHistorySessionCount > 0 {
+            return "trash.badge.clock"
+        }
         if pendingHistorySessionCount > 0 {
             return "icloud.and.arrow.up"
         }
@@ -276,7 +289,7 @@ struct HistoryView: View {
     }
 
     private var historyCloudColor: Color {
-        if pendingHistorySessionCount > 0 {
+        if deletedPendingHistorySessionCount > 0 || pendingHistorySessionCount > 0 {
             return .orange
         }
         if isHistoryCloudAvailable {
@@ -389,7 +402,8 @@ struct HistoryView: View {
     // MARK: - Azioni
 
     private func deleteEntry(_ entry: HistoryEntry) {
-        context.delete(entry)
+        entry.markHistorySessionLocalDeletion()
+        recordHistoryDeletionPending(for: entry)
         do {
             try context.save()
         } catch {
@@ -404,7 +418,8 @@ struct HistoryView: View {
         for index in offsets {
             guard filteredEntries.indices.contains(index) else { continue }
             let entry = filteredEntries[index]
-            context.delete(entry)
+            entry.markHistorySessionLocalDeletion()
+            recordHistoryDeletionPending(for: entry)
         }
 
         do {
@@ -412,6 +427,22 @@ struct HistoryView: View {
         } catch {
             #if DEBUG
             print("Errore durante l'eliminazione della HistoryEntry: \(error)")
+            #endif
+        }
+    }
+
+    private func recordHistoryDeletionPending(for entry: HistoryEntry) {
+        guard let ownerUserID = supabaseAuthViewModel.sessionInfo?.userID else { return }
+        do {
+            _ = try LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
+                .recordHistorySessionChange(
+                    entry: entry,
+                    operation: .delete,
+                    changedFields: ["deleted_at"]
+                )
+        } catch {
+            #if DEBUG
+            print("Errore durante la registrazione delete pending History: \(error)")
             #endif
         }
     }
@@ -658,7 +689,7 @@ private struct HistoryRow: View {
             }
 
             HStack(alignment: .top, spacing: 8) {
-                HistoryStatusBadge(status: entry.syncStatus)
+                HistoryStatusBadge(status: entry.syncStatus, deletedPending: entry.isHistorySessionDeletedPendingCloud)
 
                 if entry.wasExported {
                     Label(L("history.exported"), systemImage: "square.and.arrow.up")
@@ -729,8 +760,12 @@ private struct HistoryRow: View {
 
 private struct HistoryStatusBadge: View {
     let status: HistorySyncStatus
+    let deletedPending: Bool
 
     private var title: String {
+        if deletedPending {
+            return L("history.status.deleted_pending")
+        }
         switch status {
         case .notAttempted:
             return L("history.status.not_attempted")
@@ -742,6 +777,9 @@ private struct HistoryStatusBadge: View {
     }
 
     private var systemName: String {
+        if deletedPending {
+            return "trash.badge.clock"
+        }
         switch status {
         case .notAttempted:
             return "arrow.triangle.2.circlepath"
@@ -753,6 +791,9 @@ private struct HistoryStatusBadge: View {
     }
 
     private var color: Color {
+        if deletedPending {
+            return .orange
+        }
         switch status {
         case .notAttempted:
             return .gray

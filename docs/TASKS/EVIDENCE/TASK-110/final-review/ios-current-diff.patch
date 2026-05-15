@@ -1,0 +1,815 @@
+diff --git a/docs/MASTER-PLAN.md b/docs/MASTER-PLAN.md
+index ed4340a..13feafc 100644
+--- a/docs/MASTER-PLAN.md
++++ b/docs/MASTER-PLAN.md
+@@ -4,9 +4,11 @@
+ iOSMerchandiseControl — app iOS per controllo merce e inventario
+ 
+ ## Obiettivo attuale
+-**ACTIVE — REVIEW TASK-109 / CHANGES_REQUIRED** *(review completa Codex eseguita; fix iOS mirato PASS build/test; DONE bloccato da app-auth mancante per validare History live non-empty)* — file task **`docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md`**; cartella evidence **`docs/TASKS/EVIDENCE/TASK-109/`**.
++**ACTIVE — TASK-110 BLOCKED / FIX / BLOCKED_APP_AUTH_IOS_MANUAL_LIVE** *(2026-05-15 13:45 -0400: FIX parziale completato; manual cross-platform live bloccato da iOS app-auth `sessionMissing`.)* — file task **`docs/TASKS/TASK-110-cross-platform-cloud-sync-consistency.md`**.
+ 
+-**TASK-108** (**DONE / Chiusura — PASS_WITH_NOTES**, `docs/TASKS/TASK-108-supabase-sync-unification-ios.md`) rimane **riferimento storico / artefatti review** — **non** viene trattato come garanzia che le promesse runtime (launch/foreground auto incremental History ecc.) restino soddisfatte dopo feedback operatore successivo alla chiusura; la remediation rientra in **TASK‑109 ACTIVE / REVIEW — CHANGES_REQUIRED**.
++**TASK-109 — BLOCKED / SOSPESO** *(override utente 2026-05-15: «User override 2026-05-15: sospeso per aprire un nuovo task prioritario su discrepanza sync cloud Android/iOS/Supabase per cronologia, catalogo e prezzi.»)* — file **`docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md`**; evidence storica **`docs/TASKS/EVIDENCE/TASK-109/`** — **non continuare** fino a ripresa esplicita; **non** marcare DONE.
++
++**TASK-108** (**DONE / Chiusura — PASS_WITH_NOTES**, `docs/TASKS/TASK-108-supabase-sync-unification-ios.md`) rimane **riferimento storico / artefatti review** — **non** viene trattato come garanzia runtime globale; follow‑up cross‑device coerente è ricollocato in **TASK‑110**; **TASK‑109** resta **BLOCKED / SOSPESO** (storico remediation iOS lifecycle/UX non ripreso senza decisione utente).
+ 
+ **TASK-108 chiusura documentale (snapshot pre‑TASK‑109)** — stato archiviato PASS_WITH_NOTES: conferma utente **2026-05-14 20:27 -0400**; review **`80`** **2026-05-14 22:20 -0400**. Evidenza storica: `docs/TASKS/EVIDENCE/TASK-108/`. *(Non ri‑usare questo blocco come verdict corrente del progetto in lavorazione — vedi ACTIVE sopra.)*
+ 
+@@ -18,22 +20,34 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
+ 
+ **Precedente completato:** **TASK-100 DONE / Chiusura — REVIEW PASS FINAL** (`docs/TASKS/TASK-100-large-dataset-performance-acceptance-ios.md`). Chiusura dopo final acceptance utente/Claude: minimum closure, **physical device** **PASS**, **D100-L** **PASS**, live Supabase write/read/preview **PASS**, cleanup live scoped **PASS**, **0** righe residue per prefisso `TASK100_LIVE_1778463255_`. Cleanup con ruolo admin/postgres **solo** su prefisso test, **senza** modifiche a policy/grant/schema. Evidence pack in `docs/TASKS/EVIDENCE/TASK-100/`. **Nessun** claim production-ready globale 100% da TASK-100.
+ 
+-**Roadmap backlog:** **TASK-101** **DONE / Chiusura — REVIEW PASS FINAL** *(file task `docs/TASKS/TASK-101-production-readiness-privacy-rls-security-audit.md`)*; **TASK-102** **DONE / Chiusura — REVIEW PASS FINAL / PASS WITH NOTES** *(file task `docs/TASKS/TASK-102-release-polish-ux-ios.md`)*; **TASK-103** **DONE / Chiusura — REVIEW PASS FINAL** *(file task `docs/TASKS/TASK-103-final-real-device-cross-platform-acceptance-ios-supabase-android.md`)*; **TASK-104** **DONE / Chiusura — REVIEW PASS FINAL / PASS_WITH_NOTES** *(file task `docs/TASKS/TASK-104-real-shop-acceptance-ios-supabase-android.md`; realistic shop acceptance sintetica, non real-user/no-notes/global)*; **TASK-105** **DONE / Chiusura — OWNER_OPERATOR_ACCEPTED** *(file task `docs/TASKS/TASK-105-production-no-notes-real-ops-closure-ios.md`; real ops closure iOS completata; production no-notes non dichiarato separatamente come claim globale)*; **TASK-106** **DONE / Chiusura — PASS_WITH_NOTES** *(file task `docs/TASKS/TASK-106-database-screen-layout-regression-fix-ios.md`; fix regressione UI/layout Database iOS chiuso dopo review finale)*; **TASK-107** **DONE / Chiusura — PASS_WITH_NOTES** *(file task `docs/TASKS/TASK-107-database-supplier-category-management-ios.md`; supplier/category management, delete avanzato e Price history parity chiusi dopo review finale)*; **TASK-108** **DONE / Chiusura — PASS_WITH_NOTES** *(file task `docs/TASKS/TASK-108-supabase-sync-unification-ios.md`; chiusura documentale archiviata)*; **TASK-109** **ACTIVE / REVIEW — CHANGES_REQUIRED** *(review completa Codex: fix iOS mirato PASS, History live non-empty bloccata da app-auth mancante; file `docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md`)*.
++**Roadmap backlog:** **TASK-101** **DONE / Chiusura — REVIEW PASS FINAL** *(file task `docs/TASKS/TASK-101-production-readiness-privacy-rls-security-audit.md`)*; **TASK-102** **DONE / Chiusura — REVIEW PASS FINAL / PASS WITH NOTES** *(file task `docs/TASKS/TASK-102-release-polish-ux-ios.md`)*; **TASK-103** **DONE / Chiusura — REVIEW PASS FINAL** *(file task `docs/TASKS/TASK-103-final-real-device-cross-platform-acceptance-ios-supabase-android.md`)*; **TASK-104** **DONE / Chiusura — REVIEW PASS FINAL / PASS_WITH_NOTES** *(file task `docs/TASKS/TASK-104-real-shop-acceptance-ios-supabase-android.md`; realistic shop acceptance sintetica, non real-user/no-notes/global)*; **TASK-105** **DONE / Chiusura — OWNER_OPERATOR_ACCEPTED** *(file task `docs/TASKS/TASK-105-production-no-notes-real-ops-closure-ios.md`; real ops closure iOS completata; production no-notes non dichiarato separatamente come claim globale)*; **TASK-106** **DONE / Chiusura — PASS_WITH_NOTES** *(file task `docs/TASKS/TASK-106-database-screen-layout-regression-fix-ios.md`; fix regressione UI/layout Database iOS chiuso dopo review finale)*; **TASK-107** **DONE / Chiusura — PASS_WITH_NOTES** *(file task `docs/TASKS/TASK-107-database-supplier-category-management-ios.md`; supplier/category management, delete avanzato e Price history parity chiusi dopo review finale)*; **TASK-108** **DONE / Chiusura — PASS_WITH_NOTES** *(file task `docs/TASKS/TASK-108-supabase-sync-unification-ios.md`; chiusura documentale archiviata)*; **TASK-109** **BLOCKED / SOSPESO** *(override 2026-05-15; ripresa solo esplicita; file `docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md`)*; **TASK-110** **BLOCKED / FIX / BLOCKED_APP_AUTH_IOS_MANUAL_LIVE** *(manual cross-platform live bloccato da iOS app-auth `sessionMissing`; file `docs/TASKS/TASK-110-cross-platform-cloud-sync-consistency.md`)*.
+ 
+ **Precedente completato:** **TASK-099 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`). **TASK-098** resta **DONE / Chiusura — REVIEW PASS**; evidence pack in `docs/TASKS/EVIDENCE/TASK-098/`. **TASK-097 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — runtime sandbox smoke iOS ↔ Supabase. **TASK-096** resta **DONE / Chiusura — REVIEW PASS**; **TASK-095** resta **DONE / Chiusura — REVIEW PASS**; **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** riallineato a **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** tramite evidenze TASK-097/098/100/103.
+ 
+ ## Stato globale
+-**ACTIVE** — **`TASK-109` `ACTIVE / REVIEW — CHANGES_REQUIRED / BLOCKED_WITH_PLAYBOOK`** *(review completa Codex; conditional DONE non consumato per stop condition History live non-empty non chiusa)* — file task `docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md`; evidence pack `docs/TASKS/EVIDENCE/TASK-109/`.
++**ACTIVE** — **`TASK-110` `BLOCKED / FIX / BLOCKED_APP_AUTH_IOS_MANUAL_LIVE`** *(unico task operativo; FIX tecnico parziale completato, manual cross-platform live in attesa di login app-auth iOS.)* — file task `docs/TASKS/TASK-110-cross-platform-cloud-sync-consistency.md`.
++
++**TASK-109** risulta **`BLOCKED / SOSPESO`** *(motivo: override utente 2026-05-15, testo integrale nel file task TASK-109 — `Decisioni`)* — **non** è il task attivo operativo.
+ 
+ **Ultimo task archiviato / chiuso formalmente:** **TASK‑108 DONE / PASS_WITH_NOTES** (`docs/TASKS/TASK-108-supabase-sync-unification-ios.md`; storico evidences `docs/TASKS/EVIDENCE/TASK-108/`). **TASK‑107 / TASK‑106** restano DONE come da cronaca backlog.
+ 
+ ---
+ 
+-## Follow‑up ANDROID MASTER *(solo pianificazione, nessuna modifica Kotlin / nessun file Android MASTER toccato in questo pass)*
+-Durante EXECUTION TASK‑109 leggere **`MerchandiseControlSplitView`** (Application lifecycle coordinators, Catalog sync tracker/VM). Se emerge gap funzionale/efficiency **non attribuibile solo a Swift wiring**, proporre **`TASK‑110‑android…` o backlog MASTER Android esterno repo** dopo audit — **TASK‑109 rimane prioritariamente remediation iOS** e non si blocca in assenza decisione Android immediata.
++## Follow‑up cross‑platform sync *(TASK‑110)*
++Il perimetro **TASK‑110** copre audit/implementazione **Android + iOS + Supabase** per coerenza History/catalog/prezzi/bootstrap/delete **e** allineamento **Data API grants/RLS** (matrice accesso `public`, GRANT espliciti, `anon` chiuso salvo eccezioni documentate, sequence/RPC, checklist migration, Security Advisor, diagnostica `42501`), più **parity ambiente** (project_ref/JWT), **column/schema privileges**, **playbook PostgREST schema reload**, **matrice conflitti entità**, **catalog delete**, **ProductPrice incrementale**, **preflight backup/rollback**, **tassonomia stati UI** *(no «Cancelled» generico per no_auth/42501/RLS/rete)*, audit versioni client SDK. **`MerchandiseControlSplitView`** e **`MerchandiseControlSupabase`** sono repo di riferimento. **Fase corrente: FIX / BLOCKED_APP_AUTH_IOS_MANUAL_LIVE** — ledger/migration/tombstone/ProductPrice Android live completati; resta bloccante il login app-auth iOS per rieseguire la matrice manuale cross-platform richiesta.
+ 
+ ---
+ 
++> **2026-05-15 — User override:** **TASK-109** → **BLOCKED / SOSPESO**; motivo testuale: «User override 2026-05-15: sospeso per aprire un nuovo task prioritario su discrepanza sync cloud Android/iOS/Supabase per cronologia, catalogo e prezzi.» Creato e attivato **TASK-110** **ACTIVE / PLANNING-AUDIT** (`docs/TASKS/TASK-110-cross-platform-cloud-sync-consistency.md`). Un solo task attivo: **TASK-110**.
++
++> **2026-05-15 11:58 -0400 — EXECUTION TASK-110 avviata (user override end-to-end):** utente ha autorizzato passaggio esplicito **PLANNING-AUDIT → EXECUTION** per TASK-110. Branch locale iOS `codex/task-110-sync-consistency`; TASK-109 resta **BLOCKED / SOSPESO**, non DONE; nessun task DONE riaperto. Obbligatori snapshot/evidence prima di write/delete/migration, GitHub iOS upstream read prima di patch Swift, e handoff finale solo verso **REVIEW**.
++
++> **2026-05-15 12:32 -0400 — TASK-110 handoff REVIEW (Codex):** completati P0-P3 evidence e patch mirata History reconciliation. Root cause verificata: Supabase/iOS hanno 1 History, Android fisico 7 locali con 6 refs clean e 0 dirty; sessioni clean-stale non venivano ripushate. Patch: Android full reconciliation push su `candidateUids=null` + login bootstrap pull→push; iOS manual History pull iniziale → full reconciliation push → pull conferma. Build PASS: Android `assembleDebug`, iOS `xcodebuild build`. Test mirati PASS: iOS `HistorySessionSyncServiceTests` 8/0; Android repository PASS e coordinator PASS isolato con `GRADLE_OPTS`. Blocker documentati: migration Supabase non applicata per ledger locale/remoto divergente, delete tombstone non live, ProductPrice Android ancora driftato, manual cross-platform non eseguito. **TASK-110 ACTIVE / REVIEW**, responsabile **Claude / Reviewer**; **TASK-109 resta BLOCKED / SOSPESO**, non DONE.
++
++> **2026-05-15 12:50 -0400 — TASK-110 FIX / EXECUTION-COMPLETION avviato (user override):** User rejected incomplete review; authorized full completion of remaining blockers. **TASK-110** resta unico **ACTIVE**, fase **FIX / EXECUTION-COMPLETION**, responsabile **CODEX / Cursor Executor**. **TASK-109** resta **BLOCKED / SOSPESO**, non DONE; TASK-041 e altri DONE non riaperti; handoff finale richiesto verso REVIEW, non DONE.
++
++> **2026-05-15 13:45 -0400 — TASK-110 FIX parziale completato / BLOCKED_APP_AUTH_IOS_MANUAL_LIVE:** ledger Supabase riconciliato, migration `20260515161500_task110_history_tombstone_grants.sql` applicata, smoke grants/RLS/tombstone PASS, delete tombstone Android/iOS implementato con test mirati PASS, ProductPrice Android fisico riallineato live a `41109` con `pricesSkippedNoProductRef=0`. Manual cross-platform live completo non chiudibile: iOS app-auth smoke fallisce `sessionMissing`, quindi login/logout/re-login iOS e matrice P8 restano bloccanti. **TASK-110** non torna a REVIEW finale e non viene marcato DONE; responsabile **UTENTE / iOS app-auth login richiesto**, poi **CODEX / Cursor Executor** per rerun P8. **TASK-109** resta **BLOCKED / SOSPESO**.
++
+ > **2026-05-15 02:25 -0400 — REVIEW COMPLETA TASK-109 / CHANGES_REQUIRED:** Codex ha eseguito review repo-grounded/runtime-grounded, applicando un fix iOS mirato: `SupabaseManualSyncViewModel` ora deferisce History sync finche' l'apply catalog/prezzi staged non e' completato; aggiunto test `testDirectSyncDefersHistoryUntilPreparedApplyCompletes`; copy Release `Fetching cloud counts...` sostituita e localizzata EN/IT/ES/ZH. Check PASS: `git diff --check`, Debug build XcodeBuildMCP warnings `0`, Release build XcodeBuildMCP warnings `0`, targeted XCTest finale PASS su iPhone 17 Pro iOS 26.5 (`Test-iOSMerchandiseControl-2026.05.15_02-16-00--0400.xcresult`), `plutil` localizzazioni PASS, Android parity static audit PASS_WITH_NOTES. Supabase dev: creata riga test owner-scoped `TASK109_REVIEW_HISTORY_20260515_0622Z`, owner hash `ad3d747e936ccd13ed305b1d8a3fb9558ac1e1a0081b9728b3aec2f14f06b1c8`, remote History count `0 -> 1`, retention intenzionale per rerun. **NON DONE:** app runtime iOS e' signed-out/account issue; ASWebAuthenticationSession non ha ripristinato sessione valida; Options resta `History sessions, 0`; quindi R4/S11/S12/second sync History live restano **BLOCKED_WITH_PLAYBOOK**. Evidence `docs/TASKS/EVIDENCE/TASK-109/100`...`110`; matrix aggiornata.
+ 
+ > **2026-05-15 01:30 -0400 — EXECUTION TASK-109 completata / REVIEW:** Codex ha completato Wave 1 diagnostica, audit iOS/Android/Supabase, fix iOS lifecycle/Review/Cancel/History count e verification finale. Fix principali: root auth/foreground trigger in `ContentView`, Options observer/manual trigger senza auto-start, no-op/warning-only ProductPrice preview non apre Review ne' root Review banner, Cancel review non annida dialog, History count in Options e test History/session. Check PASS: `git diff --check`, Debug build/run XcodeBuildMCP warnings 0, Release build, targeted XCTest lifecycle/coordinator/ViewModel/Release UI/History/Options/localization/pull/apply/ProductPrice/pending PASS (`Test-iOSMerchandiseControl-2026.05.15_01-19-03--0400.xcresult`), simulator smoke cold launch root banner + Options + Sync now no stale Review + Dynamic Type XXXL. Note: Supabase live History non-empty non verificato per `shared_sheet_sessions` dev `0` e successivo `ECIRCUITBREAKER`; Android solo audit statico, nessuna patch Kotlin. **TASK-109 ACTIVE / REVIEW, NON DONE**.
+@@ -54,7 +68,7 @@ Durante EXECUTION TASK‑109 leggere **`MerchandiseControlSplitView`** (Applicat
+ 
+ > **2026-05-14 18:07 -0400 — FIX reset/clean seed completato / REVIEW non DONE:** Codex ha confermato progetto Supabase dev `jpgoimipbothfgkokyvm`, risolto l'utente Gmail test con match esatto, creato backup `backup_task108_*_20260514173049`, resettato solo dati applicativi owner-scoped, verificato post-reset 0, controllato indici anti-duplicazione, caricato seed remoto pulito da Excel reale (`57/27/19.695/41.108`) e verificato duplicati ProductPrice finali 0. iOS: harness import Excel reale PASS, harness ProductPrice full pull/no-op PASS, safety gate >75.000 PASS, Debug/Release build PASS, targeted tests finali 169/0. Android minimo: `assembleDebug` PASS, `./gradlew test` PASS, audit statico ProductPrice/backfill PASS. **Non DONE:** seed remoto e no-op sono SQL-backed, non push app-auth iOS; full pull app-auth, document picker, incrementali iOS/Android live e cross-platform E2E restano non eseguiti.
+ 
+-> **2026-05-14 17:18 -0400 — FIX reset/clean seed ripreso:** utente ha fornito `EMAIL_GMAIL_TEST = x***@gmail.com` e autorizzazione esplicita per reset dati applicativi Supabase dell'account test sul progetto dev `jpgoimipbothfgkokyvm`, senza cancellare `auth.users`, schema, config, secrets o progetto. Codex riprende TASK-108 da BLOCKED a ACTIVE/FIX.
++> **2026-05-14 17:18 -0400 — FIX reset/clean seed ripreso:** utente ha fornito `EMAIL_GMAIL_TEST = x***@gmail.com` e autorizzazione esplicita per reset dati applicativi Supabase dell'account test sul progetto dev `jpgoimipbothfgkokyvm`, senza cancellare `auth.users`, schema, config, secrets o progetto. Codex riprende TASK-108 da BLOCKED a ACTIVE/FIX.
+ 
+ > **2026-05-14 17:10 -0400 — FIX sync reset/clean seed preflight / BLOCKED_EMAIL_TEST:** Codex ha eseguito solo passaggi non distruttivi richiesti dal nuovo prompt: branch `task108-sync-reset-clean-seed`, audit iOS/Android/Supabase locale, safety gate ProductPrice default `75.000`, Options/background contexts, snapshot logging/diagnostica, Excel count reale (`Products 19.695`, `Suppliers 57`, `Categories 27`, `PriceHistory 41.108`), iOS Debug/Release build PASS, iOS safety tests PASS, Android `assembleDebug` PASS. Full iOS XCTest non green per test preesistenti/stale e launch clone simulator; Android `./gradlew test` bloccato da ByteBuddy/MockK attach locale. Nessun SQL distruttivo Supabase, nessun backup remoto e nessun reset eseguiti: manca l'email Gmail test esatta per identificare `auth.users` con 1 match.
+ 
+@@ -913,12 +927,12 @@ Qualunque altra transizione è invalida.
+ - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
+ 
+ ## Task attivo
+-- **Task attivo corrente:** nessuno.
+-- **File task attivo:** N/A.
+-- **Stato task:** N/A.
+-- **Fase attuale:** N/A.
+-- **Responsabile attuale:** N/A.
+-- **Ultimo aggiornamento:** 2026-05-13 — **TASK-105 DONE / Chiusura — OWNER_OPERATOR_ACCEPTED**; conferma owner/operator redatta ricevuta; production no-notes non dichiarato separatamente come claim globale.
++- **Task attivo corrente:** **TASK-110**
++- **File task attivo:** `docs/TASKS/TASK-110-cross-platform-cloud-sync-consistency.md`
++- **Stato task:** **BLOCKED**
++- **Fase attuale:** **FIX / BLOCKED_APP_AUTH_IOS_MANUAL_LIVE** *(FIX tecnico parziale completato; prossima azione utente: login app-auth iOS, poi rerun Codex P8/manual cross-platform)*
++- **Responsabile attuale:** **UTENTE / iOS app-auth login richiesto** *(poi CODEX / Cursor Executor per rerun manual cross-platform)*
++- **Ultimo aggiornamento:** 2026-05-15 13:45 -0400 — **TASK-110** **BLOCKED / FIX / BLOCKED_APP_AUTH_IOS_MANUAL_LIVE** *(ledger/migration/tombstone/ProductPrice Android live PASS; iOS app-auth `sessionMissing` blocca review finale)*; **TASK-109** resta **BLOCKED / SOSPESO** (override utente).
+ - **Nota:** **TASK-104 non** è real user data acceptance, **non** production-ready globale, **non** production no-notes, **non** 100% globale. **TASK-103** non riaperto; verdict P0 invariato.
+ - **Ultimo completato:** **TASK-105** (`docs/TASKS/TASK-105-production-no-notes-real-ops-closure-ios.md`) — **DONE / Chiusura — OWNER_OPERATOR_ACCEPTED** (real ops closure iOS; evidence `EVIDENCE/TASK-105/`; TASK-104 resta chiuso).
+ - **Precedente completato:** **TASK-103** (`docs/TASKS/TASK-103-final-real-device-cross-platform-acceptance-ios-supabase-android.md`) — **DONE / Chiusura — REVIEW PASS FINAL** (final real-device cross-platform acceptance iOS ↔ Supabase ↔ Android; CA-103-01…18 PASS/PASS_AFTER_FIX; evidence `EVIDENCE/TASK-103/`; verdict P0 **Supabase iOS cross-platform acceptance 100% PASS**).
+@@ -1243,10 +1257,12 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
+ | TASK-078 | Supabase pull apply locale guidato Release iOS | 2026-05-08 |
+ 
+ ## Blocchi e dipendenze
+-- **Nessun task legacy resta bloccato come stato corrente.** Il riallineamento 2026-05-12 19:18 -0400 ha chiuso gli stati storici `BLOCKED`, `PARTIAL_ACCEPTED`, `SUPERSEDED` e `WONT_DO` dove coperti da evidenze successive, supersessione o accettazione esplicita di limite non bloccante.
++- **TASK-109 — BLOCKED / SOSPESO** *(non DONE; non task attivo)*: override utente 2026-05-15 — «User override 2026-05-15: sospeso per aprire un nuovo task prioritario su discrepanza sync cloud Android/iOS/Supabase per cronologia, catalogo e prezzi.» Ripresa solo su richiesta esplicita utente; nel frattempo lavoro operativo su **TASK-110**.
++- **TASK-110 — BLOCKED / FIX / BLOCKED_APP_AUTH_IOS_MANUAL_LIVE** *(task operativo corrente, non DONE, non REVIEW finale)*: FIX tecnico parziale completato; la matrice manuale live cross-platform resta bloccata da iOS app-auth `sessionMissing`. Serve login dell'app iOS con account autorizzato redatto (`x***@gmail.com`) prima del rerun P8.
++- **Nessun altro task legacy resta bloccato come stato corrente** oltre a quanto sopra per TASK-109. Il riallineamento 2026-05-12 19:18 -0400 aveva chiuso gli stati storici `BLOCKED`, `PARTIAL_ACCEPTED`, `SUPERSEDED` e `WONT_DO` dove coperti da evidenze successive, supersessione o accettazione esplicita di limite non bloccante.
+ - Fonte di dettaglio: `docs/TASKS/EVIDENCE/LEGACY-CLOSURE-2026-05-12.md`.
+ - Residui non bloccanti: VoiceOver gesture traversal completo e uso fisico camera/torcia restano note P1/manuali accettate in TASK-102, non blocker aperti.
+-- **TASK-104** è **DONE / Chiusura — REVIEW PASS FINAL / PASS_WITH_NOTES** nel perimetro realistic synthetic shop acceptance; **TASK-105 è DONE / Chiusura — OWNER_OPERATOR_ACCEPTED**; production no-notes non dichiarato separatamente come claim globale; ultimo completato **TASK-105**. **TASK-106** è **ACTIVE / PLANNING** (fix regressione UI/layout Database iOS); **NON READY FOR EXECUTION** fino ad approvazione planning utente.
++- **TASK-104** è **DONE / Chiusura — REVIEW PASS FINAL / PASS_WITH_NOTES** nel perimetro realistic synthetic shop acceptance; **TASK-105 è DONE / Chiusura — OWNER_OPERATOR_ACCEPTED**; production no-notes non dichiarato separatamente come claim globale; **TASK-106…TASK-108** risultano **DONE** come da backlog/tab recuperati storici — stato **runtime corrente** guidato da **TASK-110**.
+ 
+ ## Note di coordinamento
+ - Il file `docs/TASKS/TASK-TEMPLATE.md` è un MODELLO, non un task reale — non usarlo come task attivo
+@@ -1254,6 +1270,8 @@ Motivazione: TASK-002..013 proposti da TASK-001 (gap audit originale). TASK-015.
+ - ID sempre a 3 cifre (`001`, `002`, `003`...) — mai riutilizzare un ID già assegnato
+ - Il nuovo task prende sempre il prossimo ID disponibile (verificare le tabelle Backlog e Task completati)
+ - Note operative dettagliate → nei file task, non qui
++- User override **2026-05-15 12:50 -0400**: **TASK-109** → **BLOCKED / SOSPESO**; **TASK-110** → **ACTIVE / FIX / EXECUTION-COMPLETION** (`docs/TASKS/TASK-110-cross-platform-cloud-sync-consistency.md`); responsabile **CODEX / Cursor Executor** per completare i blocker residui; snapshot/evidence obbligatori prima di write/delete/migration.
++- Tracking **2026-05-15 13:45 -0400**: **TASK-110** → **BLOCKED / FIX / BLOCKED_APP_AUTH_IOS_MANUAL_LIVE**; completati ledger Supabase, migration tombstone/grants/RLS, smoke Supabase, delete tombstone Android/iOS, Android ProductPrice live; bloccante residuo: iOS app-auth `sessionMissing` impedisce login/logout/re-login e manual cross-platform P8 finale. Non DONE, non REVIEW finale.
+ - Lavoro fuori scope emerso durante execution → registrare come follow-up, non inglobare
+ - I follow-up candidate non bloccano la chiusura del task, salvo che siano criteri di accettazione non soddisfatti
+ - Task in stato DONE restano archiviati in `docs/TASKS/` — non vanno riusati né modificati (salvo note documentali minime)
+diff --git a/docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md b/docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md
+index e7ad39f..da0b69d 100644
+--- a/docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md
++++ b/docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md
+@@ -4,17 +4,25 @@
+ - **Task ID**: TASK-109
+ - **Titolo**: iOS Supabase sync lifecycle regression: auto check/apply on launch, incremental push/pull, Review/Cancel UX cleanup, History/session runtime parity
+ - **File task**: `docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md`
+-- **Stato**: ACTIVE
+-- **Fase attuale**: REVIEW — CHANGES_REQUIRED / BLOCKED_WITH_PLAYBOOK
+-- **Responsabile attuale**: OWNER / App-auth required
++- **Stato**: BLOCKED
++- **Fase attuale**: REVIEW — sospeso (override utente 2026-05-15; task non attivo)
++- **Responsabile attuale**: UTENTE *(ripresa esplicita richiesta)* / poi CODEX se TASK-109 viene ripreso
+ - **Data creazione**: 2026-05-15
+-- **Ultimo aggiornamento**: 2026-05-15 02:25 -0400 *(REVIEW completa Codex: fix iOS mirato applicato e verificato; Supabase History seed owner-scoped creato; chiusura DONE bloccata da app-auth mancante per pull History live non-empty)*  
+-- **Ultimo agente che ha operato**: CODEX *(Reviewer/Fixer — review completa + fix autorizzato + evidence)*
++- **Ultimo aggiornamento**: 2026-05-15 *(BLOCKED / SOSPESO: override priorità TASK-110)*
++- **Ultimo agente che ha operato**: CODEX *(tracking sospensione + nuovo task; nessuna continuazione TASK-109 autorizzata)*
+ 
+ ## Dipendenze
+ - **Dipende da**: **TASK-108** (**DONE / Chiusura — PASS_WITH_NOTES**). **TASK-108 non viene riaperto** come garante runtime delle promesse (auto incremental launch/foreground, push Database/Generated/History, parity History, UX unified). La **regressione post‑chiusura segnalata dall’operatore** richiede un nuovo perimetro TRACKING TASK-109.
+ - **Sblocca**: fix strutturato iOS lifecycle + sync engine/state machine; eventualmente **follow‑up Android separato** se l’audit comparativo EXECUTION evidenzia gap (nessuna patch Kotlin nel task corrente finché non deciso backlog).
+ 
++## BLOCKED / SOSPESO (override utente 2026-05-15)
++
++**Motivo:** «User override 2026-05-15: sospeso per aprire un nuovo task prioritario su discrepanza sync cloud Android/iOS/Supabase per cronologia, catalogo e prezzi.»
++
++- **Non** continuare questo task finché l’utente non riparte esplicitamente da questo file.
++- **Non** marcare **DONE**.
++- Il perimetro prioritario cross‑platform è stato ricollocato in **`TASK-110`** (`docs/TASKS/TASK-110-cross-platform-cloud-sync-consistency.md`), task **unico attivo** nel MASTER‑PLAN al momento dell’override.
++
+ ## Tracking reconciliation gate — MASTER-PLAN e task file devono concordare
+ 
+ Prima di qualunque transizione da **PLANNING** a **EXECUTION DIAGNOSTICA**, il tracking deve essere coerente.
+diff --git a/iOSMerchandiseControl/HistoryEntry.swift b/iOSMerchandiseControl/HistoryEntry.swift
+index d5535e3..f8e9dda 100644
+--- a/iOSMerchandiseControl/HistoryEntry.swift
++++ b/iOSMerchandiseControl/HistoryEntry.swift
+@@ -218,6 +218,10 @@ extension HistoryEntry {
+         remotePayloadFingerprint == nil || localChangeRevision > lastSyncedLocalRevision
+     }
+ 
++    var isHistorySessionDeletedPendingCloud: Bool {
++        remoteDeletedAt != nil && localChangeRevision > lastSyncedLocalRevision
++    }
++
+     func ensureHistorySessionRemoteID() -> UUID {
+         if let remoteID {
+             return remoteID
+@@ -231,15 +235,23 @@ extension HistoryEntry {
+         remoteDeletedAt = nil
+     }
+ 
++    func markHistorySessionLocalDeletion(at deletedAt: Date = Date()) {
++        _ = ensureHistorySessionRemoteID()
++        remoteDeletedAt = deletedAt
++        localChangeRevision += 1
++        syncStatus = .notAttempted
++    }
++
+     func markHistorySessionRemoteApplied(
+         remoteID: UUID,
+         remoteUpdatedAt: Date?,
++        remoteDeletedAt: Date? = nil,
+         fingerprint: String,
+         syncedRevision: Int
+     ) {
+         self.remoteID = remoteID
+         self.remoteUpdatedAt = remoteUpdatedAt
+-        self.remoteDeletedAt = nil
++        self.remoteDeletedAt = remoteDeletedAt
+         self.remotePayloadFingerprint = fingerprint
+         self.lastSyncedLocalRevision = syncedRevision
+     }
+diff --git a/iOSMerchandiseControl/HistorySessionSyncService.swift b/iOSMerchandiseControl/HistorySessionSyncService.swift
+index 42d6fa9..f2bfb4d 100644
+--- a/iOSMerchandiseControl/HistorySessionSyncService.swift
++++ b/iOSMerchandiseControl/HistorySessionSyncService.swift
+@@ -25,6 +25,7 @@ nonisolated struct SharedSheetSessionUpsertRow: Encodable, Equatable, Sendable {
+     let data: [[String]]
+     let sessionOverlay: HistorySessionOverlayPayload?
+     let ownerUserID: UUID
++    let deletedAt: String?
+ 
+     enum CodingKeys: String, CodingKey {
+         case remoteID = "remote_id"
+@@ -37,6 +38,7 @@ nonisolated struct SharedSheetSessionUpsertRow: Encodable, Equatable, Sendable {
+         case data
+         case sessionOverlay = "session_overlay"
+         case ownerUserID = "owner_user_id"
++        case deletedAt = "deleted_at"
+     }
+ }
+ 
+@@ -52,6 +54,7 @@ nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
+     let sessionOverlay: HistorySessionOverlayPayload?
+     let ownerUserID: UUID
+     let updatedAt: String?
++    let deletedAt: String?
+ 
+     enum CodingKeys: String, CodingKey {
+         case remoteID = "remote_id"
+@@ -65,6 +68,7 @@ nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
+         case sessionOverlay = "session_overlay"
+         case ownerUserID = "owner_user_id"
+         case updatedAt = "updated_at"
++        case deletedAt = "deleted_at"
+     }
+ }
+ 
+@@ -98,7 +102,8 @@ nonisolated enum HistorySessionPayloadCodec {
+             isManualEntry: entry.isManualEntry,
+             data: entry.data,
+             sessionOverlay: overlay,
+-            ownerUserID: ownerUserID
++            ownerUserID: ownerUserID,
++            deletedAt: entry.remoteDeletedAt.map(formatTimestamp)
+         )
+     }
+ 
+@@ -130,7 +135,8 @@ nonisolated enum HistorySessionPayloadCodec {
+             row.isManualEntry ? "1" : "0",
+             canonicalJSONString(row.data),
+             canonicalJSONString(row.sessionOverlay?.editable ?? []),
+-            canonicalJSONString(row.sessionOverlay?.complete ?? [])
++            canonicalJSONString(row.sessionOverlay?.complete ?? []),
++            row.deletedAt.map(normalizedTimestamp) ?? ""
+         ].joined(separator: "|")
+         let digest = SHA256.hash(data: Data(canonical.utf8))
+         return digest.map { String(format: "%02x", $0) }.joined()
+@@ -254,20 +260,21 @@ nonisolated final class HistorySessionSyncService {
+         entries: [HistoryEntry],
+         ownerUserID: UUID,
+         context: ModelContext,
++        includeSynced: Bool = false,
+         onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void = { _ in }
+     ) async throws -> HistorySessionPushResult {
+         var result = HistorySessionPushResult()
+-        let dirtyEntries = entries.filter(\.isHistorySessionDirtyForCloud)
+-        result.skippedCleanCount = max(0, entries.count - dirtyEntries.count)
+-        let dirtyEntryCount = dirtyEntries.count
+-        await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: 0, total: dirtyEntryCount), onProgress: onProgress)
+-        guard !dirtyEntries.isEmpty else { return result }
++        let uploadEntries = includeSynced ? entries : entries.filter(\.isHistorySessionDirtyForCloud)
++        result.skippedCleanCount = includeSynced ? 0 : max(0, entries.count - uploadEntries.count)
++        let uploadEntryCount = uploadEntries.count
++        await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: 0, total: uploadEntryCount), onProgress: onProgress)
++        guard !uploadEntries.isEmpty else { return result }
+ 
+         let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
+         var uploadPairs: [(entry: HistoryEntry, row: SharedSheetSessionUpsertRow, revision: Int)] = []
+-        uploadPairs.reserveCapacity(dirtyEntries.count)
++        uploadPairs.reserveCapacity(uploadEntries.count)
+ 
+-        for entry in dirtyEntries {
++        for entry in uploadEntries {
+             do {
+                 let row = try HistorySessionPayloadCodec.upsertRow(for: entry, ownerUserID: ownerUserID)
+                 uploadPairs.append((entry, row, entry.localChangeRevision))
+@@ -289,7 +296,7 @@ nonisolated final class HistorySessionSyncService {
+             ownerUserID: ownerUserID
+         )
+         try Task.checkCancellation()
+-        await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: uploadPairs.count, total: dirtyEntryCount), onProgress: onProgress)
++        await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: uploadPairs.count, total: uploadEntryCount), onProgress: onProgress)
+         let readBackByRemoteID = Dictionary(uniqueKeysWithValues: readBackRows.map { ($0.remoteID, $0) })
+ 
+         for (index, pair) in uploadPairs.enumerated() {
+@@ -302,13 +309,14 @@ nonisolated final class HistorySessionSyncService {
+             pair.entry.markHistorySessionRemoteApplied(
+                 remoteID: readBack.remoteID,
+                 remoteUpdatedAt: HistorySessionPayloadCodec.parseUpdatedAt(readBack.updatedAt),
++                remoteDeletedAt: HistorySessionPayloadCodec.parseUpdatedAt(readBack.deletedAt),
+                 fingerprint: fingerprint,
+                 syncedRevision: pair.revision
+             )
+             pair.entry.syncStatus = .syncedSuccessfully
+             try accumulator.acknowledgeHistorySessionChange(entry: pair.entry)
+             result.uploadedCount += 1
+-            await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: index + 1, total: dirtyEntryCount), onProgress: onProgress)
++            await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: index + 1, total: uploadEntryCount), onProgress: onProgress)
+         }
+ 
+         return result
+@@ -373,7 +381,14 @@ nonisolated final class HistorySessionSyncService {
+             }
+ 
+             let remoteFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: row)
++            let remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
+             if let existing = byRemoteID[row.remoteID] ?? byUID[row.remoteID] {
++                if remoteDeletedAt != nil {
++                    applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
++                    result.updatedCount += 1
++                    continue
++                }
++
+                 if existing.remotePayloadFingerprint == remoteFingerprint {
+                     result.skippedCleanCount += 1
+                     continue
+@@ -387,6 +402,11 @@ nonisolated final class HistorySessionSyncService {
+                 apply(row: row, to: existing, fingerprint: remoteFingerprint)
+                 result.updatedCount += 1
+             } else {
++                if remoteDeletedAt != nil {
++                    result.skippedCleanCount += 1
++                    continue
++                }
++
+                 let inserted = makeEntry(from: row, fingerprint: remoteFingerprint)
+                 context.insert(inserted)
+                 byRemoteID[row.remoteID] = inserted
+@@ -429,8 +449,13 @@ nonisolated final class HistorySessionSyncService {
+             }
+ 
+             let remoteFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: row)
++            let remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
+             if let existing = byRemoteID[row.remoteID] ?? byUID[row.remoteID] {
+-                if existing.remotePayloadFingerprint == remoteFingerprint {
++                if remoteDeletedAt != nil {
++                    applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
++                    result.updatedCount += 1
++                    mutationsSinceSave += 1
++                } else if existing.remotePayloadFingerprint == remoteFingerprint {
+                     result.skippedCleanCount += 1
+                 } else if existing.localChangeRevision > existing.lastSyncedLocalRevision {
+                     result.skippedDirtyLocalCount += 1
+@@ -440,6 +465,12 @@ nonisolated final class HistorySessionSyncService {
+                     mutationsSinceSave += 1
+                 }
+             } else {
++                if remoteDeletedAt != nil {
++                    result.skippedCleanCount += 1
++                    await publishProgress(HistorySessionSyncProgress(stage: .applying, current: index + 1, total: rowCount), onProgress: onProgress)
++                    continue
++                }
++
+                 let inserted = makeEntry(from: row, fingerprint: remoteFingerprint)
+                 context.insert(inserted)
+                 byRemoteID[row.remoteID] = inserted
+@@ -494,7 +525,20 @@ nonisolated final class HistorySessionSyncService {
+         entry.remoteID = row.remoteID
+         entry.remoteUpdatedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.updatedAt)
+         entry.remotePayloadFingerprint = fingerprint
+-        entry.remoteDeletedAt = nil
++        entry.remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
++        entry.lastSyncedLocalRevision = entry.localChangeRevision
++        entry.syncStatus = .syncedSuccessfully
++    }
++
++    private func applyRemoteTombstone(
++        row: RemoteSharedSheetSessionRow,
++        to entry: HistoryEntry,
++        fingerprint: String
++    ) {
++        entry.remoteID = row.remoteID
++        entry.remoteUpdatedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.updatedAt)
++        entry.remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt) ?? Date()
++        entry.remotePayloadFingerprint = fingerprint
+         entry.lastSyncedLocalRevision = entry.localChangeRevision
+         entry.syncStatus = .syncedSuccessfully
+     }
+@@ -534,6 +578,7 @@ nonisolated final class HistorySessionSyncService {
+             uid: row.remoteID,
+             remoteID: row.remoteID,
+             remoteUpdatedAt: HistorySessionPayloadCodec.parseUpdatedAt(row.updatedAt),
++            remoteDeletedAt: HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt),
+             remotePayloadFingerprint: fingerprint,
+             lastSyncedLocalRevision: 0
+         )
+diff --git a/iOSMerchandiseControl/HistoryView.swift b/iOSMerchandiseControl/HistoryView.swift
+index 07646e4..709e131 100644
+--- a/iOSMerchandiseControl/HistoryView.swift
++++ b/iOSMerchandiseControl/HistoryView.swift
+@@ -131,7 +131,9 @@ struct HistoryView: View {
+     
+     /// Applica i filtri (periodo + solo errori) alle entry.
+     private var filteredEntries: [HistoryEntry] {
+-        var result = entries
++        var result = entries.filter { entry in
++            entry.remoteDeletedAt == nil || entry.isHistorySessionDeletedPendingCloud
++        }
+ 
+         let now = Date()
+         let calendar = Calendar.current
+@@ -166,8 +168,9 @@ struct HistoryView: View {
+         }
+ 
+         if showOnlyErrorEntries {
+-            // Consideriamo "con errori" le entry marcate come attemptedWithErrors
+-            result = result.filter { $0.syncStatus == .attemptedWithErrors }
++            result = result.filter {
++                $0.syncStatus == .attemptedWithErrors || $0.isHistorySessionDeletedPendingCloud
++            }
+         }
+ 
+         return result
+@@ -242,6 +245,10 @@ struct HistoryView: View {
+         entries.filter(\.isHistorySessionDirtyForCloud).count
+     }
+ 
++    private var deletedPendingHistorySessionCount: Int {
++        entries.filter(\.isHistorySessionDeletedPendingCloud).count
++    }
++
+     private var latestHistorySyncedAt: Date? {
+         entries.compactMap(\.remoteUpdatedAt).max()
+     }
+@@ -253,6 +260,9 @@ struct HistoryView: View {
+         if historySessionSyncService == nil {
+             return L("history.cloud.status.unavailable")
+         }
++        if deletedPendingHistorySessionCount > 0 {
++            return L("history.cloud.status.deleted_pending", deletedPendingHistorySessionCount)
++        }
+         if pendingHistorySessionCount > 0 {
+             return L("history.cloud.status.pending", pendingHistorySessionCount)
+         }
+@@ -269,6 +279,9 @@ struct HistoryView: View {
+         if !supabaseAuthViewModel.isSignedIn || historySessionSyncService == nil {
+             return "icloud.slash"
+         }
++        if deletedPendingHistorySessionCount > 0 {
++            return "trash.badge.clock"
++        }
+         if pendingHistorySessionCount > 0 {
+             return "icloud.and.arrow.up"
+         }
+@@ -276,7 +289,7 @@ struct HistoryView: View {
+     }
+ 
+     private var historyCloudColor: Color {
+-        if pendingHistorySessionCount > 0 {
++        if deletedPendingHistorySessionCount > 0 || pendingHistorySessionCount > 0 {
+             return .orange
+         }
+         if isHistoryCloudAvailable {
+@@ -389,7 +402,8 @@ struct HistoryView: View {
+     // MARK: - Azioni
+ 
+     private func deleteEntry(_ entry: HistoryEntry) {
+-        context.delete(entry)
++        entry.markHistorySessionLocalDeletion()
++        recordHistoryDeletionPending(for: entry)
+         do {
+             try context.save()
+         } catch {
+@@ -404,7 +418,8 @@ struct HistoryView: View {
+         for index in offsets {
+             guard filteredEntries.indices.contains(index) else { continue }
+             let entry = filteredEntries[index]
+-            context.delete(entry)
++            entry.markHistorySessionLocalDeletion()
++            recordHistoryDeletionPending(for: entry)
+         }
+ 
+         do {
+@@ -415,6 +430,22 @@ struct HistoryView: View {
+             #endif
+         }
+     }
++
++    private func recordHistoryDeletionPending(for entry: HistoryEntry) {
++        guard let ownerUserID = supabaseAuthViewModel.sessionInfo?.userID else { return }
++        do {
++            _ = try LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
++                .recordHistorySessionChange(
++                    entry: entry,
++                    operation: .delete,
++                    changedFields: ["deleted_at"]
++                )
++        } catch {
++            #if DEBUG
++            print("Errore durante la registrazione delete pending History: \(error)")
++            #endif
++        }
++    }
+     
+     @MainActor
+     private func exportHistoryEntry(_ entry: HistoryEntry) {
+@@ -658,7 +689,7 @@ private struct HistoryRow: View {
+             }
+ 
+             HStack(alignment: .top, spacing: 8) {
+-                HistoryStatusBadge(status: entry.syncStatus)
++                HistoryStatusBadge(status: entry.syncStatus, deletedPending: entry.isHistorySessionDeletedPendingCloud)
+ 
+                 if entry.wasExported {
+                     Label(L("history.exported"), systemImage: "square.and.arrow.up")
+@@ -729,8 +760,12 @@ private struct HistoryRow: View {
+ 
+ private struct HistoryStatusBadge: View {
+     let status: HistorySyncStatus
++    let deletedPending: Bool
+ 
+     private var title: String {
++        if deletedPending {
++            return L("history.status.deleted_pending")
++        }
+         switch status {
+         case .notAttempted:
+             return L("history.status.not_attempted")
+@@ -742,6 +777,9 @@ private struct HistoryStatusBadge: View {
+     }
+ 
+     private var systemName: String {
++        if deletedPending {
++            return "trash.badge.clock"
++        }
+         switch status {
+         case .notAttempted:
+             return "arrow.triangle.2.circlepath"
+@@ -753,6 +791,9 @@ private struct HistoryStatusBadge: View {
+     }
+ 
+     private var color: Color {
++        if deletedPending {
++            return .orange
++        }
+         switch status {
+         case .notAttempted:
+             return .gray
+diff --git a/iOSMerchandiseControl/SupabaseInventoryService.swift b/iOSMerchandiseControl/SupabaseInventoryService.swift
+index 335e634..2e394cc 100644
+--- a/iOSMerchandiseControl/SupabaseInventoryService.swift
++++ b/iOSMerchandiseControl/SupabaseInventoryService.swift
+@@ -84,7 +84,7 @@ nonisolated struct SupabaseTask087RemoteCatalogSnapshot: Sendable {
+ actor SupabaseInventoryService {
+     nonisolated static let stablePageOrderColumn = "id"
+     nonisolated static let productPriceStablePageOrderColumns = ["id"]
+-    nonisolated static let sharedSheetSessionColumns = "remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at"
++    nonisolated static let sharedSheetSessionColumns = "remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at,deleted_at"
+ 
+     private let clientProvider: SupabaseClientProvider
+ #if DEBUG
+diff --git a/iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift b/iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift
+index 08cb544..50db036 100644
+--- a/iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift
++++ b/iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift
+@@ -115,6 +115,12 @@ private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManu
+         return try await Task.detached(priority: .utility) {
+             let context = ModelContext(modelContainer)
+             let service = HistorySessionSyncService(remote: remote)
++            let initialPull = try await service.pullHistorySessionsFromCloud(
++                ownerUserID: ownerUserID,
++                context: context,
++                onProgress: onProgress
++            )
++            try context.save()
+             let entries = try context.fetch(
+                 FetchDescriptor<HistoryEntry>(
+                     sortBy: [SortDescriptor(\HistoryEntry.timestamp, order: .reverse)]
+@@ -124,10 +130,11 @@ private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManu
+                 entries: entries,
+                 ownerUserID: ownerUserID,
+                 context: context,
++                includeSynced: true,
+                 onProgress: onProgress
+             )
+             try context.save()
+-            let pull = try await service.pullHistorySessionsFromCloud(
++            let confirmPull = try await service.pullHistorySessionsFromCloud(
+                 ownerUserID: ownerUserID,
+                 context: context,
+                 onProgress: onProgress
+@@ -135,10 +142,10 @@ private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManu
+             try context.save()
+             return SupabaseManualSyncHistorySessionSummary(
+                 uploaded: push.uploadedCount,
+-                inserted: pull.insertedCount,
+-                updated: pull.updatedCount,
+-                skippedClean: push.skippedCleanCount + pull.skippedCleanCount,
+-                skippedDirtyLocal: pull.skippedDirtyLocalCount,
++                inserted: initialPull.insertedCount + confirmPull.insertedCount,
++                updated: initialPull.updatedCount + confirmPull.updatedCount,
++                skippedClean: push.skippedCleanCount + initialPull.skippedCleanCount + confirmPull.skippedCleanCount,
++                skippedDirtyLocal: initialPull.skippedDirtyLocalCount + confirmPull.skippedDirtyLocalCount,
+                 skippedOversized: push.skippedOversizedCount
+             )
+         }.value
+diff --git a/iOSMerchandiseControl/en.lproj/Localizable.strings b/iOSMerchandiseControl/en.lproj/Localizable.strings
+index cec3b2b..8d53af1 100644
+--- a/iOSMerchandiseControl/en.lproj/Localizable.strings
++++ b/iOSMerchandiseControl/en.lproj/Localizable.strings
+@@ -1440,5 +1440,7 @@
+ "history.cloud.status.unavailable" = "Cloud history is not available on this device.";
+ "history.cloud.status.ready" = "History will sync with Sync now in Options.";
+ "history.cloud.status.pending" = "Local History changes pending: %d.";
++"history.cloud.status.deleted_pending" = "Deleted History items pending cloud sync: %d.";
+ "history.cloud.status.synced_at" = "History synchronized: %@.";
++"history.status.deleted_pending" = "Deleted pending";
+ "history.cloud.sync_hint" = "Use Sync now in Options to send and receive History together with catalog and prices.";
+diff --git a/iOSMerchandiseControl/es.lproj/Localizable.strings b/iOSMerchandiseControl/es.lproj/Localizable.strings
+index 682e4ac..1724902 100644
+--- a/iOSMerchandiseControl/es.lproj/Localizable.strings
++++ b/iOSMerchandiseControl/es.lproj/Localizable.strings
+@@ -1440,5 +1440,7 @@
+ "history.cloud.status.unavailable" = "El historial en la nube no está disponible en este dispositivo.";
+ "history.cloud.status.ready" = "El historial se sincroniza con Sincronizar ahora en Opciones.";
+ "history.cloud.status.pending" = "Cambios locales de historial pendientes: %d.";
++"history.cloud.status.deleted_pending" = "Elementos de historial eliminados pendientes de sincronización cloud: %d.";
+ "history.cloud.status.synced_at" = "Historial sincronizado: %@.";
++"history.status.deleted_pending" = "Eliminación pendiente";
+ "history.cloud.sync_hint" = "Usa Sincronizar ahora en Opciones para enviar y recibir el historial junto con catálogo y precios.";
+diff --git a/iOSMerchandiseControl/it.lproj/Localizable.strings b/iOSMerchandiseControl/it.lproj/Localizable.strings
+index c2c3975..e19e20d 100644
+--- a/iOSMerchandiseControl/it.lproj/Localizable.strings
++++ b/iOSMerchandiseControl/it.lproj/Localizable.strings
+@@ -1439,5 +1439,7 @@
+ "history.cloud.status.unavailable" = "Cronologia cloud non disponibile su questo dispositivo.";
+ "history.cloud.status.ready" = "La cronologia si sincronizza con Sincronizza ora in Opzioni.";
+ "history.cloud.status.pending" = "Modifiche locali cronologia in attesa: %d.";
++"history.cloud.status.deleted_pending" = "Cronologie eliminate in attesa di sync cloud: %d.";
+ "history.cloud.status.synced_at" = "Cronologia sincronizzata: %@.";
++"history.status.deleted_pending" = "Eliminazione in attesa";
+ "history.cloud.sync_hint" = "Usa Sincronizza ora in Opzioni per inviare e ricevere la cronologia insieme a catalogo e prezzi.";
+diff --git a/iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings b/iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings
+index ccbc4d5..5615ffe 100644
+--- a/iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings
++++ b/iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings
+@@ -1440,5 +1440,7 @@
+ "history.cloud.status.unavailable" = "此设备无法使用云端历史。";
+ "history.cloud.status.ready" = "历史会随“选项”中的“立即同步”一起同步。";
+ "history.cloud.status.pending" = "本地历史更改待同步：%d。";
++"history.cloud.status.deleted_pending" = "待云同步的已删除历史：%d。";
+ "history.cloud.status.synced_at" = "历史已同步：%@。";
++"history.status.deleted_pending" = "删除待同步";
+ "history.cloud.sync_hint" = "在“选项”中使用“立即同步”，即可和商品、价格一起发送和接收历史。";
+diff --git a/iOSMerchandiseControlTests/HistorySessionSyncServiceTests.swift b/iOSMerchandiseControlTests/HistorySessionSyncServiceTests.swift
+index b4b0d5b..91c0d0e 100644
+--- a/iOSMerchandiseControlTests/HistorySessionSyncServiceTests.swift
++++ b/iOSMerchandiseControlTests/HistorySessionSyncServiceTests.swift
+@@ -52,6 +52,49 @@ final class HistorySessionSyncServiceTests: XCTestCase {
+         XCTAssertEqual(changes.first?.status, .acknowledged)
+     }
+ 
++    func testFullReconciliationPushUploadsCleanHistorySessionWithStableRemoteID() async throws {
++        let context = try makeContext()
++        let remote = FakeHistorySessionRemote(ownerUserID: owner)
++        let service = HistorySessionSyncService(remote: remote)
++        let remoteID = UUID(uuidString: "10101010-1010-4010-8010-101010101010")!
++        let entry = HistoryEntry(
++            id: remoteID.uuidString.lowercased(),
++            timestamp: Date(timeIntervalSince1970: 1_778_400_000),
++            data: [["barcode"], ["TASK110_HISTORY_BAR"]],
++            editable: [[""], [""]],
++            complete: [false, true],
++            supplier: "TASK110_SUP",
++            category: "TASK110_CAT",
++            uid: remoteID,
++            remoteID: remoteID,
++            remotePayloadFingerprint: "stale-clean",
++            localChangeRevision: 1,
++            lastSyncedLocalRevision: 1
++        )
++        context.insert(entry)
++        try context.save()
++
++        let precise = try await service.pushPendingHistorySessions(
++            entries: [entry],
++            ownerUserID: owner,
++            context: context
++        )
++        let full = try await service.pushPendingHistorySessions(
++            entries: [entry],
++            ownerUserID: owner,
++            context: context,
++            includeSynced: true
++        )
++
++        XCTAssertEqual(precise.uploadedCount, 0)
++        XCTAssertEqual(precise.skippedCleanCount, 1)
++        XCTAssertEqual(full.uploadedCount, 1)
++        let upsertedRemoteIDs = await remote.upsertedRemoteIDs()
++        XCTAssertEqual(upsertedRemoteIDs, [remoteID])
++        XCTAssertEqual(entry.remoteID, remoteID)
++        XCTAssertEqual(entry.lastSyncedLocalRevision, entry.localChangeRevision)
++    }
++
+     func testPullInsertsRemoteHistorySession() async throws {
+         let context = try makeContext()
+         let remoteID = UUID(uuidString: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")!
+@@ -168,6 +211,68 @@ final class HistorySessionSyncServiceTests: XCTestCase {
+         XCTAssertEqual(entry.lastSyncedLocalRevision, 1)
+     }
+ 
++    func testPushUploadsDeletedHistorySessionTombstone() async throws {
++        let context = try makeContext()
++        let remote = FakeHistorySessionRemote(ownerUserID: owner)
++        let service = HistorySessionSyncService(remote: remote)
++        let remoteID = UUID(uuidString: "12121212-1212-4212-8212-121212121212")!
++        let entry = HistoryEntry(
++            id: remoteID.uuidString.lowercased(),
++            uid: remoteID,
++            remoteID: remoteID,
++            remotePayloadFingerprint: "old",
++            localChangeRevision: 1,
++            lastSyncedLocalRevision: 1
++        )
++        context.insert(entry)
++        entry.markHistorySessionLocalDeletion(at: Date(timeIntervalSince1970: 1_778_600_000))
++        try context.save()
++
++        let result = try await service.pushPendingHistorySessions(
++            entries: [entry],
++            ownerUserID: owner,
++            context: context
++        )
++
++        XCTAssertEqual(result.uploadedCount, 1)
++        let upserted = await remote.upsertedRows()
++        XCTAssertEqual(upserted.single?.remoteID, remoteID)
++        XCTAssertNotNil(upserted.single?.deletedAt)
++        XCTAssertFalse(entry.isHistorySessionDirtyForCloud)
++        XCTAssertNotNil(entry.remoteDeletedAt)
++    }
++
++    func testPullAppliesRemoteTombstoneToExistingHistorySession() async throws {
++        let context = try makeContext()
++        let remoteID = UUID(uuidString: "13131313-1313-4313-8313-131313131313")!
++        let entry = HistoryEntry(
++            id: remoteID.uuidString.lowercased(),
++            data: [["barcode"], ["LOCAL"]],
++            uid: remoteID,
++            remoteID: remoteID,
++            remotePayloadFingerprint: "old",
++            localChangeRevision: 1,
++            lastSyncedLocalRevision: 1
++        )
++        context.insert(entry)
++        let row = remoteRow(
++            remoteID: remoteID,
++            displayName: "REMOTE_DELETED",
++            data: [["barcode"], ["REMOTE"]],
++            editable: [[""], [""]],
++            complete: [false, true],
++            deletedAt: "2026-05-15T17:00:00Z"
++        )
++        let service = HistorySessionSyncService(remote: FakeHistorySessionRemote(ownerUserID: owner, rows: [row]))
++
++        let result = try await service.pullHistorySessionsFromCloud(ownerUserID: owner, context: context)
++
++        XCTAssertEqual(result.updatedCount, 1)
++        XCTAssertNotNil(entry.remoteDeletedAt)
++        XCTAssertEqual(entry.data, [["barcode"], ["LOCAL"]])
++        XCTAssertEqual(entry.lastSyncedLocalRevision, entry.localChangeRevision)
++    }
++
+     func testPullRejectsOwnerMismatch() async throws {
+         let context = try makeContext()
+         let remoteID = UUID(uuidString: "ffffffff-ffff-4fff-8fff-ffffffffffff")!
+@@ -187,7 +292,8 @@ final class HistorySessionSyncServiceTests: XCTestCase {
+                 complete: [false, false]
+             ),
+             ownerUserID: otherOwner,
+-            updatedAt: "2026-05-13T12:00:01Z"
++            updatedAt: "2026-05-13T12:00:01Z",
++            deletedAt: nil
+         )
+         let service = HistorySessionSyncService(remote: FakeHistorySessionRemote(ownerUserID: owner, rows: [row]))
+ 
+@@ -226,7 +332,8 @@ final class HistorySessionSyncServiceTests: XCTestCase {
+         displayName: String,
+         data: [[String]],
+         editable: [[String]],
+-        complete: [Bool]
++        complete: [Bool],
++        deletedAt: String? = nil
+     ) -> RemoteSharedSheetSessionRow {
+         RemoteSharedSheetSessionRow(
+             remoteID: remoteID,
+@@ -243,7 +350,8 @@ final class HistorySessionSyncServiceTests: XCTestCase {
+                 complete: complete
+             ),
+             ownerUserID: owner,
+-            updatedAt: "2026-05-13T12:00:01Z"
++            updatedAt: "2026-05-13T12:00:01Z",
++            deletedAt: deletedAt
+         )
+     }
+ 
+@@ -294,7 +402,8 @@ private actor FakeHistorySessionRemote: HistorySessionRemoteSyncing {
+                 data: $0.data,
+                 sessionOverlay: $0.sessionOverlay,
+                 ownerUserID: $0.ownerUserID,
+-                updatedAt: "2026-05-13T12:00:01Z"
++                updatedAt: "2026-05-13T12:00:01Z",
++                deletedAt: $0.deletedAt
+             )
+         }
+         self.rows = readBack
+@@ -314,4 +423,14 @@ private actor FakeHistorySessionRemote: HistorySessionRemoteSyncing {
+     func upsertedRemoteIDs() -> [UUID?] {
+         upserted.map(\.remoteID)
+     }
++
++    func upsertedRows() -> [SharedSheetSessionUpsertRow] {
++        upserted
++    }
++}
++
++private extension Array {
++    var single: Element? {
++        count == 1 ? self[0] : nil
++    }
+ }

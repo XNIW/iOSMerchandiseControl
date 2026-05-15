@@ -1,0 +1,16 @@
+ .../data/AppDatabase.kt                            |  12 ++-
+ .../data/HistoryEntry.kt                           |   6 +-
+ .../data/HistoryEntryDao.kt                        |  38 +++++++-
+ .../data/HistorySessionPushCoordinator.kt          |  51 +++++++---
+ .../data/InventoryRepository.kt                    | 105 +++++++++++++++++----
+ .../data/SessionRemotePayload.kt                   |   7 +-
+ .../data/SharedSheetSessionRecord.kt               |  14 ++-
+ .../ui/screens/HistoryScreen.kt                    |  26 +++--
+ app/src/main/res/values-en/strings.xml             |   1 +
+ app/src/main/res/values-es/strings.xml             |   1 +
+ app/src/main/res/values-zh/strings.xml             |   1 +
+ app/src/main/res/values/strings.xml                |   1 +
+ .../data/AppDatabaseMigrationTest.kt               |  66 +++++++++++--
+ .../data/DefaultInventoryRepositoryTest.kt         | 102 ++++++++++++++++++--
+ .../data/HistorySessionPushCoordinatorTest.kt      |  54 +++++++++++
+ 15 files changed, 415 insertions(+), 70 deletions(-)

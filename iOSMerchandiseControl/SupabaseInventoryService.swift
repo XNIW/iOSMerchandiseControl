@@ -84,7 +84,8 @@ nonisolated struct SupabaseTask087RemoteCatalogSnapshot: Sendable {
 actor SupabaseInventoryService {
     nonisolated static let stablePageOrderColumn = "id"
     nonisolated static let productPriceStablePageOrderColumns = ["id"]
-    nonisolated static let sharedSheetSessionColumns = "remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at"
+    nonisolated static let productColumns = "id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at"
+    nonisolated static let sharedSheetSessionColumns = "remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at,deleted_at"
 
     private let clientProvider: SupabaseClientProvider
 #if DEBUG
@@ -411,9 +412,42 @@ actor SupabaseInventoryService {
     func fetchProducts(limit: Int = 100) async throws -> [RemoteInventoryProductRow] {
         try await fetchRows(
             table: "inventory_products",
-            columns: "id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at",
+            columns: Self.productColumns,
             limit: limit
         )
+    }
+
+    func updateProduct(id: UUID, payload: SupabaseManualPushProductUpdatePayload) async throws -> RemoteInventoryProductRow {
+        let ownerUserID = try await requireAuthenticatedSession()
+        do {
+            let row: RemoteInventoryProductRow = try await clientProvider.client
+                .from("inventory_products")
+                .update(payload)
+                .eq("id", value: id.uuidString)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .select(Self.productColumns)
+                .single()
+                .execute()
+                .value
+            guard row.id == id,
+                  row.ownerUserID == ownerUserID else {
+                throw SupabaseInventoryServiceError.schemaDrift(message: "Product update read-back mismatch.")
+            }
+            return row
+        } catch let error as SupabaseInventoryServiceError {
+            throw error
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
     }
 
     func upsertSharedSheetSessions(
@@ -499,7 +533,7 @@ actor SupabaseInventoryService {
     func fetchProductsPage(from: Int, to: Int) async throws -> [RemoteInventoryProductRow] {
         try await fetchRowsPage(
             table: "inventory_products",
-            columns: "id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at",
+            columns: Self.productColumns,
             from: from,
             to: to
         )

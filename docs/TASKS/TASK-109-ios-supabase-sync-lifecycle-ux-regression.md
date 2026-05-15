@@ -4,16 +4,24 @@
 - **Task ID**: TASK-109
 - **Titolo**: iOS Supabase sync lifecycle regression: auto check/apply on launch, incremental push/pull, Review/Cancel UX cleanup, History/session runtime parity
 - **File task**: `docs/TASKS/TASK-109-ios-supabase-sync-lifecycle-ux-regression.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW — CHANGES_REQUIRED / BLOCKED_WITH_PLAYBOOK
-- **Responsabile attuale**: OWNER / App-auth required
+- **Stato**: BLOCKED
+- **Fase attuale**: REVIEW — sospeso (override utente 2026-05-15; task non attivo)
+- **Responsabile attuale**: UTENTE *(ripresa esplicita richiesta)* / poi CODEX se TASK-109 viene ripreso
 - **Data creazione**: 2026-05-15
-- **Ultimo aggiornamento**: 2026-05-15 02:25 -0400 *(REVIEW completa Codex: fix iOS mirato applicato e verificato; Supabase History seed owner-scoped creato; chiusura DONE bloccata da app-auth mancante per pull History live non-empty)*  
-- **Ultimo agente che ha operato**: CODEX *(Reviewer/Fixer — review completa + fix autorizzato + evidence)*
+- **Ultimo aggiornamento**: 2026-05-15 *(BLOCKED / SOSPESO: override priorità TASK-110)*
+- **Ultimo agente che ha operato**: CODEX *(tracking sospensione + nuovo task; nessuna continuazione TASK-109 autorizzata)*
 
 ## Dipendenze
 - **Dipende da**: **TASK-108** (**DONE / Chiusura — PASS_WITH_NOTES**). **TASK-108 non viene riaperto** come garante runtime delle promesse (auto incremental launch/foreground, push Database/Generated/History, parity History, UX unified). La **regressione post‑chiusura segnalata dall’operatore** richiede un nuovo perimetro TRACKING TASK-109.
 - **Sblocca**: fix strutturato iOS lifecycle + sync engine/state machine; eventualmente **follow‑up Android separato** se l’audit comparativo EXECUTION evidenzia gap (nessuna patch Kotlin nel task corrente finché non deciso backlog).
+
+## BLOCKED / SOSPESO (override utente 2026-05-15)
+
+**Motivo:** «User override 2026-05-15: sospeso per aprire un nuovo task prioritario su discrepanza sync cloud Android/iOS/Supabase per cronologia, catalogo e prezzi.»
+
+- **Non** continuare questo task finché l’utente non riparte esplicitamente da questo file.
+- **Non** marcare **DONE**.
+- Il perimetro prioritario cross‑platform è stato ricollocato in **`TASK-110`** (`docs/TASKS/TASK-110-cross-platform-cloud-sync-consistency.md`), task **unico attivo** nel MASTER‑PLAN al momento dell’override.
 
 ## Tracking reconciliation gate — MASTER-PLAN e task file devono concordare
 

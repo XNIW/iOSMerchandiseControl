@@ -1439,5 +1439,7 @@
 "history.cloud.status.unavailable" = "Cronologia cloud non disponibile su questo dispositivo.";
 "history.cloud.status.ready" = "La cronologia si sincronizza con Sincronizza ora in Opzioni.";
 "history.cloud.status.pending" = "Modifiche locali cronologia in attesa: %d.";
+"history.cloud.status.deleted_pending" = "Cronologie eliminate in attesa di sync cloud: %d.";
 "history.cloud.status.synced_at" = "Cronologia sincronizzata: %@.";
+"history.status.deleted_pending" = "Eliminazione in attesa";
 "history.cloud.sync_hint" = "Usa Sincronizza ora in Opzioni per inviare e ricevere la cronologia insieme a catalogo e prezzi.";

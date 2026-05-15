@@ -185,6 +185,67 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         XCTAssertFalse(plan.isApplyAllowed)
     }
 
+    func testSampledNoApplicablePlanDoesNotReportConcreteApplyWork() {
+        let plan = ProductPriceApplyPlan(
+            generatedAt: Date(timeIntervalSince1970: 1_778_500_000),
+            sessionSnapshot: session,
+            sourceState: ProductPriceApplySourceState(sampled: true),
+            summary: ProductPriceApplySummary(
+                remoteRead: 900,
+                included: 0,
+                skippedExisting: 900,
+                unmapped: 0,
+                invalid: 0,
+                conflicts: 0,
+                mappingConflicts: 0,
+                partial: false,
+                truncated: false,
+                sourceError: nil
+            ),
+            blockReasons: [.noApplicableRows],
+            linesToInsert: [],
+            issues: [],
+            remoteRows: []
+        )
+
+        XCTAssertTrue(plan.isApplyAllowed)
+        XCTAssertFalse(plan.hasConcreteApplyWork)
+    }
+
+    func testBootstrapPreviewSampleComparesLocalPricesBeforeReportingNewWork() async throws {
+        let context = try makeContext()
+        let productIDs = (0..<30).map { uuid(990_000 + $0) }
+        let products = try productIDs.enumerated().map { index, productID in
+            try insertProduct(context: context, barcode: "TASK110-SAMPLE-\(index)", remoteID: productID)
+        }
+        let rows = makeRemotePriceRows(count: 900, productIDs: productIDs)
+        for row in rows {
+            let productIndex = try XCTUnwrap(productIDs.firstIndex(of: row.productID))
+            context.insert(
+                ProductPrice(
+                    remoteID: row.id,
+                    type: .purchase,
+                    price: row.price,
+                    effectiveAt: try XCTUnwrap(ProductPriceEffectiveAtCanonicalizer.canonicalDate(from: row.effectiveAt)),
+                    product: products[productIndex]
+                )
+            )
+        }
+        try context.save()
+        let pagedService = SupabaseProductPriceApplyService(fetcher: ProductPricePagedFetcherFake(rows: rows))
+
+        let samplePlan = try await pagedService.loadBootstrapPreviewSample(
+            context: context,
+            sessionSnapshot: session
+        )
+
+        XCTAssertEqual(samplePlan.summary.remoteRead, 900)
+        XCTAssertEqual(samplePlan.summary.skippedExisting, 900)
+        XCTAssertEqual(samplePlan.linesToInsert.count, 0)
+        XCTAssertEqual(samplePlan.remoteIdentityLinks.count, 0)
+        XCTAssertFalse(samplePlan.hasConcreteApplyWork)
+    }
+
     func testDuplicateLocalProductRemoteIDIsMappingConflict() {
         let productID = uuid(205)
         let plan = makePlan(

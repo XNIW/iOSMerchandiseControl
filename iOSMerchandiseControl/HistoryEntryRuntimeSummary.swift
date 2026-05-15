@@ -7,6 +7,14 @@ nonisolated struct HistoryEntryRuntimeSummary {
 
     static func compute(from mergedGrid: [[String]], complete: [Bool]) -> HistoryEntryRuntimeSummary {
         let totalItems = max(0, mergedGrid.count - 1)
+        guard mergedGrid.count > 1 else {
+            return HistoryEntryRuntimeSummary(
+                totalItems: totalItems,
+                missingItems: 0,
+                paymentTotal: 0
+            )
+        }
+
         let header = mergedGrid.first ?? []
         let indices = HeaderIndices(header: header)
 

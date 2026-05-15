@@ -809,6 +809,62 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertEqual(vm.historySessionSummary?.inserted, 1)
     }
 
+    func testDirectSyncRunsPendingHistoryIfPreparedApplyIsInvalidatedBeforeAutoApply() async {
+        let owner = UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")!
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        fake.handler = { [weak self] _, _ in
+            self?.cloudCheckSummary(
+                finalState: .technicalReviewNeeded,
+                remotePreviewSummary: self?.remotePreviewSummary(
+                    hasRemoteSignals: true,
+                    counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                        remoteProductPriceCount: 1,
+                        priceHistorySignalCount: 1
+                    ),
+                    key: .cloudDataNeedsReview
+                )
+            ) ?? SupabaseManualSyncRunSummary(
+                finalState: .technicalReviewNeeded,
+                userFacingHeadline: SupabaseManualSyncUserFacingCopy.cloudCheckNoAction,
+                executedPhases: [],
+                skippedPhases: [],
+                countsSnapshot: SupabaseManualSyncPrivacyCounts(),
+                suggestedNextStep: nil,
+                detailMessage: nil
+            )
+        }
+        let applyPlan = makeProductPriceApplyPlan(ownerID: owner, lineCount: 1)
+        let productProvider = ManualSyncProductPriceProviderFake(applyPlans: [applyPlan])
+        let historyProvider = ManualSyncHistorySessionProviderFake(
+            result: SupabaseManualSyncHistorySessionSummary(inserted: 1)
+        )
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsProductPriceSync: true
+            ),
+            initialAuthPresentationContext: .signedInReady,
+            productPriceProvider: productProvider,
+            currentProductPriceOwnerID: { owner },
+            historySessionProvider: historyProvider,
+            currentHistorySessionOwnerID: { owner }
+        )
+
+        await vm.start(with: .dryRun, syncHistoryAfterRun: true)
+
+        XCTAssertEqual(historyProvider.callCount, 0)
+
+        vm.cancelLocalApplyReview()
+        let didSyncHistory = await vm.applyStagedLocalChangesIfNeeded()
+
+        XCTAssertTrue(didSyncHistory)
+        XCTAssertEqual(productProvider.applyCallCount, 0)
+        XCTAssertEqual(historyProvider.callCount, 1)
+        XCTAssertEqual(vm.historySessionSummary?.inserted, 1)
+    }
+
     func testDryRunWithoutSyncNowFlagDoesNotMutateHistory() async {
         let fake = ClosureSupabaseManualSyncCoordinatorFake()
         fake.handler = { [weak self] _, _ in

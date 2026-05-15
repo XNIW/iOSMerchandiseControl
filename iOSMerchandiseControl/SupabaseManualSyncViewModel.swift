@@ -595,6 +595,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private var stagedProductPriceApplyFingerprint: String?
     private var stagedProductPricePushPlan: ProductPricePushDryRunPlan?
     private var stagedProductPricePushFingerprint: String?
+    private var shouldSyncHistoryAfterDirectApply = false
 
     @Published private(set) var presentationKind: SupabaseManualSyncUserPresentationKind = .idleReady
     @Published private(set) var title: String = Copy.idleTitle
@@ -1135,6 +1136,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         invalidateCatalogPushPlan(clearSummary: true)
         invalidateProductPricePlans(clearSummary: true)
         invalidateActivityRegistration(clearSummary: true)
+        shouldSyncHistoryAfterDirectApply = false
         lastStartedMode = mode
         if mode == .dryRun {
             semiAutomaticState = .checking
@@ -1172,6 +1174,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         }
 
         apply(summary: summary)
+        await reconcileCatalogApplyEligibilityWithStagedPlan()
         updateProgress(
             phase: .reviewingChanges,
             domain: .catalog,
@@ -1181,9 +1184,12 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         await prepareCatalogPushPlanIfNeeded(after: summary)
         await prepareProductPricePlansIfNeeded(after: summary)
         await prepareActivityRegistrationIfNeeded(after: summary)
+        let shouldDeferHistorySync = syncHistoryAfterRun && (canApplyCatalogChanges || canApplyProductPriceChanges)
+        shouldSyncHistoryAfterDirectApply = shouldDeferHistorySync
         let historySummary: SupabaseManualSyncHistorySessionSummary
-        if syncHistoryAfterRun && !canApplyCatalogChanges && !canApplyProductPriceChanges {
+        if syncHistoryAfterRun && !shouldDeferHistorySync {
             historySummary = await syncHistorySessionsIfAvailable()
+            shouldSyncHistoryAfterDirectApply = false
         } else {
             historySummary = SupabaseManualSyncHistorySessionSummary()
         }
@@ -1675,6 +1681,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 "[ManualSync] apply_prices_done op=\(redactedDebugUUID(operationID)) applied=\(priceSummary.applied) skipped=\(priceSummary.skippedDuplicate) blocked=\(priceSummary.blocked) failed=\(priceSummary.failed)"
             )
             let historySummary = await syncHistorySessionsIfAvailable()
+            shouldSyncHistoryAfterDirectApply = false
             var baselineCommitted = false
             var baselineCommitFailed = false
             if let preview,
@@ -1785,9 +1792,25 @@ final class SupabaseManualSyncViewModel: ObservableObject {
 
     @discardableResult
     func applyStagedLocalChangesIfNeeded() async -> Bool {
-        guard canApplyCatalogChanges || canApplyProductPriceChanges else { return false }
+        guard canApplyCatalogChanges || canApplyProductPriceChanges else {
+            return await syncPendingHistoryAfterDirectRunIfNeeded()
+        }
         await applyStagedLocalChanges()
         return true
+    }
+
+    @discardableResult
+    private func syncPendingHistoryAfterDirectRunIfNeeded() async -> Bool {
+        guard shouldSyncHistoryAfterDirectApply else { return false }
+        shouldSyncHistoryAfterDirectApply = false
+        let historySummary = await syncHistorySessionsIfAvailable()
+        finishProgress(
+            warnings: historySummary.hasWarnings,
+            detailMessage: historySummary.totalChanged > 0
+                ? L("options.supabase.manualSync.progress.detail.historyChanged", historySummary.totalChanged)
+                : nil
+        )
+        return historySummary.totalChanged > 0 || historySummary.hasWarnings
     }
 
     private enum LocalApplyInternalError: Error {
@@ -1854,6 +1877,39 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             invalidateLocalApplyStaging(reason: localApplyBlockedMessage(for: error))
         }
         refreshCombinedLocalApplyEligibility()
+    }
+
+    private func reconcileCatalogApplyEligibilityWithStagedPlan() async {
+        guard canApplyCatalogChanges,
+              let preview = remotePreviewStaging?.stagedPreviewForLocalApply,
+              let modelContainer = localApplyModelContainer,
+              let service = localApplyService else {
+            return
+        }
+
+        let isAuthenticated = isLocalApplyAuthenticated?() ?? authPresentationContext.isSignedIn
+        let accountGuard = SupabasePullApplyAccountGuard(
+            currentUserID: currentLocalApplyOwnerID?(),
+            lastLinkedUserID: stagedLocalApplyOwnerID ?? currentLocalApplyOwnerID?()
+        )
+
+        do {
+            _ = try await Task.detached(priority: .utility) {
+                let context = ModelContext(modelContainer)
+                return try service.prepareApplyPlan(
+                    preview: preview,
+                    context: context,
+                    options: SupabasePullApplyOptions(),
+                    isAuthenticated: isAuthenticated,
+                    accountGuard: accountGuard
+                )
+            }.value
+        } catch let error as SupabasePullApplyError where error.disabledReason == .noApplicableChanges {
+            debugPrint("[ManualSync] apply_reconcile_no_applicable_catalog_changes")
+            invalidateLocalApplyStaging(reason: L("options.supabase.manualSync.apply.blocked.noChanges"))
+        } catch {
+            debugPrint("[ManualSync] apply_reconcile_kept_catalog_review error=\(safeDebugError(error))")
+        }
     }
 
     private func prepareLocalApplyPlan(from preview: SyncPreview) async throws -> SupabasePullApplyPlan {
@@ -2366,7 +2422,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 deferUnmappedProductsUntilCatalogApply: canDeferUnmappedPrices
             )
             productPriceSummary = productPriceSummary.merging(applySummary)
-            canApplyProductPriceChanges = plan.isApplyAllowed || canDeferUnmappedPrices
+            canApplyProductPriceChanges = plan.hasConcreteApplyWork || canDeferUnmappedPrices
             refreshCombinedLocalApplyEligibility()
             if canApplyProductPriceChanges,
                !shouldPreserveTerminalApplyPresentation {
@@ -3001,9 +3057,10 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         let sourceBlocked = (plan.summary.partial ? 1 : 0)
             + (plan.summary.truncated ? 1 : 0)
         let accessOrSyncFailed = plan.summary.sourceError == nil ? 0 : 1
-        let readyToApply = (plan.isApplyAllowed || deferUnmappedProductsUntilCatalogApply)
-            ? max(plan.linesToInsert.count + plan.remoteIdentityLinks.count, plan.sourceState.sampled ? 1 : 0)
-            : 0
+        let concreteApplyCount = plan.linesToInsert.count + plan.remoteIdentityLinks.count
+        let readyToApply = deferUnmappedProductsUntilCatalogApply
+            ? max(concreteApplyCount, 1)
+            : concreteApplyCount
         let unmappedBlocked = deferUnmappedProductsUntilCatalogApply ? 0 : plan.summary.unmapped
         return SupabaseManualSyncProductPriceSummary(
             remoteFound: plan.summary.remoteRead,
@@ -3999,11 +4056,11 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 isLoading: false
             )
         case .noChanges:
-            if lastSummary?.hasCompletedRemotePreviewSignals == true {
-                return nil
-            }
             if let priceOnlyState = productPriceOnlyPushPresentationState() {
                 return priceOnlyState
+            }
+            if lastSummary?.hasCompletedRemotePreviewSignals == true {
+                return nil
             }
             if activityRegistrationPhase.shouldShowReviewSection {
                 return nil

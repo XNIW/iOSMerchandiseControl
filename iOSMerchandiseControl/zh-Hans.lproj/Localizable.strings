@@ -1440,5 +1440,7 @@
 "history.cloud.status.unavailable" = "此设备无法使用云端历史。";
 "history.cloud.status.ready" = "历史会随“选项”中的“立即同步”一起同步。";
 "history.cloud.status.pending" = "本地历史更改待同步：%d。";
+"history.cloud.status.deleted_pending" = "待云同步的已删除历史：%d。";
 "history.cloud.status.synced_at" = "历史已同步：%@。";
+"history.status.deleted_pending" = "删除待同步";
 "history.cloud.sync_hint" = "在“选项”中使用“立即同步”，即可和商品、价格一起发送和接收历史。";

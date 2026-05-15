@@ -1440,5 +1440,7 @@
 "history.cloud.status.unavailable" = "Cloud history is not available on this device.";
 "history.cloud.status.ready" = "History will sync with Sync now in Options.";
 "history.cloud.status.pending" = "Local History changes pending: %d.";
+"history.cloud.status.deleted_pending" = "Deleted History items pending cloud sync: %d.";
 "history.cloud.status.synced_at" = "History synchronized: %@.";
+"history.status.deleted_pending" = "Deleted pending";
 "history.cloud.sync_hint" = "Use Sync now in Options to send and receive History together with catalog and prices.";

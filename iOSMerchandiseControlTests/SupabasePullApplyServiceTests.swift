@@ -190,6 +190,57 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         XCTAssertEqual(product.remoteUpdatedAt, remoteUpdatedAt)
     }
 
+    func testPendingLocalProductChangeBlocksRemoteUpdateCandidate() throws {
+        let context = try makeContext()
+        let ownerID = UUID(uuidString: "11111111-1111-4111-8111-111111111111")!
+        let remoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000110")!
+        let product = try insertProduct(
+            context: context,
+            barcode: "100",
+            productName: "Local",
+            retailPrice: 34.56,
+            remoteID: remoteID
+        )
+        context.insert(LocalPendingChange(
+            ownerUserID: ownerID,
+            entityKind: .product,
+            operation: .update,
+            origin: .manualCatalogSave,
+            logicalKey: LocalPendingChangeLogicalKey.product(remoteID: remoteID, barcode: "100"),
+            changedFields: ["retailPrice"],
+            entityRemoteID: remoteID
+        ))
+        try context.save()
+
+        let preview = makePreview(updateCandidates: [
+            makeSummary(
+                classification: .updateCandidate,
+                payload: makePayload(
+                    remoteID: remoteID,
+                    barcode: "100",
+                    productName: "Remote",
+                    retailPrice: 23.45
+                )
+            )
+        ])
+
+        XCTAssertThrowsError(
+            try service.prepareApplyPlan(
+                preview: preview,
+                context: context,
+                isAuthenticated: true,
+                accountGuard: SupabasePullApplyAccountGuard(
+                    currentUserID: ownerID,
+                    lastLinkedUserID: ownerID
+                )
+            )
+        ) { error in
+            XCTAssertEqual(error as? SupabasePullApplyError, .noApplicableChanges)
+        }
+        XCTAssertEqual(product.productName, "Local")
+        XCTAssertEqual(product.retailPrice, 34.56)
+    }
+
     func testLinkOnlySetsRemoteIDWithoutDuplicatingProduct() throws {
         let context = try makeContext()
         let remoteID = UUID()
@@ -554,7 +605,8 @@ final class SupabasePullApplyServiceTests: XCTestCase {
             Product.self,
             Supplier.self,
             ProductCategory.self,
-            ProductPrice.self
+            ProductPrice.self,
+            LocalPendingChange.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])

@@ -25,6 +25,7 @@ nonisolated struct SharedSheetSessionUpsertRow: Encodable, Equatable, Sendable {
     let data: [[String]]
     let sessionOverlay: HistorySessionOverlayPayload?
     let ownerUserID: UUID
+    let deletedAt: String?
 
     enum CodingKeys: String, CodingKey {
         case remoteID = "remote_id"
@@ -37,6 +38,22 @@ nonisolated struct SharedSheetSessionUpsertRow: Encodable, Equatable, Sendable {
         case data
         case sessionOverlay = "session_overlay"
         case ownerUserID = "owner_user_id"
+        case deletedAt = "deleted_at"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(remoteID.uuidString.lowercased(), forKey: .remoteID)
+        try container.encode(payloadVersion, forKey: .payloadVersion)
+        try container.encode(displayName, forKey: .displayName)
+        try container.encode(timestamp, forKey: .timestamp)
+        try container.encode(supplier, forKey: .supplier)
+        try container.encode(category, forKey: .category)
+        try container.encode(isManualEntry, forKey: .isManualEntry)
+        try container.encode(data, forKey: .data)
+        try container.encodeIfPresent(sessionOverlay, forKey: .sessionOverlay)
+        try container.encode(ownerUserID.uuidString.lowercased(), forKey: .ownerUserID)
+        try container.encodeIfPresent(deletedAt, forKey: .deletedAt)
     }
 }
 
@@ -52,6 +69,7 @@ nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
     let sessionOverlay: HistorySessionOverlayPayload?
     let ownerUserID: UUID
     let updatedAt: String?
+    let deletedAt: String?
 
     enum CodingKeys: String, CodingKey {
         case remoteID = "remote_id"
@@ -65,6 +83,7 @@ nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
         case sessionOverlay = "session_overlay"
         case ownerUserID = "owner_user_id"
         case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
     }
 }
 
@@ -98,7 +117,8 @@ nonisolated enum HistorySessionPayloadCodec {
             isManualEntry: entry.isManualEntry,
             data: entry.data,
             sessionOverlay: overlay,
-            ownerUserID: ownerUserID
+            ownerUserID: ownerUserID,
+            deletedAt: entry.remoteDeletedAt.map(formatTimestamp)
         )
     }
 
@@ -130,7 +150,8 @@ nonisolated enum HistorySessionPayloadCodec {
             row.isManualEntry ? "1" : "0",
             canonicalJSONString(row.data),
             canonicalJSONString(row.sessionOverlay?.editable ?? []),
-            canonicalJSONString(row.sessionOverlay?.complete ?? [])
+            canonicalJSONString(row.sessionOverlay?.complete ?? []),
+            row.deletedAt.map(normalizedTimestamp) ?? ""
         ].joined(separator: "|")
         let digest = SHA256.hash(data: Data(canonical.utf8))
         return digest.map { String(format: "%02x", $0) }.joined()
@@ -254,20 +275,21 @@ nonisolated final class HistorySessionSyncService {
         entries: [HistoryEntry],
         ownerUserID: UUID,
         context: ModelContext,
+        includeSynced: Bool = false,
         onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void = { _ in }
     ) async throws -> HistorySessionPushResult {
         var result = HistorySessionPushResult()
-        let dirtyEntries = entries.filter(\.isHistorySessionDirtyForCloud)
-        result.skippedCleanCount = max(0, entries.count - dirtyEntries.count)
-        let dirtyEntryCount = dirtyEntries.count
-        await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: 0, total: dirtyEntryCount), onProgress: onProgress)
-        guard !dirtyEntries.isEmpty else { return result }
+        let uploadEntries = includeSynced ? entries : entries.filter(\.isHistorySessionDirtyForCloud)
+        result.skippedCleanCount = includeSynced ? 0 : max(0, entries.count - uploadEntries.count)
+        let uploadEntryCount = uploadEntries.count
+        await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: 0, total: uploadEntryCount), onProgress: onProgress)
+        guard !uploadEntries.isEmpty else { return result }
 
         let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
         var uploadPairs: [(entry: HistoryEntry, row: SharedSheetSessionUpsertRow, revision: Int)] = []
-        uploadPairs.reserveCapacity(dirtyEntries.count)
+        uploadPairs.reserveCapacity(uploadEntries.count)
 
-        for entry in dirtyEntries {
+        for entry in uploadEntries {
             do {
                 let row = try HistorySessionPayloadCodec.upsertRow(for: entry, ownerUserID: ownerUserID)
                 uploadPairs.append((entry, row, entry.localChangeRevision))
@@ -289,7 +311,7 @@ nonisolated final class HistorySessionSyncService {
             ownerUserID: ownerUserID
         )
         try Task.checkCancellation()
-        await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: uploadPairs.count, total: dirtyEntryCount), onProgress: onProgress)
+        await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: uploadPairs.count, total: uploadEntryCount), onProgress: onProgress)
         let readBackByRemoteID = Dictionary(uniqueKeysWithValues: readBackRows.map { ($0.remoteID, $0) })
 
         for (index, pair) in uploadPairs.enumerated() {
@@ -302,13 +324,14 @@ nonisolated final class HistorySessionSyncService {
             pair.entry.markHistorySessionRemoteApplied(
                 remoteID: readBack.remoteID,
                 remoteUpdatedAt: HistorySessionPayloadCodec.parseUpdatedAt(readBack.updatedAt),
+                remoteDeletedAt: HistorySessionPayloadCodec.parseUpdatedAt(readBack.deletedAt),
                 fingerprint: fingerprint,
                 syncedRevision: pair.revision
             )
             pair.entry.syncStatus = .syncedSuccessfully
             try accumulator.acknowledgeHistorySessionChange(entry: pair.entry)
             result.uploadedCount += 1
-            await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: index + 1, total: dirtyEntryCount), onProgress: onProgress)
+            await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: index + 1, total: uploadEntryCount), onProgress: onProgress)
         }
 
         return result
@@ -373,7 +396,18 @@ nonisolated final class HistorySessionSyncService {
             }
 
             let remoteFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: row)
+            let remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
             if let existing = byRemoteID[row.remoteID] ?? byUID[row.remoteID] {
+                if remoteDeletedAt != nil {
+                    if shouldProtectDirtyLocalEntryFromRemoteTombstone(existing) {
+                        result.skippedDirtyLocalCount += 1
+                    } else {
+                        applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
+                        result.updatedCount += 1
+                    }
+                    continue
+                }
+
                 if existing.remotePayloadFingerprint == remoteFingerprint {
                     result.skippedCleanCount += 1
                     continue
@@ -387,6 +421,11 @@ nonisolated final class HistorySessionSyncService {
                 apply(row: row, to: existing, fingerprint: remoteFingerprint)
                 result.updatedCount += 1
             } else {
+                if remoteDeletedAt != nil {
+                    result.skippedCleanCount += 1
+                    continue
+                }
+
                 let inserted = makeEntry(from: row, fingerprint: remoteFingerprint)
                 context.insert(inserted)
                 byRemoteID[row.remoteID] = inserted
@@ -429,8 +468,17 @@ nonisolated final class HistorySessionSyncService {
             }
 
             let remoteFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: row)
+            let remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
             if let existing = byRemoteID[row.remoteID] ?? byUID[row.remoteID] {
-                if existing.remotePayloadFingerprint == remoteFingerprint {
+                if remoteDeletedAt != nil {
+                    if shouldProtectDirtyLocalEntryFromRemoteTombstone(existing) {
+                        result.skippedDirtyLocalCount += 1
+                    } else {
+                        applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
+                        result.updatedCount += 1
+                        mutationsSinceSave += 1
+                    }
+                } else if existing.remotePayloadFingerprint == remoteFingerprint {
                     result.skippedCleanCount += 1
                 } else if existing.localChangeRevision > existing.lastSyncedLocalRevision {
                     result.skippedDirtyLocalCount += 1
@@ -440,6 +488,12 @@ nonisolated final class HistorySessionSyncService {
                     mutationsSinceSave += 1
                 }
             } else {
+                if remoteDeletedAt != nil {
+                    result.skippedCleanCount += 1
+                    await publishProgress(HistorySessionSyncProgress(stage: .applying, current: index + 1, total: rowCount), onProgress: onProgress)
+                    continue
+                }
+
                 let inserted = makeEntry(from: row, fingerprint: remoteFingerprint)
                 context.insert(inserted)
                 byRemoteID[row.remoteID] = inserted
@@ -468,6 +522,10 @@ nonisolated final class HistorySessionSyncService {
         return result
     }
 
+    private func shouldProtectDirtyLocalEntryFromRemoteTombstone(_ entry: HistoryEntry) -> Bool {
+        entry.remoteDeletedAt == nil && entry.localChangeRevision > entry.lastSyncedLocalRevision
+    }
+
     private func apply(
         row: RemoteSharedSheetSessionRow,
         to entry: HistoryEntry,
@@ -494,7 +552,20 @@ nonisolated final class HistorySessionSyncService {
         entry.remoteID = row.remoteID
         entry.remoteUpdatedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.updatedAt)
         entry.remotePayloadFingerprint = fingerprint
-        entry.remoteDeletedAt = nil
+        entry.remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
+        entry.lastSyncedLocalRevision = entry.localChangeRevision
+        entry.syncStatus = .syncedSuccessfully
+    }
+
+    private func applyRemoteTombstone(
+        row: RemoteSharedSheetSessionRow,
+        to entry: HistoryEntry,
+        fingerprint: String
+    ) {
+        entry.remoteID = row.remoteID
+        entry.remoteUpdatedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.updatedAt)
+        entry.remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt) ?? Date()
+        entry.remotePayloadFingerprint = fingerprint
         entry.lastSyncedLocalRevision = entry.localChangeRevision
         entry.syncStatus = .syncedSuccessfully
     }
@@ -534,6 +605,7 @@ nonisolated final class HistorySessionSyncService {
             uid: row.remoteID,
             remoteID: row.remoteID,
             remoteUpdatedAt: HistorySessionPayloadCodec.parseUpdatedAt(row.updatedAt),
+            remoteDeletedAt: HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt),
             remotePayloadFingerprint: fingerprint,
             lastSyncedLocalRevision: 0
         )

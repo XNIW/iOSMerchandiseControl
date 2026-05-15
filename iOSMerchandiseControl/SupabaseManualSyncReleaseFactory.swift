@@ -115,6 +115,12 @@ private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManu
         return try await Task.detached(priority: .utility) {
             let context = ModelContext(modelContainer)
             let service = HistorySessionSyncService(remote: remote)
+            let initialPull = try await service.pullHistorySessionsFromCloud(
+                ownerUserID: ownerUserID,
+                context: context,
+                onProgress: onProgress
+            )
+            try context.save()
             let entries = try context.fetch(
                 FetchDescriptor<HistoryEntry>(
                     sortBy: [SortDescriptor(\HistoryEntry.timestamp, order: .reverse)]
@@ -124,10 +130,11 @@ private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManu
                 entries: entries,
                 ownerUserID: ownerUserID,
                 context: context,
+                includeSynced: true,
                 onProgress: onProgress
             )
             try context.save()
-            let pull = try await service.pullHistorySessionsFromCloud(
+            let confirmPull = try await service.pullHistorySessionsFromCloud(
                 ownerUserID: ownerUserID,
                 context: context,
                 onProgress: onProgress
@@ -135,10 +142,10 @@ private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManu
             try context.save()
             return SupabaseManualSyncHistorySessionSummary(
                 uploaded: push.uploadedCount,
-                inserted: pull.insertedCount,
-                updated: pull.updatedCount,
-                skippedClean: push.skippedCleanCount + pull.skippedCleanCount,
-                skippedDirtyLocal: pull.skippedDirtyLocalCount,
+                inserted: initialPull.insertedCount + confirmPull.insertedCount,
+                updated: initialPull.updatedCount + confirmPull.updatedCount,
+                skippedClean: push.skippedCleanCount + initialPull.skippedCleanCount + confirmPull.skippedCleanCount,
+                skippedDirtyLocal: initialPull.skippedDirtyLocalCount + confirmPull.skippedDirtyLocalCount,
                 skippedOversized: push.skippedOversizedCount
             )
         }.value
@@ -240,6 +247,13 @@ private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManual
                     snapshot.payloads,
                     context: context
                 )
+                _ = try await ProductPriceCoveredProductChangeReconciler()
+                    .syncRemoteProductsAndAcknowledgeCoveredProductPriceFieldChanges(
+                        payloads: snapshot.payloads,
+                        ownerUserID: ownerUserID,
+                        remote: remote,
+                        context: context
+                    )
             }
         } catch {
             if let pendingBatch {

@@ -1,0 +1,13 @@
+ docs/MASTER-PLAN.md                                |  48 +++++---
+ ...09-ios-supabase-sync-lifecycle-ux-regression.md |  18 ++-
+ iOSMerchandiseControl/HistoryEntry.swift           |  14 ++-
+ .../HistorySessionSyncService.swift                |  71 +++++++++---
+ iOSMerchandiseControl/HistoryView.swift            |  55 +++++++--
+ .../SupabaseInventoryService.swift                 |   2 +-
+ .../SupabaseManualSyncReleaseFactory.swift         |  17 ++-
+ iOSMerchandiseControl/en.lproj/Localizable.strings |   2 +
+ iOSMerchandiseControl/es.lproj/Localizable.strings |   2 +
+ iOSMerchandiseControl/it.lproj/Localizable.strings |   2 +
+ .../zh-Hans.lproj/Localizable.strings              |   2 +
+ .../HistorySessionSyncServiceTests.swift           | 127 ++++++++++++++++++++-
+ 12 files changed, 309 insertions(+), 51 deletions(-)

@@ -621,6 +621,32 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         }
     }
 
+    func testTask110OptionsCheckCloudRunsHistorySyncPath() throws {
+        let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
+        let viewModelSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift")
+
+        XCTAssertTrue(source.contains("actionID == .checkCloud || actionID == .downloadCloudDatabase"))
+        XCTAssertTrue(source.contains("syncHistoryAfterRun: directSync"))
+        XCTAssertTrue(source.contains("privacySafeAggregatesSnapshot?.hasAnyPendingWork == true"))
+        XCTAssertTrue(source.contains("applyStagedLocalChangesIfNeeded()"))
+        XCTAssertTrue(source.contains("prepareCatalogPushPlanForReview()"))
+        XCTAssertTrue(source.contains("prepareProductPricePlansForReview()"))
+        XCTAssertTrue(viewModelSource.contains("reconcileCatalogApplyEligibilityWithStagedPlan()"))
+        XCTAssertTrue(source.contains("isReviewSheetPresented = true"))
+        XCTAssertTrue(source.contains("onChange(of: viewModel.presentationState.reviewSheet)"))
+        XCTAssertTrue(viewModelSource.contains("canApplyProductPriceChanges = plan.hasConcreteApplyWork || canDeferUnmappedPrices"))
+        let priceOnlyPushCheck = try XCTUnwrap(
+            viewModelSource.range(of: "if let priceOnlyState = productPriceOnlyPushPresentationState()")
+        )
+        let remoteSignalGate = try XCTUnwrap(
+            viewModelSource.range(
+                of: "lastSummary?.hasCompletedRemotePreviewSignals == true",
+                range: priceOnlyPushCheck.upperBound..<viewModelSource.endIndex
+            )
+        )
+        XCTAssertLessThan(priceOnlyPushCheck.lowerBound, remoteSignalGate.lowerBound)
+    }
+
     func testTask067DebugOutboxCardRemainsDebugOnlyAndSeparateFromReleaseCard() throws {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: source)

@@ -1440,5 +1440,7 @@
 "history.cloud.status.unavailable" = "El historial en la nube no está disponible en este dispositivo.";
 "history.cloud.status.ready" = "El historial se sincroniza con Sincronizar ahora en Opciones.";
 "history.cloud.status.pending" = "Cambios locales de historial pendientes: %d.";
+"history.cloud.status.deleted_pending" = "Elementos de historial eliminados pendientes de sincronización cloud: %d.";
 "history.cloud.status.synced_at" = "Historial sincronizado: %@.";
+"history.status.deleted_pending" = "Eliminación pendiente";
 "history.cloud.sync_hint" = "Usa Sincronizar ahora en Opciones para enviar y recibir el historial junto con catálogo y precios.";

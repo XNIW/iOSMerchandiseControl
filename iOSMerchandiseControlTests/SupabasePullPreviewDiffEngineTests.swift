@@ -109,6 +109,49 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
         XCTAssertTrue(preview.unchangedProducts.isEmpty)
     }
 
+    func testMatchedProductWithOnlyRemoteMetadataDifferenceIsUnchanged() {
+        let remoteID = UUID()
+        let preview = makePreview(
+            remote: remoteSnapshot(products: [
+                remoteProduct(id: remoteID, barcode: "12345", name: "Same product")
+            ]),
+            local: localSnapshot(products: [
+                localProduct(
+                    barcode: "12345",
+                    remoteID: remoteID,
+                    remoteUpdatedAt: SupabaseRemoteDateParser.parse("2026-05-03T00:00:00Z"),
+                    name: "Same product"
+                )
+            ])
+        )
+
+        XCTAssertEqual(preview.unchangedProducts.count, 1)
+        XCTAssertTrue(preview.updateCandidates.isEmpty)
+        XCTAssertTrue(preview.conflicts.isEmpty)
+    }
+
+    func testMatchedProductWithOnlyRemoteStockDifferenceIsUnchangedByDefault() {
+        let remoteID = UUID()
+        let preview = makePreview(
+            remote: remoteSnapshot(products: [
+                remoteProduct(id: remoteID, barcode: "12345", name: "Same product", stockQuantity: 7)
+            ]),
+            local: localSnapshot(products: [
+                localProduct(
+                    barcode: "12345",
+                    remoteID: remoteID,
+                    remoteUpdatedAt: SupabaseRemoteDateParser.parse("2026-05-04T00:00:00Z"),
+                    name: "Same product",
+                    stockQuantity: nil
+                )
+            ])
+        )
+
+        XCTAssertEqual(preview.unchangedProducts.count, 1)
+        XCTAssertTrue(preview.updateCandidates.isEmpty)
+        XCTAssertTrue(preview.conflicts.isEmpty)
+    }
+
     func testRemoteIDConflictBlocksSameBarcodeSilentMerge() {
         let localRemoteID = UUID()
         let remoteID = UUID()

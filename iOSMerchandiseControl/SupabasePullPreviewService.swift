@@ -481,12 +481,7 @@ nonisolated enum SupabasePullPreviewDiffEngine {
             supplierDiffs.append(contentsOf: productSupplierDiffs)
             categoryDiffs.append(contentsOf: productCategoryDiffs)
 
-            let metadataNeedsUpdate = productRemoteMetadataNeedsUpdate(
-                remoteProduct: product,
-                localProduct: localProduct
-            )
-
-            if changes.isEmpty && !metadataNeedsUpdate {
+            if changes.isEmpty && localProduct.remoteID != nil {
                 unchangedProducts.append(productSummary(product, remote: remote, classification: .unchanged))
             } else if changes.isEmpty && localProduct.remoteID == nil {
                 updateCandidates.append(productSummary(product, remote: remote, classification: .linkOnly))
@@ -582,14 +577,6 @@ nonisolated enum SupabasePullPreviewDiffEngine {
             remoteValue: remoteProduct.retailPrice,
             localValue: localProduct.retailPrice
         )
-        appendDoubleChange(
-            to: &changes,
-            fieldKey: .stockQuantity,
-            barcode: barcode,
-            remoteValue: remoteProduct.stockQuantity,
-            localValue: localProduct.stockQuantity
-        )
-
         if compareSupplier {
             appendLookupNameChange(
                 to: &changes,
@@ -611,15 +598,6 @@ nonisolated enum SupabasePullPreviewDiffEngine {
         }
 
         return changes
-    }
-
-    private static func productRemoteMetadataNeedsUpdate(
-        remoteProduct: RemoteInventoryProductRow,
-        localProduct: LocalProductSnapshot
-    ) -> Bool {
-        localProduct.remoteID != remoteProduct.id
-            || localProduct.remoteUpdatedAt != SupabaseRemoteDateParser.parse(remoteProduct.updatedAt)
-            || localProduct.remoteDeletedAt != SupabaseRemoteDateParser.parse(remoteProduct.deletedAt)
     }
 
     private static func unresolvedLookupConflicts(

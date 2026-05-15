@@ -251,6 +251,10 @@ nonisolated struct ProductPriceApplyPlan: Sendable {
     var hasHardBlocks: Bool {
         blockReasons.contains { $0 != .noApplicableRows }
     }
+
+    var hasConcreteApplyWork: Bool {
+        !linesToInsert.isEmpty || !remoteIdentityLinks.isEmpty
+    }
 }
 
 nonisolated struct ProductPriceApplyResult: Sendable, Equatable {
@@ -530,7 +534,7 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
                 to: currentPageSize - 1
             )
             try Task.checkCancellation()
-            let snapshot = try makeLocalSnapshot(context: context, includePrices: false)
+            let snapshot = try makeLocalSnapshot(context: context)
             return prepareApplyPlan(
                 remoteRows: rows,
                 localSnapshot: snapshot,
