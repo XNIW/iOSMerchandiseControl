@@ -1117,6 +1117,7 @@
 "options.localDatabase.suppliers" = "Fornitori";
 "options.localDatabase.categories" = "Categorie";
 "options.localDatabase.prices" = "Storico prezzi";
+"options.localDatabase.historySessions" = "Sessioni cronologia";
 "options.localDatabase.pending" = "Modifiche locali in attesa";
 "options.localDatabase.empty.title" = "Database locale vuoto";
 "options.localDatabase.empty.detail" = "Dopo l'accesso, scarica il database dal cloud per partire dai dati condivisi.";
@@ -1201,12 +1202,12 @@
 "options.supabase.manualSync.progress.completedPrices" = "Storico prezzi completato: %d righe.";
 "options.supabase.manualSync.progress.completedPricesWithTotal" = "Storico prezzi completato: %d / %d righe.";
 "options.supabase.manualSync.progress.checkingCloud" = "Controllo accesso cloud…";
-"options.supabase.manualSync.progress.fetchingRemoteCounts" = "Lettura conteggi cloud…";
+"options.supabase.manualSync.progress.fetchingRemoteCounts" = "Controllo aggiornamenti cloud…";
 "options.supabase.manualSync.progress.reviewingChanges" = "Controllo catalogo, prezzi e cronologia…";
 "options.supabase.manualSync.progress.allowsLocalWork" = "Puoi continuare a usare l’app.";
 "options.supabase.manualSync.progress.readyToReview" = "Aggiornamenti pronti da rivedere.";
 "options.supabase.manualSync.progress.completed" = "Sincronizzazione completata.";
-"options.supabase.manualSync.progress.completedWithWarnings" = "Sincronizzazione completata con elementi da rivedere.";
+"options.supabase.manualSync.progress.completedWithWarnings" = "Sincronizzazione completata con note.";
 "options.supabase.manualSync.progress.failed" = "Sincronizzazione non completata.";
 "options.supabase.manualSync.progress.cancelled" = "Sincronizzazione annullata.";
 "options.supabase.manualSync.progress.detail.products" = "prodotti: %d";

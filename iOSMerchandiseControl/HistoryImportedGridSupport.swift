@@ -1,6 +1,6 @@
 import Foundation
 
-enum HistoryImportedGridSupport {
+nonisolated enum HistoryImportedGridSupport {
     static func editableTemplate(forGrid grid: [[String]]) -> [[String]] {
         guard !grid.isEmpty else { return [] }
         return Array(repeating: ["", ""], count: grid.count)

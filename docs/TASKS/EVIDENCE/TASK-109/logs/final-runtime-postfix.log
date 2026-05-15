@@ -1,0 +1,3 @@
+"[InventorySnapshot] start products=19695 suppliers=57 categories=27 prices=41109"
+"[InventorySnapshot] done elapsedMs=2768 products=19695 suppliers=57 categories=27 prices=41109"
+"[PullPreview] summary complete=true partial=false signals=true failure=none remoteProducts=19695 remoteSuppliers=57 remoteCategories=27 remotePrices=1000 new=0 updates=0 conflicts=0 tombstones=0 warnings=1 sourceErrors=0 supplierDiffs=0 categoryDiffs=0 priceSignals=0"

@@ -387,9 +387,7 @@ nonisolated struct SupabaseManualSyncProductPriceSummary: Equatable, Sendable {
     )
 
     var hasReviewSignals: Bool {
-        remoteFound > 0
-            || localFound > 0
-            || readyToApply > 0
+        readyToApply > 0
             || readyToPush > 0
             || applied > 0
             || pushed > 0
@@ -902,11 +900,40 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return true
         }
         if let remotePreviewSummary = lastSummary?.remotePreviewSummary,
-           remotePreviewSummary.hasRemoteSignals,
+           remotePreviewSummary.hasActionableReviewSignals,
            remotePreviewSummary.isComplete,
            !remotePreviewSummary.isPartial,
            !remotePreviewSummary.wasCancelled,
            remotePreviewSummary.failureCategory == nil {
+            return true
+        }
+        return false
+    }
+
+    private var hasReviewableStagedWork: Bool {
+        if canApplyLocalChanges || stagedCatalogPushPlan != nil {
+            return true
+        }
+        if stagedProductPriceApplyPlan != nil {
+            return true
+        }
+        if stagedProductPricePushPlan != nil, productPriceSummary.hasReadyToPush {
+            return true
+        }
+        if activityRegistrationPhase.hasRegisterAction {
+            return true
+        }
+        return false
+    }
+
+    private var hasReviewableCurrentWork: Bool {
+        if hasReviewableStagedWork {
+            return true
+        }
+        if lastSummary?.countsSnapshot.hasAnyPendingWork == true {
+            return true
+        }
+        if lastSummary?.remotePreviewSummary?.hasActionableReviewSignals == true {
             return true
         }
         return false
@@ -979,7 +1006,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             presentationKind = .partialSync
             clearRecoverableError()
             lastForegroundObservationEvent = .foreground_check_completed_changes
-        } else if remotePreviewSummary.hasRemoteSignals || summary.countsSnapshot.hasAnyPendingWork || hasUnresolvedStagedPlan {
+        } else if remotePreviewSummary.hasActionableReviewSignals || hasReviewableStagedWork {
             semiAutomaticState = .changesFound
             presentationKind = .partialSync
             clearRecoverableError()
@@ -1040,9 +1067,14 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                     lastRecoverableErrorAt: lastRecoverableForegroundErrorAt
                 )
             }
-            await start(with: .dryRun, checkStartedAt: now, lifecycleRunID: lifecycleRunID)
-            if source == .rootForeground, shouldAutoApplyForegroundPreviewAfterLastCheck {
-                await applyStagedLocalChanges()
+            await start(
+                with: .dryRun,
+                checkStartedAt: now,
+                lifecycleRunID: lifecycleRunID,
+                syncHistoryAfterRun: source == .rootForeground
+            )
+            if source == .rootForeground {
+                await applyStagedLocalChangesIfNeeded()
             }
             return true
         case .blocked(.authOrOwnerMissing):
@@ -1086,7 +1118,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     func start(
         with mode: SupabaseManualSyncRunMode,
         checkStartedAt: Date = Date(),
-        lifecycleRunID: UUID? = nil
+        lifecycleRunID: UUID? = nil,
+        syncHistoryAfterRun: Bool = false
     ) async {
         guard !isRunning else { return }
         let activeLifecycleRunID: UUID?
@@ -1148,13 +1181,19 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         await prepareCatalogPushPlanIfNeeded(after: summary)
         await prepareProductPricePlansIfNeeded(after: summary)
         await prepareActivityRegistrationIfNeeded(after: summary)
+        let historySummary: SupabaseManualSyncHistorySessionSummary
+        if syncHistoryAfterRun && !canApplyCatalogChanges && !canApplyProductPriceChanges {
+            historySummary = await syncHistorySessionsIfAvailable()
+        } else {
+            historySummary = SupabaseManualSyncHistorySessionSummary()
+        }
         if mode == .dryRun {
             recordCloudCheckResult(summary, at: checkStartedAt)
         }
         finishProgress(
-            warnings: shouldFinishProgressWithWarnings(summary),
+            warnings: shouldFinishProgressWithWarnings(summary) || historySummary.hasWarnings,
             message: progressCompletionMessage(after: summary),
-            detailMessage: progressDetail(after: summary)
+            detailMessage: progressDetail(after: summary, historySummary: historySummary)
         )
         switch summary.finalState {
         case .allUpToDate, .completedSuccessfully:
@@ -1178,14 +1217,23 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .allUpToDate, .completedSuccessfully:
             return summary.hasIncompleteRemotePreview
                 || summary.countsSnapshot.hasAnyPendingWork
-                || summary.remotePreviewSummary?.hasRemoteSignals == true
+                || (summary.remotePreviewSummary?.safeAggregateCounts.warningCount ?? 0) > 0
         case .partialSync,
              .blocked,
              .connectivityIssue,
-             .technicalReviewNeeded,
              .concurrentRunNotAllowed,
              .modeNotSupportedInThisSlice,
              .cancelled:
+            return true
+        case .technicalReviewNeeded:
+            if let remotePreviewSummary = summary.remotePreviewSummary,
+               remotePreviewSummary.failureCategory == nil,
+               remotePreviewSummary.isComplete,
+               !remotePreviewSummary.isPartial,
+               !remotePreviewSummary.wasCancelled,
+               !remotePreviewSummary.hasActionableReviewSignals {
+                return false
+            }
             return true
         }
     }
@@ -1194,9 +1242,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         if summary.finalState == .cancelled {
             return L("options.supabase.manualSync.progress.cancelled")
         }
-        if summary.remotePreviewSummary?.hasRemoteSignals == true
-            || summary.countsSnapshot.hasAnyPendingWork
-            || hasUnresolvedStagedPlan {
+        if summary.remotePreviewSummary?.hasActionableReviewSignals == true
+            || hasReviewableStagedWork {
             return L("options.supabase.manualSync.progress.readyToReview")
         }
         if shouldFinishProgressWithWarnings(summary) {
@@ -1206,15 +1253,33 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     }
 
     private func progressDetail(after summary: SupabaseManualSyncRunSummary) -> String? {
+        progressDetail(after: summary, historySummary: nil)
+    }
+
+    private func progressDetail(
+        after summary: SupabaseManualSyncRunSummary,
+        historySummary: SupabaseManualSyncHistorySessionSummary?
+    ) -> String? {
         guard let remotePreviewSummary = summary.remotePreviewSummary else {
-            return nonEmpty(summary.suggestedNextStep)
+            let base = nonEmpty(summary.suggestedNextStep)
+            guard let historySummary,
+                  historySummary.totalChanged > 0 else {
+                return base
+            }
+            return [base, L("options.supabase.manualSync.progress.detail.historyChanged", historySummary.totalChanged)]
+                .compactMap { $0 }
+                .joined(separator: " · ")
         }
         let counts = remotePreviewSummary.safeAggregateCounts
-        let pieces = [
+        var pieces = [
             counts.newProductCount > 0 ? L("options.supabase.manualSync.progress.detail.products", counts.newProductCount) : nil,
             counts.priceHistorySignalCount > 0 ? L("options.supabase.manualSync.progress.detail.prices", counts.priceHistorySignalCount) : nil,
             summary.countsSnapshot.pendingQueuedCloudOperationCount > 0 ? L("options.supabase.manualSync.progress.detail.pending", summary.countsSnapshot.pendingQueuedCloudOperationCount) : nil
         ].compactMap { $0 }
+        if let historySummary,
+           historySummary.totalChanged > 0 {
+            pieces.append(L("options.supabase.manualSync.progress.detail.historyChanged", historySummary.totalChanged))
+        }
         return pieces.isEmpty ? nil : pieces.joined(separator: " · ")
     }
 
@@ -1415,6 +1480,16 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             subtitle = nonEmpty(summary.suggestedNextStep) ?? nonEmpty(summary.userFacingHeadline)
             primaryActionTitle = Copy.dismissOrRetryAction
 
+        case .technicalReviewNeeded where summary.hasCompletedRemotePreviewSignals == false
+            && summary.remotePreviewSummary?.failureCategory == nil
+            && summary.remotePreviewSummary?.isComplete == true
+            && summary.remotePreviewSummary?.isPartial == false
+            && summary.remotePreviewSummary?.wasCancelled == false:
+            presentationKind = .successFullyUpToDate
+            title = SupabaseManualSyncUserFacingCopy.allUpToDate
+            subtitle = summarySummarySubtitle(from: summary)
+            primaryActionTitle = Copy.startAction
+
         case .technicalReviewNeeded where summary.hasCompletedRemotePreviewSignals:
             presentationKind = .partialSync
             title = Copy.localPendingNeedsReviewTitle
@@ -1581,16 +1656,21 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 }
             }
 
-            localApplyProgressMessage = L("options.supabase.manualSync.progress.downloadingPrices")
-            updateProgress(
-                phase: .downloadingPriceHistory,
-                domain: .prices,
-                message: L("options.supabase.manualSync.progress.downloadingPrices"),
-                detailMessage: nil,
-                isBlockingApply: true,
-                allowsLocalWork: true
-            )
-            let priceSummary = try await applyProductPricesIfNeeded()
+            let priceSummary: SupabaseManualSyncProductPriceSummary
+            if stagedProductPriceApplyPlan != nil {
+                localApplyProgressMessage = L("options.supabase.manualSync.progress.downloadingPrices")
+                updateProgress(
+                    phase: .downloadingPriceHistory,
+                    domain: .prices,
+                    message: L("options.supabase.manualSync.progress.downloadingPrices"),
+                    detailMessage: nil,
+                    isBlockingApply: true,
+                    allowsLocalWork: true
+                )
+                priceSummary = try await applyProductPricesIfNeeded()
+            } else {
+                priceSummary = productPriceSummary
+            }
             debugPrint(
                 "[ManualSync] apply_prices_done op=\(redactedDebugUUID(operationID)) applied=\(priceSummary.applied) skipped=\(priceSummary.skippedDuplicate) blocked=\(priceSummary.blocked) failed=\(priceSummary.failed)"
             )
@@ -1703,6 +1783,13 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         }
     }
 
+    @discardableResult
+    func applyStagedLocalChangesIfNeeded() async -> Bool {
+        guard canApplyCatalogChanges || canApplyProductPriceChanges else { return false }
+        await applyStagedLocalChanges()
+        return true
+    }
+
     private enum LocalApplyInternalError: Error {
         case dependenciesUnavailable
     }
@@ -1729,7 +1816,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         }
 
         guard let preview = remotePreviewStaging?.stagedPreviewForLocalApply else {
-            let reasonKey = remotePreviewSummary.hasRemoteSignals
+            let reasonKey = remotePreviewSummary.hasActionableReviewSignals
                 ? "options.supabase.manualSync.apply.blocked.refreshRequired"
                 : "options.supabase.manualSync.apply.blocked.noChanges"
             invalidateLocalApplyStaging(reason: L(reasonKey))
@@ -2251,7 +2338,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private func prepareProductPriceApplyPlanIfNeeded(after summary: SupabaseManualSyncRunSummary) async {
         guard capabilities.supportsProductPriceSync,
               let productPriceProvider,
-              shouldPrepareProductPricePlan(after: summary) else {
+              shouldPrepareProductPriceApplyPlan(after: summary) else {
             invalidateProductPriceApplyPlan(clearSummary: false)
             return
         }
@@ -2336,6 +2423,18 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return false
         }
         return true
+    }
+
+    private func shouldPrepareProductPriceApplyPlan(after summary: SupabaseManualSyncRunSummary) -> Bool {
+        guard shouldPrepareProductPricePlan(after: summary),
+              let aggregateCounts = summary.remotePreviewSummary?.safeAggregateCounts else {
+            return false
+        }
+        return aggregateCounts.priceHistorySignalCount > 0
+            || aggregateCounts.newProductCount > 0
+            || aggregateCounts.updateCandidateCount > 0
+            || aggregateCounts.supplierDiffCount > 0
+            || aggregateCounts.categoryDiffCount > 0
     }
 
     private func applyProductPricePushPlan(_ plan: ProductPricePushDryRunPlan) {
@@ -3086,6 +3185,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 }
             )
             historySessionSummary = summary
+            if summary.totalChanged > 0 {
+                NotificationCenter.default.post(name: .historySessionsDidChange, object: nil)
+            }
             return summary
         } catch {
             var summary = SupabaseManualSyncHistorySessionSummary()
@@ -3381,7 +3483,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
               remotePreviewSummary.isComplete,
               !remotePreviewSummary.isPartial,
               !remotePreviewSummary.wasCancelled,
-              remotePreviewSummary.hasRemoteSignals,
+              remotePreviewSummary.hasActionableReviewSignals,
               canApplyLocalChanges else {
             return false
         }
@@ -4475,7 +4577,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return userFacingSummary(.cloudCheckIncomplete, key: "options.supabase.manualSync.summary.cloudCheck.incomplete")
         }
 
-        if remotePreviewSummary.hasRemoteSignals {
+        if remotePreviewSummary.hasActionableReviewSignals {
             return userFacingSummary(.remoteReviewNeeded, key: "options.supabase.manualSync.summary.cloudCheck.differences")
         }
 
@@ -4524,9 +4626,19 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             return nil
         }
 
+        guard remotePreviewSummary.hasActionableReviewSignals
+                || lastSummary.countsSnapshot.hasAnyPendingWork
+                || canApplyLocalChanges
+                || productPriceSummary.hasReviewSignals
+                || activityRegistrationPhase.shouldShowReviewSection else {
+            return nil
+        }
+
         switch summary.kind {
-        case .cloudCheckCompleted, .cloudCheckCompletedNoAction, .remoteReviewNeeded:
+        case .cloudCheckCompleted, .remoteReviewNeeded:
             return makeReviewSheetState(from: lastSummary, remotePreviewSummary: remotePreviewSummary)
+        case .cloudCheckCompletedNoAction:
+            return nil
         case .noLocalChangesToSend,
              .cloudCheckIncomplete,
              .networkIssue,
@@ -4569,7 +4681,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             reviewSection(
                 id: .cloudToDevice,
                 titleKey: "options.supabase.manualSync.review.cloudToDevice.title",
-                messageKey: remotePreviewSummary.hasRemoteSignals
+                messageKey: remotePreviewSummary.hasActionableReviewSignals
                     ? "options.supabase.manualSync.review.cloudToDevice.needsReview"
                     : "options.supabase.manualSync.review.cloudToDevice.noChanges",
                 systemImage: "icloud.and.arrow.down",
@@ -5004,7 +5116,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             blocked: productPriceSummary.blocked,
             failed: productPriceSummary.failed
         )
-        if remotePreviewSummary.hasRemoteSignals,
+        if remotePreviewSummary.hasActionableReviewSignals,
            !canApplyLocalChanges,
            counters.reviewNeeded == 0,
            counters.blocked == 0,
@@ -5026,7 +5138,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             ] + (activityRegistrationPhase.shouldShowReviewSection ? [.activity] : []),
             blockingReasons: reasons,
             planFingerprint: [
-                "\(remotePreviewSummary.safeAggregateCounts.reviewSignalCount)",
+                "\(remotePreviewSummary.safeAggregateCounts.actionableReviewSignalCount)",
                 "\(counts.pendingQueuedCloudOperationCount)",
                 "\(productPriceSummary.readyToApply)",
                 "\(productPriceSummary.readyToPush)"
@@ -5400,7 +5512,6 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         aggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts
     ) -> Bool {
         counts.pendingPriceChangeCount > 0
-            || aggregateCounts.remoteProductPriceCount > 0
             || aggregateCounts.priceHistorySignalCount > 0
     }
 
@@ -5419,8 +5530,6 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         let newFound = summary.readyToApply
         if newFound > 0 {
             lines.append(L("options.supabase.manualSync.review.prices.newFound", newFound))
-        } else if summary.remoteFound > 0 {
-            lines.append(L("options.supabase.manualSync.review.prices.needsUpdate"))
         }
         if summary.applied > 0 {
             lines.append(L("options.supabase.manualSync.review.prices.applied", summary.applied))
@@ -5858,7 +5967,7 @@ private extension SupabaseManualPushTerminalStatus {
 private extension SupabaseManualSyncRunSummary {
     var hasCompletedRemotePreviewSignals: Bool {
         guard let remotePreviewSummary else { return false }
-        return remotePreviewSummary.hasRemoteSignals
+        return remotePreviewSummary.hasActionableReviewSignals
             && remotePreviewSummary.isComplete
             && !remotePreviewSummary.isPartial
             && !remotePreviewSummary.wasCancelled

@@ -1118,6 +1118,7 @@
 "options.localDatabase.suppliers" = "供应商";
 "options.localDatabase.categories" = "分类";
 "options.localDatabase.prices" = "价格历史";
+"options.localDatabase.historySessions" = "历史会话";
 "options.localDatabase.pending" = "待发送本地更改";
 "options.localDatabase.empty.title" = "本地数据库为空";
 "options.localDatabase.empty.detail" = "登录后下载云端数据库，以共享数据开始使用。";
@@ -1202,12 +1203,12 @@
 "options.supabase.manualSync.progress.completedPrices" = "价格历史已完成：%d 行。";
 "options.supabase.manualSync.progress.completedPricesWithTotal" = "价格历史已完成：%d / %d 行。";
 "options.supabase.manualSync.progress.checkingCloud" = "正在检查云端访问…";
-"options.supabase.manualSync.progress.fetchingRemoteCounts" = "正在读取云端数量…";
+"options.supabase.manualSync.progress.fetchingRemoteCounts" = "正在检查云端更新…";
 "options.supabase.manualSync.progress.reviewingChanges" = "正在检查目录、价格与历史…";
 "options.supabase.manualSync.progress.allowsLocalWork" = "你可以继续使用 app。";
 "options.supabase.manualSync.progress.readyToReview" = "有更新可供查看。";
 "options.supabase.manualSync.progress.completed" = "同步已完成。";
-"options.supabase.manualSync.progress.completedWithWarnings" = "同步已完成，但有项目需要查看。";
+"options.supabase.manualSync.progress.completedWithWarnings" = "同步已完成，并有备注。";
 "options.supabase.manualSync.progress.failed" = "同步未完成。";
 "options.supabase.manualSync.progress.cancelled" = "同步已取消。";
 "options.supabase.manualSync.progress.detail.products" = "商品：%d";

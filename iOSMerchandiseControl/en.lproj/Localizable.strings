@@ -1118,6 +1118,7 @@
 "options.localDatabase.suppliers" = "Suppliers";
 "options.localDatabase.categories" = "Categories";
 "options.localDatabase.prices" = "Price history";
+"options.localDatabase.historySessions" = "History sessions";
 "options.localDatabase.pending" = "Pending local changes";
 "options.localDatabase.empty.title" = "Local database is empty";
 "options.localDatabase.empty.detail" = "After signing in, download the cloud database to start from shared data.";
@@ -1202,12 +1203,12 @@
 "options.supabase.manualSync.progress.completedPrices" = "Price history complete: %d rows.";
 "options.supabase.manualSync.progress.completedPricesWithTotal" = "Price history complete: %d / %d rows.";
 "options.supabase.manualSync.progress.checkingCloud" = "Checking cloud access…";
-"options.supabase.manualSync.progress.fetchingRemoteCounts" = "Fetching cloud counts…";
+"options.supabase.manualSync.progress.fetchingRemoteCounts" = "Checking cloud updates…";
 "options.supabase.manualSync.progress.reviewingChanges" = "Reviewing catalog, prices, and history…";
 "options.supabase.manualSync.progress.allowsLocalWork" = "You can keep using the app.";
 "options.supabase.manualSync.progress.readyToReview" = "Updates are ready to review.";
 "options.supabase.manualSync.progress.completed" = "Sync completed.";
-"options.supabase.manualSync.progress.completedWithWarnings" = "Sync completed with items to review.";
+"options.supabase.manualSync.progress.completedWithWarnings" = "Sync completed with notes.";
 "options.supabase.manualSync.progress.failed" = "Sync could not be completed.";
 "options.supabase.manualSync.progress.cancelled" = "Sync cancelled.";
 "options.supabase.manualSync.progress.detail.products" = "products: %d";

@@ -275,6 +275,28 @@ private final class ManualSyncActivityRegistrationProviderFake: SupabaseManualSy
 }
 
 @MainActor
+private final class ManualSyncHistorySessionProviderFake: SupabaseManualSyncHistorySessionSyncProviding {
+    var result: SupabaseManualSyncHistorySessionSummary
+    private(set) var callCount = 0
+    private(set) var ownerIDs: [UUID] = []
+
+    init(result: SupabaseManualSyncHistorySessionSummary = SupabaseManualSyncHistorySessionSummary()) {
+        self.result = result
+    }
+
+    func syncHistorySessions(
+        ownerUserID: UUID,
+        onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
+    ) async throws -> SupabaseManualSyncHistorySessionSummary {
+        callCount += 1
+        ownerIDs.append(ownerUserID)
+        onProgress(HistorySessionSyncProgress(stage: .fetching, current: 0))
+        onProgress(HistorySessionSyncProgress(stage: .completed, current: result.totalChanged, total: result.totalChanged))
+        return result
+    }
+}
+
+@MainActor
 final class SupabaseManualSyncViewModelTests: XCTestCase {
     private static var retainedContainers: [ModelContainer] = []
 
@@ -549,6 +571,274 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertEqual(vm.runMode(for: .checkCloud), .dryRun)
         assertSinglePrimaryAction(state)
         assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testSyncNowDryRunSynchronizesHistoryWhenCatalogAndPricesHaveNoChanges() async {
+        let owner = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        fake.handler = { [weak self] _, _ in
+            guard let self else {
+                return SupabaseManualSyncRunSummary(
+                    finalState: .allUpToDate,
+                    userFacingHeadline: SupabaseManualSyncUserFacingCopy.cloudCheckNoAction,
+                    executedPhases: [],
+                    skippedPhases: [],
+                    countsSnapshot: SupabaseManualSyncPrivacyCounts(),
+                    suggestedNextStep: nil,
+                    detailMessage: nil
+                )
+            }
+            return self.cloudCheckSummary(
+                finalState: .allUpToDate,
+                remotePreviewSummary: self.remotePreviewSummary(hasRemoteSignals: false)
+            )
+        }
+        let historyProvider = ManualSyncHistorySessionProviderFake(
+            result: SupabaseManualSyncHistorySessionSummary(inserted: 5)
+        )
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            initialAuthPresentationContext: .signedInReady,
+            historySessionProvider: historyProvider,
+            currentHistorySessionOwnerID: { owner }
+        )
+
+        await vm.start(with: .dryRun, syncHistoryAfterRun: true)
+
+        XCTAssertEqual(historyProvider.callCount, 1)
+        XCTAssertEqual(historyProvider.ownerIDs, [owner])
+        XCTAssertEqual(vm.historySessionSummary?.inserted, 5)
+        XCTAssertEqual(vm.progressState.detailMessage, L("options.supabase.manualSync.progress.detail.historyChanged", 5))
+    }
+
+    func testSyncNowHistoryOnlySkipsProductPriceApplyPlanWhenPreviewHasNoSignals() async {
+        let owner = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        fake.handler = { [weak self] _, _ in
+            self?.cloudCheckSummary(
+                finalState: .allUpToDate,
+                remotePreviewSummary: self?.remotePreviewSummary(
+                    hasRemoteSignals: false,
+                    counts: SupabaseManualSyncRemotePreviewAggregateCounts(remoteProductPriceCount: 41_000)
+                )
+            ) ?? SupabaseManualSyncRunSummary(
+                finalState: .allUpToDate,
+                userFacingHeadline: SupabaseManualSyncUserFacingCopy.cloudCheckNoAction,
+                executedPhases: [],
+                skippedPhases: [],
+                countsSnapshot: SupabaseManualSyncPrivacyCounts(),
+                suggestedNextStep: nil,
+                detailMessage: nil
+            )
+        }
+        let productProvider = ManualSyncProductPriceProviderFake()
+        let historyProvider = ManualSyncHistorySessionProviderFake(
+            result: SupabaseManualSyncHistorySessionSummary(inserted: 5)
+        )
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsProductPriceSync: true
+            ),
+            initialAuthPresentationContext: .signedInReady,
+            productPriceProvider: productProvider,
+            currentProductPriceOwnerID: { owner },
+            historySessionProvider: historyProvider,
+            currentHistorySessionOwnerID: { owner }
+        )
+
+        await vm.start(with: .dryRun, syncHistoryAfterRun: true)
+
+        XCTAssertEqual(historyProvider.callCount, 1)
+        XCTAssertEqual(productProvider.makeApplyPlanCallCount, 0)
+        XCTAssertEqual(productProvider.applyCallCount, 0)
+        XCTAssertEqual(vm.historySessionSummary?.inserted, 5)
+    }
+
+    func testRootForegroundSynchronizesHistoryWhenCatalogAndPricesHaveNoChanges() async {
+        let owner = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        fake.handler = { [weak self] _, _ in
+            self?.cloudCheckSummary(
+                finalState: .allUpToDate,
+                remotePreviewSummary: self?.remotePreviewSummary(hasRemoteSignals: false)
+            ) ?? SupabaseManualSyncRunSummary(
+                finalState: .allUpToDate,
+                userFacingHeadline: SupabaseManualSyncUserFacingCopy.cloudCheckNoAction,
+                executedPhases: [],
+                skippedPhases: [],
+                countsSnapshot: SupabaseManualSyncPrivacyCounts(),
+                suggestedNextStep: nil,
+                detailMessage: nil
+            )
+        }
+        let historyProvider = ManualSyncHistorySessionProviderFake(
+            result: SupabaseManualSyncHistorySessionSummary(inserted: 5)
+        )
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsForegroundCloudCheck: true,
+                supportsGuidedManualSync: false
+            ),
+            initialAuthPresentationContext: .signedInReady,
+            historySessionProvider: historyProvider,
+            currentHistorySessionOwnerID: { owner }
+        )
+
+        let didStart = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: Date(timeIntervalSince1970: 1_778_500_000),
+            source: .rootForeground
+        )
+
+        XCTAssertTrue(didStart)
+        XCTAssertEqual(historyProvider.callCount, 1)
+        XCTAssertEqual(historyProvider.ownerIDs, [owner])
+        XCTAssertEqual(vm.historySessionSummary?.inserted, 5)
+    }
+
+    func testSyncNowDirectApplyRunsPreparedProductPriceApplyWithoutSecondUpdateStep() async {
+        let owner = UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")!
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        fake.handler = { [weak self] _, _ in
+            self?.cloudCheckSummary(
+                finalState: .technicalReviewNeeded,
+                remotePreviewSummary: self?.remotePreviewSummary(
+                    hasRemoteSignals: true,
+                    counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                        remoteProductPriceCount: 1,
+                        priceHistorySignalCount: 1
+                    ),
+                    key: .cloudDataNeedsReview
+                )
+            ) ?? SupabaseManualSyncRunSummary(
+                finalState: .technicalReviewNeeded,
+                userFacingHeadline: SupabaseManualSyncUserFacingCopy.cloudCheckNoAction,
+                executedPhases: [],
+                skippedPhases: [],
+                countsSnapshot: SupabaseManualSyncPrivacyCounts(),
+                suggestedNextStep: nil,
+                detailMessage: nil
+            )
+        }
+        let applyPlan = makeProductPriceApplyPlan(ownerID: owner, lineCount: 1)
+        let productProvider = ManualSyncProductPriceProviderFake(
+            applyPlans: [applyPlan, applyPlan],
+            applyResult: ProductPriceApplyResult(inserted: 1, skippedExisting: 0, totalConsidered: 1)
+        )
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsProductPriceSync: true
+            ),
+            initialAuthPresentationContext: .signedInReady,
+            productPriceProvider: productProvider,
+            currentProductPriceOwnerID: { owner }
+        )
+
+        await vm.start(with: .dryRun, syncHistoryAfterRun: true)
+        let didApply = await vm.applyStagedLocalChangesIfNeeded()
+
+        XCTAssertTrue(didApply)
+        XCTAssertEqual(productProvider.makeApplyPlanCallCount, 2)
+        XCTAssertEqual(productProvider.applyCallCount, 1)
+        XCTAssertNil(vm.presentationState.reviewSheet)
+        XCTAssertEqual(vm.presentationKind, .localApplyCompleted)
+        XCTAssertEqual(vm.productPriceSummary.applied, 1)
+    }
+
+    func testDirectSyncDefersHistoryUntilPreparedApplyCompletes() async {
+        let owner = UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")!
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        fake.handler = { [weak self] _, _ in
+            self?.cloudCheckSummary(
+                finalState: .technicalReviewNeeded,
+                remotePreviewSummary: self?.remotePreviewSummary(
+                    hasRemoteSignals: true,
+                    counts: SupabaseManualSyncRemotePreviewAggregateCounts(
+                        remoteProductPriceCount: 1,
+                        priceHistorySignalCount: 1
+                    ),
+                    key: .cloudDataNeedsReview
+                )
+            ) ?? SupabaseManualSyncRunSummary(
+                finalState: .technicalReviewNeeded,
+                userFacingHeadline: SupabaseManualSyncUserFacingCopy.cloudCheckNoAction,
+                executedPhases: [],
+                skippedPhases: [],
+                countsSnapshot: SupabaseManualSyncPrivacyCounts(),
+                suggestedNextStep: nil,
+                detailMessage: nil
+            )
+        }
+        let applyPlan = makeProductPriceApplyPlan(ownerID: owner, lineCount: 1)
+        let productProvider = ManualSyncProductPriceProviderFake(
+            applyPlans: [applyPlan, applyPlan],
+            applyResult: ProductPriceApplyResult(inserted: 1, skippedExisting: 0, totalConsidered: 1)
+        )
+        let historyProvider = ManualSyncHistorySessionProviderFake(
+            result: SupabaseManualSyncHistorySessionSummary(inserted: 1)
+        )
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false,
+                supportsProductPriceSync: true
+            ),
+            initialAuthPresentationContext: .signedInReady,
+            productPriceProvider: productProvider,
+            currentProductPriceOwnerID: { owner },
+            historySessionProvider: historyProvider,
+            currentHistorySessionOwnerID: { owner }
+        )
+
+        await vm.start(with: .dryRun, syncHistoryAfterRun: true)
+
+        XCTAssertEqual(historyProvider.callCount, 0)
+
+        let didApply = await vm.applyStagedLocalChangesIfNeeded()
+
+        XCTAssertTrue(didApply)
+        XCTAssertEqual(historyProvider.callCount, 1)
+        XCTAssertEqual(vm.historySessionSummary?.inserted, 1)
+    }
+
+    func testDryRunWithoutSyncNowFlagDoesNotMutateHistory() async {
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        fake.handler = { [weak self] _, _ in
+            self?.cloudCheckSummary(
+                finalState: .allUpToDate,
+                remotePreviewSummary: self?.remotePreviewSummary(hasRemoteSignals: false)
+            ) ?? SupabaseManualSyncRunSummary(
+                finalState: .allUpToDate,
+                userFacingHeadline: SupabaseManualSyncUserFacingCopy.cloudCheckNoAction,
+                executedPhases: [],
+                skippedPhases: [],
+                countsSnapshot: SupabaseManualSyncPrivacyCounts(),
+                suggestedNextStep: nil,
+                detailMessage: nil
+            )
+        }
+        let historyProvider = ManualSyncHistorySessionProviderFake(
+            result: SupabaseManualSyncHistorySessionSummary(inserted: 5)
+        )
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            initialAuthPresentationContext: .signedInReady,
+            historySessionProvider: historyProvider,
+            currentHistorySessionOwnerID: { UUID() }
+        )
+
+        await vm.start(with: .dryRun)
+
+        XCTAssertEqual(historyProvider.callCount, 0)
+        XCTAssertNil(vm.historySessionSummary)
     }
 
     func testTask091SemiAutomaticPolicyAppliesCooldownWindow() {
@@ -1374,12 +1664,39 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         let state = vm.presentationState
         XCTAssertEqual(state.userFacingSummary?.kind, .cloudCheckCompletedNoAction)
-        XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
-        XCTAssertNotNil(state.reviewSheet)
+        XCTAssertEqual(state.primaryAction?.id, .checkCloud)
+        XCTAssertNil(state.reviewSheet)
         XCTAssertFalse(state.userFacingSummary?.message.localizedCaseInsensitiveContains("sincronizzato") ?? false)
         XCTAssertFalse(state.userFacingSummary?.message.localizedCaseInsensitiveContains("fully synced") ?? false)
         XCTAssertTrue(state.accessibilityLabel.contains(state.userFacingSummary?.message ?? ""))
         assertNoDuplicateSummaryCopy(state)
+        assertNoForbiddenUserFacingJargon(vm)
+    }
+
+    func testTask109WarningsOnlyRemotePreviewDoesNotOpenNoOpReview() async {
+        let fake = ClosureSupabaseManualSyncCoordinatorFake()
+        let vm = SupabaseManualSyncViewModel(
+            coordinator: fake,
+            capabilities: SupabaseManualSyncCapabilitySet(
+                supportsRemoteCloudCheck: true,
+                supportsGuidedManualSync: false
+            )
+        )
+
+        vm.apply(summary: cloudCheckSummary(
+            finalState: .technicalReviewNeeded,
+            remotePreviewSummary: remotePreviewSummary(
+                hasRemoteSignals: true,
+                counts: SupabaseManualSyncRemotePreviewAggregateCounts(warningCount: 1),
+                key: .cloudDataNeedsReview
+            )
+        ))
+
+        let state = vm.presentationState
+        XCTAssertEqual(state.userFacingSummary?.kind, .cloudCheckCompletedNoAction)
+        XCTAssertNil(state.reviewSheet)
+        XCTAssertEqual(state.primaryAction?.id, .checkCloud)
+        XCTAssertFalse(state.accessibilityLabel.localizedCaseInsensitiveContains("needs review"))
         assertNoForbiddenUserFacingJargon(vm)
     }
 
@@ -1759,8 +2076,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         let completed = vm.presentationState
         XCTAssertEqual(vm.presentationKind, .successFullyUpToDate)
         XCTAssertEqual(completed.userFacingSummary?.kind, .cloudCheckCompletedNoAction)
-        XCTAssertEqual(completed.primaryAction?.id, .reviewChanges)
-        XCTAssertNotNil(completed.reviewSheet)
+        XCTAssertEqual(completed.primaryAction?.id, .checkCloud)
+        XCTAssertNil(completed.reviewSheet)
         XCTAssertNil(completed.secondaryAction)
         XCTAssertFalse(fake.calls.contains(.catalogPush))
         XCTAssertFalse(fake.calls.contains(.productPricePush))

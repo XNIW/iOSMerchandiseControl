@@ -57,6 +57,21 @@ nonisolated struct SupabaseManualSyncRemotePreviewAggregateCounts: Sendable, Equ
             + categoryDiffCount
             + priceHistorySignalCount
     }
+
+    var actionableReviewSignalCount: Int {
+        newProductCount
+            + updateCandidateCount
+            + conflictCount
+            + tombstoneCount
+            + sourceErrorCount
+            + supplierDiffCount
+            + categoryDiffCount
+            + priceHistorySignalCount
+    }
+
+    var hasActionableReviewSignals: Bool {
+        actionableReviewSignalCount > 0
+    }
 }
 
 nonisolated struct SupabaseManualSyncRemotePreviewSummary: Sendable, Equatable {
@@ -67,6 +82,10 @@ nonisolated struct SupabaseManualSyncRemotePreviewSummary: Sendable, Equatable {
     var safeAggregateCounts: SupabaseManualSyncRemotePreviewAggregateCounts
     var recommendedUserMessageKey: SupabaseManualSyncRemotePreviewMessageKey
     var failureCategory: SupabaseManualSyncRemotePreviewFailureCategory?
+
+    var hasActionableReviewSignals: Bool {
+        safeAggregateCounts.hasActionableReviewSignals
+    }
 }
 
 nonisolated enum SupabaseManualSyncRemotePreviewOutcomeMapper {
@@ -138,7 +157,7 @@ nonisolated enum SupabaseManualSyncRemotePreviewOutcomeMapper {
             return .technicalReviewNeeded
         }
 
-        if summary.hasRemoteSignals {
+        if summary.hasActionableReviewSignals {
             return .technicalReviewNeeded
         }
 

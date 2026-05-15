@@ -277,6 +277,7 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
             }
             .task {
                 guard !didReachInteractiveUI else { return }
+                syncAuthPresentationContext()
                 await Task.yield()
                 didReachInteractiveUI = true
                 startRootForegroundCheckIfAllowed()
@@ -284,6 +285,7 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
                 case .active:
+                    syncAuthPresentationContext()
                     guard didReachInteractiveUI else { return }
                     startRootForegroundCheckIfAllowed()
                 case .background:
@@ -294,6 +296,18 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
                     break
                 }
             }
+            .onChange(of: authViewModel.isTransitioning) { _, _ in
+                handleAuthPresentationChanged()
+            }
+            .onChange(of: authViewModel.canSignIn) { _, _ in
+                handleAuthPresentationChanged()
+            }
+            .onChange(of: authViewModel.sessionInfo?.userID) { _, _ in
+                handleAuthPresentationChanged()
+            }
+            .onChange(of: authViewModel.isSignedIn) { _, _ in
+                handleAuthPresentationChanged()
+            }
             .onChange(of: activityCenter.activeReasons) { _, _ in
                 guard didReachInteractiveUI,
                       hasDeferredForegroundCheck,
@@ -301,6 +315,23 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
                 hasDeferredForegroundCheck = false
                 startRootForegroundCheckIfAllowed()
             }
+    }
+
+    private func handleAuthPresentationChanged() {
+        syncAuthPresentationContext()
+        guard didReachInteractiveUI,
+              scenePhase == .active else { return }
+        startRootForegroundCheckIfAllowed()
+    }
+
+    private func syncAuthPresentationContext() {
+        viewModel.applyAuthPresentationContext(
+            SupabaseManualSyncAuthPresentationContext(
+                isSignedIn: authViewModel.isSignedIn,
+                canSignIn: authViewModel.canSignIn,
+                isTransitioning: authViewModel.isTransitioning
+            )
+        )
     }
 
     @ViewBuilder

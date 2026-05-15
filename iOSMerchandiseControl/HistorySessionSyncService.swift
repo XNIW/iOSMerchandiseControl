@@ -485,8 +485,10 @@ nonisolated final class HistorySessionSyncService {
         }
         entry.editable = row.sessionOverlay?.editable ?? []
         entry.complete = row.sessionOverlay?.complete ?? []
+        let initialSummary = HistoryImportedGridSupport.initialSummary(forGrid: row.data)
         let summary = HistoryEntryRuntimeSummary.compute(from: row.data, complete: entry.complete)
         entry.totalItems = summary.totalItems
+        entry.orderTotal = initialSummary.orderTotal
         entry.paymentTotal = summary.paymentTotal
         entry.missingItems = summary.missingItems
         entry.remoteID = row.remoteID
@@ -511,6 +513,7 @@ nonisolated final class HistorySessionSyncService {
         fingerprint: String
     ) -> HistoryEntry {
         let complete = row.sessionOverlay?.complete ?? []
+        let initialSummary = HistoryImportedGridSupport.initialSummary(forGrid: row.data)
         let summary = HistoryEntryRuntimeSummary.compute(from: row.data, complete: complete)
         let entry = HistoryEntry(
             id: row.remoteID.uuidString.lowercased(),
@@ -523,7 +526,7 @@ nonisolated final class HistorySessionSyncService {
             supplier: row.supplier,
             category: row.category,
             totalItems: summary.totalItems,
-            orderTotal: 0,
+            orderTotal: initialSummary.orderTotal,
             paymentTotal: summary.paymentTotal,
             missingItems: summary.missingItems,
             syncStatus: .syncedSuccessfully,

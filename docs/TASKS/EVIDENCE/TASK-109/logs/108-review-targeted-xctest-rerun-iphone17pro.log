@@ -1,0 +1,616 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination "platform=iOS Simulator,id=240F400E-5EFA-486A-9137-FFBBE70F604D" CODE_SIGNING_ALLOWED=NO "-only-testing:iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests" "-only-testing:iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests" "-only-testing:iOSMerchandiseControlTests/CloudSyncOverviewStateTests" "-only-testing:iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests" "-only-testing:iOSMerchandiseControlTests/SupabaseManualSyncLifecycleRunGateTests" "-only-testing:iOSMerchandiseControlTests/SupabaseManualSyncLocalPendingSnapshotProviderTests" "-only-testing:iOSMerchandiseControlTests/SupabaseManualSyncReleaseActivityRegistrationAdapterTests" "-only-testing:iOSMerchandiseControlTests/SupabaseManualSyncRemotePreviewTests" "-only-testing:iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests" "-only-testing:iOSMerchandiseControlTests/InventorySyncServiceTests" "-only-testing:iOSMerchandiseControlTests/HistorySessionSyncServiceTests" "-only-testing:iOSMerchandiseControlTests/HistoryViewStateTests" "-only-testing:iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests" "-only-testing:iOSMerchandiseControlTests/SupabasePullPreviewDiffEngineTests" "-only-testing:iOSMerchandiseControlTests/SupabasePullPreviewPaginationTests" "-only-testing:iOSMerchandiseControlTests/SupabasePullApplyServiceTests" "-only-testing:iOSMerchandiseControlTests/SupabaseProductPriceApplyServiceTests" "-only-testing:iOSMerchandiseControlTests/SupabaseProductPricePreviewServiceTests" "-only-testing:iOSMerchandiseControlTests/SupabaseProductPricePushDryRunServiceTests" "-only-testing:iOSMerchandiseControlTests/SupabaseProductPriceManualPushServiceTests" "-only-testing:iOSMerchandiseControlTests/LocalizationCoverageTests"
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  swift-crypto: https://github.com/apple/swift-crypto.git @ 4.5.0
+  libxlsxwriter: https://github.com/jmcnamara/libxlsxwriter @ main (f064715)
+  ZIPFoundation: https://github.com/weichsel/ZIPFoundation.git @ 0.9.20
+  swift-atomics: https://github.com/apple/swift-atomics.git @ 1.3.0
+  swift-clocks: https://github.com/pointfreeco/swift-clocks @ 1.0.6
+  swift-http-types: https://github.com/apple/swift-http-types.git @ 1.5.1
+  swift-asn1: https://github.com/apple/swift-asn1.git @ 1.7.0
+  SwiftSoup: https://github.com/scinfu/SwiftSoup @ 2.11.2
+  Supabase: https://github.com/supabase/supabase-swift.git @ 2.46.0
+  LRUCache: https://github.com/nicklockwood/LRUCache.git @ 1.2.0
+  xctest-dynamic-overlay: https://github.com/pointfreeco/xctest-dynamic-overlay @ 1.9.0
+  xlsxwriter.swift: https://github.com/damuellen/xlsxwriter.swift @ SPM (f4c0e10)
+  swift-concurrency-extras: https://github.com/pointfreeco/swift-concurrency-extras @ 1.3.2
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (38 targets)
+    Target 'iOSMerchandiseControlTests' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+    Target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation' (no dependencies)
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target '_AtomicsShims' in project 'swift-atomics' (no dependencies)
+    Target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+    Target 'LRUCache' in project 'LRUCache' (no dependencies)
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter' (no dependencies)
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'swift-crypto_Crypto' in project 'swift-crypto' (no dependencies)
+    Target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay' (no dependencies)
+    Target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+    Target 'HTTPTypes' in project 'swift-http-types' (no dependencies)
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x objective-c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Assets.xcassets
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+Build description signature: d0740d07dc6bd7dd41696eb6790623b0
+Build description path: /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/XCBuildData/d0740d07dc6bd7dd41696eb6790623b0.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk /Users/minxiang/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+    cd /Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -o /Users/minxiang/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+
+ProcessInfoPlistFile /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/swift-crypto_Crypto.bundle/Info.plist /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist (in target 'swift-crypto_Crypto' from project 'swift-crypto')
+    cd /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-crypto
+    builtin-infoPlistUtility /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphonesimulator -o /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/swift-crypto_Crypto.bundle/Info.plist
+
+ProcessInfoPlistFile /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.bundle/Info.plist /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist (in target 'ZIPFoundation_ZIPFoundation' from project 'ZIPFoundation')
+    cd /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/ZIPFoundation
+    builtin-infoPlistUtility /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphonesimulator -o /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.bundle/Info.plist
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+CompileAssetCatalogVariant thinned /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app /Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Assets.xcassets (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd /Users/minxiang/Desktop/iOSMerchandiseControl
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Assets.xcassets --compile /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/assetcatalog_dependencies_thinned --output-partial-info-plist /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --accent-color AccentColor --compress-pngs --enable-on-demand-resources YES --filter-for-thinning-device-configuration iPhone18,1 --filter-for-device-os-version 26.5 --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 26.1 --platform iphonesimulator
+/* com.apple.actool.compilation-results */
+/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/assetcatalog_generated_info.plist_thinned
+
+
+ProcessInfoPlistFile /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Info.plist /Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd /Users/minxiang/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility /Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/assetcatalog_generated_info.plist -scanforprivacyfile /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/swift-crypto_Crypto.bundle -o /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Info.plist
+
+CopySwiftLibs /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd /Users/minxiang/Desktop/iOSMerchandiseControl
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib --scan-folder /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Frameworks --scan-folder /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns --scan-folder /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/SystemExtensions --scan-folder /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+ProcessInfoPlistFile /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd /Users/minxiang/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/swift-crypto_Crypto.bundle -o /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist
+
+CopySwiftLibs /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd /Users/minxiang/Desktop/iOSMerchandiseControl
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/iOSMerchandiseControlTests --scan-folder /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Frameworks --scan-folder /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/PlugIns --scan-folder /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/SystemExtensions --scan-folder /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+Testing started
+Test suite 'SupabaseProductPriceApplyServiceTests' started on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)'
+Test case 'SupabaseProductPriceApplyServiceTests.testApplyDoesNotModifyProductCurrentPrices()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.045 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testApplyLinksExistingProductPriceRemoteIDWithoutDuplicate()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.022 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testApplyPersistsRemoteRowIDOnInsertedProductPrice()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.009 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testApplyUsesRemoteProductIdentityIfBarcodeChangesAfterDryRun()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.020 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testDoubleApplyDoesNotDuplicateProductPrice()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.008 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testDuplicateLocalProductPricesSameKeySamePriceAreConflict()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.001 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testDuplicateLocalProductRemoteIDIsMappingConflict()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.000 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testDuplicateRemoteLogicalRowsWithDifferentCanonicalPriceConflict()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.001 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testDuplicateRemoteLogicalRowsWithSameCanonicalPriceConflict()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.001 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testEffectiveAtRawDifferentButCanonicalEqualDedupes()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.002 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testExistingProductPriceSameKeyDifferentPriceIsConflictAndNotUpdated()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.009 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testInvalidEffectiveAtIsInvalid()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.001 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testInvalidPricesAreClassifiedInvalid()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.001 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testInvalidTypeIsClassifiedInvalid()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.000 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testKeysetPagedFullPullCompletesThreePagesAndPublishesProgress()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (1.270 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testKeysetPagedFullPullSkipsTombstonedProductPrices()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.010 seconds)
+Test suite 'SupabaseManualSyncViewModelTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabaseManualSyncViewModelTests.testAuthBlockedMessaging()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.028 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testBaselineBlockedMessaging()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.025 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testCancellationMessagingNeverSuccessPresentation()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.043 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testCancelledCloudCheckShowsNeutralSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.026 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testCloudCheckNoActionAddsCompactUserFacingSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.020 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testCompletedRemotePreviewSignalsUseReviewStateWithoutTechnicalFailureCopy()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.045 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testConnectivityMessaging()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.017 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testCoordinatorBusyStateAllowsRetryAndAvoidsDuplicateCopy()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testDirectSyncDefersHistoryUntilPreparedApplyCompletes()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.034 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testDryRunWithoutSyncNowFlagDoesNotMutateHistory()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testDryRunWithPendingShowsNeedsReviewInsteadOfAllUpToDate()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testInitialStateIdleReadyPrivacySafeTitles()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testNoLocalPendingSummaryDoesNotClaimCloudIsSynced()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.022 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testPartialOutcomeDoesNotAppearAsSuccessPresentation()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testPresentationStateGuidedCapabilityShowsSingleSyncNowAction()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testPresentationStateRemoteCapabilityShowsSyncNowOnly()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testPresentationStateSignedOutUsesSignInAsOnlyPrimaryAction()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testPresentationStateWithoutCapabilitiesDoesNotExposeCloudOrSyncActions()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testPrivacySafeAggregateSnapshotCopiedFromSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.019 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testReleaseCurrentCapabilitiesKeepCloudAndSyncActionsHidden()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testRemoteFailureSummariesUseUserFacingCategories()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.017 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testRemotePartialSummaryWinsOverCompletedState()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.022 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testRemoteSignalsSummaryAvoidsIdentifiersAndCounts()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testRootForegroundSynchronizesHistoryWhenCatalogAndPricesHaveNoChanges()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.019 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testRunningAuthAndBaselineStatesHidePreviousSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.053 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testRunningPresentationStateShowsCancelWithoutPrimaryAction()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.019 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testStartWhileRunningIgnoresDuplicateCoordinatorRuns()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.028 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testSyncNowDirectApplyRunsPreparedProductPriceApplyWithoutSecondUpdateStep()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.025 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testSyncNowDryRunSynchronizesHistoryWhenCatalogAndPricesHaveNoChanges()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testSyncNowHistoryOnlySkipsProductPriceApplyPlanWhenPreviewHasNoSignals()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.022 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask073ReleaseCapabilitiesExposeCloudCheckOnlyWhenPreviewProviderExists()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.022 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask075SmallDatasetCancelShowsRetryAndVolatileSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.051 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask075SmallDatasetDoubleTapDoesNotStartConcurrentRun()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.019 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask075SmallDatasetNoPendingCompletesReadOnlyCloudCheck()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.068 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask075SmallDatasetPartialAndErrorStatesStayRecoverable()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.019 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask075SmallDatasetPendingLocalWorkRemainsReadOnlyAndRetryable()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.021 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask077ReviewSheetIsPreparedForCompletedPreviewWithoutMutativeAction()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.027 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask078CancelAndRelaunchLoseStaging()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.038 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask078ConflictsBlockLocalApplyAndDoNotExposeIdentifiers()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.036 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask078DoubleApplyTapOnlyWritesOnce()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.069 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask078FullApplicablePreviewEnablesUpdateDeviceAndAppliesLocally()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.088 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask078NoFinalManualSyncCopyUsesOldApplyChangesLabel()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.053 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask078PartialPreviewBlocksLocalApplyWithNaturalCopy()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.026 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask078StaleLocalDataInvalidatesStagingBeforeApply()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.025 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask078WarningsDoNotBlockApplicablePreview()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.021 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask079AuthFailureFailsBeforeWriteAndDoesNotExecute()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.011 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask079ConfirmedPushMapsTerminalResultsAndKeepsSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.021 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask079DoubleSendTapOnlyExecutesOnce()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.113 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask079PreflightBlockersShowNeedsFixWithoutMutativeCTA()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask079PreflightValidCandidatesCreatesVolatileReviewPlan()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask079PreflightZeroChangeShowsNoMutativeCTAAndDoesNotExecute()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask079RemoteApplyKeepsPriorityBeforeCatalogPush()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.018 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask079SessionChangeDuringPreWriteRecheckDoesNotExecute()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask079StalePlanCannotBeConfirmed()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask080LocalProductPricesEnableCloudSendWithoutCatalogCandidates()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.019 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask080ProductPriceApplyStalePlanDoesNotWrite()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask080ProductPricePushStalePlanDoesNotWrite()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask080ProductPriceReviewCombinesSkippedAndBlockedCountsOnce()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask080RemoteProductPricesEnableUpdateDeviceAndApplyAfterRecheck()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.017 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask081ActivitiesOnlyShowsRegisterCTAAfterCloudCheckReview()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.017 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask081AuthGateAndCancellationAreUserFacing()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.037 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask081BlockedAndRetryableFailuresUseNonTechnicalCopy()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask081ConfirmBeforeReviewDoesNotRegisterActivities()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask081DataActionsStayBeforeActivityRegistration()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask081DoubleTapDoesNotStartConcurrentRegistration()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.118 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask081SuccessfulRegistrationUpdatesSummaryAndPendingCount()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask082AccessIssueWithoutSupportedSignInUsesRecheckCTA()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask082ChangedLocalApplyOwnerInvalidatesStagingBeforeApply()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.019 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask091CancelledForegroundCheckDoesNotRemainChecking()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask091DiscardReviewClearsUnresolvedStagedPlan()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.028 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask091ForegroundPreviewRemainsReadOnlyAndSkipsMutativeDryRunPhases()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.018 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask091PreparedReviewDoesNotMutateBeforeConfirmation()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask091RecoverablePreviewErrorFallsBackWithoutBlockingApp()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask091SemiAutomaticCheckBlocksWhenSessionOwnerIsMissing()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask091SemiAutomaticCheckBlocksWhileRunIsActive()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.011 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask091SemiAutomaticPolicyAppliesCooldownWindow()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask091SemiAutomaticSuggestionAndNoChangesStateArePresented()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask091StagedPlanIsInvalidatedWhenAccessChanges()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.017 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask092BusyWorkflowObservationIsPrivacySafeAndDoesNotStartNetwork()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask092ForegroundRootRollbackOffLeavesReleaseCardTask091PathAvailable()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask092RecoverableErrorBackoffThrottlesOnlyAutomaticRetry()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask092RootAndCardAutomaticChecksShareDebounceAcrossScenes()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask092RootForegroundBlockedAuthMapsToSignInWithoutNetwork()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask092RootForegroundChangesFoundMapsToActionableBannerState()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.011 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask092RootForegroundStartsAfterSharedCapabilityAndStaysSilentWhenNoChanges()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask092WorkflowActivityCenterKeepsBusyUntilAllSourcesClearSameReason()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask094TelemetryFollowUpAfterVerifiedProductPricePushShowsPartialSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask095CancelDuringPushKeepsRemoteWriteInterrupted()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.037 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask095PreflightBlocksUnsafeMutativeRetryBeforeWrite()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask095UnverifiedRemoteWriteDoesNotBecomeCompletedVerified()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask099AuthFailureUsesSignInRecovery()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask099PermissionFailureUsesCheckCloudRecoveryWithoutSignInCopy()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask108BaselineAbsentUsesUnifiedSyncCopyForApplicableReviewCTA()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.017 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask108ProductPriceApplyCancellationShowsCancelledInsteadOfIdle()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask108ProductPriceApplyFailureShowsFailedInsteadOfIdle()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTask109WarningsOnlyRemotePreviewDoesNotOpenNoOpReview()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.011 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testTechnicalReviewSoftCopyOverridesUnexpectedCoordinatorHeadline()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testViewModelSourcesAvoidForbiddenScopeTerms()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.093 seconds)
+Test case 'SupabaseManualSyncViewModelTests.testZeroPendingDryRunLeavesAllUpToDateHeadlineWithoutPartialMasking()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.015 seconds)
+Test suite 'SupabaseManualSyncReleaseUITests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabaseManualSyncReleaseUITests.testTask067DebugOutboxCardRemainsDebugOnlyAndSeparateFromReleaseCard()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.007 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask067ManualSyncReleaseCopyAvoidsForbiddenJargon()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.030 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask067ManualSyncReleaseLocalizationKeysExistInSupportedLanguages()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.009 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask067ManualSyncReleaseSourcesAvoidForbiddenScope()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.067 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask067OptionsViewDoesNotUseSupabaseClientDirectly()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask067ReleaseCardSourceAvoidsDeveloperJargon()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask069ReadOnlyReleaseSourcesAvoidForbiddenLiveCalls()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.088 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask069ReleaseFactoryUsesLocalPendingSnapshotProvider()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask072ManualSyncLocalizationKeysHaveNoDuplicates()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.009 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask072ManualSyncReleaseCopyDoesNotClaimCloudUpdatedWithoutPreview()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.020 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask072ReleaseCardDeclaresProminentActionStylesForCardAndSheet()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask072ReleaseCardRendersPresentationStateOnly()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask073ReleaseFactoryBuildsReadOnlyRemotePreviewProvider()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask074ReleaseCardRendersPreparedSummaryOnly()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask074SummaryIsNotPersistedByReleaseSurface()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.027 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask077ReleaseCardRendersReviewSheetFromPreparedPresentationOnly()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.007 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask081ActivityRegistrationDrainIsAdapterOwned()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask081ManualSyncReleaseCopyAvoidsIdentifiersAndRawDataShapes()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.014 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask091AppWiresFullCatalogPreviewWithBoundedPriceHistory()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask092RootForegroundCopyIsLocalizedNotHardcodedInSwift()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.029 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask092RootForegroundHostUsesPresenterSharedViewModelAndBusyGating()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask092RootForegroundSourcesAvoidForbiddenAutomationScope()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.055 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask092WorkflowBusyGatingIsDeclaredOnInteractiveSurfaces()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.028 seconds)
+Test case 'SupabaseManualSyncReleaseUITests.testTask109ReleaseCardUsesConfirmationDialogsOnlyForMutations()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test suite 'LocalPendingAggregatedPushPlannerTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'LocalPendingAggregatedPushPlannerTests.testBlockedStaleCappedAndSentRowsBlockBeforeNetwork()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.026 seconds)
+Test case 'LocalPendingAggregatedPushPlannerTests.testCandidateFilteringUsesOnlyPendingAndIgnoresTerminalRows()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.021 seconds)
+Test case 'LocalPendingAggregatedPushPlannerTests.testCatalogPendingRecordedBeforeRemoteLinkMatchesCurrentRemoteModel()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.022 seconds)
+Test case 'LocalPendingAggregatedPushPlannerTests.testFingerprintChangesWhenCurrentLiveModelChanges()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.011 seconds)
+Test case 'LocalPendingAggregatedPushPlannerTests.testMissingOwnerFailsClosed()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'LocalPendingAggregatedPushPlannerTests.testProductPriceDedupeUsesSingleRemoteFetchAndDeterministicFingerprint()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.028 seconds)
+Test case 'LocalPendingAggregatedPushPlannerTests.testProductPricePendingRecordedBeforeProductRemoteLinkUsesCurrentRemoteIDForPush()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.012 seconds)
+Test case 'LocalPendingAggregatedPushPlannerTests.testSentRetryEligibleHasExplicitRetryBlocker()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'LocalPendingAggregatedPushPlannerTests.testSoftLimitSelectsBoundedBatchAndHardCapBlocks()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'LocalPendingAggregatedPushPlannerTests.testStateTransitionsAreBatchScoped()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.011 seconds)
+Test case 'LocalPendingAggregatedPushPlannerTests.testTerminalRowsDoNotConsumeHardCapOrHidePendingCandidate()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.010 seconds)
+Test suite 'SupabasePullPreviewPaginationTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabasePullPreviewPaginationTests.testGeneratePreviewFetchesCompletePagedCatalog()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'SupabasePullPreviewPaginationTests.testGeneratePreviewMarksCatalogPartialWhenBudgetStopsPaging()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'SupabasePullPreviewPaginationTests.testLargeProductPriceHistorySampleDoesNotMakePreviewPartialOrSourceError()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.329 seconds)
+Test case 'SupabasePullPreviewPaginationTests.testPagerUsesContiguousInclusiveRangesAndStableServiceOrderColumn()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test suite 'HistorySessionSyncServiceTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'HistorySessionSyncServiceTests.testHistoryPendingCountsAsQueuedCloudOperationForOptions()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.016 seconds)
+Test case 'HistorySessionSyncServiceTests.testPullInsertsRemoteHistorySession()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'HistorySessionSyncServiceTests.testPullRejectsOwnerMismatch()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.005 seconds)
+Test case 'HistorySessionSyncServiceTests.testPullSkipsDirtyLocalEntryInsteadOfOverwritingIt()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'HistorySessionSyncServiceTests.testPullUpdatesChangedRemoteSessionWhenLocalEntryIsClean()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'HistorySessionSyncServiceTests.testPushUploadsDirtyHistorySessionAndAcknowledgesPendingChange()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.010 seconds)
+Test case 'HistorySessionSyncServiceTests.testSecondPullIsNoOpAndDoesNotDuplicateRemoteHistorySession()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.007 seconds)
+Test suite 'SupabaseProductPriceManualPushServiceTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabaseProductPriceManualPushServiceTests.testBatchOverLimitFailsClosed()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.013 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testBlocksSnapshotWithoutSafeDryRun()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testPayloadOwnerUserIDAndDeterministicIDComeFromDryRunSession()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testReadBackExactMatchSucceedsWithNormalizedTypeEffectiveAtAndPrice()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testReadBackMissingRowIsFailure()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testReadBackPriceMismatchIsFailure()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testReadBackTypeAndEffectiveAtMismatchAreFailures()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testReadBackUsesSnapshotOwnerAndProductFilter()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testSnapshotStaleWhenCandidateFingerprintChanges()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testSourceContainsNoUpsertRetryOrScopeExtras()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testTask051LocalizationKeysExistInSupportedLanguages()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testTask088IdentityReconcilerFailsClosedForAmbiguousLocalMatch()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testTask088VerifiedPushLinksRemoteIDAcrossReloadAndSecondDryRun()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.010 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testTask099UniqueConflictWithExactReadBackIsIdempotentSuccess()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testTask099UniqueConflictWithMismatchedReadBackFailsClosed()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testVerificationUnknownWhenReadBackFailsAfterInsert()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testViewModelCancellationNeverReportsSuccess()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.019 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testViewModelDoubleTapRunsSingleInsert()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.077 seconds)
+Test case 'SupabaseProductPriceManualPushServiceTests.testViewModelInvalidatedSnapshotDisablesPush()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.019 seconds)
+Test suite 'SupabaseManualSyncRemotePreviewTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabaseManualSyncRemotePreviewTests.testCancelledSummaryNeverMapsToSuccess()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testCompletePreviewWithoutRemoteSignalsMapsToNoActionSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testCompletePreviewWithRemoteSignalsMapsToNeedsReviewSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testNetworkFailureMapsToRetryableUserSafeFailure()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testPartialPreviewMapsToIncompleteAndNeverSuccessOutcome()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testPermissionAndSchemaFailuresMapToNonTechnicalKeysWithoutSuccess()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testPrivacySafeSummaryDoesNotCarryRawIdentifiers()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.009 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testProductPriceSignalsRemainAggregatedOnly()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testPullPreviewAdapterCanUseFakeFetcherWithoutLiveNetwork()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.023 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testTask071ProductionSourcesAvoidForbiddenWriteAndAutomationScope()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.107 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testTask071ReleaseAndViewModelDoNotExposeRawSyncPreview()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'SupabaseManualSyncRemotePreviewTests.testTask078PullPreviewAdapterDoesNotStagePartialPreview()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test suite 'SupabasePullApplyServiceTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabasePullApplyServiceTests.testAccountGuardTreatsMissingCapturedOwnerAsMismatch()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabasePullApplyServiceTests.testAccountMismatchBlocksApplyRelink()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabasePullApplyServiceTests.testApplyBlocksSupplierSameNameDifferentRemoteID()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.005 seconds)
+Test case 'SupabasePullApplyServiceTests.testApplyFailsPreviewStaleIfLocalDatabaseChangesBetweenPrepareAndApply()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'SupabasePullApplyServiceTests.testApplyServiceHasNoNetworkServiceDependency()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabasePullApplyServiceTests.testCreateLocalSetsRemoteIDMetadata()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.005 seconds)
+Test case 'SupabasePullApplyServiceTests.testExistingProductBarcodeNeverChanges()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'SupabasePullApplyServiceTests.testInvalidPricesAreBlocked()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'SupabasePullApplyServiceTests.testLinkOnlySetsRemoteIDWithoutDuplicatingProduct()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'SupabasePullApplyServiceTests.testMissingRequiredFieldWhenNewProductHasNoProductNameNorSecondProductName()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabasePullApplyServiceTests.testNegativeStockIsBlockedWhenApplyStockQuantityIsTrue()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabasePullApplyServiceTests.testNilOrEmptyRemoteValuesDoNotClearLocalFields()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.005 seconds)
+Test case 'SupabasePullApplyServiceTests.testNoProductPriceRowsAreCreated()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'SupabasePullApplyServiceTests.testPartialPreviewDoesNotOverwriteExistingRemoteID()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'SupabasePullApplyServiceTests.testPrepareApplyPlanBlocksConflicts()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabasePullApplyServiceTests.testPrepareApplyPlanBlocksDuplicateLocalRemoteIdentityBeforeMutations()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.005 seconds)
+Test case 'SupabasePullApplyServiceTests.testPrepareApplyPlanBlocksInvalidLocalInventoryBeforeMutations()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'SupabasePullApplyServiceTests.testPrepareApplyPlanBlocksMissingApplicablePayloadForNewProducts()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabasePullApplyServiceTests.testPrepareApplyPlanBlocksMissingApplicablePayloadForUpdateCandidates()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'SupabasePullApplyServiceTests.testPrepareApplyPlanBlocksPartialPreview()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabasePullApplyServiceTests.testPrepareApplyPlanBlocksPriceHistoryIncomplete()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabasePullApplyServiceTests.testPrepareApplyPlanBlocksSessionMissing()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabasePullApplyServiceTests.testPrepareApplyPlanBlocksSourceErrors()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabasePullApplyServiceTests.testSameFullPullAfterApplyDoesNotCreateDuplicates()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.005 seconds)
+Test case 'SupabasePullApplyServiceTests.testSamePlanSecondApplyDoesNotDuplicateAndDoesNotMutate()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'SupabasePullApplyServiceTests.testSaveFailurePathRollsBackBeforeSurfacingError()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabasePullApplyServiceTests.testStockIsIgnoredByDefaultWhenApplyStockQuantityIsFalse()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test case 'SupabasePullApplyServiceTests.testSupplierAndCategoryReuseCaseInsensitive()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'SupabasePullApplyServiceTests.testTombstonePreviewOnlyDoesNotDeleteLocalProduct()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.004 seconds)
+Test suite 'SupabaseProductPricePushDryRunServiceTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabaseProductPricePushDryRunServiceTests.testBucketOrderingIsDeterministic()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testCanonicalMappingCreatesDeterministicCandidatePayload()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testGlobalGatesBlockBeforeRemoteDedupe()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testInvalidRemoteRowsMakeDedupeUnsafe()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testLinkedLocalRemoteIDIsNotPushedAgain()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testLocalConflictSameKeyDifferentCanonicalPriceBlocksKey()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testLocalDuplicatesSameKeyUseOneStableRepresentativeAndReportBucket()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testProductWithoutRemoteIDBlocksPriceRows()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testRemoteEmptyMakesAllValidRepresentativesCandidates()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testRemoteSameKeyDifferentPriceIsConflict()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testRemoteSameKeySamePriceIsAlreadyPresent()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testServiceBatchesProductIDsAndUsesOwnerScopedFetcher()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.066 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testServiceCompletesWhenFinalPageUsesLastAllowedPage()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.007 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testServiceMarksUnsafeWhenPageBudgetExceeded()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testServiceMarksUnsafeWhenRowBudgetExceeded()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testServicePagesWithinProductBatchUntilComplete()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.007 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testSourceContainsNoRemoteWriteOrRandomCandidateID()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.010 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testUnsafePartialRemoteDedupeClearsSafeCandidates()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testWrongOwnerRemoteRowsMakeDedupeUnsafe()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePushDryRunServiceTests.testZeroPriceIsAllowedButNaNInfiniteAndNegativeAreInvalid()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test suite 'InventorySyncServiceTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'InventorySyncServiceTests.testGeneratedInventorySyncRecordsPendingAndAvoidsDuplicatePriceOnRetry()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.013 seconds)
+Test suite 'LocalizationCoverageTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'LocalizationCoverageTests.testTask040NewLocalizationKeysExistInSupportedLanguages()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'LocalizationCoverageTests.testTask043BaselineLocalizationKeysExistInSupportedLanguages()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'LocalizationCoverageTests.testTask044ManualPushLocalizationKeysExistInSupportedLanguages()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.009 seconds)
+Test case 'LocalizationCoverageTests.testTask047ScopedPushPreflightLocalizationKeysExistInSupportedLanguages()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'LocalizationCoverageTests.testTask048ProductPricePreviewCopyAvoidsWriteLanguage()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.009 seconds)
+Test case 'LocalizationCoverageTests.testTask048ProductPricePreviewLocalizationKeysExistInSupportedLanguages()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'LocalizationCoverageTests.testTask049ProductPriceApplyLocalizationKeysExistInSupportedLanguages()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'LocalizationCoverageTests.testTask061SyncEventsOutboxLocalizationKeysExistInSupportedLanguages()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test suite 'SupabaseManualSyncCoordinatorTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabaseManualSyncCoordinatorTests.testAutomaticModeBlockedOutOfScope()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testCancellationBeforeFirstCheckpointReturnsCancelled()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testCancellationDuringIntermediatePhase()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.023 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testCatalogRetryableWithoutPriorSuccessIsConnectivityNotPartial()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testConcurrentRunsSecondIsBlockedBusy()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testCoordinatorSwiftSourcesAvoidDirectSupabaseClientAndRpc()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.007 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testDryRunBaselineMissingBlocks()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testDryRunBaselineMissingWithRemotePreviewProviderAllowsBootstrapPreview()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testDryRunCatalogPendingOnlyPlansCatalogPush()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testDryRunFullPendingPreservesPhaseOrdering()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testDryRunProductPricePendingOnlyPlansPricePush()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testDryRunQueuedCloudOperationsOnlyPlansFlushPhase()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testDryRunWithoutAuthBlocksWithoutPushOrFlush()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testDryRunZeroPendingAllUpToDateSkipsPushConfirmationFlushPath()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testFlushRetryableWithoutPriorMutationSuccessIsConnectivityNotPartial()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testGuidedManualAndDebugDiagnosticsAreBlockedWithoutDependencyCalls()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testNonRetryableMutationFailureUsesSoftTechnicalCopyWithoutJargon()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testPartialCatalogOkProductPriceRetryable()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testPartialMutationsOkFlushFailsRetryable()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testPrivacySummaryContainsOnlyAggregateCountsAndNoDetailStrings()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testRemotePreviewRetryableStopsBeforeConfirmationOrMutationPhases()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testTask071CancelledRemotePreviewProviderNeverMapsToSuccess()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testTask071CompleteRemotePreviewWithoutSignalsDoesNotPromiseCloudIsUpdated()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testTask071FakeRemotePreviewProviderRunsPreviewOnlyWithoutDownstreamPhases()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testTask071PartialRemotePreviewProviderDoesNotBecomeSyncCompleted()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testTask071RemotePreviewProviderNilPreservesTask069DryRunPath()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncCoordinatorTests.testTask071RemotePreviewProviderRunsPreviewOnlyEvenWithZeroLocalPending()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test suite 'SupabaseManualSyncLocalPendingSnapshotProviderTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testCatalogAdapterCountsPreflightWriteCandidatesOnlyAsAggregates()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testCatalogAdapterLimitExceededReturnsConservativePendingFlag()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testCatalogAdapterMissingBaselineReturnsZeroForSafeBlockedPath()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testCatalogAdapterZeroPendingWhenPreflightIsNoOp()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testCatalogPendingProducesAggregatedPendingSnapshot()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testCombinedLocalPendingCounterIsLoadedOnceAndAvoidsFallbackWhenCatalogExists()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testDirtyHistoryEntriesAreReportedAsQueuedCloudOperationsWithoutPendingRows()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testHistorySessionLocalPendingIsReportedAsQueuedCloudOperation()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testMissingAuthSessionReturnsZeroWithoutCallingCounters()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testOutboxAdapterCountsOwnerScopedPendingFailedAndBlockedRows()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.011 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testOutboxPendingProducesAggregatedPendingSnapshot()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testProductPricePendingProducesAggregatedPendingSnapshot()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testProviderIsOwnerSessionScopedAndDoesNotReuseStaleCounts()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testProviderPropagatesCancellationAndDoesNotReportSuccess()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseManualSyncLocalPendingSnapshotProviderTests.testZeroPendingReturnsZeroSnapshot()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test suite 'SupabaseProductPricePreviewServiceTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabaseProductPricePreviewServiceTests.testCancellationReturnsPartialCancelledSummaryWithoutSideEffects()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testDecodesRemoteProductPriceDTO()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testDefaultAndHardSampleLimits()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.009 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testDefensiveDedupeAcrossPagesKeepsSingleSample()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testEmptyFinalPageStopsWithoutTruncation()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testErrorAfterFetchedPageReturnsPartialErrorSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testFetcherCannotPushPreviewPastMaxRows()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testInvalidEffectiveAtWarnsWithoutCrashing()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testInvalidTypeWarnsWithoutCrashing()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testLocalProductWithoutRemoteIDIsExcludedFromLookup()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testMaxPagesCapsPreviewAndMarksTruncated()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testMaxRowsCapsPreviewAndMarksTruncated()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testNormalizesPurchaseRetailAndMixedCaseTypes()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testOrphanProductIDIsReported()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testPartialPageStopsWithoutTruncation()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testPreviewFetchOrderContractIsStableForPagedPrices()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testPreviewSourceHasNoSyncEventOrProductPriceWritePath()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.008 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testPreviewUsesInclusiveRangesWithoutOffByOne()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test case 'SupabaseProductPricePreviewServiceTests.testTwoPagesWithoutDuplicatesCountsRows()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test suite 'SupabaseManualSyncReleaseActivityRegistrationAdapterTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabaseManualSyncReleaseActivityRegistrationAdapterTests.testTask081BlockedPayloadMapsToNonRegisterableWithoutNetwork()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.009 seconds)
+Test case 'SupabaseManualSyncReleaseActivityRegistrationAdapterTests.testTask081EmptyActivityRegistrationDoesNotCallNetwork()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.003 seconds)
+Test case 'SupabaseManualSyncReleaseActivityRegistrationAdapterTests.testTask081RetryableNetworkFailureKeepsAggregatedWaitingCount()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.007 seconds)
+Test case 'SupabaseManualSyncReleaseActivityRegistrationAdapterTests.testTask081ValidActivityRegistrationDrainsAndUpdatesSummary()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.006 seconds)
+Test suite 'OptionsLocalDatabaseSummaryTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'OptionsLocalDatabaseSummaryTests.testLocalDatabaseSummaryUsesFetchCountForHistorySessions()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.005 seconds)
+Test suite 'SupabasePullPreviewDiffEngineTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabasePullPreviewDiffEngineTests.testDuplicateActiveRemoteBarcodeIsConflict()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testDuplicateLocalRemoteIDIsConflict()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testMatchedLocalProductWithoutRemoteIDIsLinkOnlyWhenFieldsMatch()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testMatchedProductWithPriceOrNameDifferenceIsUpdateCandidate()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testNewProductWithMissingRemoteSupplierOrCategoryIsConflictAndNotNewProduct()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testNormalizationForEmptyStringsLookupNamesAndDoubleTolerance()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testProductPricesBudgetWarningDoesNotFailCatalogPreview()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testRemoteDeletedAtCreatesTombstoneOnly()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testRemoteEmptyBarcodeIsConflictAndNotNewProduct()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testRemoteIDConflictBlocksSameBarcodeSilentMerge()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testRemoteProductPriceDiffStaysInPreviewOnly()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testRemoteProductWithUnknownBarcodeIsNewProduct()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testSupplierSameNameDifferentRemoteIDIsConflict()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabasePullPreviewDiffEngineTests.testSupplierSourceErrorProducesPartialWithoutSupplierFieldConflict()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test suite 'SupabaseManualSyncLifecycleRunGateTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'SupabaseManualSyncLifecycleRunGateTests.testTask095ForegroundMultiplesDoNotCreateDuplicateRun()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseManualSyncLifecycleRunGateTests.testTask095InterruptedMutationHasPriorityOverReadOnlyForegroundCheck()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseManualSyncLifecycleRunGateTests.testTask095PreflightBlocksRetryWhenAuthOwnerNetworkOrContextAreUnsafe()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchan
+Test session results, code coverage, and logs:
+	/Users/minxiang/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Logs/Test/Test-iOSMerchandiseControl-2026.05.15_02-16-00--0400.xcresult
+
+** TEST SUCCEEDED **
+
+diseControl (57710)' (0.000 seconds)
+Test case 'SupabaseManualSyncLifecycleRunGateTests.testTask095RemoteWriteUnverifiedNeverBecomesCompletedVerified()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseManualSyncLifecycleRunGateTests.testTask095RootOptionsAndReleaseSheetDoNotCompeteForMutatingRun()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'SupabaseManualSyncLifecycleRunGateTests.testTask095TimeBudgetMovesRunToReadyToRetryWithoutCompleting()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.002 seconds)
+Test suite 'CloudSyncOverviewStateTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'CloudSyncOverviewStateTests.testLocalPendingAfterValidBaseline()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'CloudSyncOverviewStateTests.testMissingBaselineOffersDownload()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'CloudSyncOverviewStateTests.testPermissionMapsToCloudPermission()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'CloudSyncOverviewStateTests.testReadyWhenNoBlockingInputs()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'CloudSyncOverviewStateTests.testReviewPrecedesBaseline()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'CloudSyncOverviewStateTests.testSignedInRemoteAuthFailureNeedsAccountCheckNotSignIn()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test case 'CloudSyncOverviewStateTests.testSignedOutRequiresAccount()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.000 seconds)
+Test suite 'HistoryViewStateTests' started on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)'
+Test case 'HistoryViewStateTests.testHistoryViewDefaultsToAllSessionsWithoutDatePredicate()' passed on 'Clone 2 of iPhone 17 Pro - iOSMerchandiseControl (57710)' (0.001 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testPagedFullPullAppliesLargeProductPriceHistoryWithoutFixedTotalLimit()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (136.201 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testPagedFullPullBlocksRemoteAboveDefaultSafetyLimit()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.336 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testPagedFullPullCanCancelLargeProductPriceHistoryWithoutFixedTotalLimit()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (1.896 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testPagedFullPullFailsWhenRemoteEndsBeforeReportedCount()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.540 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testPartialTruncatedAndSourceErrorBlockApply()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.001 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testPostgresFractionalCreatedAtIsAccepted()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.003 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testPostgresTimezoneEffectiveAtIsAccepted()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.001 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testPostSaveVerificationFailureThrowsVerificationFailed()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.007 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testPriceCanonicalizerDoesNotUseRawDoubleEqualityForSkippedExisting()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.001 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testRemoteProductWithoutLocalProductIsUnmapped()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.000 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testSameLogicalKeyWithDifferentCanonicalPriceIsConflict()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.001 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testSessionMismatchRefusesApply()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.004 seconds)
+Test case 'SupabaseProductPriceApplyServiceTests.testWrongOwnerRemoteRowsAreInvalidAccessData()' passed on 'Clone 1 of iPhone 17 Pro - iOSMerchandiseControl (57493)' (0.000 seconds)

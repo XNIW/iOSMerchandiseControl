@@ -513,15 +513,17 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         }
     }
 
-    func testTask091ReleaseCardUsesConfirmationDialogsForMutationsAndDiscard() throws {
+    func testTask109ReleaseCardUsesConfirmationDialogsOnlyForMutations() throws {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: source)
 
-        XCTAssertEqual(countOccurrences(of: ".confirmationDialog(", in: releaseCardSource), 4)
+        XCTAssertEqual(countOccurrences(of: ".confirmationDialog(", in: releaseCardSource), 3)
         XCTAssertTrue(releaseCardSource.contains("options.supabase.manualSync.confirm.updateDevice.title"))
         XCTAssertTrue(releaseCardSource.contains("options.supabase.manualSync.confirm.send.title"))
         XCTAssertTrue(releaseCardSource.contains("options.supabase.manualSync.confirm.activity.title"))
-        XCTAssertTrue(releaseCardSource.contains("options.supabase.manualSync.confirm.discard.title"))
+        XCTAssertFalse(releaseCardSource.contains("options.supabase.manualSync.confirm.discard.title"))
+        XCTAssertFalse(releaseCardSource.contains("isDiscardConfirmationPresented"))
+        XCTAssertFalse(releaseCardSource.contains("startForegroundSemiAutomaticCheckIfAllowed"))
         XCTAssertFalse(releaseCardSource.contains(".alert("))
     }
 

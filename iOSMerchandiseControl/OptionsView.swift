@@ -183,6 +183,10 @@ struct OptionsView: View {
             refreshLocalDatabaseSummary()
             refreshSupabaseBaselineSummary()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .historySessionsDidChange)) { _ in
+            refreshLocalDatabaseSummary()
+            refreshSupabaseBaselineSummary()
+        }
     }
 
     private var cloudAccountAndSyncPublicCard: some View {
@@ -309,6 +313,7 @@ struct OptionsView: View {
                 LabeledContent(L("options.localDatabase.suppliers"), value: "\(localDatabaseSummary.suppliers)")
                 LabeledContent(L("options.localDatabase.categories"), value: "\(localDatabaseSummary.categories)")
                 LabeledContent(L("options.localDatabase.prices"), value: "\(localDatabaseSummary.productPrices)")
+                LabeledContent(L("options.localDatabase.historySessions"), value: "\(localDatabaseSummary.historySessions)")
 
                 if localPendingAttentionCount > 0 {
                     LabeledContent(
@@ -484,12 +489,7 @@ struct OptionsView: View {
 
     private func refreshLocalDatabaseSummary() {
         do {
-            localDatabaseSummary = LocalDatabasePublicSummary(
-                products: try modelContext.fetchCount(FetchDescriptor<Product>()),
-                suppliers: try modelContext.fetchCount(FetchDescriptor<Supplier>()),
-                categories: try modelContext.fetchCount(FetchDescriptor<ProductCategory>()),
-                productPrices: try modelContext.fetchCount(FetchDescriptor<ProductPrice>())
-            )
+            localDatabaseSummary = try LocalDatabasePublicSummary.make(context: modelContext)
         } catch {
             localDatabaseSummary = .empty
         }
@@ -497,29 +497,39 @@ struct OptionsView: View {
 
 }
 
-private struct LocalDatabasePublicSummary: Equatable {
+struct LocalDatabasePublicSummary: Equatable {
     var products: Int
     var suppliers: Int
     var categories: Int
     var productPrices: Int
+    var historySessions: Int
 
     static let empty = LocalDatabasePublicSummary(
         products: 0,
         suppliers: 0,
         categories: 0,
-        productPrices: 0
+        productPrices: 0,
+        historySessions: 0
     )
 
     var isCatalogEmpty: Bool {
         products == 0 && suppliers == 0 && categories == 0
+    }
+
+    static func make(context: ModelContext) throws -> LocalDatabasePublicSummary {
+        LocalDatabasePublicSummary(
+            products: try context.fetchCount(FetchDescriptor<Product>()),
+            suppliers: try context.fetchCount(FetchDescriptor<Supplier>()),
+            categories: try context.fetchCount(FetchDescriptor<ProductCategory>()),
+            productPrices: try context.fetchCount(FetchDescriptor<ProductPrice>()),
+            historySessions: try context.fetchCount(FetchDescriptor<HistoryEntry>())
+        )
     }
 }
 
 // MARK: - Release manual sync surface
 
 private struct SupabaseManualSyncReleaseCard: View {
-    private static let semiAutomaticCheckRenderDelayNanoseconds: UInt64 = 700_000_000
-
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var authViewModel: SupabaseAuthViewModel
     @StateObject private var viewModel: SupabaseManualSyncViewModel
@@ -529,7 +539,6 @@ private struct SupabaseManualSyncReleaseCard: View {
     @State private var isApplyConfirmationPresented = false
     @State private var isSendConfirmationPresented = false
     @State private var isActivityRegistrationConfirmationPresented = false
-    @State private var isDiscardConfirmationPresented = false
     @State private var activeApplyTask: Task<Void, Never>?
     @State private var activeSendTask: Task<Void, Never>?
     @State private var activeActivityRegistrationTask: Task<Void, Never>?
@@ -649,12 +658,10 @@ private struct SupabaseManualSyncReleaseCard: View {
         .padding(.vertical, 4)
         .onAppear {
             syncAuthPresentationContext()
-            startSemiAutomaticCheckIfNeeded()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 syncAuthPresentationContext()
-                startSemiAutomaticCheckIfNeeded()
             } else if phase == .background {
                 cancelActiveRun()
             }
@@ -683,7 +690,6 @@ private struct SupabaseManualSyncReleaseCard: View {
             isApplyConfirmationPresented = false
             isSendConfirmationPresented = false
             isActivityRegistrationConfirmationPresented = false
-            isDiscardConfirmationPresented = false
         }
         .sheet(
             isPresented: $isReviewSheetPresented,
@@ -701,16 +707,11 @@ private struct SupabaseManualSyncReleaseCard: View {
                             activeApplyTask = nil
                             return
                         }
-                        if viewModel.requiresReviewDiscardConfirmation {
-                            isDiscardConfirmationPresented = true
-                        } else {
-                            viewModel.cancelReviewFlow()
-                            isReviewSheetPresented = false
-                        }
+                        confirmDiscardReview()
                     }
                 )
                 .interactiveDismissDisabled(
-                    viewModel.isReviewMutationInProgress || viewModel.requiresReviewDiscardConfirmation
+                    viewModel.isReviewMutationInProgress
                 )
             }
         }
@@ -750,25 +751,12 @@ private struct SupabaseManualSyncReleaseCard: View {
         } message: {
             Text(L("options.supabase.manualSync.confirm.activity.message"))
         }
-        .confirmationDialog(
-            L("options.supabase.manualSync.confirm.discard.title"),
-            isPresented: $isDiscardConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button(L("options.supabase.manualSync.confirm.discard.cancel"), role: .cancel) {}
-            Button(L("options.supabase.manualSync.confirm.discard.discard"), role: .destructive) {
-                confirmDiscardReview()
-            }
-        } message: {
-            Text(L("options.supabase.manualSync.confirm.discard.message"))
-        }
         .foregroundCloudWorkflowActivity(.manualSyncSheet, isActive: isReviewSheetPresented)
         .foregroundCloudWorkflowActivity(
             .confirmationDialog,
             isActive: isApplyConfirmationPresented
                 || isSendConfirmationPresented
                 || isActivityRegistrationConfirmationPresented
-                || isDiscardConfirmationPresented
         )
     }
 
@@ -884,30 +872,16 @@ private struct SupabaseManualSyncReleaseCard: View {
 
         activeRunTask?.cancel()
         activeRunTask = Task { @MainActor in
-            await viewModel.start(with: mode)
-            activeRunTask = nil
-        }
-    }
-
-    private func startSemiAutomaticCheckIfNeeded() {
-        guard activeRunTask == nil else { return }
-
-        activeRunTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: Self.semiAutomaticCheckRenderDelayNanoseconds)
-            } catch {
-                activeRunTask = nil
-                return
+            let directSync = actionID == .syncNow || actionID == .downloadCloudDatabase
+            await viewModel.start(with: mode, syncHistoryAfterRun: directSync)
+            if directSync {
+                await viewModel.applyStagedLocalChangesIfNeeded()
+                if !viewModel.isApplyingLocalChanges,
+                   viewModel.presentationState.reviewSheet == nil {
+                    isReviewSheetPresented = false
+                }
             }
-            guard !Task.isCancelled else {
-                activeRunTask = nil
-                return
-            }
-            syncAuthPresentationContext()
-            let didStart = await viewModel.startForegroundSemiAutomaticCheckIfAllowed()
-            if !didStart {
-                viewModel.suggestSemiAutomaticCheckIfAllowed()
-            }
+            baselineDidChange()
             activeRunTask = nil
         }
     }
@@ -940,13 +914,11 @@ private struct SupabaseManualSyncReleaseCard: View {
         isReviewSheetPresented = false
         viewModel.resetPresentationToIdleReady()
         syncAuthPresentationContext()
-        startSemiAutomaticCheckIfNeeded()
     }
 
     private func confirmDiscardReview() {
         viewModel.cancelReviewFlow()
         isReviewSheetPresented = false
-        isDiscardConfirmationPresented = false
     }
 
     private func syncAuthPresentationContext() {

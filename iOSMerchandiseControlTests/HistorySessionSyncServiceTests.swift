@@ -58,7 +58,7 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         let row = remoteRow(
             remoteID: remoteID,
             displayName: "TASK108_HISTORY_REMOTE",
-            data: [["barcode", "quantity"], ["TASK108_HISTORY_REMOTE_BAR", "3"]],
+            data: [["barcode", "quantity", "purchasePrice"], ["TASK108_HISTORY_REMOTE_BAR", "3", "2.50"]],
             editable: [[""], ["3"]],
             complete: [false, true]
         )
@@ -74,7 +74,66 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         XCTAssertEqual(entries.first?.data, row.data)
         XCTAssertEqual(entries.first?.editable, row.sessionOverlay?.editable)
         XCTAssertEqual(entries.first?.complete, row.sessionOverlay?.complete)
+        XCTAssertEqual(entries.first?.orderTotal, 7.5)
+        XCTAssertEqual(entries.first?.paymentTotal, 7.5)
+        XCTAssertEqual(entries.first?.missingItems, 0)
         XCTAssertEqual(entries.first?.syncStatus, .syncedSuccessfully)
+    }
+
+    func testSecondPullIsNoOpAndDoesNotDuplicateRemoteHistorySession() async throws {
+        let context = try makeContext()
+        let remoteID = UUID(uuidString: "dddddddd-dddd-4ddd-8ddd-dddddddddddd")!
+        let row = remoteRow(
+            remoteID: remoteID,
+            displayName: "TASK108_HISTORY_IDEMPOTENT",
+            data: [["barcode", "quantity"], ["TASK108_HISTORY_REMOTE_BAR", "3"]],
+            editable: [[""], ["3"]],
+            complete: [false, true]
+        )
+        let service = HistorySessionSyncService(remote: FakeHistorySessionRemote(ownerUserID: owner, rows: [row]))
+
+        let first = try await service.pullHistorySessionsFromCloud(ownerUserID: owner, context: context)
+        let second = try await service.pullHistorySessionsFromCloud(ownerUserID: owner, context: context)
+
+        XCTAssertEqual(first.insertedCount, 1)
+        XCTAssertEqual(second.skippedCleanCount, 1)
+        XCTAssertEqual(second.insertedCount, 0)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<HistoryEntry>()), 1)
+    }
+
+    func testPullUpdatesChangedRemoteSessionWhenLocalEntryIsClean() async throws {
+        let context = try makeContext()
+        let remoteID = UUID(uuidString: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee")!
+        let entry = HistoryEntry(
+            id: remoteID.uuidString.lowercased(),
+            data: [["barcode"], ["OLD"]],
+            editable: [[""], [""]],
+            complete: [false, false],
+            supplier: "OLD_SUP",
+            uid: remoteID,
+            remoteID: remoteID,
+            remotePayloadFingerprint: "old",
+            localChangeRevision: 1,
+            lastSyncedLocalRevision: 1
+        )
+        context.insert(entry)
+        let row = remoteRow(
+            remoteID: remoteID,
+            displayName: "REMOTE_UPDATED",
+            data: [["barcode"], ["REMOTE"]],
+            editable: [[""], ["9"]],
+            complete: [false, true]
+        )
+        let service = HistorySessionSyncService(remote: FakeHistorySessionRemote(ownerUserID: owner, rows: [row]))
+
+        let result = try await service.pullHistorySessionsFromCloud(ownerUserID: owner, context: context)
+
+        XCTAssertEqual(result.updatedCount, 1)
+        XCTAssertEqual(entry.title, "REMOTE_UPDATED")
+        XCTAssertEqual(entry.data, [["barcode"], ["REMOTE"]])
+        XCTAssertEqual(entry.editable, [[""], ["9"]])
+        XCTAssertEqual(entry.complete, [false, true])
+        XCTAssertEqual(entry.lastSyncedLocalRevision, entry.localChangeRevision)
     }
 
     func testPullSkipsDirtyLocalEntryInsteadOfOverwritingIt() async throws {
@@ -107,6 +166,38 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         XCTAssertEqual(entry.data, [["barcode"], ["LOCAL"]])
         XCTAssertEqual(entry.localChangeRevision, 2)
         XCTAssertEqual(entry.lastSyncedLocalRevision, 1)
+    }
+
+    func testPullRejectsOwnerMismatch() async throws {
+        let context = try makeContext()
+        let remoteID = UUID(uuidString: "ffffffff-ffff-4fff-8fff-ffffffffffff")!
+        let otherOwner = UUID(uuidString: "99999999-9999-4999-8999-999999999999")!
+        let row = RemoteSharedSheetSessionRow(
+            remoteID: remoteID,
+            payloadVersion: HistorySessionPayloadCodec.payloadVersion,
+            displayName: "OWNER_MISMATCH",
+            timestamp: "2026-05-13 12:00:00",
+            supplier: "SUP",
+            category: "CAT",
+            isManualEntry: false,
+            data: [["barcode"], ["REMOTE"]],
+            sessionOverlay: HistorySessionOverlayPayload(
+                overlaySchema: HistorySessionPayloadCodec.overlaySchema,
+                editable: [[""], [""]],
+                complete: [false, false]
+            ),
+            ownerUserID: otherOwner,
+            updatedAt: "2026-05-13T12:00:01Z"
+        )
+        let service = HistorySessionSyncService(remote: FakeHistorySessionRemote(ownerUserID: owner, rows: [row]))
+
+        do {
+            _ = try await service.pullHistorySessionsFromCloud(ownerUserID: owner, context: context)
+            XCTFail("Expected owner mismatch to be rejected.")
+        } catch let error as HistorySessionSyncError {
+            XCTAssertEqual(error, .ownerMismatch)
+        }
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<HistoryEntry>()), 0)
     }
 
     func testHistoryPendingCountsAsQueuedCloudOperationForOptions() async throws {
