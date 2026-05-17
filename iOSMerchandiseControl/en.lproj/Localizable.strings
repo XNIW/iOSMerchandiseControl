@@ -36,6 +36,7 @@
 "common.identifier" = "Identifier: %@";
 "common.examples" = "Examples: %@";
 "common.rows" = "Rows: %@";
+"common.rows_header" = "Rows";
 "common.row_number" = "Row %d";
 
 /* Tabs */
@@ -514,6 +515,7 @@
 "product.history.title" = "Price history";
 "product.history.source.initial_price" = "Initial price";
 "product.history.source.import_excel" = "Excel import";
+"product.history.source.import_previous" = "Previous import price";
 "product.history.source.inventory_sync" = "Inventory sync";
 "product.history.source.manual_edit" = "Manual edit";
 "product.history.source.database_import" = "Database import";
@@ -586,6 +588,8 @@
 "import.analysis.no_work.title" = "No changes to import";
 "import.analysis.no_work.body" = "The file was read correctly and the database is already aligned with this import.";
 "import.analysis.summary" = "Summary";
+"import.analysis.summary.total_rows" = "Rows read";
+"import.analysis.summary.valid_rows" = "Rows ready";
 "import.analysis.summary.new_products" = "New products";
 "import.analysis.summary.updates" = "Updates";
 "import.analysis.summary.warnings" = "Warnings";
@@ -596,6 +600,35 @@
 "import.analysis.summary.price_history_already_present" = "Price history already present";
 "import.analysis.summary.price_history_unresolved" = "Unresolved price history";
 "import.analysis.duplicate_barcodes" = "Duplicate barcodes in file";
+"import.analysis.export_warnings" = "Export warnings";
+"import.analysis.warning_sheet_name" = "Import Warnings";
+"import.analysis.warning.occurrences" = "Occurrences";
+"import.analysis.warning.duplicate_policy" = "%d occurrences. Last row will be used and quantities are aggregated.";
+"import.analysis.apply.ready_count" = "%d rows ready";
+"import.analysis.apply.errors_excluded" = "%d error rows excluded";
+"import.analysis.apply.accessibility_hint" = "Saves valid rows and leaves error rows unchanged.";
+"import.analysis.filter.all" = "All";
+"import.analysis.filter.valid" = "Ready";
+"import.analysis.filter.warnings" = "Warnings";
+"import.analysis.filter.errors" = "Errors";
+"import.analysis.filter.new" = "New";
+"import.analysis.filter.updated" = "Updates";
+"import.analysis.row_error.barcode_missing" = "Barcode is missing.";
+"import.analysis.row_error.product_name_missing" = "Product name is missing.";
+"import.analysis.row_error.update_name_missing" = "At least one product name is required for this update row.";
+"import.analysis.row_error.purchase_invalid" = "Purchase price is not valid.";
+"import.analysis.row_error.retail_invalid" = "Retail price is not valid.";
+"import.analysis.row_error.discounted_invalid" = "Discounted price is not valid.";
+"import.analysis.row_error.quantity_invalid" = "Quantity is not valid.";
+"import.analysis.row_error.old_purchase_invalid" = "Previous purchase price is not valid.";
+"import.analysis.row_error.old_retail_invalid" = "Previous retail price is not valid.";
+"import.analysis.row_error.discount_invalid" = "Discount is not valid.";
+"import.analysis.row_error.discount_range" = "Discount must be between 0 and 100.";
+"import.analysis.row_error.purchase_negative" = "Purchase price cannot be negative.";
+"import.analysis.row_error.discounted_negative" = "Discounted price cannot be negative.";
+"import.analysis.row_error.quantity_negative" = "Quantity cannot be negative.";
+"import.analysis.row_error.retail_required" = "Retail price is required and must be greater than zero.";
+"import.analysis.row_error.retail_positive" = "Retail price must be greater than zero.";
 "import.analysis.new_products_count" = "New products (%d)";
 "import.analysis.updated_products_count" = "Updated products (%d)";
 "import.analysis.barcode" = "Barcode: %@";
@@ -764,6 +797,12 @@
 "pregenerate.add_file" = "Add file";
 "pregenerate.reload_file" = "Reload file";
 "pregenerate.show_all" = "Show all…";
+"pregenerate.selection.not_selected" = "Not selected";
+"pregenerate.selection.existing" = "Selected: %@";
+"pregenerate.supplier.pending_create" = "New supplier: %@";
+"pregenerate.category.pending_create" = "New category: %@";
+"pregenerate.supplier.summary_new" = "New: %@";
+"pregenerate.category.summary_new" = "New: %@";
 "pregenerate.ignore_warnings" = "Ignore warnings and continue anyway";
 "pregenerate.generating" = "Generating…";
 "pregenerate.generate" = "Generate inventory";
@@ -787,6 +826,7 @@
 "pregenerate.role.purchase_price" = "Purchase price";
 "pregenerate.role.total_price" = "Total price";
 "pregenerate.role.retail_price" = "Retail price";
+"pregenerate.role.discount" = "Discount";
 "pregenerate.role.discounted_price" = "Discounted price";
 "pregenerate.role.supplier" = "Supplier";
 "pregenerate.role.category" = "Category";

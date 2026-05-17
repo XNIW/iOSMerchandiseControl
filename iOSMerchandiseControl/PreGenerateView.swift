@@ -29,6 +29,7 @@ struct PreGenerateView: View {
     @State private var ignoreWarnings = false
     
     private enum FocusField { case supplier, category }
+    private enum RelationKind { case supplier, category }
     @FocusState private var focusedField: FocusField?
 
     @State private var showAllSuppliersSheet = false
@@ -71,8 +72,20 @@ struct PreGenerateView: View {
     
     var body: some View {
         let validationSnapshot = excelSession.preGenerateValidationSnapshot
-        let canGenerate = canGenerate(using: validationSnapshot)
-        let previewSelectedIndices = validationSnapshot.effectiveSelectedIndices
+        let supplierState = ExcelSessionViewModel.resolvePendingSupplierState(
+            input: excelSession.supplierName,
+            suppliers: suppliers
+        )
+        let categoryState = ExcelSessionViewModel.resolvePendingCategoryState(
+            input: excelSession.categoryName,
+            categories: categories
+        )
+        let canGenerate = canGenerate(
+            using: validationSnapshot,
+            supplierState: supplierState,
+            categoryState: categoryState
+        )
+        let previewColumnIndices = excelSession.preGeneratePreviewColumnIndices
 
         ZStack {
             // ✅ tap “dietro” al Form: non ruba i tap ai Button
@@ -93,7 +106,7 @@ struct PreGenerateView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 // Header
                                 HStack(alignment: .bottom, spacing: 4) {
-                                    ForEach(previewSelectedIndices, id: \.self) { index in
+                                    ForEach(previewColumnIndices, id: \.self) { index in
                                         let key = excelSession.normalizedHeader[index]
                                         let width = columnWidth(for: key)
                                         Text(key)
@@ -109,7 +122,7 @@ struct PreGenerateView: View {
                                 // Prime righe dati
                                 ForEach(Array(previewRows.enumerated()), id: \.offset) { _, row in
                                     HStack(alignment: .top, spacing: 4) {
-                                        ForEach(previewSelectedIndices, id: \.self) { colIdx in
+                                        ForEach(previewColumnIndices, id: \.self) { colIdx in
                                             let key = excelSession.normalizedHeader[colIdx]
                                             let width = columnWidth(for: key)
                                             let value = colIdx < row.count ? row[colIdx] : ""
@@ -255,6 +268,12 @@ struct PreGenerateView: View {
                             )
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
+
+                        RelationInputStatusText(
+                            text: relationStatusText(for: supplierState, kind: .supplier),
+                            systemImage: relationStatusIcon(for: supplierState),
+                            tint: relationStatusColor(for: supplierState)
+                        )
                     }
                     .animation(.easeInOut(duration: 0.15), value: debouncedSupplierQuery)
                     
@@ -289,6 +308,12 @@ struct PreGenerateView: View {
                             )
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
+
+                        RelationInputStatusText(
+                            text: relationStatusText(for: categoryState, kind: .category),
+                            systemImage: relationStatusIcon(for: categoryState),
+                            tint: relationStatusColor(for: categoryState)
+                        )
                     }
                     .animation(.easeInOut(duration: 0.15), value: debouncedCategoryQuery)
                     
@@ -317,6 +342,20 @@ struct PreGenerateView: View {
                             .font(.footnote)
                             .foregroundStyle(.orange)
                     }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        PreGenerateRelationSummaryRow(
+                            label: L("pregenerate.supplier.title"),
+                            value: relationSummaryText(for: supplierState, kind: .supplier),
+                            isPendingCreate: supplierState.isPendingCreate
+                        )
+                        PreGenerateRelationSummaryRow(
+                            label: L("pregenerate.category.title"),
+                            value: relationSummaryText(for: categoryState, kind: .category),
+                            isPendingCreate: categoryState.isPendingCreate
+                        )
+                    }
+                    .padding(.vertical, 4)
                     
                     Button {
                         focusedField = nil
@@ -542,12 +581,76 @@ struct PreGenerateView: View {
     
     /// Possiamo generare solo se c'è un file caricato, le colonne essenziali sono valide
     /// e supplier/category non sono vuoti.
-    private func canGenerate(using validationSnapshot: ExcelSessionViewModel.PreGenerateValidationSnapshot) -> Bool {
+    private func canGenerate(
+        using validationSnapshot: ExcelSessionViewModel.PreGenerateValidationSnapshot,
+        supplierState: ExcelSessionViewModel.RelationInputState,
+        categoryState: ExcelSessionViewModel.RelationInputState
+    ) -> Bool {
         !excelSession.normalizedHeader.isEmpty &&
         !excelSession.rows.isEmpty &&
         validationSnapshot.missingEssentialCanonicalKeys.isEmpty &&
-        !excelSession.supplierName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !excelSession.categoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        supplierState.isValid &&
+        categoryState.isValid
+    }
+
+    private func relationStatusText(
+        for state: ExcelSessionViewModel.RelationInputState,
+        kind: RelationKind
+    ) -> String {
+        switch state {
+        case .empty:
+            return L("pregenerate.selection.not_selected")
+        case .existing(let name):
+            return L("pregenerate.selection.existing", name)
+        case .pendingCreate(let name):
+            switch kind {
+            case .supplier:
+                return L("pregenerate.supplier.pending_create", name)
+            case .category:
+                return L("pregenerate.category.pending_create", name)
+            }
+        }
+    }
+
+    private func relationSummaryText(
+        for state: ExcelSessionViewModel.RelationInputState,
+        kind: RelationKind
+    ) -> String {
+        switch state {
+        case .empty:
+            return L("pregenerate.selection.not_selected")
+        case .existing(let name):
+            return name
+        case .pendingCreate(let name):
+            switch kind {
+            case .supplier:
+                return L("pregenerate.supplier.summary_new", name)
+            case .category:
+                return L("pregenerate.category.summary_new", name)
+            }
+        }
+    }
+
+    private func relationStatusIcon(for state: ExcelSessionViewModel.RelationInputState) -> String {
+        switch state {
+        case .empty:
+            return "circle"
+        case .existing:
+            return "checkmark.circle.fill"
+        case .pendingCreate:
+            return "plus.circle.fill"
+        }
+    }
+
+    private func relationStatusColor(for state: ExcelSessionViewModel.RelationInputState) -> Color {
+        switch state {
+        case .empty:
+            return .secondary
+        case .existing:
+            return .green
+        case .pendingCreate:
+            return .accentColor
+        }
     }
 
     // Larghezza consigliata per ogni colonna
@@ -581,21 +684,23 @@ struct PreGenerateView: View {
     
     private func generateInventory() {
         let validationSnapshot = excelSession.preGenerateValidationSnapshot
-        guard canGenerate(using: validationSnapshot) else { return }
+        let supplierState = ExcelSessionViewModel.resolvePendingSupplierState(
+            input: excelSession.supplierName,
+            suppliers: suppliers
+        )
+        let categoryState = ExcelSessionViewModel.resolvePendingCategoryState(
+            input: excelSession.categoryName,
+            categories: categories
+        )
+        guard canGenerate(
+            using: validationSnapshot,
+            supplierState: supplierState,
+            categoryState: categoryState
+        ) else { return }
         isGenerating = true
 
         Task {
             do {
-                let s = excelSession.supplierName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if let existing = suppliers.first(where: { $0.name.compare(s, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame }) {
-                    excelSession.supplierName = existing.name
-                }
-
-                let c = excelSession.categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if let existing = categories.first(where: { $0.name.compare(c, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame }) {
-                    excelSession.categoryName = existing.name
-                }
-                
                 let entry = try excelSession.generateHistoryEntry(in: context)
 
                 await MainActor.run {
@@ -883,6 +988,43 @@ private struct InlineSuggestionsBox: View {
     }
 }
 
+private struct RelationInputStatusText: View {
+    let text: String
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        Label {
+            Text(text)
+                .font(.footnote)
+        } icon: {
+            Image(systemName: systemImage)
+        }
+        .foregroundStyle(tint)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct PreGenerateRelationSummaryRow: View {
+    let label: String
+    let value: String
+    let isPendingCreate: Bool
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(label)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 12)
+            Text(value)
+                .font(.footnote.weight(isPendingCreate ? .semibold : .regular))
+                .foregroundStyle(isPendingCreate ? Color.accentColor : Color.primary)
+                .multilineTextAlignment(.trailing)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
 private struct NamePickerSheet: View {
     let title: String
     let allItems: [String]
@@ -902,8 +1044,8 @@ private struct NamePickerSheet: View {
 
     private var canCreateNew: Bool {
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return false }
-        return !allItems.contains(where: { $0.compare(q, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame })
+        guard let key = ExcelSessionViewModel.normalizedRelationKey(q) else { return false }
+        return !allItems.contains(where: { ExcelSessionViewModel.normalizedRelationKey($0) == key })
     }
 
     var body: some View {

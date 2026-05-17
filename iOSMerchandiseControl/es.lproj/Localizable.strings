@@ -36,6 +36,7 @@
 "common.identifier" = "Identificador: %@";
 "common.examples" = "Ejemplos: %@";
 "common.rows" = "Filas: %@";
+"common.rows_header" = "Filas";
 "common.row_number" = "Fila %d";
 
 /* Tabs */
@@ -514,6 +515,7 @@
 "product.history.title" = "Historial de precios";
 "product.history.source.initial_price" = "Precio inicial";
 "product.history.source.import_excel" = "Importación Excel";
+"product.history.source.import_previous" = "Precio anterior importado";
 "product.history.source.inventory_sync" = "Sync de inventario";
 "product.history.source.manual_edit" = "Edición manual";
 "product.history.source.database_import" = "Importación de base de datos";
@@ -586,6 +588,8 @@
 "import.analysis.no_work.title" = "No hay cambios para importar";
 "import.analysis.no_work.body" = "El archivo se leyó correctamente y la base de datos ya está alineada con esta importación.";
 "import.analysis.summary" = "Resumen";
+"import.analysis.summary.total_rows" = "Filas leídas";
+"import.analysis.summary.valid_rows" = "Filas válidas";
 "import.analysis.summary.new_products" = "Productos nuevos";
 "import.analysis.summary.updates" = "Actualizaciones";
 "import.analysis.summary.warnings" = "Avisos";
@@ -596,6 +600,35 @@
 "import.analysis.summary.price_history_already_present" = "Historial de precios ya presente";
 "import.analysis.summary.price_history_unresolved" = "Historial de precios no resuelto";
 "import.analysis.duplicate_barcodes" = "Barcodes duplicados en el archivo";
+"import.analysis.export_warnings" = "Exportar avisos";
+"import.analysis.warning_sheet_name" = "Avisos de importacion";
+"import.analysis.warning.occurrences" = "Ocurrencias";
+"import.analysis.warning.duplicate_policy" = "%d ocurrencias. Se usa la última fila y las cantidades se agregan.";
+"import.analysis.apply.ready_count" = "%d filas listas";
+"import.analysis.apply.errors_excluded" = "%d filas con error excluidas";
+"import.analysis.apply.accessibility_hint" = "Guarda las filas válidas y deja sin cambios las filas con error.";
+"import.analysis.filter.all" = "Todo";
+"import.analysis.filter.valid" = "Listas";
+"import.analysis.filter.warnings" = "Avisos";
+"import.analysis.filter.errors" = "Errores";
+"import.analysis.filter.new" = "Nuevos";
+"import.analysis.filter.updated" = "Actualizados";
+"import.analysis.row_error.barcode_missing" = "Falta el barcode.";
+"import.analysis.row_error.product_name_missing" = "Falta el nombre del producto.";
+"import.analysis.row_error.update_name_missing" = "Se requiere al menos un nombre de producto para esta fila de actualización.";
+"import.analysis.row_error.purchase_invalid" = "El precio de compra no es válido.";
+"import.analysis.row_error.retail_invalid" = "El precio de venta no es válido.";
+"import.analysis.row_error.discounted_invalid" = "El precio con descuento no es válido.";
+"import.analysis.row_error.quantity_invalid" = "La cantidad no es válida.";
+"import.analysis.row_error.old_purchase_invalid" = "El precio de compra anterior no es válido.";
+"import.analysis.row_error.old_retail_invalid" = "El precio de venta anterior no es válido.";
+"import.analysis.row_error.discount_invalid" = "El descuento no es válido.";
+"import.analysis.row_error.discount_range" = "El descuento debe estar entre 0 y 100.";
+"import.analysis.row_error.purchase_negative" = "El precio de compra no puede ser negativo.";
+"import.analysis.row_error.discounted_negative" = "El precio con descuento no puede ser negativo.";
+"import.analysis.row_error.quantity_negative" = "La cantidad no puede ser negativa.";
+"import.analysis.row_error.retail_required" = "El precio de venta es obligatorio y debe ser mayor que cero.";
+"import.analysis.row_error.retail_positive" = "El precio de venta debe ser mayor que cero.";
 "import.analysis.new_products_count" = "Productos nuevos (%d)";
 "import.analysis.updated_products_count" = "Productos actualizados (%d)";
 "import.analysis.barcode" = "Barcode: %@";
@@ -764,6 +797,12 @@
 "pregenerate.add_file" = "Agregar archivo";
 "pregenerate.reload_file" = "Recargar archivo";
 "pregenerate.show_all" = "Mostrar todo…";
+"pregenerate.selection.not_selected" = "Sin seleccionar";
+"pregenerate.selection.existing" = "Seleccionado: %@";
+"pregenerate.supplier.pending_create" = "Nuevo proveedor: %@";
+"pregenerate.category.pending_create" = "Nueva categoría: %@";
+"pregenerate.supplier.summary_new" = "Nuevo: %@";
+"pregenerate.category.summary_new" = "Nueva: %@";
 "pregenerate.ignore_warnings" = "Ignorar avisos y continuar";
 "pregenerate.generating" = "Generando…";
 "pregenerate.generate" = "Generar inventario";
@@ -787,6 +826,7 @@
 "pregenerate.role.purchase_price" = "Precio de compra";
 "pregenerate.role.total_price" = "Precio total";
 "pregenerate.role.retail_price" = "Precio de venta";
+"pregenerate.role.discount" = "Descuento";
 "pregenerate.role.discounted_price" = "Precio con descuento";
 "pregenerate.role.supplier" = "Proveedor";
 "pregenerate.role.category" = "Categoria";

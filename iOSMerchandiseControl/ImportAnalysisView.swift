@@ -3,12 +3,7 @@ import Combine
 import xlsxwriter
 
 nonisolated func normalizedImportNamedEntityName(_ rawName: String?) -> String? {
-    guard let normalized = rawName?.trimmingCharacters(in: .whitespacesAndNewlines),
-          !normalized.isEmpty else {
-        return nil
-    }
-
-    return normalized
+    ProductImportCore.normalizedDisplayName(rawName)
 }
 
 // MARK: - Modelli per ImportAnalysis (Excel → Database)
@@ -24,6 +19,8 @@ struct ProductDraft: Identifiable, Hashable, Sendable {
     var purchasePrice: Double?
     var retailPrice: Double?
     var stockQuantity: Double?
+    var oldPurchasePrice: Double? = nil
+    var oldRetailPrice: Double? = nil
     var supplierName: String?
     var categoryName: String?
 }
@@ -63,9 +60,11 @@ struct ProductUpdateDraft: Identifiable, Sendable {
             case .stockQuantity:
                 return !doublesEqual(old.stockQuantity, new.stockQuantity)
             case .supplierName:
-                return (old.supplierName ?? "") != (new.supplierName ?? "")
+                return ProductImportCore.normalizedRelationKey(old.supplierName)
+                    != ProductImportCore.normalizedRelationKey(new.supplierName)
             case .categoryName:
-                return (old.categoryName ?? "") != (new.categoryName ?? "")
+                return ProductImportCore.normalizedRelationKey(old.categoryName)
+                    != ProductImportCore.normalizedRelationKey(new.categoryName)
             }
         }
     }
@@ -86,8 +85,26 @@ struct ProductUpdateDraft: Identifiable, Sendable {
 struct ProductImportRowError: Identifiable, Sendable {
     let id = UUID()
     let rowNumber: Int
-    let reason: String
+    let reasonKeys: [String]
     let rowContent: [String: String]
+
+    var reason: String {
+        reasonKeys
+            .map { L($0) }
+            .joined(separator: " ")
+    }
+
+    nonisolated init(rowNumber: Int, reasonKey: String, rowContent: [String: String]) {
+        self.rowNumber = rowNumber
+        self.reasonKeys = [reasonKey]
+        self.rowContent = rowContent
+    }
+
+    nonisolated init(rowNumber: Int, reasonKeys: [String], rowContent: [String: String]) {
+        self.rowNumber = rowNumber
+        self.reasonKeys = reasonKeys
+        self.rowContent = rowContent
+    }
 }
 
 /// Warning per barcode duplicati nello stesso file
@@ -95,6 +112,10 @@ struct ProductDuplicateWarning: Identifiable, Sendable {
     var id: String { barcode }
     let barcode: String
     let rowNumbers: [Int]
+
+    var totalOccurrences: Int {
+        rowNumbers.count
+    }
 }
 
 /// Risultato complessivo dell'analisi
@@ -104,6 +125,7 @@ struct ProductImportAnalysisResult: Identifiable, Sendable {
     var updatedProducts: [ProductUpdateDraft]
     var errors: [ProductImportRowError]
     var warnings: [ProductDuplicateWarning]
+    var totalInputRows: Int = 0
 
     var hasChanges: Bool {
         !newProducts.isEmpty || !updatedProducts.isEmpty
@@ -130,8 +152,9 @@ final class ImportAnalysisSession: ObservableObject, Identifiable {
 
     private let pendingSupplierNames: [String]
     private let pendingCategoryNames: [String]
-    private let existingSupplierNames: Set<String>
-    private let existingCategoryNames: Set<String>
+    private let existingSupplierKeys: Set<String>
+    private let existingCategoryKeys: Set<String>
+    let totalInputRows: Int
     private let priceHistoryToInsert: Int
     private let priceHistoryAlreadyPresent: Int
     private let priceHistoryUnresolved: Int
@@ -149,11 +172,12 @@ final class ImportAnalysisSession: ObservableObject, Identifiable {
         updatedProducts = analysis.updatedProducts
         errors = analysis.errors
         warnings = analysis.warnings
+        totalInputRows = analysis.totalInputRows
         self.nonProductSummary = nonProductSummary
         self.pendingSupplierNames = pendingSupplierNames
         self.pendingCategoryNames = pendingCategoryNames
-        self.existingSupplierNames = existingSupplierNames
-        self.existingCategoryNames = existingCategoryNames
+        existingSupplierKeys = Set(existingSupplierNames.compactMap(ProductImportCore.normalizedRelationKey))
+        existingCategoryKeys = Set(existingCategoryNames.compactMap(ProductImportCore.normalizedRelationKey))
         priceHistoryToInsert = nonProductSummary?.priceHistoryToInsert ?? 0
         priceHistoryAlreadyPresent = nonProductSummary?.priceHistoryAlreadyPresent ?? 0
         priceHistoryUnresolved = nonProductSummary?.priceHistoryUnresolved ?? 0
@@ -167,12 +191,12 @@ final class ImportAnalysisSession: ObservableObject, Identifiable {
     func refreshNonProductSummary() {
         guard nonProductSummary != nil else { return }
 
-        let suppliersToAdd = Set(pendingSupplierNames.filter { !existingSupplierNames.contains($0) })
-            .union(referencedNames(from: newProducts, keyPath: \.supplierName).filter { !existingSupplierNames.contains($0) })
-            .union(referencedNames(from: updatedProducts, changedField: .supplierName).filter { !existingSupplierNames.contains($0) })
-        let categoriesToAdd = Set(pendingCategoryNames.filter { !existingCategoryNames.contains($0) })
-            .union(referencedNames(from: newProducts, keyPath: \.categoryName).filter { !existingCategoryNames.contains($0) })
-            .union(referencedNames(from: updatedProducts, changedField: .categoryName).filter { !existingCategoryNames.contains($0) })
+        let suppliersToAdd = relationKeys(from: pendingSupplierNames).subtracting(existingSupplierKeys)
+            .union(referencedRelationKeys(from: newProducts, keyPath: \.supplierName).subtracting(existingSupplierKeys))
+            .union(referencedRelationKeys(from: updatedProducts, changedField: .supplierName).subtracting(existingSupplierKeys))
+        let categoriesToAdd = relationKeys(from: pendingCategoryNames).subtracting(existingCategoryKeys)
+            .union(referencedRelationKeys(from: newProducts, keyPath: \.categoryName).subtracting(existingCategoryKeys))
+            .union(referencedRelationKeys(from: updatedProducts, changedField: .categoryName).subtracting(existingCategoryKeys))
 
         nonProductSummary = NonProductDeltaSummary(
             suppliersToAdd: suppliersToAdd.count,
@@ -183,14 +207,18 @@ final class ImportAnalysisSession: ObservableObject, Identifiable {
         )
     }
 
-    private func referencedNames(
+    private func relationKeys(from names: [String]) -> Set<String> {
+        Set(names.compactMap(ProductImportCore.normalizedRelationKey))
+    }
+
+    private func referencedRelationKeys(
         from drafts: [ProductDraft],
         keyPath: KeyPath<ProductDraft, String?>
     ) -> Set<String> {
-        Set(drafts.compactMap { normalizedImportNamedEntityName($0[keyPath: keyPath]) })
+        Set(drafts.compactMap { ProductImportCore.normalizedRelationKey($0[keyPath: keyPath]) })
     }
 
-    private func referencedNames(
+    private func referencedRelationKeys(
         from updates: [ProductUpdateDraft],
         changedField: ProductUpdateDraft.ChangedField
     ) -> Set<String> {
@@ -199,9 +227,9 @@ final class ImportAnalysisSession: ObservableObject, Identifiable {
                 guard update.changedFields.contains(changedField) else { return nil }
                 switch changedField {
                 case .supplierName:
-                    return normalizedImportNamedEntityName(update.new.supplierName)
+                    return ProductImportCore.normalizedRelationKey(update.new.supplierName)
                 case .categoryName:
-                    return normalizedImportNamedEntityName(update.new.categoryName)
+                    return ProductImportCore.normalizedRelationKey(update.new.categoryName)
                 default:
                     return nil
                 }
@@ -227,12 +255,24 @@ struct ImportAnalysisView: View {
         let isUpdate: Bool
     }
 
+    private enum AnalysisFilter: String, CaseIterable, Identifiable {
+        case all
+        case valid
+        case warnings
+        case errors
+        case newProducts
+        case updatedProducts
+
+        var id: String { rawValue }
+    }
+
     @ObservedObject private var session: ImportAnalysisSession
     @State private var shareItem: ShareItem?
     @State private var exportError: String?
     @State private var applyError: String?
     @State private var editingDraftItem: EditingItem?
     @State private var isApplying = false
+    @State private var selectedFilter: AnalysisFilter = .all
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     let hasWorkToApply: () -> Bool
     let onApply: () async throws -> Void
@@ -265,25 +305,52 @@ struct ImportAnalysisView: View {
         Array(session.errors.prefix(Self.previewErrorLimit))
     }
 
+    private var validProductCount: Int {
+        session.newProducts.count + session.updatedProducts.count
+    }
+
+    private var canApply: Bool {
+        !isApplying && hasWorkToApply()
+    }
+
+    private var showsWarnings: Bool {
+        !session.warnings.isEmpty && (selectedFilter == .all || selectedFilter == .warnings)
+    }
+
+    private var showsNewProducts: Bool {
+        !session.newProducts.isEmpty
+            && (selectedFilter == .all || selectedFilter == .valid || selectedFilter == .newProducts)
+    }
+
+    private var showsUpdatedProducts: Bool {
+        !session.updatedProducts.isEmpty
+            && (selectedFilter == .all || selectedFilter == .valid || selectedFilter == .updatedProducts)
+    }
+
+    private var showsErrors: Bool {
+        !session.errors.isEmpty && (selectedFilter == .all || selectedFilter == .errors)
+    }
+
     var body: some View {
         let resolvedLanguageCode = Bundle.resolvedLanguageCode(for: appLanguage)
 
         List {
             summarySection
+            filterSection
 
-            if !session.warnings.isEmpty {
+            if showsWarnings {
                 warningsSection
             }
 
-            if !session.newProducts.isEmpty {
+            if showsNewProducts {
                 newProductsSection
             }
 
-            if !session.updatedProducts.isEmpty {
+            if showsUpdatedProducts {
                 updatedProductsSection
             }
 
-            if !session.errors.isEmpty {
+            if showsErrors {
                 errorsSection
             }
         }
@@ -308,30 +375,15 @@ struct ImportAnalysisView: View {
         .interactiveDismissDisabled(isApplying)
         .navigationTitle(L("import.analysis.title"))
         .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom) {
+            applyBar
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(L("common.cancel")) {
                     dismiss()
                 }
                 .disabled(isApplying)
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button(L("import.analysis.apply")) {
-                    guard !isApplying else { return }
-                    isApplying = true
-
-                    Task {
-                        defer { isApplying = false }
-
-                        do {
-                            try await onApply()
-                            dismiss()
-                        } catch {
-                            applyError = error.localizedDescription
-                        }
-                    }
-                }
-                .disabled(isApplying || !hasWorkToApply())
             }
         }
         .sheet(item: $shareItem) { shareItem in
@@ -388,10 +440,43 @@ struct ImportAnalysisView: View {
         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
     }
 
+    private var applyBar: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L("import.analysis.apply.ready_count", validProductCount))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                if !session.errors.isEmpty {
+                    Text(L("import.analysis.apply.errors_excluded", session.errors.count))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                applyConfirmedImport()
+            } label: {
+                Label(L("import.analysis.apply"), systemImage: "checkmark.circle.fill")
+                    .font(.headline)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(!canApply)
+            .accessibilityHint(L("import.analysis.apply.accessibility_hint"))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.bar)
+    }
+
     // MARK: - Sezioni
 
     private var summarySection: some View {
         Section(L("import.analysis.summary")) {
+            row(label: L("import.analysis.summary.total_rows"), systemImage: "tablecells", value: session.totalInputRows)
+            row(label: L("import.analysis.summary.valid_rows"), systemImage: "checkmark.circle", value: validProductCount)
             row(label: L("import.analysis.summary.new_products"), systemImage: "plus.circle", value: session.newProducts.count)
             row(label: L("import.analysis.summary.updates"), systemImage: "arrow.triangle.2.circlepath", value: session.updatedProducts.count)
             row(label: L("import.analysis.summary.warnings"), systemImage: "exclamationmark.triangle", value: session.warnings.count)
@@ -437,6 +522,30 @@ struct ImportAnalysisView: View {
         }
     }
 
+    private var filterSection: some View {
+        Section {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(AnalysisFilter.allCases) { filter in
+                        Button {
+                            selectedFilter = filter
+                        } label: {
+                            Label(filterTitle(filter), systemImage: filterIcon(filter))
+                                .font(.caption.weight(.semibold))
+                                .lineLimit(1)
+                        }
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.capsule)
+                        .tint(selectedFilter == filter ? .accentColor : .secondary)
+                        .accessibilityAddTraits(selectedFilter == filter ? .isSelected : AccessibilityTraits())
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 0))
+        }
+    }
+
     private var shouldShowNoWorkNotice: Bool {
         guard !isApplying, !hasWorkToApply(), session.errors.isEmpty else {
             return false
@@ -470,7 +579,7 @@ struct ImportAnalysisView: View {
     }
 
     private var warningsSection: some View {
-        Section(L("import.analysis.duplicate_barcodes")) {
+        Section {
             if visibleWarnings.count < session.warnings.count {
                 previewBanner(
                     text: L(
@@ -489,8 +598,22 @@ struct ImportAnalysisView: View {
                     Text(L("common.rows", warning.rowNumbers.map(String.init).joined(separator: ", ")))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    Text(L("import.analysis.warning.duplicate_policy", warning.totalOccurrences))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 4)
+            }
+        } header: {
+            HStack {
+                Text(L("import.analysis.duplicate_barcodes"))
+                Spacer()
+                Button(L("import.analysis.export_warnings")) {
+                    exportWarnings()
+                }
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.borderless)
             }
         }
     }
@@ -732,10 +855,37 @@ struct ImportAnalysisView: View {
         }
     }
 
+    private func applyConfirmedImport() {
+        guard !isApplying, hasWorkToApply() else { return }
+        isApplying = true
+
+        Task {
+            defer { isApplying = false }
+
+            do {
+                try await onApply()
+                dismiss()
+            } catch {
+                applyError = error.localizedDescription
+            }
+        }
+    }
+
     private func exportErrors() {
         Task { @MainActor in
             do {
                 let url = try Self.exportErrorsToXLSX(session.errors)
+                shareItem = ShareItem(url: url)
+            } catch {
+                exportError = L("import.analysis.export_impossible", error.localizedDescription)
+            }
+        }
+    }
+
+    private func exportWarnings() {
+        Task { @MainActor in
+            do {
+                let url = try Self.exportWarningsToXLSX(session.warnings)
                 shareItem = ShareItem(url: url)
             } catch {
                 exportError = L("import.analysis.export_impossible", error.localizedDescription)
@@ -776,6 +926,35 @@ struct ImportAnalysisView: View {
         return url
     }
 
+    private static func exportWarningsToXLSX(_ warnings: [ProductDuplicateWarning]) throws -> URL {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("exports", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+        let timestamp = formatter.string(from: Date())
+
+        let url = dir.appendingPathComponent("warning_import_\(timestamp).xlsx")
+        let workbook = xlsxwriter.Workbook(name: url.path)
+        defer { workbook.close() }
+
+        let sheet = workbook.addWorksheet(name: L("import.analysis.warning_sheet_name"))
+        sheet.write(.string(L("product.field.barcode")), [0, 0])
+        sheet.write(.string(L("import.analysis.warning.occurrences")), [0, 1])
+        sheet.write(.string(L("common.rows_header")), [0, 2])
+
+        for (index, warning) in warnings.enumerated() {
+            let row = index + 1
+            sheet.write(.string(warning.barcode), [row, 0])
+            sheet.write(.number(Double(warning.totalOccurrences)), [row, 1])
+            sheet.write(.string(warning.rowNumbers.map(String.init).joined(separator: ", ")), [row, 2])
+        }
+
+        return url
+    }
+
     // MARK: - Helper UI
 
     private func row(label: String, systemImage: String, value: Int) -> some View {
@@ -783,6 +962,40 @@ struct ImportAnalysisView: View {
             Label(label, systemImage: systemImage)
             Spacer()
             Text("\(value)")
+        }
+    }
+
+    private func filterTitle(_ filter: AnalysisFilter) -> String {
+        switch filter {
+        case .all:
+            return L("import.analysis.filter.all")
+        case .valid:
+            return L("import.analysis.filter.valid")
+        case .warnings:
+            return L("import.analysis.filter.warnings")
+        case .errors:
+            return L("import.analysis.filter.errors")
+        case .newProducts:
+            return L("import.analysis.filter.new")
+        case .updatedProducts:
+            return L("import.analysis.filter.updated")
+        }
+    }
+
+    private func filterIcon(_ filter: AnalysisFilter) -> String {
+        switch filter {
+        case .all:
+            return "line.3.horizontal.decrease.circle"
+        case .valid:
+            return "checkmark.circle"
+        case .warnings:
+            return "exclamationmark.triangle"
+        case .errors:
+            return "xmark.octagon"
+        case .newProducts:
+            return "plus.circle"
+        case .updatedProducts:
+            return "arrow.triangle.2.circlepath"
         }
     }
 
@@ -851,6 +1064,8 @@ private struct EditProductDraftView: View {
     @State private var supplierName: String
     @State private var categoryName: String
 
+    private let oldPurchasePrice: Double?
+    private let oldRetailPrice: Double?
     let barcodeEditable: Bool
     let forbiddenBarcodes: Set<String>
     let onSave: (ProductDraft) -> Void
@@ -872,6 +1087,8 @@ private struct EditProductDraftView: View {
         _stockQuantity = State(initialValue: draft.stockQuantity.map(Self.format(number:)) ?? "")
         _supplierName = State(initialValue: draft.supplierName ?? "")
         _categoryName = State(initialValue: draft.categoryName ?? "")
+        self.oldPurchasePrice = draft.oldPurchasePrice
+        self.oldRetailPrice = draft.oldRetailPrice
         self.barcodeEditable = barcodeEditable
         self.forbiddenBarcodes = forbiddenBarcodes
         self.onSave = onSave
@@ -954,6 +1171,8 @@ private struct EditProductDraftView: View {
             purchasePrice: Self.parseDouble(from: purchasePrice),
             retailPrice: Self.parseDouble(from: retailPrice),
             stockQuantity: Self.parseDouble(from: stockQuantity),
+            oldPurchasePrice: oldPurchasePrice,
+            oldRetailPrice: oldRetailPrice,
             supplierName: Self.trimmedOrNil(supplierName),
             categoryName: Self.trimmedOrNil(categoryName)
         )
@@ -974,11 +1193,6 @@ private struct EditProductDraftView: View {
     }
 
     private nonisolated static func parseDouble(from text: String) -> Double? {
-        let normalized = text
-            .replacingOccurrences(of: ",", with: ".")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !normalized.isEmpty else { return nil }
-        return Double(normalized)
+        ProductImportCore.parseDouble(from: text)
     }
 }

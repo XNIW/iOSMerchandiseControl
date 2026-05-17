@@ -49,6 +49,37 @@ final class ExcelSessionViewModel: ObservableObject {
     // HistoryEntry generata a partire da questo Excel
     @Published var currentHistoryEntry: HistoryEntry?
 
+    enum RelationInputState: Equatable {
+        case empty
+        case existing(name: String)
+        case pendingCreate(name: String)
+
+        var isValid: Bool {
+            switch self {
+            case .empty:
+                return false
+            case .existing, .pendingCreate:
+                return true
+            }
+        }
+
+        var displayName: String? {
+            switch self {
+            case .empty:
+                return nil
+            case .existing(let name), .pendingCreate(let name):
+                return name
+            }
+        }
+
+        var isPendingCreate: Bool {
+            if case .pendingCreate = self {
+                return true
+            }
+            return false
+        }
+    }
+
     // Stato di caricamento (per mostrare eventuale progress)
     @Published var isLoading: Bool = false
     @Published var progress: Double? = nil   // 0.0 ... 1.0
@@ -61,6 +92,40 @@ final class ExcelSessionViewModel: ObservableObject {
     @Published var analysisMetrics: AnalysisMetrics?
 
     var hasData: Bool { !rows.isEmpty }
+
+    static func normalizedRelationKey(_ rawName: String?) -> String? {
+        ProductImportCore.normalizedRelationKey(rawName)
+    }
+
+    static func resolvePendingSupplierState(
+        input: String,
+        suppliers: [Supplier]
+    ) -> RelationInputState {
+        resolveRelationInputState(input: input, existingNames: suppliers.map(\.name))
+    }
+
+    static func resolvePendingCategoryState(
+        input: String,
+        categories: [ProductCategory]
+    ) -> RelationInputState {
+        resolveRelationInputState(input: input, existingNames: categories.map(\.name))
+    }
+
+    static func resolveRelationInputState(
+        input: String,
+        existingNames: [String]
+    ) -> RelationInputState {
+        guard let displayName = ProductImportCore.normalizedDisplayName(input),
+              let inputKey = normalizedRelationKey(displayName) else {
+            return .empty
+        }
+
+        if let existing = existingNames.first(where: { normalizedRelationKey($0) == inputKey }) {
+            return .existing(name: existing)
+        }
+
+        return .pendingCreate(name: displayName)
+    }
 
     // Colonne essenziali (come su Android: barcode, productName, purchasePrice)
     static let orderedEssentialColumnKeys: [String] = [
@@ -83,6 +148,25 @@ final class ExcelSessionViewModel: ObservableObject {
         "discount",
         "supplier",
         "category"
+    ]
+
+    private static let defaultIncludedColumnKeys: Set<String> = [
+        "barcode",
+        "productName",
+        "purchasePrice",
+        "quantity",
+        "retailPrice",
+        "totalPrice",
+        "secondProductName",
+        "itemNumber",
+        "supplier",
+        "rowNumber",
+        "discount",
+        "discountedPrice",
+        "category",
+        "realQuantity",
+        "oldPurchasePrice",
+        "oldRetailPrice"
     ]
 
     /// Indici di colonna ordinati per priorità logica
@@ -157,6 +241,22 @@ final class ExcelSessionViewModel: ObservableObject {
 
     // MARK: - Selezione colonne (equivalente di isColumnEssential)
 
+    static func isRecognizedColumnKey(_ key: String) -> Bool {
+        defaultIncludedColumnKeys.contains(key)
+    }
+
+    static func defaultIsIncluded(for normalizedHeaderKey: String) -> Bool {
+        essentialColumnKeys.contains(normalizedHeaderKey) || isRecognizedColumnKey(normalizedHeaderKey)
+    }
+
+    static func defaultColumnSelections(for normalizedHeader: [String]) -> [Bool] {
+        normalizedHeader.map(defaultIsIncluded)
+    }
+
+    var preGeneratePreviewColumnIndices: [Int] {
+        Array(normalizedHeader.indices)
+    }
+
     func isColumnEssential(at index: Int) -> Bool {
         guard normalizedHeader.indices.contains(index) else { return false }
         return Self.essentialColumnKeys.contains(normalizedHeader[index])
@@ -221,6 +321,10 @@ final class ExcelSessionViewModel: ObservableObject {
             return .generated
         }
 
+        guard Self.isRecognizedColumnKey(normalized) else {
+            return .generated
+        }
+
         if original == normalized {
             return .exactMatch
         }
@@ -263,7 +367,7 @@ final class ExcelSessionViewModel: ObservableObject {
             self.normalizedHeader = loaded.normalizedHeader
             self.initialNormalizedHeader = loaded.normalizedHeader
             self.rows = loaded.rows
-            self.selectedColumns = Array(repeating: true, count: loaded.normalizedHeader.count)
+            self.selectedColumns = Self.defaultColumnSelections(for: loaded.normalizedHeader)
 
             // 🔹 calcolo metriche di analisi (usa l'header normalizzato)
             if let metrics = loaded.analysisMetrics {
@@ -493,11 +597,11 @@ extension ExcelSessionViewModel {
         let initialSummary = HistoryImportedGridSupport.initialSummary(forGrid: filteredData)
         let runtimeSummary = HistoryEntryRuntimeSummary.compute(from: filteredData, complete: complete)
 
+        // ✅ salva (se necessario) fornitore/categoria nel DB per autocomplete futuro
+        try persistSupplierAndCategoryIfNeeded(in: context)
+
         let now = Date()
         let fileId = makeHistoryEntryId(supplier: supplierName, date: now)
-
-        // ✅ salva (se necessario) fornitore/categoria nel DB per autocomplete futuro
-        persistSupplierAndCategoryIfNeeded(in: context)
         
         let entry = HistoryEntry(
             id: fileId,
@@ -524,37 +628,46 @@ extension ExcelSessionViewModel {
         return entry
     }
     
-    private func persistSupplierAndCategoryIfNeeded(in context: ModelContext) {
-        let s = supplierName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if s != supplierName { supplierName = s }
-        if !s.isEmpty {
-            _ = findOrCreateSupplier(named: s, in: context)
-        }
-
-        let c = categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if c != categoryName { categoryName = c }
-        if !c.isEmpty {
-            _ = findOrCreateCategory(named: c, in: context)
-        }
+    private func persistSupplierAndCategoryIfNeeded(in context: ModelContext) throws {
+        _ = try ensureSupplierExists(in: context)
+        _ = try ensureCategoryExists(in: context)
     }
 
-    private func findOrCreateSupplier(named name: String, in context: ModelContext) -> Supplier {
-        let descriptor = FetchDescriptor<Supplier>(predicate: #Predicate { $0.name == name })
-        if let existing = try? context.fetch(descriptor).first {
+    @discardableResult
+    func ensureSupplierExists(name rawName: String? = nil, in context: ModelContext) throws -> Supplier? {
+        guard let displayName = ProductImportCore.normalizedDisplayName(rawName ?? supplierName),
+              let key = Self.normalizedRelationKey(displayName) else {
+            return nil
+        }
+
+        let suppliers = try context.fetch(FetchDescriptor<Supplier>())
+        if let existing = suppliers.first(where: { Self.normalizedRelationKey($0.name) == key }) {
+            supplierName = existing.name
             return existing
         }
-        let supplier = Supplier(name: name)
+
+        let supplier = Supplier(name: displayName)
         context.insert(supplier)
+        supplierName = displayName
         return supplier
     }
 
-    private func findOrCreateCategory(named name: String, in context: ModelContext) -> ProductCategory {
-        let descriptor = FetchDescriptor<ProductCategory>(predicate: #Predicate { $0.name == name })
-        if let existing = try? context.fetch(descriptor).first {
+    @discardableResult
+    func ensureCategoryExists(name rawName: String? = nil, in context: ModelContext) throws -> ProductCategory? {
+        guard let displayName = ProductImportCore.normalizedDisplayName(rawName ?? categoryName),
+              let key = Self.normalizedRelationKey(displayName) else {
+            return nil
+        }
+
+        let categories = try context.fetch(FetchDescriptor<ProductCategory>())
+        if let existing = categories.first(where: { Self.normalizedRelationKey($0.name) == key }) {
+            categoryName = existing.name
             return existing
         }
-        let category = ProductCategory(name: name)
+
+        let category = ProductCategory(name: displayName)
         context.insert(category)
+        categoryName = displayName
         return category
     }
 
@@ -636,6 +749,7 @@ extension ExcelSessionViewModel {
             "purchasePrice",
             "totalPrice",
             "retailPrice",
+            "discount",
             "discountedPrice",
             "supplier",
             "category"
@@ -657,7 +771,11 @@ extension ExcelSessionViewModel {
                 case "purchasePrice": return L("pregenerate.role.purchase_price")
                 case "totalPrice": return L("pregenerate.role.total_price")
                 case "retailPrice": return L("pregenerate.role.retail_price")
+                case "discount": return L("pregenerate.role.discount")
                 case "discountedPrice": return L("pregenerate.role.discounted_price")
+                case "realQuantity": return L("generated.column.real_quantity")
+                case "oldPurchasePrice": return L("generated.column.old_purchase")
+                case "oldRetailPrice": return L("generated.column.old_retail")
                 case "supplier": return L("pregenerate.role.supplier")
                 case "category": return L("pregenerate.role.category")
                 default: return role
@@ -678,6 +796,9 @@ extension ExcelSessionViewModel {
             guard normalizedHeader.indices.contains(index) else { return }
             if isColumnEssential(at: index) { return } // evita di “perdere” un essenziale con un tap
             normalizedHeader[index] = fallbackHeader(for: index)
+            if selectedColumns.indices.contains(index) {
+                selectedColumns[index] = false
+            }
 
             // refresh metriche
             if let metrics = ExcelAnalyzer.computeAnalysisMetrics(header: normalizedHeader, rows: rows) {
@@ -705,15 +826,17 @@ extension ExcelSessionViewModel {
                 if let oldRoleOnTarget = targetHadRole, oldRoleOnTarget != newRole {
                     normalizedHeader[oldIndex] = oldRoleOnTarget
 
-                    // se quello che “finisce” su oldIndex è essenziale, deve stare selezionato
-                    if Self.essentialColumnKeys.contains(oldRoleOnTarget),
+                    // se quello che “finisce” su oldIndex è riconosciuto, deve stare selezionato
+                    if Self.defaultIsIncluded(for: oldRoleOnTarget),
                        selectedColumns.indices.contains(oldIndex) {
                         selectedColumns[oldIndex] = true
                     }
                 } else {
                     // Caso B: target non aveva ruolo → “sposto”: la vecchia colonna torna fallback
                     normalizedHeader[oldIndex] = fallbackHeader(for: oldIndex)
-                    // ⚠️ NON forzo selectedColumns[oldIndex] a false: lasciamo decidere all’utente
+                    if selectedColumns.indices.contains(oldIndex), !isColumnEssential(at: oldIndex) {
+                        selectedColumns[oldIndex] = false
+                    }
                 }
             } else {
                 // newRole non era assegnato altrove: attenzione se sto sovrascrivendo un essenziale
@@ -723,8 +846,8 @@ extension ExcelSessionViewModel {
             // assegna il ruolo al target
             normalizedHeader[index] = newRole
 
-            // essenziali sempre selezionate
-            if Self.essentialColumnKeys.contains(newRole),
+            // ruoli riconosciuti sempre selezionati quando assegnati manualmente
+            if Self.defaultIsIncluded(for: newRole),
                selectedColumns.indices.contains(index) {
                 selectedColumns[index] = true
             }
@@ -740,7 +863,7 @@ extension ExcelSessionViewModel {
         func roleKeyForColumn(_ index: Int) -> String? {
             guard normalizedHeader.indices.contains(index) else { return nil }
             let key = normalizedHeader[index]
-            return Self.uniqueRoles.contains(key) ? key : nil
+            return Self.isRecognizedColumnKey(key) ? key : nil
         }
 
         /// Restituisce alcuni valori di esempio per una colonna (escluse le intestazioni)
@@ -786,7 +909,7 @@ private extension ExcelSessionViewModel {
     ) -> PreGenerateValidationSnapshot {
         let effectiveSelectedColumns: [Bool]
         if selectedColumns.count != normalizedHeader.count {
-            effectiveSelectedColumns = Array(repeating: true, count: normalizedHeader.count)
+            effectiveSelectedColumns = defaultColumnSelections(for: normalizedHeader)
         } else {
             effectiveSelectedColumns = selectedColumns
         }

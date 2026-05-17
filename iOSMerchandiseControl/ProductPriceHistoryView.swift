@@ -179,6 +179,8 @@ struct ProductPriceHistoryView: View {
             return L("product.history.source.initial_price")
         case "IMPORT_EXCEL":
             return L("product.history.source.import_excel")
+        case "IMPORT_PREV":
+            return L("product.history.source.import_previous")
         case "INVENTORY_SYNC":
             return L("product.history.source.inventory_sync")
         case "EDIT_PRODUCT":

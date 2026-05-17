@@ -36,6 +36,7 @@
 "common.identifier" = "标识符: %@";
 "common.examples" = "示例: %@";
 "common.rows" = "行: %@";
+"common.rows_header" = "行";
 "common.row_number" = "第 %d 行";
 
 /* Tabs */
@@ -514,6 +515,7 @@
 "product.history.title" = "价格历史";
 "product.history.source.initial_price" = "初始价格";
 "product.history.source.import_excel" = "Excel 导入";
+"product.history.source.import_previous" = "导入前价格";
 "product.history.source.inventory_sync" = "库存同步";
 "product.history.source.manual_edit" = "手动编辑";
 "product.history.source.database_import" = "数据库导入";
@@ -586,6 +588,8 @@
 "import.analysis.no_work.title" = "没有可导入的更改";
 "import.analysis.no_work.body" = "文件已正确读取，数据库已与此次导入保持一致。";
 "import.analysis.summary" = "摘要";
+"import.analysis.summary.total_rows" = "已读取行";
+"import.analysis.summary.valid_rows" = "可导入行";
 "import.analysis.summary.new_products" = "新商品";
 "import.analysis.summary.updates" = "更新";
 "import.analysis.summary.warnings" = "警告";
@@ -596,6 +600,35 @@
 "import.analysis.summary.price_history_already_present" = "已存在价格历史";
 "import.analysis.summary.price_history_unresolved" = "未解析价格历史";
 "import.analysis.duplicate_barcodes" = "文件中重复的条码";
+"import.analysis.export_warnings" = "导出警告";
+"import.analysis.warning_sheet_name" = "导入警告";
+"import.analysis.warning.occurrences" = "出现次数";
+"import.analysis.warning.duplicate_policy" = "%d 次出现。将使用最后一行并汇总数量。";
+"import.analysis.apply.ready_count" = "%d 行可导入";
+"import.analysis.apply.errors_excluded" = "%d 个错误行将被排除";
+"import.analysis.apply.accessibility_hint" = "保存有效行，错误行保持不变。";
+"import.analysis.filter.all" = "全部";
+"import.analysis.filter.valid" = "可导入";
+"import.analysis.filter.warnings" = "警告";
+"import.analysis.filter.errors" = "错误";
+"import.analysis.filter.new" = "新增";
+"import.analysis.filter.updated" = "更新";
+"import.analysis.row_error.barcode_missing" = "缺少条码。";
+"import.analysis.row_error.product_name_missing" = "缺少商品名称。";
+"import.analysis.row_error.update_name_missing" = "此更新行至少需要一个商品名称。";
+"import.analysis.row_error.purchase_invalid" = "进货价无效。";
+"import.analysis.row_error.retail_invalid" = "零售价无效。";
+"import.analysis.row_error.discounted_invalid" = "折后价无效。";
+"import.analysis.row_error.quantity_invalid" = "数量无效。";
+"import.analysis.row_error.old_purchase_invalid" = "上一次进货价无效。";
+"import.analysis.row_error.old_retail_invalid" = "上一次零售价无效。";
+"import.analysis.row_error.discount_invalid" = "折扣无效。";
+"import.analysis.row_error.discount_range" = "折扣必须在 0 到 100 之间。";
+"import.analysis.row_error.purchase_negative" = "进货价不能为负数。";
+"import.analysis.row_error.discounted_negative" = "折后价不能为负数。";
+"import.analysis.row_error.quantity_negative" = "数量不能为负数。";
+"import.analysis.row_error.retail_required" = "零售价必填且必须大于零。";
+"import.analysis.row_error.retail_positive" = "零售价必须大于零。";
 "import.analysis.new_products_count" = "新商品（%d）";
 "import.analysis.updated_products_count" = "已更新商品（%d）";
 "import.analysis.barcode" = "条码：%@";
@@ -764,6 +797,12 @@
 "pregenerate.add_file" = "添加文件";
 "pregenerate.reload_file" = "重新加载文件";
 "pregenerate.show_all" = "显示全部…";
+"pregenerate.selection.not_selected" = "未选择";
+"pregenerate.selection.existing" = "已选择：%@";
+"pregenerate.supplier.pending_create" = "新供应商：%@";
+"pregenerate.category.pending_create" = "新分类：%@";
+"pregenerate.supplier.summary_new" = "新建：%@";
+"pregenerate.category.summary_new" = "新建：%@";
 "pregenerate.ignore_warnings" = "忽略警告并继续";
 "pregenerate.generating" = "生成中…";
 "pregenerate.generate" = "生成库存";
@@ -787,6 +826,7 @@
 "pregenerate.role.purchase_price" = "进货价";
 "pregenerate.role.total_price" = "总价";
 "pregenerate.role.retail_price" = "零售价";
+"pregenerate.role.discount" = "折扣";
 "pregenerate.role.discounted_price" = "折后价";
 "pregenerate.role.supplier" = "供应商";
 "pregenerate.role.category" = "分类";

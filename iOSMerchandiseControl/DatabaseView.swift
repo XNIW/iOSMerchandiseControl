@@ -175,13 +175,9 @@ nonisolated private enum DatabaseImportPreparationError: Error, Sendable {
     case barcodeColumnMissing
 }
 
-nonisolated private enum DatabaseImportRowErrorReason: Sendable {
-    case barcodeMissing
-}
-
 nonisolated private struct DatabaseImportRowErrorPayload: Sendable {
     let rowNumber: Int
-    let reason: DatabaseImportRowErrorReason
+    let reasonKeys: [String]
     let rowContent: [String: String]
 }
 
@@ -190,6 +186,7 @@ nonisolated private struct DatabaseImportAnalysisPayload: Sendable {
     let updatedProducts: [ProductUpdateDraft]
     let errors: [DatabaseImportRowErrorPayload]
     let warnings: [ProductDuplicateWarning]
+    let totalInputRows: Int
 }
 
 nonisolated private struct PreparedImportAnalysis: Sendable {
@@ -237,11 +234,12 @@ private enum DatabaseImportUILocalizer {
             errors: payload.errors.map { error in
                 ProductImportRowError(
                     rowNumber: error.rowNumber,
-                    reason: rowErrorReason(for: error.reason),
+                    reasonKeys: error.reasonKeys,
                     rowContent: error.rowContent
                 )
             },
-            warnings: payload.warnings
+            warnings: payload.warnings,
+            totalInputRows: payload.totalInputRows
         )
     }
 
@@ -348,12 +346,6 @@ private enum DatabaseImportUILocalizer {
         )
     }
 
-    private static func rowErrorReason(for reason: DatabaseImportRowErrorReason) -> String {
-        switch reason {
-        case .barcodeMissing:
-            return L("database.error.barcode_missing")
-        }
-    }
 }
 
 nonisolated private enum DatabaseImportPipeline {
@@ -706,11 +698,12 @@ nonisolated private enum DatabaseImportPipeline {
             errors: analysis.errors.map { error in
                 DatabaseImportRowErrorPayload(
                     rowNumber: error.rowNumber,
-                    reason: .barcodeMissing,
+                    reasonKeys: error.reasonKeys,
                     rowContent: error.rowContent
                 )
             },
-            warnings: analysis.warnings
+            warnings: analysis.warnings,
+            totalInputRows: analysis.totalInputRows
         )
     }
 
@@ -759,7 +752,18 @@ nonisolated private enum DatabaseImportPipeline {
     }
 
     private static func normalizedUniqueSortedNames<S: Sequence>(_ names: S) -> [String] where S.Element == String {
-        Array(Set(names.compactMap(normalizeNamedEntityName))).sorted()
+        var namesByKey: [String: String] = [:]
+        for rawName in names {
+            guard let displayName = normalizeNamedEntityName(rawName),
+                  let key = ProductImportCore.normalizedRelationKey(displayName),
+                  namesByKey[key] == nil else {
+                continue
+            }
+            namesByKey[key] = displayName
+        }
+        return namesByKey.values.sorted {
+            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+        }
     }
 
     private static func normalizedFullDatabasePriceHistorySource(_ rawSource: String?) -> String {
@@ -782,28 +786,28 @@ nonisolated private enum DatabaseImportPipeline {
         )
     }
 
-    private static func referencedSupplierNames(
+    private static func referencedSupplierKeys(
         from analysis: DatabaseImportAnalysisPayload
     ) -> Set<String> {
-        var names = Set(analysis.newProducts.compactMap { normalizeNamedEntityName($0.supplierName) })
+        var keys = Set(analysis.newProducts.compactMap { ProductImportCore.normalizedRelationKey($0.supplierName) })
         for update in analysis.updatedProducts where update.changedFields.contains(.supplierName) {
-            if let name = normalizeNamedEntityName(update.new.supplierName) {
-                names.insert(name)
+            if let key = ProductImportCore.normalizedRelationKey(update.new.supplierName) {
+                keys.insert(key)
             }
         }
-        return names
+        return keys
     }
 
-    private static func referencedCategoryNames(
+    private static func referencedCategoryKeys(
         from analysis: DatabaseImportAnalysisPayload
     ) -> Set<String> {
-        var names = Set(analysis.newProducts.compactMap { normalizeNamedEntityName($0.categoryName) })
+        var keys = Set(analysis.newProducts.compactMap { ProductImportCore.normalizedRelationKey($0.categoryName) })
         for update in analysis.updatedProducts where update.changedFields.contains(.categoryName) {
-            if let name = normalizeNamedEntityName(update.new.categoryName) {
-                names.insert(name)
+            if let key = ProductImportCore.normalizedRelationKey(update.new.categoryName) {
+                keys.insert(key)
             }
         }
-        return names
+        return keys
     }
 
     private static func buildPendingSuppliersCategoriesAndNonProductSummary(
@@ -819,22 +823,26 @@ nonisolated private enum DatabaseImportPipeline {
         pendingCategoryNames: [String],
         summary: NonProductDeltaSummary
     ) {
-        let existingSupplierNames = Set(
-            try context.fetch(FetchDescriptor<Supplier>()).compactMap { normalizeNamedEntityName($0.name) }
+        let existingSupplierKeys = Set(
+            try context.fetch(FetchDescriptor<Supplier>()).compactMap { ProductImportCore.normalizedRelationKey($0.name) }
         )
-        let existingCategoryNames = Set(
-            try context.fetch(FetchDescriptor<ProductCategory>()).compactMap { normalizeNamedEntityName($0.name) }
+        let existingCategoryKeys = Set(
+            try context.fetch(FetchDescriptor<ProductCategory>()).compactMap { ProductImportCore.normalizedRelationKey($0.name) }
         )
 
         let pendingSupplierNames = normalizedUniqueSortedNames(supplierSheetNames)
-            .filter { !existingSupplierNames.contains($0) }
+            .filter { name in
+                ProductImportCore.normalizedRelationKey(name).map { !existingSupplierKeys.contains($0) } ?? false
+            }
         let pendingCategoryNames = normalizedUniqueSortedNames(categorySheetNames)
-            .filter { !existingCategoryNames.contains($0) }
+            .filter { name in
+                ProductImportCore.normalizedRelationKey(name).map { !existingCategoryKeys.contains($0) } ?? false
+            }
 
-        let suppliersToAdd = Set(pendingSupplierNames)
-            .union(referencedSupplierNames(from: analysis).filter { !existingSupplierNames.contains($0) })
-        let categoriesToAdd = Set(pendingCategoryNames)
-            .union(referencedCategoryNames(from: analysis).filter { !existingCategoryNames.contains($0) })
+        let suppliersToAdd = Set(pendingSupplierNames.compactMap(ProductImportCore.normalizedRelationKey))
+            .union(referencedSupplierKeys(from: analysis).filter { !existingSupplierKeys.contains($0) })
+        let categoriesToAdd = Set(pendingCategoryNames.compactMap(ProductImportCore.normalizedRelationKey))
+            .union(referencedCategoryKeys(from: analysis).filter { !existingCategoryKeys.contains($0) })
 
         return (
             pendingSupplierNames: pendingSupplierNames,
