@@ -663,6 +663,10 @@ private struct HistoryRow: View {
             GridItem(.adaptive(minimum: 92), spacing: 8, alignment: .top)
         ]
     }
+
+    private var totalQuantityText: String? {
+        HistoryEntryRuntimeSummary.totalQuantity(from: entry.data).map { formatCLQuantity($0) }
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -725,6 +729,9 @@ private struct HistoryRow: View {
 
             LazyVGrid(columns: summaryColumns, alignment: .leading, spacing: 8) {
                 HistorySummaryChip(title: L("history.summary.items"), value: "\(entry.totalItems)")
+                if let totalQuantityText {
+                    HistorySummaryChip(title: L("history.summary.total_quantity"), value: totalQuantityText)
+                }
                 HistorySummaryChip(title: L("history.summary.order"), value: formatMoney(entry.orderTotal))
                 HistorySummaryChip(title: L("history.summary.paid"), value: formatMoney(entry.paymentTotal))
                 HistorySummaryChip(title: L("history.summary.missing"), value: "\(entry.missingItems)")

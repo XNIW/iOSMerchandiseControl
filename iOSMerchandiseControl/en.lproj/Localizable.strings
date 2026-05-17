@@ -569,6 +569,7 @@
 "history.delete.confirm_message" = "This action will permanently remove the inventory:\n%@";
 "history.exported" = "Exported";
 "history.summary.items" = "Items";
+"history.summary.total_quantity" = "Total quantity";
 "history.summary.order" = "Order";
 "history.summary.paid" = "Paid";
 "history.summary.missing" = "Missing";
@@ -819,6 +820,8 @@
 "generated.action.add_row" = "Add row";
 "generated.summary.title" = "Summary";
 "generated.summary.total_items" = "Total items";
+"generated.summary.total_quantity" = "Total quantity";
+"generated.summary.payment_total" = "Paid total";
 "generated.summary.items_to_complete" = "Items to complete";
 "generated.summary.rows_in_error" = "Rows with errors";
 "generated.summary.initial_order_total" = "Initial order total";

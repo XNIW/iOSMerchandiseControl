@@ -46,6 +46,31 @@ nonisolated struct HistoryEntryRuntimeSummary {
         )
     }
 
+    static func totalQuantity(from grid: [[String]]) -> Double? {
+        guard grid.count > 1,
+              let header = grid.first,
+              let quantityIndex = header.firstIndex(of: "quantity") else {
+            return nil
+        }
+
+        var parsedQuantityCount = 0
+        var totalQuantity = 0.0
+
+        for row in grid.dropFirst() {
+            guard row.indices.contains(quantityIndex),
+                  let quantity = parseNumber(row[quantityIndex]) else {
+                continue
+            }
+
+            parsedQuantityCount += 1
+            if quantity > 0 {
+                totalQuantity += quantity
+            }
+        }
+
+        return parsedQuantityCount > 0 ? totalQuantity : nil
+    }
+
     private struct HeaderIndices {
         let quantity: Int?
         let realQuantity: Int?
@@ -98,6 +123,14 @@ nonisolated struct HistoryEntryRuntimeSummary {
             trimmed.removeLast()
             trimmed = trimmed.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return nil }
+        }
+
+        if trimmed.range(of: #"^-?\d{1,3}([,.]\d{3})+$"#, options: .regularExpression) != nil {
+            return Double(
+                trimmed
+                    .replacingOccurrences(of: ".", with: "")
+                    .replacingOccurrences(of: ",", with: "")
+            )
         }
 
         if trimmed.range(of: #"^-?\d{1,3}(\.\d{3})*,\d+$"#, options: .regularExpression) != nil {

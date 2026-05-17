@@ -569,6 +569,7 @@
 "history.delete.confirm_message" = "Esta operación eliminará definitivamente el inventario:\n%@";
 "history.exported" = "Exportado";
 "history.summary.items" = "Artículos";
+"history.summary.total_quantity" = "Cantidad total";
 "history.summary.order" = "Pedido";
 "history.summary.paid" = "Pagado";
 "history.summary.missing" = "Faltantes";
@@ -819,6 +820,8 @@
 "generated.action.add_row" = "Añadir fila";
 "generated.summary.title" = "Resumen";
 "generated.summary.total_items" = "Artículos totales";
+"generated.summary.total_quantity" = "Cantidad total";
+"generated.summary.payment_total" = "Pago total";
 "generated.summary.items_to_complete" = "Artículos por completar";
 "generated.summary.rows_in_error" = "Filas con error";
 "generated.summary.initial_order_total" = "Total del pedido (inicial)";

@@ -41,6 +41,39 @@ private struct GeneratedDatabaseApplyPreview: Equatable {
     )
 }
 
+private struct GeneratedSummaryMetricTile: View {
+    let title: String
+    let value: String
+    var highlighted: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+
+            Text(value)
+                .font((highlighted ? Font.headline : Font.subheadline).weight(.semibold))
+                .foregroundColor(highlighted ? .accentColor : .primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(highlighted ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(highlighted ? Color.accentColor.opacity(0.24) : Color.secondary.opacity(0.12), lineWidth: 1)
+        )
+    }
+}
+
 /// Schermata di editing inventario (equivalente base di GeneratedScreen su Android).
 /// - Mostra la griglia salvata in HistoryEntry.data
 /// - Permette di:
@@ -213,6 +246,10 @@ struct GeneratedView: View {
 
     private var inventoryTotalCount: Int {
         max(0, data.count - 1)
+    }
+
+    private var initialTotalQuantity: Double? {
+        HistoryEntryRuntimeSummary.totalQuantity(from: data)
     }
 
     private var inventoryColumns: [Int] {
@@ -897,19 +934,62 @@ struct GeneratedView: View {
         let missing = max(0, totalItems - inventoryCheckedCount)
 
         return Section(L("generated.summary.title")) {
-            LabeledContent(L("generated.summary.total_items")) {
-                Text("\(totalItems)")
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("\(inventoryCheckedCount)/\(totalItems)")
+                        .font(.largeTitle.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+
+                    Spacer(minLength: 12)
+
+                    if inventoryErrorCount > 0 {
+                        Label("\(inventoryErrorCount)", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.red)
+                            .labelStyle(.titleAndIcon)
+                    }
+                }
+
+                ProgressView(value: Double(inventoryCheckedCount), total: Double(max(totalItems, 1)))
+                    .tint(.accentColor)
+
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 140), spacing: 8, alignment: .top)],
+                    alignment: .leading,
+                    spacing: 8
+                ) {
+                    GeneratedSummaryMetricTile(
+                        title: L("generated.summary.payment_total"),
+                        value: formatMoney(entry.paymentTotal),
+                        highlighted: true
+                    )
+                    GeneratedSummaryMetricTile(
+                        title: L("generated.summary.initial_order_total"),
+                        value: formatMoney(entry.orderTotal)
+                    )
+                    GeneratedSummaryMetricTile(
+                        title: L("generated.summary.items_to_complete"),
+                        value: "\(missing)"
+                    )
+                    GeneratedSummaryMetricTile(
+                        title: L("generated.summary.total_quantity"),
+                        value: formatCLQuantity(initialTotalQuantity)
+                    )
+                }
+
+                HStack {
+                    Text(L("generated.summary.rows_in_error"))
+                    Spacer(minLength: 8)
+                    Text("\(inventoryErrorCount)")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(inventoryErrorCount > 0 ? .red : .secondary)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
-            LabeledContent(L("generated.summary.items_to_complete")) {
-                Text("\(missing)")
-            }
-            LabeledContent(L("generated.summary.rows_in_error")) {
-                Text("\(inventoryErrorCount)")
-                    .foregroundStyle(inventoryErrorCount > 0 ? .red : .secondary)
-            }
-            LabeledContent(L("generated.summary.initial_order_total")) {
-                Text(formatMoney(entry.orderTotal))
-            }
+            .padding(.vertical, 4)
         }
     }
 
