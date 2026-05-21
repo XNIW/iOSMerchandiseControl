@@ -1,0 +1,6 @@
+=== mc-agent android offline-tier-status ===
+Android offline tier status:
+L1 = JVM deterministic offline harness: implemented via Task113AndroidOfflineHarnessJvmTest.
+L2 = instrumented Room + fake network harness: implemented via Task113AndroidOfflineHarnessTest#offlineWriteAndReconnectDrainInstrumentedL2.
+L3 = live offline matrix with Supabase read-back + cleanup: gated by MC_ALLOW_LIVE and signed-in device.
+Claim rule: L1 is not live offline PASS; DONE_FULL requires L2 PASS or accepted PASS_WITH_NOTES.

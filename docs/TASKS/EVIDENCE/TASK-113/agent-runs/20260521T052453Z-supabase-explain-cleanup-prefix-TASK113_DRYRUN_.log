@@ -1,0 +1,8 @@
+=== mc-agent supabase explain-cleanup --prefix TASK113_DRYRUN_ ===
+-- FK-safe TASK scoped cleanup only; no auth.users, no truncate, no reset.
+DELETE FROM inventory_product_prices WHERE barcode LIKE 'TASK113_DRYRUN_';
+DELETE FROM inventory_products WHERE barcode LIKE 'TASK113_DRYRUN_' OR product_name LIKE 'TASK113_DRYRUN_';
+DELETE FROM inventory_suppliers WHERE name LIKE 'TASK113_DRYRUN_';
+DELETE FROM inventory_categories WHERE name LIKE 'TASK113_DRYRUN_';
+DELETE FROM shared_sheet_sessions WHERE file_name LIKE 'TASK113_DRYRUN_' OR sheet_name LIKE 'TASK113_DRYRUN_';
+DELETE FROM sync_events WHERE entity_id LIKE 'TASK113_DRYRUN_' OR payload::text LIKE 'TASK113_DRYRUN_';

@@ -1,0 +1,3 @@
+=== mc-agent live sync-matrix --task TASK-113 --prefix TASK113_DRYRUN_ ===
+Live operation refused. Set MC_ALLOW_LIVE=1 in config.env
+Live operation refused. Set MC_ALLOW_LIVE=1 in config.env

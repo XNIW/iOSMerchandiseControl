@@ -1,0 +1,4 @@
+=== mc-agent supabase residue-check --prefix TASK113_DRYRUN_ --profile linked ===
+Initialising login role...
+unexpected status 400: {"message":"Failed to run sql query: ERROR:  42703: column \"barcode\" does not exist\nLINE 4: UNION ALL SELECT 'product_prices', count(*) FROM inventory_product_prices WHERE barcode LIKE 'TASK113_DRYRUN_'\n                                                                                        ^\n"}
+Try rerunning the command with --debug to troubleshoot the error.

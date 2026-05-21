@@ -1,0 +1,2 @@
+=== mc-agent scan evidence --task TASK-113 ===
+23:- PASS: fake JWT/Bearer/email/service_role=<REDACTED_SECRET> is detected by `scan sensitive` with exit 1 as expected.

@@ -1,0 +1,4 @@
+=== mc-agent supabase residue-check --prefix TASK113_DRYRUN_ --profile local ===
+Connecting to local database...
+failed to execute query: ERROR: column "barcode" does not exist (SQLSTATE 42703)
+Try rerunning the command with --debug to troubleshoot the error.

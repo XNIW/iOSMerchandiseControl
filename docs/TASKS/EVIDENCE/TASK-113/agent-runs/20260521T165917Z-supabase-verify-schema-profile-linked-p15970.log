@@ -1,0 +1,33 @@
+=== mc-agent supabase verify-schema --profile linked ===
+Connecting to remote database...
+Skipping migration README.md... (file name must match pattern "<timestamp>_name.sql")
+
+  
+   Local          | Remote         | Time (UTC)          
+  ----------------|----------------|---------------------
+   20260416       | 20260416       | 20260416            
+   20260417000000 | 20260417000000 | 2026-04-17 00:00:00 
+   20260417120000 | 20260417120000 | 2026-04-17 12:00:00 
+   20260417200000 | 20260417200000 | 2026-04-17 20:00:00 
+   20260418200000 | 20260418200000 | 2026-04-18 20:00:00 
+   20260421120000 | 20260421120000 | 2026-04-21 12:00:00 
+   20260422120000 | 20260422120000 | 2026-04-22 12:00:00 
+   20260424021936 | 20260424021936 | 2026-04-24 02:19:36 
+   20260424145010 | 20260424145010 | 2026-04-24 14:50:10 
+   20260509120000 | 20260509120000 | 2026-05-09 12:00:00 
+   20260511030000 | 20260511030000 | 2026-05-11 03:00:00 
+   20260514213110 | 20260514213110 | 2026-05-14 21:31:10 
+   20260515161500 | 20260515161500 | 2026-05-15 16:15:00 
+   20260515203000 | 20260515203000 | 2026-05-15 20:30:00 
+   20260515204033 | 20260515204033 | 2026-05-15 20:40:33 
+   20260515204135 | 20260515204135 | 2026-05-15 20:41:35 
+
+A new version of Supabase CLI is available: v2.101.0 (currently installed v2.98.2)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+Connecting to remote database...
+Linting schema: extensions
+Linting schema: public
+
+No schema errors found
+A new version of Supabase CLI is available: v2.101.0 (currently installed v2.98.2)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

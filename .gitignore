@@ -2,3 +2,8 @@
 iOSMerchandiseControl/SupabaseConfig.plist
 *.local.xcconfig
 *.secrets.xcconfig
+
+# Agent harness local/runtime artifacts.
+tools/agent/config.env
+tools/agent/mcp/node_modules/
+tools/agent/**/*.tmp

@@ -1,0 +1,4 @@
+=== mc-agent supabase verify-rls --profile local ===
+Connecting to local database...
+failed to scan row: can't scan into dest[2]: unknown oid 1003 cannot be scanned into *interface {}
+Try rerunning the command with --debug to troubleshoot the error.

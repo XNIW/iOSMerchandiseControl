@@ -1,0 +1,3 @@
+=== mc-agent supabase cleanup --task TASK-113 --prefix GLOBAL_ --dry-run ===
+Prefix must match TASKNNN_* pattern.
+Prefix must match TASKNNN_* pattern.

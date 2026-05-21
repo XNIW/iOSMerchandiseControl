@@ -1,0 +1,54 @@
+=== mc-agent list commands ===
+help
+help-json
+version
+doctor
+preflight
+config validate
+config print-redacted
+list commands
+list commands-json
+report --task
+report --latest
+report validate-json
+scan sensitive
+scan evidence
+scan repo-diff
+scan release-cta
+safety check-prefix
+safety dry-run-required
+ios build debug
+ios build release
+ios test sync
+ios test lifecycle
+ios test offline
+ios smoke simulator
+ios smoke options
+ios auth-preflight
+ios live-write
+ios cleanup-scoped
+android build debug
+android build release
+android test sync
+android test offline
+android smoke device
+android smoke options
+android auth-preflight
+android live-pull
+android live-write
+android offline-tier-status
+android offline-write
+android reconnect-drain
+supabase start
+supabase status-redacted
+supabase verify-schema
+supabase verify-rls
+supabase verify-grants
+supabase explain-cleanup
+supabase cleanup dry-run
+supabase cleanup execute
+supabase residue-check
+supabase pooler-cooldown-check
+live sync-matrix
+live offline-matrix
+live cleanup-and-verify

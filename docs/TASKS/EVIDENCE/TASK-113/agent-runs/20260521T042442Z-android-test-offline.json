@@ -1,0 +1,57 @@
+{
+  "android_offline_tier": "L1",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042442Z-android-test-offline.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042442Z-android-test-offline.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042442Z-android-test-offline.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [],
+  "cleanup_plan_id": null,
+  "command": "android test offline",
+  "command_slug": "android-test-offline",
+  "device_simulator_redacted": {
+    "android_serial": "",
+    "ios_os": "",
+    "ios_simulator": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 8307,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "<unset>",
+    "MC_ALLOW_LIVE": "<unset>",
+    "MC_ANDROID_DEVICE_SERIAL": "<unset>",
+    "MC_ANDROID_REPO": "<unset>",
+    "MC_IOS_REPO": "<unset>",
+    "MC_IOS_SCHEME": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "<unset>",
+    "MC_RUN_PREFIX": "<unset>",
+    "MC_SUPABASE_REPO": "<unset>",
+    "MC_TASK_ID": "<unset>"
+  },
+  "exit_code": 0,
+  "git_sha": "10f5bdd",
+  "next_action_recommended": "Review report.",
+  "platform": "android",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "repo": "<HOME_<REDACTED_PROJECT_REF>>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "pass",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260521T042442Z-android-test-offline",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "task_id": "TASK-113",
+  "test_prefix": "TASK113_RUN_",
+  "timestamp_end": "20260521T042442Z",
+  "timestamp_start": "20260521T042442Z",
+  "warnings": [
+    "legacy report normalized to schema 1.1"
+  ]
+}

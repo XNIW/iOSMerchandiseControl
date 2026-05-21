@@ -1,0 +1,2 @@
+=== mc-agent supabase residue-check --prefix TASK113_DRYRUN_ --profile dry-run-no-db ===
+profile=dry-run-no-db residue_count=0 (database not queried)

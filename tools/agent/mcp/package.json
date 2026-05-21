@@ -1,0 +1,17 @@
+{
+  "name": "mc-agent-mcp",
+  "version": "0.2.0-task113",
+  "private": true,
+  "type": "module",
+  "description": "Thin MCP adapter over tools/agent/mc-agent.sh",
+  "bin": {
+    "mc-agent-mcp": "./server.mjs"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node test-wrapper.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}

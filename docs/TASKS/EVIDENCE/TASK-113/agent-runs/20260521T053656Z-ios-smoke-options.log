@@ -1,0 +1,4 @@
+=== mc-agent ios smoke options ===
+[sim_ui] OK: App com.niwcyber.iOSMerchandiseControl lanciata
+[sim_ui] ERROR: JXA timeout dopo 30s
+NOT_FOUND

@@ -1,0 +1,21 @@
+=== mc-agent report --task TASK-113 ===
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042453Z-ios-build-debug.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042453Z-preflight.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042454Z-report---task-TASK-113.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042501Z-android-test-sync.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042508Z-supabase-status-redacted.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042510Z-supabase-verify-schema.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042514Z-supabase-residue-check---prefix-TASK113_DRYRUN_.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042521Z-supabase-status-redacted.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042523Z-ios-build-release.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042526Z-live-sync-matrix---task-TASK-113---prefix-TASK113_DRYRUN_.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042537Z-supabase-status-redacted.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042542Z-supabase-status-redacted.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042625Z-android-offline-write---prefix-TASK113_OFFLINE_JVM_.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042647Z-android-offline-write---prefix-TASK113_OFFLINE_JVM_.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T042754Z-android-offline-write---prefix-TASK113_OFFLINE_JVM_.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T052323Z-config-validate.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T052323Z-list-commands-json.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T052323Z-list-commands.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T052323Z-version.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T052358Z-list-commands.json

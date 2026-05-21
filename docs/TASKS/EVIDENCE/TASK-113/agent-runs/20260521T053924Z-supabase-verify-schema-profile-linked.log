@@ -1,0 +1,17 @@
+=== mc-agent supabase verify-schema --profile linked ===
+Initialising login role...
+failed to connect as temp role: failed to connect to `host=aws-1-sa-east-1.pooler.supabase.com user=cli_login_postgres.<REDACTED_PROJECT_REF> database=postgres`: server error (FATAL: (ECIRCUITBREAKER) too many authentication failures, new connections are temporarily blocked (SQLSTATE XX000))
+Retry (3/8): failed to connect as temp role: failed to connect to `host=aws-1-sa-east-1.pooler.supabase.com user=cli_login_postgres.<REDACTED_PROJECT_REF> database=postgres`: server error (FATAL: (ECIRCUITBREAKER) too many authentication failures, new connections are temporarily blocked (SQLSTATE XX000))
+Retry (4/8): failed to connect as temp role: failed to connect to `host=aws-1-sa-east-1.pooler.supabase.com user=cli_login_postgres.<REDACTED_PROJECT_REF> database=postgres`: server error (FATAL: (ECIRCUITBREAKER) too many authentication failures, new connections are temporarily blocked (SQLSTATE XX000))
+Retry (5/8): failed to connect as temp role: failed to connect to `host=aws-1-sa-east-1.pooler.supabase.com user=cli_login_postgres.<REDACTED_PROJECT_REF> database=postgres`: server error (FATAL: (ECIRCUITBREAKER) too many authentication failures, new connections are temporarily blocked (SQLSTATE XX000))
+Retry (6/8): failed to connect as temp role: failed to connect to `host=aws-1-sa-east-1.pooler.supabase.com user=cli_login_postgres.<REDACTED_PROJECT_REF> database=postgres`: server error (FATAL: (ECIRCUITBREAKER) too many authentication failures, new connections are temporarily blocked (SQLSTATE XX000))
+Retry (7/8): failed to connect as temp role: failed to connect to `host=aws-1-sa-east-1.pooler.supabase.com user=cli_login_postgres.<REDACTED_PROJECT_REF> database=postgres`: server error (FATAL: (ECIRCUITBREAKER) too many authentication failures, new connections are temporarily blocked (SQLSTATE XX000))
+Retry (8/8): failed to connect as temp role: failed to connect to `host=aws-1-sa-east-1.pooler.supabase.com user=cli_login_postgres.<REDACTED_PROJECT_REF> database=postgres`: server error (FATAL: (ECIRCUITBREAKER) too many authentication failures, new connections are temporarily blocked (SQLSTATE XX000))
+Connect to your database by setting the env var correctly: SUPABASE_DB_PASSWORD
+Connecting to local database...
+Linting schema: extensions
+Linting schema: public
+
+No schema errors found
+A new version of Supabase CLI is available: v2.100.1 (currently installed v2.98.2)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

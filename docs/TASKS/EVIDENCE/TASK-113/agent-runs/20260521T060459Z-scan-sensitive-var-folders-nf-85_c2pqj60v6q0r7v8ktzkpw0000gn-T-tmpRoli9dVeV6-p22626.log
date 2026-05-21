@@ -1,0 +1,5 @@
+=== mc-agent scan sensitive /var/folders/nf/85_c2pqj60v6q0r7v8ktzkpw0000gn/T/tmp.Roli9dVeV6 ===
+2:<REDACTED_JWT>
+1:Bearer <REDACTED_TOKEN>
+4:service_role=<REDACTED_SECRET>
+3:<REDACTED_EMAIL>

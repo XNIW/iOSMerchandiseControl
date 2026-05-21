@@ -1,0 +1,4 @@
+=== mc-agent scan evidence --task TASK-113 ===
+tmp residue in evidence: <HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T052622Z-scan-evidence-task-TASK-113.log.tmp
+31:│ Secret      │ <REDACTED_SUPABASE_SECRET>      ││ Secret      │ <REDACTED_SUPABASE_SECRET>      │
+31:│ Secret      │ <REDACTED_SUPABASE_SECRET>      ││ Secret      │ <REDACTED_SUPABASE_SECRET>      │

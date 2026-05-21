@@ -1,0 +1,3 @@
+=== mc-agent ios smoke options ===
+[sim_ui] OK: App com.niwcyber.iOSMerchandiseControl lanciata
+/tmp/sim_ui_jxa_3TvR9e: execution error: Error: Error: [sim_ui] Finestra Simulator non trovata (-2700)

@@ -1,0 +1,12 @@
+timestamp_utc=2026-05-21T16:56:00Z
+tool=XcodeBuildMCP
+simulator=iPhone 17 Pro iOS 26.5
+simulator_id=240F400E-5EFA-486A-9137-FFBBE70F604D
+screen=Opzioni
+automatic_sync_visible=true
+automatic_sync_label=Sincronizzazione automatica attiva
+sync_badge=Attiva
+pending_local_changes=0
+manual_sync_cta_visible=false
+screenshot=docs/TASKS/EVIDENCE/TASK-113/screenshots/ios-options-xcodebuildmcp-20260521T1656Z.jpg
+note=Legacy JXA/AX automation remains tooling-blocked; this file is a privacy-safe functional fallback generated from XcodeBuildMCP UI hierarchy plus screenshot evidence.

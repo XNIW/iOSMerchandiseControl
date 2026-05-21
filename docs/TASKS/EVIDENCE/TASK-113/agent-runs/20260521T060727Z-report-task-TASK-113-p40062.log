@@ -1,0 +1,21 @@
+=== mc-agent report --task TASK-113 ===
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060420Z-scan-repo-diff-p3162.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060420Z-scan-sensitive-p3158.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060459Z-report-latest-p22712.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060459Z-scan-release-cta-p22700.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060459Z-scan-sensitive-var-folders-nf-85_c2pqj60v6q0r7v8ktzkpw0000gn-T-tmpRoli9dVeV6-p22626.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060528Z-report-validate-json-path-docs-TASKS-EVIDENCE-TASK-113-agent-runs-p24154.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060528Z-scan-sensitive-p24145.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060549Z-live-sync-matrix-task-TASK-113-prefix-TASK113_FINAL_-p34259.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060549Z-supabase-cleanup-task-TASK-113-dry-run-p34213.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060549Z-supabase-cleanup-task-TASK-113-prefix-BAD_-dry-run-p34212.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060549Z-supabase-cleanup-task-TASK-113-prefix-GLOBAL_-dry-run-p34260.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060645Z-supabase-cleanup-task-TASK-113-dry-run-p36504.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060705Z-safety-check-prefix-prefix-TASK113_rm-p37114.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060705Z-safety-dry-run-required-command-supabase-cleanup-task-TASK-113-prefix-TASK113_DRYRUN_-execute-p37169.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060705Z-supabase-cleanup-task-TASK-113-prefix-TASK113_DRYRUN_-execute-cleanup-plan-id-fake-plan-p37110.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060705Z-supabase-cleanup-task-TASK-113-prefix-TASK113_DRYRUN_-execute-cleanup-plan-id-fake-plan-p37111.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060712Z-supabase-cleanup-task-TASK-113-prefix-TASK113_DRYRUN_-dry-run-p38382.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060726Z-preflight-p39308.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060726Z-supabase-cleanup-task-TASK-113-prefix-TASK113_LOCK_-dry-run-p39019.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-113/agent-runs/20260521T060726Z-supabase-cleanup-task-TASK-113-prefix-TASK113_STALE_-dry-run-p39031.json

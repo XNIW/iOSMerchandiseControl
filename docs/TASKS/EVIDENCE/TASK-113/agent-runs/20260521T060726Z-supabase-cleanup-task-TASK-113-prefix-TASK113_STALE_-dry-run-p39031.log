@@ -1,0 +1,2 @@
+=== mc-agent supabase cleanup --task TASK-113 --prefix TASK113_STALE_ --dry-run ===
+profile=dry-run-no-db residue_count=0 (database not queried)
