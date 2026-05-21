@@ -947,6 +947,37 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         assertRootPresentationPrivacySafe(vm.rootPresentationState)
     }
 
+    func testTask112NetworkReconnectBypassesForegroundCooldownWithReconnectReason() async {
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        let policy = SupabaseManualSyncSemiAutomaticPolicy(
+            foregroundCooldown: 1_800,
+            foregroundDebounce: 0,
+            recoverableErrorBackoff: 0
+        )
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            supportsForegroundCloudCheck: true,
+            policy: policy
+        )
+        let now = Date(timeIntervalSince1970: 1_778_500_000)
+
+        let foregroundStarted = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: now,
+            source: .rootForeground
+        )
+        let reconnectStarted = await vm.startForegroundSemiAutomaticCheckIfAllowed(
+            now: now.addingTimeInterval(10),
+            source: .networkReconnect
+        )
+
+        XCTAssertTrue(foregroundStarted)
+        XCTAssertTrue(reconnectStarted)
+        XCTAssertEqual(fake.calls.filter { $0 == .remotePreview }.count, 2)
+        XCTAssertEqual(vm.lastCloudCheckAt, now.addingTimeInterval(10))
+        XCTAssertEqual(vm.lifecycleProcessState.source, .networkReconnect)
+        XCTAssertEqual(vm.lastForegroundObservationEvent, .foreground_check_completed_no_changes)
+    }
+
     func testTask092RootForegroundChangesFoundMapsToActionableBannerState() async {
         let fake = SupabaseManualSyncCoordinatorDryRunFake()
         fake.remotePreviewSummary = remotePreviewSummary(
@@ -2354,7 +2385,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
 
         let state = vm.presentationState
         XCTAssertEqual(state.primaryAction?.id, .reviewChanges)
-        XCTAssertEqual(state.primaryAction?.title, "Sincronizza ora")
+        XCTAssertEqual(state.primaryAction?.title, "Aggiornamento automatico")
         XCTAssertNotNil(state.reviewSheet)
     }
 

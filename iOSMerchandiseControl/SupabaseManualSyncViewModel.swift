@@ -89,6 +89,16 @@ nonisolated struct SupabaseManualSyncCapabilitySet: Equatable, Sendable {
 nonisolated enum SupabaseManualSyncSemiAutomaticTriggerSource: Equatable, Sendable {
     case releaseCard
     case rootForeground
+    case networkReconnect
+
+    var isForegroundAutomatic: Bool {
+        switch self {
+        case .rootForeground, .networkReconnect:
+            return true
+        case .releaseCard:
+            return false
+        }
+    }
 }
 
 nonisolated enum SupabaseManualSyncRootPresentationKind: Equatable, Sendable {
@@ -815,6 +825,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         switch source {
         case .rootForeground:
             return .rootForeground
+        case .networkReconnect:
+            return .networkReconnect
         case .releaseCard:
             return .optionsCard
         }
@@ -944,13 +956,13 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         now: Date,
         source: SupabaseManualSyncSemiAutomaticTriggerSource
     ) -> SupabaseManualSyncSemiAutomaticDecision {
-        let supportsCloudCheck = source == .rootForeground
+        let supportsCloudCheck = source.isForegroundAutomatic
             ? capabilities.supportsForegroundCloudCheck
             : capabilities.supportsRemoteCloudCheck
         return SupabaseManualSyncForegroundAutomaticGate.decision(
             policy: semiAutomaticPolicy,
             now: now,
-            lastCheckAt: lastCloudCheckAt,
+            lastCheckAt: source == .networkReconnect ? nil : lastCloudCheckAt,
             instanceLastAttemptAt: lastSemiAutomaticForegroundAttemptAt,
             instanceLastRecoverableErrorAt: lastRecoverableForegroundErrorAt,
             supportsCloudCheck: supportsCloudCheck,
@@ -1027,7 +1039,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         case .allowed:
             guard semiAutomaticState == .idle || semiAutomaticState == .noChanges else { return }
             semiAutomaticState = .suggestedCheck
-            if source == .rootForeground {
+            if source.isForegroundAutomatic {
                 lastForegroundObservationEvent = .foreground_check_suggested
             }
         case .blocked(.authOrOwnerMissing):
@@ -1037,7 +1049,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 semiAutomaticState = .changesFound
             }
         case .blocked(.debounce), .blocked(.cooldown), .blocked(.recoverableErrorBackoff):
-            if source == .rootForeground {
+            if source.isForegroundAutomatic {
                 lastForegroundObservationEvent = .foreground_check_throttled
             }
         case .blocked:
@@ -1060,7 +1072,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             }
             lastSemiAutomaticForegroundAttemptAt = now
             SupabaseManualSyncForegroundAutomaticGate.markAttempt(at: now)
-            if source == .rootForeground {
+            if source.isForegroundAutomatic {
                 lastForegroundObservationEvent = .foreground_check_suggested
             }
             defer {
@@ -1072,9 +1084,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 with: .dryRun,
                 checkStartedAt: now,
                 lifecycleRunID: lifecycleRunID,
-                syncHistoryAfterRun: source == .rootForeground
+                syncHistoryAfterRun: source.isForegroundAutomatic
             )
-            if source == .rootForeground {
+            if source.isForegroundAutomatic {
                 await applyStagedLocalChangesIfNeeded()
             }
             return true
@@ -1085,7 +1097,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 semiAutomaticState = .changesFound
             }
         case .blocked(.debounce), .blocked(.cooldown), .blocked(.recoverableErrorBackoff):
-            if source == .rootForeground {
+            if source.isForegroundAutomatic {
                 lastForegroundObservationEvent = .foreground_check_throttled
             }
         case .blocked:

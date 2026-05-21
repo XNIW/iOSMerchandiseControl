@@ -10,8 +10,10 @@ final class SupabaseConfigSecurityTests: XCTestCase {
             || isEnabled(environment["TEST_RUNNER_TASK103_IOS_AUTH_PREFLIGHT"])
         let task104Enabled = isEnabled(environment["TASK104_PASS2_IOS_AUTH_PREFLIGHT"])
             || isEnabled(environment["TEST_RUNNER_TASK104_PASS2_IOS_AUTH_PREFLIGHT"])
+        let task112Enabled = isEnabled(environment["TASK112_IOS_AUTH_PREFLIGHT"])
+            || isEnabled(environment["TEST_RUNNER_TASK112_IOS_AUTH_PREFLIGHT"])
         try XCTSkipUnless(
-            task103Enabled || task104Enabled,
+            task103Enabled || task104Enabled || task112Enabled,
             "Live auth preflight is gated."
         )
 
@@ -28,7 +30,14 @@ final class SupabaseConfigSecurityTests: XCTestCase {
             return
         }
 
-        let label = task104Enabled ? "TASK104_PASS2_IOS_AUTH_PREFLIGHT" : "TASK103_IOS_AUTH_PREFLIGHT"
+        let label: String
+        if task112Enabled {
+            label = "TASK112_IOS_AUTH_PREFLIGHT"
+        } else if task104Enabled {
+            label = "TASK104_PASS2_IOS_AUTH_PREFLIGHT"
+        } else {
+            label = "TASK103_IOS_AUTH_PREFLIGHT"
+        }
         print(
             "\(label) project_hash=\(task103Hash(config.projectURL.absoluteString)) " +
             "owner_hash=\(task103Hash(session.userID.uuidString.lowercased())) " +

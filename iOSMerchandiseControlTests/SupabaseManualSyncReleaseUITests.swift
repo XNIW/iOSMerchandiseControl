@@ -547,10 +547,12 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertTrue(optionsSource.contains("cancelHandler?()"))
         XCTAssertTrue(hostSource.contains("viewModel.rootPresentationState"))
         XCTAssertTrue(hostSource.contains("Task.yield()"))
-        XCTAssertTrue(hostSource.contains("startForegroundSemiAutomaticCheckIfAllowed(source: .rootForeground)"))
+        XCTAssertTrue(hostSource.contains("startForegroundSemiAutomaticCheckIfAllowed(source: source)"))
+        XCTAssertTrue(hostSource.contains("startRootForegroundCheckIfAllowed(source: .networkReconnect)"))
         XCTAssertTrue(hostSource.contains("safeAreaInset(edge: .top"))
         XCTAssertTrue(hostSource.contains("activityCenter.isBusy"))
         XCTAssertTrue(hostSource.contains("markForegroundCheckSkippedBecauseBusy()"))
+        XCTAssertTrue(hostSource.contains("viewModel.requestLifecycleInterruptionForBackground()"))
         XCTAssertTrue(hostSource.contains("state.primaryActionID != nil"))
         XCTAssertTrue(hostSource.contains("selectedTab != 3"))
 
@@ -656,6 +658,18 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertFalse(source.contains("Developer diagnostics"))
         XCTAssertFalse(source.contains("Advanced diagnostics"))
         XCTAssertFalse(releaseCardSource.contains("sync_events"))
+    }
+
+    func testTask112OAuthCallbackIsForwardedDuringSigningIn() throws {
+        let source = try readSource("iOSMerchandiseControl/SupabaseAuthViewModel.swift")
+        let start = try XCTUnwrap(source.range(of: "func handleOpenURL(_ url: URL) -> Bool"))
+        let end = try XCTUnwrap(
+            source.range(of: "private func startAuthListener()", range: start.upperBound..<source.endIndex)
+        )
+        let methodSource = String(source[start.lowerBound..<end.lowerBound])
+
+        XCTAssertTrue(methodSource.contains("authService?.handleOpenURL(url)"))
+        XCTAssertFalse(methodSource.contains("if case .signingIn = state"))
     }
 
     private func extractReleaseCardSource(from source: String) throws -> String {

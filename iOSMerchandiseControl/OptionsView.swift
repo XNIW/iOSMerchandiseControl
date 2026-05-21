@@ -193,24 +193,19 @@ struct OptionsView: View {
         VStack(alignment: .leading, spacing: 16) {
             cloudAccountPublicHeader
 
-            if supabaseAuthViewModel.isSignedIn || supabaseAuthViewModel.isTransitioning {
-                Divider()
+            Divider()
 
-                SupabaseManualSyncReleaseCard(
-                    context: modelContext,
-                    authViewModel: supabaseAuthViewModel,
-                    inventoryService: supabaseInventoryService,
-                    pullPreviewService: supabasePullPreviewService,
-                    manualPushService: supabaseManualPushService,
-                    activityRecorder: syncEventOutboxDrainRecorder,
-                    viewModel: manualSyncViewModel,
-                    cancelHandler: manualSyncCancelHandler,
-                    baselineDidChange: {
-                        refreshLocalDatabaseSummary()
-                        refreshSupabaseBaselineSummary()
-                    }
-                )
-            }
+            SupabaseAutomaticSyncStatusCard(
+                context: modelContext,
+                authViewModel: supabaseAuthViewModel,
+                inventoryService: supabaseInventoryService,
+                pullPreviewService: supabasePullPreviewService,
+                manualPushService: supabaseManualPushService,
+                activityRecorder: syncEventOutboxDrainRecorder,
+                viewModel: manualSyncViewModel,
+                pendingCount: localPendingAttentionCount,
+                baselineSummary: supabaseBaselineSummary
+            )
         }
         .padding(.vertical, 4)
     }
@@ -527,7 +522,277 @@ struct LocalDatabasePublicSummary: Equatable {
     }
 }
 
-// MARK: - Release manual sync surface
+// MARK: - Release automatic sync status surface
+
+private struct SupabaseAutomaticSyncStatusCard: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject private var authViewModel: SupabaseAuthViewModel
+    @StateObject private var viewModel: SupabaseManualSyncViewModel
+
+    private let pendingCount: Int
+    private let baselineSummary: SupabaseCatalogBaselineDebugSummary
+
+    init(
+        context: ModelContext,
+        authViewModel: SupabaseAuthViewModel,
+        inventoryService: SupabaseInventoryService?,
+        pullPreviewService: SupabasePullPreviewService?,
+        manualPushService: SupabaseManualPushService?,
+        activityRecorder: (any SyncEventRecording)?,
+        viewModel: SupabaseManualSyncViewModel? = nil,
+        pendingCount: Int,
+        baselineSummary: SupabaseCatalogBaselineDebugSummary
+    ) {
+        self.authViewModel = authViewModel
+        self.pendingCount = pendingCount
+        self.baselineSummary = baselineSummary
+
+        let resolvedViewModel = viewModel ?? SupabaseManualSyncReleaseFactory.makeViewModel(
+            context: context,
+            authViewModel: authViewModel,
+            inventoryService: inventoryService,
+            pullPreviewService: pullPreviewService,
+            manualPushService: manualPushService,
+            activityRecorder: activityRecorder
+        )
+        _viewModel = StateObject(wrappedValue: resolvedViewModel)
+    }
+
+    var body: some View {
+        let presentation = viewModel.presentationState
+
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Label {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(title(for: presentation))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(detail(for: presentation))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } icon: {
+                    Image(systemName: systemImage(for: presentation))
+                        .foregroundStyle(tint(for: presentation))
+                }
+                .accessibilityElement(children: .combine)
+
+                Spacer(minLength: 8)
+
+                statusBadge(for: presentation)
+            }
+
+            if presentation.progressState.isActive || presentation.progressState.phase == .completedWithWarnings {
+                CloudSyncProgressInlineView(state: presentation.progressState)
+            } else if presentation.isRunning {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text(L("options.supabase.automaticSync.running.inline"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                LabeledContent(
+                    L("options.supabase.automaticSync.pending"),
+                    value: "\(pendingCount)"
+                )
+
+                LabeledContent(
+                    L("options.supabase.automaticSync.lastSuccess"),
+                    value: lastSuccessText
+                )
+
+                if let statusDetail = presentation.statusDetailText,
+                   !statusDetail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   authViewModel.isSignedIn {
+                    Text(statusDetail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .font(.footnote)
+        }
+        .padding(.vertical, 4)
+        .onAppear(perform: syncAuthPresentationContext)
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            syncAuthPresentationContext()
+        }
+        .onChange(of: authViewModel.isTransitioning) { _, _ in
+            syncAuthPresentationContext()
+        }
+        .onChange(of: authViewModel.canSignIn) { _, _ in
+            syncAuthPresentationContext()
+        }
+        .onChange(of: authViewModel.sessionInfo?.userID) { _, _ in
+            syncAuthPresentationContext()
+        }
+        .onChange(of: authViewModel.isSignedIn) { _, _ in
+            syncAuthPresentationContext()
+        }
+    }
+
+    private var lastSuccessText: String {
+        guard let appliedAt = baselineSummary.appliedAt,
+              baselineSummary.status == .valid else {
+            return L("options.supabase.automaticSync.lastSuccess.none")
+        }
+        return appliedAt.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func title(for presentation: SupabaseManualSyncPresentationState) -> String {
+        if authViewModel.isTransitioning {
+            return L("options.supabase.automaticSync.running.title")
+        }
+        guard authViewModel.isSignedIn else {
+            return L("options.supabase.automaticSync.signedOut.title")
+        }
+        if presentation.isRunning || presentation.progressState.isActive {
+            return L("options.supabase.automaticSync.running.title")
+        }
+        return L("options.supabase.automaticSync.active.title")
+    }
+
+    private func detail(for presentation: SupabaseManualSyncPresentationState) -> String {
+        if authViewModel.isTransitioning {
+            return L("options.supabase.automaticSync.running.detail")
+        }
+        guard authViewModel.isSignedIn else {
+            return L("options.supabase.automaticSync.signedOut.detail")
+        }
+        if presentation.isRunning || presentation.progressState.isActive {
+            return L("options.supabase.automaticSync.running.detail")
+        }
+        if pendingCount > 0 {
+            return L("options.supabase.automaticSync.pending.detail")
+        }
+        switch baselineSummary.status {
+        case .valid:
+            return L("options.supabase.automaticSync.active.detail")
+        case .absent:
+            return L("options.supabase.automaticSync.bootstrap.detail")
+        case .stale, .accountMismatch, .incomplete:
+            return L("options.supabase.automaticSync.actionNeeded.detail")
+        }
+    }
+
+    private func systemImage(for presentation: SupabaseManualSyncPresentationState) -> String {
+        if !authViewModel.isSignedIn {
+            return "icloud.slash"
+        }
+        if presentation.isRunning || presentation.progressState.isActive {
+            return "arrow.triangle.2.circlepath.icloud"
+        }
+        if pendingCount > 0 {
+            return "icloud.and.arrow.up"
+        }
+        switch baselineSummary.status {
+        case .valid:
+            return "checkmark.seal.fill"
+        case .absent:
+            return "icloud"
+        case .stale, .accountMismatch, .incomplete:
+            return "exclamationmark.icloud"
+        }
+    }
+
+    private func tint(for presentation: SupabaseManualSyncPresentationState) -> Color {
+        if !authViewModel.isSignedIn {
+            return .secondary
+        }
+        if presentation.isRunning || presentation.progressState.isActive {
+            return .accentColor
+        }
+        if pendingCount > 0 {
+            return .orange
+        }
+        switch baselineSummary.status {
+        case .valid:
+            return .green
+        case .absent:
+            return .secondary
+        case .stale, .accountMismatch, .incomplete:
+            return .orange
+        }
+    }
+
+    @ViewBuilder
+    private func statusBadge(for presentation: SupabaseManualSyncPresentationState) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: statusBadgeSystemImage(for: presentation))
+                .imageScale(.small)
+            Text(statusBadgeText(for: presentation))
+                .lineLimit(1)
+        }
+        .font(.caption)
+        .fontWeight(.medium)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.secondary.opacity(0.10), in: Capsule())
+        .accessibilityElement(children: .combine)
+    }
+
+    private func statusBadgeText(for presentation: SupabaseManualSyncPresentationState) -> String {
+        if !authViewModel.isSignedIn {
+            return L("options.supabase.automaticSync.badge.signedOut")
+        }
+        if presentation.isRunning || presentation.progressState.isActive {
+            return L("options.supabase.automaticSync.badge.running")
+        }
+        if pendingCount > 0 {
+            return L("options.supabase.automaticSync.badge.pending")
+        }
+        switch baselineSummary.status {
+        case .valid:
+            return L("options.supabase.automaticSync.badge.active")
+        case .absent:
+            return L("options.supabase.automaticSync.badge.scheduled")
+        case .stale, .accountMismatch, .incomplete:
+            return L("options.supabase.automaticSync.badge.actionNeeded")
+        }
+    }
+
+    private func statusBadgeSystemImage(for presentation: SupabaseManualSyncPresentationState) -> String {
+        if !authViewModel.isSignedIn {
+            return "person.crop.circle.badge.exclamationmark"
+        }
+        if presentation.isRunning || presentation.progressState.isActive {
+            return "arrow.triangle.2.circlepath"
+        }
+        if pendingCount > 0 {
+            return "clock"
+        }
+        switch baselineSummary.status {
+        case .valid:
+            return "checkmark"
+        case .absent:
+            return "calendar.badge.clock"
+        case .stale, .accountMismatch, .incomplete:
+            return "exclamationmark.triangle"
+        }
+    }
+
+    private func syncAuthPresentationContext() {
+        viewModel.applyAuthPresentationContext(
+            SupabaseManualSyncAuthPresentationContext(
+                isSignedIn: authViewModel.isSignedIn,
+                canSignIn: authViewModel.canSignIn,
+                isTransitioning: authViewModel.isTransitioning
+            )
+        )
+    }
+}
+
+#if DEBUG
+// MARK: - Developer manual sync diagnostics surface
 
 private struct SupabaseManualSyncReleaseCard: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -1088,6 +1353,8 @@ private struct SupabaseManualSyncReviewSheet: View {
         }
     }
 }
+
+#endif
 
 private struct CloudSyncProgressInlineView: View {
     let state: CloudSyncProgressState

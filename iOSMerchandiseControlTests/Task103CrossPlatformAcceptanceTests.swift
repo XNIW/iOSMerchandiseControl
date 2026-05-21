@@ -11,7 +11,13 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let prefix: String
         let tolerance = 0.005
         var isTask104Pass2: Bool { prefix.hasPrefix("TASK104_PASS2_") }
-        var logPrefix: String { isTask104Pass2 ? "TASK104_PASS2" : "TASK103" }
+        var isTask112: Bool { prefix.hasPrefix("TASK112_") }
+        var logPrefix: String {
+            if isTask112 {
+                return "TASK112"
+            }
+            return isTask104Pass2 ? "TASK104_PASS2" : "TASK103"
+        }
 
         var supplierIOS: String { "\(prefix)SUP_IOS_01" }
         var categoryIOS: String { "\(prefix)CAT_IOS_01" }
@@ -660,6 +666,71 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         )
     }
 
+    func test08Task112ScopedCleanupWhenEnabled() async throws {
+        try requireLiveAcceptanceEnabled()
+        let fixture = try makeFixture()
+        guard fixture.isTask112 else {
+            throw XCTSkip("TASK112 scoped cleanup only accepts TASK112_ prefixes.")
+        }
+
+        let environment = ProcessInfo.processInfo.environment
+        let cleanupValue = (
+            environment["TASK112_SCOPED_CLEANUP"]
+                ?? environment["TEST_RUNNER_TASK112_SCOPED_CLEANUP"]
+        )?.lowercased()
+        guard cleanupValue == "1" || cleanupValue == "true" else {
+            throw XCTSkip("Set TASK112_SCOPED_CLEANUP=1 to delete scoped TASK112 rows.")
+        }
+
+        let runtime = try await makeRuntime()
+        let before = try await fetchRemoteSnapshot(runtime, fixture: fixture)
+        let productIDs = before.products.map(\.id.uuidString)
+
+        if !productIDs.isEmpty {
+            try await runtime.provider.client
+                .from("inventory_product_prices")
+                .delete()
+                .eq("owner_user_id", value: runtime.session.userID.uuidString)
+                .in("product_id", values: productIDs)
+                .execute()
+
+            try await runtime.provider.client
+                .from("inventory_products")
+                .delete()
+                .eq("owner_user_id", value: runtime.session.userID.uuidString)
+                .in("barcode", values: fixture.allBarcodes)
+                .execute()
+        }
+
+        try await runtime.provider.client
+            .from("inventory_suppliers")
+            .delete()
+            .eq("owner_user_id", value: runtime.session.userID.uuidString)
+            .in("name", values: fixture.allSupplierNames)
+            .execute()
+
+        try await runtime.provider.client
+            .from("inventory_categories")
+            .delete()
+            .eq("owner_user_id", value: runtime.session.userID.uuidString)
+            .in("name", values: fixture.allCategoryNames)
+            .execute()
+
+        let after = try await fetchRemoteSnapshot(runtime, fixture: fixture)
+        XCTAssertTrue(after.suppliers.isEmpty)
+        XCTAssertTrue(after.categories.isEmpty)
+        XCTAssertTrue(after.products.isEmpty)
+        XCTAssertTrue(after.prices.isEmpty)
+
+        print(
+            "TASK112_SCOPED_CLEANUP owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "before_suppliers=\(before.suppliers.count) before_categories=\(before.categories.count) " +
+            "before_products=\(before.products.count) before_prices=\(before.prices.count) " +
+            "after_suppliers=\(after.suppliers.count) after_categories=\(after.categories.count) " +
+            "after_products=\(after.products.count) after_prices=\(after.prices.count)"
+        )
+    }
+
     private func pushPendingCatalog(
         context: ModelContext,
         runtime: Runtime,
@@ -1032,8 +1103,11 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let environment = ProcessInfo.processInfo.environment
         let task103Value = (environment["TASK103_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK103_LIVE_ACCEPTANCE"])?.lowercased()
         let task104Value = (environment["TASK104_PASS2_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK104_PASS2_LIVE_ACCEPTANCE"])?.lowercased()
-        guard task103Value == "1" || task103Value == "true" || task104Value == "1" || task104Value == "true" else {
-            throw XCTSkip("Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1 or TASK104_PASS2_LIVE_ACCEPTANCE=1 in the xctestrun environment.")
+        let task112Value = (environment["TASK112_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK112_LIVE_ACCEPTANCE"])?.lowercased()
+        guard task103Value == "1" || task103Value == "true"
+            || task104Value == "1" || task104Value == "true"
+            || task112Value == "1" || task112Value == "true" else {
+            throw XCTSkip("Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1 or TASK112_LIVE_ACCEPTANCE=1 in the xctestrun environment.")
         }
     }
 
@@ -1042,11 +1116,17 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         guard let prefix = environment["TASK104_PASS2_RUN_PREFIX"]
             ?? environment["TEST_RUNNER_TASK104_PASS2_RUN_PREFIX"]
             ?? environment["TASK103_RUN_PREFIX"]
-            ?? environment["TEST_RUNNER_TASK103_RUN_PREFIX"] else {
-            throw XCTSkip("TASK104_PASS2_RUN_PREFIX or TASK103_RUN_PREFIX must be explicitly set for live acceptance.")
+            ?? environment["TEST_RUNNER_TASK103_RUN_PREFIX"]
+            ?? environment["TASK112_RUN_PREFIX"]
+            ?? environment["TEST_RUNNER_TASK112_RUN_PREFIX"] else {
+            throw XCTSkip("TASK104_PASS2_RUN_PREFIX, TASK103_RUN_PREFIX or TASK112_RUN_PREFIX must be explicitly set for live acceptance.")
         }
-        guard (prefix.hasPrefix("TASK103_REAL_R") || prefix.hasPrefix("TASK104_PASS2_")), prefix.hasSuffix("_") else {
-            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._ or TASK104_PASS2_..._.")
+        guard (
+            prefix.hasPrefix("TASK103_REAL_R")
+                || prefix.hasPrefix("TASK104_PASS2_")
+                || prefix.hasPrefix("TASK112_")
+        ), prefix.hasSuffix("_") else {
+            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._ or TASK112_..._.")
         }
         return Fixture(prefix: prefix)
     }

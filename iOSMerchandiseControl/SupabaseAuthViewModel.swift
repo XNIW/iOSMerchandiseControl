@@ -114,11 +114,7 @@ final class SupabaseAuthViewModel: ObservableObject {
             return false
         }
 
-        if case .signingIn = state {
-            return true
-        }
-
-        return authService?.handleOpenURL(url) ?? false
+        return authService?.handleOpenURL(url) ?? true
     }
 
     private func startAuthListener() {

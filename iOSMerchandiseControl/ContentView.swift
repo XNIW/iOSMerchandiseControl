@@ -240,6 +240,8 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
     @State private var foregroundTask: Task<Void, Never>?
     @State private var didReachInteractiveUI = false
     @State private var hasDeferredForegroundCheck = false
+    @State private var reconnectScheduler: AutomaticSyncReconnectScheduler?
+    @State private var reconnectObserver: AutomaticSyncNetworkReachabilityObserver?
 
     private let content: (SupabaseManualSyncViewModel, @escaping () -> Void) -> Content
 
@@ -276,19 +278,23 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
                 rootBanner
             }
             .task {
+                startReconnectObserverIfNeeded()
                 guard !didReachInteractiveUI else { return }
                 syncAuthPresentationContext()
                 await Task.yield()
                 didReachInteractiveUI = true
+                reconnectScheduler?.setForeground(scenePhase == .active)
                 startRootForegroundCheckIfAllowed()
             }
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
                 case .active:
+                    reconnectScheduler?.setForeground(true)
                     syncAuthPresentationContext()
                     guard didReachInteractiveUI else { return }
                     startRootForegroundCheckIfAllowed()
                 case .background:
+                    reconnectScheduler?.setForeground(false)
                     cancelRootForegroundCheck()
                 case .inactive:
                     break
@@ -314,6 +320,11 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
                       !activityCenter.isBusy else { return }
                 hasDeferredForegroundCheck = false
                 startRootForegroundCheckIfAllowed()
+            }
+            .onDisappear {
+                reconnectObserver?.cancel()
+                reconnectObserver = nil
+                reconnectScheduler = nil
             }
     }
 
@@ -357,7 +368,22 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
         return true
     }
 
-    private func startRootForegroundCheckIfAllowed() {
+    private func startReconnectObserverIfNeeded() {
+        guard reconnectScheduler == nil,
+              reconnectObserver == nil else { return }
+        let scheduler = AutomaticSyncReconnectScheduler {
+            startRootForegroundCheckIfAllowed(source: .networkReconnect)
+        }
+        scheduler.setForeground(scenePhase == .active)
+        let observer = AutomaticSyncNetworkReachabilityObserver(scheduler: scheduler)
+        observer.start()
+        reconnectScheduler = scheduler
+        reconnectObserver = observer
+    }
+
+    private func startRootForegroundCheckIfAllowed(
+        source: SupabaseManualSyncSemiAutomaticTriggerSource = .rootForeground
+    ) {
         guard scenePhase == .active else { return }
         guard foregroundTask == nil else { return }
         guard !activityCenter.isBusy else {
@@ -367,13 +393,14 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
         }
 
         foregroundTask = Task { @MainActor in
-            _ = await viewModel.startForegroundSemiAutomaticCheckIfAllowed(source: .rootForeground)
+            _ = await viewModel.startForegroundSemiAutomaticCheckIfAllowed(source: source)
             foregroundTask = nil
         }
     }
 
     private func cancelRootForegroundCheck() {
         hasDeferredForegroundCheck = false
+        viewModel.requestLifecycleInterruptionForBackground()
         foregroundTask?.cancel()
         foregroundTask = nil
     }
@@ -453,7 +480,7 @@ private struct SupabaseManualSyncRootForegroundBanner: View {
 
             Spacer(minLength: 8)
 
-            if let actionTitle = state.primaryActionTitle {
+            if let actionTitle = publicRemediationActionTitle {
                 Button(actionTitle, action: action)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
@@ -472,6 +499,15 @@ private struct SupabaseManualSyncRootForegroundBanner: View {
         .accessibilityLabel(state.accessibilityLabel)
         .transition(reduceMotion ? .identity : .move(edge: .top).combined(with: .opacity))
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: state.kind)
+    }
+
+    private var publicRemediationActionTitle: String? {
+        switch state.primaryActionID {
+        case .signIn, .retry:
+            return state.primaryActionTitle
+        case .checkCloud, .downloadCloudDatabase, .realignData, .reviewChanges, .sendCloudChanges, .syncNow, .cancel, .none:
+            return nil
+        }
     }
 
     private var iconTint: Color {

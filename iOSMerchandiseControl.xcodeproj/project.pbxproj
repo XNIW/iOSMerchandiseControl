@@ -14,18 +14,6 @@
 		41B18D052EE7A90100FE61E2 /* xls.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CEB2EE7A90100FE61E2 /* xls.c */; };
 		41B18D062EE7A90100FE61E2 /* locale.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CE92EE7A90100FE61E2 /* locale.c */; };
 		41B18D092EE7A90100FE61E2 /* ole.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CEA2EE7A90100FE61E2 /* ole.c */; settings = {COMPILER_FLAGS = "-w"; }; };
-		41B18D0F2EE7A90100FE61E2 /* configure.ac in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF82EE7A90100FE61E2 /* configure.ac */; };
-		41B18D142EE7A90100FE61E2 /* libxls.pc.in in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFA2EE7A90100FE61E2 /* libxls.pc.in */; };
-		41B18D172EE7A90100FE61E2 /* Makefile.am in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFC2EE7A90100FE61E2 /* Makefile.am */; };
-		41B18D192EE7A90100FE61E2 /* INSTALL in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF92EE7A90100FE61E2 /* INSTALL */; };
-		41B18D1B2EE7A90100FE61E2 /* autogen.sh in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF62EE7A90100FE61E2 /* autogen.sh */; };
-		41B18D1D2EE7A90100FE61E2 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFB2EE7A90100FE61E2 /* LICENSE */; };
-		41B18D202EE7A90100FE61E2 /* fuzz.yml in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CAD2EE7A90100FE61E2 /* fuzz.yml */; };
-		41B18D262EE7A90100FE61E2 /* config.rpath in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF72EE7A90100FE61E2 /* config.rpath */; };
-		41B18D272EE7A90100FE61E2 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CFD2EE7A90100FE61E2 /* README.md */; };
-		41B18D2B2EE7A90100FE61E2 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF42EE7A90100FE61E2 /* .gitignore */; };
-		41B18D2C2EE7A90100FE61E2 /* build.yml in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CAC2EE7A90100FE61E2 /* build.yml */; };
-		41B18D372EE7A90100FE61E2 /* AUTHORS in Resources */ = {isa = PBXBuildFile; fileRef = 41B18CF52EE7A90100FE61E2 /* AUTHORS */; };
 		41B18D3D2EE7B39400FE61E2 /* xlstool.c in Sources */ = {isa = PBXBuildFile; fileRef = 41B18CED2EE7A90100FE61E2 /* xlstool.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		42D034012F3A034000000001 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 42D034032F3A034000000003 /* Supabase */; };
 /* End PBXBuildFile section */
@@ -340,18 +328,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				41B18D0F2EE7A90100FE61E2 /* configure.ac in Resources */,
-				41B18D142EE7A90100FE61E2 /* libxls.pc.in in Resources */,
-				41B18D172EE7A90100FE61E2 /* Makefile.am in Resources */,
-				41B18D192EE7A90100FE61E2 /* INSTALL in Resources */,
-				41B18D1B2EE7A90100FE61E2 /* autogen.sh in Resources */,
-				41B18D1D2EE7A90100FE61E2 /* LICENSE in Resources */,
-				41B18D202EE7A90100FE61E2 /* fuzz.yml in Resources */,
-				41B18D262EE7A90100FE61E2 /* config.rpath in Resources */,
-				41B18D272EE7A90100FE61E2 /* README.md in Resources */,
-				41B18D2B2EE7A90100FE61E2 /* .gitignore in Resources */,
-				41B18D2C2EE7A90100FE61E2 /* build.yml in Resources */,
-				41B18D372EE7A90100FE61E2 /* AUTHORS in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

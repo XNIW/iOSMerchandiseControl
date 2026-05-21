@@ -69,6 +69,26 @@ final class SupabaseManualSyncLifecycleRunGateTests: XCTestCase {
         XCTAssertEqual(foregroundSnapshot.interruptReason, .remoteWriteUnverified)
     }
 
+    func testTask112InterruptedMutationHasPriorityOverNetworkReconnectCheck() {
+        let gate = makeGate()
+        let started = gate.begin(kind: .pushAggregated, source: .releaseSheet)
+        guard case .started(let snapshot) = started, let runID = snapshot.runID else {
+            XCTFail("Expected mutating run to start")
+            return
+        }
+
+        gate.markInterrupted(runID: runID, reason: .remoteWriteUnverified)
+        let reconnect = gate.begin(kind: .previewReadOnly, source: .networkReconnect)
+
+        guard case .ignored(let reason, let reconnectSnapshot) = reconnect else {
+            XCTFail("Expected reconnect read-only run to be ignored")
+            return
+        }
+        XCTAssertEqual(reason, .interruptedMutationNeedsReview)
+        XCTAssertEqual(reconnectSnapshot.state, .interrupted)
+        XCTAssertEqual(reconnectSnapshot.interruptReason, .remoteWriteUnverified)
+    }
+
     func testTask095PreflightBlocksRetryWhenAuthOwnerNetworkOrContextAreUnsafe() {
         let authBlocked = makeGate(isSignedIn: false)
         assertBlocked(authBlocked.begin(kind: .pushAggregated, source: .releaseSheet), .authMissing)

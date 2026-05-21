@@ -21,6 +21,7 @@ nonisolated enum SupabaseManualSyncLifecycleRunKind: String, Equatable, Sendable
 
 nonisolated enum SupabaseManualSyncLifecycleRunSource: String, Equatable, Sendable {
     case rootForeground
+    case networkReconnect
     case optionsCard
     case releaseSheet
 }
@@ -124,6 +125,8 @@ final class SupabaseManualSyncLifecyclePreflight: SupabaseManualSyncLifecyclePre
         self.isAppLifecycleCompatible = isAppLifecycleCompatible
     }
 
+    nonisolated deinit {}
+
     func evaluate(
         kind: SupabaseManualSyncLifecycleRunKind,
         source: SupabaseManualSyncLifecycleRunSource
@@ -171,6 +174,8 @@ final class SupabaseManualSyncLifecycleRunGate {
         self.timeBudget = max(1, timeBudget)
     }
 
+    nonisolated deinit {}
+
     func begin(
         kind: SupabaseManualSyncLifecycleRunKind,
         source: SupabaseManualSyncLifecycleRunSource,
@@ -179,7 +184,9 @@ final class SupabaseManualSyncLifecycleRunGate {
         let timestamp = now()
         _ = expireBudgetIfNeeded(at: timestamp)
 
-        if snapshot.hasInterruptedMutationPriority, !kind.isMutating, source == .rootForeground {
+        if snapshot.hasInterruptedMutationPriority,
+           !kind.isMutating,
+           (source == .rootForeground || source == .networkReconnect) {
             return .ignored(.interruptedMutationNeedsReview, snapshot)
         }
 
