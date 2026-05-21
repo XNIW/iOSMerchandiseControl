@@ -56,6 +56,7 @@ main() {
     safety) handler=(mc_cmd_safety "${args[@]:1}") ;;
     ios) handler=(mc_cmd_ios "${args[@]:1}") ;;
     android) handler=(mc_cmd_android "${args[@]:1}") ;;
+    sync) handler=(mc_cmd_sync "${args[@]:1}") ;;
     supabase) handler=(mc_cmd_supabase "${args[@]:1}") ;;
     live) handler=(mc_cmd_live "${args[@]:1}") ;;
     *)
@@ -65,6 +66,7 @@ main() {
       ;;
   esac
 
+  mc_prepare_task_context_from_args "${args[@]}"
   mc_run_wrapped "${args[*]}" "${handler[@]}"
   exit $?
 }

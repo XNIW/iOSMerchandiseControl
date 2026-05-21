@@ -5,9 +5,11 @@ mc_android_connected_devices() {
 }
 
 mc_android_serial() {
+  MC_ANDROID_SELECTED_SERIAL=""
   local configured="${MC_ANDROID_DEVICE_SERIAL:-}"
   if [[ -n "$configured" && "$configured" != "REDACTED_SERIAL" && "$configured" != "<REDACTED_SERIAL>" ]]; then
     if adb -s "$configured" get-state >/dev/null 2>&1; then
+      MC_ANDROID_SELECTED_SERIAL="$configured"
       printf '%s' "$configured"
       return "$MC_EXIT_PASS"
     fi
@@ -28,6 +30,7 @@ mc_android_serial() {
     MC_NEXT_ACTION="Set MC_ANDROID_DEVICE_SERIAL to the intended device."
     return "$MC_EXIT_BLOCKED"
   fi
+  MC_ANDROID_SELECTED_SERIAL="$devices"
   printf '%s' "$devices"
 }
 
@@ -42,11 +45,37 @@ mc_android_require_unlocked() {
     return "$MC_EXIT_BLOCKED"
   fi
   if grep -Eq 'mDreamingLockscreen=true|mShowingLockscreen=true' <<< "$keyguard"; then
+    if [[ "${MC_ANDROID_ALLOW_LOCKED_INSTRUMENTATION:-0}" == "1" ]]; then
+      MC_WARNINGS="${MC_WARNINGS:+${MC_WARNINGS},}android-locked-instrumentation-override"
+      return "$MC_EXIT_PASS"
+    fi
     MC_SUMMARY="Android device appears locked."
     MC_NEXT_ACTION="Unlock the device, then retry."
     return "$MC_EXIT_BLOCKED"
   fi
   return "$MC_EXIT_PASS"
+}
+
+mc_android_timeout_seconds() {
+  printf '%s' "${MC_ANDROID_ADB_TIMEOUT_SECONDS:-180}"
+}
+
+mc_android_instrument_timeout_seconds() {
+  printf '%s' "${MC_ANDROID_INSTRUMENT_TIMEOUT_SECONDS:-240}"
+}
+
+mc_android_adb_timed() {
+  local seconds="$1"
+  shift
+  perl -e 'alarm shift @ARGV; exec @ARGV' "$seconds" adb "$@"
+}
+
+mc_android_device_state_redacted() {
+  local serial="$1"
+  local state boot_completed
+  state="$(adb -s "$serial" get-state 2>/dev/null || true)"
+  boot_completed="$(adb -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+  printf 'state=%s boot_completed=%s' "${state:-unknown}" "${boot_completed:-unknown}"
 }
 
 mc_android_gradle() {
@@ -86,6 +115,7 @@ mc_android_test_sync() {
   MC_CA_REFS="CA-113-05,CA-113-15,CA-113-29,CA-113-30"
   mc_git_context "$MC_ANDROID_REPO"
   mc_android_gradle :app:testDebugUnitTest \
+    --tests '*DefaultInventoryRepositoryTest*114*' \
     --tests 'CatalogAutoSyncCoordinatorTest' \
     --tests 'CatalogSyncViewModelTest' \
     --tests 'HistorySessionPushCoordinatorTest' \
@@ -126,20 +156,53 @@ mc_android_instrument() {
   shift
   local extra_args=("$@")
   local serial code
-  serial="$(mc_android_serial)" || return $?
+  mc_android_serial >/dev/null || return $?
+  serial="$MC_ANDROID_SELECTED_SERIAL"
   mc_android_require_unlocked "$serial" || return $?
   mc_git_context "$MC_ANDROID_REPO"
   mc_android_gradle :app:assembleDebug :app:assembleDebugAndroidTest || return "$MC_EXIT_FAIL"
   local apk_app="$MC_ANDROID_REPO/app/build/outputs/apk/debug/app-debug.apk"
   local apk_test="$MC_ANDROID_REPO/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
-  adb -s "$serial" install -r "$apk_app" >/dev/null || return "$MC_EXIT_BLOCKED"
-  adb -s "$serial" install -r "$apk_test" >/dev/null || return "$MC_EXIT_BLOCKED"
-  adb -s "$serial" shell am instrument -w -r \
+  local adb_timeout instrument_timeout state_summary instrument_log
+  adb_timeout="$(mc_android_timeout_seconds)"
+  instrument_timeout="$(mc_android_instrument_timeout_seconds)"
+  if ! mc_android_adb_timed "$adb_timeout" -s "$serial" install -r "$apk_app" >/dev/null; then
+    state_summary="$(mc_android_device_state_redacted "$serial")"
+    MC_SUMMARY="Android instrumentation BLOCKED: app install failed or timed out after ${adb_timeout}s (${state_summary})."
+    MC_NEXT_ACTION="Verify the device is connected/unlocked, then retry; if adb remains stuck, restart the selected emulator/device."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  if ! mc_android_adb_timed "$adb_timeout" -s "$serial" install -r "$apk_test" >/dev/null; then
+    state_summary="$(mc_android_device_state_redacted "$serial")"
+    MC_SUMMARY="Android instrumentation BLOCKED: test APK install failed or timed out after ${adb_timeout}s (${state_summary})."
+    MC_NEXT_ACTION="Verify device storage/install state and retry; restart only the selected emulator/device if adb is still stuck."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  instrument_log="$(mktemp /tmp/mc-agent-android-instrument.XXXXXX.log)"
+  mc_android_adb_timed "$instrument_timeout" -s "$serial" shell am instrument -w -r \
     "${extra_args[@]}" \
     -e class "$class" \
-    com.example.merchandisecontrolsplitview.test/androidx.test.runner.AndroidJUnitRunner
+    com.example.merchandisecontrolsplitview.test/androidx.test.runner.AndroidJUnitRunner >"$instrument_log" 2>&1
   code=$?
-  [[ "$code" -eq 0 ]] && return "$MC_EXIT_PASS"
+  mc_report_log "$(mc_redact_text "$(tail -n 160 "$instrument_log")")"
+  if [[ "$code" -eq 0 ]] \
+    && grep -q "OK (" "$instrument_log" \
+    && ! grep -Eq "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2" "$instrument_log"; then
+    rm -f "$instrument_log"
+    MC_SUMMARY="Android instrumentation PASS for ${class}."
+    MC_NEXT_ACTION="Continue Android live/device gate."
+    return "$MC_EXIT_PASS"
+  fi
+  state_summary="$(mc_android_device_state_redacted "$serial")"
+  if [[ "$code" -eq 142 ]]; then
+    rm -f "$instrument_log"
+    MC_SUMMARY="Android instrumentation BLOCKED: am instrument timed out after ${instrument_timeout}s (${state_summary})."
+    MC_NEXT_ACTION="Inspect device/emulator responsiveness and test runner logs; retry after restarting only the selected device if needed."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  rm -f "$instrument_log"
+  MC_SUMMARY="Android instrumentation FAIL for ${class}; adb exit=${code} (${state_summary})."
+  MC_NEXT_ACTION="Inspect instrumentation output/logcat and rerun after fixing the reported failure."
   return "$MC_EXIT_FAIL"
 }
 
@@ -151,6 +214,32 @@ mc_android_auth_preflight() {
   mc_require_live || return $?
   mc_android_instrument 'com.example.merchandisecontrolsplitview.Task103AuthPreflightTest#authSessionOwnerHashWhenEnabled' \
     -e task112AuthPreflight true
+  local code=$?
+  if [[ "$code" -eq 0 ]]; then
+    MC_SUMMARY="Android auth-preflight PASS."
+    MC_NEXT_ACTION="Run Android live-full-pull or live matrix."
+    return "$MC_EXIT_PASS"
+  fi
+  return "$code"
+}
+
+mc_android_cleanup_scoped() {
+  local prefix="$1"
+  local execute="$2"
+  MC_PLATFORM="android"
+  MC_SAFETY_LEVEL="cleanup-dry-run"
+  MC_REQUIRES_CLEANUP="true"
+  MC_CA_REFS="CA-06,CA-10"
+  mc_validate_task_prefix "$prefix" || return $?
+  MC_TEST_PREFIX="$prefix"
+  if [[ "$execute" == "1" ]]; then
+    MC_SAFETY_LEVEL="cleanup-execute"
+    mc_require_cleanup_execute || return $?
+  fi
+  mc_android_instrument 'com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#test114AndroidCleanupLocalHistoryResidue' \
+    -e task114LocalCleanup true \
+    -e task114CleanupPrefix "$prefix" \
+    -e task114CleanupExecute "$execute"
 }
 
 mc_android_live_pull() {
@@ -163,7 +252,7 @@ mc_android_live_pull() {
   mc_require_live || return $?
   MC_TEST_PREFIX="$prefix"
   mc_android_instrument 'com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#test02AndroidPullIOSSmokeAndLocalReadBack' \
-    -e task112LiveAcceptance true -e task112RunPrefix "$prefix"
+    -e task114LiveAcceptance true -e task114RunPrefix "$prefix"
 }
 
 mc_android_live_write() {
@@ -176,7 +265,31 @@ mc_android_live_write() {
   mc_require_live || return $?
   MC_TEST_PREFIX="$prefix"
   mc_android_instrument 'com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#test03AndroidWriteSmokeAndRemoteReadBack' \
-    -e task112LiveAcceptance true -e task112RunPrefix "$prefix"
+    -e task114LiveAcceptance true -e task114RunPrefix "$prefix"
+}
+
+mc_android_live_full_pull() {
+  MC_PLATFORM="android"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-02,CA-07,CA-10"
+  mc_require_live || return $?
+  mc_android_instrument 'com.example.merchandisecontrolsplitview.Task114AndroidFullReconciliationTest#fullPullFromSupabaseWithoutClearingLocalData' \
+    -e task114AndroidFullReconcile true
+}
+
+mc_android_task114_matrix_step() {
+  local method="$1"
+  local prefix="$2"
+  MC_PLATFORM="android"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-114-06,T-06"
+  mc_validate_task_prefix "$prefix" || return $?
+  mc_require_live || return $?
+  MC_TEST_PREFIX="$prefix"
+  mc_android_instrument "com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#${method}" \
+    -e task114LiveAcceptance true -e task114RunPrefix "$prefix"
 }
 
 mc_android_offline_l1() {
@@ -323,7 +436,8 @@ mc_android_smoke() {
   MC_SAFETY_LEVEL="safe-readonly"
   MC_CA_REFS="CA-113-29,CA-113-30"
   local serial
-  serial="$(mc_android_serial)" || return $?
+  mc_android_serial >/dev/null || return $?
+  serial="$MC_ANDROID_SELECTED_SERIAL"
   mc_android_require_unlocked "$serial" || return $?
   mc_android_gradle :app:assembleDebug || return "$MC_EXIT_FAIL"
   local apk="$MC_ANDROID_REPO/app/build/outputs/apk/debug/app-debug.apk"
@@ -357,6 +471,18 @@ mc_cmd_android() {
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
       mc_android_auth_preflight
       ;;
+    cleanup-scoped)
+      local prefix execute=0
+      prefix="$(mc_parse_opt --prefix "$@")" || { mc_missing_prefix; return "$MC_EXIT_REFUSED"; }
+      if mc_parse_flag --execute "$@"; then
+        execute=1
+      elif ! mc_parse_flag --dry-run "$@"; then
+        MC_SUMMARY="Android cleanup-scoped refused: specify --dry-run or --execute."
+        MC_NEXT_ACTION="Run android cleanup-scoped --prefix TASK114_ --dry-run first."
+        return "$MC_EXIT_REFUSED"
+      fi
+      mc_android_cleanup_scoped "$prefix" "$execute"
+      ;;
     live-pull)
       local prefix
       prefix="$(mc_parse_opt --prefix "$@")" || { mc_missing_prefix; return "$MC_EXIT_REFUSED"; }
@@ -366,6 +492,10 @@ mc_cmd_android() {
       local prefix
       prefix="$(mc_parse_opt --prefix "$@")" || { mc_missing_prefix; return "$MC_EXIT_REFUSED"; }
       mc_android_live_write "$prefix"
+      ;;
+    live-full-pull)
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      mc_android_live_full_pull
       ;;
     offline-tier-status)
       mc_android_offline_tier_status

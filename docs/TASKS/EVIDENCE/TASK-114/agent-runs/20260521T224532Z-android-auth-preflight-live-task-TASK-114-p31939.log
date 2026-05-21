@@ -1,0 +1,64 @@
+=== mc-agent android auth-preflight --live --task TASK-114 ===
++ local sub=auth-preflight
++ shift
++ case "$sub" in
++ mc_parse_flag --live --live --task TASK-114
++ local name=--live
++ shift
++ [[ 3 -gt 0 ]]
++ [[ --live == \-\-\l\i\v\e ]]
++ return 0
++ mc_android_auth_preflight
++ MC_PLATFORM=android
++ MC_SAFETY_LEVEL=live-write
++ MC_REQUIRES_LIVE=true
++ MC_CA_REFS=CA-113-07,CA-113-19,CA-113-30
++ mc_require_live
++ [[ 1 != \1 ]]
++ mc_acquire_live_lock TASK-114
++ local task=TASK-114
++ [[ 0 == \1 ]]
++ local lock
+++ mc_lock_path TASK-114
+++ local task=TASK-114
+++ printf %s <HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/.mc-agent-live.lock
++ lock=<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/.mc-agent-live.lock
+++ dirname <HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/.mc-agent-live.lock
++ mkdir -p <HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs
++ [[ -f <HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/.mc-agent-live.lock ]]
++ MC_LOCK_HELD=1
++ MC_LOCK_FILE=<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/.mc-agent-live.lock
++ trap mc_release_live_lock EXIT INT TERM
++ return 0
++ mc_android_instrument com.example.merchandisecontrolsplitview.Task103AuthPreflightTest#authSessionOwnerHashWhenEnabled -e task112AuthPreflight true
++ local class=com.example.merchandisecontrolsplitview.Task103AuthPreflightTest#authSessionOwnerHashWhenEnabled
++ shift
++ extra_args=("$@")
++ local extra_args
++ local serial code
+++ mc_android_serial
+++ local configured=REDACTED_SERIAL
+++ [[ -n REDACTED_SERIAL ]]
+++ [[ REDACTED_SERIAL != \R\E\D\A\C\T\E\D\_\S\E\R\I\A\L ]]
+++ local devices count
++++ mc_android_connected_devices
++++ adb devices
++++ awk 'NR>1 && $2=="device"{print $1}'
+++ devices='8ac48ff0
+emulator-5554'
++++ printf '%s\n' '8ac48ff0
+emulator-5554'
++++ sed '/^$/d'
++++ wc -l
++++ tr -d ' '
+++ count=2
+++ [[ 2 -eq 0 ]]
+++ [[ 2 -gt 1 ]]
+++ MC_SUMMARY='Multiple Android devices connected.'
+++ MC_NEXT_ACTION='Set MC_ANDROID_DEVICE_SERIAL to the intended device.'
+++ return 2
++ serial=
++ return 2
++ local code=2
++ [[ 2 -eq 0 ]]
++ return 2

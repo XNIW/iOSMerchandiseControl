@@ -85,6 +85,21 @@ nonisolated struct SupabasePullApplyResult: Sendable, Equatable {
     let updated: Int
     let suppliersCreated: Int
     let categoriesCreated: Int
+    let productTombstoned: Int
+
+    init(
+        inserted: Int,
+        updated: Int,
+        suppliersCreated: Int,
+        categoriesCreated: Int,
+        productTombstoned: Int = 0
+    ) {
+        self.inserted = inserted
+        self.updated = updated
+        self.suppliersCreated = suppliersCreated
+        self.categoriesCreated = categoriesCreated
+        self.productTombstoned = productTombstoned
+    }
 }
 
 nonisolated struct SupabasePullApplyProgress: Sendable, Equatable {
@@ -115,9 +130,11 @@ nonisolated struct SupabasePullApplyPlan: Sendable, Equatable {
     let categoriesToCreate: [SupabasePullApplyLookup]
     let productInserts: [SupabasePullApplyProductInsert]
     let productUpdates: [SupabasePullApplyProductUpdate]
+    let productTombstones: [SupabasePullApplyProductTombstone]
 
     var plannedInsertedCount: Int { productInserts.count }
     var plannedUpdatedCount: Int { productUpdates.count }
+    var plannedProductMutationCount: Int { productInserts.count + productUpdates.count + productTombstones.count }
 }
 
 nonisolated struct SupabasePullApplyExpectedProductState: Sendable, Equatable {
@@ -153,6 +170,12 @@ nonisolated struct SupabasePullApplyProductInsert: Sendable, Equatable {
 }
 
 nonisolated struct SupabasePullApplyProductUpdate: Sendable, Equatable {
+    let barcode: String
+    let payload: SyncPreviewProductApplyPayload
+    let expectedFingerprint: SupabasePullApplyProductFingerprint
+}
+
+nonisolated struct SupabasePullApplyProductTombstone: Sendable, Equatable {
     let barcode: String
     let payload: SyncPreviewProductApplyPayload
     let expectedFingerprint: SupabasePullApplyProductFingerprint
@@ -258,6 +281,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
 
         var inserts: [SupabasePullApplyProductInsert] = []
         var updates: [SupabasePullApplyProductUpdate] = []
+        var tombstones: [SupabasePullApplyProductTombstone] = []
         var expectedStates: [SupabasePullApplyExpectedProductState] = []
 
         for summary in preview.newProducts.sorted(by: productSort) {
@@ -328,28 +352,88 @@ nonisolated struct SupabasePullApplyService: Sendable {
             expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: fingerprint))
         }
 
-        guard !inserts.isEmpty || !updates.isEmpty else {
-            throw SupabasePullApplyError.noApplicableChanges
+        for summary in preview.remoteTombstones.sorted(by: productSort) {
+            guard let payload = summary.applyPayload else {
+                throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
+            }
+
+            guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(summary.barcode ?? payload.barcode) else {
+                throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
+            }
+
+            guard let localProduct = snapshot.productsByBarcode[barcode] else {
+                continue
+            }
+
+            if let localRemoteID = localProduct.remoteID,
+               localRemoteID != payload.remoteID {
+                throw SupabasePullApplyError.previewStale
+            }
+
+            if hasPendingLocalProductChange(
+                payload: payload,
+                barcode: barcode,
+                pendingChanges: pendingProductChanges
+            ) {
+                continue
+            }
+
+            guard localProduct.remoteDeletedAt != (payload.remoteDeletedAt ?? localProduct.remoteDeletedAt)
+                    || localProduct.remoteUpdatedAt != payload.remoteUpdatedAt
+                    || localProduct.remoteID != payload.remoteID else {
+                continue
+            }
+
+            let fingerprint = SupabasePullApplyProductFingerprint(snapshot: localProduct)
+            tombstones.append(
+                SupabasePullApplyProductTombstone(
+                    barcode: barcode,
+                    payload: payload,
+                    expectedFingerprint: fingerprint
+                )
+            )
+            expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: fingerprint))
         }
 
+        let applicablePayloads = inserts.map(\.payload) + updates.map(\.payload)
         let suppliersToCreate = lookupsToCreate(
-            from: inserts.map(\.payload) + updates.map(\.payload),
-            existing: snapshot.suppliersByNormalizedName,
-            existingRemoteIDs: Set(snapshot.suppliersByRemoteID.keys),
-            value: \.supplierName,
-            remoteID: \.supplierRemoteID,
-            remoteUpdatedAt: \.supplierRemoteUpdatedAt,
-            remoteDeletedAt: \.supplierRemoteDeletedAt
+            lookupsToCreate(
+                from: applicablePayloads,
+                existing: snapshot.suppliersByNormalizedName,
+                existingRemoteIDs: Set(snapshot.suppliersByRemoteID.keys),
+                value: \.supplierName,
+                remoteID: \.supplierRemoteID,
+                remoteUpdatedAt: \.supplierRemoteUpdatedAt,
+                remoteDeletedAt: \.supplierRemoteDeletedAt
+            ) + lookupsToCreate(
+                from: preview.remoteSupplierLookups,
+                existing: snapshot.suppliersByNormalizedName,
+                existingRemoteIDs: Set(snapshot.suppliersByRemoteID.keys)
+            )
         )
         let categoriesToCreate = lookupsToCreate(
-            from: inserts.map(\.payload) + updates.map(\.payload),
-            existing: snapshot.categoriesByNormalizedName,
-            existingRemoteIDs: Set(snapshot.categoriesByRemoteID.keys),
-            value: \.categoryName,
-            remoteID: \.categoryRemoteID,
-            remoteUpdatedAt: \.categoryRemoteUpdatedAt,
-            remoteDeletedAt: \.categoryRemoteDeletedAt
+            lookupsToCreate(
+                from: applicablePayloads,
+                existing: snapshot.categoriesByNormalizedName,
+                existingRemoteIDs: Set(snapshot.categoriesByRemoteID.keys),
+                value: \.categoryName,
+                remoteID: \.categoryRemoteID,
+                remoteUpdatedAt: \.categoryRemoteUpdatedAt,
+                remoteDeletedAt: \.categoryRemoteDeletedAt
+            ) + lookupsToCreate(
+                from: preview.remoteCategoryLookups,
+                existing: snapshot.categoriesByNormalizedName,
+                existingRemoteIDs: Set(snapshot.categoriesByRemoteID.keys)
+            )
         )
+
+        guard !inserts.isEmpty ||
+            !updates.isEmpty ||
+            !tombstones.isEmpty ||
+            !suppliersToCreate.isEmpty ||
+            !categoriesToCreate.isEmpty else {
+            throw SupabasePullApplyError.noApplicableChanges
+        }
 
         return SupabasePullApplyPlan(
             generatedAt: preview.generatedAt,
@@ -358,12 +442,17 @@ nonisolated struct SupabasePullApplyService: Sendable {
             suppliersToCreate: suppliersToCreate,
             categoriesToCreate: categoriesToCreate,
             productInserts: inserts.sorted { $0.barcode < $1.barcode },
-            productUpdates: updates.sorted { $0.barcode < $1.barcode }
+            productUpdates: updates.sorted { $0.barcode < $1.barcode },
+            productTombstones: tombstones.sorted { $0.barcode < $1.barcode }
         )
     }
 
     func apply(plan: SupabasePullApplyPlan, context: ModelContext) throws -> SupabasePullApplyResult {
-        guard !plan.productInserts.isEmpty || !plan.productUpdates.isEmpty else {
+        guard !plan.productInserts.isEmpty ||
+            !plan.productUpdates.isEmpty ||
+            !plan.productTombstones.isEmpty ||
+            !plan.suppliersToCreate.isEmpty ||
+            !plan.categoriesToCreate.isEmpty else {
             throw SupabasePullApplyError.noApplicableChanges
         }
 
@@ -375,6 +464,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
 
         var inserted = 0
         var updated = 0
+        var productTombstoned = 0
         var suppliersCreated = 0
         var categoriesCreated = 0
 
@@ -468,6 +558,16 @@ nonisolated struct SupabasePullApplyService: Sendable {
             }
         }
 
+        for tombstone in plan.productTombstones {
+            guard let product = productsByBarcode[tombstone.barcode] else {
+                throw SupabasePullApplyError.previewStale
+            }
+
+            if applyProductTombstone(tombstone.payload, to: product) {
+                productTombstoned += 1
+            }
+        }
+
         do {
             try context.save()
         } catch {
@@ -479,7 +579,8 @@ nonisolated struct SupabasePullApplyService: Sendable {
             inserted: inserted,
             updated: updated,
             suppliersCreated: suppliersCreated,
-            categoriesCreated: categoriesCreated
+            categoriesCreated: categoriesCreated,
+            productTombstoned: productTombstoned
         )
     }
 
@@ -531,7 +632,11 @@ nonisolated struct SupabasePullApplyService: Sendable {
         context: ModelContext,
         onProgress: @escaping @MainActor @Sendable (SupabasePullApplyProgress) -> Void = { _ in }
     ) async throws -> SupabasePullApplyResult {
-        guard !plan.productInserts.isEmpty || !plan.productUpdates.isEmpty else {
+        guard !plan.productInserts.isEmpty ||
+            !plan.productUpdates.isEmpty ||
+            !plan.productTombstones.isEmpty ||
+            !plan.suppliersToCreate.isEmpty ||
+            !plan.categoriesToCreate.isEmpty else {
             throw SupabasePullApplyError.noApplicableChanges
         }
 
@@ -544,6 +649,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
 
         var inserted = 0
         var updated = 0
+        var productTombstoned = 0
         var suppliersCreated = 0
         var categoriesCreated = 0
         var mutationsSinceSave = 0
@@ -552,7 +658,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
         func saveBatchIfNeeded(force: Bool = false) async throws {
             guard mutationsSinceSave > 0, force || mutationsSinceSave >= batchSize else { return }
             await publishProgress(
-                SupabasePullApplyProgress(stage: .saving, current: inserted + updated, total: plan.plannedInsertedCount + plan.plannedUpdatedCount),
+                SupabasePullApplyProgress(stage: .saving, current: inserted + updated + productTombstoned, total: plan.plannedProductMutationCount),
                 onProgress: onProgress
             )
             do {
@@ -610,7 +716,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
             }
         }
 
-        let productTotal = plan.plannedInsertedCount + plan.plannedUpdatedCount
+        let productTotal = plan.plannedProductMutationCount
         var processedProducts = 0
         await publishProgress(SupabasePullApplyProgress(stage: .products, current: 0, total: productTotal), onProgress: onProgress)
         for insert in plan.productInserts {
@@ -695,6 +801,24 @@ nonisolated struct SupabasePullApplyService: Sendable {
             }
         }
 
+        for tombstone in plan.productTombstones {
+            try Task.checkCancellation()
+            guard let product = productsByBarcode[tombstone.barcode] else {
+                throw SupabasePullApplyError.previewStale
+            }
+
+            if applyProductTombstone(tombstone.payload, to: product) {
+                productTombstoned += 1
+                mutationsSinceSave += 1
+            }
+            processedProducts += 1
+            await publishProgress(SupabasePullApplyProgress(stage: .products, current: processedProducts, total: productTotal), onProgress: onProgress)
+            try await saveBatchIfNeeded()
+            if processedProducts.isMultiple(of: batchSize) {
+                await Task.yield()
+            }
+        }
+
         try await saveBatchIfNeeded(force: true)
         await publishProgress(SupabasePullApplyProgress(stage: .completed, current: productTotal, total: productTotal), onProgress: onProgress)
 
@@ -702,7 +826,8 @@ nonisolated struct SupabasePullApplyService: Sendable {
             inserted: inserted,
             updated: updated,
             suppliersCreated: suppliersCreated,
-            categoriesCreated: categoriesCreated
+            categoriesCreated: categoriesCreated,
+            productTombstoned: productTombstoned
         )
     }
 
@@ -951,6 +1076,26 @@ nonisolated struct SupabasePullApplyService: Sendable {
             product.remoteDeletedAt = payload.remoteDeletedAt
             didMutate = true
         }
+    }
+
+    private func applyProductTombstone(
+        _ payload: SyncPreviewProductApplyPayload,
+        to product: Product
+    ) -> Bool {
+        var didMutate = false
+        if product.remoteID != payload.remoteID {
+            product.remoteID = payload.remoteID
+            didMutate = true
+        }
+        if product.remoteUpdatedAt != payload.remoteUpdatedAt {
+            product.remoteUpdatedAt = payload.remoteUpdatedAt
+            didMutate = true
+        }
+        if product.remoteDeletedAt != payload.remoteDeletedAt {
+            product.remoteDeletedAt = payload.remoteDeletedAt
+            didMutate = true
+        }
+        return didMutate
     }
 
     private func resolveSupplier(
@@ -1206,6 +1351,47 @@ nonisolated struct SupabasePullApplyService: Sendable {
             )
         }
 
+        return pending
+            .map(\.value)
+            .sorted { $0.normalizedName < $1.normalizedName }
+    }
+
+    private func lookupsToCreate(
+        from lookups: [SyncPreviewLookupSummary],
+        existing: [String: String],
+        existingRemoteIDs: Set<UUID>
+    ) -> [SupabasePullApplyLookup] {
+        var pending: [String: SupabasePullApplyLookup] = [:]
+
+        for lookup in lookups {
+            guard lookup.remoteDeletedAt == nil,
+                  !existingRemoteIDs.contains(lookup.remoteID),
+                  let displayName = SupabasePullPreviewNormalizer.semanticString(lookup.displayName),
+                  let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(displayName),
+                  existing[normalizedName] == nil,
+                  pending[normalizedName] == nil else {
+                continue
+            }
+
+            pending[normalizedName] = SupabasePullApplyLookup(
+                normalizedName: normalizedName,
+                displayName: displayName,
+                remoteID: lookup.remoteID,
+                remoteUpdatedAt: lookup.remoteUpdatedAt,
+                remoteDeletedAt: nil
+            )
+        }
+
+        return pending
+            .map(\.value)
+            .sorted { $0.normalizedName < $1.normalizedName }
+    }
+
+    private func lookupsToCreate(_ lookups: [SupabasePullApplyLookup]) -> [SupabasePullApplyLookup] {
+        var pending: [String: SupabasePullApplyLookup] = [:]
+        for lookup in lookups where pending[lookup.normalizedName] == nil {
+            pending[lookup.normalizedName] = lookup
+        }
         return pending
             .map(\.value)
             .sorted { $0.normalizedName < $1.normalizedName }

@@ -214,6 +214,45 @@ final class LocalPendingAggregatedPushPlannerTests: XCTestCase {
         XCTAssertEqual(plan.catalogBatch?.plan.writeCandidates.count, 1)
     }
 
+    func testRemoteProductDeletePlansOutboundTombstoneInsteadOfUnsupportedDelete() async throws {
+        let context = try makeContext()
+        let remoteID = UUID(uuidString: "09400000-0000-4094-8094-000000000314")!
+        let product = Product(
+            barcode: "TASK114_TOMBSTONE_PLAN",
+            remoteID: remoteID,
+            remoteUpdatedAt: now,
+            productName: "Tombstone source"
+        )
+        context.insert(product)
+        try context.save()
+        try commitBaseline(context)
+
+        try LocalPendingChangeAccumulator(context: context, ownerUserID: ownerID, now: { self.now })
+            .recordProductChange(
+                product: product,
+                operation: .delete,
+                origin: .manualCatalogSave,
+                changedFields: ["tombstone"],
+                baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(product)
+            )
+        context.delete(product)
+        try context.save()
+
+        let plan = try await LocalPendingAggregatedPushPlanner(
+            context: context,
+            now: { self.now },
+            includesProductPrice: false
+        ).makePlan(ownerUserID: ownerID)
+
+        XCTAssertFalse(plan.blockers.contains(.unsupportedDelete))
+        XCTAssertEqual(plan.counts.unsupportedCount, 0)
+        XCTAssertEqual(plan.counts.selectedCatalogChanges, 1)
+        XCTAssertEqual(plan.catalogBatch?.plan.writeCandidates.count, 1)
+        let candidate = try XCTUnwrap(plan.catalogBatch?.plan.writeCandidates.first)
+        XCTAssertEqual(candidate.action, .dryRunTombstoneCandidate)
+        XCTAssertEqual(candidate.remoteID, remoteID)
+    }
+
     func testProductPriceDedupeUsesSingleRemoteFetchAndDeterministicFingerprint() async throws {
         let context = try makeContext()
         let productID = UUID(uuidString: "09400000-0000-4094-8094-000000000201")!

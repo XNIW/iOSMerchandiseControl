@@ -426,6 +426,7 @@
 "options.supabase.pushpreflight.metric.scopeBlockedDependencies" = "Dipendenze bloccate";
 "options.supabase.pushpreflight.category.dryRunCreateCandidate" = "Create candidate: %d";
 "options.supabase.pushpreflight.category.dryRunUpdateCandidate" = "Update candidate: %d";
+"options.supabase.pushpreflight.category.dryRunTombstoneCandidate" = "Tombstone candidate: %d";
 "options.supabase.pushpreflight.category.noOpAlreadySynced" = "No-op gia' allineati: %d";
 "options.supabase.pushpreflight.category.blockedNoRemoteID" = "Bloccati: remoteID mancante/collisione barcode: %d";
 "options.supabase.pushpreflight.category.blockedAccountMismatch" = "Bloccati: account mismatch: %d";
@@ -1170,6 +1171,8 @@
 "options.localDatabase.needsDownload.detail" = "Scarica il database dal cloud prima di usare questi dati locali come riferimento.";
 "options.localDatabase.ready.title" = "Database locale aggiornato";
 "options.localDatabase.ready.detail" = "Questo dispositivo ha un punto cloud salvato.";
+"options.localDatabase.reconcile.title" = "Da riconciliare";
+"options.localDatabase.reconcile.detail" = "I conteggi locali non coincidono con il cloud. Esegui di nuovo la sync.";
 "options.localDatabase.needsCheck.title" = "Database locale da controllare";
 "options.localDatabase.needsCheck.detail" = "Controlla il cloud prima di sincronizzare altre modifiche.";
 "options.supabase.automaticSync.active.title" = "Sincronizzazione automatica attiva";

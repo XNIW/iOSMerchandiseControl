@@ -682,15 +682,67 @@ actor SupabaseInventoryService {
     }
 
     func fetchProductPriceCount() async throws -> Int? {
-        let ownerUserID = try await requireAuthenticatedSession()
-        let client = clientProvider.client
+        try await fetchExactRowCount(table: "inventory_product_prices", ownerUserID: nil, activeOnly: false)
+    }
 
+    /// TASK-114: conteggi remoti leggeri per reconciliation (head + count exact).
+    func fetchReconciliationRemoteCounts() async throws -> SyncInventoryCountSnapshot {
+        let ownerUserID = try await requireAuthenticatedSession()
+        async let products = fetchExactRowCount(
+            table: "inventory_products",
+            ownerUserID: ownerUserID,
+            activeOnly: true
+        )
+        async let suppliers = fetchExactRowCount(
+            table: "inventory_suppliers",
+            ownerUserID: ownerUserID,
+            activeOnly: true
+        )
+        async let categories = fetchExactRowCount(
+            table: "inventory_categories",
+            ownerUserID: ownerUserID,
+            activeOnly: true
+        )
+        async let prices = fetchExactRowCount(
+            table: "inventory_product_prices",
+            ownerUserID: ownerUserID,
+            activeOnly: false
+        )
+        async let history = fetchExactRowCount(
+            table: "shared_sheet_sessions",
+            ownerUserID: ownerUserID,
+            activeOnly: true
+        )
+        return SyncInventoryCountSnapshot(
+            products: try await products ?? 0,
+            suppliers: try await suppliers ?? 0,
+            categories: try await categories ?? 0,
+            productPrices: try await prices ?? 0,
+            historySessions: try await history ?? 0
+        )
+    }
+
+    private func fetchExactRowCount(
+        table: String,
+        ownerUserID: UUID?,
+        activeOnly: Bool
+    ) async throws -> Int? {
+        let resolvedOwner: UUID
+        if let ownerUserID {
+            resolvedOwner = ownerUserID
+        } else {
+            resolvedOwner = try await requireAuthenticatedSession()
+        }
+        let client = clientProvider.client
         do {
-            let response = try await client
-                .from("inventory_product_prices")
+            var query = client
+                .from(table)
                 .select("id", head: true, count: .exact)
-                .eq("owner_user_id", value: ownerUserID.uuidString)
-                .execute()
+                .eq("owner_user_id", value: resolvedOwner.uuidString)
+            if activeOnly {
+                query = query.is("deleted_at", value: nil)
+            }
+            let response = try await query.execute()
             return response.count
         } catch let error as DecodingError {
             throw mapDecodingError(error)

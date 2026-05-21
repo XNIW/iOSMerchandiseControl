@@ -485,6 +485,7 @@ final class LocalPendingAggregatedPushPlanner {
         var supplierKeys = Set<String>()
         var categoryKeys = Set<String>()
         var productKeys = Set<String>()
+        var productTombstones: [PushCandidate] = []
         var changeIDs: [String] = []
 
         for change in changes {
@@ -507,8 +508,19 @@ final class LocalPendingAggregatedPushPlanner {
                 changeIDs.append(change.changeID)
             case .product:
                 guard change.operation != .delete else {
-                    blockers.insert(.unsupportedDelete)
-                    counts.unsupportedCount += 1
+                    if let remoteID = productTombstoneRemoteID(for: change) {
+                        productTombstones.append(PushCandidate(
+                            entityKind: .product,
+                            localID: change.logicalKey,
+                            remoteID: remoteID,
+                            action: .dryRunTombstoneCandidate,
+                            detail: "Product tombstone"
+                        ))
+                        changeIDs.append(change.changeID)
+                    } else {
+                        blockers.insert(.unsupportedDelete)
+                        counts.unsupportedCount += 1
+                    }
                     continue
                 }
                 productKeys.insert(change.logicalKey)
@@ -555,7 +567,7 @@ final class LocalPendingAggregatedPushPlanner {
         guard !changeIDs.isEmpty else { return nil }
 
         let baseline = try readCatalogBaseline(ownerUserID: ownerUserID)
-        let plan = preflightService.makePlan(input: ManualPushPreflightInput(
+        let preflightPlan = preflightService.makePlan(input: ManualPushPreflightInput(
             baselineRunID: baseline.runID,
             pullState: ManualPushPullState(isComplete: true, hasSourceErrors: false),
             accountState: baseline.accountState,
@@ -564,6 +576,20 @@ final class LocalPendingAggregatedPushPlanner {
             categories: selectedCategories.map(makeCategoryState),
             products: selectedProducts.map(makeProductState)
         ))
+        let plan = productTombstones.isEmpty
+            ? preflightPlan
+            : ManualPushPlan(
+                generatedAt: preflightPlan.generatedAt,
+                baselineRunID: preflightPlan.baselineRunID,
+                ownerUserID: preflightPlan.ownerUserID,
+                fingerprintSchemaVersion: preflightPlan.fingerprintSchemaVersion,
+                scope: preflightPlan.scope,
+                scopeSummary: preflightPlan.scopeSummary,
+                candidates: preflightPlan.candidates + productTombstones.sorted { $0.id < $1.id },
+                blockedReasons: preflightPlan.blockedReasons,
+                warnings: preflightPlan.warnings,
+                futureEventChangedCount: preflightPlan.futureEventChangedCount
+            )
 
         counts.catalogWriteCount = plan.writeCandidates.count
         if plan.hasBlockers {
@@ -573,6 +599,17 @@ final class LocalPendingAggregatedPushPlanner {
             changeIDs: changeIDs.uniquedSorted(),
             plan: plan
         )
+    }
+
+    private func productTombstoneRemoteID(for change: LocalPendingChange) -> UUID? {
+        if let remoteID = change.entityRemoteID {
+            return remoteID
+        }
+        let prefix = "\(LocalPendingChangeEntityKind.product.rawValue):remote:"
+        guard change.logicalKey.hasPrefix(prefix) else {
+            return nil
+        }
+        return UUID(uuidString: String(change.logicalKey.dropFirst(prefix.count)))
     }
 
     private func makeProductPriceBatch(

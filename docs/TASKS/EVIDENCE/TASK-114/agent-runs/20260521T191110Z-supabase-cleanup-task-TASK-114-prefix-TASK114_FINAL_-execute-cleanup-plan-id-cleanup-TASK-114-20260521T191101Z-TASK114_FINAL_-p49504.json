@@ -1,0 +1,62 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191110Z-supabase-cleanup-task-TASK-114-prefix-TASK114_FINAL_-execute-cleanup-plan-id-cleanup-TASK-114-20260521T191101Z-TASK114_FINAL_-p49504.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191110Z-supabase-cleanup-task-TASK-114-prefix-TASK114_FINAL_-execute-cleanup-plan-id-cleanup-TASK-114-20260521T191101Z-TASK114_FINAL_-p49504.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191110Z-supabase-cleanup-task-TASK-114-prefix-TASK114_FINAL_-execute-cleanup-plan-id-cleanup-TASK-114-20260521T191101Z-TASK114_FINAL_-p49504.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-113-08",
+    "CA-113-19",
+    "CA-113-24",
+    "CA-113-30"
+  ],
+  "cleanup_plan_id": "cleanup-TASK-114-20260521T191101Z-TASK114_FINAL_",
+  "command": "supabase cleanup --task TASK-114 --prefix TASK114_FINAL_ --execute --cleanup-plan-id cleanup-TASK-114-20260521T191101Z-TASK114_FINAL_",
+  "command_slug": "supabase-cleanup-task-TASK-114-prefix-TASK114_FINAL_-execute-cleanup-plan-id-cleanup-TASK-114-20260521T191101Z-TASK114_FINAL_",
+  "device_simulator_redacted": {
+    "android_serial": "<REDACTED>",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro"
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 3387,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "1",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-114",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_RUN_PREFIX": "TASK113_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-114"
+  },
+  "exit_code": 0,
+  "git_sha": "4b74773",
+  "next_action_recommended": "Run residue-check for the same prefix/profile.",
+  "platform": "supabase",
+  "profile": "linked",
+  "raw_log_redacted": true,
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": true,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "pass",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260521T191110Z-supabase-cleanup-task-TASK-114-prefix-TASK114_FINAL_-execute-cleanup-plan-id-cleanup-TASK-114-20260521T191101Z-TASK114_FINAL_-p49504",
+  "safety_level": "cleanup-execute",
+  "schema_version": "1.1",
+  "task_id": "TASK-114",
+  "test_prefix": "TASK114_FINAL_",
+  "timestamp_end": "2026-05-21T19:11:14Z",
+  "timestamp_start": "2026-05-21T19:11:10Z",
+  "warnings": []
+}

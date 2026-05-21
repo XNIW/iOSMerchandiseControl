@@ -47,7 +47,7 @@ UNION ALL SELECT 'product_prices', count(*)
   WHERE p.barcode LIKE '${like_prefix}' OR p.product_name LIKE '${like_prefix}'
 UNION ALL SELECT 'shared_sheet_sessions', count(*)
   FROM shared_sheet_sessions
-  WHERE remote_id LIKE '${like_prefix}' OR supplier LIKE '${like_prefix}' OR category LIKE '${like_prefix}' OR data::text LIKE '${like_prefix}'
+  WHERE remote_id LIKE '${like_prefix}' OR display_name LIKE '${like_prefix}' OR supplier LIKE '${like_prefix}' OR category LIKE '${like_prefix}' OR data::text LIKE '${like_prefix}'
 UNION ALL SELECT 'sync_events', count(*)
   FROM sync_events
   WHERE client_event_id LIKE '${like_prefix}' OR source_device_id LIKE '${like_prefix}' OR entity_ids::text LIKE '${like_prefix}' OR metadata::text LIKE '${like_prefix}';
@@ -73,7 +73,6 @@ mc_supabase_residue_count() {
 mc_supabase_cleanup_sql() {
   local like_prefix="$1"
   cat <<SQL
--- FK-safe TASK scoped cleanup only; no auth.users, no truncate, no reset.
 DELETE FROM inventory_product_prices ipp
 USING inventory_products p
 WHERE p.id = ipp.product_id
@@ -82,7 +81,7 @@ DELETE FROM inventory_products WHERE barcode LIKE '${like_prefix}' OR product_na
 DELETE FROM inventory_suppliers WHERE name LIKE '${like_prefix}';
 DELETE FROM inventory_categories WHERE name LIKE '${like_prefix}';
 DELETE FROM shared_sheet_sessions
-WHERE remote_id LIKE '${like_prefix}' OR supplier LIKE '${like_prefix}' OR category LIKE '${like_prefix}' OR data::text LIKE '${like_prefix}';
+WHERE remote_id LIKE '${like_prefix}' OR display_name LIKE '${like_prefix}' OR supplier LIKE '${like_prefix}' OR category LIKE '${like_prefix}' OR data::text LIKE '${like_prefix}';
 DELETE FROM sync_events
 WHERE client_event_id LIKE '${like_prefix}' OR source_device_id LIKE '${like_prefix}' OR entity_ids::text LIKE '${like_prefix}' OR metadata::text LIKE '${like_prefix}';
 SQL
@@ -444,7 +443,112 @@ mc_cmd_live() {
   mc_require_live || return $?
   MC_TEST_PREFIX="$prefix"
   case "$sub" in
+    reconcile-counts)
+      local profile
+      profile="$(mc_parse_opt --profile "$@" || true)"
+      profile="${profile:-${MC_SUPABASE_PROFILE:-linked}}"
+      mc_sync_reconcile_counts "$task_id" "$prefix" "$profile"
+      ;;
     sync-matrix)
+      if [[ "$task_id" == "TASK-114" ]]; then
+        local run_prefix steps_file steps fails blocked
+        run_prefix="${prefix//\*/}"
+        run_prefix="${run_prefix%_}_MATRIX_${MC_TIMESTAMP}_"
+        mc_validate_task_prefix "$run_prefix" || return $?
+        MC_TEST_PREFIX="$run_prefix"
+        steps_file="$(mktemp)"
+        steps=0
+        fails=0
+        blocked=0
+
+        mc_task114_matrix_step() {
+          local name="$1"
+          shift
+          local code status
+          mc_report_log "TASK114_MATRIX_STEP start name=${name}"
+          "$@"
+          code=$?
+          steps=$((steps + 1))
+          case "$code" in
+            0) status="pass" ;;
+            2) status="blocked"; blocked=$((blocked + 1)) ;;
+            *) status="fail"; fails=$((fails + 1)) ;;
+          esac
+          mc_report_log "TASK114_MATRIX_STEP summary name=${name} summary=${MC_SUMMARY:-unset} next=${MC_NEXT_ACTION:-unset}"
+          mc_report_log "TASK114_MATRIX_STEP end name=${name} status=${status} exit=${code}"
+          python3 - "$steps_file" "$name" "$status" "$code" <<'PY'
+import json, sys
+path, name, status, code = sys.argv[1:5]
+with open(path, "a", encoding="utf-8") as fh:
+    fh.write(json.dumps({"name": name, "status": status, "exit_code": int(code)}) + "\n")
+PY
+          return "$code"
+        }
+
+        mc_task114_matrix_step "preflight" mc_cmd_preflight || true
+        mc_task114_matrix_step "supabase_residue_readonly" mc_supabase_residue_count "$run_prefix" "${MC_SUPABASE_PROFILE:-linked}" || true
+        mc_task114_matrix_step "ios_auth_preflight" mc_ios_auth_preflight || true
+        mc_task114_matrix_step "android_auth_preflight" mc_android_auth_preflight || true
+        mc_task114_matrix_step "android_write_product_history_create_update_tombstone" \
+          mc_android_task114_matrix_step test114AndroidWriteProductHistoryMatrix "$run_prefix" || true
+        mc_task114_matrix_step "ios_pull_android_product_history_create_update_tombstone" \
+          mc_ios_task114_matrix_step test114IOSPullAndroidProductHistoryMatrix "$run_prefix" || true
+        mc_task114_matrix_step "ios_write_product_history_create_update_tombstone" \
+          mc_ios_task114_matrix_step test114IOSWriteProductHistoryMatrix "$run_prefix" || true
+        mc_task114_matrix_step "android_pull_ios_product_history_create_update_tombstone" \
+          mc_android_task114_matrix_step test114AndroidPullIOSProductHistoryMatrix "$run_prefix" || true
+
+        MC_RECONCILIATION_JSON="$(python3 - "$steps_file" "$run_prefix" <<'PY'
+import json, sys
+path, prefix = sys.argv[1:3]
+steps = []
+with open(path, encoding="utf-8") as fh:
+    for line in fh:
+        line = line.strip()
+        if line:
+            steps.append(json.loads(line))
+covered = [
+    "Android -> Supabase -> iOS product create",
+    "Android -> Supabase -> iOS product update",
+    "Android -> Supabase -> iOS product tombstone/delete",
+    "iOS -> Supabase -> Android product create",
+    "iOS -> Supabase -> Android product update",
+    "iOS -> Supabase -> Android product tombstone/delete",
+    "Android -> Supabase -> iOS history create",
+    "Android -> Supabase -> iOS history update/rename",
+    "Android -> Supabase -> iOS history tombstone/delete",
+    "iOS -> Supabase -> Android history create",
+    "iOS -> Supabase -> Android history update/rename",
+    "iOS -> Supabase -> Android history tombstone/delete",
+]
+status = "PASS" if steps and all(s["status"] == "pass" for s in steps) else (
+    "BLOCKED" if any(s["status"] == "blocked" for s in steps) and not any(s["status"] == "fail" for s in steps) else "FAIL"
+)
+print(json.dumps({
+    "task": "TASK-114",
+    "matrix_prefix": prefix,
+    "status": status,
+    "steps": steps,
+    "covered_legs": covered,
+}, sort_keys=True))
+PY
+)"
+        rm -f "$steps_file"
+
+        if [[ "$fails" -gt 0 ]]; then
+          MC_SUMMARY="Live sync-matrix FAIL for ${run_prefix}: steps=${steps} fails=${fails} blocked=${blocked}."
+          MC_NEXT_ACTION="Inspect failing matrix step evidence/log, fix root cause, then rerun sync-matrix and cleanup scoped data."
+          return "$MC_EXIT_FAIL"
+        fi
+        if [[ "$blocked" -gt 0 ]]; then
+          MC_SUMMARY="Live sync-matrix BLOCKED for ${run_prefix}: steps=${steps} blocked=${blocked}."
+          MC_NEXT_ACTION="Resolve device/auth/Supabase blocker and rerun TASK-114 sync-matrix."
+          return "$MC_EXIT_BLOCKED"
+        fi
+        MC_SUMMARY="Live sync-matrix PASS for ${run_prefix}: Product + History create/update/tombstone covered both directions."
+        MC_NEXT_ACTION="Run TASK-114 cleanup-and-verify/residue, reconcile-counts and evidence scans."
+        return "$MC_EXIT_PASS"
+      fi
       local steps=0 fails=0 blocked=0
       mc_cmd_preflight || blocked=$((blocked + 1)); steps=$((steps + 1))
       mc_supabase_residue_count "$prefix" "${MC_SUPABASE_PROFILE:-linked}" >/dev/null 2>&1 || blocked=$((blocked + 1)); steps=$((steps + 1))

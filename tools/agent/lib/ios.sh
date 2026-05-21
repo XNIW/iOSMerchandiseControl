@@ -9,6 +9,30 @@ mc_ios_result_bundle() {
   printf '%s' "/tmp/mc-agent-ios-${slug}-${MC_TIMESTAMP}.xcresult"
 }
 
+mc_ios_plist_set_or_add() {
+  local plist="$1"
+  local path="$2"
+  local value="$3"
+  /usr/libexec/PlistBuddy -c "Set ${path} ${value}" "$plist" 2>/dev/null \
+    || /usr/libexec/PlistBuddy -c "Add ${path} string ${value}" "$plist"
+}
+
+mc_ios_plist_ensure_dict() {
+  local plist="$1"
+  local path="$2"
+  /usr/libexec/PlistBuddy -c "Print ${path}" "$plist" >/dev/null 2>&1 \
+    || /usr/libexec/PlistBuddy -c "Add ${path} dict" "$plist"
+}
+
+mc_ios_xctestrun_set_env() {
+  local plist="$1"
+  local key="$2"
+  local value="$3"
+  local env_path=":TestConfigurations:0:TestTargets:0:EnvironmentVariables"
+  mc_ios_plist_ensure_dict "$plist" "$env_path" || return $?
+  mc_ios_plist_set_or_add "$plist" "${env_path}:${key}" "$value"
+}
+
 mc_ios_xcode_lock_path() {
   printf '%s' "$MC_EVIDENCE_ABS/agent-runs/.mc-agent-xcode.lock"
 }
@@ -98,6 +122,9 @@ mc_ios_test() {
   case "$suite" in
     sync)
       tests=(
+        -only-testing:iOSMerchandiseControlTests/SyncCountReconciliationTests
+        -only-testing:iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests
+        -only-testing:iOSMerchandiseControlTests/SupabasePullApplyServiceTests
         -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests
         -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests
         -only-testing:iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests
@@ -234,24 +261,54 @@ mc_ios_auth_preflight() {
   MC_REQUIRES_LIVE="true"
   MC_CA_REFS="CA-113-07,CA-113-19,CA-113-30"
   mc_require_live || return $?
-  local dest bundle code
+  local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped
   dest="$(mc_ios_destination)"
   bundle="$(mc_ios_result_bundle auth-preflight)"
+  test_log="$(mktemp /tmp/mc-agent-ios-auth-preflight.XXXXXX.log)"
+  derived_data="/tmp/mc-agent-ios-auth-preflight-${MC_TIMESTAMP}-DerivedData"
+  xctestrun="${derived_data}/Build/Products/task114-ios-auth-preflight.xctestrun"
   MC_ARTIFACT_XCRESULT="$bundle"
   mc_git_context "$MC_IOS_REPO"
   mc_ios_acquire_xcode_lock || return $?
   (
     cd "$MC_IOS_REPO" || exit 3
-    TASK112_IOS_AUTH_PREFLIGHT=1 TASK112_LIVE_ACCEPTANCE=1 \
-      xcodebuild test -project iOSMerchandiseControl.xcodeproj \
+    xcodebuild build-for-testing -project iOSMerchandiseControl.xcodeproj \
         -scheme "${MC_IOS_SCHEME}" -configuration Debug \
-        -destination "$dest" -resultBundlePath "$bundle" \
+        -destination "$dest" -derivedDataPath "$derived_data" \
         -parallel-testing-enabled NO \
         -only-testing:iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testTask103IOSAuthPreflightWhenEnabled
-  )
+  ) >"$test_log" 2>&1
   code=$?
-  mc_ios_release_xcode_lock
   if [[ "$code" -eq 0 ]]; then
+    generated_xctestrun="$(find "$derived_data/Build/Products" -name '*.xctestrun' 2>/dev/null | sort | head -1)"
+    if [[ -z "$generated_xctestrun" ]]; then
+      code=2
+      printf '\nTASK114_IOS_AUTH_PREFLIGHT_XCTESTRUN_MISSING\n' >>"$test_log"
+    else
+      mkdir -p "$(dirname "$xctestrun")"
+      cp "$generated_xctestrun" "$xctestrun"
+      mc_ios_xctestrun_set_env "$xctestrun" "TASK112_IOS_AUTH_PREFLIGHT" "1" >>"$test_log" 2>&1
+      mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK112_IOS_AUTH_PREFLIGHT" "1" >>"$test_log" 2>&1
+      mc_ios_xctestrun_set_env "$xctestrun" "TASK112_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
+      mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK112_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
+      (
+        cd "$MC_IOS_REPO" || exit 3
+        xcodebuild test-without-building -xctestrun "$xctestrun" \
+          -destination "$dest" -resultBundlePath "$bundle" \
+          -only-testing:iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testTask103IOSAuthPreflightWhenEnabled
+      ) >>"$test_log" 2>&1
+      code=$?
+    fi
+  fi
+  mc_ios_release_xcode_lock
+  skipped=0
+  if grep -q "Test skipped" "$test_log"; then
+    skipped=1
+  fi
+  mc_report_log "$(mc_redact_text "$(tail -n 80 "$test_log")")"
+  rm -f "$test_log"
+  rm -rf "$derived_data"
+  if [[ "$code" -eq 0 && "$skipped" -eq 0 ]]; then
     MC_SUMMARY="iOS auth-preflight PASS. xcresult=${bundle}"
     MC_NEXT_ACTION="Run scoped live-write."
     return "$MC_EXIT_PASS"
@@ -259,6 +316,179 @@ mc_ios_auth_preflight() {
   MC_SUMMARY="iOS auth-preflight BLOCKED/FAIL. xcresult=${bundle}"
   MC_NEXT_ACTION="Open app, complete login, verify session restore, then retry."
   return "$MC_EXIT_BLOCKED"
+}
+
+mc_ios_live_full_pull() {
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-03,CA-06,CA-10"
+  mc_require_live || return $?
+  local dest bundle before_json after_json code test_log store_path store_hash derived_data xctestrun generated_xctestrun detail_status
+  dest="$(mc_ios_destination)"
+  bundle="$(mc_ios_result_bundle live-full-pull)"
+  test_log="$(mktemp /tmp/mc-agent-ios-live-full-pull.XXXXXX.log)"
+  derived_data="/tmp/mc-agent-ios-live-full-pull-${MC_TIMESTAMP}-DerivedData"
+  xctestrun="${derived_data}/Build/Products/task114-ios-live-full-pull.xctestrun"
+  MC_ARTIFACT_XCRESULT="$bundle"
+  mc_git_context "$MC_IOS_REPO"
+
+  mc_sync_counts_ios "$MC_TASK_ID"
+  before_json="$MC_SYNC_JSON_RESULT"
+  store_path="$(mc_sync_ios_container | { read -r container && mc_sync_ios_store_path "$container"; } 2>/dev/null || true)"
+  if [[ -z "$store_path" ]]; then
+    MC_SUMMARY="iOS live-full-pull BLOCKED. App SwiftData store path is unavailable."
+    MC_NEXT_ACTION="Install/launch the iOS app on the booted simulator, then retry ios live-full-pull."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  store_hash="$(printf '%s' "$store_path" | shasum -a 256 | awk '{print $1}')"
+
+  mc_ios_acquire_xcode_lock || return $?
+  (
+    cd "$MC_IOS_REPO" || exit 3
+    xcodebuild build-for-testing -project iOSMerchandiseControl.xcodeproj \
+      -scheme "${MC_IOS_SCHEME}" -configuration Debug \
+      -destination "$dest" -derivedDataPath "$derived_data" \
+      -parallel-testing-enabled NO
+  ) >"$test_log" 2>&1
+  code=$?
+  if [[ "$code" -eq 0 ]]; then
+    generated_xctestrun="$(find "$derived_data/Build/Products" -name '*.xctestrun' 2>/dev/null | sort | head -1)"
+    if [[ -z "$generated_xctestrun" ]]; then
+      code=2
+      printf '\nTASK114_IOS_FULL_PULL_XCTESTRUN_MISSING\n' >>"$test_log"
+    else
+      mkdir -p "$(dirname "$xctestrun")"
+      cp "$generated_xctestrun" "$xctestrun"
+      mc_ios_plist_set_or_add "$xctestrun" ":TestConfigurations:0:TestTargets:0:EnvironmentVariables:TASK114_IOS_FULL_PULL" "1" >>"$test_log" 2>&1
+      mc_ios_plist_set_or_add "$xctestrun" ":TestConfigurations:0:TestTargets:0:EnvironmentVariables:TASK114_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
+      (
+        cd "$MC_IOS_REPO" || exit 3
+        xcodebuild test-without-building -xctestrun "$xctestrun" \
+          -destination "$dest" -resultBundlePath "$bundle" \
+          -only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore
+      ) >>"$test_log" 2>&1
+      code=$?
+    fi
+  fi
+  mc_ios_release_xcode_lock
+  mc_report_log "$(mc_redact_text "$(tail -n 80 "$test_log")")"
+
+  mc_sync_counts_ios "$MC_TASK_ID"
+  after_json="$MC_SYNC_JSON_RESULT"
+
+  IOS_FULL_PULL_STARTED="${MC_TIMESTAMP_ISO:-$(mc_now_iso)}" \
+  TASK_ID="$MC_TASK_ID" \
+  BEFORE_JSON="$before_json" \
+  AFTER_JSON="$after_json" \
+  XCODE_EXIT="$code" \
+  XCODE_LOG="$test_log" \
+  STORE_HASH="$store_hash" \
+  SOURCE="ios.live-full-pull" \
+  python3 - > /tmp/mc-agent-ios-live-full-pull.$$.json <<'PY'
+import json, os, re
+from datetime import datetime, timezone
+
+before = json.loads(os.environ["BEFORE_JSON"])
+after = json.loads(os.environ["AFTER_JSON"])
+code = int(os.environ["XCODE_EXIT"])
+log_path = os.environ["XCODE_LOG"]
+line = ""
+skipped = False
+try:
+    with open(log_path, "r", encoding="utf-8", errors="replace") as fh:
+        for candidate in fh:
+            if "Test skipped" in candidate:
+                skipped = True
+            if "TASK114_IOS_FULL_PULL_LOOKUPS" in candidate:
+                line = candidate.strip()
+except OSError:
+    pass
+
+metrics = {}
+for key, value in re.findall(r"([a-zA-Z_]+)=([^ ]+)", line):
+    if key.endswith("hash"):
+        continue
+    try:
+        metrics[key] = int(value)
+    except ValueError:
+        metrics[key] = value
+
+before_counts = before.get("counts", {})
+after_counts = after.get("counts", {})
+supplier_delta = (after_counts.get("suppliers", {}).get("active") or 0) - (before_counts.get("suppliers", {}).get("active") or 0)
+category_delta = (after_counts.get("categories", {}).get("active") or 0) - (before_counts.get("categories", {}).get("active") or 0)
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+remote_suppliers = metrics.get("remote_suppliers")
+remote_categories = metrics.get("remote_categories")
+after_suppliers = after_counts.get("suppliers", {}).get("active")
+after_categories = after_counts.get("categories", {}).get("active")
+counts_match = True
+if isinstance(remote_suppliers, int):
+    counts_match = counts_match and after_suppliers == remote_suppliers
+if isinstance(remote_categories, int):
+    counts_match = counts_match and after_categories == remote_categories
+status = "PASS" if code == 0 and after.get("status") == "PASS" and line and not skipped and counts_match else "FAIL"
+payload = {
+    "schemaVersion": "1.1",
+    "taskId": os.environ["TASK_ID"],
+    "startedAt": os.environ["IOS_FULL_PULL_STARTED"],
+    "completedAt": now,
+    "source": os.environ["SOURCE"],
+    "account": {"state": "redacted"},
+    "session": {"state": "device-app-auth-redacted"},
+    "store": {"pathHash": os.environ.get("STORE_HASH")},
+    "counts": {"before": before_counts, "after": after_counts},
+    "checkpoint": {"local": after.get("checkpoint"), "remote": "app-auth-full-pull"},
+    "lastPush": None,
+    "lastPull": now if status == "PASS" else None,
+    "lastFullReconciliation": now if status == "PASS" else None,
+    "inserted": metrics.get("products_inserted", 0),
+    "updated": metrics.get("products_updated", 0),
+    "deleted": 0,
+    "pruned": {
+        "wouldPrune": 0,
+        "didPrune": 0,
+        "skippedDirty": 0,
+        "skippedLocalOnly": 0,
+        "skippedPendingTombstone": 0,
+        "skippedScopedSnapshot": 0,
+        "isCompleteSnapshot": True
+    },
+    "lookupApply": {
+        "suppliersInserted": metrics.get("suppliers_created", max(0, supplier_delta)),
+        "categoriesInserted": metrics.get("categories_created", max(0, category_delta)),
+        "supplierDelta": supplier_delta,
+        "categoryDelta": category_delta,
+        "plannedSuppliers": metrics.get("planned_suppliers"),
+        "plannedCategories": metrics.get("planned_categories"),
+        "skippedSuppliers": 0,
+        "skippedCategories": 0
+    },
+    "skipped": 0,
+    "drift": {},
+    "samples": after.get("samples", {}),
+    "status": status,
+    "xcodeExit": code,
+    "xcodeSkipped": skipped,
+    "metricsLineFound": bool(line)
+}
+print(json.dumps(payload, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-live-full-pull.$$.json)"
+  detail_status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  rm -f /tmp/mc-agent-ios-live-full-pull.$$.json "$test_log"
+  rm -rf "$derived_data"
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+
+  if [[ "$detail_status" == "PASS" ]]; then
+    MC_SUMMARY="iOS live-full-pull PASS. xcresult=${bundle}"
+    MC_NEXT_ACTION="Run sync counts ios and live reconcile-counts."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="iOS live-full-pull FAIL/BLOCKED. xcresult=${bundle}"
+  MC_NEXT_ACTION="Inspect xcresult/log; verify app-auth session and persistent SwiftData store."
+  return "$MC_EXIT_FAIL"
 }
 
 mc_ios_live_write() {
@@ -278,12 +508,12 @@ mc_ios_live_write() {
   mc_ios_acquire_xcode_lock || return $?
   (
     cd "$MC_IOS_REPO" || exit 3
-    TASK112_LIVE_ACCEPTANCE=1 TASK112_RUN_PREFIX="$prefix" \
+    TASK114_LIVE_ACCEPTANCE=1 TASK114_RUN_PREFIX="$prefix" \
       xcodebuild test -project iOSMerchandiseControl.xcodeproj \
         -scheme "${MC_IOS_SCHEME}" -configuration Debug \
         -destination "$dest" -resultBundlePath "$bundle" \
         -parallel-testing-enabled NO \
-        -only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test04IOSWriteSmokeAndRemoteReadBack
+        -only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test02IOSWriteSmokeAndRemoteReadBack
   )
   code=$?
   mc_ios_release_xcode_lock
@@ -294,6 +524,78 @@ mc_ios_live_write() {
   fi
   MC_SUMMARY="iOS live-write FAIL/BLOCKED for prefix ${prefix}. xcresult=${bundle}"
   MC_NEXT_ACTION="Inspect auth/session, RLS and xcresult."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_ios_task114_matrix_step() {
+  local method="$1"
+  local prefix="$2"
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-114-06,T-06"
+  mc_validate_task_prefix "$prefix" || return $?
+  mc_require_live || return $?
+  MC_TEST_PREFIX="$prefix"
+  local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped
+  dest="$(mc_ios_destination)"
+  bundle="$(mc_ios_result_bundle "task114-${method}")"
+  test_log="$(mktemp "/tmp/mc-agent-ios-task114-${method}.XXXXXX.log")"
+  derived_data="/tmp/mc-agent-ios-task114-${method}-${MC_TIMESTAMP}-DerivedData"
+  xctestrun="${derived_data}/Build/Products/task114-${method}.xctestrun"
+  MC_ARTIFACT_XCRESULT="$bundle"
+  mc_git_context "$MC_IOS_REPO"
+  mc_ios_acquire_xcode_lock || return $?
+  (
+    cd "$MC_IOS_REPO" || exit 3
+    xcodebuild build-for-testing -project iOSMerchandiseControl.xcodeproj \
+        -scheme "${MC_IOS_SCHEME}" -configuration Debug \
+        -destination "$dest" -derivedDataPath "$derived_data" \
+        -parallel-testing-enabled NO \
+        "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/${method}"
+  ) >"$test_log" 2>&1
+  code=$?
+  if [[ "$code" -eq 0 ]]; then
+    generated_xctestrun="$(find "$derived_data/Build/Products" -name '*.xctestrun' 2>/dev/null | sort | head -1)"
+    if [[ -z "$generated_xctestrun" ]]; then
+      code=2
+      printf '\nTASK114_IOS_MATRIX_XCTESTRUN_MISSING method=%s\n' "$method" >>"$test_log"
+    else
+      mkdir -p "$(dirname "$xctestrun")"
+      cp "$generated_xctestrun" "$xctestrun"
+      mc_ios_xctestrun_set_env "$xctestrun" "TASK114_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
+      mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK114_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
+      mc_ios_xctestrun_set_env "$xctestrun" "TASK114_RUN_PREFIX" "$prefix" >>"$test_log" 2>&1
+      mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK114_RUN_PREFIX" "$prefix" >>"$test_log" 2>&1
+      (
+        cd "$MC_IOS_REPO" || exit 3
+        xcodebuild test-without-building -xctestrun "$xctestrun" \
+          -destination "$dest" -resultBundlePath "$bundle" \
+          "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/${method}"
+      ) >>"$test_log" 2>&1
+      code=$?
+    fi
+  fi
+  mc_ios_release_xcode_lock
+  skipped=0
+  if grep -q "Test skipped" "$test_log"; then
+    skipped=1
+  fi
+  mc_report_log "$(mc_redact_text "$(tail -n 80 "$test_log")")"
+  rm -f "$test_log"
+  rm -rf "$derived_data"
+  if [[ "$code" -eq 0 && "$skipped" -eq 0 ]]; then
+    MC_SUMMARY="iOS TASK-114 matrix step ${method} PASS for prefix ${prefix}. xcresult=${bundle}"
+    MC_NEXT_ACTION="Continue TASK-114 live sync-matrix."
+    return "$MC_EXIT_PASS"
+  fi
+  if [[ "$skipped" -eq 1 ]]; then
+    MC_SUMMARY="iOS TASK-114 matrix step ${method} BLOCKED/SKIPPED for prefix ${prefix}. xcresult=${bundle}"
+    MC_NEXT_ACTION="Inspect xctestrun environment injection for TASK114_LIVE_ACCEPTANCE/TASK114_RUN_PREFIX."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  MC_SUMMARY="iOS TASK-114 matrix step ${method} FAIL/BLOCKED for prefix ${prefix}. xcresult=${bundle}"
+  MC_NEXT_ACTION="Inspect xcresult/log; verify app-auth session, RLS and scoped remote rows."
   return "$MC_EXIT_FAIL"
 }
 
@@ -331,6 +633,10 @@ mc_cmd_ios() {
       local prefix
       prefix="$(mc_parse_opt --prefix "$@")" || { mc_missing_prefix; return "$MC_EXIT_REFUSED"; }
       mc_ios_live_write "$prefix"
+      ;;
+    live-full-pull)
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      mc_ios_live_full_pull
       ;;
     cleanup-scoped)
       local prefix dry=0

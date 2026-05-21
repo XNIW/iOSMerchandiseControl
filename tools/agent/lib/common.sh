@@ -30,16 +30,26 @@ mc_agent_source_libs() {
   source "${MC_AGENT_ROOT}/lib/android.sh"
   # shellcheck source=/dev/null
   source "${MC_AGENT_ROOT}/lib/supabase.sh"
+  # shellcheck source=/dev/null
+  source "${MC_AGENT_ROOT}/lib/sync.sh"
 }
 
 mc_load_config() {
   local cfg="${MC_AGENT_CONFIG:-${MC_AGENT_ROOT}/config.env}"
+  local had_task_id="${MC_TASK_ID+x}"
+  local had_evidence_dir="${MC_EVIDENCE_DIR+x}"
+  local had_run_prefix="${MC_RUN_PREFIX+x}"
   local had_allow_live="${MC_ALLOW_LIVE+x}"
   local had_allow_cleanup="${MC_ALLOW_CLEANUP+x}"
   local had_profile="${MC_SUPABASE_PROFILE+x}"
+  local had_android_serial="${MC_ANDROID_DEVICE_SERIAL+x}"
+  local env_task_id="${MC_TASK_ID:-}"
+  local env_evidence_dir="${MC_EVIDENCE_DIR:-}"
+  local env_run_prefix="${MC_RUN_PREFIX:-}"
   local env_allow_live="${MC_ALLOW_LIVE:-}"
   local env_allow_cleanup="${MC_ALLOW_CLEANUP:-}"
   local env_profile="${MC_SUPABASE_PROFILE:-}"
+  local env_android_serial="${MC_ANDROID_DEVICE_SERIAL:-}"
   if [[ -f "$cfg" ]]; then
     # shellcheck source=/dev/null
     source "$cfg"
@@ -47,9 +57,13 @@ mc_load_config() {
     # shellcheck source=/dev/null
     source "${MC_AGENT_ROOT}/config.example.env"
   fi
+  [[ -n "$had_task_id" ]] && MC_TASK_ID="$env_task_id"
+  [[ -n "$had_evidence_dir" ]] && MC_EVIDENCE_DIR="$env_evidence_dir"
+  [[ -n "$had_run_prefix" ]] && MC_RUN_PREFIX="$env_run_prefix"
   [[ -n "$had_allow_live" ]] && MC_ALLOW_LIVE="$env_allow_live"
   [[ -n "$had_allow_cleanup" ]] && MC_ALLOW_CLEANUP="$env_allow_cleanup"
   [[ -n "$had_profile" ]] && MC_SUPABASE_PROFILE="$env_profile"
+  [[ -n "$had_android_serial" ]] && MC_ANDROID_DEVICE_SERIAL="$env_android_serial"
 
   export MC_IOS_REPO MC_ANDROID_REPO MC_SUPABASE_REPO MC_TASK_ID MC_EVIDENCE_DIR
   export MC_AGENT_VERSION MC_SCHEMA_VERSION MC_ALLOW_LIVE MC_ALLOW_CLEANUP
@@ -57,12 +71,7 @@ mc_load_config() {
   export MC_ANDROID_DEVICE_SERIAL MC_ANDROID_SDK_ROOT MC_SUPABASE_PROJECT_REF MC_SUPABASE_PROFILE
   export MC_REDACT_EMAILS MC_REDACT_PATHS MC_RUN_PREFIX
 
-  if [[ -d "$MC_IOS_REPO" ]]; then
-    MC_EVIDENCE_ABS="$(cd "$MC_IOS_REPO" && mkdir -p "$MC_EVIDENCE_DIR" && cd "$MC_EVIDENCE_DIR" && pwd)"
-  else
-    MC_EVIDENCE_ABS="$MC_IOS_REPO/$MC_EVIDENCE_DIR"
-  fi
-  export MC_EVIDENCE_ABS
+  mc_refresh_evidence_abs
 
   export MC_ANDROID_SDK_ROOT="${MC_ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}"
   export PATH="${MC_ANDROID_SDK_ROOT}/platform-tools:${MC_ANDROID_SDK_ROOT}/tools:${PATH}"
@@ -70,6 +79,31 @@ mc_load_config() {
     export JAVA_HOME="$MC_ANDROID_JAVA_HOME"
   fi
   export GRADLE_OPTS="${MC_ANDROID_GRADLE_OPTS:-}"
+}
+
+mc_refresh_evidence_abs() {
+  if [[ -d "$MC_IOS_REPO" ]]; then
+    MC_EVIDENCE_ABS="$(cd "$MC_IOS_REPO" && mkdir -p "$MC_EVIDENCE_DIR" && cd "$MC_EVIDENCE_DIR" && pwd)"
+  else
+    MC_EVIDENCE_ABS="$MC_IOS_REPO/$MC_EVIDENCE_DIR"
+  fi
+  export MC_TASK_ID MC_EVIDENCE_DIR MC_EVIDENCE_ABS
+}
+
+mc_set_task_context() {
+  local task_id="$1"
+  [[ -n "$task_id" ]] || return 0
+  MC_TASK_ID="$task_id"
+  MC_EVIDENCE_DIR="docs/TASKS/EVIDENCE/${task_id}"
+  mc_refresh_evidence_abs
+}
+
+mc_prepare_task_context_from_args() {
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" 2>/dev/null || true)"
+  if [[ -n "$task_id" ]]; then
+    mc_set_task_context "$task_id"
+  fi
 }
 
 mc_now_ms() {
@@ -183,12 +217,12 @@ mc_validate_task_prefix() {
   fi
   if [[ ! "$prefix" =~ ^TASK[0-9]{3,}_[A-Za-z0-9_.*-]*$ ]]; then
     MC_SUMMARY="Prefix must match TASKNNN_* scoped pattern."
-    MC_NEXT_ACTION="Example: --prefix TASK113_DRYRUN_ or --prefix 'TASK113_*'."
+    MC_NEXT_ACTION="Example: --prefix TASK114_DRYRUN_ or --prefix 'TASK114_*'."
     return "$MC_EXIT_REFUSED"
   fi
   if [[ "$require_offline" == "1" && "$prefix" != *OFFLINE* ]]; then
     MC_SUMMARY="Offline prefix must contain OFFLINE."
-    MC_NEXT_ACTION="Example: --prefix TASK113_OFFLINE_L2_"
+    MC_NEXT_ACTION="Example: --prefix TASK114_OFFLINE_L2_"
     return "$MC_EXIT_REFUSED"
   fi
   return "$MC_EXIT_PASS"
@@ -203,6 +237,9 @@ mc_missing_prefix() {
 mc_prefix_like() {
   local prefix="$1"
   prefix="${prefix//\*/%}"
+  if [[ "$prefix" != *% ]]; then
+    prefix="${prefix}%"
+  fi
   printf '%s' "$prefix"
 }
 
@@ -325,14 +362,17 @@ Usage:
   ./tools/agent/mc-agent.sh help | help-json | version
   ./tools/agent/mc-agent.sh doctor | preflight | config validate | config print-redacted
   ./tools/agent/mc-agent.sh list commands | list commands-json
-  ./tools/agent/mc-agent.sh report --task TASK-113 | report --latest | report validate-json --path <file>
-  ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task TASK-113 | scan repo-diff | scan release-cta
-  ./tools/agent/mc-agent.sh safety check-prefix --prefix TASK113_* | safety dry-run-required --command "<command>"
+  ./tools/agent/mc-agent.sh report --task <TASK-ID> | report --latest | report validate-json --path <file>
+  ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task <TASK-ID> | scan repo-diff | scan release-cta
+  ./tools/agent/mc-agent.sh safety check-prefix --prefix TASK114_* | safety dry-run-required --command "<command>"
   ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|lifecycle|offline | ios smoke simulator|options
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-114
   ./tools/agent/mc-agent.sh android build debug|release | android test sync|offline | android offline-tier-status
-  ./tools/agent/mc-agent.sh android offline-write|reconnect-drain --tier L1|L2|L3 --prefix TASK113_OFFLINE_*
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh android live-full-pull --live
+  ./tools/agent/mc-agent.sh android offline-write|reconnect-drain --tier L1|L2|L3 --prefix TASK114_OFFLINE_*
+  ./tools/agent/mc-agent.sh sync counts --task TASK-114 --source supabase|android|ios [--profile linked]
   ./tools/agent/mc-agent.sh supabase status-redacted|verify-schema|verify-rls|verify-grants|residue-check --profile local|linked|dry-run-no-db
-  ./tools/agent/mc-agent.sh live sync-matrix|offline-matrix|cleanup-and-verify --task TASK-113 --prefix TASK113_*
+  ./tools/agent/mc-agent.sh live sync-matrix|offline-matrix|reconcile-counts|cleanup-and-verify --task TASK-114 --prefix TASK114_*
 
 Exit codes: 0=PASS 1=FAIL 2=BLOCKED 3=MISCONFIGURED 4=UNSAFE_OPERATION_REFUSED
 Reports: docs/TASKS/EVIDENCE/<task>/agent-runs/<timestamp>-<command>.{log,md,json}
@@ -380,6 +420,7 @@ mc_help_json() {
     {"name":"ios smoke options","argv":["ios","smoke","options"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios auth-preflight","argv":["ios","auth-preflight","--live"],"platform":"ios","safety_level":"live-write","requires_live":true},
     {"name":"ios live-write","argv":["ios","live-write","--prefix","TASK113_*"],"platform":"ios","safety_level":"live-write","requires_live":true},
+    {"name":"ios live-full-pull","argv":["ios","live-full-pull","--live","--task","TASK-114"],"platform":"ios","safety_level":"live-write","requires_live":true},
     {"name":"ios cleanup-scoped","argv":["ios","cleanup-scoped","--prefix","TASK113_*","--dry-run"],"platform":"ios","safety_level":"cleanup-dry-run"},
     {"name":"android build debug","argv":["android","build","debug"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android build release","argv":["android","build","release"],"platform":"android","safety_level":"safe-readonly"},
@@ -390,9 +431,11 @@ mc_help_json() {
     {"name":"android auth-preflight","argv":["android","auth-preflight","--live"],"platform":"android","safety_level":"live-write","requires_live":true},
     {"name":"android live-pull","argv":["android","live-pull","--prefix","TASK113_*"],"platform":"android","safety_level":"live-write","requires_live":true},
     {"name":"android live-write","argv":["android","live-write","--prefix","TASK113_*"],"platform":"android","safety_level":"live-write","requires_live":true},
+    {"name":"android live-full-pull","argv":["android","live-full-pull","--live"],"platform":"android","safety_level":"live-write","requires_live":true},
     {"name":"android offline-tier-status","argv":["android","offline-tier-status"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android offline-write","argv":["android","offline-write","--tier","L1","--prefix","TASK113_OFFLINE_*"],"platform":"android","safety_level":"safe-readonly","android_offline_tier":"L1"},
     {"name":"android reconnect-drain","argv":["android","reconnect-drain","--tier","L1","--prefix","TASK113_OFFLINE_*"],"platform":"android","safety_level":"safe-readonly","android_offline_tier":"L1"},
+    {"name":"sync counts","argv":["sync","counts","--task","TASK-114","--source","supabase","--profile","linked"],"platform":"sync","safety_level":"safe-readonly"},
     {"name":"supabase start","argv":["supabase","start"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase status-redacted","argv":["supabase","status-redacted"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-schema","argv":["supabase","verify-schema"],"platform":"supabase","safety_level":"safe-readonly"},
@@ -404,6 +447,7 @@ mc_help_json() {
     {"name":"supabase residue-check","argv":["supabase","residue-check","--prefix","TASK113_*","--profile","dry-run-no-db"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase pooler-cooldown-check","argv":["supabase","pooler-cooldown-check"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"live sync-matrix","argv":["live","sync-matrix","--task","TASK-113","--prefix","TASK113_FINAL_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live reconcile-counts","argv":["live","reconcile-counts","--task","TASK-114","--prefix","TASK114_RECON_*"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"live offline-matrix","argv":["live","offline-matrix","--task","TASK-113","--prefix","TASK113_OFFLINE_*"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"live cleanup-and-verify","argv":["live","cleanup-and-verify","--task","TASK-113","--prefix","TASK113_*"],"platform":"live","safety_level":"cleanup-execute","requires_cleanup":true}
   ]
@@ -740,7 +784,7 @@ mc_cmd_scan_evidence() {
     return "$MC_EXIT_FAIL"
   fi
   MC_SUMMARY="Evidence scan PASS for ${task_id}."
-  MC_NEXT_ACTION="Use evidence in TASK-113 closure matrix."
+  MC_NEXT_ACTION="Use evidence in ${task_id} closure matrix."
   return "$MC_EXIT_PASS"
 }
 

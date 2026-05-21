@@ -407,9 +407,7 @@ final class SupabasePushPreflightViewModel: ObservableObject {
             generatedAt: preview.generatedAt,
             categoryCounts: preview.categoryCounts,
             scopeSummary: preview.plan.scopeSummary,
-            totalCandidates: preview.plan.candidates.filter {
-                $0.action == .dryRunCreateCandidate || $0.action == .dryRunUpdateCandidate || $0.action == .dryRunLinkCandidate
-            }.count,
+            totalCandidates: preview.plan.writeCandidates.count,
             supplierCreates: preview.plan.count(entityKind: .supplier, action: .dryRunCreateCandidate),
             supplierUpdates: preview.plan.count(entityKind: .supplier, action: .dryRunUpdateCandidate),
             supplierLinks: preview.plan.count(entityKind: .supplier, action: .dryRunLinkCandidate),

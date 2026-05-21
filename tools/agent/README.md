@@ -45,6 +45,11 @@ Per operatore umano:
 ./tools/agent/mc-agent.sh ios build debug
 ./tools/agent/mc-agent.sh android build debug
 ./tools/agent/mc-agent.sh supabase status-redacted
+./tools/agent/mc-agent.sh sync counts --task TASK-114 --source supabase --profile linked
+./tools/agent/mc-agent.sh sync counts --task TASK-114 --source android
+./tools/agent/mc-agent.sh sync counts --task TASK-114 --source ios
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-114
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh android live-full-pull --live
 ./tools/agent/mc-agent.sh supabase cleanup --task TASK-113 --prefix TASK113_DRYRUN_ --dry-run
 ```
 
@@ -82,8 +87,22 @@ NEXT_ACTION ...
 ```bash
 MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios auth-preflight --live
 MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh android auth-preflight --live
-MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live sync-matrix --task TASK-113 --prefix TASK113_FINAL_
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-114
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh android live-full-pull --live
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live reconcile-counts --task TASK-114 --prefix TASK114_RECON_
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live sync-matrix --task TASK-114 --prefix TASK114_FINAL_
 ```
+
+## TASK-114 sync counts
+
+`sync counts` reads one source at a time and writes Markdown/JSON under the requested `--task` evidence directory. The JSON report includes the `reconciliation` object with `schemaVersion`, `taskId`, source/session redaction, canonical counts (`active`, `deleted`, `all`, `dirty`, `pending`, `localOnly`, `userVisible`), checkpoints, prune summary and hashed samples.
+
+- `--source supabase` uses the selected Supabase profile and read-only count SQL.
+- `--source android` copies the debug Room database through `adb run-as` and performs read-only SQLite counts.
+- `--source ios` reads the booted Simulator SwiftData SQLite store read-only.
+- `ios live-full-pull --live --task TASK-114` runs the TASK-114 app-auth lookup repair on the test host, applies supplier/category lookup-only rows, and validates before/after counts.
+- `android live-full-pull --live` runs the TASK-114 Android app-auth full pull without clearing local data; it is intended to repair/verify local Room counts after a full Supabase snapshot.
+- `live reconcile-counts` is gated by `MC_ALLOW_LIVE=1`, takes the live lock, runs the three source collectors, and fails on drift or blocks on missing auth/device/local store evidence.
 
 ## Cleanup dry-run/execute
 

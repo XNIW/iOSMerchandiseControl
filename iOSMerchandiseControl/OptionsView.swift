@@ -32,6 +32,7 @@ struct OptionsView: View {
     @Query private var localPendingChanges: [LocalPendingChange]
     @State private var supabaseBaselineSummary: SupabaseCatalogBaselineDebugSummary = .absent
     @State private var localDatabaseSummary: LocalDatabasePublicSummary = .empty
+    @State private var syncCountDriftReport: SyncCountDriftReport?
 
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
@@ -178,14 +179,17 @@ struct OptionsView: View {
         .onAppear {
             refreshLocalDatabaseSummary()
             refreshSupabaseBaselineSummary()
+            refreshSyncCountDriftIfNeeded()
         }
         .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
             refreshLocalDatabaseSummary()
             refreshSupabaseBaselineSummary()
+            refreshSyncCountDriftIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: .historySessionsDidChange)) { _ in
             refreshLocalDatabaseSummary()
             refreshSupabaseBaselineSummary()
+            refreshSyncCountDriftIfNeeded()
         }
     }
 
@@ -392,12 +396,19 @@ struct OptionsView: View {
         }
     }
 
+    private var hasSyncCountDrift: Bool {
+        syncCountDriftReport?.isAligned == false
+    }
+
     private var localDatabaseTitle: String {
         if localDatabaseSummary.isCatalogEmpty {
             return L("options.localDatabase.empty.title")
         }
         if localPendingAttentionCount > 0 {
             return L("options.localDatabase.pending.title")
+        }
+        if hasSyncCountDrift {
+            return L("options.localDatabase.reconcile.title")
         }
         switch supabaseBaselineSummary.status {
         case .absent:
@@ -416,6 +427,9 @@ struct OptionsView: View {
         if localPendingAttentionCount > 0 {
             return L("options.localDatabase.pending.detail")
         }
+        if hasSyncCountDrift {
+            return L("options.localDatabase.reconcile.detail")
+        }
         switch supabaseBaselineSummary.status {
         case .absent:
             return L("options.localDatabase.needsDownload.detail")
@@ -429,6 +443,9 @@ struct OptionsView: View {
     private var localDatabaseSystemImage: String {
         if localDatabaseSummary.isCatalogEmpty {
             return "tray"
+        }
+        if hasSyncCountDrift {
+            return "exclamationmark.arrow.triangle.2.circlepath"
         }
         switch supabaseBaselineSummary.status {
         case .valid where localPendingAttentionCount == 0:
@@ -446,7 +463,7 @@ struct OptionsView: View {
         if localDatabaseSummary.isCatalogEmpty {
             return .secondary
         }
-        if localPendingAttentionCount > 0 {
+        if localPendingAttentionCount > 0 || hasSyncCountDrift {
             return .orange
         }
         switch supabaseBaselineSummary.status {
@@ -484,9 +501,38 @@ struct OptionsView: View {
 
     private func refreshLocalDatabaseSummary() {
         do {
-            localDatabaseSummary = try LocalDatabasePublicSummary.make(context: modelContext)
+            let snapshot = try LocalDatabasePublicSummary.makeReconciliationAware(context: modelContext)
+            localDatabaseSummary = LocalDatabasePublicSummary(
+                products: snapshot.products,
+                suppliers: snapshot.suppliers,
+                categories: snapshot.categories,
+                productPrices: snapshot.productPrices,
+                historySessions: snapshot.historySessions
+            )
         } catch {
             localDatabaseSummary = .empty
+        }
+    }
+
+    private func refreshSyncCountDriftIfNeeded() {
+        guard supabaseAuthViewModel.state == .signedIn,
+              let service = supabaseInventoryService else {
+            syncCountDriftReport = nil
+            return
+        }
+        Task {
+            do {
+                let remote = try await service.fetchReconciliationRemoteCounts()
+                let local = try LocalDatabasePublicSummary.makeReconciliationAware(context: modelContext)
+                let report = SyncCountDriftReport.compare(local: local, remote: remote)
+                await MainActor.run {
+                    syncCountDriftReport = report
+                }
+            } catch {
+                await MainActor.run {
+                    syncCountDriftReport = nil
+                }
+            }
         }
     }
 
@@ -512,12 +558,13 @@ struct LocalDatabasePublicSummary: Equatable {
     }
 
     static func make(context: ModelContext) throws -> LocalDatabasePublicSummary {
-        LocalDatabasePublicSummary(
-            products: try context.fetchCount(FetchDescriptor<Product>()),
-            suppliers: try context.fetchCount(FetchDescriptor<Supplier>()),
-            categories: try context.fetchCount(FetchDescriptor<ProductCategory>()),
-            productPrices: try context.fetchCount(FetchDescriptor<ProductPrice>()),
-            historySessions: try context.fetchCount(FetchDescriptor<HistoryEntry>())
+        let snapshot = try makeReconciliationAware(context: context)
+        return LocalDatabasePublicSummary(
+            products: snapshot.products,
+            suppliers: snapshot.suppliers,
+            categories: snapshot.categories,
+            productPrices: snapshot.productPrices,
+            historySessions: snapshot.historySessions
         )
     }
 }

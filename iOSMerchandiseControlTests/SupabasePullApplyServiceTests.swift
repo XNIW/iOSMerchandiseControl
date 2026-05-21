@@ -577,6 +577,78 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         _ = SupabasePullApplyService()
     }
 
+    func testApplyMaterializesRemoteLookupOnlyPreview() throws {
+        let context = try makeContext()
+        let supplierID = UUID(uuidString: "D8200000-0000-4000-8000-000000000114")!
+        let categoryID = UUID(uuidString: "D8200000-0000-4000-8000-000000000115")!
+        let preview = makePreview(
+            remoteSupplierLookups: [
+                SyncPreviewLookupSummary(
+                    remoteID: supplierID,
+                    displayName: "Remote Orphan Supplier",
+                    remoteUpdatedAt: Date(timeIntervalSince1970: 1_777_777_701)
+                )
+            ],
+            remoteCategoryLookups: [
+                SyncPreviewLookupSummary(
+                    remoteID: categoryID,
+                    displayName: "Remote Orphan Category",
+                    remoteUpdatedAt: Date(timeIntervalSince1970: 1_777_777_702)
+                )
+            ]
+        )
+
+        let plan = try prepare(preview, context: context)
+        XCTAssertEqual(plan.suppliersToCreate.count, 1)
+        XCTAssertEqual(plan.categoriesToCreate.count, 1)
+
+        let result = try service.apply(plan: plan, context: context)
+
+        XCTAssertEqual(result.suppliersCreated, 1)
+        XCTAssertEqual(result.categoriesCreated, 1)
+        let suppliers = try context.fetch(FetchDescriptor<Supplier>())
+        let categories = try context.fetch(FetchDescriptor<ProductCategory>())
+        XCTAssertEqual(suppliers.count, 1)
+        XCTAssertEqual(categories.count, 1)
+        XCTAssertEqual(suppliers.first?.remoteID, supplierID)
+        XCTAssertEqual(categories.first?.remoteID, categoryID)
+    }
+
+    func testApplyMarksRemoteProductTombstoneWhenLocalClean() throws {
+        let context = try makeContext()
+        let remoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000116")!
+        let remoteUpdatedAt = Date(timeIntervalSince1970: 1_777_777_801)
+        let remoteDeletedAt = Date(timeIntervalSince1970: 1_777_777_802)
+        let product = try insertProduct(
+            context: context,
+            barcode: "100",
+            productName: "Local",
+            remoteID: remoteID,
+            remoteUpdatedAt: remoteUpdatedAt
+        )
+        let tombstonePayload = makePayload(
+            remoteID: remoteID,
+            remoteUpdatedAt: remoteUpdatedAt,
+            remoteDeletedAt: remoteDeletedAt,
+            barcode: "100",
+            productName: "Local"
+        )
+        let preview = makePreview(remoteTombstones: [
+            makeSummary(
+                classification: .remoteTombstone,
+                payload: tombstonePayload
+            )
+        ])
+
+        let plan = try prepare(preview, context: context)
+        XCTAssertEqual(plan.productTombstones.count, 1)
+
+        let result = try service.apply(plan: plan, context: context)
+
+        XCTAssertEqual(result.productTombstoned, 1)
+        XCTAssertEqual(product.remoteDeletedAt, remoteDeletedAt)
+    }
+
     private func prepare(
         _ preview: SyncPreview,
         context: ModelContext,
@@ -627,6 +699,9 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         outcome: SyncPreviewOutcome = .success,
         newProducts: [SyncPreviewProductSummary] = [],
         updateCandidates: [SyncPreviewProductSummary] = [],
+        remoteTombstones: [SyncPreviewProductSummary] = [],
+        remoteSupplierLookups: [SyncPreviewLookupSummary] = [],
+        remoteCategoryLookups: [SyncPreviewLookupSummary] = [],
         conflicts: [SyncPreviewConflict] = [],
         warnings: [SyncPreviewWarning] = [],
         sourceErrors: [SyncPreviewWarning] = []
@@ -650,9 +725,11 @@ final class SupabasePullApplyServiceTests: XCTestCase {
             ),
             newProducts: newProducts,
             updateCandidates: updateCandidates,
+            remoteSupplierLookups: remoteSupplierLookups,
+            remoteCategoryLookups: remoteCategoryLookups,
             conflicts: conflicts,
             unchangedProducts: [],
-            remoteTombstones: [],
+            remoteTombstones: remoteTombstones,
             supplierDiffs: [],
             categoryDiffs: [],
             priceHistoryDiffs: [],

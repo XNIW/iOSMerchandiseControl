@@ -1,0 +1,82 @@
+=== mc-agent ios live-full-pull --live --task TASK-114 ===
+2026-05-21 17:38:16.967344-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: d
+CoreData: error: d
+2026-05-21 17:38:16.967379-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error:   755
+CoreData: error:   755
+2026-05-21 17:38:16.967418-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error:   component is not a symbolic link
+CoreData: error:   component is not a symbolic link
+2026-05-21 17:38:16.967469-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error:   component is readable
+CoreData: error:   component is readable
+2026-05-21 17:38:16.967520-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error:   component is writeable
+CoreData: error:   component is writeable
+2026-05-21 17:38:16.967568-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: Failed to stat path '<HOME_REDACTED>/Library/Developer/CoreSimulator/Devices/240F400E-5EFA-486A-9137-FFBBE70F604D/data/Containers/Data/Application/3776A176-C293-4DCA-BA2B-21B598E7865D', errno 2 / No such file or directory.
+CoreData: error: Failed to stat path '<HOME_REDACTED>/Library/Developer/CoreSimulator/Devices/240F400E-5EFA-486A-9137-FFBBE70F604D/data/Containers/Data/Application/3776A176-C293-4DCA-BA2B-21B598E7865D', errno 2 / No such file or directory.
+2026-05-21 17:38:16.967616-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: Failed to stat path '<HOME_REDACTED>/Library/Developer/CoreSimulator/Devices/240F400E-5EFA-486A-9137-FFBBE70F604D/data/Containers/Data/Application/3776A176-C293-4DCA-BA2B-21B598E7865D/Library', errno 2 / No such file or directory.
+CoreData: error: Failed to stat path '<HOME_REDACTED>/Library/Developer/CoreSimulator/Devices/240F400E-5EFA-486A-9137-FFBBE70F604D/data/Containers/Data/Application/3776A176-C293-4DCA-BA2B-21B598E7865D/Library', errno 2 / No such file or directory.
+2026-05-21 17:38:16.967655-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: Failed to stat path '<HOME_REDACTED>/Library/Developer/CoreSimulator/Devices/240F400E-5EFA-486A-9137-FFBBE70F604D/data/Containers/Data/Application/3776A176-C293-4DCA-BA2B-21B598E7865D/Library/Application Support', errno 2 / No such file or directory.
+CoreData: error: Failed to stat path '<HOME_REDACTED>/Library/Developer/CoreSimulator/Devices/240F400E-5EFA-486A-9137-FFBBE70F604D/data/Containers/Data/Application/3776A176-C293-4DCA-BA2B-21B598E7865D/Library/Application Support', errno 2 / No such file or directory.
+2026-05-21 17:38:16.967761-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error:   Sandbox access to file-write-create denied
+CoreData: error:   Sandbox access to file-write-create denied
+2026-05-21 17:38:16.975696-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: addPersistentStoreWithType:configuration:URL:options:error: returned error NSCocoaErrorDomain (512)
+CoreData: error: addPersistentStoreWithType:configuration:URL:options:error: returned error NSCocoaErrorDomain (512)
+2026-05-21 17:38:16.975825-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: userInfo:
+CoreData: error: userInfo:
+2026-05-21 17:38:16.975867-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: 	reason : Failed to create file; code = 2
+CoreData: error: 	reason : Failed to create file; code = 2
+2026-05-21 17:38:16.975903-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: storeType: SQLite
+CoreData: error: storeType: SQLite
+2026-05-21 17:38:16.975941-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: configuration: Task114AppStore
+CoreData: error: configuration: Task114AppStore
+2026-05-21 17:38:16.975992-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: URL: file://<HOME_REDACTED>/Library/Developer/CoreSimulator/Devices/240F400E-5EFA-486A-9137-FFBBE70F604D/data/Containers/Data/Application/3776A176-C293-4DCA-BA2B-21B598E7865D/Library/Application%20Support/default.store
+CoreData: error: URL: file://<HOME_REDACTED>/Library/Developer/CoreSimulator/Devices/240F400E-5EFA-486A-9137-FFBBE70F604D/data/Containers/Data/Application/3776A176-C293-4DCA-BA2B-21B598E7865D/Library/Application%20Support/default.store
+CoreData: annotation: options:
+CoreData: annotation: 	NSMigratePersistentStoresAutomaticallyOption : 1
+CoreData: annotation: 	NSInferMappingModelAutomaticallyOption : 1
+CoreData: annotation: 	NSPersistentStoreRemoteChangeNotificationOptionKey : 1
+CoreData: annotation: 	NSPersistentHistoryTrackingKey : 1
+2026-05-21 17:38:16.979399-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: <NSPersistentStoreCoordinator: 0x109daa680>: Attempting recovery from error encountered during addPersistentStore: 0x11f6907b0 Error Domain=NSCocoaErrorDomain Code=512 "Impossibile salvare il file." UserInfo={reason=Failed to create file; code = 2}
+CoreData: error: <NSPersistentStoreCoordinator: 0x109daa680>: Attempting recovery from error encountered during addPersistentStore: 0x11f6907b0 Error Domain=NSCocoaErrorDomain Code=512 "Impossibile salvare il file." UserInfo={reason=Failed to create file; code = 2}
+2026-05-21 17:38:16.979497-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: During recovery, parent directory path reported as missing
+CoreData: error: During recovery, parent directory path reported as missing
+2026-05-21 17:38:16.987853-0400 iOSMerchandiseControl[18029:4395113] [error] CoreData: error: Recovery attempt while adding <NSPersistentStoreDescription: 0x11f6907b0> (type: SQLite, url: file://<HOME_REDACTED>/Library/Developer/CoreSimulator/Devices/240F400E-5EFA-486A-9137-FFBBE70F604D/data/Containers/Data/Application/3776A176-C293-4DCA-BA2B-21B598E7865D/Library/Application%20Support/default.store) was successful!
+CoreData: error: Recovery attempt while adding <NSPersistentStoreDescription: 0x11f6907b0> (type: SQLite, url: file://<HOME_REDACTED>/Library/Developer/CoreSimulator/Devices/240F400E-5EFA-486A-9137-FFBBE70F604D/data/Containers/Data/Application/3776A176-C293-4DCA-BA2B-21B598E7865D/Library/Application%20Support/default.store) was successful!
+objc[18029]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x1202d0310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x11fc0c398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=10 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=19696 suppliers=57 categories=27 prices=41111"
+"[InventorySnapshot] done elapsedMs=3120 products=19696 suppliers=57 categories=27 prices=41111"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1050 checkpointed: 1050
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1037 checkpointed: 1037
+"[PullPreview] summary complete=true partial=false signals=true failure=none remoteProducts=19696 remoteSuppliers=59 remoteCategories=28 remotePrices=1000 new=0 updates=0 conflicts=0 tombstones=0 warnings=1 sourceErrors=0 supplierDiffs=0 categoryDiffs=0 priceSignals=0"
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1089 checkpointed: 1089
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1015 checkpointed: 1015
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1245 checkpointed: 1245
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1467 checkpointed: 1467
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1109 checkpointed: 1109
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1205 checkpointed: 1205
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1291 checkpointed: 1291
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1384 checkpointed: 1384
+CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1370 checkpointed: 1370
+TASK114_IOS_FULL_PULL_LOOKUPS owner_hash=ad3d747e936c before_suppliers=0 before_categories=0 remote_suppliers=59 remote_categories=28 planned_suppliers=59 planned_categories=28 suppliers_created=59 categories_created=28 products_inserted=19696 products_updated=0 product_tombstoned=0 after_suppliers=59 after_categories=28
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore]' passed (17.282 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-21 17:38:34.177.
+	 Executed 1 test, with 0 failures (0 unexpected) in 17.282 (17.283) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-21 17:38:34.177.
+	 Executed 1 test, with 0 failures (0 unexpected) in 17.282 (17.283) seconds
+Test Suite 'Selected tests' passed at 2026-05-21 17:38:34.178.
+	 Executed 1 test, with 0 failures (0 unexpected) in 17.282 (17.284) seconds
+2026-05-21 17:38:34.471 xcodebuild[17996:4394744] [MT] IDETestOperationsObserverDebug: 20.959 elapsed -- Testing started completed.
+2026-05-21 17:38:34.471 xcodebuild[17996:4394744] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-21 17:38:34.471 xcodebuild[17996:4394744] [MT] IDETestOperationsObserverDebug: 20.959 sec, +20.959 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-live-full-pull-20260521T213748Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"local": {"pendingAggregate": 0}, "remote": null}, "remote": "app-auth-full-pull"}, "completedAt": "2026-05-21T21:38:35Z", "counts": {"after": {"categories": {"active": 27, "all": 27, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 11, "all": 11, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 11}, "product_prices": {"active": 41111, "all": 41111, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19696, "all": 19696, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 57, "all": 57, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}, "before": {"categories": {"active": 27, "all": 27, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 11, "all": 11, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 11}, "product_prices": {"active": 41111, "all": 41111, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19696, "all": 19696, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 57, "all": 57, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}}, "deleted": 0, "drift": {}, "inserted": 19696, "lastFullReconciliation": null, "lastPull": null, "lastPush": null, "lookupApply": {"categoriesInserted": 28, "categoryDelta": 0, "plannedCategories": 28, "plannedSuppliers": 59, "skippedCategories": 0, "skippedSuppliers": 0, "supplierDelta": 0, "suppliersInserted": 59}, "metricsLineFound": true, "pruned": {"didPrune": 0, "isCompleteSnapshot": true, "skippedDirty": 0, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 11, "all": 11, "tombstone": 0}], "iosMissingSupplierCategory": [], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "device-app-auth-redacted"}, "skipped": 0, "source": "ios.live-full-pull", "startedAt": "2026-05-21T21:38:35Z", "status": "FAIL", "store": {"pathHash": "<REDACTED_HEX>"}, "taskId": "TASK-114", "updated": 0, "xcodeExit": 0, "xcodeSkipped": false}

@@ -131,6 +131,7 @@ PY
   export MC_REPORT_CA_JSON="$ca_json"
   export MC_REPORT_WARNINGS_JSON="$warnings_json"
   export MC_REPORT_NEXT_ACTION="$next_action"
+  export MC_REPORT_RECONCILIATION_JSON="${MC_RECONCILIATION_JSON:-}"
 
   python3 - <<'PY' > "$MC_JSON_TMP"
 import json, os
@@ -178,6 +179,12 @@ payload = {
     "warnings": json.loads(os.environ["MC_REPORT_WARNINGS_JSON"]),
     "next_action_recommended": os.environ["MC_REPORT_NEXT_ACTION"],
 }
+detail = os.environ.get("MC_REPORT_RECONCILIATION_JSON", "").strip()
+if detail:
+    try:
+        payload["reconciliation"] = json.loads(detail)
+    except Exception as exc:
+        payload["reconciliation_parse_error"] = str(exc)
 print(json.dumps(payload, indent=2, sort_keys=True))
 PY
 
@@ -222,6 +229,13 @@ ${summary}
 
 ${next_action}
 MD
+
+  if [[ -n "${MC_RECONCILIATION_MD:-}" ]]; then
+    {
+      printf '\n## Reconciliation Detail\n\n'
+      printf '%s\n' "$(mc_redact_text "$MC_RECONCILIATION_MD")"
+    } >> "$MC_MD_TMP"
+  fi
 
   mc_redact_file_inplace "$MC_LOG_TMP"
   mc_redact_file_inplace "$MC_MD_TMP"

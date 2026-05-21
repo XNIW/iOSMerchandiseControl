@@ -1,0 +1,21 @@
+=== mc-agent report --task TASK-114 ===
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191101Z-supabase-cleanup-task-TASK-114-prefix-TASK114_FINAL_-dry-run-profile-linked-p48838.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191110Z-supabase-cleanup-task-TASK-114-prefix-TASK114_FINAL_-execute-cleanup-plan-id-cleanup-TASK-114-20260521T191101Z-TASK114_FINAL_-p49504.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191118Z-supabase-residue-check-prefix-TASK114_FINAL_-profile-linked-p50108.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191127Z-android-live-full-pull-live-p50753.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191211Z-sync-counts-task-TASK-114-source-android-p51870.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191211Z-sync-counts-task-TASK-114-source-ios-p51903.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191211Z-sync-counts-task-TASK-114-source-supabase-profile-linked-p51869.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191220Z-live-reconcile-counts-task-TASK-114-prefix-TASK114_RECON_-profile-linked-p53256.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191259Z-android-build-release-p54623.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191342Z-report-latest-p56664.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191342Z-scan-evidence-task-TASK-114-p56663.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191342Z-scan-sensitive-p56662.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191437Z-android-smoke-options-p65712.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191437Z-ios-smoke-options-p65711.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191630Z-report-latest-p68341.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191630Z-scan-evidence-task-TASK-114-p68342.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T191630Z-scan-sensitive-p68326.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T202519Z-ios-test-sync-p3918.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T203157Z-ios-test-sync-p11998.json
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T203231Z-ios-test-sync-p13178.json

@@ -67,6 +67,40 @@ final class SupabaseManualPushServiceTests: XCTestCase {
         XCTAssertFalse(object.keys.contains("owner_user_id"))
     }
 
+    func testProductTombstoneCandidateUpdatesRemoteDeletedAtWithoutLocalProduct() async throws {
+        let context = try makeContext()
+        let ownerID = UUID()
+        let remoteID = UUID()
+        let plan = ManualPushPlan(
+            generatedAt: Date(timeIntervalSince1970: 1_778_300_000),
+            ownerUserID: ownerID,
+            candidates: [
+                PushCandidate(
+                    entityKind: .product,
+                    localID: "product:remote:\(remoteID.uuidString.lowercased())",
+                    remoteID: remoteID,
+                    action: .dryRunTombstoneCandidate
+                )
+            ],
+            blockedReasons: [],
+            warnings: [],
+            futureEventChangedCount: 0
+        )
+        let gateway = FakeManualPushRemoteGateway()
+
+        let result = await makeService(gateway: gateway).execute(
+            plan: plan,
+            context: context,
+            ownerUserID: ownerID
+        )
+
+        XCTAssertEqual(result.status, .completed)
+        XCTAssertEqual(result.productUpdates, 1)
+        XCTAssertNil(result.baselineRunID)
+        XCTAssertEqual(gateway.productUpdatePayloads.count, 1)
+        XCTAssertNotNil(gateway.productUpdatePayloads.first?.deletedAt)
+    }
+
     func testPartialSuccessDoesNotCreateValidBaseline() async throws {
         let context = try makeContext()
         let ownerID = UUID()
@@ -405,6 +439,7 @@ private final class FakeManualPushRemoteGateway: SupabaseManualPushRemoteGateway
     var supplierCreatePayloads: [SupabaseManualPushSupplierCreatePayload] = []
     var categoryCreatePayloads: [SupabaseManualPushCategoryCreatePayload] = []
     var productCreatePayloads: [SupabaseManualPushProductCreatePayload] = []
+    var productUpdatePayloads: [SupabaseManualPushProductUpdatePayload] = []
     var supplierCreateBatchSizes: [Int] = []
     var failSupplierBatchLargerThanOne = false
     var failProductCreate = false
@@ -504,6 +539,7 @@ private final class FakeManualPushRemoteGateway: SupabaseManualPushRemoteGateway
     }
 
     func updateProduct(id: UUID, payload: SupabaseManualPushProductUpdatePayload) async throws -> RemoteInventoryProductRow {
+        productUpdatePayloads.append(payload)
         let row = RemoteInventoryProductRow(
             id: id,
             ownerUserID: UUID(),
@@ -517,7 +553,7 @@ private final class FakeManualPushRemoteGateway: SupabaseManualPushRemoteGateway
             categoryID: payload.categoryID,
             stockQuantity: payload.stockQuantity,
             updatedAt: "2026-05-05T10:01:00Z",
-            deletedAt: nil
+            deletedAt: payload.deletedAt
         )
         productsByID[id] = row
         return row

@@ -15,6 +15,7 @@ const TIMEOUT_MS = Number(process.env.MC_MCP_TIMEOUT_MS || 120000);
 const TOOLS = [
   { name: "mc_preflight", args: ["preflight"], live: false, cleanup: false },
   { name: "mc_report", args: ["report", "--task", "TASK-113"], live: false, cleanup: false },
+  { name: "mc_report_task114", args: ["report", "--task", "TASK-114"], live: false, cleanup: false },
   { name: "mc_ios_build_debug", args: ["ios", "build", "debug"], live: false, cleanup: false },
   { name: "mc_ios_build_release", args: ["ios", "build", "release"], live: false, cleanup: false },
   { name: "mc_ios_test_sync", args: ["ios", "test", "sync"], live: false, cleanup: false },
@@ -22,9 +23,14 @@ const TOOLS = [
   { name: "mc_android_build_release", args: ["android", "build", "release"], live: false, cleanup: false },
   { name: "mc_android_test_sync", args: ["android", "test", "sync"], live: false, cleanup: false },
   { name: "mc_android_test_offline", args: ["android", "test", "offline"], live: false, cleanup: false },
+  { name: "mc_sync_counts_supabase_task114", args: ["sync", "counts", "--task", "TASK-114", "--source", "supabase", "--profile", "linked"], live: false, cleanup: false },
+  { name: "mc_sync_counts_android_task114", args: ["sync", "counts", "--task", "TASK-114", "--source", "android"], live: false, cleanup: false },
+  { name: "mc_sync_counts_ios_task114", args: ["sync", "counts", "--task", "TASK-114", "--source", "ios"], live: false, cleanup: false },
   { name: "mc_supabase_status_redacted", args: ["supabase", "status-redacted"], live: false, cleanup: false },
   { name: "mc_supabase_residue_check", args: ["supabase", "residue-check", "--prefix"], live: false, cleanup: false, prefixArg: true, profileArg: true },
+  { name: "mc_live_reconcile_counts_task114", args: ["live", "reconcile-counts", "--task", "TASK-114", "--prefix"], live: true, cleanup: false, prefixArg: true },
   { name: "mc_live_sync_matrix", args: ["live", "sync-matrix", "--task", "TASK-113", "--prefix"], live: true, cleanup: false, prefixArg: true },
+  { name: "mc_live_sync_matrix_task114", args: ["live", "sync-matrix", "--task", "TASK-114", "--prefix"], live: true, cleanup: false, prefixArg: true },
   { name: "mc_live_offline_matrix", args: ["live", "offline-matrix", "--task", "TASK-113", "--prefix"], live: true, cleanup: false, prefixArg: true },
 ];
 
@@ -97,7 +103,11 @@ function runMcAgent(extraArgs = [], timeoutMs = TIMEOUT_MS) {
 
 async function selfTest() {
   const names = new Set(TOOLS.map((tool) => tool.name));
-  if (!names.has("mc_preflight") || !names.has("mc_android_test_offline")) {
+  if (!names.has("mc_preflight") ||
+      !names.has("mc_report_task114") ||
+      !names.has("mc_android_test_offline") ||
+      !names.has("mc_sync_counts_supabase_task114") ||
+      !names.has("mc_live_sync_matrix_task114")) {
     throw new Error("allowlist missing required tool");
   }
   try {

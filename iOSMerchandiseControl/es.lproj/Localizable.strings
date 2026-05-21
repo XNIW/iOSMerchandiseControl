@@ -427,6 +427,7 @@
 "options.supabase.pushpreflight.metric.scopeBlockedDependencies" = "Dependencias bloqueadas";
 "options.supabase.pushpreflight.category.dryRunCreateCandidate" = "Candidatos create: %d";
 "options.supabase.pushpreflight.category.dryRunUpdateCandidate" = "Candidatos update: %d";
+"options.supabase.pushpreflight.category.dryRunTombstoneCandidate" = "Candidatos tombstone: %d";
 "options.supabase.pushpreflight.category.noOpAlreadySynced" = "No-op ya alineados: %d";
 "options.supabase.pushpreflight.category.blockedNoRemoteID" = "Bloqueados: remoteID faltante/colisión barcode: %d";
 "options.supabase.pushpreflight.category.blockedAccountMismatch" = "Bloqueados: account mismatch: %d";

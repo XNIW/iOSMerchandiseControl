@@ -1,0 +1,311 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T225909Z-live-reconcile-counts-task-TASK-114-prefix-TASK114_RECON_-p65125.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T225909Z-live-reconcile-counts-task-TASK-114-prefix-TASK114_RECON_-p65125.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260521T225909Z-live-reconcile-counts-task-TASK-114-prefix-TASK114_RECON_-p65125.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-01",
+    "CA-02",
+    "CA-03",
+    "CA-06",
+    "CA-07",
+    "CA-10"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live reconcile-counts --task TASK-114 --prefix TASK114_RECON_",
+  "command_slug": "live-reconcile-counts-task-TASK-114-prefix-TASK114_RECON_",
+  "device_simulator_redacted": {
+    "android_serial": "<REDACTED>",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro"
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 6583,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-114",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_RUN_PREFIX": "TASK113_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-114"
+  },
+  "exit_code": 1,
+  "git_sha": "4b74773",
+  "next_action_recommended": "Inspect drift table in report, repair sync/apply/prune, then rerun.",
+  "platform": "live",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "account": {
+      "state": "redacted"
+    },
+    "blockers": {},
+    "checkpoint": {
+      "android": {
+        "local": {
+          "pendingAggregate": 0
+        },
+        "remote": null
+      },
+      "ios": {
+        "local": {
+          "pendingAggregate": 0
+        },
+        "remote": null
+      },
+      "supabase": {
+        "local": null,
+        "remote": "linked-read"
+      }
+    },
+    "comparison": {
+      "definition": "TASK-114 canonical compare uses active/pending/localOnly for catalog/prices and userVisible/pending/localOnly for history; raw active/all/deleted remain diagnostic.",
+      "fields": {
+        "categories": [
+          "active",
+          "pending",
+          "localOnly"
+        ],
+        "history_entries": [
+          "userVisible",
+          "pending",
+          "localOnly"
+        ],
+        "product_prices": [
+          "active",
+          "pending",
+          "localOnly"
+        ],
+        "products": [
+          "active",
+          "pending",
+          "localOnly"
+        ],
+        "suppliers": [
+          "active",
+          "pending",
+          "localOnly"
+        ]
+      }
+    },
+    "completedAt": "2026-05-21T22:59:15Z",
+    "counts": {
+      "android": {
+        "categories": {
+          "active": 28,
+          "all": 28,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 18,
+          "all": 20,
+          "deleted": 2,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 17
+        },
+        "product_prices": {
+          "active": 41111,
+          "all": 41111,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19696,
+          "all": 19696,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 59,
+          "all": 59,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "ios": {
+        "categories": {
+          "active": 28,
+          "all": 28,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 11,
+          "all": 11,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 11
+        },
+        "product_prices": {
+          "active": 41111,
+          "all": 41111,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19696,
+          "all": 19696,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 59,
+          "all": 59,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "supabase": {
+        "categories": {
+          "active": 28,
+          "all": 28,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 17,
+          "all": 21,
+          "deleted": 4,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 17
+        },
+        "product_prices": {
+          "active": 41111,
+          "all": 41111,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19696,
+          "all": 19696,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 59,
+          "all": 59,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      }
+    },
+    "deleted": 0,
+    "drift": {
+      "history_entries": {
+        "userVisible": {
+          "android": 17,
+          "ios": 11,
+          "supabase": 17
+        }
+      }
+    },
+    "inserted": 0,
+    "lastFullReconciliation": null,
+    "lastPull": null,
+    "lastPush": null,
+    "prefix": "TASK114_RECON_",
+    "pruned": {
+      "didPrune": 0,
+      "isCompleteSnapshot": null,
+      "skippedDirty": 0,
+      "skippedLocalOnly": 1,
+      "skippedPendingTombstone": 0,
+      "skippedScopedSnapshot": 0,
+      "wouldPrune": 0
+    },
+    "samples": {
+      "androidLocalProductsMissingRemote": [],
+      "historySessionActiveAllTombstone": [
+        {
+          "active": 17,
+          "all": 21,
+          "tombstone": 4
+        }
+      ],
+      "iosMissingSupplierCategory": [],
+      "localOnlyNotPrunable": [
+        "4e8e896ebabc2b83"
+      ],
+      "remotePriceHistoryWithoutLocalProduct": []
+    },
+    "schemaVersion": "1.1",
+    "session": {
+      "state": "redacted"
+    },
+    "skipped": 0,
+    "source": "live.reconcile-counts",
+    "startedAt": "2026-05-21T22:59:09Z",
+    "status": "FAIL",
+    "taskId": "TASK-114",
+    "updated": 0
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "fail",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260521T225909Z-live-reconcile-counts-task-TASK-114-prefix-TASK114_RECON_-p65125",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "task_id": "TASK-114",
+  "test_prefix": "TASK114_RECON_",
+  "timestamp_end": "2026-05-21T22:59:16Z",
+  "timestamp_start": "2026-05-21T22:59:09Z",
+  "warnings": []
+}

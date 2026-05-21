@@ -12,7 +12,11 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let tolerance = 0.005
         var isTask104Pass2: Bool { prefix.hasPrefix("TASK104_PASS2_") }
         var isTask112: Bool { prefix.hasPrefix("TASK112_") }
+        var isTask114: Bool { prefix.hasPrefix("TASK114_") }
         var logPrefix: String {
+            if isTask114 {
+                return "TASK114"
+            }
             if isTask112 {
                 return "TASK112"
             }
@@ -28,6 +32,32 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var categoryAndroid: String { "\(prefix)CAT_ANDROID_01" }
         var productAndroid: String { "\(prefix)CANARY_ANDROID_01" }
         var barcodeAndroid: String { "\(prefix)ANDROID_0001" }
+
+        var matrixSupplierIOS: String { "\(prefix)MATRIX_SUP_IOS" }
+        var matrixCategoryIOS: String { "\(prefix)MATRIX_CAT_IOS" }
+        var matrixBarcodeIOSCreate: String { "\(prefix)MATRIX_IOS_CREATE" }
+        var matrixBarcodeIOSUpdate: String { "\(prefix)MATRIX_IOS_UPDATE" }
+        var matrixBarcodeIOSTombstone: String { "\(prefix)MATRIX_IOS_TOMBSTONE" }
+        var matrixProductIOSCreate: String { "\(prefix)MATRIX_IOS_PRODUCT_CREATE" }
+        var matrixProductIOSUpdateInitial: String { "\(prefix)MATRIX_IOS_PRODUCT_UPDATE_INITIAL" }
+        var matrixProductIOSUpdateFinal: String { "\(prefix)MATRIX_IOS_PRODUCT_UPDATE_FINAL" }
+        var matrixProductIOSTombstone: String { "\(prefix)MATRIX_IOS_PRODUCT_TOMBSTONE" }
+        var matrixHistoryIOSCreate: String { "\(prefix)MATRIX_IOS_HISTORY_CREATE" }
+        var matrixHistoryIOSUpdateInitial: String { "\(prefix)MATRIX_IOS_HISTORY_UPDATE_INITIAL" }
+        var matrixHistoryIOSUpdateFinal: String { "\(prefix)MATRIX_IOS_HISTORY_UPDATE_FINAL" }
+        var matrixHistoryIOSTombstone: String { "\(prefix)MATRIX_IOS_HISTORY_TOMBSTONE" }
+
+        var matrixSupplierAndroid: String { "\(prefix)MATRIX_SUP_ANDROID" }
+        var matrixCategoryAndroid: String { "\(prefix)MATRIX_CAT_ANDROID" }
+        var matrixBarcodeAndroidCreate: String { "\(prefix)MATRIX_ANDROID_CREATE" }
+        var matrixBarcodeAndroidUpdate: String { "\(prefix)MATRIX_ANDROID_UPDATE" }
+        var matrixBarcodeAndroidTombstone: String { "\(prefix)MATRIX_ANDROID_TOMBSTONE" }
+        var matrixProductAndroidCreate: String { "\(prefix)MATRIX_ANDROID_PRODUCT_CREATE" }
+        var matrixProductAndroidUpdateFinal: String { "\(prefix)MATRIX_ANDROID_PRODUCT_UPDATE_FINAL" }
+        var matrixProductAndroidTombstone: String { "\(prefix)MATRIX_ANDROID_PRODUCT_TOMBSTONE" }
+        var matrixHistoryAndroidCreate: String { "\(prefix)MATRIX_ANDROID_HISTORY_CREATE" }
+        var matrixHistoryAndroidUpdateFinal: String { "\(prefix)MATRIX_ANDROID_HISTORY_UPDATE_FINAL" }
+        var matrixHistoryAndroidTombstone: String { "\(prefix)MATRIX_ANDROID_HISTORY_TOMBSTONE" }
 
         var mediumSuppliers: [String] { (1...5).map { "\(prefix)SUP_MEDIUM_\($0.padded3)" } }
         var mediumCategories: [String] { (1...5).map { "\(prefix)CAT_MEDIUM_\($0.padded3)" } }
@@ -51,15 +81,25 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var barcodeOffline: String { "\(prefix)OFFLINE_0001" }
 
         var allSupplierNames: [String] {
-            [supplierIOS, supplierAndroid, supplierConflictCatalog, supplierConflictPrice, supplierOffline] + mediumSuppliers
+            [
+                supplierIOS, supplierAndroid, supplierConflictCatalog, supplierConflictPrice, supplierOffline,
+                matrixSupplierIOS, matrixSupplierAndroid
+            ] + mediumSuppliers
         }
 
         var allCategoryNames: [String] {
-            [categoryIOS, categoryAndroid, categoryConflictCatalog, categoryConflictPrice, categoryOffline] + mediumCategories
+            [
+                categoryIOS, categoryAndroid, categoryConflictCatalog, categoryConflictPrice, categoryOffline,
+                matrixCategoryIOS, matrixCategoryAndroid
+            ] + mediumCategories
         }
 
         var allBarcodes: [String] {
-            [barcodeIOS, barcodeAndroid, barcodeConflictCatalog, barcodeConflictPrice, barcodeOffline] + mediumBarcodes
+            [
+                barcodeIOS, barcodeAndroid, barcodeConflictCatalog, barcodeConflictPrice, barcodeOffline,
+                matrixBarcodeIOSCreate, matrixBarcodeIOSUpdate, matrixBarcodeIOSTombstone,
+                matrixBarcodeAndroidCreate, matrixBarcodeAndroidUpdate, matrixBarcodeAndroidTombstone
+            ] + mediumBarcodes
         }
 
         func mediumBarcode(_ index: Int) -> String {
@@ -250,6 +290,253 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         print(
             "\(fixture.logPrefix)_IOS_PULL_ANDROID owner_hash=\(ownerHash(runtime.session.userID)) " +
             "inserted_catalog=\(result.inserted) inserted_prices=\(priceResult.inserted) no_op=true"
+        )
+    }
+
+    func test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore() async throws {
+        try requireTask114IOSFullPullEnabled()
+        let runtime = try await makeRuntime()
+        let context = try makePersistentAppContext()
+        let before = try task114LocalCounts(context: context)
+        let service = SupabasePullPreviewService(
+            inventoryService: runtime.inventory,
+            pageSize: 1_000,
+            catalogRowBudget: nil,
+            productPricePreviewSampleLimit: 1_000
+        )
+
+        let state = await service.generatePreview(modelContainer: context.container)
+        let preview: SyncPreview
+        switch state {
+        case .success(let successfulPreview):
+            preview = successfulPreview
+        case .partial(_, let warnings, let sourceErrors):
+            XCTFail("TASK114 iOS full pull requires a complete catalog preview. warnings=\(warnings.count) sourceErrors=\(sourceErrors.count)")
+            return
+        case .failed(let error):
+            XCTFail("TASK114 iOS full pull preview failed: \(error.safeDiagnosticDetail ?? "redacted")")
+            return
+        case .idle, .loading:
+            XCTFail("TASK114 iOS full pull preview returned a non-terminal state.")
+            return
+        }
+
+        let plan: SupabasePullApplyPlan?
+        do {
+            plan = try SupabasePullApplyService().prepareApplyPlan(
+                preview: preview,
+                context: context,
+                isAuthenticated: true,
+                accountGuard: SupabasePullApplyAccountGuard(
+                    currentUserID: runtime.session.userID,
+                    lastLinkedUserID: runtime.session.userID
+                )
+            )
+        } catch let error as SupabasePullApplyError where error == .noApplicableChanges {
+            plan = nil
+        }
+
+        let result: SupabasePullApplyResult
+        if let plan {
+            result = try await SupabasePullApplyService().applyBatched(plan: plan, context: context)
+            _ = try SupabaseCatalogBaselineWriter().commitLatestBaseline(
+                context: context,
+                ownerUserUUID: runtime.session.userID
+            )
+        } else {
+            result = SupabasePullApplyResult(inserted: 0, updated: 0, suppliersCreated: 0, categoriesCreated: 0)
+        }
+
+        let after = try task114LocalCounts(context: context)
+        XCTAssertEqual(after.suppliers, preview.remoteCounts.suppliers)
+        XCTAssertEqual(after.categories, preview.remoteCounts.categories)
+
+        print(
+            "TASK114_IOS_FULL_PULL_LOOKUPS owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "before_suppliers=\(before.suppliers) before_categories=\(before.categories) " +
+            "remote_suppliers=\(preview.remoteCounts.suppliers) remote_categories=\(preview.remoteCounts.categories) " +
+            "planned_suppliers=\(plan?.suppliersToCreate.count ?? 0) planned_categories=\(plan?.categoriesToCreate.count ?? 0) " +
+            "suppliers_created=\(result.suppliersCreated) categories_created=\(result.categoriesCreated) " +
+            "products_inserted=\(result.inserted) products_updated=\(result.updated) product_tombstoned=\(result.productTombstoned) " +
+            "after_suppliers=\(after.suppliers) after_categories=\(after.categories)"
+        )
+    }
+
+    func test114IOSPullAndroidProductHistoryMatrix() async throws {
+        try requireLiveAcceptanceEnabled()
+        let fixture = try makeFixture()
+        let runtime = try await makeRuntime()
+        let snapshot = try await fetchRemoteSnapshot(runtime, fixture: fixture)
+        let context = try makeContext()
+
+        let createRemote = try XCTUnwrap(product(in: snapshot, barcode: fixture.matrixBarcodeAndroidCreate))
+        XCTAssertNil(createRemote.deletedAt)
+        let createApply = try applyProductCreate(createRemote, snapshot: snapshot, context: context, ownerUserID: runtime.session.userID)
+        XCTAssertEqual(createApply.inserted, 1)
+
+        let updateRemote = try XCTUnwrap(product(in: snapshot, barcode: fixture.matrixBarcodeAndroidUpdate))
+        XCTAssertNil(updateRemote.deletedAt)
+        try seedLocalProduct(
+            remote: updateRemote,
+            snapshot: snapshot,
+            context: context,
+            staleName: "TASK114_IOS_STALE_ANDROID_UPDATE"
+        )
+        let updateApply = try applyProductUpdate(updateRemote, snapshot: snapshot, context: context, ownerUserID: runtime.session.userID)
+        XCTAssertEqual(updateApply.updated, 1)
+        XCTAssertEqual(try localProduct(context: context, barcode: fixture.matrixBarcodeAndroidUpdate)?.productName, fixture.matrixProductAndroidUpdateFinal)
+
+        let tombstoneRemote = try XCTUnwrap(product(in: snapshot, barcode: fixture.matrixBarcodeAndroidTombstone))
+        XCTAssertNotNil(tombstoneRemote.deletedAt)
+        let localTombstoneProduct = try seedLocalProduct(
+            remote: tombstoneRemote,
+            snapshot: snapshot,
+            context: context,
+            staleName: fixture.matrixProductAndroidTombstone
+        )
+        let tombstoneApply = try applyProductTombstone(tombstoneRemote, snapshot: snapshot, context: context, ownerUserID: runtime.session.userID)
+        XCTAssertEqual(tombstoneApply.productTombstoned, 1)
+        XCTAssertNotNil(localTombstoneProduct.remoteDeletedAt)
+
+        let sessions = try await fetchFixtureSessions(runtime, fixture: fixture)
+        let historyService = HistorySessionSyncService(remote: runtime.inventory)
+
+        let historyCreate = try XCTUnwrap(session(in: sessions, displayName: fixture.matrixHistoryAndroidCreate))
+        let historyCreateApply = try historyService.applyRemoteSharedSheetSessions([historyCreate], ownerUserID: runtime.session.userID, context: context)
+        XCTAssertEqual(historyCreateApply.insertedCount, 1)
+
+        let historyUpdate = try XCTUnwrap(session(in: sessions, displayName: fixture.matrixHistoryAndroidUpdateFinal))
+        _ = try seedLocalHistoryEntry(remote: historyUpdate, context: context, title: "TASK114_IOS_STALE_ANDROID_HISTORY_UPDATE")
+        let historyUpdateApply = try historyService.applyRemoteSharedSheetSessions([historyUpdate], ownerUserID: runtime.session.userID, context: context)
+        XCTAssertEqual(historyUpdateApply.updatedCount, 1)
+        XCTAssertEqual(try localHistoryEntry(context: context, remoteID: historyUpdate.remoteID)?.title, fixture.matrixHistoryAndroidUpdateFinal)
+
+        let historyTombstone = try XCTUnwrap(session(in: sessions, displayName: fixture.matrixHistoryAndroidTombstone))
+        XCTAssertNotNil(historyTombstone.deletedAt)
+        let localTombstoneHistory = try seedLocalHistoryEntry(remote: historyTombstone, context: context, title: fixture.matrixHistoryAndroidTombstone)
+        let historyTombstoneApply = try historyService.applyRemoteSharedSheetSessions([historyTombstone], ownerUserID: runtime.session.userID, context: context)
+        XCTAssertEqual(historyTombstoneApply.updatedCount, 1)
+        XCTAssertNotNil(localTombstoneHistory.remoteDeletedAt)
+
+        print(
+            "\(fixture.logPrefix)_IOS_PULL_ANDROID_MATRIX owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "product_create=pass product_update=pass product_tombstone=pass " +
+            "history_create=pass history_update=pass history_tombstone=pass"
+        )
+    }
+
+    func test114IOSWriteProductHistoryMatrix() async throws {
+        try requireLiveAcceptanceEnabled()
+        let fixture = try makeFixture()
+        let runtime = try await makeRuntime()
+        let context = try makeContext()
+        _ = try SupabaseCatalogBaselineWriter().commitLatestBaseline(
+            context: context,
+            ownerUserUUID: runtime.session.userID
+        )
+
+        let supplier = Supplier(name: fixture.matrixSupplierIOS)
+        let category = ProductCategory(name: fixture.matrixCategoryIOS)
+        context.insert(supplier)
+        context.insert(category)
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: runtime.session.userID)
+        try accumulator.recordSupplierChange(supplier: supplier, operation: .create, origin: .manualCatalogSave)
+        try accumulator.recordCategoryChange(category: category, operation: .create, origin: .manualCatalogSave)
+
+        let createProduct = matrixProduct(
+            barcode: fixture.matrixBarcodeIOSCreate,
+            name: fixture.matrixProductIOSCreate,
+            supplier: supplier,
+            category: category
+        )
+        let updateProduct = matrixProduct(
+            barcode: fixture.matrixBarcodeIOSUpdate,
+            name: fixture.matrixProductIOSUpdateInitial,
+            supplier: supplier,
+            category: category
+        )
+        let tombstoneProduct = matrixProduct(
+            barcode: fixture.matrixBarcodeIOSTombstone,
+            name: fixture.matrixProductIOSTombstone,
+            supplier: supplier,
+            category: category
+        )
+        for product in [createProduct, updateProduct, tombstoneProduct] {
+            context.insert(product)
+            try accumulator.recordProductChange(
+                product: product,
+                operation: .create,
+                origin: .manualCatalogSave,
+                changedFields: ["barcode", "productName", "supplier", "category", "purchasePrice", "retailPrice", "stockQuantity"]
+            )
+        }
+        try context.save()
+        let initialCatalogPush = try await pushPendingCatalog(context: context, runtime: runtime, expectedReadyCandidatesAtLeast: 5)
+        XCTAssertEqual(initialCatalogPush.status, .completed)
+
+        updateProduct.productName = fixture.matrixProductIOSUpdateFinal
+        try accumulator.recordProductChange(
+            product: updateProduct,
+            operation: .update,
+            origin: .manualCatalogSave,
+            changedFields: ["productName"]
+        )
+        try context.save()
+        let updateCatalogPush = try await pushPendingCatalog(context: context, runtime: runtime, expectedReadyCandidatesAtLeast: 1)
+        XCTAssertEqual(updateCatalogPush.status, .completed)
+
+        let tombstoneBaseline = LocalPendingChangeLogicalKey.productFingerprintHash(tombstoneProduct)
+        try accumulator.recordProductChange(
+            product: tombstoneProduct,
+            operation: .delete,
+            origin: .manualCatalogSave,
+            changedFields: ["tombstone"],
+            baselineFingerprintHash: tombstoneBaseline
+        )
+        context.delete(tombstoneProduct)
+        try context.save()
+        let tombstoneCatalogPush = try await pushPendingCatalog(context: context, runtime: runtime, expectedReadyCandidatesAtLeast: 1)
+        XCTAssertEqual(tombstoneCatalogPush.status, .completed)
+
+        let historyCreate = matrixHistoryEntry(title: fixture.matrixHistoryIOSCreate, fixture: fixture)
+        let historyUpdate = matrixHistoryEntry(title: fixture.matrixHistoryIOSUpdateInitial, fixture: fixture)
+        let historyTombstone = matrixHistoryEntry(title: fixture.matrixHistoryIOSTombstone, fixture: fixture)
+        for entry in [historyCreate, historyUpdate, historyTombstone] {
+            context.insert(entry)
+            entry.markHistorySessionLocalMutation()
+            try accumulator.recordHistorySessionChange(entry: entry, operation: .upsert, changedFields: ["create"])
+        }
+        try context.save()
+        let initialHistoryPush = try await pushPendingHistory([historyCreate, historyUpdate, historyTombstone], context: context, runtime: runtime)
+        XCTAssertEqual(initialHistoryPush.uploadedCount, 3)
+
+        historyUpdate.title = fixture.matrixHistoryIOSUpdateFinal
+        historyUpdate.markHistorySessionLocalMutation()
+        try accumulator.recordHistorySessionChange(entry: historyUpdate, operation: .upsert, changedFields: ["displayName"])
+        try context.save()
+        let updateHistoryPush = try await pushPendingHistory([historyUpdate], context: context, runtime: runtime)
+        XCTAssertEqual(updateHistoryPush.uploadedCount, 1)
+
+        historyTombstone.markHistorySessionLocalDeletion()
+        try accumulator.recordHistorySessionChange(entry: historyTombstone, operation: .delete, changedFields: ["tombstone"])
+        try context.save()
+        let tombstoneHistoryPush = try await pushPendingHistory([historyTombstone], context: context, runtime: runtime)
+        XCTAssertEqual(tombstoneHistoryPush.uploadedCount, 1)
+
+        let readBack = try await fetchRemoteSnapshot(runtime, fixture: fixture)
+        XCTAssertEqual(try XCTUnwrap(singleActiveProduct(in: readBack, barcode: fixture.matrixBarcodeIOSCreate)).productName, fixture.matrixProductIOSCreate)
+        XCTAssertEqual(try XCTUnwrap(singleActiveProduct(in: readBack, barcode: fixture.matrixBarcodeIOSUpdate)).productName, fixture.matrixProductIOSUpdateFinal)
+        XCTAssertNotNil(try XCTUnwrap(product(in: readBack, barcode: fixture.matrixBarcodeIOSTombstone)).deletedAt)
+
+        let sessions = try await fetchFixtureSessions(runtime, fixture: fixture)
+        XCTAssertNotNil(session(in: sessions, displayName: fixture.matrixHistoryIOSCreate))
+        XCTAssertNotNil(session(in: sessions, displayName: fixture.matrixHistoryIOSUpdateFinal))
+        XCTAssertNotNil(try XCTUnwrap(session(in: sessions, displayName: fixture.matrixHistoryIOSTombstone)).deletedAt)
+
+        print(
+            "\(fixture.logPrefix)_IOS_WRITE_MATRIX owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "product_create=pass product_update=pass product_tombstone=pass " +
+            "history_create=pass history_update=pass history_tombstone=pass"
         )
     }
 
@@ -800,6 +1087,197 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         return push
     }
 
+    private func pushPendingHistory(
+        _ entries: [HistoryEntry],
+        context: ModelContext,
+        runtime: Runtime
+    ) async throws -> HistorySessionPushResult {
+        try await HistorySessionSyncService(remote: runtime.inventory).pushPendingHistorySessions(
+            entries: entries,
+            ownerUserID: runtime.session.userID,
+            context: context
+        )
+    }
+
+    private func matrixProduct(
+        barcode: String,
+        name: String,
+        supplier: Supplier,
+        category: ProductCategory
+    ) -> Product {
+        Product(
+            barcode: barcode,
+            itemNumber: "\(barcode)_ITEM",
+            productName: name,
+            purchasePrice: 44.10,
+            retailPrice: 55.20,
+            stockQuantity: 6,
+            supplier: supplier,
+            category: category
+        )
+    }
+
+    private func matrixHistoryEntry(title: String, fixture: Fixture) -> HistoryEntry {
+        let entry = HistoryEntry(
+            id: title,
+            timestamp: Date(timeIntervalSince1970: 1_778_700_000),
+            isManualEntry: true,
+            data: [["barcode", "count"], [title, "2"]],
+            editable: [["", ""], ["", "2"]],
+            complete: [false, true],
+            supplier: fixture.matrixSupplierIOS,
+            category: fixture.matrixCategoryIOS,
+            totalItems: 1,
+            paymentTotal: 2,
+            missingItems: 0
+        )
+        entry.title = title
+        return entry
+    }
+
+    private func applyProductCreate(
+        _ remote: RemoteInventoryProductRow,
+        snapshot: RemoteSnapshot,
+        context: ModelContext,
+        ownerUserID: UUID
+    ) throws -> SupabasePullApplyResult {
+        let plan = try SupabasePullApplyService().prepareApplyPlan(
+            preview: makePreview(for: remote, snapshot: snapshot),
+            context: context,
+            isAuthenticated: true,
+            accountGuard: SupabasePullApplyAccountGuard(currentUserID: ownerUserID, lastLinkedUserID: ownerUserID)
+        )
+        return try SupabasePullApplyService().apply(plan: plan, context: context)
+    }
+
+    private func applyProductUpdate(
+        _ remote: RemoteInventoryProductRow,
+        snapshot: RemoteSnapshot,
+        context: ModelContext,
+        ownerUserID: UUID
+    ) throws -> SupabasePullApplyResult {
+        let plan = try SupabasePullApplyService().prepareApplyPlan(
+            preview: makeUpdatePreview(for: remote, snapshot: snapshot),
+            context: context,
+            isAuthenticated: true,
+            accountGuard: SupabasePullApplyAccountGuard(currentUserID: ownerUserID, lastLinkedUserID: ownerUserID)
+        )
+        return try SupabasePullApplyService().apply(plan: plan, context: context)
+    }
+
+    private func applyProductTombstone(
+        _ remote: RemoteInventoryProductRow,
+        snapshot: RemoteSnapshot,
+        context: ModelContext,
+        ownerUserID: UUID
+    ) throws -> SupabasePullApplyResult {
+        let plan = try SupabasePullApplyService().prepareApplyPlan(
+            preview: makeTombstonePreview(for: remote, snapshot: snapshot),
+            context: context,
+            isAuthenticated: true,
+            accountGuard: SupabasePullApplyAccountGuard(currentUserID: ownerUserID, lastLinkedUserID: ownerUserID)
+        )
+        return try SupabasePullApplyService().apply(plan: plan, context: context)
+    }
+
+    @discardableResult
+    private func seedLocalProduct(
+        remote: RemoteInventoryProductRow,
+        snapshot: RemoteSnapshot,
+        context: ModelContext,
+        staleName: String
+    ) throws -> Product {
+        let supplier: Supplier?
+        if let supplierID = remote.supplierID,
+           let row = snapshot.suppliers.first(where: { $0.id == supplierID }) {
+            supplier = try lookupOrInsertSupplier(row, context: context)
+        } else {
+            supplier = nil
+        }
+        let category: ProductCategory?
+        if let categoryID = remote.categoryID,
+           let row = snapshot.categories.first(where: { $0.id == categoryID }) {
+            category = try lookupOrInsertCategory(row, context: context)
+        } else {
+            category = nil
+        }
+        let product = Product(
+            barcode: remote.barcode,
+            remoteID: remote.id,
+            remoteUpdatedAt: SupabaseRemoteDateParser.parse(remote.updatedAt),
+            remoteDeletedAt: nil,
+            itemNumber: remote.itemNumber,
+            productName: staleName,
+            secondProductName: remote.secondProductName,
+            purchasePrice: remote.purchasePrice,
+            retailPrice: remote.retailPrice,
+            stockQuantity: remote.stockQuantity,
+            supplier: supplier,
+            category: category
+        )
+        context.insert(product)
+        try context.save()
+        return product
+    }
+
+    private func lookupOrInsertSupplier(_ row: RemoteInventorySupplierRow, context: ModelContext) throws -> Supplier {
+        if let existing = try context.fetch(FetchDescriptor<Supplier>()).first(where: { $0.remoteID == row.id || $0.name == row.name }) {
+            return existing
+        }
+        let supplier = Supplier(
+            name: row.name,
+            remoteID: row.id,
+            remoteUpdatedAt: SupabaseRemoteDateParser.parse(row.updatedAt),
+            remoteDeletedAt: SupabaseRemoteDateParser.parse(row.deletedAt)
+        )
+        context.insert(supplier)
+        return supplier
+    }
+
+    private func lookupOrInsertCategory(_ row: RemoteInventoryCategoryRow, context: ModelContext) throws -> ProductCategory {
+        if let existing = try context.fetch(FetchDescriptor<ProductCategory>()).first(where: { $0.remoteID == row.id || $0.name == row.name }) {
+            return existing
+        }
+        let category = ProductCategory(
+            name: row.name,
+            remoteID: row.id,
+            remoteUpdatedAt: SupabaseRemoteDateParser.parse(row.updatedAt),
+            remoteDeletedAt: SupabaseRemoteDateParser.parse(row.deletedAt)
+        )
+        context.insert(category)
+        return category
+    }
+
+    @discardableResult
+    private func seedLocalHistoryEntry(
+        remote: RemoteSharedSheetSessionRow,
+        context: ModelContext,
+        title: String
+    ) throws -> HistoryEntry {
+        let entry = HistoryEntry(
+            id: remote.remoteID.uuidString.lowercased(),
+            timestamp: HistorySessionPayloadCodec.parseTimestamp(remote.timestamp),
+            isManualEntry: remote.isManualEntry,
+            data: remote.data,
+            editable: remote.sessionOverlay?.editable ?? [],
+            complete: remote.sessionOverlay?.complete ?? [],
+            supplier: remote.supplier,
+            category: remote.category,
+            syncStatus: .syncedSuccessfully,
+            uid: remote.remoteID,
+            remoteID: remote.remoteID,
+            remoteUpdatedAt: HistorySessionPayloadCodec.parseUpdatedAt(remote.updatedAt),
+            remoteDeletedAt: nil,
+            remotePayloadFingerprint: nil,
+            localChangeRevision: 0,
+            lastSyncedLocalRevision: 0
+        )
+        entry.title = title
+        context.insert(entry)
+        try context.save()
+        return entry
+    }
+
     private func pushAllPendingPrices(
         context: ModelContext,
         runtime: Runtime
@@ -1104,10 +1582,20 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let task103Value = (environment["TASK103_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK103_LIVE_ACCEPTANCE"])?.lowercased()
         let task104Value = (environment["TASK104_PASS2_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK104_PASS2_LIVE_ACCEPTANCE"])?.lowercased()
         let task112Value = (environment["TASK112_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK112_LIVE_ACCEPTANCE"])?.lowercased()
+        let task114Value = (environment["TASK114_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK114_LIVE_ACCEPTANCE"])?.lowercased()
         guard task103Value == "1" || task103Value == "true"
             || task104Value == "1" || task104Value == "true"
-            || task112Value == "1" || task112Value == "true" else {
-            throw XCTSkip("Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1 or TASK112_LIVE_ACCEPTANCE=1 in the xctestrun environment.")
+            || task112Value == "1" || task112Value == "true"
+            || task114Value == "1" || task114Value == "true" else {
+            throw XCTSkip("Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1 or TASK114_LIVE_ACCEPTANCE=1 in the xctestrun environment.")
+        }
+    }
+
+    private func requireTask114IOSFullPullEnabled() throws {
+        let environment = ProcessInfo.processInfo.environment
+        let enabled = (environment["TASK114_IOS_FULL_PULL"] ?? environment["TEST_RUNNER_TASK114_IOS_FULL_PULL"])?.lowercased()
+        guard enabled == "1" || enabled == "true" else {
+            throw XCTSkip("TASK114 iOS full pull is gated. Set TASK114_IOS_FULL_PULL=1 in the xctestrun environment.")
         }
     }
 
@@ -1118,15 +1606,18 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             ?? environment["TASK103_RUN_PREFIX"]
             ?? environment["TEST_RUNNER_TASK103_RUN_PREFIX"]
             ?? environment["TASK112_RUN_PREFIX"]
-            ?? environment["TEST_RUNNER_TASK112_RUN_PREFIX"] else {
-            throw XCTSkip("TASK104_PASS2_RUN_PREFIX, TASK103_RUN_PREFIX or TASK112_RUN_PREFIX must be explicitly set for live acceptance.")
+            ?? environment["TEST_RUNNER_TASK112_RUN_PREFIX"]
+            ?? environment["TASK114_RUN_PREFIX"]
+            ?? environment["TEST_RUNNER_TASK114_RUN_PREFIX"] else {
+            throw XCTSkip("TASK104_PASS2_RUN_PREFIX, TASK103_RUN_PREFIX, TASK112_RUN_PREFIX or TASK114_RUN_PREFIX must be explicitly set for live acceptance.")
         }
         guard (
             prefix.hasPrefix("TASK103_REAL_R")
                 || prefix.hasPrefix("TASK104_PASS2_")
                 || prefix.hasPrefix("TASK112_")
+                || prefix.hasPrefix("TASK114_")
         ), prefix.hasSuffix("_") else {
-            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._ or TASK112_..._.")
+            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._ or TASK114_..._.")
         }
         return Fixture(prefix: prefix)
     }
@@ -1144,6 +1635,21 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             productIDs: products.map(\.id)
         )
         return try await RemoteSnapshot(suppliers: suppliers, categories: categories, products: products, prices: prices)
+    }
+
+    private func fetchFixtureSessions(
+        _ runtime: Runtime,
+        fixture: Fixture
+    ) async throws -> [RemoteSharedSheetSessionRow] {
+        try await runtime.provider.client
+            .from("shared_sheet_sessions")
+            .select("remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at,deleted_at")
+            .eq("owner_user_id", value: runtime.session.userID.uuidString)
+            .like("display_name", pattern: "\(fixture.prefix)MATRIX_%")
+            .order("remote_id", ascending: true)
+            .limit(50)
+            .execute()
+            .value
     }
 
     private func fetchFixtureSuppliers(
@@ -1392,11 +1898,100 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         )
     }
 
+    private func makeTombstonePreview(for product: RemoteInventoryProductRow, snapshot: RemoteSnapshot) -> SyncPreview {
+        let payload = SyncPreviewProductApplyPayload(
+            remoteID: product.id,
+            remoteUpdatedAt: SupabaseRemoteDateParser.parse(product.updatedAt),
+            remoteDeletedAt: SupabaseRemoteDateParser.parse(product.deletedAt),
+            barcode: product.barcode,
+            itemNumber: product.itemNumber,
+            productName: product.productName,
+            secondProductName: product.secondProductName,
+            purchasePrice: product.purchasePrice,
+            retailPrice: product.retailPrice,
+            stockQuantity: product.stockQuantity,
+            supplierName: product.supplierID.flatMap { id in snapshot.suppliers.first { $0.id == id }?.name },
+            supplierRemoteID: product.supplierID,
+            supplierRemoteUpdatedAt: product.supplierID
+                .flatMap { id in snapshot.suppliers.first { $0.id == id }?.updatedAt }
+                .flatMap(SupabaseRemoteDateParser.parse),
+            supplierRemoteDeletedAt: product.supplierID
+                .flatMap { id in snapshot.suppliers.first { $0.id == id }?.deletedAt }
+                .flatMap(SupabaseRemoteDateParser.parse),
+            categoryName: product.categoryID.flatMap { id in snapshot.categories.first { $0.id == id }?.name },
+            categoryRemoteID: product.categoryID,
+            categoryRemoteUpdatedAt: product.categoryID
+                .flatMap { id in snapshot.categories.first { $0.id == id }?.updatedAt }
+                .flatMap(SupabaseRemoteDateParser.parse),
+            categoryRemoteDeletedAt: product.categoryID
+                .flatMap { id in snapshot.categories.first { $0.id == id }?.deletedAt }
+                .flatMap(SupabaseRemoteDateParser.parse)
+        )
+        let summary = SyncPreviewProductSummary(
+            classification: .remoteTombstone,
+            remoteID: product.id,
+            barcode: product.barcode,
+            productName: product.productName,
+            applyPayload: payload
+        )
+        return SyncPreview(
+            generatedAt: Date(),
+            outcome: .success,
+            remoteCounts: RemoteInventorySnapshotCounts(
+                products: 1,
+                activeProducts: 0,
+                tombstonedProducts: 1,
+                suppliers: product.supplierID == nil ? 0 : 1,
+                categories: product.categoryID == nil ? 0 : 1,
+                productPrices: prices(in: snapshot, productID: product.id).count
+            ),
+            localCounts: LocalInventorySnapshotCounts(
+                products: 1,
+                suppliers: product.supplierID == nil ? 0 : 1,
+                categories: product.categoryID == nil ? 0 : 1,
+                productPrices: 0,
+                linkedProducts: 1,
+                linkedSuppliers: product.supplierID == nil ? 0 : 1,
+                linkedCategories: product.categoryID == nil ? 0 : 1
+            ),
+            newProducts: [],
+            updateCandidates: [],
+            conflicts: [],
+            unchangedProducts: [],
+            remoteTombstones: [summary],
+            supplierDiffs: [],
+            categoryDiffs: [],
+            priceHistoryDiffs: [],
+            warnings: [],
+            metrics: [],
+            sourceErrors: []
+        )
+    }
+
+    private func product(in snapshot: RemoteSnapshot, barcode: String) -> RemoteInventoryProductRow? {
+        let matches = snapshot.products.filter { $0.barcode == barcode }
+        return matches.count == 1 ? matches[0] : nil
+    }
+
+    private func session(in sessions: [RemoteSharedSheetSessionRow], displayName: String) -> RemoteSharedSheetSessionRow? {
+        let matches = sessions.filter { $0.displayName == displayName }
+        return matches.count == 1 ? matches[0] : nil
+    }
+
+    private func localProduct(context: ModelContext, barcode: String) throws -> Product? {
+        try context.fetch(FetchDescriptor<Product>()).first { $0.barcode == barcode }
+    }
+
+    private func localHistoryEntry(context: ModelContext, remoteID: UUID) throws -> HistoryEntry? {
+        try context.fetch(FetchDescriptor<HistoryEntry>()).first { $0.remoteID == remoteID }
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             Product.self,
             Supplier.self,
             ProductCategory.self,
+            HistoryEntry.self,
             ProductPrice.self,
             SupabaseCatalogBaselineRun.self,
             SupabaseCatalogBaselineRecord.self,
@@ -1408,6 +2003,50 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let context = ModelContext(container)
         Self.retainedContexts.append(context)
         return context
+    }
+
+    private func makePersistentAppContext() throws -> ModelContext {
+        let schema = Schema([
+            Product.self,
+            Supplier.self,
+            ProductCategory.self,
+            HistoryEntry.self,
+            ProductPrice.self,
+            SupabaseCatalogBaselineRun.self,
+            SupabaseCatalogBaselineRecord.self,
+            SyncEventOutboxEntry.self,
+            LocalPendingChange.self
+        ])
+        let configuration: ModelConfiguration
+        if let storePath = ProcessInfo.processInfo.environment["TASK114_IOS_STORE_PATH"],
+           !storePath.isEmpty {
+            configuration = ModelConfiguration(
+                "Task114AppStore",
+                schema: schema,
+                url: URL(fileURLWithPath: storePath),
+                allowsSave: true,
+                cloudKitDatabase: .none
+            )
+        } else {
+            configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        }
+        let container = try ModelContainer(for: schema, configurations: [configuration])
+        Self.retainedContainers.append(container)
+        let context = ModelContext(container)
+        Self.retainedContexts.append(context)
+        return context
+    }
+
+    private struct Task114LocalCounts {
+        let suppliers: Int
+        let categories: Int
+    }
+
+    private func task114LocalCounts(context: ModelContext) throws -> Task114LocalCounts {
+        Task114LocalCounts(
+            suppliers: try context.fetch(FetchDescriptor<Supplier>()).filter { $0.remoteDeletedAt == nil }.count,
+            categories: try context.fetch(FetchDescriptor<ProductCategory>()).filter { $0.remoteDeletedAt == nil }.count
+        )
     }
 
     private func assertLocalPrices(

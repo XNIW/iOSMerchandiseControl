@@ -57,6 +57,8 @@ nonisolated struct SyncPreview: Sendable {
     let localCounts: LocalInventorySnapshotCounts
     let newProducts: [SyncPreviewProductSummary]
     let updateCandidates: [SyncPreviewProductSummary]
+    let remoteSupplierLookups: [SyncPreviewLookupSummary]
+    let remoteCategoryLookups: [SyncPreviewLookupSummary]
     let conflicts: [SyncPreviewConflict]
     let unchangedProducts: [SyncPreviewProductSummary]
     let remoteTombstones: [SyncPreviewProductSummary]
@@ -66,6 +68,66 @@ nonisolated struct SyncPreview: Sendable {
     let warnings: [SyncPreviewWarning]
     let metrics: [SyncPreviewMetric]
     let sourceErrors: [SyncPreviewWarning]
+
+    init(
+        generatedAt: Date,
+        outcome: SyncPreviewOutcome,
+        remoteCounts: RemoteInventorySnapshotCounts,
+        localCounts: LocalInventorySnapshotCounts,
+        newProducts: [SyncPreviewProductSummary],
+        updateCandidates: [SyncPreviewProductSummary],
+        remoteSupplierLookups: [SyncPreviewLookupSummary] = [],
+        remoteCategoryLookups: [SyncPreviewLookupSummary] = [],
+        conflicts: [SyncPreviewConflict],
+        unchangedProducts: [SyncPreviewProductSummary],
+        remoteTombstones: [SyncPreviewProductSummary],
+        supplierDiffs: [SyncPreviewFieldChange],
+        categoryDiffs: [SyncPreviewFieldChange],
+        priceHistoryDiffs: [SyncPreviewFieldChange],
+        warnings: [SyncPreviewWarning],
+        metrics: [SyncPreviewMetric],
+        sourceErrors: [SyncPreviewWarning]
+    ) {
+        self.generatedAt = generatedAt
+        self.outcome = outcome
+        self.remoteCounts = remoteCounts
+        self.localCounts = localCounts
+        self.newProducts = newProducts
+        self.updateCandidates = updateCandidates
+        self.remoteSupplierLookups = remoteSupplierLookups
+        self.remoteCategoryLookups = remoteCategoryLookups
+        self.conflicts = conflicts
+        self.unchangedProducts = unchangedProducts
+        self.remoteTombstones = remoteTombstones
+        self.supplierDiffs = supplierDiffs
+        self.categoryDiffs = categoryDiffs
+        self.priceHistoryDiffs = priceHistoryDiffs
+        self.warnings = warnings
+        self.metrics = metrics
+        self.sourceErrors = sourceErrors
+    }
+}
+
+nonisolated struct SyncPreviewLookupSummary: Identifiable, Sendable, Equatable {
+    let id: UUID
+    let remoteID: UUID
+    let displayName: String
+    let remoteUpdatedAt: Date?
+    let remoteDeletedAt: Date?
+
+    init(
+        id: UUID = UUID(),
+        remoteID: UUID,
+        displayName: String,
+        remoteUpdatedAt: Date? = nil,
+        remoteDeletedAt: Date? = nil
+    ) {
+        self.id = id
+        self.remoteID = remoteID
+        self.displayName = displayName
+        self.remoteUpdatedAt = remoteUpdatedAt
+        self.remoteDeletedAt = remoteDeletedAt
+    }
 }
 
 nonisolated struct SyncPreviewMetric: Identifiable, Sendable {

@@ -427,6 +427,7 @@
 "options.supabase.pushpreflight.metric.scopeBlockedDependencies" = "阻塞依赖";
 "options.supabase.pushpreflight.category.dryRunCreateCandidate" = "Create 候选：%d";
 "options.supabase.pushpreflight.category.dryRunUpdateCandidate" = "Update 候选：%d";
+"options.supabase.pushpreflight.category.dryRunTombstoneCandidate" = "Tombstone 候选：%d";
 "options.supabase.pushpreflight.category.noOpAlreadySynced" = "已同步无变化：%d";
 "options.supabase.pushpreflight.category.blockedNoRemoteID" = "已阻塞：缺少 remoteID/条码冲突：%d";
 "options.supabase.pushpreflight.category.blockedAccountMismatch" = "已阻塞：账号不匹配：%d";

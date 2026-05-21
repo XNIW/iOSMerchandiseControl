@@ -150,6 +150,31 @@ nonisolated struct SupabaseManualPushProductUpdatePayload: Encodable, Equatable,
     let supplierID: UUID?
     let categoryID: UUID?
     let stockQuantity: Double?
+    let deletedAt: String?
+
+    init(
+        barcode: String?,
+        itemNumber: String?,
+        productName: String?,
+        secondProductName: String?,
+        purchasePrice: Double?,
+        retailPrice: Double?,
+        supplierID: UUID?,
+        categoryID: UUID?,
+        stockQuantity: Double?,
+        deletedAt: String? = nil
+    ) {
+        self.barcode = barcode
+        self.itemNumber = itemNumber
+        self.productName = productName
+        self.secondProductName = secondProductName
+        self.purchasePrice = purchasePrice
+        self.retailPrice = retailPrice
+        self.supplierID = supplierID
+        self.categoryID = categoryID
+        self.stockQuantity = stockQuantity
+        self.deletedAt = deletedAt
+    }
 
     enum CodingKeys: String, CodingKey {
         case barcode
@@ -161,6 +186,7 @@ nonisolated struct SupabaseManualPushProductUpdatePayload: Encodable, Equatable,
         case supplierID = "supplier_id"
         case categoryID = "category_id"
         case stockQuantity = "stock_quantity"
+        case deletedAt = "deleted_at"
     }
 
     func encode(to encoder: Encoder) throws {
@@ -174,6 +200,7 @@ nonisolated struct SupabaseManualPushProductUpdatePayload: Encodable, Equatable,
         try container.encodeIfPresent(supplierID, forKey: .supplierID)
         try container.encodeIfPresent(categoryID, forKey: .categoryID)
         try container.encodeIfPresent(stockQuantity, forKey: .stockQuantity)
+        try container.encodeIfPresent(deletedAt, forKey: .deletedAt)
     }
 }
 
@@ -811,6 +838,22 @@ final class SupabaseManualPushService {
             didConfirmAnyRemoteOrLink = true
         }
 
+        for candidate in candidates where candidate.action == .dryRunTombstoneCandidate {
+            guard let remoteID = candidate.remoteID else {
+                throw SupabaseInventoryServiceError.schemaDrift(message: "Missing product tombstone target.")
+            }
+            let row = try await remote.updateProduct(
+                id: remoteID,
+                payload: makeProductTombstonePayload()
+            )
+            guard SupabasePullPreviewNormalizer.semanticString(row.deletedAt) != nil else {
+                throw SupabaseInventoryServiceError.schemaDrift(message: "Product tombstone response did not include deleted_at.")
+            }
+            didConfirmAnyRemoteWrite = true
+            counters.productUpdates += 1
+            didConfirmAnyRemoteOrLink = true
+        }
+
         for candidate in candidates where candidate.action == .dryRunUpdateCandidate {
             guard let product = productsByBarcode[candidate.localID],
                   let remoteID = product.remoteID else {
@@ -896,6 +939,21 @@ final class SupabaseManualPushService {
             supplierID: product.supplier?.remoteID,
             categoryID: product.category?.remoteID,
             stockQuantity: product.stockQuantity
+        )
+    }
+
+    private func makeProductTombstonePayload(now: Date = Date()) -> SupabaseManualPushProductUpdatePayload {
+        SupabaseManualPushProductUpdatePayload(
+            barcode: nil,
+            itemNumber: nil,
+            productName: nil,
+            secondProductName: nil,
+            purchasePrice: nil,
+            retailPrice: nil,
+            supplierID: nil,
+            categoryID: nil,
+            stockQuantity: nil,
+            deletedAt: Self.tombstoneFormatter.string(from: now)
         )
     }
 
@@ -1048,4 +1106,10 @@ final class SupabaseManualPushService {
         var productUpdates = 0
         var productLinks = 0
     }
+
+    private static let tombstoneFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
 }

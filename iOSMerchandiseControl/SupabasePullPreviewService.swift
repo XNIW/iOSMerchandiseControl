@@ -520,6 +520,8 @@ nonisolated enum SupabasePullPreviewDiffEngine {
             localCounts: local.counts,
             newProducts: newProducts.sorted { $0.sortKey < $1.sortKey },
             updateCandidates: updateCandidates.sorted { $0.sortKey < $1.sortKey },
+            remoteSupplierLookups: remoteSupplierLookupSummaries(remote: remote, local: local),
+            remoteCategoryLookups: remoteCategoryLookupSummaries(remote: remote, local: local),
             conflicts: conflicts.sorted { ($0.barcodeOrKey ?? $0.detail ?? "") < ($1.barcodeOrKey ?? $1.detail ?? "") },
             unchangedProducts: unchangedProducts.sorted { $0.sortKey < $1.sortKey },
             remoteTombstones: tombstones.sorted { $0.sortKey < $1.sortKey },
@@ -598,6 +600,52 @@ nonisolated enum SupabasePullPreviewDiffEngine {
         }
 
         return changes
+    }
+
+    private static func remoteSupplierLookupSummaries(
+        remote: RemoteInventorySnapshot,
+        local: LocalInventorySnapshot
+    ) -> [SyncPreviewLookupSummary] {
+        remote.suppliersByID.values.compactMap { row in
+            guard SupabasePullPreviewNormalizer.semanticString(row.deletedAt) == nil,
+                  local.suppliersByRemoteID[row.id] == nil,
+                  let displayName = SupabasePullPreviewNormalizer.semanticString(row.name),
+                  let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(displayName),
+                  local.suppliersByNormalizedName[normalizedName] == nil else {
+                return nil
+            }
+
+            return SyncPreviewLookupSummary(
+                remoteID: row.id,
+                displayName: displayName,
+                remoteUpdatedAt: SupabaseRemoteDateParser.parse(row.updatedAt),
+                remoteDeletedAt: nil
+            )
+        }
+        .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
+
+    private static func remoteCategoryLookupSummaries(
+        remote: RemoteInventorySnapshot,
+        local: LocalInventorySnapshot
+    ) -> [SyncPreviewLookupSummary] {
+        remote.categoriesByID.values.compactMap { row in
+            guard SupabasePullPreviewNormalizer.semanticString(row.deletedAt) == nil,
+                  local.categoriesByRemoteID[row.id] == nil,
+                  let displayName = SupabasePullPreviewNormalizer.semanticString(row.name),
+                  let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(displayName),
+                  local.categoriesByNormalizedName[normalizedName] == nil else {
+                return nil
+            }
+
+            return SyncPreviewLookupSummary(
+                remoteID: row.id,
+                displayName: displayName,
+                remoteUpdatedAt: SupabaseRemoteDateParser.parse(row.updatedAt),
+                remoteDeletedAt: nil
+            )
+        }
+        .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
     }
 
     private static func unresolvedLookupConflicts(

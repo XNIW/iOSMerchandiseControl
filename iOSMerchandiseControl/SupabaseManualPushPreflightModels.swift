@@ -18,6 +18,7 @@ nonisolated enum ManualPushPreflightCategory: String, Sendable, Equatable, Hasha
     case dryRunCreateCandidate
     case dryRunUpdateCandidate
     case dryRunLinkCandidate
+    case dryRunTombstoneCandidate
     case noOpAlreadySynced
     case blockedNoRemoteID
     case blockedAccountMismatch
@@ -55,7 +56,8 @@ nonisolated enum ManualPushPreflightCategory: String, Sendable, Equatable, Hasha
             return .futureOnly
         case .dryRunCreateCandidate,
              .dryRunUpdateCandidate,
-             .dryRunLinkCandidate:
+             .dryRunLinkCandidate,
+             .dryRunTombstoneCandidate:
             return .info
         }
     }
@@ -65,6 +67,7 @@ nonisolated enum PushCandidateAction: String, Sendable, Equatable, CaseIterable 
     case dryRunCreateCandidate
     case dryRunUpdateCandidate
     case dryRunLinkCandidate
+    case dryRunTombstoneCandidate
     case noOpAlreadySynced
     case futurePricePushCandidate
 
@@ -76,6 +79,8 @@ nonisolated enum PushCandidateAction: String, Sendable, Equatable, CaseIterable 
             return .dryRunUpdateCandidate
         case .dryRunLinkCandidate:
             return .dryRunLinkCandidate
+        case .dryRunTombstoneCandidate:
+            return .dryRunTombstoneCandidate
         case .noOpAlreadySynced:
             return .noOpAlreadySynced
         case .futurePricePushCandidate:
@@ -438,6 +443,7 @@ nonisolated struct ManualPushPlan: Sendable, Equatable {
             $0.action == .dryRunCreateCandidate
                 || $0.action == .dryRunUpdateCandidate
                 || $0.action == .dryRunLinkCandidate
+                || $0.action == .dryRunTombstoneCandidate
         }
     }
 
@@ -446,6 +452,7 @@ nonisolated struct ManualPushPlan: Sendable, Equatable {
             $0.action == .dryRunCreateCandidate
                 || $0.action == .dryRunUpdateCandidate
                 || $0.action == .dryRunLinkCandidate
+                || $0.action == .dryRunTombstoneCandidate
         }
     }
 
@@ -485,7 +492,8 @@ nonisolated struct ManualPushPlan: Sendable, Equatable {
             $0.entityKind == entityKind
                 && ($0.action == .dryRunCreateCandidate
                     || $0.action == .dryRunUpdateCandidate
-                    || $0.action == .dryRunLinkCandidate)
+                    || $0.action == .dryRunLinkCandidate
+                    || $0.action == .dryRunTombstoneCandidate)
         }.count
     }
 

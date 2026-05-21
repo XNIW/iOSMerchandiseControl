@@ -18,6 +18,28 @@ final class SupabasePullPreviewDiffEngineTests: XCTestCase {
         XCTAssertTrue(preview.conflicts.isEmpty)
     }
 
+    func testRemoteLookupRowsWithoutProductsAreApplicableLookups() {
+        let supplierID = UUID()
+        let categoryID = UUID()
+        let preview = makePreview(
+            remote: remoteSnapshot(
+                products: [],
+                suppliers: [
+                    remoteSupplier(id: supplierID, name: "Remote Orphan Supplier")
+                ],
+                categories: [
+                    remoteCategory(id: categoryID, name: "Remote Orphan Category")
+                ]
+            ),
+            local: localSnapshot()
+        )
+
+        XCTAssertEqual(preview.remoteSupplierLookups.map(\.remoteID), [supplierID])
+        XCTAssertEqual(preview.remoteSupplierLookups.first?.displayName, "Remote Orphan Supplier")
+        XCTAssertEqual(preview.remoteCategoryLookups.map(\.remoteID), [categoryID])
+        XCTAssertEqual(preview.remoteCategoryLookups.first?.displayName, "Remote Orphan Category")
+    }
+
     func testMatchedProductWithPriceOrNameDifferenceIsUpdateCandidate() {
         let preview = makePreview(
             remote: remoteSnapshot(products: [
