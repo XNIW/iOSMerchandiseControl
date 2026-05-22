@@ -157,6 +157,24 @@ nonisolated enum HistorySessionPayloadCodec {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 
+    static func fingerprintHash(for row: SharedSheetSessionUpsertRow) -> String {
+        let canonical = [
+            row.remoteID.uuidString.lowercased(),
+            "\(row.payloadVersion)",
+            normalize(row.displayName),
+            normalizedTimestamp(row.timestamp),
+            normalize(row.supplier),
+            normalize(row.category),
+            row.isManualEntry ? "1" : "0",
+            canonicalJSONString(row.data),
+            canonicalJSONString(row.sessionOverlay?.editable ?? []),
+            canonicalJSONString(row.sessionOverlay?.complete ?? []),
+            row.deletedAt.map(normalizedTimestamp) ?? ""
+        ].joined(separator: "|")
+        let digest = SHA256.hash(data: Data(canonical.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
     static func formatTimestamp(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -218,6 +236,7 @@ nonisolated enum HistorySessionSyncError: Error, Equatable, Sendable {
 
 nonisolated struct HistorySessionPushResult: Equatable, Sendable {
     var uploadedCount: Int = 0
+    var pushedRemoteIDs: Set<UUID> = []
     var skippedCleanCount: Int = 0
     var skippedOversizedCount: Int = 0
 }
@@ -227,6 +246,7 @@ nonisolated struct HistorySessionPullResult: Equatable, Sendable {
     var updatedCount: Int = 0
     var skippedCleanCount: Int = 0
     var skippedDirtyLocalCount: Int = 0
+    var prunedMissingRemoteCount: Int = 0
 }
 
 nonisolated struct HistorySessionSyncProgress: Equatable, Sendable {
@@ -320,7 +340,11 @@ nonisolated final class HistorySessionSyncService {
                   readBack.ownerUserID == ownerUserID else {
                 throw HistorySessionSyncError.readBackMismatch
             }
+            let expectedFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: pair.row)
             let fingerprint = HistorySessionPayloadCodec.fingerprintHash(for: readBack)
+            guard fingerprint == expectedFingerprint else {
+                throw HistorySessionSyncError.readBackMismatch
+            }
             pair.entry.markHistorySessionRemoteApplied(
                 remoteID: readBack.remoteID,
                 remoteUpdatedAt: HistorySessionPayloadCodec.parseUpdatedAt(readBack.updatedAt),
@@ -331,6 +355,7 @@ nonisolated final class HistorySessionSyncService {
             pair.entry.syncStatus = .syncedSuccessfully
             try accumulator.acknowledgeHistorySessionChange(entry: pair.entry)
             result.uploadedCount += 1
+            result.pushedRemoteIDs.insert(readBack.remoteID)
             await publishProgress(HistorySessionSyncProgress(stage: .pushing, current: index + 1, total: uploadEntryCount), onProgress: onProgress)
         }
 
@@ -367,9 +392,18 @@ nonisolated final class HistorySessionSyncService {
             context: context,
             onProgress: onProgress
         )
+        var finalResult = result
+        let pruned = try pruneCleanRemoteLinkedEntriesMissingFromFullSnapshot(
+            remoteIDs: Set(allRows.map(\.remoteID)),
+            context: context
+        )
+        if pruned > 0 {
+            try context.save()
+            finalResult.prunedMissingRemoteCount = pruned
+        }
         let totalRows = allRows.count
         await publishProgress(HistorySessionSyncProgress(stage: .completed, current: totalRows, total: totalRows), onProgress: onProgress)
-        return result
+        return finalResult
     }
 
     func applyRemoteSharedSheetSessions(
@@ -524,6 +558,37 @@ nonisolated final class HistorySessionSyncService {
 
     private func shouldProtectDirtyLocalEntryFromRemoteTombstone(_ entry: HistoryEntry) -> Bool {
         entry.remoteDeletedAt == nil && entry.localChangeRevision > entry.lastSyncedLocalRevision
+    }
+
+    private func pruneCleanRemoteLinkedEntriesMissingFromFullSnapshot(
+        remoteIDs: Set<UUID>,
+        context: ModelContext
+    ) throws -> Int {
+        let pendingKeys = try fetchActiveHistoryPendingKeys(context: context)
+        let entries = try context.fetch(FetchDescriptor<HistoryEntry>())
+        var pruned = 0
+        for entry in entries {
+            guard let remoteID = entry.remoteID,
+                  !remoteIDs.contains(remoteID),
+                  entry.remoteDeletedAt == nil,
+                  entry.localChangeRevision <= entry.lastSyncedLocalRevision,
+                  !pendingKeys.contains(LocalPendingChangeLogicalKey.historySession(remoteID: remoteID, uid: entry.uid)) else {
+                continue
+            }
+            context.delete(entry)
+            pruned += 1
+        }
+        return pruned
+    }
+
+    private func fetchActiveHistoryPendingKeys(context: ModelContext) throws -> Set<String> {
+        let descriptor = FetchDescriptor<LocalPendingChange>()
+        let historyKind = LocalPendingChangeEntityKind.historySession.rawValue
+        return Set(
+            try context.fetch(descriptor)
+                .filter { $0.entityKindRaw == historyKind && !$0.status.isTerminal }
+                .map(\.logicalKey)
+        )
     }
 
     private func apply(

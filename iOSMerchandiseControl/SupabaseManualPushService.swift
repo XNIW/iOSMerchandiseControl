@@ -18,6 +18,14 @@ nonisolated struct SupabaseManualPushTouchedIDs: Sendable, Equatable {
     var isEmpty: Bool {
         suppliers.isEmpty && categories.isEmpty && products.isEmpty
     }
+
+    var syncEventEntityIDs: SyncEventJSONValue {
+        .object([
+            "supplier_ids": .array(suppliers.sorted { $0.uuidString < $1.uuidString }.map { .string($0.uuidString.lowercased()) }),
+            "category_ids": .array(categories.sorted { $0.uuidString < $1.uuidString }.map { .string($0.uuidString.lowercased()) }),
+            "product_ids": .array(products.sorted { $0.uuidString < $1.uuidString }.map { .string($0.uuidString.lowercased()) })
+        ])
+    }
 }
 
 nonisolated struct SupabaseManualPushReadBackExpectation: Sendable, Equatable {
@@ -51,6 +59,7 @@ nonisolated struct SupabaseManualPushResult: Sendable, Equatable {
     let productCreates: Int
     let productUpdates: Int
     let productLinks: Int
+    var touchedIDs = SupabaseManualPushTouchedIDs()
     let baselineRunID: UUID?
     let message: String?
 
@@ -66,6 +75,7 @@ nonisolated struct SupabaseManualPushResult: Sendable, Equatable {
             productCreates: 0,
             productUpdates: 0,
             productLinks: 0,
+            touchedIDs: SupabaseManualPushTouchedIDs(),
             baselineRunID: nil,
             message: message
         )
@@ -530,6 +540,7 @@ final class SupabaseManualPushService {
 
         var counters = Counters()
         var touchedIDs = SupabaseManualPushTouchedIDs()
+        var readBackIDs = SupabaseManualPushTouchedIDs()
         var didConfirmAnyRemoteWrite = false
         var didConfirmAnyRemoteOrLink = false
 
@@ -540,6 +551,7 @@ final class SupabaseManualPushService {
                 ownerUserID: ownerUserID,
                 counters: &counters,
                 touchedIDs: &touchedIDs,
+                readBackIDs: &readBackIDs,
                 didConfirmAnyRemoteWrite: &didConfirmAnyRemoteWrite,
                 didConfirmAnyRemoteOrLink: &didConfirmAnyRemoteOrLink
             )
@@ -549,6 +561,7 @@ final class SupabaseManualPushService {
                 ownerUserID: ownerUserID,
                 counters: &counters,
                 touchedIDs: &touchedIDs,
+                readBackIDs: &readBackIDs,
                 didConfirmAnyRemoteWrite: &didConfirmAnyRemoteWrite,
                 didConfirmAnyRemoteOrLink: &didConfirmAnyRemoteOrLink
             )
@@ -558,6 +571,7 @@ final class SupabaseManualPushService {
                 ownerUserID: ownerUserID,
                 counters: &counters,
                 touchedIDs: &touchedIDs,
+                readBackIDs: &readBackIDs,
                 didConfirmAnyRemoteWrite: &didConfirmAnyRemoteWrite,
                 didConfirmAnyRemoteOrLink: &didConfirmAnyRemoteOrLink
             )
@@ -565,18 +579,21 @@ final class SupabaseManualPushService {
             return makeResult(
                 status: didConfirmAnyRemoteWrite || didConfirmAnyRemoteOrLink ? .partial : .failedBeforeWrite,
                 counters: counters,
+                touchedIDs: touchedIDs,
                 baselineRunID: nil,
                 message: sanitized(error)
             )
         }
 
         guard !touchedIDs.isEmpty else {
-            return makeResult(status: .completed, counters: counters, baselineRunID: nil, message: nil)
+            return makeResult(status: .completed, counters: counters, touchedIDs: touchedIDs, baselineRunID: nil, message: nil)
         }
 
         do {
-            let expectation = try makeReadBackExpectation(context: context, touchedIDs: touchedIDs)
-            try await remote.verifyReadBack(expectation: expectation)
+            if !readBackIDs.isEmpty {
+                let expectation = try makeReadBackExpectation(context: context, touchedIDs: readBackIDs)
+                try await remote.verifyReadBack(expectation: expectation)
+            }
             let baseline = try baselineWriter.commitLatestBaseline(
                 context: context,
                 ownerUserUUID: ownerUserID
@@ -584,6 +601,7 @@ final class SupabaseManualPushService {
             return makeResult(
                 status: .completed,
                 counters: counters,
+                touchedIDs: touchedIDs,
                 baselineRunID: baseline.baselineRunID,
                 message: nil
             )
@@ -591,6 +609,7 @@ final class SupabaseManualPushService {
             return makeResult(
                 status: didConfirmAnyRemoteWrite ? .completedBaselineRefreshFailed : .failedBeforeWrite,
                 counters: counters,
+                touchedIDs: touchedIDs,
                 baselineRunID: nil,
                 message: sanitized(error)
             )
@@ -656,6 +675,7 @@ final class SupabaseManualPushService {
         ownerUserID: UUID,
         counters: inout Counters,
         touchedIDs: inout SupabaseManualPushTouchedIDs,
+        readBackIDs: inout SupabaseManualPushTouchedIDs,
         didConfirmAnyRemoteWrite: inout Bool,
         didConfirmAnyRemoteOrLink: inout Bool
     ) async throws {
@@ -682,6 +702,7 @@ final class SupabaseManualPushService {
             try save(context)
             counters.supplierCreates += 1
             touchedIDs.suppliers.insert(row.id)
+            readBackIDs.suppliers.insert(row.id)
             didConfirmAnyRemoteOrLink = true
         }
 
@@ -696,6 +717,7 @@ final class SupabaseManualPushService {
             try save(context)
             counters.supplierLinks += 1
             touchedIDs.suppliers.insert(row.id)
+            readBackIDs.suppliers.insert(row.id)
             didConfirmAnyRemoteOrLink = true
         }
 
@@ -713,6 +735,7 @@ final class SupabaseManualPushService {
             try save(context)
             counters.supplierUpdates += 1
             touchedIDs.suppliers.insert(row.id)
+            readBackIDs.suppliers.insert(row.id)
             didConfirmAnyRemoteOrLink = true
         }
     }
@@ -723,6 +746,7 @@ final class SupabaseManualPushService {
         ownerUserID: UUID,
         counters: inout Counters,
         touchedIDs: inout SupabaseManualPushTouchedIDs,
+        readBackIDs: inout SupabaseManualPushTouchedIDs,
         didConfirmAnyRemoteWrite: inout Bool,
         didConfirmAnyRemoteOrLink: inout Bool
     ) async throws {
@@ -749,6 +773,7 @@ final class SupabaseManualPushService {
             try save(context)
             counters.categoryCreates += 1
             touchedIDs.categories.insert(row.id)
+            readBackIDs.categories.insert(row.id)
             didConfirmAnyRemoteOrLink = true
         }
 
@@ -763,6 +788,7 @@ final class SupabaseManualPushService {
             try save(context)
             counters.categoryLinks += 1
             touchedIDs.categories.insert(row.id)
+            readBackIDs.categories.insert(row.id)
             didConfirmAnyRemoteOrLink = true
         }
 
@@ -780,6 +806,7 @@ final class SupabaseManualPushService {
             try save(context)
             counters.categoryUpdates += 1
             touchedIDs.categories.insert(row.id)
+            readBackIDs.categories.insert(row.id)
             didConfirmAnyRemoteOrLink = true
         }
     }
@@ -790,6 +817,7 @@ final class SupabaseManualPushService {
         ownerUserID: UUID,
         counters: inout Counters,
         touchedIDs: inout SupabaseManualPushTouchedIDs,
+        readBackIDs: inout SupabaseManualPushTouchedIDs,
         didConfirmAnyRemoteWrite: inout Bool,
         didConfirmAnyRemoteOrLink: inout Bool
     ) async throws {
@@ -821,6 +849,7 @@ final class SupabaseManualPushService {
             try save(context)
             counters.productCreates += 1
             touchedIDs.products.insert(row.id)
+            readBackIDs.products.insert(row.id)
             didConfirmAnyRemoteOrLink = true
         }
 
@@ -835,6 +864,7 @@ final class SupabaseManualPushService {
             try save(context)
             counters.productLinks += 1
             touchedIDs.products.insert(row.id)
+            readBackIDs.products.insert(row.id)
             didConfirmAnyRemoteOrLink = true
         }
 
@@ -851,6 +881,7 @@ final class SupabaseManualPushService {
             }
             didConfirmAnyRemoteWrite = true
             counters.productUpdates += 1
+            touchedIDs.products.insert(remoteID)
             didConfirmAnyRemoteOrLink = true
         }
 
@@ -868,6 +899,7 @@ final class SupabaseManualPushService {
             try save(context)
             counters.productUpdates += 1
             touchedIDs.products.insert(row.id)
+            readBackIDs.products.insert(row.id)
             didConfirmAnyRemoteOrLink = true
         }
     }
@@ -1068,6 +1100,7 @@ final class SupabaseManualPushService {
     private func makeResult(
         status: SupabaseManualPushTerminalStatus,
         counters: Counters,
+        touchedIDs: SupabaseManualPushTouchedIDs,
         baselineRunID: UUID?,
         message: String?
     ) -> SupabaseManualPushResult {
@@ -1082,6 +1115,7 @@ final class SupabaseManualPushService {
             productCreates: counters.productCreates,
             productUpdates: counters.productUpdates,
             productLinks: counters.productLinks,
+            touchedIDs: touchedIDs,
             baselineRunID: baselineRunID,
             message: message
         )

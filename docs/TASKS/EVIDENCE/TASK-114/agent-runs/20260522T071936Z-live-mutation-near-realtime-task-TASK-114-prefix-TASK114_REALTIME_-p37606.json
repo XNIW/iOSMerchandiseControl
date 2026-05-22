@@ -1,0 +1,347 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260522T071936Z-live-mutation-near-realtime-task-TASK-114-prefix-TASK114_REALTIME_-p37606.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260522T071936Z-live-mutation-near-realtime-task-TASK-114-prefix-TASK114_REALTIME_-p37606.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260522T071936Z-live-mutation-near-realtime-task-TASK-114-prefix-TASK114_REALTIME_-p37606.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260522T071936Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "PR-01",
+    "PR-03",
+    "PR-04",
+    "PR-08"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live mutation-near-realtime --task TASK-114 --prefix TASK114_REALTIME_",
+  "command_slug": "live-mutation-near-realtime-task-TASK-114-prefix-TASK114_REALTIME_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "physical",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": "<REDACTED>"
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 196191,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-114",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<REDACTED>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK113_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-114"
+  },
+  "exit_code": 0,
+  "git_sha": "8f6c04f",
+  "next_action_recommended": "Run cleanup/residue for TASK114_REALTIME_, then reconcile/runtime-parity/sync-matrix.",
+  "platform": "ios",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "breakdown": {
+      "androidToIos": {
+        "androidCatalogPushAndEventsMs": 15706,
+        "androidHistoryPushAndEventsMs": 9412,
+        "androidLocalHistorySaveMs": 34,
+        "androidLocalSaveMs": 173,
+        "androidRemotePushMs": 25118,
+        "androidSyncEventCreateMs": 25118,
+        "androidTotalMatrixMs": 26431,
+        "androidWriteBatchMs": 36142,
+        "classification": "TEMPORARY_TOLERABLE",
+        "fullPullUsed": false,
+        "iosApplyToStoreVisibleMs": 44066,
+        "iosCatalogApplyMs": 38,
+        "iosCatalogFetchMs": 186,
+        "iosEventPageFetchMs": 436,
+        "iosHistoryApplyMs": 0,
+        "iosHistoryFetchMs": 0,
+        "iosIncrementalTotalElapsedMs": 661,
+        "iosProductPriceApplyMs": 0,
+        "iosProductPriceFetchMs": 0,
+        "iosRealtimeCallbackDelayMs": null,
+        "iosRealtimeCallbackUsed": false,
+        "iosSafetyPollDelayMs": 11230,
+        "polls": 5,
+        "supabaseEventsObserved": 7,
+        "supabaseFirstEventVisibleAfterAndroidStartMs": 15232,
+        "supabaseFirstEventVisibleAfterAndroidWriteMs": -20910,
+        "syncType": "CHECKPOINT_INCREMENTAL"
+      }
+    },
+    "budget": {
+      "borderlineMs": 30000,
+      "expectedReceiveWindow": "ideal 2-5s; good <=10s; temporary tolerable <=15s; 15-30s is borderline and must be explained/optimized; >30s or FULL_PULL_* in normal mutation is FAIL",
+      "failOverMs": 30000,
+      "goodAcceptableMs": 10000,
+      "idealMs": 5000,
+      "remoteReceiveMs": 30000,
+      "temporaryTolerableMs": 15000
+    },
+    "cleanupRequired": true,
+    "completedAt": "2026-05-22T07:22:51Z",
+    "counts": {
+      "androidAfterIosWrite": {
+        "categories": {
+          "active": 33,
+          "all": 33,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 22,
+          "all": 24,
+          "deleted": 2,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 21
+        },
+        "product_prices": {
+          "active": 41127,
+          "all": 41127,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19706,
+          "all": 19706,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 64,
+          "all": 64,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "androidBeforeIosWrite": {
+        "categories": {
+          "active": 32,
+          "all": 32,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 20,
+          "all": 22,
+          "deleted": 2,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 19
+        },
+        "product_prices": {
+          "active": 41127,
+          "all": 41127,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19704,
+          "all": 19704,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 63,
+          "all": 63,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "iosAfterAndroidWrite": {
+        "categories": {
+          "active": 34,
+          "all": 34,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 21,
+          "all": 26,
+          "deleted": 5,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 21
+        },
+        "product_prices": {
+          "active": 41131,
+          "all": 41131,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19708,
+          "all": 19710,
+          "deleted": 2,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 65,
+          "all": 65,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "iosBeforeAndroidWrite": {
+        "categories": {
+          "active": 33,
+          "all": 33,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 19,
+          "all": 24,
+          "deleted": 5,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 19
+        },
+        "product_prices": {
+          "active": 41127,
+          "all": 41127,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19706,
+          "all": 19708,
+          "deleted": 2,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 64,
+          "all": 64,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      }
+    },
+    "coverage": [
+      "iOS write product/history create/update/tombstone through live app-auth matrix path",
+      "Android foreground runtime receives iOS write without explicit pull command",
+      "Android write product/history create/update/tombstone through live instrumentation app DB path",
+      "iOS foreground runtime receives Android write without explicit pull command"
+    ],
+    "directionPrefixes": {
+      "androidToIos": "TASK114_REALTIME_RT_20260522T071936Z_ANDROID_",
+      "iosToAndroid": "TASK114_REALTIME_RT_20260522T071936Z_IOS_"
+    },
+    "fullPullUsed": false,
+    "prefix": "TASK114_REALTIME_RT_20260522T071936Z_",
+    "schemaVersion": "1.1",
+    "source": "live.mutation-near-realtime",
+    "startedAt": "2026-05-22T07:19:36Z",
+    "status": "PASS",
+    "syncModes": {
+      "androidLocalSave": "EVENT_INCREMENTAL",
+      "androidPostPushEvent": "EVENT_INCREMENTAL",
+      "androidReceiveApply": "EVENT_INCREMENTAL",
+      "androidRemotePush": "EVENT_INCREMENTAL",
+      "fallbackAllowed": [
+        "CHECKPOINT_INCREMENTAL",
+        "LIGHT_RECONCILE"
+      ],
+      "forbiddenInNormalMutation": [
+        "FULL_PULL_BOOTSTRAP",
+        "FULL_PULL_RECOVERY"
+      ],
+      "iosLocalSave": "EVENT_INCREMENTAL",
+      "iosPostPushEvent": "EVENT_INCREMENTAL",
+      "iosReceiveApply": "EVENT_INCREMENTAL",
+      "iosRemotePush": "EVENT_INCREMENTAL"
+    },
+    "taskId": "TASK-114",
+    "timings": {
+      "androidToIosPolls": 5,
+      "androidToIosReceiveMs": 11230,
+      "androidToIosTotalMsFromWriteStart": 47372,
+      "androidWriteBatchMs": 36142,
+      "iosToAndroidPolls": 1,
+      "iosToAndroidReceiveMs": 3452,
+      "iosToAndroidTotalMsFromWriteStart": 37114,
+      "iosWriteBatchMs": 33662
+    }
+  },
+  "repo": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "pass",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260522T071936Z-live-mutation-near-realtime-task-TASK-114-prefix-TASK114_REALTIME_-p37606",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "task_id": "TASK-114",
+  "test_prefix": "TASK114_REALTIME_RT_20260522T071936Z_ANDROID_",
+  "timestamp_end": "2026-05-22T07:22:52Z",
+  "timestamp_start": "2026-05-22T07:19:36Z",
+  "warnings": []
+}

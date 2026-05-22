@@ -514,6 +514,7 @@ nonisolated final class LocalPendingChangeAccumulator {
                 superseded.supersededByChangeID = current.changeID
                 superseded.updatedAt = timestamp
             }
+            notifyActiveChangeIfNeeded(current)
             return current.status.isTerminal ? nil : current
         }
 
@@ -539,7 +540,18 @@ nonisolated final class LocalPendingChangeAccumulator {
         )
         context.insert(change)
         cachedActiveCount = (cachedActiveCount ?? 0) + 1
+        notifyActiveChangeIfNeeded(change)
         return change
+    }
+
+    private func notifyActiveChangeIfNeeded(_ change: LocalPendingChange) {
+        guard !change.status.isTerminal else { return }
+        Task { @MainActor in
+            NotificationCenter.default.post(
+                name: .localPendingChangesDidChange,
+                object: nil
+            )
+        }
     }
 
     private func coalesce(

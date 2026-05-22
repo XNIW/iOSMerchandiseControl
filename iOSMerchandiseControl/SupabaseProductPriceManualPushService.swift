@@ -59,6 +59,7 @@ nonisolated struct ProductPriceManualPushResult: Sendable, Equatable {
     let insertedCount: Int
     let verification: ProductPriceManualPushVerificationResult
     let fingerprint: String
+    let confirmedRemoteIDs: [UUID]
     let needsTechnicalFollowUp: Bool
 
     var isVerifiedSuccess: Bool {
@@ -72,11 +73,13 @@ nonisolated struct ProductPriceManualPushResult: Sendable, Equatable {
         insertedCount: Int,
         verification: ProductPriceManualPushVerificationResult,
         fingerprint: String,
+        confirmedRemoteIDs: [UUID] = [],
         needsTechnicalFollowUp: Bool = false
     ) {
         self.insertedCount = insertedCount
         self.verification = verification
         self.fingerprint = fingerprint
+        self.confirmedRemoteIDs = confirmedRemoteIDs
         self.needsTechnicalFollowUp = needsTechnicalFollowUp
     }
 }
@@ -298,7 +301,8 @@ struct SupabaseProductPriceManualPushService: Sendable {
                     return ProductPriceManualPushResult(
                         insertedCount: 0,
                         verification: verification,
-                        fingerprint: snapshot.fingerprint
+                        fingerprint: snapshot.fingerprint,
+                        confirmedRemoteIDs: Self.confirmedRemoteIDs(for: verification, snapshot: snapshot)
                     )
                 }
             }
@@ -308,7 +312,8 @@ struct SupabaseProductPriceManualPushService: Sendable {
         return ProductPriceManualPushResult(
             insertedCount: insertedCount,
             verification: verification,
-            fingerprint: snapshot.fingerprint
+            fingerprint: snapshot.fingerprint,
+            confirmedRemoteIDs: Self.confirmedRemoteIDs(for: verification, snapshot: snapshot)
         )
     }
 
@@ -397,6 +402,14 @@ struct SupabaseProductPriceManualPushService: Sendable {
             return .mismatchedRows(mismatches)
         }
         return .exactMatch(verifiedCount: snapshot.payloads.count)
+    }
+
+    private static func confirmedRemoteIDs(
+        for verification: ProductPriceManualPushVerificationResult,
+        snapshot: ProductPriceManualPushSnapshot
+    ) -> [UUID] {
+        guard case .exactMatch = verification else { return [] }
+        return snapshot.payloads.map(\.id)
     }
 
     private func mismatchesFor(

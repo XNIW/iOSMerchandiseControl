@@ -71,6 +71,18 @@ final class SupabaseAuthViewModel: ObservableObject {
         isSignedIn && !isTransitioning
     }
 
+    func refreshCurrentSessionSnapshot() {
+        guard let currentSession = authService?.currentSession else { return }
+        sessionInfo = currentSession
+        if currentSession.isExpired {
+            if !isTransitioning {
+                state = .signedOut
+            }
+        } else {
+            state = .signedIn
+        }
+    }
+
     func signInWithGoogle() {
         guard canSignIn, let authService else { return }
 

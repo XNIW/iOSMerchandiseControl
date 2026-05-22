@@ -80,17 +80,29 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var productOffline: String { "\(prefix)CANARY_OFFLINE_01" }
         var barcodeOffline: String { "\(prefix)OFFLINE_0001" }
 
+        var supplierOfflineIOSSeed: String { "\(prefix)OFFLINE_IOS_SEED_SUPPLIER" }
+        var categoryOfflineIOSSeed: String { "\(prefix)OFFLINE_IOS_SEED_CATEGORY" }
+        var supplierOfflineIOSTombstone: String { "\(prefix)OFFLINE_IOS_TOMBSTONE_SUPPLIER" }
+        var categoryOfflineIOSTombstone: String { "\(prefix)OFFLINE_IOS_TOMBSTONE_CATEGORY" }
+        var supplierOfflineIOS: String { "\(prefix)OFFLINE_IOS_SUPPLIER" }
+        var categoryOfflineIOS: String { "\(prefix)OFFLINE_IOS_CATEGORY" }
+        var barcodeOfflineIOSCreate: String { "\(prefix)OFFLINE_IOS_CREATE" }
+        var barcodeOfflineIOSUpdate: String { "\(prefix)OFFLINE_IOS_UPDATE" }
+        var barcodeOfflineIOSTombstone: String { "\(prefix)OFFLINE_IOS_TOMBSTONE" }
+
         var allSupplierNames: [String] {
             [
                 supplierIOS, supplierAndroid, supplierConflictCatalog, supplierConflictPrice, supplierOffline,
-                matrixSupplierIOS, matrixSupplierAndroid
+                matrixSupplierIOS, matrixSupplierAndroid,
+                supplierOfflineIOSSeed, supplierOfflineIOSTombstone, supplierOfflineIOS
             ] + mediumSuppliers
         }
 
         var allCategoryNames: [String] {
             [
                 categoryIOS, categoryAndroid, categoryConflictCatalog, categoryConflictPrice, categoryOffline,
-                matrixCategoryIOS, matrixCategoryAndroid
+                matrixCategoryIOS, matrixCategoryAndroid,
+                categoryOfflineIOSSeed, categoryOfflineIOSTombstone, categoryOfflineIOS
             ] + mediumCategories
         }
 
@@ -98,7 +110,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             [
                 barcodeIOS, barcodeAndroid, barcodeConflictCatalog, barcodeConflictPrice, barcodeOffline,
                 matrixBarcodeIOSCreate, matrixBarcodeIOSUpdate, matrixBarcodeIOSTombstone,
-                matrixBarcodeAndroidCreate, matrixBarcodeAndroidUpdate, matrixBarcodeAndroidTombstone
+                matrixBarcodeAndroidCreate, matrixBarcodeAndroidUpdate, matrixBarcodeAndroidTombstone,
+                barcodeOfflineIOSCreate, barcodeOfflineIOSUpdate, barcodeOfflineIOSTombstone
             ] + mediumBarcodes
         }
 
@@ -346,19 +359,39 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         } else {
             result = SupabasePullApplyResult(inserted: 0, updated: 0, suppliersCreated: 0, categoriesCreated: 0)
         }
+        let historyResult = try await HistorySessionSyncService(remote: runtime.inventory)
+            .pullHistorySessionsFromCloud(ownerUserID: runtime.session.userID, context: context)
+        let priceService = SupabaseProductPriceApplyService(fetcher: runtime.inventory)
+        let priceSession = ProductPriceApplySessionSnapshot(userID: runtime.session.userID)
+        let pricePlan = try await priceService.loadBootstrapPreviewSample(
+            context: context,
+            sessionSnapshot: priceSession
+        )
+        let priceResult = try await priceService.applyPagedFullPull(
+            plan: pricePlan,
+            context: context,
+            currentSessionSnapshot: priceSession
+        )
 
-        let after = try task114LocalCounts(context: context)
+        let after = try task114LocalCounts(context: ModelContext(context.container))
+        XCTAssertEqual(after.products, preview.remoteCounts.activeProducts)
         XCTAssertEqual(after.suppliers, preview.remoteCounts.suppliers)
         XCTAssertEqual(after.categories, preview.remoteCounts.categories)
+        XCTAssertLessThanOrEqual(after.productPrices, priceResult.totalConsidered)
 
         print(
             "TASK114_IOS_FULL_PULL_LOOKUPS owner_hash=\(ownerHash(runtime.session.userID)) " +
             "before_suppliers=\(before.suppliers) before_categories=\(before.categories) " +
+            "before_prices=\(before.productPrices) " +
             "remote_suppliers=\(preview.remoteCounts.suppliers) remote_categories=\(preview.remoteCounts.categories) " +
             "planned_suppliers=\(plan?.suppliersToCreate.count ?? 0) planned_categories=\(plan?.categoriesToCreate.count ?? 0) " +
             "suppliers_created=\(result.suppliersCreated) categories_created=\(result.categoriesCreated) " +
             "products_inserted=\(result.inserted) products_updated=\(result.updated) product_tombstoned=\(result.productTombstoned) " +
-            "after_suppliers=\(after.suppliers) after_categories=\(after.categories)"
+            "product_pruned=\(result.productPruned) " +
+            "price_inserted=\(priceResult.inserted) price_linked=\(priceResult.remoteIdentityLinked) price_pruned=\(priceResult.prunedLocal) " +
+            "price_skipped=\(priceResult.skippedExisting) price_total=\(priceResult.totalConsidered) after_prices=\(after.productPrices) " +
+            "history_inserted=\(historyResult.insertedCount) history_updated=\(historyResult.updatedCount) history_pruned=\(historyResult.prunedMissingRemoteCount) " +
+            "after_products=\(after.products) after_suppliers=\(after.suppliers) after_categories=\(after.categories) after_history_user_visible=\(after.userVisibleHistory)"
         )
     }
 
@@ -474,6 +507,12 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let initialCatalogPush = try await pushPendingCatalog(context: context, runtime: runtime, expectedReadyCandidatesAtLeast: 5)
         XCTAssertEqual(initialCatalogPush.status, .completed)
 
+        try insertPrices(expectedIOS(), product: createProduct, context: context, ownerUserID: runtime.session.userID)
+        try insertPrices(expectedIOS(), product: updateProduct, context: context, ownerUserID: runtime.session.userID)
+        let initialPricePush = try await pushPendingPrices(context: context, runtime: runtime)
+        XCTAssertTrue(initialPricePush.isVerifiedSuccess)
+        XCTAssertEqual(initialPricePush.confirmedRemoteIDs.count, 8)
+
         updateProduct.productName = fixture.matrixProductIOSUpdateFinal
         try accumulator.recordProductChange(
             product: updateProduct,
@@ -484,6 +523,16 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         try context.save()
         let updateCatalogPush = try await pushPendingCatalog(context: context, runtime: runtime, expectedReadyCandidatesAtLeast: 1)
         XCTAssertEqual(updateCatalogPush.status, .completed)
+
+        try insertPrices(
+            [ExpectedPoint(type: .purchase, price: 47.70, effectiveAt: "2026-05-12 13:45:00")],
+            product: updateProduct,
+            context: context,
+            ownerUserID: runtime.session.userID
+        )
+        let correctionPricePush = try await pushPendingPrices(context: context, runtime: runtime)
+        XCTAssertTrue(correctionPricePush.isVerifiedSuccess)
+        XCTAssertEqual(correctionPricePush.confirmedRemoteIDs.count, 1)
 
         let tombstoneBaseline = LocalPendingChangeLogicalKey.productFingerprintHash(tombstoneProduct)
         try accumulator.recordProductChange(
@@ -524,7 +573,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         XCTAssertEqual(tombstoneHistoryPush.uploadedCount, 1)
 
         let readBack = try await fetchRemoteSnapshot(runtime, fixture: fixture)
-        XCTAssertEqual(try XCTUnwrap(singleActiveProduct(in: readBack, barcode: fixture.matrixBarcodeIOSCreate)).productName, fixture.matrixProductIOSCreate)
+        let remoteCreate = try XCTUnwrap(singleActiveProduct(in: readBack, barcode: fixture.matrixBarcodeIOSCreate))
+        XCTAssertEqual(remoteCreate.productName, fixture.matrixProductIOSCreate)
+        assertRemotePrices(prices(in: readBack, productID: remoteCreate.id), expected: expectedIOS(), fixture: fixture)
         XCTAssertEqual(try XCTUnwrap(singleActiveProduct(in: readBack, barcode: fixture.matrixBarcodeIOSUpdate)).productName, fixture.matrixProductIOSUpdateFinal)
         XCTAssertNotNil(try XCTUnwrap(product(in: readBack, barcode: fixture.matrixBarcodeIOSTombstone)).deletedAt)
 
@@ -536,7 +587,186 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         print(
             "\(fixture.logPrefix)_IOS_WRITE_MATRIX owner_hash=\(ownerHash(runtime.session.userID)) " +
             "product_create=pass product_update=pass product_tombstone=pass " +
+            "product_price_create=pass product_price_correction=pass product_price_tombstone=not_supported_append_only " +
             "history_create=pass history_update=pass history_tombstone=pass"
+        )
+    }
+
+    func test114IOSOfflineReconnectProductPriceHistoryMatrix() async throws {
+        try requireLiveAcceptanceEnabled()
+        let fixture = try makeFixture()
+        let runtime = try await makeRuntime()
+        let context = try makeContext()
+        _ = try SupabaseCatalogBaselineWriter().commitLatestBaseline(
+            context: context,
+            ownerUserUUID: runtime.session.userID
+        )
+
+        let seedUpdate = try await createCatalogCanary(
+            context: context,
+            runtime: runtime,
+            supplierName: "\(fixture.prefix)OFFLINE_IOS_SEED_SUPPLIER",
+            categoryName: "\(fixture.prefix)OFFLINE_IOS_SEED_CATEGORY",
+            productName: "\(fixture.prefix)OFFLINE_IOS_UPDATE_INITIAL",
+            barcode: "\(fixture.prefix)OFFLINE_IOS_UPDATE",
+            itemNumber: "\(fixture.prefix)OFFLINE_IOS_UPDATE_ITEM",
+            purchasePrice: 52,
+            retailPrice: 62,
+            stockQuantity: 4
+        )
+        let seedTombstone = try await createCatalogCanary(
+            context: context,
+            runtime: runtime,
+            supplierName: "\(fixture.prefix)OFFLINE_IOS_TOMBSTONE_SUPPLIER",
+            categoryName: "\(fixture.prefix)OFFLINE_IOS_TOMBSTONE_CATEGORY",
+            productName: "\(fixture.prefix)OFFLINE_IOS_TOMBSTONE_PRODUCT",
+            barcode: "\(fixture.prefix)OFFLINE_IOS_TOMBSTONE",
+            itemNumber: "\(fixture.prefix)OFFLINE_IOS_TOMBSTONE_ITEM",
+            purchasePrice: 53,
+            retailPrice: 63,
+            stockQuantity: 5
+        )
+
+        let seededHistoryUpdate = matrixHistoryEntry(title: "\(fixture.prefix)OFFLINE_IOS_HISTORY_UPDATE_INITIAL", fixture: fixture)
+        let seededHistoryTombstone = matrixHistoryEntry(title: "\(fixture.prefix)OFFLINE_IOS_HISTORY_TOMBSTONE", fixture: fixture)
+        context.insert(seededHistoryUpdate)
+        context.insert(seededHistoryTombstone)
+        seededHistoryUpdate.markHistorySessionLocalMutation()
+        seededHistoryTombstone.markHistorySessionLocalMutation()
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: runtime.session.userID)
+        try accumulator.recordHistorySessionChange(entry: seededHistoryUpdate, operation: .upsert, changedFields: ["seed"])
+        try accumulator.recordHistorySessionChange(entry: seededHistoryTombstone, operation: .upsert, changedFields: ["seed"])
+        try context.save()
+        let seedHistoryPush = try await pushPendingHistory([seededHistoryUpdate, seededHistoryTombstone], context: context, runtime: runtime)
+        XCTAssertEqual(seedHistoryPush.uploadedCount, 2)
+
+        let localSaveStarted = Date()
+        let offlineSupplier = Supplier(name: "\(fixture.prefix)OFFLINE_IOS_SUPPLIER")
+        let offlineCategory = ProductCategory(name: "\(fixture.prefix)OFFLINE_IOS_CATEGORY")
+        context.insert(offlineSupplier)
+        context.insert(offlineCategory)
+        try accumulator.recordSupplierChange(supplier: offlineSupplier, operation: .create, origin: .manualCatalogSave)
+        try accumulator.recordCategoryChange(category: offlineCategory, operation: .create, origin: .manualCatalogSave)
+
+        let createProduct = matrixProduct(
+            barcode: "\(fixture.prefix)OFFLINE_IOS_CREATE",
+            name: "\(fixture.prefix)OFFLINE_IOS_CREATE_PRODUCT",
+            supplier: offlineSupplier,
+            category: offlineCategory
+        )
+        context.insert(createProduct)
+        try accumulator.recordProductChange(
+            product: createProduct,
+            operation: .create,
+            origin: .manualCatalogSave,
+            changedFields: ["barcode", "productName", "supplier", "category", "purchasePrice", "retailPrice", "stockQuantity"]
+        )
+
+        seedUpdate.productName = "\(fixture.prefix)OFFLINE_IOS_UPDATE_FINAL"
+        try accumulator.recordProductChange(
+            product: seedUpdate,
+            operation: .update,
+            origin: .manualCatalogSave,
+            changedFields: ["productName"]
+        )
+
+        let tombstoneBaseline = LocalPendingChangeLogicalKey.productFingerprintHash(seedTombstone)
+        try accumulator.recordProductChange(
+            product: seedTombstone,
+            operation: .delete,
+            origin: .manualCatalogSave,
+            changedFields: ["tombstone"],
+            baselineFingerprintHash: tombstoneBaseline
+        )
+        context.delete(seedTombstone)
+
+        try insertPrices(expectedIOS(), product: createProduct, context: context, ownerUserID: runtime.session.userID)
+        try insertPrices(
+            [ExpectedPoint(type: .purchase, price: 58.80, effectiveAt: "2026-05-12 15:45:00")],
+            product: seedUpdate,
+            context: context,
+            ownerUserID: runtime.session.userID
+        )
+
+        let historyCreate = matrixHistoryEntry(title: "\(fixture.prefix)OFFLINE_IOS_HISTORY_CREATE", fixture: fixture)
+        context.insert(historyCreate)
+        historyCreate.markHistorySessionLocalMutation()
+        try accumulator.recordHistorySessionChange(entry: historyCreate, operation: .upsert, changedFields: ["create"])
+        seededHistoryUpdate.title = "\(fixture.prefix)OFFLINE_IOS_HISTORY_UPDATE_FINAL"
+        seededHistoryUpdate.markHistorySessionLocalMutation()
+        try accumulator.recordHistorySessionChange(entry: seededHistoryUpdate, operation: .upsert, changedFields: ["displayName"])
+        seededHistoryTombstone.markHistorySessionLocalDeletion()
+        try accumulator.recordHistorySessionChange(entry: seededHistoryTombstone, operation: .delete, changedFields: ["tombstone"])
+        try context.save()
+        let localSaveMs = Int(Date().timeIntervalSince(localSaveStarted) * 1000)
+
+        let pendingBefore = try LocalPendingChangeSnapshotProvider(context: context)
+            .loadSnapshot(ownerUserID: runtime.session.userID)
+        XCTAssertGreaterThanOrEqual(pendingBefore.pendingCatalogChangeCount, 3)
+        XCTAssertGreaterThanOrEqual(pendingBefore.pendingProductPriceChangeCount, 1)
+        XCTAssertGreaterThanOrEqual(pendingBefore.pendingHistorySessionChangeCount, 3)
+
+        let offlinePlan = try await LocalPendingAggregatedPushPlanner(
+            context: context,
+            includesCatalog: true,
+            includesProductPrice: true
+        ).makePlan(ownerUserID: runtime.session.userID)
+        let offlineBatch = try XCTUnwrap(offlinePlan.catalogBatch)
+        let stateStore = LocalPendingAggregatedPushStateStore(context: context)
+        try stateStore.markSent(
+            changeIDs: offlineBatch.changeIDs,
+            ownerUserID: runtime.session.userID,
+            planFingerprint: offlineBatch.plan.planFingerprint
+        )
+        let offlineResult = await SupabaseManualPushService(
+            remote: Task103NetworkDownManualPushRemoteGateway()
+        ).execute(
+            plan: offlineBatch.plan,
+            context: context,
+            ownerUserID: runtime.session.userID
+        )
+        XCTAssertEqual(offlineResult.status, .failedBeforeWrite)
+        try stateStore.markRetryable(changeIDs: offlineBatch.changeIDs, ownerUserID: runtime.session.userID)
+
+        let reconnectStarted = Date()
+        let catalogPush = try await pushPendingCatalog(context: context, runtime: runtime, expectedReadyCandidatesAtLeast: 3)
+        XCTAssertEqual(catalogPush.status, .completed)
+        let pricePush = try await pushPendingPrices(context: context, runtime: runtime)
+        XCTAssertTrue(pricePush.isVerifiedSuccess)
+        XCTAssertGreaterThanOrEqual(pricePush.confirmedRemoteIDs.count, 1)
+        let historyPush = try await pushPendingHistory(
+            [historyCreate, seededHistoryUpdate, seededHistoryTombstone],
+            context: context,
+            runtime: runtime
+        )
+        XCTAssertGreaterThanOrEqual(historyPush.uploadedCount, 3)
+        let remotePushMs = Int(Date().timeIntervalSince(reconnectStarted) * 1000)
+
+        let pendingAfter = try LocalPendingChangeSnapshotProvider(context: context)
+            .loadSnapshot(ownerUserID: runtime.session.userID)
+        XCTAssertEqual(pendingAfter.pendingCatalogChangeCount, 0)
+        XCTAssertEqual(pendingAfter.pendingProductPriceChangeCount, 0)
+        XCTAssertEqual(pendingAfter.pendingHistorySessionChangeCount, 0)
+
+        let readBack = try await fetchRemoteSnapshot(runtime, fixture: fixture)
+        let remoteCreate = try XCTUnwrap(singleActiveProduct(in: readBack, barcode: "\(fixture.prefix)OFFLINE_IOS_CREATE"))
+        XCTAssertEqual(remoteCreate.productName, "\(fixture.prefix)OFFLINE_IOS_CREATE_PRODUCT")
+        assertRemotePrices(prices(in: readBack, productID: remoteCreate.id), expected: expectedIOS(), fixture: fixture)
+        XCTAssertEqual(try XCTUnwrap(singleActiveProduct(in: readBack, barcode: "\(fixture.prefix)OFFLINE_IOS_UPDATE")).productName, "\(fixture.prefix)OFFLINE_IOS_UPDATE_FINAL")
+        XCTAssertNotNil(try XCTUnwrap(product(in: readBack, barcode: "\(fixture.prefix)OFFLINE_IOS_TOMBSTONE")).deletedAt)
+
+        let sessions = try await fetchFixtureSessions(runtime, fixture: fixture)
+        XCTAssertNotNil(session(in: sessions, displayName: "\(fixture.prefix)OFFLINE_IOS_HISTORY_CREATE"))
+        XCTAssertNotNil(session(in: sessions, displayName: "\(fixture.prefix)OFFLINE_IOS_HISTORY_UPDATE_FINAL"))
+        XCTAssertNotNil(try XCTUnwrap(session(in: sessions, displayName: "\(fixture.prefix)OFFLINE_IOS_HISTORY_TOMBSTONE")).deletedAt)
+
+        print(
+            "\(fixture.logPrefix)_IOS_OFFLINE_RECONNECT owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "offline_status=\(offlineResult.status.rawValue) localSaveMs=\(localSaveMs) " +
+            "pendingCatalog=\(pendingBefore.pendingCatalogChangeCount) pendingPrices=\(pendingBefore.pendingProductPriceChangeCount) pendingHistory=\(pendingBefore.pendingHistorySessionChangeCount) " +
+            "remotePushMs=\(remotePushMs) product_create=pass product_update=pass product_tombstone=pass " +
+            "product_price_create=pass product_price_correction=pass history_create=pass history_update=pass history_tombstone=pass " +
+            "coalescing=last_write_wins conflictPolicy=fail_closed syncType=EVENT_INCREMENTAL fullPull=false"
         )
     }
 
@@ -1048,7 +1278,69 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             changeIDs: batch.changeIDs,
             ownerUserID: runtime.session.userID
         )
+        try await recordCatalogSyncEvent(
+            context: context,
+            runtime: runtime,
+            result: push,
+            planFingerprint: batch.plan.planFingerprint
+        )
         return push
+    }
+
+    private func recordCatalogSyncEvent(
+        context: ModelContext,
+        runtime: Runtime,
+        result: SupabaseManualPushResult,
+        planFingerprint: String
+    ) async throws {
+        let enqueue = SupabaseManualSyncAggregatedPushOutboxProducer(context: context).produce(
+            .catalogManualPush(
+                result: result,
+                ownerUserID: runtime.session.userID,
+                currentOwnerUserID: runtime.session.userID,
+                planFingerprint: planFingerprint
+            )
+        )
+        let confirmedCatalogChangeCount =
+            result.supplierCreates + result.supplierUpdates + result.supplierLinks
+            + result.categoryCreates + result.categoryUpdates + result.categoryLinks
+            + result.productCreates + result.productUpdates + result.productLinks
+        print(
+            "TASK114_SYNC_EVENT_ENQUEUE kind=\(enqueue.kind.rawValue) " +
+            "entryStatus=\(enqueue.entryStatus?.rawValue ?? "nil") " +
+            "error=\(enqueue.errorCode ?? "nil") " +
+            "confirmed=\(confirmedCatalogChangeCount) " +
+            "suppliers=\(result.touchedIDs.suppliers.count) " +
+            "categories=\(result.touchedIDs.categories.count) " +
+            "products=\(result.touchedIDs.products.count)"
+        )
+        guard enqueue.kind == .enqueued || enqueue.kind == .duplicateNoOp || enqueue.kind == .skippedNoOp else {
+            throw HarnessError.unexpectedCatalogPushStatus("sync_event_enqueue_failed")
+        }
+        let authService = SupabaseAuthService(provider: runtime.provider)
+        let recorder = SupabaseSyncEventLiveRecorder(
+            configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
+            sessionProvider: authService,
+            transport: SupabaseSyncEventRPCTransport(clientProvider: runtime.provider)
+        )
+        let drain = try await SyncEventOutboxDrainService(context: context, recorder: recorder)
+            .drainOnce(ownerUserID: runtime.session.userID.uuidString, limit: 25)
+        print(
+            "TASK114_SYNC_EVENT_DRAIN status=\(drain.status.rawValue) attempted=\(drain.attempted) " +
+            "sent=\(drain.sent) retry=\(drain.retryScheduled) blocked=\(drain.blocked) " +
+            "dead=\(drain.dead) skipped=\(drain.skippedIneligible)"
+        )
+        if confirmedCatalogChangeCount > 0 {
+            guard drain.sent > 0 else {
+                throw HarnessError.unexpectedCatalogPushStatus(
+                    "sync_event_drain_no_sent_status_\(drain.status.rawValue)_enqueue_\(enqueue.kind.rawValue)"
+                )
+            }
+        } else {
+            guard drain.sent > 0 || drain.status == .noWork else {
+                throw HarnessError.unexpectedCatalogPushStatus("sync_event_drain_\(drain.status.rawValue)")
+            }
+        }
     }
 
     private func pushPendingPrices(
@@ -1084,7 +1376,51 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             changeIDs: batch.changeIDs,
             ownerUserID: runtime.session.userID
         )
+        try await recordProductPriceSyncEvent(context: context, runtime: runtime, result: push)
         return push
+    }
+
+    private func recordProductPriceSyncEvent(
+        context: ModelContext,
+        runtime: Runtime,
+        result: ProductPriceManualPushResult
+    ) async throws {
+        let enqueue = SupabaseManualSyncAggregatedPushOutboxProducer(context: context).produce(
+            .productPriceManualPush(
+                result: result,
+                ownerUserID: runtime.session.userID,
+                currentOwnerUserID: runtime.session.userID
+            )
+        )
+        print(
+            "TASK114_PRICE_SYNC_EVENT_ENQUEUE kind=\(enqueue.kind.rawValue) " +
+            "entryStatus=\(enqueue.entryStatus?.rawValue ?? "nil") " +
+            "error=\(enqueue.errorCode ?? "nil") " +
+            "prices=\(result.confirmedRemoteIDs.count)"
+        )
+        guard enqueue.kind == .enqueued || enqueue.kind == .duplicateNoOp || enqueue.kind == .skippedNoOp else {
+            throw HarnessError.unexpectedCatalogPushStatus("price_sync_event_enqueue_failed")
+        }
+        let authService = SupabaseAuthService(provider: runtime.provider)
+        let recorder = SupabaseSyncEventLiveRecorder(
+            configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
+            sessionProvider: authService,
+            transport: SupabaseSyncEventRPCTransport(clientProvider: runtime.provider)
+        )
+        let drain = try await SyncEventOutboxDrainService(context: context, recorder: recorder)
+            .drainOnce(ownerUserID: runtime.session.userID.uuidString, limit: 25)
+        print(
+            "TASK114_PRICE_SYNC_EVENT_DRAIN status=\(drain.status.rawValue) attempted=\(drain.attempted) " +
+            "sent=\(drain.sent) retry=\(drain.retryScheduled) blocked=\(drain.blocked) " +
+            "dead=\(drain.dead) skipped=\(drain.skippedIneligible)"
+        )
+        if result.isVerifiedSuccess, result.confirmedRemoteIDs.isEmpty == false {
+            guard drain.sent > 0 else {
+                throw HarnessError.unexpectedCatalogPushStatus(
+                    "price_sync_event_drain_no_sent_status_\(drain.status.rawValue)_enqueue_\(enqueue.kind.rawValue)"
+                )
+            }
+        }
     }
 
     private func pushPendingHistory(
@@ -1092,10 +1428,47 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         context: ModelContext,
         runtime: Runtime
     ) async throws -> HistorySessionPushResult {
-        try await HistorySessionSyncService(remote: runtime.inventory).pushPendingHistorySessions(
+        let result = try await HistorySessionSyncService(remote: runtime.inventory).pushPendingHistorySessions(
             entries: entries,
             ownerUserID: runtime.session.userID,
             context: context
+        )
+        try await recordHistorySyncEvent(runtime: runtime, result: result)
+        return result
+    }
+
+    private func recordHistorySyncEvent(
+        runtime: Runtime,
+        result: HistorySessionPushResult
+    ) async throws {
+        guard result.uploadedCount > 0, result.pushedRemoteIDs.isEmpty == false else { return }
+        let sortedIDs = result.pushedRemoteIDs.sorted { $0.uuidString < $1.uuidString }
+        let authService = SupabaseAuthService(provider: runtime.provider)
+        let recorder = SupabaseSyncEventLiveRecorder(
+            configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
+            sessionProvider: authService,
+            transport: SupabaseSyncEventRPCTransport(clientProvider: runtime.provider)
+        )
+        let request = SyncEventRecordRequest(
+            domain: "history",
+            eventType: "history_changed",
+            changedCount: sortedIDs.count,
+            entityIDs: .object([
+                "session_ids": .array(sortedIDs.map { .string($0.uuidString.lowercased()) })
+            ]),
+            metadata: .object([
+                "source": .string("ios_history_session_push"),
+                "uploaded_count": .number(Double(sortedIDs.count))
+            ]),
+            source: "ios_history_session_push",
+            sourceDeviceID: nil,
+            batchID: UUID(),
+            clientEventID: "task114-ios-history-\(runtime.session.userID.uuidString.lowercased())-\(UUID().uuidString.lowercased())"
+        )
+        _ = try await recorder.record(request)
+        print(
+            "TASK114_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL " +
+            "sessions=\(sortedIDs.count) fullPull=false"
         )
     }
 
@@ -1645,9 +2018,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             .from("shared_sheet_sessions")
             .select("remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at,deleted_at")
             .eq("owner_user_id", value: runtime.session.userID.uuidString)
-            .like("display_name", pattern: "\(fixture.prefix)MATRIX_%")
+            .like("display_name", pattern: "\(fixture.prefix)%")
             .order("remote_id", ascending: true)
-            .limit(50)
+            .limit(100)
             .execute()
             .value
     }
@@ -1995,6 +2368,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             ProductPrice.self,
             SupabaseCatalogBaselineRun.self,
             SupabaseCatalogBaselineRecord.self,
+            SyncEventOutboxEntry.self,
             LocalPendingChange.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
@@ -2038,14 +2412,26 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
     }
 
     private struct Task114LocalCounts {
+        let products: Int
         let suppliers: Int
         let categories: Int
+        let productPrices: Int
+        let userVisibleHistory: Int
     }
 
     private func task114LocalCounts(context: ModelContext) throws -> Task114LocalCounts {
         Task114LocalCounts(
-            suppliers: try context.fetch(FetchDescriptor<Supplier>()).filter { $0.remoteDeletedAt == nil }.count,
-            categories: try context.fetch(FetchDescriptor<ProductCategory>()).filter { $0.remoteDeletedAt == nil }.count
+            products: try context.fetchCount(FetchDescriptor<Product>(
+                predicate: #Predicate<Product> { $0.remoteDeletedAt == nil }
+            )),
+            suppliers: try context.fetchCount(FetchDescriptor<Supplier>(
+                predicate: #Predicate<Supplier> { $0.remoteDeletedAt == nil }
+            )),
+            categories: try context.fetchCount(FetchDescriptor<ProductCategory>(
+                predicate: #Predicate<ProductCategory> { $0.remoteDeletedAt == nil }
+            )),
+            productPrices: try context.fetchCount(FetchDescriptor<ProductPrice>()),
+            userVisibleHistory: try LocalHistorySessionCounting.fetchUserVisibleCount(context: context)
         )
     }
 

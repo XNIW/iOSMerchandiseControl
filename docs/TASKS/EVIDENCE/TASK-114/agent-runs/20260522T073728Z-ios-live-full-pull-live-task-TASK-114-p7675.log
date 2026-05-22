@@ -1,0 +1,82 @@
+=== mc-agent ios live-full-pull --live --task TASK-114 ===
+"[ProductPriceSync] page_apply_done index=40 applyMs=270 mutations=0"
+"[ProductPriceSync] page_noop index=40 total=36000"
+"[ProductPriceSync] page_request index=41 offset=36000 after=E0A04763-redacted"
+"[ProductPriceSync] page_fetch_done index=41 fetchMs=212"
+"[ProductPriceSync] page_return index=41 count=900 first=E0A093C5-redacted last=E5EAD78B-redacted"
+"[ProductPriceSync] page_apply_done index=23 applyMs=253 mutations=0"
+"[ProductPriceSync] page_noop index=23 total=20700"
+"[ProductPriceSync] page_request index=24 offset=20700 after=81C528FE-redacted"
+"[ProductPriceSync] page_apply_done index=41 applyMs=272 mutations=0"
+"[ProductPriceSync] page_noop index=41 total=36900"
+"[ProductPriceSync] page_request index=42 offset=36900 after=E5EAD78B-redacted"
+"[ProductPriceSync] page_fetch_done index=24 fetchMs=240"
+"[ProductPriceSync] page_return index=24 count=900 first=81C60B77-redacted last=87AECC0E-redacted"
+"[ProductPriceSync] page_fetch_done index=42 fetchMs=296"
+"[ProductPriceSync] page_return index=42 count=900 first=E5EB2722-redacted last=EB62F9EA-redacted"
+"[ProductPriceSync] page_apply_done index=24 applyMs=287 mutations=0"
+"[ProductPriceSync] page_noop index=24 total=21600"
+"[ProductPriceSync] page_request index=25 offset=21600 after=87AECC0E-redacted"
+"[ProductPriceSync] page_apply_done index=42 applyMs=264 mutations=0"
+"[ProductPriceSync] page_noop index=42 total=37800"
+"[ProductPriceSync] page_request index=43 offset=37800 after=EB62F9EA-redacted"
+"[ProductPriceSync] page_fetch_done index=25 fetchMs=331"
+"[ProductPriceSync] page_return index=25 count=900 first=87AF127E-redacted last=8D4FE5B1-redacted"
+"[ProductPriceSync] page_fetch_done index=43 fetchMs=542"
+"[ProductPriceSync] page_return index=43 count=900 first=EB63F55A-redacted last=F0E2DC2E-redacted"
+"[ProductPriceSync] page_apply_done index=25 applyMs=269 mutations=0"
+"[ProductPriceSync] page_noop index=25 total=22500"
+"[ProductPriceSync] page_request index=26 offset=22500 after=8D4FE5B1-redacted"
+"[ProductPriceSync] page_apply_done index=43 applyMs=255 mutations=0"
+"[ProductPriceSync] page_noop index=43 total=38700"
+"[ProductPriceSync] page_request index=44 offset=38700 after=F0E2DC2E-redacted"
+"[ProductPriceSync] page_fetch_done index=26 fetchMs=538"
+"[ProductPriceSync] page_return index=26 count=900 first=8D58C645-redacted last=92FF19F0-redacted"
+"[ProductPriceSync] page_fetch_done index=44 fetchMs=566"
+"[ProductPriceSync] page_return index=44 count=900 first=F0E45698-redacted last=F6859030-redacted"
+"[ProductPriceSync] page_apply_done index=26 applyMs=296 mutations=0"
+"[ProductPriceSync] page_noop index=26 total=23400"
+"[ProductPriceSync] page_request index=27 offset=23400 after=92FF19F0-redacted"
+"[ProductPriceSync] page_apply_done index=44 applyMs=277 mutations=0"
+"[ProductPriceSync] page_noop index=44 total=39600"
+"[ProductPriceSync] page_request index=45 offset=39600 after=F6859030-redacted"
+"[ProductPriceSync] page_fetch_done index=45 fetchMs=1010"
+"[ProductPriceSync] page_return index=45 count=900 first=F68A519B-redacted last=FC218AEF-redacted"
+"[ProductPriceSync] page_fetch_done index=27 fetchMs=1141"
+"[ProductPriceSync] page_return index=27 count=900 first=93009AF1-redacted last=98CAA4C3-redacted"
+"[ProductPriceSync] page_apply_done index=45 applyMs=271 mutations=0"
+"[ProductPriceSync] page_noop index=45 total=40500"
+"[ProductPriceSync] page_request index=46 offset=40500 after=FC218AEF-redacted"
+"[ProductPriceSync] page_apply_done index=27 applyMs=250 mutations=0"
+"[ProductPriceSync] page_noop index=27 total=24300"
+"[ProductPriceSync] page_request index=28 offset=24300 after=98CAA4C3-redacted"
+"[ProductPriceSync] page_fetch_done index=46 fetchMs=460"
+"[ProductPriceSync] page_return index=46 count=611 first=FC241288-redacted last=FFF9125A-redacted"
+"[ProductPriceSync] page_apply_done index=46 applyMs=188 mutations=0"
+"[ProductPriceSync] page_noop index=46 total=41111"
+"[ProductPriceSync] page_fetch_done index=28 fetchMs=488"
+"[ProductPriceSync] page_return index=28 count=900 first=98CCA046-redacted last=9E1A14A3-redacted"
+"[ProductPriceSync] paged_apply_complete inserted=0 linked=0 pruned=0 skipped=41111 total=41111 elapsedMs=32821"
+"[ProductPriceSync] paged_apply_exit cancelled=false pages=45 total=41111"
+"[ProductPriceSync] page_apply_done index=28 applyMs=255 mutations=0"
+"[ProductPriceSync] page_noop index=28 total=25200"
+TASK114_IOS_FULL_PULL_LOOKUPS owner_hash=ad3d747e936c before_suppliers=59 before_categories=28 before_prices=41111 remote_suppliers=59 remote_categories=28 planned_suppliers=0 planned_categories=0 suppliers_created=0 categories_created=0 products_inserted=0 products_updated=0 product_tombstoned=0 product_pruned=0 price_inserted=0 price_linked=0 price_pruned=0 price_skipped=41111 price_total=41111 after_prices=41111 history_inserted=0 history_updated=3 history_pruned=16 after_products=19696 after_suppliers=59 after_categories=28 after_history_user_visible=10
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore]' passed (51.874 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-22 03:38:49.062.
+	 Executed 1 test, with 0 failures (0 unexpected) in 51.874 (51.875) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-22 03:38:49.063.
+	 Executed 1 test, with 0 failures (0 unexpected) in 51.874 (51.875) seconds
+Test Suite 'Selected tests' passed at 2026-05-22 03:38:49.063.
+	 Executed 1 test, with 0 failures (0 unexpected) in 51.874 (51.875) seconds
+"[ProductPriceSync] page_request index=29 offset=25200 after=9E1A14A3-redacted"
+2026-05-22 03:38:49.365 xcodebuild[8992:7662711] [MT] IDETestOperationsObserverDebug: 54.522 elapsed -- Testing started completed.
+2026-05-22 03:38:49.365 xcodebuild[8992:7662711] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-22 03:38:49.365 xcodebuild[8992:7662711] [MT] IDETestOperationsObserverDebug: 54.522 sec, +54.522 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-live-full-pull-20260522T073728Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"local": {"pendingAggregate": 0}, "remote": null}, "remote": "app-auth-full-pull"}, "completedAt": "2026-05-22T07:38:50Z", "counts": {"after": {"categories": {"active": 28, "all": 28, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 11, "all": 16, "deleted": 5, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 11}, "product_prices": {"active": 41111, "all": 41111, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19696, "all": 19698, "deleted": 2, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 59, "all": 59, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}, "before": {"categories": {"active": 28, "all": 28, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 27, "all": 32, "deleted": 5, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 27}, "product_prices": {"active": 41111, "all": 41111, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19696, "all": 19698, "deleted": 2, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 59, "all": 59, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}}, "deleted": 0, "drift": {}, "inserted": 0, "lastFullReconciliation": "2026-05-22T07:38:50Z", "lastPull": "2026-05-22T07:38:50Z", "lastPush": null, "lookupApply": {"categoriesInserted": 0, "categoryDelta": 0, "plannedCategories": 0, "plannedSuppliers": 0, "skippedCategories": 0, "skippedSuppliers": 0, "supplierDelta": 0, "suppliersInserted": 0}, "metricsLineFound": true, "productPriceApply": {"after": 41111, "inserted": 0, "linked": 0, "pruned": 0, "remoteTotal": 41111, "skipped": 41111}, "pruned": {"didPrune": 0, "isCompleteSnapshot": true, "skippedDirty": 0, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 11, "all": 16, "tombstone": 5}], "iosMissingSupplierCategory": [], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "device-app-auth-redacted"}, "skipped": 0, "source": "ios.live-full-pull", "startedAt": "2026-05-22T07:38:50Z", "status": "PASS", "store": {"pathHash": "<REDACTED_HEX>"}, "taskId": "TASK-114", "updated": 0, "xcodeExit": 0, "xcodeSkipped": false}

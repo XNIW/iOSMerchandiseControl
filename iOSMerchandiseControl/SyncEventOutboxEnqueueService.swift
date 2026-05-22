@@ -152,7 +152,8 @@ extension SyncEventOutboxProducerOutcome {
                 categoriesConfirmed: result.categoryCreates + result.categoryUpdates + result.categoryLinks,
                 productsConfirmed: result.productCreates + result.productUpdates + result.productLinks,
                 clientEventID: Self.clientEventID(prefix: "catalog-manual-push", fingerprint: planFingerprint),
-                sourceDeviceID: sourceDeviceID
+                sourceDeviceID: sourceDeviceID,
+                validationEntityIDs: result.touchedIDs.isEmpty ? nil : result.touchedIDs.syncEventEntityIDs
             )
         )
     }
@@ -173,6 +174,13 @@ extension SyncEventOutboxProducerOutcome {
             terminalStatus = .failedPreflight
             confirmedRows = 0
         }
+        let entityIDs: SyncEventJSONValue? = result.confirmedRemoteIDs.isEmpty ? nil : .object([
+            "price_ids": .array(
+                result.confirmedRemoteIDs
+                    .sorted { $0.uuidString < $1.uuidString }
+                    .map { .string($0.uuidString.lowercased()) }
+            )
+        ])
 
         return .productPriceManualPush(
             ProductPriceManualPush(
@@ -181,7 +189,8 @@ extension SyncEventOutboxProducerOutcome {
                 terminalStatus: terminalStatus,
                 confirmedPriceRows: confirmedRows,
                 clientEventID: Self.clientEventID(prefix: "prices-manual-push", fingerprint: result.fingerprint),
-                sourceDeviceID: sourceDeviceID
+                sourceDeviceID: sourceDeviceID,
+                validationEntityIDs: entityIDs
             )
         )
     }

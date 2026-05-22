@@ -631,6 +631,63 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 1)
     }
 
+    func testPagedFullPullPrunesRemoteLinkedPricesMissingFromCompleteSnapshot() async throws {
+        let context = try makeContext()
+        let productID = uuid(976_000)
+        let product = try insertProduct(
+            context: context,
+            barcode: "TASK114-PRICE-PRUNE",
+            remoteID: productID
+        )
+        let keptRemoteID = uuid(976_100)
+        let staleRemoteID = uuid(976_101)
+        let keptPrice = ProductPrice(
+            remoteID: keptRemoteID,
+            type: .purchase,
+            price: 2.5,
+            effectiveAt: try date("2026-05-01 10:30:00"),
+            product: product
+        )
+        let stalePrice = ProductPrice(
+            remoteID: staleRemoteID,
+            type: .retail,
+            price: 9.9,
+            effectiveAt: try date("2026-05-02 10:30:00"),
+            product: product
+        )
+        context.insert(keptPrice)
+        context.insert(stalePrice)
+        try context.save()
+
+        let rows = [
+            remotePrice(
+                id: keptRemoteID,
+                productID: productID,
+                type: "PURCHASE",
+                price: 2.5,
+                effectiveAt: "2026-05-01 10:30:00"
+            )
+        ]
+        let fetcher = ProductPricePagedFetcherFake(rows: rows)
+        let pagedService = SupabaseProductPriceApplyService(fetcher: fetcher)
+        let samplePlan = try await pagedService.loadBootstrapPreviewSample(
+            context: context,
+            sessionSnapshot: session
+        )
+
+        let result = try await pagedService.applyPagedFullPull(
+            plan: samplePlan,
+            context: context,
+            currentSessionSnapshot: session
+        )
+
+        XCTAssertEqual(result.prunedLocal, 1)
+        let verifyContext = ModelContext(context.container)
+        let prices = try verifyContext.fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertEqual(prices.count, 1)
+        XCTAssertEqual(prices.first?.remoteID, keptRemoteID)
+    }
+
     func testPagedFullPullCanCancelLargeProductPriceHistoryWithoutFixedTotalLimit() async throws {
         let context = try makeContext()
         let productIDs = (0..<400).map { uuid(902_000 + $0) }
@@ -755,7 +812,8 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
             Product.self,
             Supplier.self,
             ProductCategory.self,
-            ProductPrice.self
+            ProductPrice.self,
+            LocalPendingChange.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])

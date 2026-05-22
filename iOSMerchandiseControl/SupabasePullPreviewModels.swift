@@ -68,6 +68,9 @@ nonisolated struct SyncPreview: Sendable {
     let warnings: [SyncPreviewWarning]
     let metrics: [SyncPreviewMetric]
     let sourceErrors: [SyncPreviewWarning]
+    let remoteProductIDs: Set<UUID>
+    let remoteSupplierIDs: Set<UUID>
+    let remoteCategoryIDs: Set<UUID>
 
     init(
         generatedAt: Date,
@@ -86,7 +89,10 @@ nonisolated struct SyncPreview: Sendable {
         priceHistoryDiffs: [SyncPreviewFieldChange],
         warnings: [SyncPreviewWarning],
         metrics: [SyncPreviewMetric],
-        sourceErrors: [SyncPreviewWarning]
+        sourceErrors: [SyncPreviewWarning],
+        remoteProductIDs: Set<UUID>? = nil,
+        remoteSupplierIDs: Set<UUID> = [],
+        remoteCategoryIDs: Set<UUID> = []
     ) {
         self.generatedAt = generatedAt
         self.outcome = outcome
@@ -105,6 +111,12 @@ nonisolated struct SyncPreview: Sendable {
         self.warnings = warnings
         self.metrics = metrics
         self.sourceErrors = sourceErrors
+        self.remoteProductIDs = remoteProductIDs ?? Set(
+            (newProducts + updateCandidates + unchangedProducts + remoteTombstones)
+                .compactMap(\.remoteID)
+        )
+        self.remoteSupplierIDs = remoteSupplierIDs
+        self.remoteCategoryIDs = remoteCategoryIDs
     }
 }
 

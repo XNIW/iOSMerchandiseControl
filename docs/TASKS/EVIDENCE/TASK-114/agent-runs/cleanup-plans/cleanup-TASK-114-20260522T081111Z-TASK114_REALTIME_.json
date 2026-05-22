@@ -1,0 +1,22 @@
+{
+  "cleanup_plan_id": "cleanup-TASK-114-20260522T081111Z-TASK114_REALTIME_",
+  "created_at": "2026-05-22T08:11:16Z",
+  "forbidden": [
+    "auth.users",
+    "truncate",
+    "reset db",
+    "global delete"
+  ],
+  "prefix": "TASK114_REALTIME_",
+  "profile": "linked",
+  "schema_version": "1.1",
+  "scope": [
+    "inventory_product_prices",
+    "inventory_products",
+    "inventory_suppliers",
+    "inventory_categories",
+    "shared_sheet_sessions",
+    "sync_events"
+  ],
+  "task_id": "TASK-114"
+}

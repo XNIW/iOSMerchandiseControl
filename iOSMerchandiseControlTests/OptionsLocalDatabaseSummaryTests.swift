@@ -21,6 +21,27 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
         XCTAssertEqual(summary.productPrices, 0)
     }
 
+    func testLocalDatabaseSummaryCountsOnlyPricesForActiveProducts() throws {
+        let context = try makeContext()
+        let activeProduct = Product(barcode: "active")
+        let tombstonedProduct = Product(
+            barcode: "deleted",
+            remoteID: UUID(),
+            remoteDeletedAt: Date()
+        )
+        context.insert(activeProduct)
+        context.insert(tombstonedProduct)
+        context.insert(ProductPrice(type: .purchase, price: 1, product: activeProduct))
+        context.insert(ProductPrice(type: .purchase, price: 2, product: tombstonedProduct))
+        context.insert(ProductPrice(type: .purchase, price: 3))
+        try context.save()
+
+        let summary = try LocalDatabasePublicSummary.make(context: context)
+
+        XCTAssertEqual(summary.products, 1)
+        XCTAssertEqual(summary.productPrices, 1)
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             Product.self,

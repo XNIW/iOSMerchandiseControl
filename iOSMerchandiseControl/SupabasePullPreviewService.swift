@@ -530,7 +530,10 @@ nonisolated enum SupabasePullPreviewDiffEngine {
             priceHistoryDiffs: priceHistoryDiffs.sorted { ($0.barcodeOrKey ?? "") < ($1.barcodeOrKey ?? "") },
             warnings: warnings.sorted { ($0.barcodeOrKey ?? $0.detail ?? "") < ($1.barcodeOrKey ?? $1.detail ?? "") },
             metrics: metrics,
-            sourceErrors: remote.sourceErrors
+            sourceErrors: remote.sourceErrors,
+            remoteProductIDs: Set(remote.products.map(\.id)),
+            remoteSupplierIDs: Set(remote.suppliersByID.keys),
+            remoteCategoryIDs: Set(remote.categoriesByID.keys)
         )
     }
 

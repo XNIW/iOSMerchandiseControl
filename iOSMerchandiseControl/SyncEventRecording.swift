@@ -386,7 +386,7 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
 
     private func isAllowedEntityIDsKey(_ value: String) -> Bool {
         switch value {
-        case "supplier_ids", "category_ids", "product_ids", "price_ids":
+        case "supplier_ids", "category_ids", "product_ids", "price_ids", "session_ids":
             return true
         default:
             return false

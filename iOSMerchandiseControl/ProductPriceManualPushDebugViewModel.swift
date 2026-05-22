@@ -256,7 +256,8 @@ final class ProductPriceManualPushDebugViewModel: ObservableObject {
                 let result = ProductPriceManualPushResult(
                     insertedCount: insertedCount,
                     verification: verification,
-                    fingerprint: snapshot.fingerprint
+                    fingerprint: snapshot.fingerprint,
+                    confirmedRemoteIDs: Self.confirmedRemoteIDs(for: verification, snapshot: snapshot)
                 )
                 self.state = self.terminalState(for: result)
                 self.task = nil
@@ -367,6 +368,14 @@ final class ProductPriceManualPushDebugViewModel: ObservableObject {
         case .invalidPayload:
             return .failedValidation(message: ProductPriceManualPushDisabledReason.validationFailed.rawValue)
         }
+    }
+
+    private static func confirmedRemoteIDs(
+        for verification: ProductPriceManualPushVerificationResult,
+        snapshot: ProductPriceManualPushSnapshot
+    ) -> [UUID] {
+        guard case .exactMatch = verification else { return [] }
+        return snapshot.payloads.map(\.id)
     }
 }
 #endif

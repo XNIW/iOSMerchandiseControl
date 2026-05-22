@@ -4,33 +4,181 @@ mc_android_connected_devices() {
   adb devices 2>/dev/null | awk 'NR>1 && $2=="device"{print $1}'
 }
 
+mc_android_available_devices_json() {
+  local raw
+  raw="$(adb devices -l 2>/dev/null || true)"
+  ADB_DEVICES_RAW="$raw" python3 - <<'PY'
+import json, os
+rows = []
+for line in os.environ.get("ADB_DEVICES_RAW", "").splitlines()[1:]:
+    line = line.strip()
+    if not line:
+        continue
+    parts = line.split()
+    serial = parts[0]
+    status = parts[1] if len(parts) > 1 else "unknown"
+    details = {}
+    for token in parts[2:]:
+        if ":" in token:
+            key, value = token.split(":", 1)
+            details[key] = value
+    rows.append({
+        "serial": "<REDACTED>",
+        "serialHash": __import__("hashlib").sha256(serial.encode()).hexdigest()[:12],
+        "status": status,
+        "targetType": "emulator" if serial.startswith("emulator-") else "physical",
+        "model": details.get("model"),
+        "device": details.get("device"),
+        "transport": details.get("transport_id"),
+    })
+print(json.dumps(rows, sort_keys=True))
+PY
+}
+
+mc_android_target_type() {
+  local serial="$1"
+  local qemu
+  qemu="$(adb -s "$serial" shell getprop ro.kernel.qemu 2>/dev/null | tr -d '\r' || true)"
+  if [[ "$serial" == emulator-* || "$qemu" == "1" ]]; then
+    printf 'emulator'
+  else
+    printf 'physical'
+  fi
+}
+
+mc_android_app_installed() {
+  local serial="$1"
+  adb -s "$serial" shell pm path com.example.merchandisecontrolsplitview >/dev/null 2>&1
+}
+
+mc_android_foreground_package() {
+  local serial="$1"
+  adb -s "$serial" shell dumpsys window 2>/dev/null \
+    | awk -F'[ /}]+' '/mCurrentFocus|mFocusedApp/ {for (i=1;i<=NF;i++) if ($i ~ /^com\\./) {print $i; exit}}' \
+    | tr -d '\r'
+}
+
+mc_android_lock_state_json() {
+  local serial="$1"
+  local power keyguard
+  power="$(adb -s "$serial" shell dumpsys power 2>/dev/null || true)"
+  keyguard="$(adb -s "$serial" shell dumpsys window 2>/dev/null || true)"
+  ANDROID_POWER="$power" ANDROID_KEYGUARD="$keyguard" python3 - <<'PY'
+import json, os, re
+power = os.environ.get("ANDROID_POWER", "")
+keyguard = os.environ.get("ANDROID_KEYGUARD", "")
+screen_on = bool(re.search(r"mWakefulness=Awake|Display Power: state=ON|state=ON", power))
+locked = bool(re.search(r"mDreamingLockscreen=true|mShowingLockscreen=true", keyguard))
+print(json.dumps({
+    "screenOn": screen_on,
+    "locked": locked,
+    "unlocked": screen_on and not locked,
+}, sort_keys=True))
+PY
+}
+
+mc_android_preflight_json() {
+  local serial="${1:-}"
+  local devices target_type state boot_completed app_installed foreground lock_json
+  devices="$(mc_android_available_devices_json)"
+  target_type=""
+  state=""
+  boot_completed=""
+  app_installed="false"
+  foreground=""
+  lock_json='{"locked":null,"screenOn":null,"unlocked":null}'
+  if [[ -n "$serial" ]]; then
+    target_type="$(mc_android_target_type "$serial")"
+    state="$(adb -s "$serial" get-state 2>/dev/null || true)"
+    boot_completed="$(adb -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+    if mc_android_app_installed "$serial"; then
+      app_installed="true"
+    fi
+    foreground="$(mc_android_foreground_package "$serial" || true)"
+    lock_json="$(mc_android_lock_state_json "$serial")"
+  fi
+  ANDROID_DEVICES_JSON="$devices" ANDROID_HAS_SERIAL="$([[ -n "$serial" ]] && printf true || printf false)" \
+  ANDROID_TARGET_TYPE="$target_type" ANDROID_STATE="$state" ANDROID_BOOT="$boot_completed" \
+  ANDROID_APP_INSTALLED="$app_installed" ANDROID_FOREGROUND="$foreground" ANDROID_LOCK_JSON="$lock_json" python3 - <<'PY'
+import json, os
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "source": "android.live-preflight",
+    "availableAdbDevices": json.loads(os.environ["ANDROID_DEVICES_JSON"]),
+    "selectedSerial": "<REDACTED>" if os.environ["ANDROID_HAS_SERIAL"] == "true" else None,
+    "selectedTargetType": os.environ["ANDROID_TARGET_TYPE"] or None,
+    "adbState": os.environ["ANDROID_STATE"] or None,
+    "bootCompleted": os.environ["ANDROID_BOOT"] or None,
+    "appInstalled": os.environ["ANDROID_APP_INSTALLED"] == "true",
+    "foregroundPackage": os.environ["ANDROID_FOREGROUND"] or None,
+    "foregroundAppMatches": os.environ["ANDROID_FOREGROUND"] == "com.example.merchandisecontrolsplitview",
+    "lockState": json.loads(os.environ["ANDROID_LOCK_JSON"]),
+}, sort_keys=True))
+PY
+}
+
+mc_android_set_preflight_detail() {
+  local serial="${1:-}"
+  MC_RECONCILIATION_JSON="$(mc_android_preflight_json "$serial")"
+  MC_RECONCILIATION_MD="$(ANDROID_PREFLIGHT_JSON="$MC_RECONCILIATION_JSON" python3 - <<'PY'
+import json, os
+p = json.loads(os.environ["ANDROID_PREFLIGHT_JSON"])
+lock = p.get("lockState") or {}
+print(f"- android.selectedTargetType: {p.get('selectedTargetType')}")
+print(f"- android.availableAdbDevices: {len(p.get('availableAdbDevices') or [])}")
+print(f"- android.adbState: {p.get('adbState')}")
+print(f"- android.bootCompleted: {p.get('bootCompleted')}")
+print(f"- android.appInstalled: {p.get('appInstalled')}")
+print(f"- android.foregroundPackage: {p.get('foregroundPackage')}")
+print(f"- android.screenOn: {lock.get('screenOn')}")
+print(f"- android.locked: {lock.get('locked')}")
+PY
+)"
+}
+
 mc_android_serial() {
   MC_ANDROID_SELECTED_SERIAL=""
+  MC_ANDROID_TARGET_TYPE=""
   local configured="${MC_ANDROID_DEVICE_SERIAL:-}"
   if [[ -n "$configured" && "$configured" != "REDACTED_SERIAL" && "$configured" != "<REDACTED_SERIAL>" ]]; then
     if adb -s "$configured" get-state >/dev/null 2>&1; then
       MC_ANDROID_SELECTED_SERIAL="$configured"
+      MC_ANDROID_TARGET_TYPE="$(mc_android_target_type "$configured")"
+      export MC_ANDROID_SELECTED_SERIAL MC_ANDROID_TARGET_TYPE
+      mc_android_set_preflight_detail "$configured"
       printf '%s' "$configured"
       return "$MC_EXIT_PASS"
     fi
-    MC_SUMMARY="Configured Android device serial is not connected."
-    MC_NEXT_ACTION="Connect device ${configured} or update MC_ANDROID_DEVICE_SERIAL."
+    mc_android_set_preflight_detail ""
+    MC_SUMMARY="BLOCKED_DEVICE_OFFLINE: configured Android device serial is not connected or not in adb device state."
+    MC_NEXT_ACTION="Connect/wake serial ${configured}, or rerun with an explicit emulator serial such as MC_ANDROID_DEVICE_SERIAL=emulator-5554."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  if [[ "${MC_REQUIRES_LIVE:-false}" == "true" ]]; then
+    mc_android_set_preflight_detail ""
+    MC_SUMMARY="BLOCKED_ANDROID_TARGET_UNSPECIFIED: live Android commands require MC_ANDROID_DEVICE_SERIAL."
+    MC_NEXT_ACTION="Set MC_ANDROID_DEVICE_SERIAL to the physical device or emulator serial, then rerun."
     return "$MC_EXIT_BLOCKED"
   fi
   local devices count
   devices="$(mc_android_connected_devices || true)"
   count="$(printf '%s\n' "$devices" | sed '/^$/d' | wc -l | tr -d ' ')"
   if [[ "$count" -eq 0 ]]; then
+    mc_android_set_preflight_detail ""
     MC_SUMMARY="No Android device/emulator connected."
     MC_NEXT_ACTION="Connect/unlock one device or start an emulator."
     return "$MC_EXIT_BLOCKED"
   fi
   if [[ "$count" -gt 1 ]]; then
+    mc_android_set_preflight_detail ""
     MC_SUMMARY="Multiple Android devices connected."
     MC_NEXT_ACTION="Set MC_ANDROID_DEVICE_SERIAL to the intended device."
     return "$MC_EXIT_BLOCKED"
   fi
   MC_ANDROID_SELECTED_SERIAL="$devices"
+  MC_ANDROID_TARGET_TYPE="$(mc_android_target_type "$devices")"
+  export MC_ANDROID_SELECTED_SERIAL MC_ANDROID_TARGET_TYPE
+  mc_android_set_preflight_detail "$devices"
   printf '%s' "$devices"
 }
 
@@ -40,8 +188,9 @@ mc_android_require_unlocked() {
   power="$(adb -s "$serial" shell dumpsys power 2>/dev/null || true)"
   keyguard="$(adb -s "$serial" shell dumpsys window 2>/dev/null || true)"
   if ! grep -Eq 'mWakefulness=Awake|Display Power: state=ON|state=ON' <<< "$power"; then
-    MC_SUMMARY="Android device appears screen-off/asleep."
-    MC_NEXT_ACTION="Wake and unlock the device, then retry."
+    mc_android_set_preflight_detail "$serial"
+    MC_SUMMARY="BLOCKED_DEVICE_LOCKED: Android target appears screen-off/asleep."
+    MC_NEXT_ACTION="Wake and unlock the selected Android target, then retry; or rerun with an explicit emulator serial."
     return "$MC_EXIT_BLOCKED"
   fi
   if grep -Eq 'mDreamingLockscreen=true|mShowingLockscreen=true' <<< "$keyguard"; then
@@ -49,10 +198,12 @@ mc_android_require_unlocked() {
       MC_WARNINGS="${MC_WARNINGS:+${MC_WARNINGS},}android-locked-instrumentation-override"
       return "$MC_EXIT_PASS"
     fi
-    MC_SUMMARY="Android device appears locked."
-    MC_NEXT_ACTION="Unlock the device, then retry."
+    mc_android_set_preflight_detail "$serial"
+    MC_SUMMARY="BLOCKED_DEVICE_LOCKED: Android target appears locked."
+    MC_NEXT_ACTION="Unlock the selected Android target, then retry; or rerun with an explicit emulator serial."
     return "$MC_EXIT_BLOCKED"
   fi
+  mc_android_set_preflight_detail "$serial"
   return "$MC_EXIT_PASS"
 }
 
@@ -168,12 +319,14 @@ mc_android_instrument() {
   instrument_timeout="$(mc_android_instrument_timeout_seconds)"
   if ! mc_android_adb_timed "$adb_timeout" -s "$serial" install -r "$apk_app" >/dev/null; then
     state_summary="$(mc_android_device_state_redacted "$serial")"
+    mc_android_set_preflight_detail "$serial"
     MC_SUMMARY="Android instrumentation BLOCKED: app install failed or timed out after ${adb_timeout}s (${state_summary})."
     MC_NEXT_ACTION="Verify the device is connected/unlocked, then retry; if adb remains stuck, restart the selected emulator/device."
     return "$MC_EXIT_BLOCKED"
   fi
   if ! mc_android_adb_timed "$adb_timeout" -s "$serial" install -r "$apk_test" >/dev/null; then
     state_summary="$(mc_android_device_state_redacted "$serial")"
+    mc_android_set_preflight_detail "$serial"
     MC_SUMMARY="Android instrumentation BLOCKED: test APK install failed or timed out after ${adb_timeout}s (${state_summary})."
     MC_NEXT_ACTION="Verify device storage/install state and retry; restart only the selected emulator/device if adb is still stuck."
     return "$MC_EXIT_BLOCKED"
@@ -184,23 +337,33 @@ mc_android_instrument() {
     -e class "$class" \
     com.example.merchandisecontrolsplitview.test/androidx.test.runner.AndroidJUnitRunner >"$instrument_log" 2>&1
   code=$?
-  mc_report_log "$(mc_redact_text "$(tail -n 160 "$instrument_log")")"
+  mc_report_log "$(mc_redact_text "$(tail -n 260 "$instrument_log")")"
   if [[ "$code" -eq 0 ]] \
     && grep -q "OK (" "$instrument_log" \
     && ! grep -Eq "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2" "$instrument_log"; then
     rm -f "$instrument_log"
-    MC_SUMMARY="Android instrumentation PASS for ${class}."
+    mc_android_set_preflight_detail "$serial"
+    MC_SUMMARY="Android instrumentation PASS for ${class} on ${MC_ANDROID_TARGET_TYPE:-unknown} target."
     MC_NEXT_ACTION="Continue Android live/device gate."
     return "$MC_EXIT_PASS"
   fi
   state_summary="$(mc_android_device_state_redacted "$serial")"
   if [[ "$code" -eq 142 ]]; then
     rm -f "$instrument_log"
+    mc_android_set_preflight_detail "$serial"
     MC_SUMMARY="Android instrumentation BLOCKED: am instrument timed out after ${instrument_timeout}s (${state_summary})."
     MC_NEXT_ACTION="Inspect device/emulator responsiveness and test runner logs; retry after restarting only the selected device if needed."
     return "$MC_EXIT_BLOCKED"
   fi
+  if grep -Eq "requires signed-in session|Supabase session is not signed in|not signed in" "$instrument_log"; then
+    rm -f "$instrument_log"
+    mc_android_set_preflight_detail "$serial"
+    MC_SUMMARY="AUTH_BLOCKED: Android target is reachable but Supabase session is signed out or unavailable."
+    MC_NEXT_ACTION="Open the selected Android target, sign in to Supabase, then rerun the same command with MC_ANDROID_DEVICE_SERIAL=${serial}."
+    return "$MC_EXIT_BLOCKED"
+  fi
   rm -f "$instrument_log"
+  mc_android_set_preflight_detail "$serial"
   MC_SUMMARY="Android instrumentation FAIL for ${class}; adb exit=${code} (${state_summary})."
   MC_NEXT_ACTION="Inspect instrumentation output/logcat and rerun after fixing the reported failure."
   return "$MC_EXIT_FAIL"
@@ -216,7 +379,7 @@ mc_android_auth_preflight() {
     -e task112AuthPreflight true
   local code=$?
   if [[ "$code" -eq 0 ]]; then
-    MC_SUMMARY="Android auth-preflight PASS."
+    MC_SUMMARY="Android auth-preflight PASS on ${MC_ANDROID_TARGET_TYPE:-unknown} target."
     MC_NEXT_ACTION="Run Android live-full-pull or live matrix."
     return "$MC_EXIT_PASS"
   fi

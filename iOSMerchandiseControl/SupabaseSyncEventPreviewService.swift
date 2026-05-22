@@ -63,7 +63,7 @@ nonisolated struct SupabaseSyncEventPreviewService: Sendable {
     }
 }
 
-actor SupabaseSyncEventRemoteReader: SupabaseSyncEventPreviewFetching {
+actor SupabaseSyncEventRemoteReader: SupabaseSyncEventPreviewFetching, SupabaseSyncEventIncrementalFetching {
     nonisolated static let stablePageOrderColumns = ["created_at", "id"]
 
     private let clientProvider: SupabaseClientProvider
@@ -82,6 +82,42 @@ actor SupabaseSyncEventRemoteReader: SupabaseSyncEventPreviewFetching {
                 .select("id,owner_user_id,store_id,domain,event_type,source,source_device_id,batch_id,client_event_id,changed_count,entity_ids,created_at,expires_at,metadata")
                 .order("created_at", ascending: false)
                 .order("id", ascending: false)
+                .limit(effectiveLimit)
+                .execute()
+                .value
+            return rows
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    func fetchSyncEventsAfter(ownerUserID: UUID, afterID: Int64, limit: Int) async throws -> [RemoteSyncEventRow] {
+        let authenticatedUserID = try await requireAuthenticatedSession()
+        guard authenticatedUserID == ownerUserID else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+                statusCode: nil,
+                code: nil,
+                message: "sync event owner mismatch"
+            )
+        }
+        let effectiveLimit = max(1, min(limit, SyncEventPreviewOptions.maximumLimit))
+
+        do {
+            let rows: [RemoteSyncEventRow] = try await clientProvider.client
+                .from("sync_events")
+                .select("id,owner_user_id,store_id,domain,event_type,source,source_device_id,batch_id,client_event_id,changed_count,entity_ids,created_at,expires_at,metadata")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .gt("id", value: Int(afterID))
+                .order("id", ascending: true)
                 .limit(effectiveLimit)
                 .execute()
                 .value

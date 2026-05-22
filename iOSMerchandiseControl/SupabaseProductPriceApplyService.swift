@@ -260,12 +260,20 @@ nonisolated struct ProductPriceApplyPlan: Sendable {
 nonisolated struct ProductPriceApplyResult: Sendable, Equatable {
     let inserted: Int
     let remoteIdentityLinked: Int
+    let prunedLocal: Int
     let skippedExisting: Int
     let totalConsidered: Int
 
-    init(inserted: Int, remoteIdentityLinked: Int = 0, skippedExisting: Int, totalConsidered: Int) {
+    init(
+        inserted: Int,
+        remoteIdentityLinked: Int = 0,
+        prunedLocal: Int = 0,
+        skippedExisting: Int,
+        totalConsidered: Int
+    ) {
         self.inserted = inserted
         self.remoteIdentityLinked = remoteIdentityLinked
+        self.prunedLocal = prunedLocal
         self.skippedExisting = skippedExisting
         self.totalConsidered = totalConsidered
     }
@@ -792,8 +800,10 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
         let tombstonedProductIDs = try await fetchTombstonedProductIDsIfAvailable()
         var inserted = 0
         var remoteIdentityLinked = 0
+        var prunedLocal = 0
         var skippedExisting = 0
         var totalConsidered = 0
+        var completeRemotePriceIDs = Set<UUID>()
         var offset = 0
         var pageIndex = 0
         var lastKeysetID: UUID?
@@ -885,6 +895,7 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
             var pageSeenRemoteIDs = Set<UUID>()
             var pageMutations = 0
             for (rowIndex, row) in page.enumerated() {
+                completeRemotePriceIDs.insert(row.id)
                 if rowIndex > 0, rowIndex.isMultiple(of: 150) {
                     try Task.checkCancellation()
                     await Task.yield()
@@ -968,6 +979,14 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
             exitPageIndex = pageIndex
         }
 
+        if let remoteTotalRows, remoteTotalRows == totalConsidered {
+            let pruneContext = ModelContext(context.container)
+            prunedLocal = try pruneRemoteLinkedPricesMissingFromCompleteSnapshot(
+                remotePriceIDs: completeRemotePriceIDs,
+                context: pruneContext
+            )
+        }
+
         await publishProgress(
             ProductPricePagedApplyProgress(
                 stage: .completed,
@@ -980,15 +999,85 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
         )
         let elapsedMS = Int(Date().timeIntervalSince(applyStartedAt) * 1_000)
         debugPrint(
-            "[ProductPriceSync] paged_apply_complete inserted=\(inserted) linked=\(remoteIdentityLinked) skipped=\(skippedExisting) total=\(totalConsidered) elapsedMs=\(elapsedMS)"
+            "[ProductPriceSync] paged_apply_complete inserted=\(inserted) linked=\(remoteIdentityLinked) pruned=\(prunedLocal) skipped=\(skippedExisting) total=\(totalConsidered) elapsedMs=\(elapsedMS)"
         )
 
         return ProductPriceApplyResult(
             inserted: inserted,
             remoteIdentityLinked: remoteIdentityLinked,
+            prunedLocal: prunedLocal,
             skippedExisting: skippedExisting,
             totalConsidered: totalConsidered
         )
+    }
+
+    private func pruneRemoteLinkedPricesMissingFromCompleteSnapshot(
+        remotePriceIDs: Set<UUID>,
+        context: ModelContext
+    ) throws -> Int {
+        let pendingState = try fetchActiveProductPricePendingState(context: context)
+        let prices = try context.fetch(
+            FetchDescriptor<ProductPrice>(
+                sortBy: [SortDescriptor(\ProductPrice.effectiveAt)]
+            )
+        )
+
+        var pruned = 0
+        for price in prices {
+            guard let remoteID = price.remoteID,
+                  !remotePriceIDs.contains(remoteID),
+                  !pendingState.remoteIDs.contains(remoteID),
+                  productPricePendingKeys(for: price).isDisjoint(with: pendingState.logicalKeys) else {
+                continue
+            }
+            context.delete(price)
+            pruned += 1
+        }
+
+        if pruned > 0 {
+            do {
+                try context.save()
+            } catch {
+                context.rollback()
+                throw ProductPriceApplyError.saveFailed(message: String(describing: error))
+            }
+        }
+        return pruned
+    }
+
+    private func fetchActiveProductPricePendingState(
+        context: ModelContext
+    ) throws -> (remoteIDs: Set<UUID>, logicalKeys: Set<String>) {
+        let changes = try context.fetch(FetchDescriptor<LocalPendingChange>())
+        var remoteIDs = Set<UUID>()
+        var logicalKeys = Set<String>()
+        for change in changes where change.entityKind == .productPrice && !change.status.isTerminal {
+            if let remoteID = change.entityRemoteID {
+                remoteIDs.insert(remoteID)
+            }
+            logicalKeys.insert(change.logicalKey)
+        }
+        return (remoteIDs, logicalKeys)
+    }
+
+    private func productPricePendingKeys(for price: ProductPrice) -> Set<String> {
+        guard let product = price.product else {
+            return []
+        }
+        return Set([
+            LocalPendingChangeLogicalKey.productPrice(
+                productRemoteID: product.remoteID,
+                productBarcode: product.barcode,
+                type: price.type,
+                effectiveAt: price.effectiveAt
+            ),
+            LocalPendingChangeLogicalKey.productPrice(
+                productRemoteID: nil,
+                productBarcode: product.barcode,
+                type: price.type,
+                effectiveAt: price.effectiveAt
+            )
+        ])
     }
 
     private func validateRemoteProductPriceCompletion(

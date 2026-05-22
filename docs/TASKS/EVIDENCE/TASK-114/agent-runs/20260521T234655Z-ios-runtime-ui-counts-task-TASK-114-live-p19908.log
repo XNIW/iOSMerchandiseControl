@@ -1,0 +1,5 @@
+=== mc-agent ios runtime-ui-counts --task TASK-114 --live ===
+Monitoring boot status for iPhone 17 Pro (240F400E-5EFA-486A-9137-FFBBE70F604D).
+Device already booted, nothing to do.
+
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/tools/agent/lib/ios.sh: line 49: /usr/bin/xcrun: Argument list too long

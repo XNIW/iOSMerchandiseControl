@@ -13,6 +13,12 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
     func testCatalogPushSuccessEnqueuesPendingCatalogEntry() throws {
         let context = try makeContext()
         let service = makeService(context: context)
+        let supplierID1 = UUID(uuidString: "00000000-0000-4000-8000-000000000201")!
+        let supplierID2 = UUID(uuidString: "00000000-0000-4000-8000-000000000202")!
+        let categoryID1 = UUID(uuidString: "00000000-0000-4000-8000-000000000301")!
+        let categoryID2 = UUID(uuidString: "00000000-0000-4000-8000-000000000302")!
+        let productID1 = UUID(uuidString: "00000000-0000-4000-8000-000000000401")!
+        let productID2 = UUID(uuidString: "00000000-0000-4000-8000-000000000402")!
         let result = service.enqueue(
             .catalogManualPush(
                 result: SupabaseManualPushResult(
@@ -26,6 +32,11 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
                     productCreates: 1,
                     productUpdates: 1,
                     productLinks: 0,
+                    touchedIDs: SupabaseManualPushTouchedIDs(
+                        suppliers: [supplierID1, supplierID2],
+                        categories: [categoryID1, categoryID2],
+                        products: [productID1, productID2]
+                    ),
                     baselineRunID: nil,
                     message: nil
                 ),
@@ -43,7 +54,10 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertEqual(entry.eventType, "catalog_changed")
         XCTAssertEqual(entry.changedCount, 6)
         XCTAssertEqual(entry.entityIDsShape, "suppliers:count=2;categories:count=2;products:count=2")
-        XCTAssertEqual(entry.entityIDsPayloadJSON, "null")
+        XCTAssertEqual(
+            entry.entityIDsPayloadJSON,
+            #"{"category_ids":["00000000-0000-4000-8000-000000000301","00000000-0000-4000-8000-000000000302"],"product_ids":["00000000-0000-4000-8000-000000000401","00000000-0000-4000-8000-000000000402"],"supplier_ids":["00000000-0000-4000-8000-000000000201","00000000-0000-4000-8000-000000000202"]}"#
+        )
         XCTAssertEqual(
             entry.metadataPayloadJSON,
             #"{"baseline_refresh_failed":false,"failed_count":0,"partial":false,"skipped_count":0,"source":"ios_catalog_manual_push"}"#
@@ -55,7 +69,14 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertEqual(replayRequest.domain, entry.domain)
         XCTAssertEqual(replayRequest.eventType, entry.eventType)
         XCTAssertEqual(replayRequest.changedCount, entry.changedCount)
-        XCTAssertEqual(replayRequest.entityIDs, .null)
+        XCTAssertEqual(
+            replayRequest.entityIDs,
+            .object([
+                "supplier_ids": .array([.string(supplierID1.uuidString.lowercased()), .string(supplierID2.uuidString.lowercased())]),
+                "category_ids": .array([.string(categoryID1.uuidString.lowercased()), .string(categoryID2.uuidString.lowercased())]),
+                "product_ids": .array([.string(productID1.uuidString.lowercased()), .string(productID2.uuidString.lowercased())])
+            ])
+        )
         XCTAssertEqual(
             replayRequest.metadata,
             .object([

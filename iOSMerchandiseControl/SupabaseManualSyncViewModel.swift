@@ -90,13 +90,34 @@ nonisolated enum SupabaseManualSyncSemiAutomaticTriggerSource: Equatable, Sendab
     case releaseCard
     case rootForeground
     case networkReconnect
+    case localMutation
+    case remoteSyncEvent
 
     var isForegroundAutomatic: Bool {
         switch self {
-        case .rootForeground, .networkReconnect:
+        case .rootForeground, .networkReconnect, .localMutation, .remoteSyncEvent:
             return true
         case .releaseCard:
             return false
+        }
+    }
+
+    var bypassesForegroundCooldown: Bool {
+        switch self {
+        case .rootForeground, .networkReconnect, .localMutation, .remoteSyncEvent:
+            return true
+        case .releaseCard:
+            return false
+        }
+    }
+
+    var diagnosticsName: String {
+        switch self {
+        case .releaseCard: "releaseCard"
+        case .rootForeground: "rootForeground"
+        case .networkReconnect: "networkReconnect"
+        case .localMutation: "localMutation"
+        case .remoteSyncEvent: "remoteSyncEvent"
         }
     }
 }
@@ -544,12 +565,23 @@ nonisolated struct SupabaseManualSyncHistorySessionSummary: Equatable, Sendable 
     }
 }
 
+nonisolated enum SupabaseManualSyncHistorySessionMode: Sendable, Equatable {
+    case fullReconciliation
+    case incremental
+}
+
 @MainActor
 protocol SupabaseManualSyncHistorySessionSyncProviding: AnyObject {
     func syncHistorySessions(
         ownerUserID: UUID,
+        mode: SupabaseManualSyncHistorySessionMode,
         onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
     ) async throws -> SupabaseManualSyncHistorySessionSummary
+}
+
+@MainActor
+protocol SupabaseManualSyncIncrementalPullProviding: AnyObject {
+    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SupabaseSyncEventIncrementalApplySummary
 }
 
 @MainActor
@@ -586,6 +618,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private let currentActivityRegistrationOwnerID: (@MainActor () -> UUID?)?
     private let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)?
     private let currentHistorySessionOwnerID: (@MainActor () -> UUID?)?
+    private let incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)?
     private let baselineStatusProvider: (@MainActor () -> SupabaseCatalogBaselineDebugSummary?)?
     private let semiAutomaticPolicy: SupabaseManualSyncSemiAutomaticPolicy
     private let lifecycleRunGate: SupabaseManualSyncLifecycleRunGate
@@ -593,6 +626,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     private let lifecycleNetworkIsAvailable: @MainActor () -> Bool
     private let lifecycleAppContextIsSafe: @MainActor () -> Bool
     private let lifecycleAppIsActive: @MainActor () -> Bool
+    private let foregroundIncrementalTimeoutNanoseconds: UInt64
     private var lastSemiAutomaticForegroundAttemptAt: Date?
     private var lastRecoverableForegroundErrorAt: Date?
     private var lastStartedMode: SupabaseManualSyncRunMode?
@@ -653,13 +687,15 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         currentActivityRegistrationOwnerID: (@MainActor () -> UUID?)? = nil,
         historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = nil,
         currentHistorySessionOwnerID: (@MainActor () -> UUID?)? = nil,
+        incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)? = nil,
         baselineStatusProvider: (@MainActor () -> SupabaseCatalogBaselineDebugSummary?)? = nil,
         semiAutomaticPolicy: SupabaseManualSyncSemiAutomaticPolicy = SupabaseManualSyncSemiAutomaticPolicy(),
         lifecycleRunGate: SupabaseManualSyncLifecycleRunGate? = nil,
         lifecycleNetworkIsAvailable: @escaping @MainActor () -> Bool = { true },
         lifecycleAppContextIsSafe: @escaping @MainActor () -> Bool = { true },
         lifecycleAppIsActive: @escaping @MainActor () -> Bool = { true },
-        lifecycleTimeBudget: TimeInterval = 45
+        lifecycleTimeBudget: TimeInterval = 45,
+        foregroundIncrementalTimeoutNanoseconds: UInt64 = 12_000_000_000
     ) {
         self.coordinator = coordinator
         self.capabilities = capabilities
@@ -679,11 +715,13 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         self.currentActivityRegistrationOwnerID = currentActivityRegistrationOwnerID
         self.historySessionProvider = historySessionProvider
         self.currentHistorySessionOwnerID = currentHistorySessionOwnerID
+        self.incrementalPullProvider = incrementalPullProvider
         self.baselineStatusProvider = baselineStatusProvider
         self.semiAutomaticPolicy = semiAutomaticPolicy
         self.lifecycleNetworkIsAvailable = lifecycleNetworkIsAvailable
         self.lifecycleAppContextIsSafe = lifecycleAppContextIsSafe
         self.lifecycleAppIsActive = lifecycleAppIsActive
+        self.foregroundIncrementalTimeoutNanoseconds = foregroundIncrementalTimeoutNanoseconds
         if let lifecycleRunGate {
             self.lifecycleRunGate = lifecycleRunGate
             self.defaultLifecyclePreflight = nil
@@ -825,7 +863,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         switch source {
         case .rootForeground:
             return .rootForeground
-        case .networkReconnect:
+        case .networkReconnect, .localMutation, .remoteSyncEvent:
             return .networkReconnect
         case .releaseCard:
             return .optionsCard
@@ -962,7 +1000,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         return SupabaseManualSyncForegroundAutomaticGate.decision(
             policy: semiAutomaticPolicy,
             now: now,
-            lastCheckAt: source == .networkReconnect ? nil : lastCloudCheckAt,
+            lastCheckAt: source.bypassesForegroundCooldown ? nil : lastCloudCheckAt,
             instanceLastAttemptAt: lastSemiAutomaticForegroundAttemptAt,
             instanceLastRecoverableErrorAt: lastRecoverableForegroundErrorAt,
             supportsCloudCheck: supportsCloudCheck,
@@ -1064,6 +1102,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
     ) async -> Bool {
         switch semiAutomaticForegroundDecision(now: now, source: source) {
         case .allowed:
+            if source.isForegroundAutomatic, incrementalPullProvider != nil {
+                return await performForegroundAutomaticSync(now: now, source: source)
+            }
             guard let lifecycleRunID = beginLifecycleRun(
                 kind: .previewReadOnly,
                 source: lifecycleSource(for: source)
@@ -1087,7 +1128,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
                 syncHistoryAfterRun: source.isForegroundAutomatic
             )
             if source.isForegroundAutomatic {
-                await applyStagedLocalChangesIfNeeded()
+                _ = await applyStagedLocalChangesIfNeeded()
+                await registerActivitiesIfNeeded()
             }
             return true
         case .blocked(.authOrOwnerMissing):
@@ -1104,6 +1146,271 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             break
         }
         return false
+    }
+
+    @discardableResult
+    func startForegroundIncrementalCheckNow(
+        now: Date = Date(),
+        source: SupabaseManualSyncSemiAutomaticTriggerSource
+    ) async -> Bool {
+        recordTask114RuntimeDiagnostic(now.timeIntervalSince1970, forKey: "task114.runtime.incremental.lastAttemptAt")
+        recordTask114RuntimeDiagnostic(source.diagnosticsName, forKey: "task114.runtime.incremental.lastSource")
+        guard source.isForegroundAutomatic,
+              incrementalPullProvider != nil else {
+            recordTask114RuntimeDiagnostic("blocked_no_incremental_provider", forKey: "task114.runtime.incremental.lastOutcome")
+            return false
+        }
+        guard canStart else {
+            lastForegroundObservationEvent = .foreground_check_skipped_busy
+            recordTask114RuntimeDiagnostic("blocked_busy", forKey: "task114.runtime.incremental.lastOutcome")
+            return false
+        }
+        recordTask114RuntimeDiagnostic("running", forKey: "task114.runtime.incremental.lastOutcome")
+        let didRun = await performForegroundAutomaticSyncWithTimeout(now: now, source: source)
+        recordTask114RuntimeDiagnostic(Date().timeIntervalSince1970, forKey: "task114.runtime.incremental.lastCompletedAt")
+        #if DEBUG
+        let currentOutcome = UserDefaults.standard.string(forKey: "task114.runtime.incremental.lastOutcome")
+        if currentOutcome != "timeout" {
+            recordTask114RuntimeDiagnostic(didRun ? "completed" : "not_run", forKey: "task114.runtime.incremental.lastOutcome")
+        }
+        #else
+        recordTask114RuntimeDiagnostic(didRun ? "completed" : "not_run", forKey: "task114.runtime.incremental.lastOutcome")
+        #endif
+        return didRun
+    }
+
+    private enum ForegroundIncrementalRunResult: Sendable {
+        case completed(Bool)
+        case timedOut
+    }
+
+    private func performForegroundAutomaticSyncWithTimeout(
+        now: Date,
+        source: SupabaseManualSyncSemiAutomaticTriggerSource
+    ) async -> Bool {
+        guard foregroundIncrementalTimeoutNanoseconds > 0 else {
+            return await performForegroundAutomaticSync(now: now, source: source)
+        }
+
+        let result = await withTaskGroup(of: ForegroundIncrementalRunResult.self) { group in
+            group.addTask { @MainActor in
+                .completed(await self.performForegroundAutomaticSync(now: now, source: source))
+            }
+            group.addTask { [foregroundIncrementalTimeoutNanoseconds] in
+                try? await Task.sleep(nanoseconds: foregroundIncrementalTimeoutNanoseconds)
+                return .timedOut
+            }
+
+            let firstResult = await group.next() ?? .timedOut
+            group.cancelAll()
+            return firstResult
+        }
+
+        switch result {
+        case .completed(let didRun):
+            return didRun
+        case .timedOut:
+            recordTask114RuntimeDiagnostic("timeout", forKey: "task114.runtime.incremental.lastOutcome")
+            recordTask114RuntimeDiagnostic(
+                Int(foregroundIncrementalTimeoutNanoseconds / 1_000_000),
+                forKey: "task114.runtime.incremental.lastTimeoutMs"
+            )
+            debugTask114RuntimeSync(
+                "TASK114_RUNTIME_SYNC source=\(source) syncType=\(RuntimeSyncExecutionType.checkpointIncremental.rawValue) " +
+                "domain=foreground outcome=timeout fullPull=false"
+            )
+            return false
+        }
+    }
+
+    private func recordTask114RuntimeDiagnostic(_ value: Any, forKey key: String) {
+        #if DEBUG
+        UserDefaults.standard.set(value, forKey: key)
+        #endif
+    }
+
+    private func removeTask114RuntimeDiagnostic(forKey key: String) {
+        #if DEBUG
+        UserDefaults.standard.removeObject(forKey: key)
+        #endif
+    }
+
+    private func debugTask114RuntimeSync(_ message: @autoclosure () -> String) {
+        #if DEBUG
+        debugPrint(message())
+        #endif
+    }
+
+    private func performForegroundAutomaticSync(
+        now: Date,
+        source: SupabaseManualSyncSemiAutomaticTriggerSource
+    ) async -> Bool {
+        lastSemiAutomaticForegroundAttemptAt = now
+        SupabaseManualSyncForegroundAutomaticGate.markAttempt(at: now)
+        lastForegroundObservationEvent = .foreground_check_suggested
+        defer {
+            SupabaseManualSyncForegroundAutomaticGate.finish(
+                lastRecoverableErrorAt: lastRecoverableForegroundErrorAt
+            )
+        }
+
+        switch source {
+        case .localMutation:
+            await pushLocalChangesAfterMutationIfAvailable()
+        case .rootForeground, .networkReconnect, .remoteSyncEvent:
+            _ = await applyIncrementalRemoteChangesIfAvailable(source: source)
+        case .releaseCard:
+            return false
+        }
+
+        let historySummary = await syncHistorySessionsIfAvailable(mode: .incremental)
+        if historySummary.totalChanged > 0 {
+            debugTask114RuntimeSync(
+                "TASK114_RUNTIME_SYNC source=\(source) syncType=\(RuntimeSyncExecutionType.lightReconcile.rawValue) " +
+                "domain=history changed=\(historySummary.totalChanged) fullPull=false"
+            )
+        }
+        lastCloudCheckAt = now
+        if semiAutomaticState == .blockedAuth ||
+            semiAutomaticState == .recoverableError ||
+            semiAutomaticState == .staleOrConflict {
+            return true
+        }
+        lastRecoverableForegroundErrorAt = nil
+        semiAutomaticState = .noChanges
+        lastForegroundObservationEvent = .foreground_check_completed_no_changes
+        return true
+    }
+
+    private func pushLocalChangesAfterMutationIfAvailable() async {
+        guard authPresentationContext.isSignedIn,
+              currentCatalogPushOwnerID?() != nil else {
+            semiAutomaticState = .blockedAuth
+            return
+        }
+
+        let beforeCatalogPhase = catalogPushPhase
+        let syntheticSummary = SupabaseManualSyncRunSummary(
+            finalState: .completedSuccessfully,
+            userFacingHeadline: SupabaseManualSyncUserFacingCopy.allUpToDate,
+            executedPhases: [],
+            skippedPhases: [],
+            countsSnapshot: SupabaseManualSyncPrivacyCounts(),
+            suggestedNextStep: nil,
+            detailMessage: nil
+        )
+        await prepareCatalogPushPlanIfNeeded(after: syntheticSummary, force: true)
+        if stagedCatalogPushPlan?.isSendable == true {
+            await sendConfirmedCatalogChanges()
+            await registerActivitiesIfNeeded()
+            debugTask114RuntimeSync(
+                "TASK114_RUNTIME_SYNC source=localMutation syncType=\(RuntimeSyncExecutionType.eventIncremental.rawValue) " +
+                "domain=catalog push=automatic fullPull=false"
+            )
+        } else if beforeCatalogPhase != catalogPushPhase {
+            debugTask114RuntimeSync(
+                "TASK114_RUNTIME_SYNC source=localMutation syncType=\(RuntimeSyncExecutionType.checkpointIncremental.rawValue) " +
+                "domain=catalog push=no_work fullPull=false"
+            )
+        }
+    }
+
+    @discardableResult
+    private func applyIncrementalRemoteChangesIfAvailable(
+        source: SupabaseManualSyncSemiAutomaticTriggerSource
+    ) async -> Bool {
+        guard authPresentationContext.isSignedIn,
+              let ownerUserID = currentLocalApplyOwnerID?() ?? currentCatalogPushOwnerID?() ?? currentHistorySessionOwnerID?() else {
+            semiAutomaticState = .blockedAuth
+            return true
+        }
+        guard let incrementalPullProvider else {
+            debugTask114RuntimeSync(
+                "TASK114_RUNTIME_SYNC source=\(source) syncType=\(RuntimeSyncExecutionType.lightReconcile.rawValue) " +
+                "domain=catalog outcome=blocked_missing_incremental_provider fullPull=false"
+            )
+            return false
+        }
+
+        do {
+            let summary = try await incrementalPullProvider.applyIncrementalRemoteChanges(ownerUserID: ownerUserID)
+            recordTask114RuntimeDiagnostic(summary.syncType.rawValue, forKey: "task114.runtime.incremental.lastSyncType")
+            recordTask114RuntimeDiagnostic(summary.eventsFetched, forKey: "task114.runtime.incremental.lastEventsFetched")
+            recordTask114RuntimeDiagnostic(summary.eventsProcessed, forKey: "task114.runtime.incremental.lastEventsProcessed")
+            recordTask114RuntimeDiagnostic(summary.watermarkAfter, forKey: "task114.runtime.incremental.lastWatermarkAfter")
+            recordTask114RuntimeDiagnostic(summary.totalApplied, forKey: "task114.runtime.incremental.lastApplied")
+            recordTask114RuntimeDiagnostic(summary.targetedProductPricesFetched, forKey: "task114.runtime.incremental.lastPricesFetched")
+            recordTask114RuntimeDiagnostic(summary.productPricesInserted, forKey: "task114.runtime.incremental.lastPricesInserted")
+            recordTask114RuntimeDiagnostic(summary.productPriceIdentityLinked, forKey: "task114.runtime.incremental.lastPricesLinked")
+            recordTask114RuntimeDiagnostic(summary.productPricesMissingRemotePruned, forKey: "task114.runtime.incremental.lastPricesMissingPruned")
+            recordTask114RuntimeDiagnostic(summary.historyMissingRemoteTombstoned, forKey: "task114.runtime.incremental.lastHistoryMissingTombstoned")
+            recordTask114RuntimeDiagnostic(summary.suppliersMissingRemoteTombstoned, forKey: "task114.runtime.incremental.lastSuppliersMissingTombstoned")
+            recordTask114RuntimeDiagnostic(summary.categoriesMissingRemoteTombstoned, forKey: "task114.runtime.incremental.lastCategoriesMissingTombstoned")
+            recordTask114RuntimeDiagnostic(summary.eventPageFetchMs, forKey: "task114.runtime.incremental.lastEventPageFetchMs")
+            recordTask114RuntimeDiagnostic(summary.catalogFetchMs, forKey: "task114.runtime.incremental.lastCatalogFetchMs")
+            recordTask114RuntimeDiagnostic(summary.catalogApplyMs, forKey: "task114.runtime.incremental.lastCatalogApplyMs")
+            recordTask114RuntimeDiagnostic(summary.productPriceFetchMs, forKey: "task114.runtime.incremental.lastProductPriceFetchMs")
+            recordTask114RuntimeDiagnostic(summary.productPriceApplyMs, forKey: "task114.runtime.incremental.lastProductPriceApplyMs")
+            recordTask114RuntimeDiagnostic(summary.historyFetchMs, forKey: "task114.runtime.incremental.lastHistoryFetchMs")
+            recordTask114RuntimeDiagnostic(summary.historyApplyMs, forKey: "task114.runtime.incremental.lastHistoryApplyMs")
+            recordTask114RuntimeDiagnostic(summary.totalElapsedMs, forKey: "task114.runtime.incremental.lastTotalElapsedMs")
+            if summary.eventsFetched > 0 {
+                recordTask114RuntimeDiagnostic(summary.eventsFetched, forKey: "task114.runtime.incremental.lastPage.eventsFetched")
+                recordTask114RuntimeDiagnostic(summary.eventsProcessed, forKey: "task114.runtime.incremental.lastPage.eventsProcessed")
+                recordTask114RuntimeDiagnostic(summary.watermarkBefore, forKey: "task114.runtime.incremental.lastPage.watermarkBefore")
+                recordTask114RuntimeDiagnostic(summary.watermarkAfter, forKey: "task114.runtime.incremental.lastPage.watermarkAfter")
+                recordTask114RuntimeDiagnostic(summary.targetedSuppliersFetched, forKey: "task114.runtime.incremental.lastPage.suppliersFetched")
+                recordTask114RuntimeDiagnostic(summary.targetedCategoriesFetched, forKey: "task114.runtime.incremental.lastPage.categoriesFetched")
+                recordTask114RuntimeDiagnostic(summary.targetedProductsFetched, forKey: "task114.runtime.incremental.lastPage.productsFetched")
+                recordTask114RuntimeDiagnostic(summary.targetedProductPricesFetched, forKey: "task114.runtime.incremental.lastPage.pricesFetched")
+                recordTask114RuntimeDiagnostic(summary.productPricesMissingRemotePruned, forKey: "task114.runtime.incremental.lastPage.pricesMissingPruned")
+                recordTask114RuntimeDiagnostic(summary.targetedHistoryFetched, forKey: "task114.runtime.incremental.lastPage.historyFetched")
+                recordTask114RuntimeDiagnostic(summary.historyInserted, forKey: "task114.runtime.incremental.lastPage.historyInserted")
+                recordTask114RuntimeDiagnostic(summary.historyUpdated, forKey: "task114.runtime.incremental.lastPage.historyUpdated")
+                recordTask114RuntimeDiagnostic(summary.historyMissingRemoteTombstoned, forKey: "task114.runtime.incremental.lastPage.historyMissingTombstoned")
+                recordTask114RuntimeDiagnostic(summary.suppliersMissingRemoteTombstoned, forKey: "task114.runtime.incremental.lastPage.suppliersMissingTombstoned")
+                recordTask114RuntimeDiagnostic(summary.categoriesMissingRemoteTombstoned, forKey: "task114.runtime.incremental.lastPage.categoriesMissingTombstoned")
+                recordTask114RuntimeDiagnostic(summary.totalApplied, forKey: "task114.runtime.incremental.lastPage.applied")
+                recordTask114RuntimeDiagnostic(summary.eventPageFetchMs, forKey: "task114.runtime.incremental.lastPage.eventPageFetchMs")
+                recordTask114RuntimeDiagnostic(summary.catalogFetchMs, forKey: "task114.runtime.incremental.lastPage.catalogFetchMs")
+                recordTask114RuntimeDiagnostic(summary.catalogApplyMs, forKey: "task114.runtime.incremental.lastPage.catalogApplyMs")
+                recordTask114RuntimeDiagnostic(summary.productPriceFetchMs, forKey: "task114.runtime.incremental.lastPage.productPriceFetchMs")
+                recordTask114RuntimeDiagnostic(summary.productPriceApplyMs, forKey: "task114.runtime.incremental.lastPage.productPriceApplyMs")
+                recordTask114RuntimeDiagnostic(summary.historyFetchMs, forKey: "task114.runtime.incremental.lastPage.historyFetchMs")
+                recordTask114RuntimeDiagnostic(summary.historyApplyMs, forKey: "task114.runtime.incremental.lastPage.historyApplyMs")
+                recordTask114RuntimeDiagnostic(summary.totalElapsedMs, forKey: "task114.runtime.incremental.lastPage.totalElapsedMs")
+            }
+            removeTask114RuntimeDiagnostic(forKey: "task114.runtime.incremental.lastError")
+            debugTask114RuntimeSync(
+                "TASK114_RUNTIME_SYNC source=\(source) syncType=\(summary.syncType.rawValue) " +
+                "domain=catalog eventsFetched=\(summary.eventsFetched) eventsProcessed=\(summary.eventsProcessed) " +
+                "targetedProductsFetched=\(summary.targetedProductsFetched) targetedPricesFetched=\(summary.targetedProductPricesFetched) " +
+                "targetedHistoryFetched=\(summary.targetedHistoryFetched) pricesInserted=\(summary.productPricesInserted) " +
+                "pricesLinked=\(summary.productPriceIdentityLinked) pricesMissingPruned=\(summary.productPricesMissingRemotePruned) " +
+                "historyInserted=\(summary.historyInserted) historyUpdated=\(summary.historyUpdated) " +
+                "historyMissingTombstoned=\(summary.historyMissingRemoteTombstoned) " +
+                "suppliersMissingTombstoned=\(summary.suppliersMissingRemoteTombstoned) " +
+                "categoriesMissingTombstoned=\(summary.categoriesMissingRemoteTombstoned) applied=\(summary.totalApplied) " +
+                "eventPageFetchMs=\(summary.eventPageFetchMs) catalogFetchMs=\(summary.catalogFetchMs) " +
+                "catalogApplyMs=\(summary.catalogApplyMs) priceFetchMs=\(summary.productPriceFetchMs) " +
+                "priceApplyMs=\(summary.productPriceApplyMs) historyFetchMs=\(summary.historyFetchMs) " +
+                "historyApplyMs=\(summary.historyApplyMs) totalElapsedMs=\(summary.totalElapsedMs) " +
+                "requiresFullRecovery=\(summary.requiresFullRecovery) fullPull=false"
+            )
+            if summary.requiresFullRecovery {
+                semiAutomaticState = .staleOrConflict
+                presentationKind = .partialSync
+                lastRecoverableForegroundErrorAt = Date()
+                return true
+            }
+            return false
+        } catch {
+            debugTask114RuntimeSync("TASK114_RUNTIME_SYNC source=\(source) syncType=LIGHT_RECONCILE domain=catalog outcome=failed fullPull=false error=\(safeDebugError(error))")
+            recordTask114RuntimeDiagnostic("failed_\(safeDebugError(error))", forKey: "task114.runtime.incremental.lastError")
+            semiAutomaticState = .recoverableError
+            lastRecoverableForegroundErrorAt = Date()
+            return true
+        }
     }
 
     func markForegroundCheckSkippedBecauseBusy() {
@@ -3229,7 +3536,9 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         )
     }
 
-    private func syncHistorySessionsIfAvailable() async -> SupabaseManualSyncHistorySessionSummary {
+    private func syncHistorySessionsIfAvailable(
+        mode: SupabaseManualSyncHistorySessionMode = .fullReconciliation
+    ) async -> SupabaseManualSyncHistorySessionSummary {
         guard let historySessionProvider else {
             return SupabaseManualSyncHistorySessionSummary()
         }
@@ -3249,6 +3558,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         do {
             let summary = try await historySessionProvider.syncHistorySessions(
                 ownerUserID: ownerUserID,
+                mode: mode,
                 onProgress: { [weak self] progress in
                     self?.applyHistoryProgress(progress)
                 }
@@ -6016,6 +6326,7 @@ private extension SupabaseManualPushResult {
             productCreates: 0,
             productUpdates: 0,
             productLinks: 0,
+            touchedIDs: SupabaseManualPushTouchedIDs(),
             baselineRunID: nil,
             message: message
         )

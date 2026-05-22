@@ -1,0 +1,102 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260522T172339Z-android-smoke-options-task-TASK-114-p6870.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260522T172339Z-android-smoke-options-task-TASK-114-p6870.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260522T172339Z-android-smoke-options-task-TASK-114-p6870.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-113-29",
+    "CA-113-30"
+  ],
+  "cleanup_plan_id": null,
+  "command": "android smoke options --task TASK-114",
+  "command_slug": "android-smoke-options-task-TASK-114",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "physical",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 1902,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-114",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK113_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-114"
+  },
+  "exit_code": 2,
+  "git_sha": "c1ee078",
+  "next_action_recommended": "Wake and unlock the selected Android target, then retry; or rerun with an explicit emulator serial.",
+  "platform": "android",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "adbState": "device",
+    "appInstalled": true,
+    "availableAdbDevices": [
+      {
+        "device": "OnePlus8",
+        "model": "IN2013",
+        "serial": "<REDACTED>",
+        "serialHash": "583da02ea2da",
+        "status": "device",
+        "targetType": "physical",
+        "transport": "1"
+      },
+      {
+        "device": "emu64a",
+        "model": "sdk_gphone64_arm64",
+        "serial": "<REDACTED>",
+        "serialHash": "04ab3fc382bf",
+        "status": "device",
+        "targetType": "emulator",
+        "transport": "2"
+      }
+    ],
+    "bootCompleted": "1",
+    "foregroundAppMatches": false,
+    "foregroundPackage": null,
+    "lockState": {
+      "locked": true,
+      "screenOn": false,
+      "unlocked": false
+    },
+    "schemaVersion": "1.1",
+    "selectedSerial": "<REDACTED>",
+    "selectedTargetType": "physical",
+    "source": "android.live-preflight"
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "blocked",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260522T172339Z-android-smoke-options-task-TASK-114-p6870",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "task_id": "TASK-114",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-22T17:23:41Z",
+  "timestamp_start": "2026-05-22T17:23:39Z",
+  "warnings": []
+}

@@ -55,6 +55,7 @@ nonisolated struct SwiftDataInventorySnapshotService {
 
             productBarcodeCounts[barcode, default: 0] += 1
             if productsByBarcode[barcode] == nil {
+                let isRemoteDeleted = product.remoteDeletedAt != nil
                 let snapshot = LocalProductSnapshot(
                     barcode: product.barcode,
                     remoteID: product.remoteID,
@@ -66,8 +67,8 @@ nonisolated struct SwiftDataInventorySnapshotService {
                     purchasePrice: product.purchasePrice,
                     retailPrice: product.retailPrice,
                     stockQuantity: product.stockQuantity,
-                    supplierName: product.supplier?.name,
-                    categoryName: product.category?.name
+                    supplierName: isRemoteDeleted ? nil : product.supplier?.name,
+                    categoryName: isRemoteDeleted ? nil : product.category?.name
                 )
                 productsByBarcode[barcode] = snapshot
                 if let remoteID = product.remoteID, productsByRemoteID[remoteID] == nil {

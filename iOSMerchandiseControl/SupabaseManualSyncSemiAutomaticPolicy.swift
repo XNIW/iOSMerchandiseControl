@@ -28,7 +28,7 @@ nonisolated enum SupabaseManualSyncSemiAutomaticDecision: Equatable, Sendable {
 }
 
 nonisolated struct SupabaseManualSyncSemiAutomaticPolicy: Equatable, Sendable {
-    static let defaultForegroundCooldown: TimeInterval = 30 * 60
+    static let defaultForegroundCooldown: TimeInterval = 0
     static let defaultForegroundDebounce: TimeInterval = 2
     static let defaultRecoverableErrorBackoff: TimeInterval = 10 * 60
 

@@ -87,6 +87,11 @@ nonisolated enum SyncEventRPCRequestMapper {
                 try validateKnownEventType(eventType)
                 throw contract("event_type_domain_mismatch", "eventType is not valid for prices.")
             }
+        case "history":
+            guard eventType == "history_changed" || eventType == "history_tombstone" else {
+                try validateKnownEventType(eventType)
+                throw contract("event_type_domain_mismatch", "eventType is not valid for history.")
+            }
         default:
             throw contract("unsupported_domain", "domain is not supported by the confirmed RPC contract.")
         }
@@ -94,7 +99,12 @@ nonisolated enum SyncEventRPCRequestMapper {
 
     private static func validateKnownEventType(_ eventType: String) throws {
         switch eventType {
-        case "catalog_changed", "catalog_tombstone", "prices_changed", "prices_tombstone":
+        case "catalog_changed",
+             "catalog_tombstone",
+             "prices_changed",
+             "prices_tombstone",
+             "history_changed",
+             "history_tombstone":
             return
         default:
             throw contract("unsupported_event_type", "eventType is not supported by the confirmed RPC contract.")

@@ -33,6 +33,10 @@ struct OptionsView: View {
     @State private var supabaseBaselineSummary: SupabaseCatalogBaselineDebugSummary = .absent
     @State private var localDatabaseSummary: LocalDatabasePublicSummary = .empty
     @State private var syncCountDriftReport: SyncCountDriftReport?
+    @State private var syncCountDriftCheckFailed = false
+    @State private var lastSyncCountDriftCheckedAt: Date?
+
+    private static let freshRemoteCountVerificationInterval: TimeInterval = 60
 
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
@@ -400,6 +404,26 @@ struct OptionsView: View {
         syncCountDriftReport?.isAligned == false
     }
 
+    private var hasFreshRemoteCountVerification: Bool {
+        guard let lastSyncCountDriftCheckedAt else {
+            return false
+        }
+        return Date().timeIntervalSince(lastSyncCountDriftCheckedAt) <= Self.freshRemoteCountVerificationInterval
+    }
+
+    private var needsRemoteCountVerification: Bool {
+        guard supabaseAuthViewModel.state == .signedIn else {
+            return false
+        }
+        if syncCountDriftCheckFailed {
+            return true
+        }
+        guard syncCountDriftReport != nil else {
+            return true
+        }
+        return !hasFreshRemoteCountVerification
+    }
+
     private var localDatabaseTitle: String {
         if localDatabaseSummary.isCatalogEmpty {
             return L("options.localDatabase.empty.title")
@@ -409,6 +433,9 @@ struct OptionsView: View {
         }
         if hasSyncCountDrift {
             return L("options.localDatabase.reconcile.title")
+        }
+        if needsRemoteCountVerification {
+            return L("options.localDatabase.needsCheck.title")
         }
         switch supabaseBaselineSummary.status {
         case .absent:
@@ -430,6 +457,9 @@ struct OptionsView: View {
         if hasSyncCountDrift {
             return L("options.localDatabase.reconcile.detail")
         }
+        if needsRemoteCountVerification {
+            return L("options.localDatabase.needsCheck.detail")
+        }
         switch supabaseBaselineSummary.status {
         case .absent:
             return L("options.localDatabase.needsDownload.detail")
@@ -446,6 +476,9 @@ struct OptionsView: View {
         }
         if hasSyncCountDrift {
             return "exclamationmark.arrow.triangle.2.circlepath"
+        }
+        if needsRemoteCountVerification {
+            return "exclamationmark.triangle.fill"
         }
         switch supabaseBaselineSummary.status {
         case .valid where localPendingAttentionCount == 0:
@@ -464,6 +497,9 @@ struct OptionsView: View {
             return .secondary
         }
         if localPendingAttentionCount > 0 || hasSyncCountDrift {
+            return .orange
+        }
+        if needsRemoteCountVerification {
             return .orange
         }
         switch supabaseBaselineSummary.status {
@@ -515,9 +551,16 @@ struct OptionsView: View {
     }
 
     private func refreshSyncCountDriftIfNeeded() {
-        guard supabaseAuthViewModel.state == .signedIn,
-              let service = supabaseInventoryService else {
+        guard supabaseAuthViewModel.state == .signedIn else {
             syncCountDriftReport = nil
+            syncCountDriftCheckFailed = false
+            lastSyncCountDriftCheckedAt = nil
+            return
+        }
+        guard let service = supabaseInventoryService else {
+            syncCountDriftReport = nil
+            syncCountDriftCheckFailed = true
+            lastSyncCountDriftCheckedAt = nil
             return
         }
         Task {
@@ -527,10 +570,14 @@ struct OptionsView: View {
                 let report = SyncCountDriftReport.compare(local: local, remote: remote)
                 await MainActor.run {
                     syncCountDriftReport = report
+                    syncCountDriftCheckFailed = false
+                    lastSyncCountDriftCheckedAt = Date()
                 }
             } catch {
                 await MainActor.run {
                     syncCountDriftReport = nil
+                    syncCountDriftCheckFailed = true
+                    lastSyncCountDriftCheckedAt = Date()
                 }
             }
         }

@@ -614,6 +614,66 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         XCTAssertEqual(categories.first?.remoteID, categoryID)
     }
 
+    func testLookupOnlyConflictRecoverySkipsProductsAndPrunesCleanLocalLookups() throws {
+        let context = try makeContext()
+        context.insert(Supplier(name: "Inventario manuale"))
+        try context.save()
+
+        let supplierID1 = UUID(uuidString: "D8200000-0000-4000-8000-000000000214")!
+        let supplierID2 = UUID(uuidString: "D8200000-0000-4000-8000-000000000215")!
+        let categoryID = UUID(uuidString: "D8200000-0000-4000-8000-000000000216")!
+        let preview = makePreview(
+            newProducts: [
+                makeSummary(payload: makePayload(barcode: "100", productName: "Blocked Product"))
+            ],
+            remoteSupplierLookups: [
+                SyncPreviewLookupSummary(remoteID: supplierID1, displayName: "prova fornitore"),
+                SyncPreviewLookupSummary(remoteID: supplierID2, displayName: "百茂")
+            ],
+            remoteCategoryLookups: [
+                SyncPreviewLookupSummary(remoteID: categoryID, displayName: "prova categoria")
+            ],
+            conflicts: [
+                SyncPreviewConflict(kind: .remoteDuplicateBarcode, barcodeOrKey: "100")
+            ]
+        )
+
+        let plan = try prepare(preview, context: context)
+        XCTAssertTrue(plan.shouldPruneUnreferencedCleanLookups)
+        XCTAssertEqual(plan.productInserts.count, 0)
+        XCTAssertEqual(plan.productUpdates.count, 0)
+        XCTAssertEqual(plan.productTombstones.count, 0)
+        XCTAssertEqual(plan.suppliersToCreate.count, 2)
+        XCTAssertEqual(plan.categoriesToCreate.count, 1)
+
+        let result = try service.apply(plan: plan, context: context)
+
+        XCTAssertEqual(result.inserted, 0)
+        XCTAssertEqual(result.updated, 0)
+        XCTAssertEqual(result.suppliersCreated, 2)
+        XCTAssertEqual(result.categoriesCreated, 1)
+        let suppliers = try context.fetch(FetchDescriptor<Supplier>(sortBy: [SortDescriptor(\Supplier.name)]))
+        let categories = try context.fetch(FetchDescriptor<ProductCategory>())
+        XCTAssertEqual(suppliers.map(\.name), ["prova fornitore", "百茂"])
+        XCTAssertEqual(categories.map(\.name), ["prova categoria"])
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 0)
+    }
+
+    func testLookupOnlyPlanPrunesCleanLocalLookupsWhenNoRemoteLookupIsMissing() throws {
+        let context = try makeContext()
+        context.insert(Supplier(name: "Inventario manuale"))
+        try context.save()
+
+        let plan = try prepare(makePreview(), context: context)
+        XCTAssertTrue(plan.shouldPruneUnreferencedCleanLookups)
+        XCTAssertEqual(plan.suppliersToCreate.count, 0)
+        XCTAssertEqual(plan.categoriesToCreate.count, 0)
+
+        _ = try service.apply(plan: plan, context: context)
+
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Supplier>()).count, 0)
+    }
+
     func testApplyMarksRemoteProductTombstoneWhenLocalClean() throws {
         let context = try makeContext()
         let remoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000116")!
@@ -647,6 +707,69 @@ final class SupabasePullApplyServiceTests: XCTestCase {
 
         XCTAssertEqual(result.productTombstoned, 1)
         XCTAssertEqual(product.remoteDeletedAt, remoteDeletedAt)
+    }
+
+    func testFullSnapshotPrunesCleanRemoteLinkedProductAndOrphanLookupsMissingFromRemote() throws {
+        let context = try makeContext()
+        let staleProductRemoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000117")!
+        let keptRemoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000118")!
+        try insertProduct(
+            context: context,
+            barcode: "TASK114_STALE_LOCAL",
+            productName: "Stale local product",
+            supplierName: "Stale Supplier",
+            categoryName: "Stale Category",
+            remoteID: staleProductRemoteID
+        )
+        let supplier = try XCTUnwrap(try context.fetch(FetchDescriptor<Supplier>()).first)
+        let category = try XCTUnwrap(try context.fetch(FetchDescriptor<ProductCategory>()).first)
+        supplier.remoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000119")!
+        category.remoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000120")!
+        try context.save()
+
+        let preview = makePreview(remoteProductIDs: [keptRemoteID])
+        let plan = try prepare(preview, context: context)
+
+        XCTAssertEqual(plan.productPrunes.count, 1)
+        XCTAssertTrue(plan.shouldPruneUnreferencedCleanLookups)
+
+        let result = try service.apply(plan: plan, context: context)
+
+        XCTAssertEqual(result.productPruned, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Product>()).count, 0)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Supplier>()).count, 0)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductCategory>()).count, 0)
+    }
+
+    func testFullSnapshotPrunesLookupsReferencedOnlyByRemoteTombstonedProduct() throws {
+        let context = try makeContext()
+        let productRemoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000121")!
+        try insertProduct(
+            context: context,
+            barcode: "TASK114_TOMBSTONED_LOCAL",
+            productName: "Tombstoned local product",
+            supplierName: "Removed Supplier",
+            categoryName: "Removed Category",
+            remoteID: productRemoteID,
+            remoteDeletedAt: Date(timeIntervalSince1970: 1_777_777_901)
+        )
+        let supplier = try XCTUnwrap(try context.fetch(FetchDescriptor<Supplier>()).first)
+        let category = try XCTUnwrap(try context.fetch(FetchDescriptor<ProductCategory>()).first)
+        supplier.remoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000122")!
+        category.remoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000123")!
+        try context.save()
+
+        let plan = try prepare(makePreview(), context: context)
+
+        XCTAssertTrue(plan.shouldPruneUnreferencedCleanLookups)
+        _ = try service.apply(plan: plan, context: context)
+
+        let products = try context.fetch(FetchDescriptor<Product>())
+        XCTAssertEqual(products.count, 1)
+        XCTAssertNil(products.first?.supplier)
+        XCTAssertNil(products.first?.category)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Supplier>()).count, 0)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductCategory>()).count, 0)
     }
 
     private func prepare(
@@ -704,7 +827,10 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         remoteCategoryLookups: [SyncPreviewLookupSummary] = [],
         conflicts: [SyncPreviewConflict] = [],
         warnings: [SyncPreviewWarning] = [],
-        sourceErrors: [SyncPreviewWarning] = []
+        sourceErrors: [SyncPreviewWarning] = [],
+        remoteProductIDs: Set<UUID>? = nil,
+        remoteSupplierIDs: Set<UUID>? = nil,
+        remoteCategoryIDs: Set<UUID>? = nil
     ) -> SyncPreview {
         SyncPreview(
             generatedAt: Date(timeIntervalSince1970: 1_777_777_777),
@@ -735,7 +861,10 @@ final class SupabasePullApplyServiceTests: XCTestCase {
             priceHistoryDiffs: [],
             warnings: warnings,
             metrics: [],
-            sourceErrors: sourceErrors
+            sourceErrors: sourceErrors,
+            remoteProductIDs: remoteProductIDs,
+            remoteSupplierIDs: remoteSupplierIDs ?? Set(remoteSupplierLookups.map(\.remoteID)),
+            remoteCategoryIDs: remoteCategoryIDs ?? Set(remoteCategoryLookups.map(\.remoteID))
         )
     }
 
@@ -767,7 +896,8 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         stockQuantity: Double? = nil,
         supplierName: String? = nil,
         supplierRemoteID: UUID? = nil,
-        categoryName: String? = nil
+        categoryName: String? = nil,
+        categoryRemoteID: UUID? = nil
     ) -> SyncPreviewProductApplyPayload {
         SyncPreviewProductApplyPayload(
             remoteID: remoteID,
@@ -782,7 +912,8 @@ final class SupabasePullApplyServiceTests: XCTestCase {
             stockQuantity: stockQuantity,
             supplierName: supplierName,
             supplierRemoteID: supplierRemoteID,
-            categoryName: categoryName
+            categoryName: categoryName,
+            categoryRemoteID: categoryRemoteID
         )
     }
 

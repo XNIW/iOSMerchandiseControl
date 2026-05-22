@@ -496,7 +496,9 @@ PY
 
 mc_sync_ios_container() {
   local bundle="${MC_IOS_BUNDLE_ID:-com.niwcyber.iOSMerchandiseControl}"
-  xcrun simctl get_app_container booted "$bundle" data 2>/dev/null
+  local target
+  target="$(mc_ios_simulator_target)" || return $?
+  xcrun simctl get_app_container "$target" "$bundle" data 2>/dev/null
 }
 
 mc_sync_ios_store_path() {
@@ -622,6 +624,18 @@ for key, pending_kind in kind_map.items():
     deleted_where = remote_deleted_where(table)
     local_only = local_only_where(table)
     active = count(table, deleted_where)
+    if key == "product_prices" and table and entity_tables.get("products"):
+        price_cols = cols(table)
+        product_cols = cols(entity_tables["products"])
+        price_product = price_cols.get("ZPRODUCT")
+        product_pk = product_cols.get("Z_PK")
+        product_deleted = product_cols.get("ZREMOTEDELETEDAT")
+        if price_product and product_pk and product_deleted:
+            active = q(
+                f"SELECT count(*) FROM {table} pp "
+                f"JOIN {entity_tables['products']} p ON p.{product_pk} = pp.{price_product} "
+                f"WHERE p.{product_deleted} IS NULL"
+            )
     all_count = count(table)
     deleted = None if active is None or all_count is None else max(0, all_count - active)
     counts[key] = {

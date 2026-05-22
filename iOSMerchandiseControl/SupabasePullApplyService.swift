@@ -3,9 +3,17 @@ import SwiftData
 
 nonisolated struct SupabasePullApplyOptions: Sendable, Equatable {
     var applyStockQuantity: Bool
+    var allowLookupOnlyApplyWhenProductConflicts: Bool
+    var isCompleteRemoteSnapshot: Bool
 
-    init(applyStockQuantity: Bool = false) {
+    init(
+        applyStockQuantity: Bool = false,
+        allowLookupOnlyApplyWhenProductConflicts: Bool = true,
+        isCompleteRemoteSnapshot: Bool = true
+    ) {
         self.applyStockQuantity = applyStockQuantity
+        self.allowLookupOnlyApplyWhenProductConflicts = allowLookupOnlyApplyWhenProductConflicts
+        self.isCompleteRemoteSnapshot = isCompleteRemoteSnapshot
     }
 }
 
@@ -86,19 +94,22 @@ nonisolated struct SupabasePullApplyResult: Sendable, Equatable {
     let suppliersCreated: Int
     let categoriesCreated: Int
     let productTombstoned: Int
+    let productPruned: Int
 
     init(
         inserted: Int,
         updated: Int,
         suppliersCreated: Int,
         categoriesCreated: Int,
-        productTombstoned: Int = 0
+        productTombstoned: Int = 0,
+        productPruned: Int = 0
     ) {
         self.inserted = inserted
         self.updated = updated
         self.suppliersCreated = suppliersCreated
         self.categoriesCreated = categoriesCreated
         self.productTombstoned = productTombstoned
+        self.productPruned = productPruned
     }
 }
 
@@ -131,10 +142,14 @@ nonisolated struct SupabasePullApplyPlan: Sendable, Equatable {
     let productInserts: [SupabasePullApplyProductInsert]
     let productUpdates: [SupabasePullApplyProductUpdate]
     let productTombstones: [SupabasePullApplyProductTombstone]
+    let productPrunes: [SupabasePullApplyProductPrune]
+    let remoteSupplierIDs: Set<UUID>
+    let remoteCategoryIDs: Set<UUID>
+    let shouldPruneUnreferencedCleanLookups: Bool
 
     var plannedInsertedCount: Int { productInserts.count }
     var plannedUpdatedCount: Int { productUpdates.count }
-    var plannedProductMutationCount: Int { productInserts.count + productUpdates.count + productTombstones.count }
+    var plannedProductMutationCount: Int { productInserts.count + productUpdates.count + productTombstones.count + productPrunes.count }
 }
 
 nonisolated struct SupabasePullApplyExpectedProductState: Sendable, Equatable {
@@ -178,6 +193,11 @@ nonisolated struct SupabasePullApplyProductUpdate: Sendable, Equatable {
 nonisolated struct SupabasePullApplyProductTombstone: Sendable, Equatable {
     let barcode: String
     let payload: SyncPreviewProductApplyPayload
+    let expectedFingerprint: SupabasePullApplyProductFingerprint
+}
+
+nonisolated struct SupabasePullApplyProductPrune: Sendable, Equatable {
+    let barcode: String
     let expectedFingerprint: SupabasePullApplyProductFingerprint
 }
 
@@ -260,7 +280,8 @@ nonisolated struct SupabasePullApplyService: Sendable {
         try validateGlobalGuards(
             preview: preview,
             isAuthenticated: isAuthenticated,
-            accountGuard: accountGuard
+            accountGuard: accountGuard,
+            options: options
         )
 
         let snapshot: LocalInventorySnapshot
@@ -284,116 +305,134 @@ nonisolated struct SupabasePullApplyService: Sendable {
         var tombstones: [SupabasePullApplyProductTombstone] = []
         var expectedStates: [SupabasePullApplyExpectedProductState] = []
 
-        for summary in preview.newProducts.sorted(by: productSort) {
-            guard let payload = summary.applyPayload else {
-                throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
+        let shouldSkipProductMutationsDueToConflicts =
+            options.allowLookupOnlyApplyWhenProductConflicts && !preview.conflicts.isEmpty
+
+        if !shouldSkipProductMutationsDueToConflicts {
+            for summary in preview.newProducts.sorted(by: productSort) {
+                guard let payload = summary.applyPayload else {
+                    throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
+                }
+
+                try validateNumbers(payload: payload, options: options)
+
+                guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(payload.barcode) else {
+                    throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
+                }
+
+                guard snapshot.productsByBarcode[barcode] == nil else {
+                    throw SupabasePullApplyError.previewStale
+                }
+
+                let primaryName = SupabasePullPreviewNormalizer.semanticString(payload.productName)
+                let secondaryName = SupabasePullPreviewNormalizer.semanticString(payload.secondProductName)
+                guard primaryName != nil || secondaryName != nil else {
+                    throw SupabasePullApplyError.missingRequiredField(barcode: barcode, field: "productName")
+                }
+
+                inserts.append(SupabasePullApplyProductInsert(barcode: barcode, payload: payload))
+                expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: nil))
             }
 
-            try validateNumbers(payload: payload, options: options)
+            for summary in preview.updateCandidates.sorted(by: productSort) {
+                guard let payload = summary.applyPayload else {
+                    throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
+                }
 
-            guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(payload.barcode) else {
-                throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
-            }
+                try validateNumbers(payload: payload, options: options)
 
-            guard snapshot.productsByBarcode[barcode] == nil else {
-                throw SupabasePullApplyError.previewStale
-            }
+                guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(summary.barcode ?? payload.barcode) else {
+                    throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
+                }
 
-            let primaryName = SupabasePullPreviewNormalizer.semanticString(payload.productName)
-            let secondaryName = SupabasePullPreviewNormalizer.semanticString(payload.secondProductName)
-            guard primaryName != nil || secondaryName != nil else {
-                throw SupabasePullApplyError.missingRequiredField(barcode: barcode, field: "productName")
-            }
+                guard let localProduct = snapshot.productsByBarcode[barcode] else {
+                    throw SupabasePullApplyError.previewStale
+                }
 
-            inserts.append(SupabasePullApplyProductInsert(barcode: barcode, payload: payload))
-            expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: nil))
-        }
+                if let localRemoteID = localProduct.remoteID,
+                   localRemoteID != payload.remoteID {
+                    throw SupabasePullApplyError.previewStale
+                }
 
-        for summary in preview.updateCandidates.sorted(by: productSort) {
-            guard let payload = summary.applyPayload else {
-                throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
-            }
-
-            try validateNumbers(payload: payload, options: options)
-
-            guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(summary.barcode ?? payload.barcode) else {
-                throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
-            }
-
-            guard let localProduct = snapshot.productsByBarcode[barcode] else {
-                throw SupabasePullApplyError.previewStale
-            }
-
-            if let localRemoteID = localProduct.remoteID,
-               localRemoteID != payload.remoteID {
-                throw SupabasePullApplyError.previewStale
-            }
-
-            if hasPendingLocalProductChange(
-                payload: payload,
-                barcode: barcode,
-                pendingChanges: pendingProductChanges
-            ) {
-                continue
-            }
-
-            guard hasApplicableUpdate(payload: payload, local: localProduct, options: options) else {
-                continue
-            }
-
-            let fingerprint = SupabasePullApplyProductFingerprint(snapshot: localProduct)
-            updates.append(
-                SupabasePullApplyProductUpdate(
-                    barcode: barcode,
+                if hasPendingLocalProductChange(
                     payload: payload,
-                    expectedFingerprint: fingerprint
-                )
-            )
-            expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: fingerprint))
-        }
-
-        for summary in preview.remoteTombstones.sorted(by: productSort) {
-            guard let payload = summary.applyPayload else {
-                throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
-            }
-
-            guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(summary.barcode ?? payload.barcode) else {
-                throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
-            }
-
-            guard let localProduct = snapshot.productsByBarcode[barcode] else {
-                continue
-            }
-
-            if let localRemoteID = localProduct.remoteID,
-               localRemoteID != payload.remoteID {
-                throw SupabasePullApplyError.previewStale
-            }
-
-            if hasPendingLocalProductChange(
-                payload: payload,
-                barcode: barcode,
-                pendingChanges: pendingProductChanges
-            ) {
-                continue
-            }
-
-            guard localProduct.remoteDeletedAt != (payload.remoteDeletedAt ?? localProduct.remoteDeletedAt)
-                    || localProduct.remoteUpdatedAt != payload.remoteUpdatedAt
-                    || localProduct.remoteID != payload.remoteID else {
-                continue
-            }
-
-            let fingerprint = SupabasePullApplyProductFingerprint(snapshot: localProduct)
-            tombstones.append(
-                SupabasePullApplyProductTombstone(
                     barcode: barcode,
-                    payload: payload,
-                    expectedFingerprint: fingerprint
+                    pendingChanges: pendingProductChanges
+                ) {
+                    continue
+                }
+
+                guard hasApplicableUpdate(payload: payload, local: localProduct, options: options) else {
+                    continue
+                }
+
+                let fingerprint = SupabasePullApplyProductFingerprint(snapshot: localProduct)
+                updates.append(
+                    SupabasePullApplyProductUpdate(
+                        barcode: barcode,
+                        payload: payload,
+                        expectedFingerprint: fingerprint
+                    )
                 )
-            )
-            expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: fingerprint))
+                expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: fingerprint))
+            }
+
+            for summary in preview.remoteTombstones.sorted(by: productSort) {
+                guard let payload = summary.applyPayload else {
+                    throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
+                }
+
+                guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(summary.barcode ?? payload.barcode) else {
+                    throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
+                }
+
+                guard let localProduct = snapshot.productsByBarcode[barcode] else {
+                    continue
+                }
+
+                if let localRemoteID = localProduct.remoteID,
+                   localRemoteID != payload.remoteID {
+                    throw SupabasePullApplyError.previewStale
+                }
+
+                if hasPendingLocalProductChange(
+                    payload: payload,
+                    barcode: barcode,
+                    pendingChanges: pendingProductChanges
+                ) {
+                    continue
+                }
+
+                guard localProduct.remoteDeletedAt != (payload.remoteDeletedAt ?? localProduct.remoteDeletedAt)
+                        || localProduct.remoteUpdatedAt != payload.remoteUpdatedAt
+                        || localProduct.remoteID != payload.remoteID else {
+                    continue
+                }
+
+                let fingerprint = SupabasePullApplyProductFingerprint(snapshot: localProduct)
+                tombstones.append(
+                    SupabasePullApplyProductTombstone(
+                        barcode: barcode,
+                        payload: payload,
+                        expectedFingerprint: fingerprint
+                    )
+                )
+                expectedStates.append(SupabasePullApplyExpectedProductState(barcode: barcode, fingerprint: fingerprint))
+            }
         }
+
+        let productPrunes = shouldSkipProductMutationsDueToConflicts || !options.isCompleteRemoteSnapshot
+            ? []
+            : cleanProductPrunes(
+                preview: preview,
+                snapshot: snapshot,
+                pendingChanges: pendingProductChanges
+            )
+        expectedStates.append(
+            contentsOf: productPrunes.map {
+                SupabasePullApplyExpectedProductState(barcode: $0.barcode, fingerprint: $0.expectedFingerprint)
+            }
+        )
 
         let applicablePayloads = inserts.map(\.payload) + updates.map(\.payload)
         let suppliersToCreate = lookupsToCreate(
@@ -427,11 +466,30 @@ nonisolated struct SupabasePullApplyService: Sendable {
             )
         )
 
+        let hasPrunableCleanLookups = options.isCompleteRemoteSnapshot
+            ? try hasPrunableUnreferencedCleanLookups(
+                context: context,
+                remoteSupplierIDs: preview.remoteSupplierIDs,
+                remoteCategoryIDs: preview.remoteCategoryIDs
+            )
+            : false
+        let shouldPruneUnreferencedCleanLookups =
+            options.isCompleteRemoteSnapshot
+                && inserts.isEmpty
+                && updates.isEmpty
+                && tombstones.isEmpty
+                && (hasPrunableCleanLookups || !productPrunes.isEmpty)
+
         guard !inserts.isEmpty ||
             !updates.isEmpty ||
             !tombstones.isEmpty ||
+            !productPrunes.isEmpty ||
             !suppliersToCreate.isEmpty ||
-            !categoriesToCreate.isEmpty else {
+            !categoriesToCreate.isEmpty ||
+            shouldPruneUnreferencedCleanLookups else {
+            if shouldSkipProductMutationsDueToConflicts {
+                throw SupabasePullApplyError.conflictsPresent
+            }
             throw SupabasePullApplyError.noApplicableChanges
         }
 
@@ -443,7 +501,11 @@ nonisolated struct SupabasePullApplyService: Sendable {
             categoriesToCreate: categoriesToCreate,
             productInserts: inserts.sorted { $0.barcode < $1.barcode },
             productUpdates: updates.sorted { $0.barcode < $1.barcode },
-            productTombstones: tombstones.sorted { $0.barcode < $1.barcode }
+            productTombstones: tombstones.sorted { $0.barcode < $1.barcode },
+            productPrunes: productPrunes.sorted { $0.barcode < $1.barcode },
+            remoteSupplierIDs: preview.remoteSupplierIDs,
+            remoteCategoryIDs: preview.remoteCategoryIDs,
+            shouldPruneUnreferencedCleanLookups: shouldPruneUnreferencedCleanLookups
         )
     }
 
@@ -451,8 +513,10 @@ nonisolated struct SupabasePullApplyService: Sendable {
         guard !plan.productInserts.isEmpty ||
             !plan.productUpdates.isEmpty ||
             !plan.productTombstones.isEmpty ||
+            !plan.productPrunes.isEmpty ||
             !plan.suppliersToCreate.isEmpty ||
-            !plan.categoriesToCreate.isEmpty else {
+            !plan.categoriesToCreate.isEmpty ||
+            plan.shouldPruneUnreferencedCleanLookups else {
             throw SupabasePullApplyError.noApplicableChanges
         }
 
@@ -465,6 +529,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
         var inserted = 0
         var updated = 0
         var productTombstoned = 0
+        var productPruned = 0
         var suppliersCreated = 0
         var categoriesCreated = 0
 
@@ -568,6 +633,25 @@ nonisolated struct SupabasePullApplyService: Sendable {
             }
         }
 
+        for prune in plan.productPrunes {
+            guard let product = productsByBarcode[prune.barcode] else {
+                throw SupabasePullApplyError.previewStale
+            }
+            context.delete(product)
+            productsByBarcode.removeValue(forKey: prune.barcode)
+            productPruned += 1
+        }
+
+        if plan.shouldPruneUnreferencedCleanLookups {
+            _ = try pruneUnreferencedCleanLookups(
+                context: context,
+                suppliersByName: &suppliersByName,
+                categoriesByName: &categoriesByName,
+                remoteSupplierIDs: plan.remoteSupplierIDs,
+                remoteCategoryIDs: plan.remoteCategoryIDs
+            )
+        }
+
         do {
             try context.save()
         } catch {
@@ -580,8 +664,37 @@ nonisolated struct SupabasePullApplyService: Sendable {
             updated: updated,
             suppliersCreated: suppliersCreated,
             categoriesCreated: categoriesCreated,
-            productTombstoned: productTombstoned
+            productTombstoned: productTombstoned,
+            productPruned: productPruned
         )
+    }
+
+    private func cleanProductPrunes(
+        preview: SyncPreview,
+        snapshot: LocalInventorySnapshot,
+        pendingChanges: SupabasePullApplyPendingProductChanges
+    ) -> [SupabasePullApplyProductPrune] {
+        guard !preview.remoteProductIDs.isEmpty else {
+            return []
+        }
+
+        return snapshot.productsByBarcode.compactMap { barcode, localProduct in
+            guard let remoteID = localProduct.remoteID,
+                  !preview.remoteProductIDs.contains(remoteID),
+                  localProduct.remoteDeletedAt == nil,
+                  !hasPendingLocalProductChange(
+                    remoteID: remoteID,
+                    barcode: barcode,
+                    pendingChanges: pendingChanges
+                  ) else {
+                return nil
+            }
+
+            return SupabasePullApplyProductPrune(
+                barcode: barcode,
+                expectedFingerprint: SupabasePullApplyProductFingerprint(snapshot: localProduct)
+            )
+        }
     }
 
     private func pendingProductChanges(
@@ -627,6 +740,25 @@ nonisolated struct SupabasePullApplyService: Sendable {
         return pendingChanges.logicalKeys.contains(localKey)
     }
 
+    private func hasPendingLocalProductChange(
+        remoteID: UUID,
+        barcode: String,
+        pendingChanges: SupabasePullApplyPendingProductChanges
+    ) -> Bool {
+        guard !pendingChanges.isEmpty else {
+            return false
+        }
+        if pendingChanges.remoteIDs.contains(remoteID) {
+            return true
+        }
+        let remoteKey = LocalPendingChangeLogicalKey.remoteEntity(kind: .product, remoteID: remoteID)
+        if pendingChanges.logicalKeys.contains(remoteKey) {
+            return true
+        }
+        let localKey = LocalPendingChangeLogicalKey.product(remoteID: nil, barcode: barcode)
+        return pendingChanges.logicalKeys.contains(localKey)
+    }
+
     func applyBatched(
         plan: SupabasePullApplyPlan,
         context: ModelContext,
@@ -635,8 +767,10 @@ nonisolated struct SupabasePullApplyService: Sendable {
         guard !plan.productInserts.isEmpty ||
             !plan.productUpdates.isEmpty ||
             !plan.productTombstones.isEmpty ||
+            !plan.productPrunes.isEmpty ||
             !plan.suppliersToCreate.isEmpty ||
-            !plan.categoriesToCreate.isEmpty else {
+            !plan.categoriesToCreate.isEmpty ||
+            plan.shouldPruneUnreferencedCleanLookups else {
             throw SupabasePullApplyError.noApplicableChanges
         }
 
@@ -650,6 +784,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
         var inserted = 0
         var updated = 0
         var productTombstoned = 0
+        var productPruned = 0
         var suppliersCreated = 0
         var categoriesCreated = 0
         var mutationsSinceSave = 0
@@ -658,7 +793,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
         func saveBatchIfNeeded(force: Bool = false) async throws {
             guard mutationsSinceSave > 0, force || mutationsSinceSave >= batchSize else { return }
             await publishProgress(
-                SupabasePullApplyProgress(stage: .saving, current: inserted + updated + productTombstoned, total: plan.plannedProductMutationCount),
+                SupabasePullApplyProgress(stage: .saving, current: inserted + updated + productTombstoned + productPruned, total: plan.plannedProductMutationCount),
                 onProgress: onProgress
             )
             do {
@@ -819,6 +954,35 @@ nonisolated struct SupabasePullApplyService: Sendable {
             }
         }
 
+        for prune in plan.productPrunes {
+            try Task.checkCancellation()
+            guard let product = productsByBarcode[prune.barcode] else {
+                throw SupabasePullApplyError.previewStale
+            }
+            context.delete(product)
+            productsByBarcode.removeValue(forKey: prune.barcode)
+            productPruned += 1
+            processedProducts += 1
+            mutationsSinceSave += 1
+            await publishProgress(SupabasePullApplyProgress(stage: .products, current: processedProducts, total: productTotal), onProgress: onProgress)
+            try await saveBatchIfNeeded()
+            if processedProducts.isMultiple(of: batchSize) {
+                await Task.yield()
+            }
+        }
+
+        if plan.shouldPruneUnreferencedCleanLookups {
+            let pruned = try pruneUnreferencedCleanLookups(
+                context: context,
+                suppliersByName: &suppliersByName,
+                categoriesByName: &categoriesByName,
+                remoteSupplierIDs: plan.remoteSupplierIDs,
+                remoteCategoryIDs: plan.remoteCategoryIDs
+            )
+            mutationsSinceSave += pruned
+            try await saveBatchIfNeeded()
+        }
+
         try await saveBatchIfNeeded(force: true)
         await publishProgress(SupabasePullApplyProgress(stage: .completed, current: productTotal, total: productTotal), onProgress: onProgress)
 
@@ -827,14 +991,16 @@ nonisolated struct SupabasePullApplyService: Sendable {
             updated: updated,
             suppliersCreated: suppliersCreated,
             categoriesCreated: categoriesCreated,
-            productTombstoned: productTombstoned
+            productTombstoned: productTombstoned,
+            productPruned: productPruned
         )
     }
 
     private func validateGlobalGuards(
         preview: SyncPreview,
         isAuthenticated: Bool,
-        accountGuard: SupabasePullApplyAccountGuard?
+        accountGuard: SupabasePullApplyAccountGuard?,
+        options: SupabasePullApplyOptions
     ) throws {
         guard isAuthenticated else {
             throw SupabasePullApplyError.sessionMissing
@@ -860,7 +1026,7 @@ nonisolated struct SupabasePullApplyService: Sendable {
             throw SupabasePullApplyError.localDuplicateBarcode
         }
 
-        if !preview.conflicts.isEmpty {
+        if !preview.conflicts.isEmpty && !options.allowLookupOnlyApplyWhenProductConflicts {
             throw SupabasePullApplyError.conflictsPresent
         }
     }
@@ -1266,6 +1432,134 @@ nonisolated struct SupabasePullApplyService: Sendable {
         }
         category.remoteUpdatedAt = remoteUpdatedAt ?? category.remoteUpdatedAt
         category.remoteDeletedAt = remoteDeletedAt
+    }
+
+    private func pruneUnreferencedCleanLookups(
+        context: ModelContext,
+        suppliersByName: inout [String: Supplier],
+        categoriesByName: inout [String: ProductCategory],
+        remoteSupplierIDs: Set<UUID>,
+        remoteCategoryIDs: Set<UUID>
+    ) throws -> Int {
+        let products = try context.fetch(FetchDescriptor<Product>())
+        let activeProducts = products.filter { $0.remoteDeletedAt == nil }
+        let referencedSupplierNames = Set(
+            activeProducts.compactMap { SupabasePullPreviewNormalizer.normalizedLookupName($0.supplier?.name) }
+        )
+        let referencedCategoryNames = Set(
+            activeProducts.compactMap { SupabasePullPreviewNormalizer.normalizedLookupName($0.category?.name) }
+        )
+        let activeLookupPendingKeys = try fetchActiveLookupPendingKeys(context: context)
+
+        var pruned = 0
+        let suppliers = try context.fetch(FetchDescriptor<Supplier>(sortBy: [SortDescriptor(\Supplier.name)]))
+        for supplier in suppliers {
+            let existsInRemoteSnapshot = supplier.remoteID.map { remoteSupplierIDs.contains($0) } ?? false
+            guard !existsInRemoteSnapshot,
+                  supplier.remoteDeletedAt == nil,
+                  let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(supplier.name),
+                  !referencedSupplierNames.contains(normalizedName),
+                  !activeLookupPendingKeys.contains(
+                    LocalPendingChangeLogicalKey.supplier(remoteID: supplier.remoteID, name: supplier.name)
+                  ) else {
+                continue
+            }
+            detachSupplier(supplier, from: products)
+            context.delete(supplier)
+            suppliersByName.removeValue(forKey: normalizedName)
+            pruned += 1
+        }
+
+        let categories = try context.fetch(FetchDescriptor<ProductCategory>(sortBy: [SortDescriptor(\ProductCategory.name)]))
+        for category in categories {
+            let existsInRemoteSnapshot = category.remoteID.map { remoteCategoryIDs.contains($0) } ?? false
+            guard !existsInRemoteSnapshot,
+                  category.remoteDeletedAt == nil,
+                  let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(category.name),
+                  !referencedCategoryNames.contains(normalizedName),
+                  !activeLookupPendingKeys.contains(
+                    LocalPendingChangeLogicalKey.category(remoteID: category.remoteID, name: category.name)
+                  ) else {
+                continue
+            }
+            detachCategory(category, from: products)
+            context.delete(category)
+            categoriesByName.removeValue(forKey: normalizedName)
+            pruned += 1
+        }
+
+        return pruned
+    }
+
+    private func detachSupplier(_ supplier: Supplier, from products: [Product]) {
+        for product in products where product.supplier === supplier {
+            product.supplier = nil
+        }
+    }
+
+    private func detachCategory(_ category: ProductCategory, from products: [Product]) {
+        for product in products where product.category === category {
+            product.category = nil
+        }
+    }
+
+    private func hasPrunableUnreferencedCleanLookups(
+        context: ModelContext,
+        remoteSupplierIDs: Set<UUID>,
+        remoteCategoryIDs: Set<UUID>
+    ) throws -> Bool {
+        let products = try context.fetch(FetchDescriptor<Product>())
+            .filter { $0.remoteDeletedAt == nil }
+        let referencedSupplierNames = Set(
+            products.compactMap { SupabasePullPreviewNormalizer.normalizedLookupName($0.supplier?.name) }
+        )
+        let referencedCategoryNames = Set(
+            products.compactMap { SupabasePullPreviewNormalizer.normalizedLookupName($0.category?.name) }
+        )
+        let activeLookupPendingKeys = try fetchActiveLookupPendingKeys(context: context)
+
+        let suppliers = try context.fetch(FetchDescriptor<Supplier>())
+        if suppliers.contains(where: { supplier in
+            let existsInRemoteSnapshot = supplier.remoteID.map { remoteSupplierIDs.contains($0) } ?? false
+            guard !existsInRemoteSnapshot,
+                  supplier.remoteDeletedAt == nil,
+                  let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(supplier.name),
+                  !referencedSupplierNames.contains(normalizedName) else {
+                return false
+            }
+            return !activeLookupPendingKeys.contains(
+                LocalPendingChangeLogicalKey.supplier(remoteID: supplier.remoteID, name: supplier.name)
+            )
+        }) {
+            return true
+        }
+
+        let categories = try context.fetch(FetchDescriptor<ProductCategory>())
+        return categories.contains { category in
+            let existsInRemoteSnapshot = category.remoteID.map { remoteCategoryIDs.contains($0) } ?? false
+            guard !existsInRemoteSnapshot,
+                  category.remoteDeletedAt == nil,
+                  let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(category.name),
+                  !referencedCategoryNames.contains(normalizedName) else {
+                return false
+            }
+            return !activeLookupPendingKeys.contains(
+                LocalPendingChangeLogicalKey.category(remoteID: category.remoteID, name: category.name)
+            )
+        }
+    }
+
+    private func fetchActiveLookupPendingKeys(context: ModelContext) throws -> Set<String> {
+        let descriptor = FetchDescriptor<LocalPendingChange>()
+        let lookupKinds: Set<String> = [
+            LocalPendingChangeEntityKind.supplier.rawValue,
+            LocalPendingChangeEntityKind.productCategory.rawValue
+        ]
+        return Set(
+            try context.fetch(descriptor)
+                .filter { lookupKinds.contains($0.entityKindRaw) && !$0.status.isTerminal }
+                .map(\.logicalKey)
+        )
     }
 
     private func fetchProductsByBarcode(context: ModelContext) throws -> [String: Product] {

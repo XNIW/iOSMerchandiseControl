@@ -68,7 +68,8 @@ import json, os, re
 keys = [
     "MC_TASK_ID","MC_IOS_REPO","MC_ANDROID_REPO","MC_SUPABASE_REPO",
     "MC_EVIDENCE_DIR","MC_ALLOW_LIVE","MC_ALLOW_CLEANUP","MC_IOS_SCHEME",
-    "MC_IOS_SIMULATOR_NAME","MC_ANDROID_DEVICE_SERIAL","MC_SUPABASE_PROFILE",
+    "MC_IOS_SIMULATOR_NAME","MC_IOS_SIMULATOR_OS","MC_IOS_SIMULATOR_ID","MC_IOS_SIMULATOR_UDID",
+    "MC_ANDROID_DEVICE_SERIAL","MC_SUPABASE_PROFILE",
     "MC_RUN_PREFIX"
 ]
 redact_paths = os.environ.get("MC_REDACT_PATHS", "1") == "1"
@@ -77,7 +78,7 @@ for key in keys:
     value = os.environ.get(key, "")
     if not value:
         out[key] = "<unset>"
-    elif "SERIAL" in key or "PROJECT_REF" in key:
+    elif "SERIAL" in key or "PROJECT_REF" in key or "SIMULATOR_ID" in key or "SIMULATOR_UDID" in key:
         out[key] = "<REDACTED>"
     elif redact_paths and value.startswith("/Users/"):
         out[key] = re.sub(r"^/Users/[^/]+", "<HOME_REDACTED>", value)
@@ -90,8 +91,11 @@ PY
 import json, os
 print(json.dumps({
     "ios_simulator": os.environ.get("MC_IOS_SIMULATOR_NAME", ""),
+    "ios_simulator_id": "<REDACTED>" if os.environ.get("MC_IOS_SIMULATOR_ID") or os.environ.get("MC_IOS_SIMULATOR_UDID") else "",
     "ios_destination": os.environ.get("MC_IOS_DESTINATION", ""),
-    "android_serial": "<REDACTED>" if os.environ.get("MC_ANDROID_DEVICE_SERIAL") else ""
+    "android_serial": "<REDACTED>" if os.environ.get("MC_ANDROID_DEVICE_SERIAL") else "",
+    "android_selected_serial": "<REDACTED>" if os.environ.get("MC_ANDROID_SELECTED_SERIAL") else "",
+    "android_target_type": os.environ.get("MC_ANDROID_TARGET_TYPE", "")
 }))
 PY
 )"

@@ -1,0 +1,39 @@
+# mc-agent report
+
+- **Schema**: 1.1
+- **Run ID**: 20260522T082941Z-supabase-residue-check-task-TASK-114-prefix-TASK114_REALTIME_-profile-linked-p51386
+- **Task**: TASK-114
+- **Command**: `supabase residue-check --task TASK-114 --prefix TASK114_REALTIME_ --profile linked`
+- **Platform**: supabase
+- **Safety**: safe-readonly
+- **Result**: blocked (exit 2)
+- **Duration**: 151189 ms
+- **Repo**: <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+- **Branch**: main
+- **Git SHA**: c1ee078
+- **Dirty**: dirty
+- **Profile**: linked
+- **Android offline tier**: none
+- **Cleanup plan ID**: n/a
+
+## Summary
+
+Residue check BLOCKED for profile linked.
+
+## Counts
+
+- rows_created: 0
+- rows_deleted: 0
+- residue_count: 0
+
+## Artifacts
+
+- Markdown: `docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260522T082941Z-supabase-residue-check-task-TASK-114-prefix-TASK114_REALTIME_-profile-linked-p51386.md`
+- JSON: `docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260522T082941Z-supabase-residue-check-task-TASK-114-prefix-TASK114_REALTIME_-profile-linked-p51386.json`
+- Log: `docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260522T082941Z-supabase-residue-check-task-TASK-114-prefix-TASK114_REALTIME_-profile-linked-p51386.log`
+- xcresult: `n/a`
+- screenshot: `n/a`
+
+## Next Action
+
+Use --profile dry-run-no-db, start local DB, or link Supabase.

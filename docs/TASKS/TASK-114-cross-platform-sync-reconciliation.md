@@ -5,10 +5,10 @@
 - **Titolo**: Cross-platform automatic sync reconciliation Android/iOS/Supabase
 - **File task**: `docs/TASKS/TASK-114-cross-platform-sync-reconciliation.md`
 - **Stato**: DONE
-- **Fase attuale**: Chiusura finale
+- **Fase attuale**: Chiusura finale post-regressione
 - **Responsabile attuale**: USER / Accepted override
 - **Data creazione**: 2026-05-21
-- **Ultimo aggiornamento**: 2026-05-21 19:16 -0400
+- **Ultimo aggiornamento**: 2026-05-22 13:46 -0400
 - **Ultimo agente che ha operato**: CODEX
 
 ## Dipendenze
@@ -25,6 +25,29 @@ Screenshot utente (maggio 2026): entrambe le app dichiarano sync completa e 0 pe
 - Supabase (linked, stesso account): 19696 prodotti attivi, 59 fornitori, 28 categorie, 41111 prezzi, 11 sessioni attive / 15 totali
 
 **Fonte di verità**: Supabase owner-scoped (RLS). iOS è quasi allineato su prodotti/prezzi; Android ha catalogo locale in eccesso e price history incompleta; entrambe le UI confondono «0 pending push» con «database allineato».
+
+### Regressione post-DONE — runtime UI/device mismatch segnalato dall'utente
+Il precedente DONE storico del 2026-05-21 19:16 -0400 e' riaperto come regressione, senza creare un task separato, per nota esplicita: **post-DONE runtime UI/device mismatch segnalato dall'utente**.
+
+Evidence manuale utente post-DONE:
+- iOS Options runtime reale: Products 19696, Suppliers 58, Categories 27, Price history 41111, History sessions 11, Last successful sync 15 mag 2026 18:33, testo "Local database is up to date".
+- Android Options runtime reale: Prodotti 19696, Fornitori 59, Categorie 28, Storico prezzi 41111, Sessioni cronologia 11, Modifiche locali in attesa 0.
+- iOS History mostra alcuni titoli UUID/raw, mentre Android mostra titoli leggibili tipo `Manual - 21 apr 2026, 14:39`, `Pinmark - 21 apr 2026, 22:47`, `Max bellezza - 21 apr 2026, 19:41`.
+- iOS History puo' mostrare entry tecniche/test tipo `TASK109_REVIEW_HISTORY_...`; va dimostrato se sono dati remoti reali da cleanup/hide o differenza di filtro.
+
+Verdetto operativo: il tracking DONE non e' affidabile finche' non viene dimostrata la runtime parity reale su app aperta, auto-sync foreground, UI Options/History e store/container effettivamente usato dall'utente.
+
+### Criteri di accettazione post-regressione
+- [x] PR-01: iOS Options runtime reale mostra 19696 / 59 / 28 / 41111 / 11, oppure mostra chiaramente drift e poi si riallinea dopo auto-sync.
+- [x] PR-02: Android Options runtime reale mostra gli stessi conteggi di Supabase e iOS.
+- [x] PR-03: Supabase linked mostra gli stessi conteggi canonici.
+- [x] PR-04: `live reconcile-counts`, `live runtime-parity`, `live mutation-near-realtime` e `live sync-matrix` PASS su app/container runtime reali.
+- [x] PR-05: iOS History non mostra UUID raw come titolo principale per entry user-facing.
+- [x] PR-06: iOS e Android History hanno la stessa definizione userVisible; entry tecniche `TASK*`, `APPLY_IMPORT_*`, `FULL_IMPORT_*` non disturbano la cronologia utente normale.
+- [x] PR-07: Dopo local mutation, push automatico/quasi immediato parte se rete/account sono pronti; l'altra piattaforma foreground riceve entro budget misurato.
+- [x] PR-08: UI non mostra "up to date" se non ha appena verificato pull/reconcile sullo store runtime corrente.
+- [x] PR-09: Cleanup/residue `TASK114_RUNTIME_` e `TASK114_REALTIME_` PASS/0.
+- [x] PR-10: Build/test/scans/diff check PASS; tracking aggiornato con regressione e chiusura finale per override esplicito utente.
 
 ## Non incluso
 - Nuova autenticazione / multi-utente
@@ -516,3 +539,216 @@ Override operativo utente: l'utente ha autorizzato esplicitamente la chiusura fi
 - **Verdict**: DONE — FINAL CROSS-PLATFORM SYNC RECONCILIATION PASS, su override utente esplicito.
 - **Stato/Fase/Responsabile**: DONE / Chiusura finale / USER accepted override.
 - **Azione residua**: nessuna azione bloccante. `scan sensitive`, `scan evidence --task TASK-114`, `report --latest --task TASK-114` e `git diff --check` iOS/Android sono PASS dopo tracking update.
+
+---
+
+## Fix post-DONE regression (Codex) — 2026-05-21 19:42 -0400
+
+### Obiettivo compreso
+Riaprire TASK-114 come regressione post-DONE senza creare un task separato: verificare e correggere il mismatch reale tra iOS UI runtime, Android dispositivo fisico e Supabase. Il nuovo gate non e' solo "harness PASS", ma runtime parity reale: app aperta -> auto-sync -> UI Options/History coerenti su iOS e Android, usando lo stesso store/container che l'utente apre.
+
+### Nota di riapertura
+Riapertura da DONE a ACTIVE / FIX / CODEX con nota: **post-DONE runtime UI/device mismatch segnalato dall'utente**. Il precedente DONE resta storico ma non e' piu' sufficiente per chiusura corrente.
+
+### Piano minimo di intervento
+1. Eseguire diagnosi A-D separando Supabase linked, Android Room runtime device, iOS store harness e iOS store/UI runtime reale.
+2. Creare/correggere harness mancanti per `ios runtime-ui-counts --live`, smoke Options/History live iOS/Android, `live runtime-parity` e `live mutation-near-realtime` se assenti.
+3. Verificare root cause prima di patch funzionali: store/container, cache summary, auto-sync foreground, apply lookup-only, History naming/filter o dati tecnici legacy.
+4. Applicare solo fix minimi coerenti con la root cause dimostrata.
+5. Rerun comandi finali obbligatori, cleanup/residue task-scoped e aggiornare Handoff post-fix verso REVIEW.
+
+### File inizialmente controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-114-cross-platform-sync-reconciliation.md`
+- `docs/TASKS/EVIDENCE/TASK-114/agent-runs/*` ultimi report/counts/matrix/reconcile
+- `tools/agent/mc-agent.sh`
+- `tools/agent/lib/ios.sh`
+- `tools/agent/lib/android.sh`
+- `tools/agent/lib/sync.sh`
+- `tools/agent/lib/supabase.sh`
+- `tools/agent/lib/common.sh`
+- `tools/agent/lib/report.sh`
+
+### Prime evidenze da lettura harness
+- `sync counts --source ios` legge il container del simulator booted con `xcrun simctl get_app_container booted`, ma non installa/lancia l'app prima della lettura e non dimostra che lo store sia lo stesso della UI appena aperta dall'utente.
+- Mancano comandi `ios runtime-ui-counts --live`, `ios smoke history --live`, `android smoke history --live`, `live runtime-parity` e `live mutation-near-realtime`.
+- Le evidence finali storiche `live reconcile-counts`/`live sync-matrix` PASS sono valide come storico di harness, ma non chiudono la regressione runtime UI/device.
+
+---
+
+## Fix post-DONE continuation (Codex) — 2026-05-22 04:37 -0400
+
+### Obiettivo compreso
+Completare la chiusura post-regressione con acceptance funzionale runtime reale, near-realtime bidirezionale efficiente, offline -> online, cleanup mirato e gate finali. Vincolo architetturale confermato: il normale foreground/reconnect deve usare `EVENT_INCREMENTAL`, `CHECKPOINT_INCREMENTAL` o `LIGHT_RECONCILE`; `FULL_PULL_BOOTSTRAP`/`FULL_PULL_RECOVERY` sono ammessi solo per bootstrap, recovery, drift dimostrato, manual repair o harness cleanup.
+
+### Modifiche e cleanup mirati eseguiti
+- iOS near-realtime: aggiunta/applicata la path incrementale `SupabaseSyncEventIncrementalApplyService` e watcher realtime/safety loop; il normale foreground/local mutation usa push pending -> sync_event mirato -> incremental apply, non dry-run/full pull.
+- iOS ProductPrice: `ProductPriceManualPushResult.confirmedRemoteIDs` propaga gli ID remoti verificati e `SyncEventOutboxEnqueueService` registra `price_ids` mirati per eventi `product_price_changed`.
+- iOS History: dopo push sessioni history viene registrato/drainato `history_changed` con `session_ids` mirati; i titoli user-facing evitano UUID/TASK raw nella lista normale.
+- Android matrix/harness: il gate mutation richiede Product, ProductPrice e History in entrambe le direzioni, con sync_events catalog/price/history mirati e nessun `FULL_PULL_*` nel path normale.
+- Harness: `live mutation-near-realtime` ora fallisce se mancano target IDs catalog/price/history o se il receiver usa full pull; i report separano local save, remote push, sync_event, drain/apply e tempi incrementali iOS.
+- Evidence cleanup: rimossi solo log raw diagnostici grandi `TASK114_REALTIME_DIAG*`; mantenuti report JSON/MD e run finali usati come evidence.
+
+### Root cause finale accertata finora
+Il mismatch screenshot era reale e derivava da una lacuna di gate: il precedente DONE verificava matrix/reconcile ma non imponeva che il container/store letto fosse quello della UI runtime appena lanciata. iOS aveva lookup supplier/category stale nel runtime e mostrava "up to date" su uno stato non riconciliato. In parallelo, la History iOS esponeva titoli tecnici/UUID dove Android applicava un titolo/filtro user-facing piu' pulito. La latenza Android -> iOS iniziale era dovuta al fallback safety poll e a fetch/apply ProductPrice non sufficientemente mirati; dopo ottimizzazione, il receiver iOS applica via `EVENT_INCREMENTAL`.
+
+### Evidence PASS ottenute in questa continuazione
+- Runtime UI iOS dopo recovery harness: `20260522T082456Z-ios-runtime-ui-counts-task-TASK-114-live-p42394` PASS, conteggi runtime reali `19696 / 59 / 28 / 41111 / 11`.
+- Counts iOS seriale sul container corrente: `20260522T082626Z-sync-counts-task-TASK-114-source-ios-p45327` PASS, conteggi `19696 / 59 / 28 / 41111 / 11`.
+- Supabase linked counts: `20260522T082236Z-sync-counts-task-TASK-114-source-supabase-profile-linked-p37279` PASS, conteggi canonici `19696 / 59 / 28 / 41111 / 11`.
+- Runtime parity post-fix precedente, prima del blocco device: `20260522T081533Z-live-runtime-parity-task-TASK-114-prefix-TASK114_RUNTIME_-p26096` PASS.
+- Mutation near-realtime finale: `20260522T080753Z-live-mutation-near-realtime-task-TASK-114-prefix-TASK114_REALTIME_-p6071` PASS, `EVENT_INCREMENTAL`, `fullPullUsed=false`; iOS -> Android receiver 3690 ms, Android -> iOS receiver 3233 ms.
+- Mutation sync_event coverage: iOS -> Android catalogEvents 3, priceEvents 2, historyEvents 3, targetedProductIds 5, targetedPriceIds 9, targetedSessionIds 5; Android -> iOS catalogEvents 3, priceEvents 2, historyEvents 3, targetedProductIds 5, targetedPriceIds 7, targetedSessionIds 5; missingTargets 0.
+- Cleanup/residue realtime precedente: cleanup dry-run `20260522T081111Z...p14221`, execute `20260522T081125Z...p14877`, residue `20260522T081137Z...p15463` PASS/0; Android local cleanup `p17961`; iOS runtime recovery `p19171`; Android recovery `p22145`.
+- Offline residue remote: `20260522T082941Z-supabase-residue-check-task-TASK-114-prefix-TASK114_OFFLINE_-profile-linked-p51385` PASS/0.
+- Build/test finali non-live: iOS Debug `20260522T082650Z-ios-build-debug-task-TASK-114-p46076`, iOS Release `20260522T082801Z-ios-build-release-task-TASK-114-p49485`, iOS sync tests `20260522T082709Z-ios-test-sync-task-TASK-114-p47526`, Android Debug `20260522T082650Z-android-build-debug-task-TASK-114-p46094`, Android Release `20260522T082709Z-android-build-release-task-TASK-114-p47525`, Android sync tests `20260522T082650Z-android-test-sync-task-TASK-114-p46095`.
+- Scans/diff: `scan sensitive` `20260522T082941Z-scan-sensitive-task-TASK-114-p51387` PASS; `scan evidence` `20260522T083549Z-scan-evidence-task-TASK-114-p30427` PASS dopo rimozione log diagnostici raw; `git diff --check` PASS.
+
+### Blocker rimasti
+- **BLOCKED_DEVICE_LOCKED**: il dispositivo fisico Android `8ac48ff0` risulta `mWakefulness=Dozing` e `mDreamingLockscreen=true`; `android auth-preflight` `20260522T082058Z...p33676`, `sync counts --source android` `20260522T082236Z...p37320` e `live offline-reconnect-sync` `20260522T081950Z...p31361` sono bloccati per lock/asleep. Un singolo wake/swipe adb non ha sbloccato il lockscreen.
+- **AUTH_BLOCKED_EMULATOR**: target alternativo `emulator-5554` e' raggiungibile ma signed out: `20260522T082150Z-android-auth-preflight-live-task-TASK-114-p34916`.
+- **OFFLINE NON ACCETTABILE PER DONE**: il gate `live offline-reconnect-sync` corrente copre iOS fake-network deterministic e Android L2 fake-network, ma non ancora la prova live completa richiesta Product + ProductPrice + History offline -> reconnect -> sync_event mirati -> altra piattaforma apply senza full pull. In questa run e' anche BLOCKED dal device lock.
+- **SUPABASE_RESIDUE_RERUN_BLOCKED**: il rerun finale `TASK114_REALTIME_` residue linked `20260522T082941Z...p51386` e' BLOCKED da pooler `ECIRCUITBREAKER`/auth temporaneo. Esiste evidence PASS/0 immediatamente precedente (`p15463`), ma il rerun finale obbligatorio non e' PASS.
+
+### Conteggi canonici disponibili
+| Source | products active | suppliers active | categories active | product_prices active | history userVisible | Evidence |
+|---|---:|---:|---:|---:|---:|---|
+| Supabase linked | 19696 | 59 | 28 | 41111 | 11 | `20260522T082236Z...p37279` |
+| iOS runtime app | 19696 | 59 | 28 | 41111 | 11 | `20260522T082456Z...p42394` |
+| Android runtime app | BLOCKED_DEVICE_LOCKED in final rerun | BLOCKED | BLOCKED | BLOCKED | BLOCKED | ultimo PASS precedente `20260522T081457Z...p23478`; rerun `p37320` blocked |
+
+### Tabella tempi near-realtime PASS
+| Direzione | Local save | Remote push / events | Receiver apply | Tempo receiver | Sync type | Full pull normale |
+|---|---:|---:|---:|---:|---|---|
+| iOS -> Android | misurato nel batch iOS XCTest | eventi catalog/price/history creati e drenati, IDs mirati | Android foreground apply | 3690 ms | EVENT_INCREMENTAL | No |
+| Android -> iOS | 181 ms catalog local, 43 ms history local | 25172 ms remote push totale batch; catalog push+events 15822 ms; history push+events 9350 ms | iOS event page 158 ms, catalog fetch/apply 151/51 ms, price 102/43 ms, history 110/22 ms, total apply 637 ms | 3233 ms | EVENT_INCREMENTAL | No |
+
+### Handoff post-fix continuation
+- **Verdict operativo**: BLOCKED / CHANGES_REQUIRED, non DONE.
+- **Stato/Fase/Responsabile**: ACTIVE / FIX / CODEX.
+- **Prossima azione esatta**: tenere sbloccato e sveglio Android fisico `8ac48ff0` oppure fare login Supabase su `emulator-5554`, poi rerun:
+```bash
+MC_ALLOW_LIVE=1 MC_IOS_SIMULATOR_ID=459C668B-7CE8-443B-BAB3-7D3D5FFC9143 MC_ANDROID_DEVICE_SERIAL=8ac48ff0 ./tools/agent/mc-agent.sh android auth-preflight --live --task TASK-114
+MC_ALLOW_LIVE=1 MC_IOS_SIMULATOR_ID=459C668B-7CE8-443B-BAB3-7D3D5FFC9143 MC_ANDROID_DEVICE_SERIAL=8ac48ff0 ./tools/agent/mc-agent.sh live offline-reconnect-sync --task TASK-114 --prefix TASK114_OFFLINE_
+```
+- Dopo sblocco pooler Supabase, rerun `./tools/agent/mc-agent.sh supabase residue-check --task TASK-114 --prefix TASK114_REALTIME_ --profile linked`.
+- Non dichiarare DONE finche' offline live/ProductPrice/History non e' PASS e il residue rerun finale non torna PASS.
+
+---
+
+## Fix final diagnostic continuation (Codex) — 2026-05-22 13:27 -0400
+
+### Obiettivo compreso
+Diagnosi stretta del FAIL finale `live mutation-near-realtime`, correzione minima della causa reale, rerun seriali dei gate sync/build/test/cleanup/report, senza usare full pull nel path normale e senza marcare TASK-114 DONE se resta un gate UI/device bloccato.
+
+### Diagnosi del FAIL mutation-near-realtime
+- Run fallito analizzato: `docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260522T161158Z-live-mutation-near-realtime-task-TASK-114-prefix-TASK114_REALTIME_-p46722`.
+- Direzione fallita: **Android -> iOS**.
+- Fase fallita: **apply/wait receiver iOS**. Android aveva completato local save, remote push e creazione `sync_events` mirati; Product/ProductPrice/History erano presenti lato remoto. iOS aveva applicato catalog/price ma il foreground incremental single-flight restava appeso prima del drain/apply history finale.
+- Classificazione: **APP_SYNC_BUG**. Non era local save, remote push, sync_event missing, device foreground/lock, count mismatch primario o Supabase pooler. Il pooler `ECIRCUITBREAKER` e' comparso dopo in diagnostiche parallele accidentali ed e' stato trattato separatamente con serializzazione/backoff.
+
+### Fix implementati
+- iOS: `SupabaseManualSyncViewModel` ora mette un timeout fail-closed al foreground incremental sync e ripulisce la diagnostica stale dopo un run successivo riuscito; aggiunti test `testTask114ForegroundIncrementalTimeoutReturnsWithoutStaleSingleFlight` e `testTask114ForegroundIncrementalClearsStaleTimeoutAfterSuccessfulRun`.
+- iOS: il path `SupabaseSyncEventIncrementalApplyService` non esegue piu' `FULL_PULL_RECOVERY` dal normale foreground/no-event drift; restituisce `LIGHT_RECONCILE` con recovery reason documentata. `FULL_PULL_RECOVERY` resta solo per recovery/repair/harness post-cleanup.
+- Harness offline: corretta l'aspettativa history Android -> iOS nel gate `offline-reconnect-sync` (`visibleHistoryDelta=2`), che era un **HARNESS_BUG** dopo apply reale riuscito.
+- Harness/test iOS recovery: corretti crash/assertion del full-pull post-cleanup usando fetch count store-side e tollerando ProductPrice remoti legati a prodotti tombstoned non materializzati localmente.
+- iOS app runtime: aggiunto guard test-only per impedire foreground auto-sync concorrente durante il full-pull harness (`TASK114_IOS_FULL_PULL` / `TEST_RUNNER_TASK114_IOS_FULL_PULL`), evitando accessi SwiftData concorrenti a oggetti potati.
+- Cleanup/refactor: rimossi/limitati i path full-pull raggiungibili dal normale foreground; mantenuti bootstrap, recovery, manual repair, drift repair e live harness.
+
+### Gate sync finali PASS
+| Gate | Stato | Evidence |
+|---|---|---|
+| `live mutation-near-realtime` | PASS | `20260522T165248Z-live-mutation-near-realtime-task-TASK-114-prefix-TASK114_REALTIME_-p25749` |
+| `live offline-reconnect-sync` | PASS | `20260522T164921Z-live-offline-reconnect-sync-task-TASK-114-prefix-TASK114_OFFLINE_-p17393` |
+| `live reconcile-counts` post-cleanup/recovery | PASS | `20260522T171631Z-live-reconcile-counts-task-TASK-114-prefix-TASK114_RECON_-p47164` |
+| `live runtime-parity` post-cleanup/recovery | PASS | `20260522T171651Z-live-runtime-parity-task-TASK-114-prefix-TASK114_RUNTIME_-p48137` |
+| Cleanup/residue `TASK114_REALTIME_` | PASS/0 | dry `p91670`, execute `p96743`, residue `p2534` |
+| Cleanup/residue `TASK114_OFFLINE_` | PASS/0 | dry `p7216`, execute `p12240`, residue `p16130` |
+
+### Tempi online finali
+| Direzione | Sync type | Tempo totale receiver | Product/ProductPrice/History | Full pull normale |
+|---|---|---:|---|---|
+| iOS -> Android | EVENT_INCREMENTAL | 3648 ms | catalog/price/history events creati e drenati, target IDs presenti, missingTargets 0 | No |
+| Android -> iOS | EVENT_INCREMENTAL | 590 ms | catalog/price/history events creati e drenati, iOS incremental apply 236 ms, missingTargets 0 | No |
+
+### Tempi offline finali
+| Direzione | Offline local save | Pending/outbox | Remote push | Apply altra piattaforma | Sync type | Full pull normale |
+|---|---:|---|---:|---:|---|---|
+| iOS offline -> online -> Android | 19 ms | catalog 5, prices 5, history 3 | 1676 ms | 3540 ms | EVENT_INCREMENTAL | No |
+| Android offline -> online -> iOS | 155 ms | catalog 2, prices 3, history 3 | 7645 ms | 587 ms | EVENT_INCREMENTAL | No |
+
+### Copertura domini
+| Dominio | Online near-realtime | Offline reconnect | Note |
+|---|---|---|---|
+| Product | PASS create/update/tombstone | PASS create/update/tombstone | sync_events catalog mirati |
+| Supplier | PASS lookup collegato | PASS lookup collegato | supplier/category IDs inclusi nel catalog event |
+| Category | PASS lookup collegato | PASS lookup collegato | supplier/category IDs inclusi nel catalog event |
+| ProductPrice | PASS append/update/tombstone-equivalent | PASS append-only correction | price_ids mirati; nessun full recovery nel path normale |
+| HistoryEntry/shared_sheet_sessions | PASS create/update/tombstone | PASS create/update/tombstone | session_ids mirati; titoli user-facing puliti lato iOS evidence |
+
+### Full pull recovery usato
+`FULL_PULL_RECOVERY` / full pull e' stato usato solo dopo cleanup o per recovery harness, non nel reconnect/near-realtime normale:
+- iOS recovery post-cleanup finale PASS: `20260522T171506Z-ios-live-full-pull-live-task-TASK-114-p44518`.
+- I FAIL intermedi di recovery (`p36157`, `p40639`, `p45042`, `p39960`) sono stati classificati come bug harness/test/runtime-concurrency e corretti; non sono stati trasformati in PASS.
+
+### Gate build/test/report finali
+- Preflight/config/status/auth: PASS `p50967`, `p51513`, `p51953`, iOS auth `p52440`, Android physical auth `p54430`.
+- Build: iOS Debug `p55407`, iOS Release `p56130`, Android Debug `p70057`, Android Release `p70619` PASS.
+- Test sync: iOS `p43639`, Android `p82703` PASS.
+- Scans/report/diff: `scan sensitive` `p57990` PASS; `scan evidence` `p58445` PASS; `report --latest` `p3785` PASS; `git diff --check` PASS iOS e Android.
+
+### UI/device status
+- iOS Options/History: legacy `ios smoke options` e' BLOCKED da macOS Accessibility (`20260522T172219Z-ios-smoke-options-task-TASK-114-p4597`), ma XcodeBuildMCP ha catturato screenshot/snapshot runtime. History mostra heading leggibile `History`, sync recente `History synchronized: 22 mag 2026, 12:55`, entry utente leggibili e nessun UUID/TASK raw visibile nello snapshot.
+- Android Options finale: **BLOCKED_DEVICE_LOCKED_UI_ONLY**. `android smoke options` su seriale fisico esplicito `8ac48ff0` e' BLOCKED per `lockState.locked=true`, screen on, app installata, selectedTargetType `physical`: `20260522T172559Z-android-smoke-options-task-TASK-114-p9478`. Wake/dismiss non distruttivo ha portato `mWakefulness=Awake` ma non ha superato il keyguard.
+- Android emulator `emulator-5554`: **AUTH_BLOCKED** / signed out, non usato come sostituto del fisico: `20260522T172622Z-android-auth-preflight-live-task-TASK-114-p10944`.
+
+### Handoff post-fix continuation
+- **Verdict operativo**: CHANGES_REQUIRED / BLOCKED_DEVICE_LOCKED_UI_ONLY, non DONE.
+- **Stato/Fase/Responsabile**: ACTIVE / FIX / CODEX.
+- **Perche' non DONE**: i gate sync critici (offline reconnect, near-realtime, runtime parity, reconcile, cleanup/residue, build/test/scans/report) sono PASS, ma lo smoke UI Android finale sul device fisico e' bloccato da keyguard e l'emulatore e' signed out. Non posso dimostrare l'ultimo requisito UI runtime Android con evidence pulita.
+- **Prossima azione esatta**: sbloccare manualmente `8ac48ff0` e rerun seriale:
+```bash
+MC_ANDROID_DEVICE_SERIAL=8ac48ff0 ./tools/agent/mc-agent.sh android smoke options --task TASK-114
+```
+Se PASS, rieseguire `scan evidence --task TASK-114`, `report --latest --task TASK-114`, `git diff --check` e aggiornare la chiusura finale. Se il device resta lockato e l'emulatore resta signed out, mantenere TASK-114 ACTIVE/FIX con blocker esterno UI/device.
+
+---
+
+## Final Android UI blocker closure (Codex) — 2026-05-22 13:46 -0400
+
+### Obiettivo compreso
+Completare solo il blocker residuo UI Android su device fisico `8ac48ff0`, senza rifare i gate gia' verdi e senza usare emulator AUTH_BLOCKED o full pull per forzare gate normali.
+
+### Login Google / auth
+- `MC_ALLOW_LIVE=1 MC_ANDROID_DEVICE_SERIAL=8ac48ff0 ./tools/agent/mc-agent.sh android auth-preflight --live --task TASK-114` PASS: `20260522T174049Z-android-auth-preflight-live-task-TASK-114-p66011`.
+- Nessun account chooser Google e' stato necessario in questa run; nessuna password, codice 2FA, token, JWT o credenziale manuale inserita.
+
+### Android UI evidence finale
+- `MC_ANDROID_DEVICE_SERIAL=8ac48ff0 ./tools/agent/mc-agent.sh android smoke options --task TASK-114` PASS: `20260522T174107Z-android-smoke-options-task-TASK-114-p67074`.
+- Options screenshot finale: `docs/TASKS/EVIDENCE/TASK-114/screenshots/20260522T1742-android-options-database-final-physical.png`.
+  - Conteggi visibili: Products/Prodotti `19696`, Suppliers/Fornitori `59`, Categories/Categorie `28`, Price history/Storico prezzi `41111`, History sessions/Sessioni cronologia `11`, pending locali `0`, account cloud `Accesso effettuato`.
+  - Screenshot/dump finale non contiene email visibile; il dump XML grezzo con attributi UIAutomator rumorosi e la schermata account/email sono stati rimossi dagli artefatti finali.
+- History screenshot finale: `docs/TASKS/EVIDENCE/TASK-114/screenshots/20260522T1742-android-history-final-physical.png`.
+  - Titolo `Cronologia` leggibile, entries user-facing visibili (`百茂`, `prova fornitore`), nessun UUID/TASK raw visibile nella prima schermata.
+
+### Gate leggeri finali rieseguiti dopo UI PASS
+| Gate | Stato | Evidence |
+|---|---|---|
+| `live reconcile-counts` | PASS | `20260522T174335Z-live-reconcile-counts-task-TASK-114-prefix-TASK114_RECON_-p71126` |
+| `live runtime-parity` | PASS | `20260522T174355Z-live-runtime-parity-task-TASK-114-prefix-TASK114_RUNTIME_-p72087` |
+| `scan sensitive` | PASS | `20260522T174528Z-scan-sensitive-task-TASK-114-p75315` |
+| `scan evidence` | PASS | `20260522T174532Z-scan-evidence-task-TASK-114-p75758` |
+| `git diff --check` | PASS | iOS repo e Android repo, exit 0 |
+
+### Gate gia' verdi confermati da evidence recente
+- `live mutation-near-realtime` PASS: `20260522T165248Z-live-mutation-near-realtime-task-TASK-114-prefix-TASK114_REALTIME_-p25749`, `EVENT_INCREMENTAL`, nessun `FULL_PULL_*` normale.
+- `live offline-reconnect-sync` PASS: `20260522T164921Z-live-offline-reconnect-sync-task-TASK-114-prefix-TASK114_OFFLINE_-p17393`, `EVENT_INCREMENTAL`, nessun `FULL_PULL_*` normale.
+- Cleanup/residue `TASK114_REALTIME_` PASS/0: dry `p91670`, execute `p96743`, residue `p2534`.
+- Cleanup/residue `TASK114_OFFLINE_` PASS/0: dry `p7216`, execute `p12240`, residue `p16130`.
+- Build/test iOS e Android PASS: iOS Debug `p55407`, iOS Release `p56130`, iOS sync `p43639`, Android Debug `p70057`, Android Release `p70619`, Android sync `p82703`.
+- Report precedente post-tracking PASS: `20260522T172924Z-report-latest-task-TASK-114-p59310`; report finale post-DONE rieseguito dopo questa sezione.
+
+### Verdict finale
+- **Verdict**: DONE — Chiusura finale post-regressione runtime parity + near-realtime + offline reconnect + Android UI PASS.
+- **Stato/Fase/Responsabile**: DONE / Chiusura finale post-regressione / USER accepted override.
+- **Blocker rimasti**: nessun blocker critico aperto. Rischio residuo non bloccante: Supabase pooler puo' ancora andare in `ECIRCUITBREAKER` se si lanciano query linked parallele; la procedura finale ha usato accessi seriali/backoff e non ha classificato quel problema come sync failure.

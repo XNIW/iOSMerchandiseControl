@@ -32,6 +32,34 @@ final class LocalPendingChangeAccumulatorTests: XCTestCase {
         XCTAssertEqual(changes.first?.entityKind, .product)
     }
 
+    func testTask114PostsLocalPendingChangeNotificationForActiveChange() throws {
+        let context = try makeContext()
+        let product = Product(barcode: "TASK114_AUTOSYNC", productName: "Autosync")
+        context.insert(product)
+        let notification = expectation(description: "local pending change notification")
+        let token = NotificationCenter.default.addObserver(
+            forName: .localPendingChangesDidChange,
+            object: nil,
+            queue: nil
+        ) { _ in
+            notification.fulfill()
+        }
+        defer { NotificationCenter.default.removeObserver(token) }
+
+        try LocalPendingChangeAccumulator(
+            context: context,
+            ownerUserID: ownerA,
+            now: { self.now }
+        ).recordProductChange(
+            product: product,
+            operation: .create,
+            origin: .manualCatalogSave,
+            changedFields: ["barcode", "productName"]
+        )
+
+        wait(for: [notification], timeout: 0.1)
+    }
+
     func testTemporaryFormEditsDoNotCreatePendingWithoutConfirmedRecord() throws {
         let context = try makeContext()
         let product = Product(barcode: "TASK093_TYPING", productName: "Draft")

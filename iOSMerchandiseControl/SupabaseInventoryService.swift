@@ -530,6 +530,60 @@ actor SupabaseInventoryService {
         }
     }
 
+    func fetchSharedSheetSessionsByIDs(
+        ownerUserID: UUID,
+        sessionIDs: Set<UUID>
+    ) async throws -> [RemoteSharedSheetSessionRow] {
+        guard !sessionIDs.isEmpty else { return [] }
+        let authenticatedUserID = try await requireAuthenticatedSession()
+        guard authenticatedUserID == ownerUserID else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+                statusCode: nil,
+                code: nil,
+                message: "History/session owner mismatch"
+            )
+        }
+
+        do {
+            let sortedIDs = sessionIDs
+                .map { $0.uuidString.lowercased() }
+                .sorted()
+            let rows: [RemoteSharedSheetSessionRow] = try await clientProvider.client
+                .from("shared_sheet_sessions")
+                .select(Self.sharedSheetSessionColumns)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .in("remote_id", values: sortedIDs)
+                .order("remote_id", ascending: true)
+                .execute()
+                .value
+            if !rows.isEmpty {
+                return rows
+            }
+            let targetedFilter = sortedIDs
+                .map { "remote_id.eq.\($0)" }
+                .joined(separator: ",")
+            return try await clientProvider.client
+                .from("shared_sheet_sessions")
+                .select(Self.sharedSheetSessionColumns)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .or(targetedFilter)
+                .order("remote_id", ascending: true)
+                .execute()
+                .value
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
     func fetchProductsPage(from: Int, to: Int) async throws -> [RemoteInventoryProductRow] {
         try await fetchRowsPage(
             table: "inventory_products",
@@ -537,6 +591,29 @@ actor SupabaseInventoryService {
             from: from,
             to: to
         )
+    }
+
+    func fetchCatalogByIDs(
+        supplierIDs: Set<UUID>,
+        categoryIDs: Set<UUID>,
+        productIDs: Set<UUID>
+    ) async throws -> (suppliers: [RemoteInventorySupplierRow], categories: [RemoteInventoryCategoryRow], products: [RemoteInventoryProductRow]) {
+        async let suppliers = fetchRowsByIDs(
+            table: "inventory_suppliers",
+            columns: "id,owner_user_id,name,updated_at,deleted_at",
+            ids: supplierIDs
+        ) as [RemoteInventorySupplierRow]
+        async let categories = fetchRowsByIDs(
+            table: "inventory_categories",
+            columns: "id,owner_user_id,name,updated_at,deleted_at",
+            ids: categoryIDs
+        ) as [RemoteInventoryCategoryRow]
+        async let products = fetchRowsByIDs(
+            table: "inventory_products",
+            columns: Self.productColumns,
+            ids: productIDs
+        ) as [RemoteInventoryProductRow]
+        return try await (suppliers, categories, products)
     }
 
     func fetchDeletedProductIDs(pageSize: Int = 1_000) async throws -> Set<UUID> {
@@ -601,6 +678,26 @@ actor SupabaseInventoryService {
         )
     }
 
+    func fetchProductPricesByIDs(
+        ownerUserID: UUID,
+        priceIDs: Set<UUID>
+    ) async throws -> [RemoteInventoryProductPriceRow] {
+        guard !priceIDs.isEmpty else { return [] }
+        let authenticatedUserID = try await requireAuthenticatedSession()
+        guard authenticatedUserID == ownerUserID else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+                statusCode: nil,
+                code: nil,
+                message: "ProductPrice owner mismatch"
+            )
+        }
+        return try await fetchRowsByIDs(
+            table: "inventory_product_prices",
+            columns: "id,owner_user_id,product_id,type,price,effective_at,source,note,created_at",
+            ids: priceIDs
+        )
+    }
+
     func fetchProductPricesPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {
         try await fetchRowsPage(
             table: "inventory_product_prices",
@@ -608,6 +705,41 @@ actor SupabaseInventoryService {
             from: from,
             to: to
         )
+    }
+
+    func fetchSyncEventsAfter(ownerUserID: UUID, afterID: Int64, limit: Int) async throws -> [RemoteSyncEventRow] {
+        let authenticatedUserID = try await requireAuthenticatedSession()
+        guard authenticatedUserID == ownerUserID else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+                statusCode: nil,
+                code: nil,
+                message: "sync event owner mismatch"
+            )
+        }
+        let effectiveLimit = max(1, min(limit, SupabaseSyncEventIncrementalLimits.maximumLimit))
+        do {
+            let rows: [RemoteSyncEventRow] = try await clientProvider.client
+                .from("sync_events")
+                .select("id,owner_user_id,store_id,domain,event_type,source,source_device_id,batch_id,client_event_id,changed_count,entity_ids,created_at,expires_at,metadata")
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .gt("id", value: Int(afterID))
+                .order("id", ascending: true)
+                .limit(effectiveLimit)
+                .execute()
+                .value
+            return rows
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
     }
 
     func fetchProductPricesPreviewPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {
@@ -703,11 +835,7 @@ actor SupabaseInventoryService {
             ownerUserID: ownerUserID,
             activeOnly: true
         )
-        async let prices = fetchExactRowCount(
-            table: "inventory_product_prices",
-            ownerUserID: ownerUserID,
-            activeOnly: false
-        )
+        async let prices = fetchActiveProductPriceCount(ownerUserID: ownerUserID)
         async let history = fetchExactRowCount(
             table: "shared_sheet_sessions",
             ownerUserID: ownerUserID,
@@ -737,12 +865,36 @@ actor SupabaseInventoryService {
         do {
             var query = client
                 .from(table)
-                .select("id", head: true, count: .exact)
+                .select("*", head: true, count: .exact)
                 .eq("owner_user_id", value: resolvedOwner.uuidString)
             if activeOnly {
                 query = query.is("deleted_at", value: nil)
             }
             let response = try await query.execute()
+            return response.count
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func fetchActiveProductPriceCount(ownerUserID: UUID) async throws -> Int? {
+        let client = clientProvider.client
+        do {
+            let response = try await client
+                .from("inventory_product_prices")
+                .select("id,inventory_products!inner(id)", head: true, count: .exact)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .is("inventory_products.deleted_at", value: nil)
+                .execute()
             return response.count
         } catch let error as DecodingError {
             throw mapDecodingError(error)
@@ -942,6 +1094,36 @@ actor SupabaseInventoryService {
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .order(Self.stablePageOrderColumn, ascending: true)
                 .range(from: start, to: end)
+                .execute()
+                .value
+            return rows
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func fetchRowsByIDs<Row: Decodable & Sendable>(
+        table: String,
+        columns: String,
+        ids: Set<UUID>
+    ) async throws -> [Row] {
+        guard !ids.isEmpty else { return [] }
+        let ownerUserID = try await requireAuthenticatedSession()
+        do {
+            let rows: [Row] = try await clientProvider.client
+                .from(table)
+                .select(columns)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .in("id", values: ids.sorted { $0.uuidString < $1.uuidString }.map(\.uuidString))
                 .execute()
                 .value
             return rows
@@ -1530,3 +1712,4 @@ actor SupabaseInventoryService {
 }
 
 extension SupabaseInventoryService: HistorySessionRemoteSyncing {}
+extension SupabaseInventoryService: SupabaseSyncEventIncrementalFetching {}

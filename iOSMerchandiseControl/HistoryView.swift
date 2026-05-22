@@ -132,7 +132,9 @@ struct HistoryView: View {
     /// Applica i filtri (periodo + solo errori) alle entry.
     private var filteredEntries: [HistoryEntry] {
         var result = entries.filter { entry in
-            entry.remoteDeletedAt == nil || entry.isHistorySessionDeletedPendingCloud
+            HistorySessionDisplayFormatter.isUserFacingIdentifier(entry.id)
+                && HistorySessionDisplayFormatter.isUserFacingIdentifier(entry.title)
+                && (entry.remoteDeletedAt == nil || entry.isHistorySessionDeletedPendingCloud)
         }
 
         let now = Date()
@@ -469,8 +471,14 @@ struct HistoryView: View {
     }
 
     private func exportDisplayName(for entry: HistoryEntry) -> String {
-        let title = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return title.isEmpty ? entry.id : title
+        HistorySessionDisplayFormatter.displayTitle(
+            id: entry.id,
+            title: entry.title,
+            supplier: entry.supplier,
+            isManualEntry: entry.isManualEntry,
+            timestamp: entry.timestamp,
+            locale: displayLocale
+        )
     }
 
     var body: some View {
@@ -637,8 +645,21 @@ private struct HistoryRow: View {
     }
     
     private var displayName: String {
-        let t = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? entry.id : t
+        HistorySessionDisplayFormatter.displayTitle(
+            id: entry.id,
+            title: entry.title,
+            supplier: entry.supplier,
+            isManualEntry: entry.isManualEntry,
+            timestamp: entry.timestamp,
+            locale: displayLocale
+        )
+    }
+
+    private var shouldShowEntryID: Bool {
+        HistorySessionDisplayFormatter.shouldShowSecondaryIdentifier(
+            id: entry.id,
+            displayTitle: displayName
+        )
     }
     
     /// Conta quante righe di questo HistoryEntry hanno un messaggio nella colonna "SyncError".
@@ -677,7 +698,7 @@ private struct HistoryRow: View {
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    if !entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if shouldShowEntryID {
                         Text(entry.id)
                             .font(.caption2)
                             .foregroundStyle(.secondary)

@@ -1,12 +1,316 @@
 #!/usr/bin/env bash
 
 mc_ios_destination() {
+  if [[ -n "${MC_IOS_SIMULATOR_ID:-}" ]]; then
+    printf 'platform=iOS Simulator,id=%s' "$MC_IOS_SIMULATOR_ID"
+    return 0
+  fi
+  if [[ -n "${MC_IOS_SIMULATOR_UDID:-}" ]]; then
+    printf 'platform=iOS Simulator,id=%s' "$MC_IOS_SIMULATOR_UDID"
+    return 0
+  fi
   printf '%s' "${MC_IOS_DESTINATION:-platform=iOS Simulator,name=${MC_IOS_SIMULATOR_NAME},OS=${MC_IOS_SIMULATOR_OS}}"
+}
+
+mc_ios_simulator_target() {
+  if [[ -n "${MC_IOS_SIMULATOR_ID:-}" ]]; then
+    printf '%s\n' "$MC_IOS_SIMULATOR_ID"
+    return "$MC_EXIT_PASS"
+  fi
+  if [[ -n "${MC_IOS_SIMULATOR_UDID:-}" ]]; then
+    printf '%s\n' "$MC_IOS_SIMULATOR_UDID"
+    return "$MC_EXIT_PASS"
+  fi
+  local target
+  target="$(MC_IOS_SIMULATOR_NAME="$MC_IOS_SIMULATOR_NAME" MC_IOS_SIMULATOR_OS="${MC_IOS_SIMULATOR_OS:-}" python3 - <<'PY'
+import json, os, subprocess, sys
+
+name = os.environ.get("MC_IOS_SIMULATOR_NAME", "")
+version = os.environ.get("MC_IOS_SIMULATOR_OS", "")
+raw = subprocess.check_output(["xcrun", "simctl", "list", "devices", "--json"], text=True)
+data = json.loads(raw)
+
+def runtime_matches(runtime):
+    if not version:
+        return True
+    suffix = "iOS-" + version.replace(".", "-")
+    return runtime.endswith(suffix)
+
+matches = []
+booted_matches = []
+for runtime, devices in data.get("devices", {}).items():
+    if not runtime_matches(runtime):
+        continue
+    for device in devices:
+        if device.get("name") != name:
+            continue
+        if not device.get("isAvailable", True):
+            continue
+        matches.append(device)
+        if device.get("state") == "Booted":
+            booted_matches.append(device)
+
+candidates = booted_matches or matches
+if len(candidates) == 1:
+    print(candidates[0]["udid"])
+    sys.exit(0)
+if len(candidates) == 0:
+    sys.exit(2)
+sys.exit(3)
+PY
+)"
+  case "$?" in
+    0)
+      printf '%s\n' "$target"
+      return "$MC_EXIT_PASS"
+      ;;
+    2)
+      MC_SUMMARY="No configured iOS simulator target found for name=${MC_IOS_SIMULATOR_NAME} OS=${MC_IOS_SIMULATOR_OS:-any}."
+      MC_NEXT_ACTION="Boot/configure the intended simulator or set MC_IOS_SIMULATOR_ID explicitly."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    *)
+      MC_SUMMARY="Ambiguous iOS simulator target for name=${MC_IOS_SIMULATOR_NAME} OS=${MC_IOS_SIMULATOR_OS:-any}."
+      MC_NEXT_ACTION="Set MC_IOS_SIMULATOR_ID to the simulator the user actually opens, then retry."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+  esac
 }
 
 mc_ios_result_bundle() {
   local slug="$1"
   printf '%s' "/tmp/mc-agent-ios-${slug}-${MC_TIMESTAMP}.xcresult"
+}
+
+mc_ios_runtime_derived_data() {
+  local slug="$1"
+  printf '%s' "/tmp/mc-agent-ios-${slug}-${MC_TIMESTAMP}-DerivedData"
+}
+
+mc_ios_app_bundle_id() {
+  printf '%s' "${MC_IOS_BUNDLE_ID:-com.niwcyber.iOSMerchandiseControl}"
+}
+
+mc_ios_boot_simulator() {
+  local target
+  target="$(mc_ios_simulator_target)" || return $?
+  xcrun simctl boot "$target" >/dev/null 2>&1 || true
+  xcrun simctl bootstatus "$target" -b
+}
+
+mc_ios_build_app_for_runtime() {
+  local derived_data="$1"
+  local dest app_path
+  dest="$(mc_ios_destination)"
+  (
+    cd "$MC_IOS_REPO" || exit 3
+    xcodebuild build -project iOSMerchandiseControl.xcodeproj \
+      -scheme "${MC_IOS_SCHEME}" \
+      -configuration Debug \
+      -destination "$dest" \
+      -derivedDataPath "$derived_data" \
+      -parallel-testing-enabled NO
+  ) >&2 || return $?
+  app_path="$(find "$derived_data/Build/Products" -path '*/Debug-iphonesimulator/iOSMerchandiseControl.app' -type d | sort | head -1)"
+  [[ -n "$app_path" && -d "$app_path" ]] || return "$MC_EXIT_BLOCKED"
+  printf '%s\n' "$app_path"
+}
+
+mc_ios_runtime_launch_app() {
+  local app_path="$1"
+  local bundle_id target
+  bundle_id="$(mc_ios_app_bundle_id)"
+  target="$(mc_ios_simulator_target)" || return $?
+  mc_ios_boot_simulator || return "$MC_EXIT_BLOCKED"
+  xcrun simctl terminate "$target" "$bundle_id" >/dev/null 2>&1 || true
+  xcrun simctl install "$target" "$app_path" || return "$MC_EXIT_BLOCKED"
+  xcrun simctl terminate "$target" "$bundle_id" >/dev/null 2>&1 || true
+  xcrun simctl launch "$target" "$bundle_id" || return "$MC_EXIT_BLOCKED"
+}
+
+mc_ios_runtime_foreground_installed_app() {
+  local bundle_id target
+  bundle_id="$(mc_ios_app_bundle_id)"
+  target="$(mc_ios_simulator_target)" || return $?
+  mc_ios_boot_simulator || return "$MC_EXIT_BLOCKED"
+  if [[ "${MC_IOS_RUNTIME_FORCE_RELAUNCH:-0}" == "1" ]]; then
+    xcrun simctl terminate "$target" "$bundle_id" >/dev/null 2>&1 || true
+  fi
+  xcrun simctl launch "$target" "$bundle_id" || return "$MC_EXIT_BLOCKED"
+}
+
+mc_ios_store_runtime_guard() {
+  local store="$1"
+  if [[ -z "$store" || ! -f "$store" ]]; then
+    MC_SUMMARY="iOS runtime store guard FAIL: default.store was not found after app launch."
+    MC_NEXT_ACTION="Install/launch the app, then retry ios runtime-ui-counts --live."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  if [[ "$store" != *"/Containers/Data/Application/"* || "$store" == *"DerivedData"* || "$store" == *".xctest"* ]]; then
+    MC_SUMMARY="iOS runtime store guard FAIL: store path does not look like the launched app data container."
+    MC_NEXT_ACTION="Inspect simctl get_app_container output; do not use XCTest/test-host stores for runtime evidence."
+    return "$MC_EXIT_FAIL"
+  fi
+  return "$MC_EXIT_PASS"
+}
+
+mc_ios_runtime_store_metadata_json() {
+  local container="$1"
+  local store="$2"
+  BUNDLE_ID="$(mc_ios_app_bundle_id)" CONTAINER_PATH="$container" STORE_PATH="$store" python3 - <<'PY'
+import hashlib, json, os, plistlib, sqlite3
+
+container = os.environ["CONTAINER_PATH"]
+store = os.environ["STORE_PATH"]
+bundle_id = os.environ["BUNDLE_ID"]
+
+def sha(value):
+    return hashlib.sha256(value.encode()).hexdigest()
+
+def apple_ts(value):
+    if value is None:
+        return None
+    try:
+        # SwiftData/CoreData timestamps are seconds from 2001-01-01.
+        import datetime as dt
+        return (dt.datetime(2001, 1, 1, tzinfo=dt.timezone.utc) + dt.timedelta(seconds=float(value))).strftime("%Y-%m-%dT%H:%M:%SZ")
+    except Exception:
+        return None
+
+metadata = {
+    "containerPathHash": sha(container),
+    "storePathHash": sha(store),
+    "storeFile": os.path.basename(store),
+    "isRuntimeAppContainer": "/Containers/Data/Application/" in store and "DerivedData" not in store and ".xctest" not in store,
+    "lastSuccessfulSync": None,
+    "baseline": None,
+    "diagnostics": {
+        "plistPresent": False,
+        "runtime": {},
+        "syncEventWatermarks": [],
+    },
+}
+prefs_path = os.path.join(container, "Library", "Preferences", f"{bundle_id}.plist")
+def plist_value(value):
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+try:
+    with open(prefs_path, "rb") as handle:
+        prefs = plistlib.load(handle)
+    runtime = {}
+    watermarks = []
+    for key, value in prefs.items():
+        if key.startswith("task114.runtime."):
+            runtime[key.replace("task114.runtime.", "", 1)] = plist_value(value)
+        elif key.startswith("task114.syncEvents.watermark."):
+            owner = key.replace("task114.syncEvents.watermark.", "", 1)
+            watermarks.append({"ownerHash": sha(owner)[:12], "value": plist_value(value)})
+    metadata["diagnostics"] = {
+        "plistPresent": True,
+        "runtime": runtime,
+        "syncEventWatermarks": watermarks,
+    }
+except FileNotFoundError:
+    pass
+except Exception as exc:
+    metadata["diagnostics"]["error"] = type(exc).__name__
+try:
+    con = sqlite3.connect(f"file:{store}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
+    tables = {row[0].upper(): row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    run_table = tables.get("ZSUPABASECATALOGBASELINERUN")
+    if run_table:
+        row = con.execute(
+            f"""
+            SELECT ZSTATUS, ZSOURCE, ZPRODUCTCOUNT, ZSUPPLIERCOUNT, ZCATEGORYCOUNT,
+                   ZTOMBSTONECOUNT, ZAPPLIEDAT, ZCREATEDAT, ZUPDATEDAT
+            FROM {run_table}
+            WHERE ZSTATUS = 'valid'
+            ORDER BY ZAPPLIEDAT DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        if row:
+            metadata["lastSuccessfulSync"] = apple_ts(row["ZAPPLIEDAT"])
+            metadata["baseline"] = {
+                "status": row["ZSTATUS"],
+                "source": row["ZSOURCE"],
+                "products": row["ZPRODUCTCOUNT"],
+                "suppliers": row["ZSUPPLIERCOUNT"],
+                "categories": row["ZCATEGORYCOUNT"],
+                "tombstones": row["ZTOMBSTONECOUNT"],
+                "appliedAt": apple_ts(row["ZAPPLIEDAT"]),
+                "createdAt": apple_ts(row["ZCREATEDAT"]),
+                "updatedAt": apple_ts(row["ZUPDATEDAT"]),
+            }
+except Exception as exc:
+    metadata["metadataError"] = type(exc).__name__
+print(json.dumps(metadata, sort_keys=True))
+PY
+}
+
+mc_ios_runtime_counts_payload() {
+  local source="$1"
+  local wait_seconds="$2"
+  local container="$3"
+  local store="$4"
+  local counts_json metadata_json
+
+  mc_sync_counts_ios "$MC_TASK_ID"
+  counts_json="$MC_SYNC_JSON_RESULT"
+  metadata_json="$(mc_ios_runtime_store_metadata_json "$container" "$store")"
+  IOS_COUNTS_JSON="$counts_json" IOS_METADATA_JSON="$metadata_json" IOS_WAIT_SECONDS="$wait_seconds" IOS_RUNTIME_SOURCE="$source" python3 - > /tmp/mc-agent-ios-runtime-ui-counts.$$.json <<'PY'
+import json, os
+from datetime import datetime, timezone
+
+counts = json.loads(os.environ["IOS_COUNTS_JSON"])
+metadata = json.loads(os.environ["IOS_METADATA_JSON"])
+status = "PASS"
+blocker = None
+if counts.get("status") != "PASS":
+    status = "BLOCKED"
+    blocker = counts.get("blocker", "iOS runtime count source unavailable")
+if not metadata.get("isRuntimeAppContainer"):
+    status = "FAIL"
+    blocker = "Store path is not the launched app runtime container"
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+payload = dict(counts)
+payload.update({
+    "completedAt": now,
+    "source": os.environ["IOS_RUNTIME_SOURCE"],
+    "runtime": {
+        "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl",
+        "waitSecondsAfterLaunch": int(float(os.environ["IOS_WAIT_SECONDS"])),
+        **metadata,
+    },
+    "lastPull": metadata.get("lastSuccessfulSync"),
+    "lastFullReconciliation": metadata.get("lastSuccessfulSync"),
+    "status": status,
+})
+if blocker:
+    payload["blocker"] = blocker
+print(json.dumps(payload, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-runtime-ui-counts.$$.json)"
+  rm -f /tmp/mc-agent-ios-runtime-ui-counts.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+}
+
+mc_ios_runtime_store_counts() {
+  local wait_seconds="${1:-${MC_IOS_RUNTIME_REUSE_WAIT_SECONDS:-0}}"
+  local container store
+
+  if [[ "$wait_seconds" != "0" && "$wait_seconds" != "0.0" ]]; then
+    sleep "$wait_seconds"
+  fi
+  container="$(mc_sync_ios_container 2>/dev/null || true)"
+  store="$(mc_sync_ios_store_path "$container" 2>/dev/null || true)"
+  mc_ios_store_runtime_guard "$store" || return $?
+  mc_ios_runtime_counts_payload "ios.runtime-store-counts" "$wait_seconds" "$container" "$store"
+  return "$MC_EXIT_PASS"
 }
 
 mc_ios_plist_set_or_add() {
@@ -206,6 +510,18 @@ mc_ios_smoke() {
         mc_ios_options_fallback && return "$MC_EXIT_PASS"
         code=$?
       fi
+      ;;
+    history)
+      mc_ios_runtime_ui_counts || return $?
+      if ! grep -q "HistorySessionDisplayFormatter.displayTitle" "$MC_IOS_REPO/iOSMerchandiseControl/HistoryView.swift"; then
+        MC_SUMMARY="iOS smoke history FAIL: HistoryView is not using the TASK-114 display title formatter."
+        MC_NEXT_ACTION="Wire HistoryView through HistorySessionDisplayFormatter and rerun history smoke."
+        return "$MC_EXIT_FAIL"
+      fi
+      mc_set_pass_with_notes
+      MC_SUMMARY="iOS smoke history PASS_WITH_NOTES: runtime app launched and HistoryView uses the UUID/technical-title display formatter; capture visual/XcodeBuildMCP evidence for strict UI proof."
+      MC_NEXT_ACTION="Capture iOS History screenshot/accessibility evidence and run live runtime-parity."
+      return "$MC_EXIT_PASS"
       ;;
     *)
       MC_SUMMARY="Unknown iOS smoke kind: ${kind}"
@@ -421,13 +737,19 @@ category_delta = (after_counts.get("categories", {}).get("active") or 0) - (befo
 now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 remote_suppliers = metrics.get("remote_suppliers")
 remote_categories = metrics.get("remote_categories")
+remote_product_prices = metrics.get("price_total")
 after_suppliers = after_counts.get("suppliers", {}).get("active")
 after_categories = after_counts.get("categories", {}).get("active")
+after_product_prices = after_counts.get("product_prices", {}).get("active")
 counts_match = True
 if isinstance(remote_suppliers, int):
     counts_match = counts_match and after_suppliers == remote_suppliers
 if isinstance(remote_categories, int):
     counts_match = counts_match and after_categories == remote_categories
+if isinstance(remote_product_prices, int):
+    materialized_prices = metrics.get("after_prices")
+    if isinstance(materialized_prices, int):
+        counts_match = counts_match and materialized_prices <= remote_product_prices
 status = "PASS" if code == 0 and after.get("status") == "PASS" and line and not skipped and counts_match else "FAIL"
 payload = {
     "schemaVersion": "1.1",
@@ -448,7 +770,7 @@ payload = {
     "deleted": 0,
     "pruned": {
         "wouldPrune": 0,
-        "didPrune": 0,
+        "didPrune": metrics.get("product_pruned", 0) + metrics.get("price_pruned", 0),
         "skippedDirty": 0,
         "skippedLocalOnly": 0,
         "skippedPendingTombstone": 0,
@@ -464,6 +786,14 @@ payload = {
         "plannedCategories": metrics.get("planned_categories"),
         "skippedSuppliers": 0,
         "skippedCategories": 0
+    },
+    "productPriceApply": {
+        "inserted": metrics.get("price_inserted", 0),
+        "linked": metrics.get("price_linked", 0),
+        "pruned": metrics.get("price_pruned", 0),
+        "skipped": metrics.get("price_skipped", 0),
+        "remoteTotal": remote_product_prices,
+        "after": metrics.get("after_prices")
     },
     "skipped": 0,
     "drift": {},
@@ -489,6 +819,78 @@ PY
   MC_SUMMARY="iOS live-full-pull FAIL/BLOCKED. xcresult=${bundle}"
   MC_NEXT_ACTION="Inspect xcresult/log; verify app-auth session and persistent SwiftData store."
   return "$MC_EXIT_FAIL"
+}
+
+mc_ios_runtime_ui_counts() {
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="PR-01,PR-03,PR-04,PR-08"
+  mc_require_live || return $?
+  local derived_data app_path code wait_seconds container store status
+  derived_data="$(mc_ios_runtime_derived_data runtime-ui-counts)"
+  wait_seconds="${MC_IOS_RUNTIME_WAIT_SECONDS:-20}"
+  if [[ "${MC_IOS_RUNTIME_REUSE_LAUNCHED:-0}" == "1" ]]; then
+    wait_seconds="${MC_IOS_RUNTIME_REUSE_WAIT_SECONDS:-0}"
+  elif [[ "${MC_IOS_RUNTIME_FOREGROUND_ONLY:-0}" == "1" ]]; then
+    mc_ios_runtime_foreground_installed_app || {
+      rm -rf "$derived_data"
+      MC_SUMMARY="iOS runtime-ui-counts BLOCKED: installed runtime app could not be launched foreground."
+      MC_NEXT_ACTION="Install/launch the app once, then retry the live gate."
+      return "$MC_EXIT_BLOCKED"
+    }
+  else
+    mc_git_context "$MC_IOS_REPO"
+    mc_ios_acquire_xcode_lock || return $?
+    app_path="$(mc_ios_build_app_for_runtime "$derived_data")"
+    code=$?
+    mc_ios_release_xcode_lock
+    if [[ "$code" -ne 0 || -z "$app_path" ]]; then
+      rm -rf "$derived_data"
+      MC_SUMMARY="iOS runtime-ui-counts BLOCKED: Debug app build failed or app bundle was not found."
+      MC_NEXT_ACTION="Inspect xcodebuild log, then rerun ios runtime-ui-counts --live."
+      return "$MC_EXIT_BLOCKED"
+    fi
+    mc_ios_runtime_launch_app "$app_path" || {
+      rm -rf "$derived_data"
+      MC_SUMMARY="iOS runtime-ui-counts BLOCKED: install/launch failed for the simulator app."
+      MC_NEXT_ACTION="Boot the configured simulator and retry; verify bundle id $(mc_ios_app_bundle_id)."
+      return "$MC_EXIT_BLOCKED"
+    }
+  fi
+  if [[ "$wait_seconds" != "0" && "$wait_seconds" != "0.0" ]]; then
+    sleep "$wait_seconds"
+  fi
+  container="$(mc_sync_ios_container 2>/dev/null || true)"
+  store="$(mc_sync_ios_store_path "$container" 2>/dev/null || true)"
+  mc_ios_store_runtime_guard "$store" || {
+    rm -rf "$derived_data"
+    return $?
+  }
+  if [[ "${MC_IOS_RUNTIME_REUSE_LAUNCHED:-0}" == "1" ]]; then
+    mc_ios_runtime_counts_payload "ios.runtime-store-counts" "$wait_seconds" "$container" "$store"
+  else
+    mc_ios_runtime_counts_payload "ios.runtime-ui-counts" "$wait_seconds" "$container" "$store"
+  fi
+  rm -rf "$derived_data"
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  case "$status" in
+    PASS)
+      MC_SUMMARY="iOS runtime-ui-counts PASS: launched app, read runtime default.store, and captured counts/baseline metadata."
+      MC_NEXT_ACTION="Compare with Supabase/Android and run iOS live smoke Options/History."
+      return "$MC_EXIT_PASS"
+      ;;
+    BLOCKED)
+      MC_SUMMARY="iOS runtime-ui-counts BLOCKED: launched app but count source was unavailable."
+      MC_NEXT_ACTION="Inspect simulator app container and retry after app reaches foreground."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    *)
+      MC_SUMMARY="iOS runtime-ui-counts FAIL: store/container guard failed."
+      MC_NEXT_ACTION="Fix harness/container selection before using iOS counts as runtime evidence."
+      return "$MC_EXIT_FAIL"
+      ;;
+  esac
 }
 
 mc_ios_live_write() {
@@ -537,7 +939,7 @@ mc_ios_task114_matrix_step() {
   mc_validate_task_prefix "$prefix" || return $?
   mc_require_live || return $?
   MC_TEST_PREFIX="$prefix"
-  local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped
+  local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped store_path
   dest="$(mc_ios_destination)"
   bundle="$(mc_ios_result_bundle "task114-${method}")"
   test_log="$(mktemp "/tmp/mc-agent-ios-task114-${method}.XXXXXX.log")"
@@ -545,6 +947,10 @@ mc_ios_task114_matrix_step() {
   xctestrun="${derived_data}/Build/Products/task114-${method}.xctestrun"
   MC_ARTIFACT_XCRESULT="$bundle"
   mc_git_context "$MC_IOS_REPO"
+  store_path="$(mc_sync_ios_container | { read -r container && mc_sync_ios_store_path "$container"; } 2>/dev/null || true)"
+  if [[ -n "$store_path" ]]; then
+    mc_ios_store_runtime_guard "$store_path" || return $?
+  fi
   mc_ios_acquire_xcode_lock || return $?
   (
     cd "$MC_IOS_REPO" || exit 3
@@ -625,6 +1031,10 @@ mc_cmd_ios() {
     build) mc_ios_build "${1:-debug}" ;;
     test) mc_ios_test "${1:-sync}" ;;
     smoke) mc_ios_smoke "${1:-simulator}" ;;
+    runtime-ui-counts)
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      mc_ios_runtime_ui_counts
+      ;;
     auth-preflight)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
       mc_ios_auth_preflight

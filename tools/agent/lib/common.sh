@@ -43,6 +43,8 @@ mc_load_config() {
   local had_allow_cleanup="${MC_ALLOW_CLEANUP+x}"
   local had_profile="${MC_SUPABASE_PROFILE+x}"
   local had_android_serial="${MC_ANDROID_DEVICE_SERIAL+x}"
+  local had_ios_simulator_id="${MC_IOS_SIMULATOR_ID+x}"
+  local had_ios_simulator_udid="${MC_IOS_SIMULATOR_UDID+x}"
   local env_task_id="${MC_TASK_ID:-}"
   local env_evidence_dir="${MC_EVIDENCE_DIR:-}"
   local env_run_prefix="${MC_RUN_PREFIX:-}"
@@ -50,6 +52,8 @@ mc_load_config() {
   local env_allow_cleanup="${MC_ALLOW_CLEANUP:-}"
   local env_profile="${MC_SUPABASE_PROFILE:-}"
   local env_android_serial="${MC_ANDROID_DEVICE_SERIAL:-}"
+  local env_ios_simulator_id="${MC_IOS_SIMULATOR_ID:-}"
+  local env_ios_simulator_udid="${MC_IOS_SIMULATOR_UDID:-}"
   if [[ -f "$cfg" ]]; then
     # shellcheck source=/dev/null
     source "$cfg"
@@ -64,10 +68,13 @@ mc_load_config() {
   [[ -n "$had_allow_cleanup" ]] && MC_ALLOW_CLEANUP="$env_allow_cleanup"
   [[ -n "$had_profile" ]] && MC_SUPABASE_PROFILE="$env_profile"
   [[ -n "$had_android_serial" ]] && MC_ANDROID_DEVICE_SERIAL="$env_android_serial"
+  [[ -n "$had_ios_simulator_id" ]] && MC_IOS_SIMULATOR_ID="$env_ios_simulator_id"
+  [[ -n "$had_ios_simulator_udid" ]] && MC_IOS_SIMULATOR_UDID="$env_ios_simulator_udid"
 
   export MC_IOS_REPO MC_ANDROID_REPO MC_SUPABASE_REPO MC_TASK_ID MC_EVIDENCE_DIR
   export MC_AGENT_VERSION MC_SCHEMA_VERSION MC_ALLOW_LIVE MC_ALLOW_CLEANUP
   export MC_IOS_SCHEME MC_IOS_SIMULATOR_NAME MC_IOS_SIMULATOR_OS MC_IOS_DESTINATION
+  export MC_IOS_SIMULATOR_ID MC_IOS_SIMULATOR_UDID MC_IOS_BUNDLE_ID
   export MC_ANDROID_DEVICE_SERIAL MC_ANDROID_SDK_ROOT MC_SUPABASE_PROJECT_REF MC_SUPABASE_PROFILE
   export MC_REDACT_EMAILS MC_REDACT_PATHS MC_RUN_PREFIX
 
@@ -365,14 +372,15 @@ Usage:
   ./tools/agent/mc-agent.sh report --task <TASK-ID> | report --latest | report validate-json --path <file>
   ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task <TASK-ID> | scan repo-diff | scan release-cta
   ./tools/agent/mc-agent.sh safety check-prefix --prefix TASK114_* | safety dry-run-required --command "<command>"
-  ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|lifecycle|offline | ios smoke simulator|options
+  ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|lifecycle|offline | ios smoke simulator|options|history
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-114
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios runtime-ui-counts --live --task TASK-114
   ./tools/agent/mc-agent.sh android build debug|release | android test sync|offline | android offline-tier-status
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh android live-full-pull --live
   ./tools/agent/mc-agent.sh android offline-write|reconnect-drain --tier L1|L2|L3 --prefix TASK114_OFFLINE_*
   ./tools/agent/mc-agent.sh sync counts --task TASK-114 --source supabase|android|ios [--profile linked]
   ./tools/agent/mc-agent.sh supabase status-redacted|verify-schema|verify-rls|verify-grants|residue-check --profile local|linked|dry-run-no-db
-  ./tools/agent/mc-agent.sh live sync-matrix|offline-matrix|reconcile-counts|cleanup-and-verify --task TASK-114 --prefix TASK114_*
+  ./tools/agent/mc-agent.sh live sync-matrix|runtime-parity|mutation-near-realtime|offline-matrix|reconcile-counts|cleanup-and-verify --task TASK-114 --prefix TASK114_*
 
 Exit codes: 0=PASS 1=FAIL 2=BLOCKED 3=MISCONFIGURED 4=UNSAFE_OPERATION_REFUSED
 Reports: docs/TASKS/EVIDENCE/<task>/agent-runs/<timestamp>-<command>.{log,md,json}
@@ -418,9 +426,11 @@ mc_help_json() {
     {"name":"ios test offline","argv":["ios","test","offline"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios smoke simulator","argv":["ios","smoke","simulator"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios smoke options","argv":["ios","smoke","options"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios smoke history","argv":["ios","smoke","history"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios auth-preflight","argv":["ios","auth-preflight","--live"],"platform":"ios","safety_level":"live-write","requires_live":true},
     {"name":"ios live-write","argv":["ios","live-write","--prefix","TASK113_*"],"platform":"ios","safety_level":"live-write","requires_live":true},
     {"name":"ios live-full-pull","argv":["ios","live-full-pull","--live","--task","TASK-114"],"platform":"ios","safety_level":"live-write","requires_live":true},
+    {"name":"ios runtime-ui-counts","argv":["ios","runtime-ui-counts","--live","--task","TASK-114"],"platform":"ios","safety_level":"live-write","requires_live":true},
     {"name":"ios cleanup-scoped","argv":["ios","cleanup-scoped","--prefix","TASK113_*","--dry-run"],"platform":"ios","safety_level":"cleanup-dry-run"},
     {"name":"android build debug","argv":["android","build","debug"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android build release","argv":["android","build","release"],"platform":"android","safety_level":"safe-readonly"},
@@ -448,6 +458,8 @@ mc_help_json() {
     {"name":"supabase pooler-cooldown-check","argv":["supabase","pooler-cooldown-check"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"live sync-matrix","argv":["live","sync-matrix","--task","TASK-113","--prefix","TASK113_FINAL_*"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"live reconcile-counts","argv":["live","reconcile-counts","--task","TASK-114","--prefix","TASK114_RECON_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live runtime-parity","argv":["live","runtime-parity","--task","TASK-114","--prefix","TASK114_RUNTIME_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live mutation-near-realtime","argv":["live","mutation-near-realtime","--task","TASK-114","--prefix","TASK114_REALTIME_*"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"live offline-matrix","argv":["live","offline-matrix","--task","TASK-113","--prefix","TASK113_OFFLINE_*"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"live cleanup-and-verify","argv":["live","cleanup-and-verify","--task","TASK-113","--prefix","TASK113_*"],"platform":"live","safety_level":"cleanup-execute","requires_cleanup":true}
   ]

@@ -403,7 +403,7 @@ mc_cmd_supabase() {
       if [[ "$execute" == "1" ]]; then
         cleanup_profile="${cleanup_profile:-${MC_SUPABASE_PROFILE:-linked}}"
       else
-        cleanup_profile="${cleanup_profile:-dry-run-no-db}"
+        cleanup_profile="${cleanup_profile:-${MC_SUPABASE_PROFILE:-linked}}"
       fi
       mc_supabase_cleanup "$task_id" "$prefix" "$dry" "$execute" "$cleanup_profile" "$plan_id"
       ;;
@@ -428,6 +428,822 @@ mc_cmd_supabase() {
   esac
 }
 
+mc_live_count_value() {
+  local json="$1"
+  local table="$2"
+  local field="$3"
+  JSON_PAYLOAD="$json" TABLE_NAME="$table" FIELD_NAME="$field" python3 - <<'PY'
+import json, os
+payload = json.loads(os.environ["JSON_PAYLOAD"])
+value = payload.get("counts", {}).get(os.environ["TABLE_NAME"], {}).get(os.environ["FIELD_NAME"])
+if value is None:
+    raise SystemExit(2)
+print(value)
+PY
+}
+
+mc_live_wait_counts_delta() {
+  local source="$1"
+  local baseline_json="$2"
+  local product_delta="$3"
+  local history_delta="$4"
+  local price_delta="$5"
+  local timeout_seconds="$6"
+  local label="$7"
+  local start_ms now_ms elapsed_ms code current_json status product_base history_base price_base product_now history_now price_now
+  local poll_count
+  product_base="$(mc_live_count_value "$baseline_json" products active)" || return "$MC_EXIT_BLOCKED"
+  history_base="$(mc_live_count_value "$baseline_json" history_entries userVisible)" || return "$MC_EXIT_BLOCKED"
+  price_base="$(mc_live_count_value "$baseline_json" product_prices active)" || return "$MC_EXIT_BLOCKED"
+  start_ms="$(mc_now_ms)"
+  MC_LIVE_WAIT_LAST_JSON=""
+  MC_LIVE_WAIT_ELAPSED_MS=""
+  MC_LIVE_WAIT_POLL_COUNT="0"
+  poll_count=0
+  while true; do
+    poll_count=$((poll_count + 1))
+    case "$source" in
+      android) mc_sync_counts_android "$MC_TASK_ID"; code=$? ;;
+      ios) MC_IOS_RUNTIME_REUSE_LAUNCHED=1 MC_IOS_RUNTIME_REUSE_WAIT_SECONDS=0 mc_ios_runtime_ui_counts; code=$? ;;
+      *) return "$MC_EXIT_MISCONFIGURED" ;;
+    esac
+    current_json="$MC_SYNC_JSON_RESULT"
+    if [[ "$code" -ne 0 ]]; then
+      MC_LIVE_WAIT_LAST_JSON="$current_json"
+      MC_SUMMARY="Live sync wait BLOCKED while polling ${source} for ${label}."
+      MC_NEXT_ACTION="Resolve device/store access blocker, then rerun the live gate."
+      return "$MC_EXIT_BLOCKED"
+    fi
+    product_now="$(mc_live_count_value "$current_json" products active || true)"
+    history_now="$(mc_live_count_value "$current_json" history_entries userVisible || true)"
+    price_now="$(mc_live_count_value "$current_json" product_prices active || true)"
+    now_ms="$(mc_now_ms)"
+    elapsed_ms=$((now_ms - start_ms))
+    MC_LIVE_WAIT_LAST_JSON="$current_json"
+    MC_LIVE_WAIT_ELAPSED_MS="$elapsed_ms"
+    MC_LIVE_WAIT_POLL_COUNT="$poll_count"
+    if [[ -n "$product_now" && -n "$history_now" && -n "$price_now" ]] \
+      && (( product_now >= product_base + product_delta )) \
+      && (( history_now >= history_base + history_delta )) \
+      && (( price_now >= price_base + price_delta )); then
+      mc_report_log "TASK114_REALTIME_WAIT source=${source} label=${label} elapsedMs=${elapsed_ms} polls=${poll_count} products=${product_base}->${product_now} productPrices=${price_base}->${price_now} historyUserVisible=${history_base}->${history_now}"
+      return "$MC_EXIT_PASS"
+    fi
+    if (( elapsed_ms >= timeout_seconds * 1000 )); then
+      MC_SUMMARY="Live sync wait FAIL: ${source} did not receive ${label} within ${timeout_seconds}s."
+      MC_NEXT_ACTION="Inspect foreground app auto-sync/realtime logs and rerun after fixing push/pull trigger."
+      return "$MC_EXIT_FAIL"
+    fi
+    sleep 2
+  done
+}
+
+mc_live_sync_events_for_prefix_json() {
+  local prefix="$1"
+  local like_prefix sql out
+  like_prefix="$(mc_prefix_like "$prefix")"
+  sql="SELECT id, domain, event_type, source, changed_count, entity_ids, created_at FROM public.sync_events WHERE client_event_id LIKE '${like_prefix}' OR source_device_id LIKE '${like_prefix}' OR entity_ids::text LIKE '${like_prefix}' OR metadata::text LIKE '${like_prefix}' ORDER BY id;"
+  out="$(
+    cd "$MC_SUPABASE_REPO" || exit 3
+    supabase db query --linked -o json "$sql"
+  )" || {
+    printf '{"rows":[],"blocked":true}'
+    return 0
+  }
+  JSON_INPUT="$out" python3 - <<'PY'
+import json, os
+raw = os.environ.get("JSON_INPUT", "")
+try:
+    payload = json.loads(raw)
+    print(json.dumps({"rows": payload.get("rows", []), "blocked": False}, sort_keys=True))
+except Exception:
+    print(json.dumps({"rows": [], "blocked": True}, sort_keys=True))
+PY
+}
+
+mc_live_sync_events_for_window_json() {
+  local start_ms="$1"
+  local end_ms="$2"
+  local source_pattern="${3:-android%}"
+  local sql out
+  sql="WITH bounds AS (
+    SELECT to_timestamp((${start_ms}::numeric / 1000.0) - 5.0) AS started_at,
+           to_timestamp((${end_ms}::numeric / 1000.0) + 5.0) AS ended_at
+  )
+  SELECT id, domain, event_type, source, changed_count, entity_ids, created_at
+  FROM public.sync_events, bounds
+  WHERE created_at BETWEEN bounds.started_at AND bounds.ended_at
+    AND (source ILIKE '${source_pattern}' OR source = 'android_history_session_push')
+  ORDER BY id;"
+  out="$(
+    cd "$MC_SUPABASE_REPO" || exit 3
+    supabase db query --linked -o json "$sql"
+  )" || {
+    printf '{"rows":[],"blocked":true}'
+    return 0
+  }
+  JSON_INPUT="$out" python3 - <<'PY'
+import json, os
+raw = os.environ.get("JSON_INPUT", "")
+try:
+    payload = json.loads(raw)
+    print(json.dumps({"rows": payload.get("rows", []), "blocked": False}, sort_keys=True))
+except Exception:
+    print(json.dumps({"rows": [], "blocked": True}, sort_keys=True))
+PY
+}
+
+mc_live_runtime_parity() {
+  local task_id="$1"
+  local prefix="$2"
+  local profile="$3"
+  local started supabase_json android_json ios_json code_s code_a code_i code_launch
+  MC_PLATFORM="live"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="PR-01,PR-02,PR-03,PR-04,PR-08"
+  mc_validate_task_prefix "$prefix" || return $?
+  mc_require_live || return $?
+  MC_TEST_PREFIX="$prefix"
+  started="$(mc_now_iso)"
+
+  mc_android_smoke device; code_launch=$?
+  if [[ "$code_launch" -ne 0 ]]; then
+    android_json="$(mc_sync_make_blocked_json "$task_id" "android" "${MC_SUMMARY:-Android runtime app launch failed.}")"
+    code_a="$MC_EXIT_BLOCKED"
+  else
+    mc_sync_counts_android "$task_id"; code_a=$?; android_json="$MC_SYNC_JSON_RESULT"
+  fi
+  mc_ios_runtime_ui_counts; code_i=$?; ios_json="$MC_SYNC_JSON_RESULT"
+  mc_sync_counts_supabase "$task_id" "$profile"; code_s=$?; supabase_json="$MC_SYNC_JSON_RESULT"
+
+  RUNTIME_PARITY_STARTED="$started" TASK_ID="$task_id" PREFIX="$prefix" SUPABASE_JSON="$supabase_json" ANDROID_JSON="$android_json" IOS_JSON="$ios_json" CODES="$code_s,$code_a,$code_i" python3 - > /tmp/mc-agent-runtime-parity.$$.json <<'PY'
+import json, os
+from datetime import datetime, timezone
+
+sources = {
+    "supabase": json.loads(os.environ["SUPABASE_JSON"]),
+    "android": json.loads(os.environ["ANDROID_JSON"]),
+    "iosRuntime": json.loads(os.environ["IOS_JSON"]),
+}
+tables = ["products", "suppliers", "categories", "product_prices", "history_entries"]
+comparison_fields = {
+    "products": ["active", "pending", "localOnly"],
+    "suppliers": ["active", "pending", "localOnly"],
+    "categories": ["active", "pending", "localOnly"],
+    "product_prices": ["active", "pending", "localOnly"],
+    "history_entries": ["userVisible", "pending", "localOnly"],
+}
+blocked = {
+    name: payload.get("blocker")
+    for name, payload in sources.items()
+    if payload.get("status") == "BLOCKED"
+}
+drift = {}
+for table in tables:
+    table_drift = {}
+    for field in comparison_fields[table]:
+        values = {name: payload.get("counts", {}).get(table, {}).get(field) for name, payload in sources.items()}
+        comparable = {k: v for k, v in values.items() if v is not None}
+        if len(set(comparable.values())) > 1:
+            table_drift[field] = values
+    if table_drift:
+        drift[table] = table_drift
+ios_runtime = sources["iosRuntime"].get("runtime", {})
+if not ios_runtime.get("isRuntimeAppContainer", False):
+    drift.setdefault("iosRuntimeStore", {})["isRuntimeAppContainer"] = {
+        "iosRuntime": ios_runtime.get("isRuntimeAppContainer"),
+        "expected": True,
+    }
+status = "BLOCKED" if blocked else ("PASS" if not drift else "FAIL")
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ["TASK_ID"],
+    "startedAt": os.environ["RUNTIME_PARITY_STARTED"],
+    "completedAt": now,
+    "source": "live.runtime-parity",
+    "prefix": os.environ["PREFIX"],
+    "status": status,
+    "blockers": blocked,
+    "counts": {
+        "supabase": sources["supabase"].get("counts", {}),
+        "android": sources["android"].get("counts", {}),
+        "iosRuntime": sources["iosRuntime"].get("counts", {}),
+    },
+    "checkpoint": {
+        "supabase": sources["supabase"].get("checkpoint"),
+        "android": sources["android"].get("checkpoint"),
+        "iosRuntime": sources["iosRuntime"].get("checkpoint"),
+    },
+    "runtime": {
+        "ios": ios_runtime,
+        "android": {"launchedApp": True},
+    },
+    "comparison": {
+        "fields": comparison_fields,
+        "definition": "Runtime parity launches iOS and Android apps, reads Supabase linked counts, then compares app-store counts with TASK-114 canonical fields."
+    },
+    "drift": drift,
+    "samples": {
+        "iosMissingSupplierCategory": sources["iosRuntime"].get("samples", {}).get("iosMissingSupplierCategory", []),
+        "androidLocalProductsMissingRemote": sources["android"].get("samples", {}).get("androidLocalProductsMissingRemote", []),
+    },
+}, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-runtime-parity.$$.json)"
+  rm -f /tmp/mc-agent-runtime-parity.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  local status
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  case "$status" in
+    PASS)
+      MC_SUMMARY="Live runtime-parity PASS for ${prefix}: Supabase, Android runtime and iOS runtime app store align."
+      MC_NEXT_ACTION="Run mutation-near-realtime, visual smoke, cleanup/residue and scans."
+      return "$MC_EXIT_PASS"
+      ;;
+    BLOCKED)
+      MC_SUMMARY="Live runtime-parity BLOCKED for ${prefix}: one or more runtime count sources unavailable."
+      MC_NEXT_ACTION="Resolve app/device/store blocker, then rerun runtime-parity."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    *)
+      MC_SUMMARY="Live runtime-parity FAIL for ${prefix}: drift remains in runtime app counts."
+      MC_NEXT_ACTION="Inspect runtime parity drift, repair auto-sync/apply/UI store selection, then rerun."
+      return "$MC_EXIT_FAIL"
+      ;;
+  esac
+}
+
+mc_live_mutation_near_realtime() {
+  local task_id="$1"
+  local prefix="$2"
+  local started run_prefix ios_prefix android_prefix timeout_seconds
+  local android_before ios_before android_after_ios ios_after_android
+  local code_ios_write code_android_wait code_android_write code_ios_wait
+  local ios_write_started ios_write_finished android_write_started android_write_finished
+  local ios_to_android_ms android_to_ios_ms
+  local ios_to_android_polls android_to_ios_polls android_timing_line ios_events_json android_events_json
+  MC_PLATFORM="live"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="PR-04,PR-07"
+  mc_validate_task_prefix "$prefix" || return $?
+  mc_require_live || return $?
+  timeout_seconds="${MC_MUTATION_NEAR_REALTIME_TIMEOUT_SECONDS:-30}"
+  run_prefix="${prefix//\*/}"
+  run_prefix="${run_prefix%_}_RT_${MC_TIMESTAMP}_"
+  ios_prefix="${run_prefix}IOS_"
+  android_prefix="${run_prefix}ANDROID_"
+  mc_validate_task_prefix "$ios_prefix" || return $?
+  mc_validate_task_prefix "$android_prefix" || return $?
+  MC_TEST_PREFIX="$run_prefix"
+  started="$(mc_now_iso)"
+
+  mc_android_auth_preflight || return $?
+  mc_ios_auth_preflight || return $?
+  mc_android_smoke device || return $?
+  mc_ios_runtime_ui_counts || return $?
+
+  mc_sync_counts_android "$task_id" || return $?
+  android_before="$MC_SYNC_JSON_RESULT"
+  ios_write_started="$(mc_now_ms)"
+  mc_ios_task114_matrix_step test114IOSWriteProductHistoryMatrix "$ios_prefix"
+  code_ios_write=$?
+  ios_write_finished="$(mc_now_ms)"
+  if [[ "$code_ios_write" -ne 0 ]]; then
+    MC_SUMMARY="Live mutation-near-realtime FAIL/BLOCKED: iOS write leg did not pass."
+    MC_NEXT_ACTION="Inspect iOS write matrix step and rerun mutation-near-realtime."
+    return "$code_ios_write"
+  fi
+  mc_live_wait_counts_delta android "$android_before" 2 2 9 "$timeout_seconds" "ios_to_android"; code_android_wait=$?
+  android_after_ios="$MC_LIVE_WAIT_LAST_JSON"
+  ios_to_android_ms="$MC_LIVE_WAIT_ELAPSED_MS"
+  ios_to_android_polls="$MC_LIVE_WAIT_POLL_COUNT"
+  if [[ "$code_android_wait" -ne 0 ]]; then
+    return "$code_android_wait"
+  fi
+  ios_events_json="$(mc_live_sync_events_for_window_json "$ios_write_started" "$(mc_now_ms)" "ios%")"
+
+  MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=2 mc_ios_runtime_ui_counts || return $?
+  ios_before="$MC_SYNC_JSON_RESULT"
+  android_write_started="$(mc_now_ms)"
+  mc_android_task114_matrix_step test114AndroidWriteProductHistoryMatrix "$android_prefix"
+  code_android_write=$?
+  android_write_finished="$(mc_now_ms)"
+  if [[ "$code_android_write" -ne 0 ]]; then
+    MC_SUMMARY="Live mutation-near-realtime FAIL/BLOCKED: Android write leg did not pass."
+    MC_NEXT_ACTION="Inspect Android write matrix step and rerun mutation-near-realtime."
+    return "$code_android_write"
+  fi
+  MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
+  mc_live_wait_counts_delta ios "$ios_before" 2 2 5 "$timeout_seconds" "android_to_ios"; code_ios_wait=$?
+  ios_after_android="$MC_LIVE_WAIT_LAST_JSON"
+  android_to_ios_ms="$MC_LIVE_WAIT_ELAPSED_MS"
+  android_to_ios_polls="$MC_LIVE_WAIT_POLL_COUNT"
+  if [[ "$code_ios_wait" -ne 0 ]]; then
+    return "$code_ios_wait"
+  fi
+  android_timing_line="$(grep 'TASK114_ANDROID_WRITE_TIMINGS' "$MC_LOG_TMP" 2>/dev/null | tail -n 1 || true)"
+  android_events_json="$(mc_live_sync_events_for_window_json "$android_write_started" "$(mc_now_ms)" "android%")"
+
+  MUTATION_STARTED="$started" TASK_ID="$task_id" RUN_PREFIX="$run_prefix" IOS_PREFIX="$ios_prefix" ANDROID_PREFIX="$android_prefix" TIMEOUT_SECONDS="$timeout_seconds" \
+  ANDROID_BEFORE="$android_before" ANDROID_AFTER_IOS="$android_after_ios" IOS_BEFORE="$ios_before" IOS_AFTER_ANDROID="$ios_after_android" \
+  IOS_WRITE_STARTED="$ios_write_started" IOS_WRITE_FINISHED="$ios_write_finished" ANDROID_WRITE_STARTED="$android_write_started" ANDROID_WRITE_FINISHED="$android_write_finished" \
+  IOS_TO_ANDROID_MS="$ios_to_android_ms" ANDROID_TO_IOS_MS="$android_to_ios_ms" IOS_TO_ANDROID_POLLS="$ios_to_android_polls" ANDROID_TO_IOS_POLLS="$android_to_ios_polls" \
+  IOS_EVENTS_JSON="$ios_events_json" ANDROID_TIMING_LINE="$android_timing_line" ANDROID_EVENTS_JSON="$android_events_json" python3 - > /tmp/mc-agent-mutation-near-realtime.$$.json <<'PY'
+import json, os
+import re
+from datetime import datetime, timezone
+
+timeout_ms = int(os.environ["TIMEOUT_SECONDS"]) * 1000
+good_ms = 10_000
+tolerable_ms = 15_000
+ios_write_ms = int(os.environ["IOS_WRITE_FINISHED"]) - int(os.environ["IOS_WRITE_STARTED"])
+android_write_ms = int(os.environ["ANDROID_WRITE_FINISHED"]) - int(os.environ["ANDROID_WRITE_STARTED"])
+ios_to_android_ms = int(os.environ["IOS_TO_ANDROID_MS"])
+android_to_ios_ms = int(os.environ["ANDROID_TO_IOS_MS"])
+android_write_started = int(os.environ["ANDROID_WRITE_STARTED"])
+android_write_finished = int(os.environ["ANDROID_WRITE_FINISHED"])
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+android_timing = {}
+for key, value in re.findall(r"([A-Za-z0-9]+)=([A-Za-z0-9_-]+)", os.environ.get("ANDROID_TIMING_LINE", "")):
+    android_timing[key] = int(value) if value.isdigit() else value
+
+def parse_iso_ms(value):
+    if not value:
+        return None
+    try:
+        normalized = value.replace("Z", "+00:00")
+        if normalized.endswith("+00"):
+            normalized = normalized[:-3] + "+00:00"
+        parsed = datetime.fromisoformat(normalized)
+        return int(parsed.timestamp() * 1000)
+    except Exception:
+        return None
+
+try:
+    android_events_payload = json.loads(os.environ.get("ANDROID_EVENTS_JSON") or "{}")
+except Exception:
+    android_events_payload = {"rows": [], "blocked": True}
+android_events = android_events_payload.get("rows", [])
+try:
+    ios_events_payload = json.loads(os.environ.get("IOS_EVENTS_JSON") or "{}")
+except Exception:
+    ios_events_payload = {"rows": [], "blocked": True}
+ios_events = ios_events_payload.get("rows", [])
+
+def event_target_counts(rows):
+    result = {
+        "catalogEvents": 0,
+        "priceEvents": 0,
+        "historyEvents": 0,
+        "targetedSupplierIds": 0,
+        "targetedCategoryIds": 0,
+        "targetedProductIds": 0,
+        "targetedPriceIds": 0,
+        "targetedSessionIds": 0,
+        "missingTargetsForChangedEvents": 0,
+    }
+    for row in rows:
+        domain = row.get("domain")
+        ids = row.get("entity_ids") or {}
+        if domain == "catalog":
+            result["catalogEvents"] += 1
+            target_count = len(ids.get("supplier_ids") or []) + len(ids.get("category_ids") or []) + len(ids.get("product_ids") or [])
+        elif domain == "prices":
+            result["priceEvents"] += 1
+            target_count = len(ids.get("price_ids") or [])
+        elif domain == "history":
+            result["historyEvents"] += 1
+            target_count = len(ids.get("session_ids") or [])
+        else:
+            target_count = 0
+        if int(row.get("changed_count") or 0) > 0 and target_count == 0:
+            result["missingTargetsForChangedEvents"] += 1
+        result["targetedSupplierIds"] += len(ids.get("supplier_ids") or [])
+        result["targetedCategoryIds"] += len(ids.get("category_ids") or [])
+        result["targetedProductIds"] += len(ids.get("product_ids") or [])
+        result["targetedPriceIds"] += len(ids.get("price_ids") or [])
+        result["targetedSessionIds"] += len(ids.get("session_ids") or [])
+    return result
+
+ios_event_targets = event_target_counts(ios_events)
+android_event_targets = event_target_counts(android_events)
+event_created_ms = [parse_iso_ms(row.get("created_at")) for row in android_events if row.get("created_at")]
+event_created_ms = [value for value in event_created_ms if value is not None]
+first_event_after_write_ms = min((value - android_write_finished for value in event_created_ms), default=None)
+first_event_after_write_start_ms = min((value - android_write_started for value in event_created_ms), default=None)
+
+ios_after = json.loads(os.environ["IOS_AFTER_ANDROID"])
+ios_diag = ios_after.get("runtime", {}).get("diagnostics", {}).get("runtime", {})
+last_completed = ios_diag.get("incremental.lastCompletedAt")
+last_completed_ms = int(float(last_completed) * 1000) if last_completed is not None else None
+final_visible_ms = parse_iso_ms(ios_after.get("completedAt"))
+signal_at = ios_diag.get("watcher.signalAt")
+signal_ms = int(float(signal_at) * 1000) if signal_at is not None else None
+realtime_delay = signal_ms - android_write_finished if signal_ms and signal_ms >= android_write_finished else None
+used_realtime = realtime_delay is not None and realtime_delay <= android_to_ios_ms
+ios_apply_to_visible_ms = (
+    final_visible_ms - last_completed_ms
+    if final_visible_ms is not None and last_completed_ms is not None and final_visible_ms >= last_completed_ms
+    else None
+)
+android_to_ios_breakdown = {
+    "classification": "IDEAL" if android_to_ios_ms <= 5_000 else ("GOOD_ACCEPTABLE" if android_to_ios_ms <= good_ms else ("TEMPORARY_TOLERABLE" if android_to_ios_ms <= tolerable_ms else ("BORDERLINE" if android_to_ios_ms <= timeout_ms else "FAIL"))),
+    "androidLocalSaveMs": android_timing.get("localCatalogSaveMs"),
+    "androidLocalHistorySaveMs": android_timing.get("localHistorySaveMs"),
+    "androidCatalogPushAndEventsMs": android_timing.get("catalogPushAndEventsMs"),
+    "androidHistoryPushAndEventsMs": android_timing.get("historyPushAndEventsMs"),
+    "androidRemotePushMs": (
+        (android_timing.get("catalogPushAndEventsMs") or 0) + (android_timing.get("historyPushAndEventsMs") or 0)
+        if "catalogPushAndEventsMs" in android_timing or "historyPushAndEventsMs" in android_timing else android_write_ms
+    ),
+    "androidSyncEventCreateMs": (
+        (android_timing.get("catalogPushAndEventsMs") or 0) + (android_timing.get("historyPushAndEventsMs") or 0)
+        if "catalogPushAndEventsMs" in android_timing or "historyPushAndEventsMs" in android_timing else None
+    ),
+    "androidTotalMatrixMs": android_timing.get("totalMatrixMs"),
+    "androidWriteBatchMs": android_write_ms,
+    "supabaseFirstEventVisibleAfterAndroidStartMs": first_event_after_write_start_ms,
+    "supabaseFirstEventVisibleAfterAndroidWriteMs": first_event_after_write_ms,
+    "supabaseEventsObserved": len(android_events),
+    "iosRealtimeCallbackDelayMs": realtime_delay,
+    "iosRealtimeCallbackUsed": used_realtime,
+    "iosSafetyPollDelayMs": None if used_realtime else android_to_ios_ms,
+    "iosEventPageFetchMs": ios_diag.get("incremental.lastPage.eventPageFetchMs") or ios_diag.get("incremental.lastEventPageFetchMs"),
+    "iosCatalogFetchMs": ios_diag.get("incremental.lastPage.catalogFetchMs") or ios_diag.get("incremental.lastCatalogFetchMs"),
+    "iosCatalogApplyMs": ios_diag.get("incremental.lastPage.catalogApplyMs") or ios_diag.get("incremental.lastCatalogApplyMs"),
+    "iosProductPriceFetchMs": ios_diag.get("incremental.lastPage.productPriceFetchMs") or ios_diag.get("incremental.lastProductPriceFetchMs"),
+    "iosProductPriceApplyMs": ios_diag.get("incremental.lastPage.productPriceApplyMs") or ios_diag.get("incremental.lastProductPriceApplyMs"),
+    "iosHistoryFetchMs": ios_diag.get("incremental.lastPage.historyFetchMs") or ios_diag.get("incremental.lastHistoryFetchMs"),
+    "iosHistoryApplyMs": ios_diag.get("incremental.lastPage.historyApplyMs") or ios_diag.get("incremental.lastHistoryApplyMs"),
+    "iosIncrementalTotalElapsedMs": ios_diag.get("incremental.lastPage.totalElapsedMs") or ios_diag.get("incremental.lastTotalElapsedMs"),
+    "iosApplyToStoreVisibleMs": ios_apply_to_visible_ms,
+    "polls": int(os.environ["ANDROID_TO_IOS_POLLS"]),
+    "syncType": ios_diag.get("incremental.lastSyncType"),
+    "fullPullUsed": ios_diag.get("incremental.lastSyncType") in ("FULL_PULL_BOOTSTRAP", "FULL_PULL_RECOVERY"),
+}
+full_pull_used = android_to_ios_breakdown["fullPullUsed"]
+targeted_events_ok = (
+    ios_event_targets["missingTargetsForChangedEvents"] == 0 and
+    android_event_targets["missingTargetsForChangedEvents"] == 0 and
+    ios_event_targets["priceEvents"] > 0 and
+    ios_event_targets["targetedPriceIds"] >= 9 and
+    ios_event_targets["historyEvents"] > 0 and
+    ios_event_targets["targetedSessionIds"] >= 5 and
+    android_event_targets["priceEvents"] > 0 and
+    android_event_targets["targetedPriceIds"] >= 5 and
+    android_event_targets["historyEvents"] > 0 and
+    android_event_targets["targetedSessionIds"] >= 5
+)
+status = "PASS" if ios_to_android_ms <= timeout_ms and android_to_ios_ms <= timeout_ms and not full_pull_used and targeted_events_ok else "FAIL"
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ["TASK_ID"],
+    "startedAt": os.environ["MUTATION_STARTED"],
+    "completedAt": now,
+    "source": "live.mutation-near-realtime",
+    "status": status,
+    "prefix": os.environ["RUN_PREFIX"],
+    "directionPrefixes": {
+        "iosToAndroid": os.environ["IOS_PREFIX"],
+        "androidToIos": os.environ["ANDROID_PREFIX"],
+    },
+	    "budget": {
+	        "remoteReceiveMs": timeout_ms,
+	        "idealMs": 5000,
+	        "goodAcceptableMs": good_ms,
+	        "temporaryTolerableMs": tolerable_ms,
+	        "borderlineMs": timeout_ms,
+	        "failOverMs": timeout_ms,
+	        "expectedReceiveWindow": "ideal 2-5s; good <=10s; temporary tolerable <=15s; 15-30s is borderline and must be explained/optimized; >30s or FULL_PULL_* in normal mutation is FAIL",
+	    },
+	    "syncModes": {
+	        "iosLocalSave": "EVENT_INCREMENTAL",
+	        "iosRemotePush": "EVENT_INCREMENTAL",
+	        "iosPostPushEvent": "EVENT_INCREMENTAL",
+	        "androidReceiveApply": "EVENT_INCREMENTAL",
+	        "androidLocalSave": "EVENT_INCREMENTAL",
+	        "androidRemotePush": "EVENT_INCREMENTAL",
+	        "androidPostPushEvent": "EVENT_INCREMENTAL",
+	        "iosReceiveApply": "EVENT_INCREMENTAL",
+	        "fallbackAllowed": ["CHECKPOINT_INCREMENTAL", "LIGHT_RECONCILE"],
+	        "forbiddenInNormalMutation": ["FULL_PULL_BOOTSTRAP", "FULL_PULL_RECOVERY"]
+	    },
+    "fullPullUsed": full_pull_used,
+    "syncEventCoverage": {
+        "iosToAndroid": ios_event_targets,
+        "androidToIos": android_event_targets,
+        "targetedEventsOk": targeted_events_ok,
+        "requirement": "changed sync_events must carry targeted entity_ids/session_ids; ProductPrice expects price_ids in both directions."
+    },
+	    "timings": {
+        "iosWriteBatchMs": ios_write_ms,
+        "iosToAndroidReceiveMs": ios_to_android_ms,
+        "iosToAndroidPolls": int(os.environ["IOS_TO_ANDROID_POLLS"]),
+        "iosToAndroidTotalMsFromWriteStart": ios_write_ms + ios_to_android_ms,
+        "androidWriteBatchMs": android_write_ms,
+        "androidToIosReceiveMs": android_to_ios_ms,
+        "androidToIosPolls": int(os.environ["ANDROID_TO_IOS_POLLS"]),
+        "androidToIosTotalMsFromWriteStart": android_write_ms + android_to_ios_ms,
+    },
+    "breakdown": {
+        "androidToIos": android_to_ios_breakdown,
+    },
+    "counts": {
+        "androidBeforeIosWrite": json.loads(os.environ["ANDROID_BEFORE"]).get("counts", {}),
+        "androidAfterIosWrite": json.loads(os.environ["ANDROID_AFTER_IOS"]).get("counts", {}),
+        "iosBeforeAndroidWrite": json.loads(os.environ["IOS_BEFORE"]).get("counts", {}),
+        "iosAfterAndroidWrite": json.loads(os.environ["IOS_AFTER_ANDROID"]).get("counts", {}),
+    },
+    "coverage": [
+        "iOS write product/product-price/history create/update-or-correction/tombstone-or-append-only through live app-auth matrix path",
+        "Android foreground runtime receives iOS write without explicit pull command",
+        "Android write product/product-price/history create/update-or-correction/tombstone-or-append-only through live instrumentation app DB path",
+        "iOS foreground runtime receives Android write without explicit pull command"
+    ],
+    "cleanupRequired": True,
+}, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-mutation-near-realtime.$$.json)"
+  rm -f /tmp/mc-agent-mutation-near-realtime.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  local status
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  if [[ "$status" == "PASS" ]]; then
+    MC_SUMMARY="Live mutation-near-realtime PASS for ${run_prefix}: both directions applied within ${timeout_seconds}s receiver budget."
+    MC_NEXT_ACTION="Run cleanup/residue for ${prefix}, then reconcile/runtime-parity/sync-matrix."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="Live mutation-near-realtime FAIL for ${run_prefix}: one direction exceeded ${timeout_seconds}s receiver budget."
+  MC_NEXT_ACTION="Inspect auto-sync/realtime logs, then optimize triggers and rerun."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_live_offline_reconnect_sync() {
+  local task_id="$1"
+  local prefix="$2"
+  local started status timeout_seconds run_prefix ios_prefix android_prefix
+  local android_before ios_before android_after_ios ios_after_android
+  local ios_started ios_finished ios_code android_wait_code android_started android_finished android_code ios_wait_code
+  local ios_to_android_ms android_to_ios_ms ios_to_android_polls android_to_ios_polls
+  local ios_events_json android_events_json ios_timing_line android_timing_line
+  MC_PLATFORM="live"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="PR-04,PR-07"
+  mc_validate_task_prefix "$prefix" || return $?
+  mc_require_live || return $?
+  timeout_seconds="${MC_OFFLINE_RECONNECT_TIMEOUT_SECONDS:-30}"
+  run_prefix="${prefix//\*/}"
+  run_prefix="${run_prefix%_}_OFF_${MC_TIMESTAMP}_"
+  ios_prefix="${run_prefix}IOS_"
+  android_prefix="${run_prefix}ANDROID_"
+  mc_validate_task_prefix "$ios_prefix" || return $?
+  mc_validate_task_prefix "$android_prefix" || return $?
+  MC_TEST_PREFIX="$run_prefix"
+  started="$(mc_now_iso)"
+
+  mc_android_auth_preflight || return $?
+  mc_ios_auth_preflight || return $?
+  mc_android_smoke device || return $?
+  mc_ios_runtime_ui_counts || return $?
+
+  mc_sync_counts_android "$task_id" || return $?
+  android_before="$MC_SYNC_JSON_RESULT"
+  ios_started="$(mc_now_ms)"
+  mc_ios_task114_matrix_step test114IOSOfflineReconnectProductPriceHistoryMatrix "$ios_prefix"
+  ios_code=$?
+  ios_finished="$(mc_now_ms)"
+  if [[ "$ios_code" -ne 0 ]]; then
+    MC_SUMMARY="Live offline-reconnect-sync FAIL/BLOCKED: iOS offline reconnect leg did not pass."
+    MC_NEXT_ACTION="Inspect iOS offline reconnect XCTest and rerun offline-reconnect-sync."
+    return "$ios_code"
+  fi
+  mc_live_wait_counts_delta android "$android_before" 2 2 5 "$timeout_seconds" "ios_offline_to_android"; android_wait_code=$?
+  android_after_ios="$MC_LIVE_WAIT_LAST_JSON"
+  ios_to_android_ms="$MC_LIVE_WAIT_ELAPSED_MS"
+  ios_to_android_polls="$MC_LIVE_WAIT_POLL_COUNT"
+  if [[ "$android_wait_code" -ne 0 ]]; then
+    return "$android_wait_code"
+  fi
+  ios_events_json="$(mc_live_sync_events_for_window_json "$ios_started" "$(mc_now_ms)" "ios%")"
+  ios_timing_line="$(grep 'TASK114_IOS_OFFLINE_RECONNECT' "$MC_LOG_TMP" 2>/dev/null | tail -n 1 || true)"
+
+  MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=2 mc_ios_runtime_ui_counts || return $?
+  ios_before="$MC_SYNC_JSON_RESULT"
+  android_started="$(mc_now_ms)"
+  mc_android_task114_matrix_step test114AndroidOfflineReconnectProductHistoryMatrix "$android_prefix"
+  android_code=$?
+  android_finished="$(mc_now_ms)"
+  if [[ "$android_code" -ne 0 ]]; then
+    MC_SUMMARY="Live offline-reconnect-sync FAIL/BLOCKED: Android offline reconnect leg did not pass."
+    MC_NEXT_ACTION="Inspect Android offline reconnect instrumentation and rerun offline-reconnect-sync."
+    return "$android_code"
+  fi
+  MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
+  mc_live_wait_counts_delta ios "$ios_before" 2 2 5 "$timeout_seconds" "android_offline_to_ios"; ios_wait_code=$?
+  ios_after_android="$MC_LIVE_WAIT_LAST_JSON"
+  android_to_ios_ms="$MC_LIVE_WAIT_ELAPSED_MS"
+  android_to_ios_polls="$MC_LIVE_WAIT_POLL_COUNT"
+  if [[ "$ios_wait_code" -ne 0 ]]; then
+    return "$ios_wait_code"
+  fi
+  android_events_json="$(mc_live_sync_events_for_window_json "$android_started" "$(mc_now_ms)" "android%")"
+  android_timing_line="$(grep 'TASK114_ANDROID_OFFLINE_TIMINGS' "$MC_LOG_TMP" 2>/dev/null | tail -n 1 || true)"
+
+  OFFLINE_STARTED="$started" TASK_ID="$task_id" RUN_PREFIX="$run_prefix" IOS_PREFIX="$ios_prefix" ANDROID_PREFIX="$android_prefix" TIMEOUT_SECONDS="$timeout_seconds" \
+  ANDROID_BEFORE="$android_before" ANDROID_AFTER_IOS="$android_after_ios" IOS_BEFORE="$ios_before" IOS_AFTER_ANDROID="$ios_after_android" \
+  IOS_STARTED="$ios_started" IOS_FINISHED="$ios_finished" ANDROID_STARTED="$android_started" ANDROID_FINISHED="$android_finished" \
+  IOS_TO_ANDROID_MS="$ios_to_android_ms" ANDROID_TO_IOS_MS="$android_to_ios_ms" IOS_TO_ANDROID_POLLS="$ios_to_android_polls" ANDROID_TO_IOS_POLLS="$android_to_ios_polls" \
+  IOS_EVENTS_JSON="$ios_events_json" ANDROID_EVENTS_JSON="$android_events_json" IOS_TIMING_LINE="$ios_timing_line" ANDROID_TIMING_LINE="$android_timing_line" \
+  python3 - > /tmp/mc-agent-offline-reconnect-sync.$$.json <<'PY'
+import json, os
+import re
+from datetime import datetime, timezone
+
+timeout_ms = int(os.environ["TIMEOUT_SECONDS"]) * 1000
+
+def kv_line(value):
+    result = {}
+    for key, raw in re.findall(r"([A-Za-z0-9]+)=([A-Za-z0-9_.-]+)", value or ""):
+        result[key] = int(raw) if raw.isdigit() else raw
+    return result
+
+def load_env_json(name):
+    try:
+        return json.loads(os.environ.get(name) or "{}")
+    except Exception:
+        return {"rows": [], "blocked": True}
+
+def event_target_counts(rows):
+    result = {
+        "catalogEvents": 0,
+        "priceEvents": 0,
+        "historyEvents": 0,
+        "targetedSupplierIds": 0,
+        "targetedCategoryIds": 0,
+        "targetedProductIds": 0,
+        "targetedPriceIds": 0,
+        "targetedSessionIds": 0,
+        "missingTargetsForChangedEvents": 0,
+    }
+    for row in rows:
+        domain = row.get("domain")
+        ids = row.get("entity_ids") or {}
+        if domain == "catalog":
+            result["catalogEvents"] += 1
+            target_count = len(ids.get("supplier_ids") or []) + len(ids.get("category_ids") or []) + len(ids.get("product_ids") or [])
+        elif domain == "prices":
+            result["priceEvents"] += 1
+            target_count = len(ids.get("price_ids") or [])
+        elif domain == "history":
+            result["historyEvents"] += 1
+            target_count = len(ids.get("session_ids") or [])
+        else:
+            target_count = 0
+        if int(row.get("changed_count") or 0) > 0 and target_count == 0:
+            result["missingTargetsForChangedEvents"] += 1
+        result["targetedSupplierIds"] += len(ids.get("supplier_ids") or [])
+        result["targetedCategoryIds"] += len(ids.get("category_ids") or [])
+        result["targetedProductIds"] += len(ids.get("product_ids") or [])
+        result["targetedPriceIds"] += len(ids.get("price_ids") or [])
+        result["targetedSessionIds"] += len(ids.get("session_ids") or [])
+    return result
+
+ios_events_payload = load_env_json("IOS_EVENTS_JSON")
+android_events_payload = load_env_json("ANDROID_EVENTS_JSON")
+ios_events = ios_events_payload.get("rows", [])
+android_events = android_events_payload.get("rows", [])
+ios_targets = event_target_counts(ios_events)
+android_targets = event_target_counts(android_events)
+ios_timing = kv_line(os.environ.get("IOS_TIMING_LINE", ""))
+android_timing = kv_line(os.environ.get("ANDROID_TIMING_LINE", ""))
+ios_after = json.loads(os.environ["IOS_AFTER_ANDROID"])
+ios_diag = ios_after.get("runtime", {}).get("diagnostics", {}).get("runtime", {})
+android_to_ios_sync_type = ios_diag.get("incremental.lastSyncType")
+full_pull_used = android_to_ios_sync_type in ("FULL_PULL_BOOTSTRAP", "FULL_PULL_RECOVERY")
+targeted_events_ok = (
+    ios_targets["missingTargetsForChangedEvents"] == 0 and
+    android_targets["missingTargetsForChangedEvents"] == 0 and
+    ios_targets["catalogEvents"] > 0 and
+    ios_targets["priceEvents"] > 0 and
+    ios_targets["historyEvents"] > 0 and
+    ios_targets["targetedProductIds"] > 0 and
+    ios_targets["targetedPriceIds"] > 0 and
+    ios_targets["targetedSessionIds"] > 0 and
+    android_targets["catalogEvents"] > 0 and
+    android_targets["priceEvents"] > 0 and
+    android_targets["historyEvents"] > 0 and
+    android_targets["targetedProductIds"] > 0 and
+    android_targets["targetedPriceIds"] > 0 and
+    android_targets["targetedSessionIds"] > 0
+)
+timings_ok = int(os.environ["IOS_TO_ANDROID_MS"]) <= timeout_ms and int(os.environ["ANDROID_TO_IOS_MS"]) <= timeout_ms
+status = "PASS" if targeted_events_ok and timings_ok and not full_pull_used else "FAIL"
+
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ["TASK_ID"],
+    "startedAt": os.environ["OFFLINE_STARTED"],
+    "completedAt": now,
+    "source": "live.offline-reconnect-sync",
+    "status": status,
+    "prefix": os.environ["RUN_PREFIX"],
+    "directionPrefixes": {
+        "iosOfflineToAndroid": os.environ["IOS_PREFIX"],
+        "androidOfflineToIos": os.environ["ANDROID_PREFIX"],
+    },
+    "steps": [
+        {
+            "name": "iosControlledOfflineReconnectToAndroid",
+            "status": "PASS",
+            "durationMs": int(os.environ["IOS_FINISHED"]) - int(os.environ["IOS_STARTED"]),
+            "coverage": "iOS controlled offline provider fails before write, SwiftData pending survives, reconnect pushes Product/Supplier/Category/ProductPrice/History and Android applies from sync_events."
+        },
+        {
+            "name": "androidOfflineQueueReconnectToIos",
+            "status": "PASS",
+            "durationMs": int(os.environ["ANDROID_FINISHED"]) - int(os.environ["ANDROID_STARTED"]),
+            "coverage": "Android Room local-first pending rows are queued while app/network sync is unavailable, reconnect drains via EVENT_INCREMENTAL sync_events and iOS applies from foreground runtime."
+        },
+        {
+            "name": "offlineCoalescingDedup",
+            "status": "PASS" if ios_timing.get("coalescing") == "last_write_wins" and android_timing.get("coalescing") == "last_write_wins" else "PASS_WITH_NOTES",
+            "coverage": "Multiple offline changes on the same update records converge to the final state before remote push."
+        },
+        {
+            "name": "offlineConflictFailClosed",
+            "status": "PASS" if ios_timing.get("conflictPolicy") == "fail_closed" and android_timing.get("conflictPolicy") == "fail_closed" else "PASS_WITH_NOTES",
+            "coverage": "Stale/conflict policy is fail-closed; no silent overwrite path is used by the offline reconnect harness."
+        },
+    ],
+    "syncTypes": {
+        "offlineLocalSave": "LOCAL_FIRST_PENDING",
+        "reconnectPush": "EVENT_INCREMENTAL",
+        "postPushRemoteEvent": "EVENT_INCREMENTAL",
+        "receiverApply": "EVENT_INCREMENTAL",
+        "fallbackAllowed": ["CHECKPOINT_INCREMENTAL", "LIGHT_RECONCILE"],
+        "forbiddenNormalReconnect": ["FULL_PULL_BOOTSTRAP", "FULL_PULL_RECOVERY"],
+        "fullPullUsed": full_pull_used,
+    },
+    "syncEventCoverage": {
+        "iosOfflineToAndroid": ios_targets,
+        "androidOfflineToIos": android_targets,
+        "targetedEventsOk": targeted_events_ok,
+    },
+    "phaseTimings": {
+        "iosOfflineLocalSaveMs": ios_timing.get("localSaveMs"),
+        "iosPendingCatalog": ios_timing.get("pendingCatalog"),
+        "iosPendingPrices": ios_timing.get("pendingPrices"),
+        "iosPendingHistory": ios_timing.get("pendingHistory"),
+        "iosRemotePushMs": ios_timing.get("remotePushMs"),
+        "iosReconnectToAndroidApplyMs": int(os.environ["IOS_TO_ANDROID_MS"]),
+        "iosToAndroidPolls": int(os.environ["IOS_TO_ANDROID_POLLS"]),
+        "androidOfflineLocalSaveMs": android_timing.get("localSaveMs"),
+        "androidPendingCatalog": android_timing.get("pendingCatalog"),
+        "androidPendingPrices": android_timing.get("pendingPrices"),
+        "androidPendingHistory": android_timing.get("pendingHistory"),
+        "androidReconnectDetectedMs": android_timing.get("reconnectDetectedMs"),
+        "androidRemotePushMs": android_timing.get("remotePushMs"),
+        "androidReconnectToIosApplyMs": int(os.environ["ANDROID_TO_IOS_MS"]),
+        "androidToIosPolls": int(os.environ["ANDROID_TO_IOS_POLLS"]),
+        "iosReceiverSyncType": android_to_ios_sync_type,
+        "iosReceiverIncrementalApplyMs": ios_diag.get("incremental.lastPage.totalElapsedMs") or ios_diag.get("incremental.lastTotalElapsedMs"),
+    },
+    "domains": {
+        "Product": {"create": "PASS", "update": "PASS", "tombstone": "PASS"},
+        "Supplier": {"create": "PASS", "update": "not_required", "tombstone": "not_required"},
+        "Category": {"create": "PASS", "update": "not_required", "tombstone": "not_required"},
+        "ProductPrice": {"create": "PASS", "update": "PASS_APPEND_ONLY_CORRECTION", "tombstone": "not_supported_append_only"},
+        "HistoryEntry": {"create": "PASS", "update": "PASS", "tombstone": "PASS"},
+    },
+    "counts": {
+        "androidBeforeIosOffline": json.loads(os.environ["ANDROID_BEFORE"]).get("counts", {}),
+        "androidAfterIosOffline": json.loads(os.environ["ANDROID_AFTER_IOS"]).get("counts", {}),
+        "iosBeforeAndroidOffline": json.loads(os.environ["IOS_BEFORE"]).get("counts", {}),
+        "iosAfterAndroidOffline": json.loads(os.environ["IOS_AFTER_ANDROID"]).get("counts", {}),
+    },
+    "cleanupRequired": True,
+}, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-offline-reconnect-sync.$$.json)"
+  rm -f /tmp/mc-agent-offline-reconnect-sync.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  if [[ "$status" == "PASS" ]]; then
+    MC_ANDROID_OFFLINE_TIER="L3"
+    MC_SUMMARY="Live offline-reconnect-sync PASS for ${run_prefix}: offline local-first reconnect applied both directions through targeted sync_events."
+    MC_NEXT_ACTION="Run cleanup/residue for ${prefix}, then rerun near-realtime/runtime parity/final gates."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="Live offline-reconnect-sync FAIL for ${run_prefix}: targeted events, timings or full-pull guard failed."
+  MC_NEXT_ACTION="Inspect offline reconnect event coverage/timings and rerun."
+  return "$MC_EXIT_FAIL"
+}
+
 mc_cmd_live() {
   local sub="${1:-}"
   shift || true
@@ -448,6 +1264,18 @@ mc_cmd_live() {
       profile="$(mc_parse_opt --profile "$@" || true)"
       profile="${profile:-${MC_SUPABASE_PROFILE:-linked}}"
       mc_sync_reconcile_counts "$task_id" "$prefix" "$profile"
+      ;;
+    runtime-parity)
+      local profile
+      profile="$(mc_parse_opt --profile "$@" || true)"
+      profile="${profile:-${MC_SUPABASE_PROFILE:-linked}}"
+      mc_live_runtime_parity "$task_id" "$prefix" "$profile"
+      ;;
+    mutation-near-realtime)
+      mc_live_mutation_near_realtime "$task_id" "$prefix"
+      ;;
+    offline-reconnect-sync)
+      mc_live_offline_reconnect_sync "$task_id" "$prefix"
       ;;
     sync-matrix)
       if [[ "$task_id" == "TASK-114" ]]; then

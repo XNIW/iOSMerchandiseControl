@@ -1,0 +1,82 @@
+=== mc-agent ios live-full-pull --live --task TASK-114 ===
+Touch /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-live-full-pull-20260521T235439Z-DerivedData/Build/Products/task114-ios-live-full-pull.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-live-full-pull-20260521T235439Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore"
+
+2026-05-21 19:55:04.712 xcodebuild[32996:5369331] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-live-full-pull-20260521T235439Z.xcresult
+
+2026-05-21 19:55:04.718 xcodebuild[32996:5369331] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-21 19:55:05.475 xcodebuild[32996:5369331] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-21 19:55:09.096.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-21 19:55:09.097.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-21 19:55:09.097.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore]' started.
+2026-05-21 19:55:09.285130-0400 iOSMerchandiseControl[33033:5369956] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x118e07000:socket
+2026-05-21 19:55:09.285490-0400 iOSMerchandiseControl[33033:5369956] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-21 19:55:09.285613-0400 iOSMerchandiseControl[33033:5369956] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[33033]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10c068310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10c154398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+"[InventorySnapshot] start products=19886 suppliers=81 categories=49 prices=15386"
+"[InventorySnapshot] done elapsedMs=1558 products=19886 suppliers=81 categories=49 prices=15386"
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift:326: error: -[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore] : failed: caught error: "conflictsPresent"
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore]' failed (10.090 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' failed at 2026-05-21 19:55:19.189.
+	 Executed 1 test, with 1 failure (1 unexpected) in 10.090 (10.092) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' failed at 2026-05-21 19:55:19.189.
+	 Executed 1 test, with 1 failure (1 unexpected) in 10.090 (10.092) seconds
+Test Suite 'Selected tests' failed at 2026-05-21 19:55:19.189.
+	 Executed 1 test, with 1 failure (1 unexpected) in 10.090 (10.093) seconds
+2026-05-21 19:55:28.763 xcodebuild[32996:5369331] [MT] IDETestOperationsObserverDebug: 23.285 elapsed -- Testing started completed.
+2026-05-21 19:55:28.763 xcodebuild[32996:5369331] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-21 19:55:28.763 xcodebuild[32996:5369331] [MT] IDETestOperationsObserverDebug: 23.285 sec, +23.285 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-live-full-pull-20260521T235439Z.xcresult
+
+Failing tests:
+	Task103CrossPlatformAcceptanceTests.test114IOSFullPullMaterializesRemoteLookupOnlyRowsInAppStore()
+
+** TEST EXECUTE FAILED **
+
+Testing started
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"local": {"pendingAggregate": 4}, "remote": null}, "remote": "app-auth-full-pull"}, "completedAt": "2026-05-21T23:55:30Z", "counts": {"after": {"categories": {"active": 49, "all": 49, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}, "history_entries": {"active": 2, "all": 2, "deleted": 0, "dirty": 0, "localOnly": 2, "pending": 0, "userVisible": 2}, "product_prices": {"active": 15386, "all": 15386, "deleted": 0, "dirty": 2, "localOnly": 0, "pending": 2, "userVisible": null}, "products": {"active": 19886, "all": 19886, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 81, "all": 81, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}}, "before": {"categories": {"active": 49, "all": 49, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}, "history_entries": {"active": 2, "all": 2, "deleted": 0, "dirty": 0, "localOnly": 2, "pending": 0, "userVisible": 2}, "product_prices": {"active": 15386, "all": 15386, "deleted": 0, "dirty": 2, "localOnly": 0, "pending": 2, "userVisible": null}, "products": {"active": 19886, "all": 19886, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 81, "all": 81, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}}}, "deleted": 0, "drift": {}, "inserted": 0, "lastFullReconciliation": null, "lastPull": null, "lastPush": null, "lookupApply": {"categoriesInserted": 0, "categoryDelta": 0, "plannedCategories": null, "plannedSuppliers": null, "skippedCategories": 0, "skippedSuppliers": 0, "supplierDelta": 0, "suppliersInserted": 0}, "metricsLineFound": false, "pruned": {"didPrune": 0, "isCompleteSnapshot": true, "skippedDirty": 0, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 2, "all": 2, "tombstone": 0}], "iosMissingSupplierCategory": ["dc937b59892604f5", "dc937b59892604f5", "dc937b59892604f5", "dc937b59892604f5"], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "device-app-auth-redacted"}, "skipped": 0, "source": "ios.live-full-pull", "startedAt": "2026-05-21T23:55:30Z", "status": "FAIL", "store": {"pathHash": "<REDACTED_HEX>"}, "taskId": "TASK-114", "updated": 0, "xcodeExit": 65, "xcodeSkipped": false}

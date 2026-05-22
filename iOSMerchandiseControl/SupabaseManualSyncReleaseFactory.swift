@@ -34,6 +34,13 @@ enum SupabaseManualSyncReleaseFactory {
         let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = inventoryService.map {
             SupabaseManualSyncReleaseHistorySessionAdapter(
                 modelContainer: modelContainer,
+                remote: $0,
+                recorder: activityRecorder
+            )
+        }
+        let incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)? = inventoryService.map {
+            SupabaseManualSyncReleaseIncrementalPullAdapter(
+                modelContainer: modelContainer,
                 remote: $0
             )
         }
@@ -79,6 +86,7 @@ enum SupabaseManualSyncReleaseFactory {
             currentActivityRegistrationOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
             historySessionProvider: historySessionProvider,
             currentHistorySessionOwnerID: { authViewModel.isSignedIn ? authViewModel.sessionInfo?.userID : nil },
+            incrementalPullProvider: incrementalPullProvider,
             baselineStatusProvider: {
                 do {
                     return try SupabaseCatalogBaselineReader().debugSummary(
@@ -94,7 +102,7 @@ enum SupabaseManualSyncReleaseFactory {
 }
 
 @MainActor
-private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHistorySessionSyncProviding {
+private final class SupabaseManualSyncReleaseIncrementalPullAdapter: SupabaseManualSyncIncrementalPullProviding {
     private let modelContainer: ModelContainer
     private let remote: SupabaseInventoryService
 
@@ -106,15 +114,72 @@ private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManu
         self.remote = remote
     }
 
+    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SupabaseSyncEventIncrementalApplySummary {
+        try await SupabaseSyncEventIncrementalApplyService(
+            eventFetcher: remote,
+            inventoryService: remote
+        ).applyNextEvents(
+            ownerUserID: ownerUserID,
+            modelContainer: modelContainer,
+            isAuthenticated: true
+        )
+    }
+}
+
+@MainActor
+private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHistorySessionSyncProviding {
+    private let modelContainer: ModelContainer
+    private let remote: SupabaseInventoryService
+    private let recorder: (any SyncEventRecording)?
+
+    init(
+        modelContainer: ModelContainer,
+        remote: SupabaseInventoryService,
+        recorder: (any SyncEventRecording)?
+    ) {
+        self.modelContainer = modelContainer
+        self.remote = remote
+        self.recorder = recorder
+    }
+
     func syncHistorySessions(
         ownerUserID: UUID,
+        mode: SupabaseManualSyncHistorySessionMode,
         onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
     ) async throws -> SupabaseManualSyncHistorySessionSummary {
         let modelContainer = self.modelContainer
         let remote = self.remote
+        let recorder = self.recorder
         return try await Task.detached(priority: .utility) {
             let context = ModelContext(modelContainer)
             let service = HistorySessionSyncService(remote: remote)
+            if mode == .incremental {
+                let entries = try context.fetch(
+                    FetchDescriptor<HistoryEntry>(
+                        sortBy: [SortDescriptor(\HistoryEntry.timestamp, order: .reverse)]
+                    )
+                )
+                let push = try await service.pushPendingHistorySessions(
+                    entries: entries,
+                    ownerUserID: ownerUserID,
+                    context: context,
+                    includeSynced: false,
+                    onProgress: onProgress
+                )
+                try context.save()
+                if push.uploadedCount > 0 {
+                    try await Self.recordHistorySyncEvent(
+                        recorder: recorder,
+                        ownerUserID: ownerUserID,
+                        remoteIDs: push.pushedRemoteIDs
+                    )
+                }
+                return SupabaseManualSyncHistorySessionSummary(
+                    uploaded: push.uploadedCount,
+                    skippedClean: push.skippedCleanCount,
+                    skippedOversized: push.skippedOversizedCount
+                )
+            }
             let initialPull = try await service.pullHistorySessionsFromCloud(
                 ownerUserID: ownerUserID,
                 context: context,
@@ -140,6 +205,13 @@ private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManu
                 onProgress: onProgress
             )
             try context.save()
+            if push.uploadedCount > 0 {
+                try await Self.recordHistorySyncEvent(
+                    recorder: recorder,
+                    ownerUserID: ownerUserID,
+                    remoteIDs: push.pushedRemoteIDs
+                )
+            }
             return SupabaseManualSyncHistorySessionSummary(
                 uploaded: push.uploadedCount,
                 inserted: initialPull.insertedCount + confirmPull.insertedCount,
@@ -149,6 +221,32 @@ private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManu
                 skippedOversized: push.skippedOversizedCount
             )
         }.value
+    }
+
+    private nonisolated static func recordHistorySyncEvent(
+        recorder: (any SyncEventRecording)?,
+        ownerUserID: UUID,
+        remoteIDs: Set<UUID>
+    ) async throws {
+        guard let recorder, !remoteIDs.isEmpty else { return }
+        let sortedIDs = remoteIDs.sorted { $0.uuidString < $1.uuidString }
+        let request = SyncEventRecordRequest(
+            domain: "history",
+            eventType: "history_changed",
+            changedCount: sortedIDs.count,
+            entityIDs: .object([
+                "session_ids": .array(sortedIDs.map { .string($0.uuidString.lowercased()) })
+            ]),
+            metadata: .object([
+                "source": .string("ios_history_session_push"),
+                "uploaded_count": .number(Double(sortedIDs.count))
+            ]),
+            source: "ios_history_session_push",
+            sourceDeviceID: nil,
+            batchID: UUID(),
+            clientEventID: "ios-history-\(ownerUserID.uuidString.lowercased())-\(UUID().uuidString.lowercased())"
+        )
+        _ = try await recorder.record(request)
     }
 }
 
@@ -290,6 +388,7 @@ private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManual
                 insertedCount: result.insertedCount,
                 verification: result.verification,
                 fingerprint: result.fingerprint,
+                confirmedRemoteIDs: result.confirmedRemoteIDs,
                 needsTechnicalFollowUp: true
             )
         }
@@ -488,6 +587,7 @@ private final class SupabaseManualSyncReleasePushAdapter: SupabaseManualSyncCata
                 productCreates: result.productCreates,
                 productUpdates: result.productUpdates,
                 productLinks: result.productLinks,
+                touchedIDs: result.touchedIDs,
                 baselineRunID: result.baselineRunID,
                 message: "Technical follow-up required after verified push."
             )
