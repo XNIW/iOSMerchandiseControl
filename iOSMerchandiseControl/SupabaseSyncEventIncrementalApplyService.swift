@@ -625,7 +625,19 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
     }
 
     private func watermarkKey(ownerUserID: UUID) -> String {
+        Self.watermarkKey(ownerUserID: ownerUserID)
+    }
+
+    static func watermarkKey(ownerUserID: UUID) -> String {
         "task114.syncEvents.watermark.\(ownerUserID.uuidString.lowercased())"
+    }
+
+    static func markWatermarkAfterFullRecovery(
+        ownerUserID: UUID,
+        watermark: Int64,
+        defaults: UserDefaults = .standard
+    ) {
+        defaults.set(Int(watermark), forKey: watermarkKey(ownerUserID: ownerUserID))
     }
 
     private func lightReconcileKey(ownerUserID: UUID) -> String {

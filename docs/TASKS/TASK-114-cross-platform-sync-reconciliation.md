@@ -4,11 +4,11 @@
 - **Task ID**: TASK-114
 - **Titolo**: Cross-platform automatic sync reconciliation Android/iOS/Supabase
 - **File task**: `docs/TASKS/TASK-114-cross-platform-sync-reconciliation.md`
-- **Stato**: DONE
-- **Fase attuale**: Chiusura finale post-DONE review PASS
-- **Responsabile attuale**: USER / Accepted override
+- **Stato**: ACTIVE
+- **Fase attuale**: FIX
+- **Responsabile attuale**: USER / Physical iPhone login unblock
 - **Data creazione**: 2026-05-21
-- **Ultimo aggiornamento**: 2026-05-22 17:43 -0400
+- **Ultimo aggiornamento**: 2026-05-22 19:07 -0400
 - **Ultimo agente che ha operato**: CODEX
 
 ## Dipendenze
@@ -934,3 +934,84 @@ Riprendere solo dal blocker finale `BLOCKED_EXTERNAL_DEVICE`, senza rifare revie
 
 ### Rischi residui
 - Non ci sono blocker critici aperti. Rischio operativo non bloccante: i tool legacy iOS Options visual possono restare dipendenti da Accessibility/XcodeBuildMCP, ma runtime counts/parity e screenshot esistenti coprono lo store reale; Supabase linked pooler puo' richiedere serializzazione/backoff, mitigata nei gate finali.
+
+---
+
+## Regression FIX reopening (Codex) — 2026-05-22 18:28 -0400
+
+### Obiettivo compreso
+TASK-114 viene riaperto come **REGRESSIONE POST-DONE** su iPhone fisico reale, senza creare un nuovo task. Motivo: **iOS physical runtime sync loop/performance regression after login**. L'utente ha installato la nuova app iOS su iPhone fisico, ha fatto login cloud e vede sync automatica infinita/lenta, Options scattosa, spinner `0 / 0`, stato locale "needs a cloud check" e log ripetuti `TASK114_RUNTIME_SYNC` con `EVENT_INCREMENTAL`, `eventsFetched=50`, `eventsProcessed=50`, `applied=0`, `requiresFullRecovery=true`, `fullPull=false`.
+
+### Stato operativo
+- **Stato/Fase/Responsabile**: ACTIVE / FIX / CODEX.
+- **Evidence iniziale manuale**: `docs/TASKS/EVIDENCE/TASK-114/ios-physical-runtime-loop-user-report.md`.
+- **Stop condition**: non riportare TASK-114 a DONE finche' iPhone fisico post-login non dimostra sync idle/success oppure errore stabile/actionable, niente loop `EVENT_INCREMENTAL applied=0 requiresFullRecovery=true`, niente spinner `0/0`, Options fluida, e gate fisici/build/test/scans/cleanup richiesti PASS o blocker esatto documentato.
+
+### Handoff post-reopen
+- **Prossima fase**: FIX.
+- **Prossimo agente**: CODEX.
+- **Azione consigliata**: diagnosi root-cause su runtime iOS fisico e harness `physical-*`; fix minimo su sync loop/recovery/UI/performance; rerun gate fisici e cross-platform richiesti.
+
+---
+
+## Regression FIX execution (Codex) — 2026-05-22 19:07 -0400
+
+### Obiettivo compreso
+Fixare la regressione runtime iOS fisica post-login di TASK-114 senza aprire nuovo task: niente loop `EVENT_INCREMENTAL applied=0 requiresFullRecovery=true`, niente spinner `0/0`, recovery full-pull controllata quando richiesta, Options stabile, e gate iPhone fisico obbligatorio prima di qualsiasi DONE.
+
+### File controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-114-cross-platform-sync-reconciliation.md`
+- `docs/TASKS/EVIDENCE/TASK-114/final-post-review-done-20260522T2143Z.md`
+- `docs/TASKS/EVIDENCE/TASK-114/ios-physical-runtime-loop-user-report.md`
+- `docs/TASKS/EVIDENCE/TASK-114/ios-physical-runtime-fix-evidence-20260522T2307Z.md`
+- `iOSMerchandiseControl/SupabaseManualSyncViewModel.swift`
+- `iOSMerchandiseControl/SupabaseSyncEventIncrementalApplyService.swift`
+- `iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift`
+- `tools/agent/lib/ios.sh`
+- `tools/agent/lib/sync.sh`
+- codice UI/sync auditato: `ContentView.swift`, `OptionsView.swift`, `CloudSyncOverviewState.swift`, `HistorySessionSyncService.swift`, `SupabaseManualSyncReleaseFactory.swift`, `SupabasePullApplyService.swift`, `SupabaseProductPriceApplyService.swift`, `SwiftDataInventorySnapshotService.swift`, `SyncCountReconciliation.swift`.
+
+### Piano minimo
+1. Riprodurre/leggere runtime fisico reale con harness `ios physical-*`.
+2. Coprire in test il loop recovery e il progress history `0/0`.
+3. Fixare solo la path foreground incremental/recovery/progress.
+4. Installare build iOS aggiornata su iPhone fisico e rieseguire gate fisici.
+5. Fermarsi senza DONE se il device fisico non e' autenticato o i count restano divergenti senza recovery verificabile.
+
+### Modifiche fatte
+- `startForegroundIncrementalCheckNow` ora rispetta `semiAutomaticForegroundDecision` anche quando `ContentView` forza l'incrementale da foreground/reconnect/realtime; backoff e staged-plan gate non vengono piu' bypassati.
+- Quando l'incrementale segnala `requiresFullRecovery`, il ViewModel avvia una recovery full-pull controllata usando il percorso dry-run/apply gia' esistente; se la recovery chiude pulita, aggiorna il watermark `sync_events` alla pagina recuperata e mette backoff anti-raffica.
+- Progress history `0/0` viene ignorato e ripulito quando non c'e' lavoro, cosi' Options non mostra spinner attivo con `0 / 0`.
+- Aggiunta instrumentation TASK-114 per attempt window, same-page signature, progress runtime e full recovery outcome.
+- Aggiunti test `testTask114ForegroundIncrementalRecoveryBackoffPreventsSamePageLoop` e `testTask114ForegroundIncrementalNoHistoryWorkClearsZeroProgress`.
+- Aggiunti harness fisici `ios physical-runtime-counts`, `ios physical-smoke-options`, `ios physical-sync-loop-diagnostics`, `ios physical-sync-acceptance`; i counts iOS ora possono leggere lo store copiato da appDataContainer fisico.
+
+### Check eseguiti
+- ✅ ESEGUITO — iOS TDD RED: `20260522T223341Z-ios-test-sync-task-TASK-114-p95486` falliva su loop same-page e progress `0/0`.
+- ✅ ESEGUITO — iOS test sync dopo fix: `20260522T225436Z-ios-test-sync-task-TASK-114-p6146` PASS.
+- ✅ ESEGUITO — iOS physical Debug build/install: `xcodebuild ... -destination platform=iOS,id=<REDACTED> ... build` PASS; `devicectl device install app` PASS.
+- ✅ ESEGUITO — iOS physical runtime counts: `20260522T225641Z-ios-physical-runtime-counts-task-TASK-114-live-p8322` PASS lettura store; auth fisico `false`.
+- ✅ ESEGUITO — iOS physical smoke Options: `20260522T225835Z-ios-physical-smoke-options-task-TASK-114-live-p8933` PASS; `spinnerZeroOfZero=false`, `automaticSyncInProgress=false`.
+- ✅ ESEGUITO — iOS physical loop diagnostics: `20260522T230142Z-ios-physical-sync-loop-diagnostics-task-TASK-114-live-p10174` PASS diagnostico; classification `AUTH_SESSION_NOT_READY`, attemptsLast60s `2`.
+- ✅ ESEGUITO — iOS physical acceptance: `20260522T230240Z-ios-physical-sync-acceptance-task-TASK-114-live-p10755` FAIL atteso/bloccante; `auth_session_not_ready,physical_counts_drift_without_recovery`.
+- ✅ ESEGUITO — iOS build debug: `20260522T230457Z-ios-build-debug-task-TASK-114-p11828` PASS.
+- ✅ ESEGUITO — iOS build release: `20260522T230509Z-ios-build-release-task-TASK-114-p12276` PASS.
+- ✅ ESEGUITO — scan sensitive: `20260522T230509Z-scan-sensitive-task-TASK-114-p12277` PASS.
+- ✅ ESEGUITO — scan evidence: `20260522T230509Z-scan-evidence-task-TASK-114-p12324` PASS.
+- ✅ ESEGUITO — report latest: `20260522T230658Z-report-latest-task-TASK-114-p67961` PASS.
+- ✅ ESEGUITO — `git diff --check` iOS PASS; Android repo diff check PASS.
+- ⚠️ NON ESEGUIBILE — cross-platform live gates completi post-fix: bloccati perche' iPhone fisico installato risulta non autenticato, quindi non puo' avviare recovery ne' validare counts fisici post-login.
+- ⚠️ NON ESEGUIBILE — cleanup/residue post-live mutation: nessuna mutation live eseguita in questa ripresa; physical gates sono live-readonly.
+
+### Rischi rimasti
+- BLOCKER: iPhone fisico aggiornato ha `auth.isSignedIn=false` e `auth.userIDPresent=false`; acceptance fallisce per `auth_session_not_ready` e drift fisico vs Supabase senza recovery possibile.
+- Count fisici al blocker: iOS physical products `16820`, suppliers `82`, categories `46`, product_prices `40083`, history `22`, pending `0`; Supabase linked products `19696`, suppliers `59`, categories `28`, product_prices `41111`, history `33`.
+- Il fix full-recovery e watermark e' coperto da test e build, ma non ancora verificato end-to-end su iPhone fisico autenticato.
+
+### Handoff post-fix
+- **Stato/Fase/Responsabile**: ACTIVE / FIX / USER physical login unblock.
+- **Blocco esatto**: la build corretta e' installata su iPhone fisico, ma il runtime non ha sessione cloud pronta (`auth_session_not_ready`), quindi non puo' fare recovery e non puo' passare acceptance.
+- **Prossima azione utente**: aprire l'app installata sull'iPhone fisico, rifare login cloud, lasciare l'app in foreground/Options.
+- **Prossimo comando Codex dopo login**: `MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios physical-sync-acceptance --task TASK-114 --live`.
+- **Dopo PASS fisico**: eseguire in seriale i gate cross-platform richiesti dall'utente; non marcare DONE prima.

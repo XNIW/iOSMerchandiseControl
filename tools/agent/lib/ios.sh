@@ -177,11 +177,14 @@ def apple_ts(value):
     except Exception:
         return None
 
+container_kind = os.environ.get("IOS_CONTAINER_KIND", "")
+is_physical_copy = container_kind == "physical"
 metadata = {
     "containerPathHash": sha(container),
     "storePathHash": sha(store),
     "storeFile": os.path.basename(store),
-    "isRuntimeAppContainer": "/Containers/Data/Application/" in store and "DerivedData" not in store and ".xctest" not in store,
+    "containerKind": container_kind or "simulator",
+    "isRuntimeAppContainer": is_physical_copy or ("/Containers/Data/Application/" in store and "DerivedData" not in store and ".xctest" not in store),
     "lastSuccessfulSync": None,
     "baseline": None,
     "diagnostics": {
@@ -190,7 +193,11 @@ metadata = {
         "syncEventWatermarks": [],
     },
 }
-prefs_path = os.path.join(container, "Library", "Preferences", f"{bundle_id}.plist")
+prefs_candidates = [
+    os.path.join(container, "Library", "Preferences", f"{bundle_id}.plist"),
+    os.path.join(container, "Preferences", f"{bundle_id}.plist"),
+]
+prefs_path = next((path for path in prefs_candidates if os.path.exists(path)), prefs_candidates[0])
 def plist_value(value):
     if isinstance(value, (str, int, float, bool)) or value is None:
         return value
@@ -259,9 +266,9 @@ mc_ios_runtime_counts_payload() {
   local store="$4"
   local counts_json metadata_json
 
-  mc_sync_counts_ios "$MC_TASK_ID"
+  MC_IOS_CONTAINER_OVERRIDE="$container" MC_IOS_STORE_OVERRIDE="$store" mc_sync_counts_ios "$MC_TASK_ID"
   counts_json="$MC_SYNC_JSON_RESULT"
-  metadata_json="$(mc_ios_runtime_store_metadata_json "$container" "$store")"
+  metadata_json="$(IOS_CONTAINER_KIND="${MC_IOS_CONTAINER_KIND:-}" mc_ios_runtime_store_metadata_json "$container" "$store")"
   IOS_COUNTS_JSON="$counts_json" IOS_METADATA_JSON="$metadata_json" IOS_WAIT_SECONDS="$wait_seconds" IOS_RUNTIME_SOURCE="$source" python3 - > /tmp/mc-agent-ios-runtime-ui-counts.$$.json <<'PY'
 import json, os
 from datetime import datetime, timezone
@@ -297,6 +304,360 @@ PY
   MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-runtime-ui-counts.$$.json)"
   rm -f /tmp/mc-agent-ios-runtime-ui-counts.$$.json
   mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+}
+
+mc_ios_physical_device_json() {
+  local json device_json
+  json="$(mktemp /tmp/mc-agent-ios-physical-devices.XXXXXX)"
+  xcrun devicectl list devices --json-output "$json" >/dev/null 2>&1 || return "$MC_EXIT_BLOCKED"
+  device_json="$(MC_IOS_DEVICE_ID="${MC_IOS_DEVICE_ID:-}" python3 - "$json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+target = os.environ.get("MC_IOS_DEVICE_ID") or ""
+with open(path) as handle:
+    data = json.load(handle)
+devices = data.get("result", {}).get("devices", [])
+iphones = []
+for device in devices:
+    hw = device.get("hardwareProperties", {})
+    props = device.get("deviceProperties", {})
+    conn = device.get("connectionProperties", {})
+    if hw.get("platform") != "iOS":
+        continue
+    ident = device.get("identifier")
+    candidates = {
+        ident,
+        hw.get("udid"),
+        hw.get("serialNumber"),
+        props.get("name"),
+        *(conn.get("potentialHostnames") or []),
+    }
+    if target and target not in candidates:
+        continue
+    iphones.append({
+        "identifier": ident,
+        "name": props.get("name"),
+        "productType": hw.get("productType"),
+        "osVersion": props.get("osVersionNumber"),
+        "state": conn.get("tunnelState") or "unknown",
+        "udidHash": __import__("hashlib").sha256(str(hw.get("udid") or ident or "").encode()).hexdigest()[:12],
+    })
+if len(iphones) == 1:
+    print(json.dumps(iphones[0], sort_keys=True))
+    sys.exit(0)
+if len(iphones) == 0:
+    sys.exit(2)
+sys.exit(3)
+PY
+)"
+  local code=$?
+  rm -f "$json"
+  if [[ "$code" -ne 0 ]]; then
+    return "$code"
+  fi
+  printf '%s\n' "$device_json"
+}
+
+mc_ios_physical_device_id() {
+  local device_json
+  device_json="$(mc_ios_physical_device_json)" || return $?
+  DEVICE_JSON="$device_json" python3 - <<'PY'
+import json, os
+print(json.loads(os.environ["DEVICE_JSON"])["identifier"])
+PY
+}
+
+mc_ios_physical_launch_app() {
+  local device_id="$1"
+  local bundle_id
+  bundle_id="$(mc_ios_app_bundle_id)"
+  xcrun devicectl device process launch \
+    --device "$device_id" \
+    --terminate-existing \
+    "$bundle_id" >/dev/null 2>&1
+}
+
+mc_ios_physical_copy_library() {
+  local device_id="$1"
+  local dest
+  dest="$(mktemp -d /tmp/mc-agent-ios-physical-library.XXXXXX)"
+  xcrun devicectl device copy from \
+    --device "$device_id" \
+    --domain-type appDataContainer \
+    --domain-identifier "$(mc_ios_app_bundle_id)" \
+    --source Library \
+    --destination "$dest" >/dev/null 2>&1 || {
+      rm -rf "$dest"
+      return "$MC_EXIT_BLOCKED"
+    }
+  printf '%s\n' "$dest"
+}
+
+mc_ios_physical_runtime_counts_payload() {
+  local source="$1"
+  local wait_seconds="${2:-60}"
+  local device_json device_id container store
+  device_json="$(mc_ios_physical_device_json)" || {
+    MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$MC_TASK_ID" "$source" "No single connected physical iPhone was found by devicectl.")"
+    return "$MC_EXIT_BLOCKED"
+  }
+  device_id="$(DEVICE_JSON="$device_json" python3 - <<'PY'
+import json, os
+print(json.loads(os.environ["DEVICE_JSON"])["identifier"])
+PY
+)"
+  mc_ios_physical_launch_app "$device_id" || {
+    MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$MC_TASK_ID" "$source" "Physical iPhone app launch failed; unlock/trust the device and ensure the app is installed.")"
+    return "$MC_EXIT_BLOCKED"
+  }
+  if [[ "$wait_seconds" != "0" && "$wait_seconds" != "0.0" ]]; then
+    sleep "$wait_seconds"
+  fi
+  container="$(mc_ios_physical_copy_library "$device_id")" || {
+    MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$MC_TASK_ID" "$source" "Physical iPhone appDataContainer copy failed; unlock/trust the device.")"
+    return "$MC_EXIT_BLOCKED"
+  }
+  store="$(mc_sync_ios_store_path "$container" 2>/dev/null || true)"
+  if [[ -z "$store" ]]; then
+    rm -rf "$container"
+    MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$MC_TASK_ID" "$source" "Physical iPhone SwiftData store was not found in copied appDataContainer.")"
+    return "$MC_EXIT_BLOCKED"
+  fi
+  MC_IOS_CONTAINER_KIND="physical" mc_ios_runtime_counts_payload "$source" "$wait_seconds" "$container" "$store"
+  DEVICE_JSON="$device_json" CURRENT_JSON="$MC_SYNC_JSON_RESULT" python3 - > /tmp/mc-agent-ios-physical-counts.$$.json <<'PY'
+import json, os
+payload = json.loads(os.environ["CURRENT_JSON"])
+device = json.loads(os.environ["DEVICE_JSON"])
+payload.setdefault("runtime", {})["physicalDevice"] = {
+    "name": device.get("name"),
+    "productType": device.get("productType"),
+    "osVersion": device.get("osVersion"),
+    "state": device.get("state"),
+    "udidHash": device.get("udidHash"),
+}
+print(json.dumps(payload, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-physical-counts.$$.json)"
+  rm -f /tmp/mc-agent-ios-physical-counts.$$.json
+  rm -rf "$container"
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+}
+
+mc_ios_physical_runtime_counts() {
+  local wait_seconds="${MC_IOS_PHYSICAL_WAIT_SECONDS:-60}"
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="live-readonly"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-03,CA-04,CA-05,CA-10"
+  mc_require_live || return $?
+  mc_ios_physical_runtime_counts_payload "ios.physical-runtime-counts" "$wait_seconds"
+  local code=$?
+  if [[ "$code" -eq 0 ]]; then
+    MC_SUMMARY="iOS physical-runtime-counts PASS: launched physical iPhone app and read copied runtime SwiftData store."
+    MC_NEXT_ACTION="Run ios physical-sync-loop-diagnostics or physical-sync-acceptance."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="iOS physical-runtime-counts BLOCKED: physical iPhone runtime store unavailable."
+  MC_NEXT_ACTION="Unlock/trust the iPhone, verify the app is installed/logged in, then rerun."
+  return "$code"
+}
+
+mc_ios_physical_sync_loop_diagnostics() {
+  local wait_seconds="${MC_IOS_PHYSICAL_DIAGNOSTIC_WAIT_SECONDS:-60}"
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="live-readonly"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-03,CA-04,CA-05,CA-10"
+  mc_require_live || return $?
+  mc_ios_physical_runtime_counts_payload "ios.physical-sync-loop-diagnostics" "$wait_seconds"
+  local code=$?
+  [[ "$code" -eq 0 ]] || {
+    MC_SUMMARY="iOS physical-sync-loop-diagnostics BLOCKED: could not collect physical runtime counts/diagnostics."
+    MC_NEXT_ACTION="Unlock/trust the iPhone and rerun diagnostics."
+    return "$code"
+  }
+  CURRENT_JSON="$MC_SYNC_JSON_RESULT" python3 - > /tmp/mc-agent-ios-physical-loop.$$.json <<'PY'
+import json, os
+payload = json.loads(os.environ["CURRENT_JSON"])
+runtime = payload.get("runtime", {}).get("diagnostics", {}).get("runtime", {})
+last_page = {
+    "eventsFetched": runtime.get("incremental.lastPage.eventsFetched"),
+    "eventsProcessed": runtime.get("incremental.lastPage.eventsProcessed"),
+    "watermarkBefore": runtime.get("incremental.lastPage.watermarkBefore"),
+    "watermarkAfter": runtime.get("incremental.lastPage.watermarkAfter"),
+    "targetedProductsFetched": runtime.get("incremental.lastPage.productsFetched"),
+    "targetedPricesFetched": runtime.get("incremental.lastPage.pricesFetched"),
+    "targetedHistoryFetched": runtime.get("incremental.lastPage.historyFetched"),
+    "applied": runtime.get("incremental.lastPage.applied"),
+}
+requires_recovery = bool(runtime.get("incremental.lastRequiresFullRecovery") or runtime.get("incremental.lastRequiresFullRecoveryReason"))
+attempts = int(runtime.get("incremental.attemptWindow.count") or 0)
+auth_ready = runtime.get("auth.isSignedIn") is True and runtime.get("auth.userIDPresent") is True
+classification = []
+if not auth_ready:
+    classification.append("AUTH_SESSION_NOT_READY")
+if auth_ready and last_page["eventsFetched"] == 50 and last_page["applied"] == 0 and requires_recovery:
+    classification.append("FULL_RECOVERY_REQUIRED_BUT_NOT_SCHEDULED")
+if auth_ready and last_page["eventsFetched"] == 50 and last_page["targetedProductsFetched"] == 0 and last_page["targetedPricesFetched"] == 0 and last_page["targetedHistoryFetched"] == 0:
+    classification.append("EMPTY_TARGET_EVENTS_LOOP")
+if auth_ready and last_page["watermarkAfter"] == last_page["watermarkBefore"] and last_page["eventsFetched"]:
+    classification.append("STALE_WATERMARK_NOT_ADVANCING")
+if attempts > 12:
+    classification.append("APP_RUNTIME_BUG")
+payload["loopDiagnostics"] = {
+    "attemptsLast60s": attempts,
+    "lastPage": last_page,
+    "requiresFullRecovery": requires_recovery,
+    "requiresFullRecoveryReason": runtime.get("incremental.lastRequiresFullRecoveryReason"),
+    "sameEventPageRepeated": runtime.get("incremental.samePageRepeatCount"),
+    "classification": classification or ["NO_LOOP_EVIDENCE_IN_CAPTURE"],
+    "currentSyncPhase": runtime.get("incremental.lastOutcome"),
+    "currentSyncSource": runtime.get("incremental.lastSource"),
+    "currentSyncType": runtime.get("incremental.lastSyncType"),
+    "progressNumerator": runtime.get("progress.current"),
+    "progressDenominator": runtime.get("progress.total"),
+}
+print(json.dumps(payload, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-physical-loop.$$.json)"
+  rm -f /tmp/mc-agent-ios-physical-loop.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  MC_SUMMARY="iOS physical-sync-loop-diagnostics PASS: collected physical runtime counts, diagnostics, and loop classification."
+  MC_NEXT_ACTION="Fix any loop classification, then run ios physical-sync-acceptance."
+  return "$MC_EXIT_PASS"
+}
+
+mc_ios_physical_smoke_options() {
+  local wait_seconds="${MC_IOS_PHYSICAL_SMOKE_WAIT_SECONDS:-20}"
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="live-readonly"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-03,CA-04,CA-05,CA-10"
+  mc_require_live || return $?
+  mc_ios_physical_runtime_counts_payload "ios.physical-smoke-options" "$wait_seconds"
+  local code=$?
+  [[ "$code" -eq 0 ]] || {
+    MC_SUMMARY="iOS physical-smoke-options BLOCKED: physical runtime counts unavailable."
+    MC_NEXT_ACTION="Unlock/trust the iPhone, open Options if needed, then rerun."
+    return "$code"
+  }
+  CURRENT_JSON="$MC_SYNC_JSON_RESULT" python3 - > /tmp/mc-agent-ios-physical-smoke.$$.json <<'PY'
+import json, os
+payload = json.loads(os.environ["CURRENT_JSON"])
+runtime = payload.get("runtime", {}).get("diagnostics", {}).get("runtime", {})
+progress_current = runtime.get("progress.current")
+progress_total = runtime.get("progress.total")
+active = runtime.get("progress.isActive")
+payload["optionsSmoke"] = {
+    "automaticSyncInProgress": bool(active),
+    "spinnerZeroOfZero": bool(active and progress_current == 0 and progress_total == 0),
+    "localDatabaseNeedsCloudCheck": runtime.get("reconcile.mismatches") not in (None, ""),
+    "lastOutcome": runtime.get("incremental.lastOutcome"),
+    "lastSyncType": runtime.get("incremental.lastSyncType"),
+}
+if payload["optionsSmoke"]["spinnerZeroOfZero"]:
+    payload["status"] = "FAIL"
+    payload["blocker"] = "Physical Options reports active progress with 0/0 work."
+print(json.dumps(payload, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-physical-smoke.$$.json)"
+  rm -f /tmp/mc-agent-ios-physical-smoke.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  if [[ "$(printf '%s' "$MC_SYNC_JSON_RESULT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))')" == "PASS" ]]; then
+    MC_SUMMARY="iOS physical-smoke-options PASS: physical runtime status has no 0/0 active spinner signal."
+    MC_NEXT_ACTION="Run ios physical-sync-loop-diagnostics or physical-sync-acceptance."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="iOS physical-smoke-options FAIL: Options zero-work spinner signal detected."
+  MC_NEXT_ACTION="Fix progress state and rerun physical smoke."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_ios_physical_sync_acceptance() {
+  local wait_seconds="${MC_IOS_PHYSICAL_ACCEPTANCE_WAIT_SECONDS:-60}"
+  local physical_json supabase_json supabase_code
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="live-readonly"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-03,CA-04,CA-05,CA-10"
+  mc_require_live || return $?
+  mc_ios_physical_runtime_counts_payload "ios.physical-sync-acceptance" "$wait_seconds"
+  local code=$?
+  [[ "$code" -eq 0 ]] || {
+    MC_SUMMARY="iOS physical-sync-acceptance BLOCKED: physical runtime evidence unavailable."
+    MC_NEXT_ACTION="Unlock/trust the iPhone, verify login, then rerun acceptance."
+    return "$code"
+  }
+  physical_json="$MC_SYNC_JSON_RESULT"
+  mc_sync_counts_supabase "$MC_TASK_ID" "${MC_SUPABASE_PROFILE:-linked}"
+  supabase_code=$?
+  supabase_json="$MC_SYNC_JSON_RESULT"
+  if [[ "$supabase_code" -ne 0 ]]; then
+    MC_SYNC_JSON_RESULT="$physical_json"
+    mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+    MC_SUMMARY="iOS physical-sync-acceptance BLOCKED: Supabase linked counts unavailable for physical comparison."
+    MC_NEXT_ACTION="Retry serially after Supabase pooler/backoff; do not treat physical counts as accepted without remote comparison."
+    return "$supabase_code"
+  fi
+  PHYSICAL_JSON="$physical_json" SUPABASE_JSON="$supabase_json" python3 - > /tmp/mc-agent-ios-physical-acceptance.$$.json <<'PY'
+import json, os
+payload = json.loads(os.environ["PHYSICAL_JSON"])
+remote = json.loads(os.environ["SUPABASE_JSON"])
+runtime = payload.get("runtime", {}).get("diagnostics", {}).get("runtime", {})
+counts = payload.get("counts", {})
+pending = sum((counts.get(k, {}) or {}).get("pending") or 0 for k in ["products", "suppliers", "categories", "product_prices", "history_entries"])
+attempts = int(runtime.get("incremental.attemptWindow.count") or 0)
+requires_recovery = bool(runtime.get("incremental.lastRequiresFullRecovery") or runtime.get("incremental.lastRequiresFullRecoveryReason"))
+active_zero = bool(runtime.get("progress.isActive") and runtime.get("progress.current") == 0 and runtime.get("progress.total") == 0)
+auth_ready = runtime.get("auth.isSignedIn") is True and runtime.get("auth.userIDPresent") is True
+failures = []
+drift = {}
+for table in ["products", "suppliers", "categories", "product_prices"]:
+    local_active = (counts.get(table) or {}).get("active")
+    remote_active = (remote.get("counts", {}).get(table) or {}).get("active")
+    if local_active != remote_active:
+        drift[table] = {"physical": local_active, "supabase": remote_active}
+local_history = (counts.get("history_entries") or {}).get("userVisible")
+remote_history = (remote.get("counts", {}).get("history_entries") or {}).get("userVisible")
+if local_history != remote_history:
+    drift["history_entries"] = {"physical": local_history, "supabase": remote_history}
+if active_zero:
+    failures.append("spinner_zero_of_zero")
+if not auth_ready:
+    failures.append("auth_session_not_ready")
+if attempts > 12:
+    failures.append("too_many_sync_attempts_last_60s")
+if runtime.get("incremental.lastSyncType") == "EVENT_INCREMENTAL" and runtime.get("incremental.lastPage.applied") == 0 and requires_recovery:
+    failures.append("event_incremental_requires_recovery_no_apply")
+if drift and not requires_recovery:
+    failures.append("physical_counts_drift_without_recovery")
+payload["physicalAcceptance"] = {
+    "pendingAggregate": pending,
+    "attemptsLast60s": attempts,
+    "requiresFullRecovery": requires_recovery,
+    "authReady": auth_ready,
+    "spinnerZeroOfZero": active_zero,
+    "lastSyncType": runtime.get("incremental.lastSyncType"),
+    "lastOutcome": runtime.get("incremental.lastOutcome"),
+    "drift": drift,
+    "failures": failures,
+}
+if failures:
+    payload["status"] = "FAIL"
+    payload["blocker"] = ",".join(failures)
+print(json.dumps(payload, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-physical-acceptance.$$.json)"
+  rm -f /tmp/mc-agent-ios-physical-acceptance.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  if [[ "$(printf '%s' "$MC_SYNC_JSON_RESULT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))')" == "PASS" ]]; then
+    MC_SUMMARY="iOS physical-sync-acceptance PASS: physical iPhone runtime has no loop/0-work spinner signal in the acceptance window."
+    MC_NEXT_ACTION="Run cross-platform regression gates."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="iOS physical-sync-acceptance FAIL: physical iPhone runtime loop or zero-work spinner signal remains."
+  MC_NEXT_ACTION="Inspect physicalAcceptance and loopDiagnostics, fix, rerun."
+  return "$MC_EXIT_FAIL"
 }
 
 mc_ios_runtime_store_counts() {
@@ -1034,6 +1395,22 @@ mc_cmd_ios() {
     runtime-ui-counts)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
       mc_ios_runtime_ui_counts
+      ;;
+    physical-runtime-counts)
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      mc_ios_physical_runtime_counts
+      ;;
+    physical-smoke-options)
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      mc_ios_physical_smoke_options
+      ;;
+    physical-sync-loop-diagnostics)
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      mc_ios_physical_sync_loop_diagnostics
+      ;;
+    physical-sync-acceptance)
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      mc_ios_physical_sync_acceptance
       ;;
     auth-preflight)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }

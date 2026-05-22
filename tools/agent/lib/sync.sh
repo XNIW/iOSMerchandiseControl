@@ -516,11 +516,16 @@ mc_sync_counts_ios() {
   local task_id="$1"
   local started container store code
   started="$(mc_now_iso)"
-  container="$(mc_sync_ios_container)" || {
-    MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$task_id" "ios" "Booted simulator app container is unavailable; install/launch the iOS app first.")"
-    return "$MC_EXIT_BLOCKED"
-  }
-  store="$(mc_sync_ios_store_path "$container" 2>/dev/null || true)"
+  if [[ -n "${MC_IOS_STORE_OVERRIDE:-}" ]]; then
+    store="$MC_IOS_STORE_OVERRIDE"
+    container="${MC_IOS_CONTAINER_OVERRIDE:-$(dirname "$store")}"
+  else
+    container="$(mc_sync_ios_container)" || {
+      MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$task_id" "ios" "Booted simulator app container is unavailable; install/launch the iOS app first.")"
+      return "$MC_EXIT_BLOCKED"
+    }
+    store="$(mc_sync_ios_store_path "$container" 2>/dev/null || true)"
+  fi
   if [[ -z "$store" ]]; then
     MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$task_id" "ios" "No SwiftData SQLite store was found in the booted simulator app container.")"
     return "$MC_EXIT_BLOCKED"

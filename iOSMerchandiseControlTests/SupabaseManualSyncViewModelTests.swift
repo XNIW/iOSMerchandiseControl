@@ -334,6 +334,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         UserDefaults.standard.set("it", forKey: "appLanguage")
         UserDefaults.standard.removeObject(forKey: "task114.runtime.incremental.lastOutcome")
         UserDefaults.standard.removeObject(forKey: "task114.runtime.incremental.lastTimeoutMs")
+        UserDefaults.standard.removeObject(forKey: "task114.runtime.fullRecovery.lastOutcome")
         SupabaseManualSyncViewModel.resetForegroundAutomaticGateForTests()
     }
 
@@ -342,6 +343,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         UserDefaults.standard.removeObject(forKey: "appLanguage")
         UserDefaults.standard.removeObject(forKey: "task114.runtime.incremental.lastOutcome")
         UserDefaults.standard.removeObject(forKey: "task114.runtime.incremental.lastTimeoutMs")
+        UserDefaults.standard.removeObject(forKey: "task114.runtime.fullRecovery.lastOutcome")
         try await super.tearDown()
     }
 
@@ -1086,6 +1088,79 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         XCTAssertTrue(didRun)
         XCTAssertEqual(incrementalProvider.callCount, 1)
         XCTAssertEqual(UserDefaults.standard.string(forKey: "task114.runtime.incremental.lastOutcome"), "completed")
+    }
+
+    func testTask114ForegroundIncrementalRecoveryBackoffPreventsSamePageLoop() async {
+        let owner = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
+        let watermarkKey = SupabaseSyncEventIncrementalApplyService.watermarkKey(ownerUserID: owner)
+        UserDefaults.standard.removeObject(forKey: watermarkKey)
+        var recoverySummary = SupabaseSyncEventIncrementalApplySummary(
+            syncType: .eventIncremental,
+            eventsFetched: 50,
+            eventsProcessed: 50,
+            watermarkBefore: 42,
+            watermarkAfter: 92
+        )
+        recoverySummary.requiresFullRecoveryReason = "sync_event_missing_entity_ids"
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        let incrementalProvider = ManualSyncIncrementalPullProviderFake(mode: .summary(recoverySummary))
+        let policy = SupabaseManualSyncSemiAutomaticPolicy(
+            foregroundCooldown: 0,
+            foregroundDebounce: 0,
+            recoverableErrorBackoff: 600
+        )
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            ownerID: owner,
+            supportsForegroundCloudCheck: true,
+            incrementalPullProvider: incrementalProvider,
+            policy: policy
+        )
+
+        let firstRun = await vm.startForegroundIncrementalCheckNow(
+            now: Date(timeIntervalSince1970: 1_779_466_500),
+            source: .remoteSyncEvent
+        )
+        let secondRun = await vm.startForegroundIncrementalCheckNow(
+            now: Date(timeIntervalSince1970: 1_779_466_505),
+            source: .remoteSyncEvent
+        )
+
+        XCTAssertTrue(firstRun)
+        XCTAssertTrue(secondRun)
+        XCTAssertEqual(incrementalProvider.callCount, 1)
+        XCTAssertTrue(fake.calls.contains(.remotePreview))
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: watermarkKey), 92)
+        XCTAssertEqual(vm.semiAutomaticState, .noChanges)
+        XCTAssertEqual(vm.lastForegroundObservationEvent, .foreground_check_throttled)
+        XCTAssertEqual(UserDefaults.standard.string(forKey: "task114.runtime.fullRecovery.lastOutcome"), "completed")
+        UserDefaults.standard.removeObject(forKey: watermarkKey)
+    }
+
+    func testTask114ForegroundIncrementalNoHistoryWorkClearsZeroProgress() async {
+        let owner = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
+        let fake = SupabaseManualSyncCoordinatorDryRunFake()
+        let incrementalProvider = ManualSyncIncrementalPullProviderFake(mode: .summary(.noWork(watermark: 114)))
+        let historyProvider = ManualSyncHistorySessionProviderFake()
+        let vm = makeSemiAutomaticViewModel(
+            fake: fake,
+            ownerID: owner,
+            supportsForegroundCloudCheck: true,
+            historySessionProvider: historyProvider,
+            incrementalPullProvider: incrementalProvider
+        )
+
+        let didRun = await vm.startForegroundIncrementalCheckNow(
+            now: Date(timeIntervalSince1970: 1_779_466_520),
+            source: .remoteSyncEvent
+        )
+
+        XCTAssertTrue(didRun)
+        XCTAssertEqual(incrementalProvider.callCount, 1)
+        XCTAssertEqual(historyProvider.callCount, 1)
+        XCTAssertFalse(vm.progressState.isActive)
+        XCTAssertNil(vm.progressState.countText)
+        XCTAssertEqual(vm.semiAutomaticState, .noChanges)
     }
 
     func testTask092RootForegroundChangesFoundMapsToActionableBannerState() async {
@@ -4049,6 +4124,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
         catalogPushProvider: ManualSyncCatalogPushProviderFake? = nil,
         productPriceProvider: ManualSyncProductPriceProviderFake? = nil,
         activityRegistrationProvider: ManualSyncActivityRegistrationProviderFake? = nil,
+        historySessionProvider: ManualSyncHistorySessionProviderFake? = nil,
         incrementalPullProvider: ManualSyncIncrementalPullProviderFake? = nil,
         policy: SupabaseManualSyncSemiAutomaticPolicy = SupabaseManualSyncSemiAutomaticPolicy(),
         foregroundIncrementalTimeoutNanoseconds: UInt64 = 12_000_000_000
@@ -4075,6 +4151,8 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             currentProductPriceOwnerID: { ownerID },
             activityRegistrationProvider: activityRegistrationProvider,
             currentActivityRegistrationOwnerID: { ownerID },
+            historySessionProvider: historySessionProvider,
+            currentHistorySessionOwnerID: { ownerID },
             incrementalPullProvider: incrementalPullProvider,
             semiAutomaticPolicy: policy,
             foregroundIncrementalTimeoutNanoseconds: foregroundIncrementalTimeoutNanoseconds
