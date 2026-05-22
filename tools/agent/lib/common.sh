@@ -7,6 +7,9 @@ MC_SCHEMA_VERSION="1.1"
 MC_IOS_REPO="${MC_IOS_REPO:-/Users/minxiang/Desktop/iOSMerchandiseControl}"
 MC_ANDROID_REPO="${MC_ANDROID_REPO:-/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView}"
 MC_SUPABASE_REPO="${MC_SUPABASE_REPO:-/Users/minxiang/Desktop/MerchandiseControlSupabase}"
+MC_TASK_ID_EXPLICIT="${MC_TASK_ID+x}"
+MC_EVIDENCE_DIR_EXPLICIT="${MC_EVIDENCE_DIR+x}"
+MC_RUN_PREFIX_EXPLICIT="${MC_RUN_PREFIX+x}"
 MC_TASK_ID="${MC_TASK_ID:-TASK-113}"
 MC_EVIDENCE_DIR="${MC_EVIDENCE_DIR:-docs/TASKS/EVIDENCE/TASK-113}"
 
@@ -36,9 +39,10 @@ mc_agent_source_libs() {
 
 mc_load_config() {
   local cfg="${MC_AGENT_CONFIG:-${MC_AGENT_ROOT}/config.env}"
-  local had_task_id="${MC_TASK_ID+x}"
-  local had_evidence_dir="${MC_EVIDENCE_DIR+x}"
-  local had_run_prefix="${MC_RUN_PREFIX+x}"
+  local loaded_example=0
+  local had_task_id="$MC_TASK_ID_EXPLICIT"
+  local had_evidence_dir="$MC_EVIDENCE_DIR_EXPLICIT"
+  local had_run_prefix="$MC_RUN_PREFIX_EXPLICIT"
   local had_allow_live="${MC_ALLOW_LIVE+x}"
   local had_allow_cleanup="${MC_ALLOW_CLEANUP+x}"
   local had_profile="${MC_SUPABASE_PROFILE+x}"
@@ -60,6 +64,7 @@ mc_load_config() {
   elif [[ -f "${MC_AGENT_ROOT}/config.example.env" ]]; then
     # shellcheck source=/dev/null
     source "${MC_AGENT_ROOT}/config.example.env"
+    loaded_example=1
   fi
   [[ -n "$had_task_id" ]] && MC_TASK_ID="$env_task_id"
   [[ -n "$had_evidence_dir" ]] && MC_EVIDENCE_DIR="$env_evidence_dir"
@@ -70,6 +75,16 @@ mc_load_config() {
   [[ -n "$had_android_serial" ]] && MC_ANDROID_DEVICE_SERIAL="$env_android_serial"
   [[ -n "$had_ios_simulator_id" ]] && MC_IOS_SIMULATOR_ID="$env_ios_simulator_id"
   [[ -n "$had_ios_simulator_udid" ]] && MC_IOS_SIMULATOR_UDID="$env_ios_simulator_udid"
+
+  if [[ "$loaded_example" == "1" && -z "$had_task_id" ]]; then
+    local inferred_task_id
+    inferred_task_id="$(mc_infer_task_id_from_master || true)"
+    if [[ -n "$inferred_task_id" ]]; then
+      MC_TASK_ID="$inferred_task_id"
+      [[ -z "$had_evidence_dir" ]] && MC_EVIDENCE_DIR="docs/TASKS/EVIDENCE/${inferred_task_id}"
+      [[ -z "$had_run_prefix" ]] && MC_RUN_PREFIX="${inferred_task_id/-/}_RUN_"
+    fi
+  fi
 
   export MC_IOS_REPO MC_ANDROID_REPO MC_SUPABASE_REPO MC_TASK_ID MC_EVIDENCE_DIR
   export MC_AGENT_VERSION MC_SCHEMA_VERSION MC_ALLOW_LIVE MC_ALLOW_CLEANUP
@@ -86,6 +101,12 @@ mc_load_config() {
     export JAVA_HOME="$MC_ANDROID_JAVA_HOME"
   fi
   export GRADLE_OPTS="${MC_ANDROID_GRADLE_OPTS:-}"
+}
+
+mc_infer_task_id_from_master() {
+  local master="${MC_IOS_REPO}/docs/MASTER-PLAN.md"
+  [[ -f "$master" ]] || return 1
+  LC_ALL=C grep -Eo 'TASK-[0-9]+' "$master" | head -n 1
 }
 
 mc_refresh_evidence_abs() {

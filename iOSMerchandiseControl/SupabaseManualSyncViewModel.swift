@@ -1355,6 +1355,8 @@ final class SupabaseManualSyncViewModel: ObservableObject {
             recordTask114RuntimeDiagnostic(summary.historyApplyMs, forKey: "task114.runtime.incremental.lastHistoryApplyMs")
             recordTask114RuntimeDiagnostic(summary.totalElapsedMs, forKey: "task114.runtime.incremental.lastTotalElapsedMs")
             if summary.eventsFetched > 0 {
+                recordTask114RuntimeDiagnostic(Date().timeIntervalSince1970, forKey: "task114.runtime.incremental.lastEventAppliedAt")
+                recordTask114RuntimeDiagnostic(summary.syncType.rawValue, forKey: "task114.runtime.incremental.lastEventSyncType")
                 recordTask114RuntimeDiagnostic(summary.eventsFetched, forKey: "task114.runtime.incremental.lastPage.eventsFetched")
                 recordTask114RuntimeDiagnostic(summary.eventsProcessed, forKey: "task114.runtime.incremental.lastPage.eventsProcessed")
                 recordTask114RuntimeDiagnostic(summary.watermarkBefore, forKey: "task114.runtime.incremental.lastPage.watermarkBefore")

@@ -606,6 +606,7 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
     }
 
     private func recordCanonicalDriftDiagnostics(_ drift: SyncCountDriftReport) {
+        #if DEBUG
         defaults.set(drift.local.products, forKey: "task114.runtime.reconcile.local.products")
         defaults.set(drift.local.suppliers, forKey: "task114.runtime.reconcile.local.suppliers")
         defaults.set(drift.local.categories, forKey: "task114.runtime.reconcile.local.categories")
@@ -620,6 +621,7 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
             drift.mismatches.map(\.rawValue).joined(separator: ","),
             forKey: "task114.runtime.reconcile.mismatches"
         )
+        #endif
     }
 
     private func watermarkKey(ownerUserID: UUID) -> String {

@@ -525,15 +525,21 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
     }
 
     private func recordRuntimeDiagnostic(_ key: String, _ value: String) {
+        #if DEBUG
         UserDefaults.standard.set(value, forKey: "task114.runtime.\(key)")
+        #endif
     }
 
     private func recordRuntimeDiagnostic(_ key: String, _ value: Bool) {
+        #if DEBUG
         UserDefaults.standard.set(value, forKey: "task114.runtime.\(key)")
+        #endif
     }
 
     private func recordRuntimeDiagnostic(_ key: String, _ value: TimeInterval) {
+        #if DEBUG
         UserDefaults.standard.set(value, forKey: "task114.runtime.\(key)")
+        #endif
     }
 
     private var isTask114FullPullHarnessRunning: Bool {

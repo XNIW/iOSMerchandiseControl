@@ -839,14 +839,25 @@ ios_after = json.loads(os.environ["IOS_AFTER_ANDROID"])
 ios_diag = ios_after.get("runtime", {}).get("diagnostics", {}).get("runtime", {})
 last_completed = ios_diag.get("incremental.lastCompletedAt")
 last_completed_ms = int(float(last_completed) * 1000) if last_completed is not None else None
+last_event_applied = ios_diag.get("incremental.lastEventAppliedAt")
+last_event_applied_ms = int(float(last_event_applied) * 1000) if last_event_applied is not None else None
 final_visible_ms = parse_iso_ms(ios_after.get("completedAt"))
 signal_at = ios_diag.get("watcher.signalAt")
 signal_ms = int(float(signal_at) * 1000) if signal_at is not None else None
 realtime_delay = signal_ms - android_write_finished if signal_ms and signal_ms >= android_write_finished else None
 used_realtime = realtime_delay is not None and realtime_delay <= android_to_ios_ms
+event_sync_type = ios_diag.get("incremental.lastEventSyncType")
+diagnostic_last_sync_type = ios_diag.get("incremental.lastSyncType")
+receiver_sync_type = (
+    event_sync_type
+    if last_event_applied_ms is not None and last_event_applied_ms >= android_write_started
+    else diagnostic_last_sync_type
+)
 ios_apply_to_visible_ms = (
-    final_visible_ms - last_completed_ms
-    if final_visible_ms is not None and last_completed_ms is not None and final_visible_ms >= last_completed_ms
+    final_visible_ms - (last_event_applied_ms or last_completed_ms)
+    if final_visible_ms is not None
+    and (last_event_applied_ms or last_completed_ms) is not None
+    and final_visible_ms >= (last_event_applied_ms or last_completed_ms)
     else None
 )
 android_to_ios_breakdown = {
@@ -881,8 +892,11 @@ android_to_ios_breakdown = {
     "iosIncrementalTotalElapsedMs": ios_diag.get("incremental.lastPage.totalElapsedMs") or ios_diag.get("incremental.lastTotalElapsedMs"),
     "iosApplyToStoreVisibleMs": ios_apply_to_visible_ms,
     "polls": int(os.environ["ANDROID_TO_IOS_POLLS"]),
-    "syncType": ios_diag.get("incremental.lastSyncType"),
-    "fullPullUsed": ios_diag.get("incremental.lastSyncType") in ("FULL_PULL_BOOTSTRAP", "FULL_PULL_RECOVERY"),
+    "syncType": receiver_sync_type,
+    "diagnosticLastSyncType": diagnostic_last_sync_type,
+    "lastEventSyncType": event_sync_type,
+    "lastEventAppliedAfterAndroidWrite": last_event_applied_ms is not None and last_event_applied_ms >= android_write_started,
+    "fullPullUsed": receiver_sync_type in ("FULL_PULL_BOOTSTRAP", "FULL_PULL_RECOVERY"),
 }
 full_pull_used = android_to_ios_breakdown["fullPullUsed"]
 targeted_events_ok = (

@@ -1451,7 +1451,8 @@ nonisolated struct SupabasePullApplyService: Sendable {
         )
         let activeLookupPendingKeys = try fetchActiveLookupPendingKeys(context: context)
 
-        var pruned = 0
+        var supplierPrunes: [(supplier: Supplier, normalizedName: String)] = []
+        var categoryPrunes: [(category: ProductCategory, normalizedName: String)] = []
         let suppliers = try context.fetch(FetchDescriptor<Supplier>(sortBy: [SortDescriptor(\Supplier.name)]))
         for supplier in suppliers {
             let existsInRemoteSnapshot = supplier.remoteID.map { remoteSupplierIDs.contains($0) } ?? false
@@ -1461,13 +1462,10 @@ nonisolated struct SupabasePullApplyService: Sendable {
                   !referencedSupplierNames.contains(normalizedName),
                   !activeLookupPendingKeys.contains(
                     LocalPendingChangeLogicalKey.supplier(remoteID: supplier.remoteID, name: supplier.name)
-                  ) else {
+                ) else {
                 continue
             }
-            detachSupplier(supplier, from: products)
-            context.delete(supplier)
-            suppliersByName.removeValue(forKey: normalizedName)
-            pruned += 1
+            supplierPrunes.append((supplier, normalizedName))
         }
 
         let categories = try context.fetch(FetchDescriptor<ProductCategory>(sortBy: [SortDescriptor(\ProductCategory.name)]))
@@ -1479,10 +1477,36 @@ nonisolated struct SupabasePullApplyService: Sendable {
                   !referencedCategoryNames.contains(normalizedName),
                   !activeLookupPendingKeys.contains(
                     LocalPendingChangeLogicalKey.category(remoteID: category.remoteID, name: category.name)
-                  ) else {
+                ) else {
                 continue
             }
-            detachCategory(category, from: products)
+            categoryPrunes.append((category, normalizedName))
+        }
+
+        var detachedRelationships = false
+        for (supplier, _) in supplierPrunes {
+            detachedRelationships = detachSupplier(supplier, from: products) || detachedRelationships
+        }
+        for (category, _) in categoryPrunes {
+            detachedRelationships = detachCategory(category, from: products) || detachedRelationships
+        }
+
+        if detachedRelationships {
+            do {
+                try context.save()
+            } catch {
+                context.rollback()
+                throw SupabasePullApplyError.saveFailed(message: String(describing: error))
+            }
+        }
+
+        var pruned = 0
+        for (supplier, normalizedName) in supplierPrunes {
+            context.delete(supplier)
+            suppliersByName.removeValue(forKey: normalizedName)
+            pruned += 1
+        }
+        for (category, normalizedName) in categoryPrunes {
             context.delete(category)
             categoriesByName.removeValue(forKey: normalizedName)
             pruned += 1
@@ -1491,16 +1515,24 @@ nonisolated struct SupabasePullApplyService: Sendable {
         return pruned
     }
 
-    private func detachSupplier(_ supplier: Supplier, from products: [Product]) {
+    @discardableResult
+    private func detachSupplier(_ supplier: Supplier, from products: [Product]) -> Bool {
+        var detached = false
         for product in products where product.supplier === supplier {
             product.supplier = nil
+            detached = true
         }
+        return detached
     }
 
-    private func detachCategory(_ category: ProductCategory, from products: [Product]) {
+    @discardableResult
+    private func detachCategory(_ category: ProductCategory, from products: [Product]) -> Bool {
+        var detached = false
         for product in products where product.category === category {
             product.category = nil
+            detached = true
         }
+        return detached
     }
 
     private func hasPrunableUnreferencedCleanLookups(
