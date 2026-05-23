@@ -1,0 +1,190 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-117/agent-runs/20260523T211127Z-scan-options-observer-only-task-TASK-117-p48369.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-117/agent-runs/20260523T211127Z-scan-options-observer-only-task-TASK-117-p48369.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-117/agent-runs/20260523T211127Z-scan-options-observer-only-task-TASK-117-p48369.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [],
+  "cleanup_plan_id": null,
+  "command": "scan options-observer-only --task TASK-117",
+  "command_slug": "scan-options-observer-only-task-TASK-117",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 279,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-117",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK117_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-117"
+  },
+  "exit_code": 1,
+  "git_sha": "e14b433",
+  "next_action_recommended": "Fix failing checks and rerun options-observer-only.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Fix failing source/call-graph checks and rerun.",
+    "checks": [
+      {
+        "evidence": [
+          {
+            "line": 33,
+            "snippet": "@StateObject private var syncSummaryProvider = OptionsSyncSummaryProvider()"
+          }
+        ],
+        "file": "iOSMerchandiseControl/OptionsView.swift",
+        "id": "options_uses_summary_provider",
+        "reason": "Options should observe a summary provider.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 646,
+            "snippet": "let visibleProgress = SyncStatusPresenter.visibleProgress(from: presentation.progressState)"
+          },
+          {
+            "line": 674,
+            "snippet": "} else if SyncStatusPresenter.shouldShowFallbackSpinner("
+          }
+        ],
+        "file": "iOSMerchandiseControl/OptionsView.swift",
+        "id": "options_uses_status_presenter",
+        "reason": "Options should use SyncStatusPresenter for UI-only status decisions.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 25,
+            "snippet": "private let manualSyncViewModel: SupabaseManualSyncViewModel?"
+          },
+          {
+            "line": 41,
+            "snippet": "manualSyncViewModel: SupabaseManualSyncViewModel? = nil,"
+          },
+          {
+            "line": 613,
+            "snippet": "@StateObject private var viewModel: SupabaseManualSyncViewModel"
+          },
+          {
+            "line": 625,
+            "snippet": "viewModel: SupabaseManualSyncViewModel? = nil,"
+          },
+          {
+            "line": 633,
+            "snippet": "let resolvedViewModel = viewModel ?? SupabaseManualSyncReleaseFactory.makeViewModel("
+          },
+          {
+            "line": 887,
+            "snippet": "@StateObject private var viewModel: SupabaseManualSyncViewModel"
+          },
+          {
+            "line": 906,
+            "snippet": "viewModel: SupabaseManualSyncViewModel? = nil,"
+          },
+          {
+            "line": 913,
+            "snippet": "let resolvedViewModel = viewModel ?? SupabaseManualSyncReleaseFactory.makeViewModel("
+          }
+        ],
+        "file": "iOSMerchandiseControl/OptionsView.swift",
+        "id": "options_no_manual_vm_or_factory",
+        "reason": "Options public sync surface must not own or instantiate the manual VM/factory/adapter.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": [
+          {
+            "line": 1130,
+            "snippet": "startRun(for: .checkCloud)"
+          },
+          {
+            "line": 1130,
+            "snippet": "startRun(for: .checkCloud)"
+          },
+          {
+            "line": 1223,
+            "snippet": "startRun(for: action.id)"
+          },
+          {
+            "line": 1226,
+            "snippet": "private func startRun(for actionID: SupabaseManualSyncPresentationActionID) {"
+          },
+          {
+            "line": 1232,
+            "snippet": "let directSync = actionID == .syncNow || actionID == .checkCloud || actionID == .downloadCloudDatabase"
+          },
+          {
+            "line": 1232,
+            "snippet": "let directSync = actionID == .syncNow || actionID == .checkCloud || actionID == .downloadCloudDatabase"
+          },
+          {
+            "line": 1232,
+            "snippet": "let directSync = actionID == .syncNow || actionID == .checkCloud || actionID == .downloadCloudDatabase"
+          },
+          {
+            "line": 1233,
+            "snippet": "await viewModel.start(with: mode, syncHistoryAfterRun: directSync)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/OptionsView.swift",
+        "id": "options_no_sync_start_owner",
+        "reason": "Options must not start automatic foreground/realtime/reconnect sync.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/OptionsView.swift",
+        "id": "options_no_direct_remote_decision_fetch",
+        "reason": "Options view must not directly perform remote decision fetches.",
+        "status": "PASS"
+      }
+    ],
+    "completedAt": "2026-05-23T21:11:28Z",
+    "failureCount": 2,
+    "schemaVersion": "1.1",
+    "source": "scan.options-observer-only",
+    "startedAt": "2026-05-23T21:11:28Z",
+    "status": "FAIL",
+    "taskId": "TASK-117"
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "fail",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260523T211127Z-scan-options-observer-only-task-TASK-117-p48369",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "task_id": "TASK-117",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-23T21:11:28Z",
+  "timestamp_start": "2026-05-23T21:11:27Z",
+  "warnings": []
+}

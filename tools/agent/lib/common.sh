@@ -391,8 +391,9 @@ Usage:
   ./tools/agent/mc-agent.sh doctor | preflight | harness doctor | config validate | config print-redacted
   ./tools/agent/mc-agent.sh list commands | list commands-json
   ./tools/agent/mc-agent.sh report --task <TASK-ID> | report --latest | report validate-json --path <file>
-  ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task <TASK-ID> | scan repo-diff | scan release-cta | scan no-legacy-runtime-path --task TASK-116
-  ./tools/agent/mc-agent.sh evidence hygiene --task TASK-116
+  ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task <TASK-ID> | scan repo-diff | scan release-cta | scan no-legacy-runtime-path --task TASK-117
+  ./tools/agent/mc-agent.sh scan no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys --task TASK-117
+  ./tools/agent/mc-agent.sh evidence hygiene|bundle --task TASK-117
   ./tools/agent/mc-agent.sh account fixture prepare|cleanup --task TASK-116 --prefix TASK116_ACCOUNT_ [--dry-run]
   ./tools/agent/mc-agent.sh safety check-prefix --prefix TASK115_* | safety dry-run-required --command "<command>"
   ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|lifecycle|offline | ios smoke simulator|options|history
@@ -442,7 +443,16 @@ mc_help_json() {
     {"name":"scan repo-diff","argv":["scan","repo-diff"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan release-cta","argv":["scan","release-cta"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-legacy-runtime-path","argv":["scan","no-legacy-runtime-path","--task","TASK-116"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-full-pull-normal-path","argv":["scan","no-full-pull-normal-path","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan automatic-contracts-clean","argv":["scan","automatic-contracts-clean","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan root-host-clean","argv":["scan","root-host-clean","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan options-observer-only","argv":["scan","options-observer-only","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan duplicate-sync-owner","argv":["scan","duplicate-sync-owner","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan incremental-apply-contract","argv":["scan","incremental-apply-contract","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan swiftdata-mainactor-heavy","argv":["scan","swiftdata-mainactor-heavy","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan l10n-sync-keys","argv":["scan","l10n-sync-keys","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"evidence hygiene","argv":["evidence","hygiene","--task","TASK-116"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"evidence bundle","argv":["evidence","bundle","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"account fixture prepare","argv":["account","fixture","prepare","--task","TASK-116","--prefix","TASK116_ACCOUNT_","--dry-run"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"account fixture cleanup","argv":["account","fixture","cleanup","--task","TASK-116","--prefix","TASK116_ACCOUNT_"],"platform":"general","safety_level":"cleanup-dry-run"},
     {"name":"safety check-prefix","argv":["safety","check-prefix","--prefix","TASK115_*"],"platform":"general","safety_level":"safe-readonly"},
@@ -989,6 +999,64 @@ mc_cmd_scan_no_legacy_runtime_path() {
   MC_REQUIRES_LIVE="false"
   MC_CA_REFS="CA-116-01,CA-116-02,CA-116-03,CA-116-10,CA-116-11"
 
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 "$MC_AGENT_ROOT/lib/task117_scans.py" no-legacy-runtime-path > /tmp/mc-agent-no-legacy-runtime.$$.json
+  local scan_code=$?
+  if [[ "$scan_code" -ne 0 && "$scan_code" -ne 1 ]]; then
+    MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-no-legacy-runtime.$$.json)"
+    rm -f /tmp/mc-agent-no-legacy-runtime.$$.json
+    mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+    MC_SUMMARY="No-legacy-runtime-path scan MISCONFIGURED for ${task_id}."
+    MC_NEXT_ACTION="Fix task117 scanner configuration and rerun."
+    return "$MC_EXIT_MISCONFIGURED"
+  fi
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-no-legacy-runtime.$$.json)"
+  rm -f /tmp/mc-agent-no-legacy-runtime.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  if [[ "$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))' <<<"$MC_SYNC_JSON_RESULT")" == "PASS" ]]; then
+    MC_SUMMARY="No-legacy-runtime-path scan PASS for ${task_id}: strict TASK-117 source/call-graph checks passed."
+    MC_NEXT_ACTION="Run live no-legacy-runtime-path and no-full-pull-normal-path."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="No-legacy-runtime-path scan FAIL for ${task_id}: strict TASK-117 source/call-graph checks found forbidden automatic legacy path."
+  MC_NEXT_ACTION="Remove automatic VM/adapter/legacy apply/full-pull path and rerun."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_cmd_scan_task117_static() {
+  local scan_name="$1"
+  shift || true
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-117}}"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 "$MC_AGENT_ROOT/lib/task117_scans.py" "$scan_name" > /tmp/mc-agent-task117-static.$$.json
+  local scan_code=$?
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task117-static.$$.json)"
+  rm -f /tmp/mc-agent-task117-static.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  case "$scan_code" in
+    0)
+      MC_SUMMARY="${scan_name} scan PASS for ${task_id}."
+      MC_NEXT_ACTION="Use this report in TASK-117 evidence matrix."
+      return "$MC_EXIT_PASS"
+      ;;
+    1)
+      MC_SUMMARY="${scan_name} scan FAIL for ${task_id}: source/call-graph checks failed."
+      MC_NEXT_ACTION="Fix failing checks and rerun ${scan_name}."
+      return "$MC_EXIT_FAIL"
+      ;;
+    *)
+      MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
+      MC_NEXT_ACTION="Fix scanner command/configuration."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+: <<'TASK117_LEGACY_SCANNER_DISABLED'
   TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 - > /tmp/mc-agent-no-legacy-runtime.$$.json <<'PY'
 import json, os, pathlib, re
 from datetime import datetime, timezone
@@ -1163,6 +1231,7 @@ PY
   MC_NEXT_ACTION="Remove automatic VM/adapter/legacy apply/full-pull path and rerun."
   return "$MC_EXIT_FAIL"
 }
+TASK117_LEGACY_SCANNER_DISABLED
 
 mc_cmd_evidence() {
   local sub="${1:-}"
@@ -1171,9 +1240,12 @@ mc_cmd_evidence() {
     hygiene)
       mc_cmd_scan_evidence "$@"
       ;;
+    bundle)
+      mc_cmd_scan_task117_static evidence-bundle "$@"
+      ;;
     *)
       MC_SUMMARY="Unknown evidence subcommand: ${sub}"
-      MC_NEXT_ACTION="Use evidence hygiene --task TASK-116."
+      MC_NEXT_ACTION="Use evidence hygiene|bundle --task TASK-117."
       return "$MC_EXIT_MISCONFIGURED"
       ;;
   esac

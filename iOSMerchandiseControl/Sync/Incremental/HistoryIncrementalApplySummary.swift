@@ -9,7 +9,7 @@ struct HistoryIncrementalApplySummary: Equatable, Sendable {
 
     init() {}
 
-    init(_ summary: SupabaseSyncEventIncrementalApplySummary) {
+    init(_ summary: SyncIncrementalPullSummary) {
         targetedHistoryFetched = summary.targetedHistoryFetched
         inserted = summary.historyInserted
         updated = summary.historyUpdated
@@ -17,9 +17,8 @@ struct HistoryIncrementalApplySummary: Equatable, Sendable {
     }
 }
 
-extension SupabaseSyncEventIncrementalApplySummary {
+extension SyncIncrementalPullSummary {
     var historySummary: HistoryIncrementalApplySummary {
         HistoryIncrementalApplySummary(self)
     }
 }
-

@@ -104,24 +104,15 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
         var didWork = false
 
         if let catalogPushProvider {
-            let plan = try await catalogPushProvider.makePushPlan(ownerUserID: ownerUserID)
-            if plan.isSendable {
-                let result = await catalogPushProvider.execute(plan: plan, ownerUserID: ownerUserID)
-                let changed = result.supplierCreates + result.supplierUpdates + result.supplierLinks
-                    + result.categoryCreates + result.categoryUpdates + result.categoryLinks
-                    + result.productCreates + result.productUpdates + result.productLinks
-                didWork = didWork || changed > 0
-                recordDiagnostic("catalogPush.lastChanged", changed)
-            }
+            let result = try await catalogPushProvider.pushPendingCatalog(ownerUserID: ownerUserID)
+            didWork = didWork || result.totalChanged > 0
+            recordDiagnostic("catalogPush.lastChanged", result.totalChanged)
         }
 
         if let productPriceProvider {
-            let plan = try await productPriceProvider.makePushPlan(ownerUserID: ownerUserID)
-            if plan.isAutomaticPushSafe {
-                let result = try await productPriceProvider.push(plan: plan, ownerUserID: ownerUserID)
-                didWork = didWork || result.insertedCount > 0
-                recordDiagnostic("productPricePush.lastInserted", result.insertedCount)
-            }
+            let result = try await productPriceProvider.pushPendingProductPrices(ownerUserID: ownerUserID)
+            didWork = didWork || result.insertedCount > 0
+            recordDiagnostic("productPricePush.lastInserted", result.insertedCount)
         }
 
         if let historySessionProvider {
@@ -172,7 +163,7 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
     }
 
     private func recordIncrementalSummary(
-        _ summary: SupabaseSyncEventIncrementalApplySummary,
+        _ summary: SyncIncrementalPullSummary,
         source: SyncAutomaticTriggerSource
     ) {
         #if DEBUG
@@ -268,17 +259,5 @@ private extension SyncAction {
         default:
             return [self]
         }
-    }
-}
-
-private extension ProductPricePushDryRunPlan {
-    var isAutomaticPushSafe: Bool {
-        isRemoteDedupeSafe
-            && summary.readyCandidates > 0
-            && summary.blockedTotal == 0
-            && summary.conflictSameKeyDifferentPrice == 0
-            && summary.localConflictSameKeyDifferentPrice == 0
-            && summary.excludedInvalidLocal == 0
-            && summary.readyCandidates <= ProductPriceManualPushOptions.defaultBatchLimit
     }
 }

@@ -142,21 +142,17 @@ struct ContentView: View {
     }
 
     var body: some View {
-        SupabaseManualSyncForegroundRootHost(
+        AppSyncRootHost(
             context: modelContext,
             authViewModel: supabaseAuthViewModel,
             inventoryService: supabaseInventoryService,
-            pullPreviewService: supabasePullPreviewService,
             manualPushService: supabaseManualPushService,
             activityRecorder: syncEventOutboxDrainRecorder,
             syncEventSignalWatcher: syncEventSignalWatcher,
             selectedTab: $selectedTab,
             activityCenter: foregroundActivityCenter
-        ) { manualSyncViewModel, cancelForegroundCheck in
-            tabContent(
-                manualSyncViewModel: manualSyncViewModel,
-                cancelForegroundCheck: cancelForegroundCheck
-            )
+        ) {
+            tabContent()
         }
         .environment(\.foregroundCloudWorkflowActivityCenter, foregroundActivityCenter)
         .foregroundCloudWorkflowActivity(.importExcel, isActive: excelSession.isLoading)
@@ -181,10 +177,7 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private func tabContent(
-        manualSyncViewModel: SupabaseManualSyncViewModel,
-        cancelForegroundCheck: @escaping () -> Void
-    ) -> some View {
+    private func tabContent() -> some View {
         TabView(selection: $selectedTab) {
             // TAB 1: Inventario
             NavigationStack {
@@ -220,9 +213,7 @@ struct ContentView: View {
                     supabaseInventoryService: supabaseInventoryService,
                     supabasePullPreviewService: supabasePullPreviewService,
                     supabaseManualPushService: supabaseManualPushService,
-                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
-                    manualSyncViewModel: manualSyncViewModel,
-                    manualSyncCancelHandler: cancelForegroundCheck
+                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder
                 )
             }
             .tabItem {
@@ -233,7 +224,7 @@ struct ContentView: View {
     }
 }
 
-private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
+private struct AppSyncRootHost<Content: View>: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -242,32 +233,21 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
     @StateObject private var syncOrchestrator: SyncOrchestrator
     @Binding private var selectedTab: Int
 
-    private let content: (SupabaseManualSyncViewModel, @escaping () -> Void) -> Content
+    private let content: () -> Content
 
     init(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
         inventoryService: SupabaseInventoryService?,
-        pullPreviewService: SupabasePullPreviewService?,
         manualPushService: SupabaseManualPushService?,
         activityRecorder: (any SyncEventRecording)?,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?,
         selectedTab: Binding<Int>,
         activityCenter: ForegroundCloudWorkflowActivityCenter,
-        @ViewBuilder content: @escaping (SupabaseManualSyncViewModel, @escaping () -> Void) -> Content
+        @ViewBuilder content: @escaping () -> Content
     ) {
         _syncOrchestrator = StateObject(
             wrappedValue: SyncOrchestrator(
-                manualAdapter: SupabaseManualSyncCompatibilityAdapter(
-                    viewModel: SupabaseManualSyncReleaseFactory.makeViewModel(
-                        context: context,
-                        authViewModel: authViewModel,
-                        inventoryService: inventoryService,
-                        pullPreviewService: pullPreviewService,
-                        manualPushService: manualPushService,
-                        activityRecorder: activityRecorder
-                    )
-                ),
                 automaticRuntime: SyncAutomaticRuntimeFactory.make(
                     context: context,
                     authViewModel: authViewModel,
@@ -287,7 +267,7 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
     }
 
     var body: some View {
-        content(syncOrchestrator.manualSyncViewModel, syncOrchestrator.cancelForegroundCheck)
+        content()
             .safeAreaInset(edge: .top, spacing: 0) {
                 rootBanner
             }
@@ -324,7 +304,7 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
     private var rootBanner: some View {
         let state = syncOrchestrator.rootPresentationState
         if syncOrchestrator.shouldShowRootBanner(state, selectedTab: selectedTab) {
-            SupabaseManualSyncRootForegroundBanner(
+            SyncRootForegroundBanner(
                 state: state,
                 reduceMotion: reduceMotion,
                 action: { handleRootAction(state.primaryActionID) }
@@ -334,7 +314,7 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
         }
     }
 
-    private func handleRootAction(_ actionID: SupabaseManualSyncPresentationActionID?) {
+    private func handleRootAction(_ actionID: SyncRootPresentationActionID?) {
         switch actionID {
         case .reviewChanges:
             selectedTab = 3
@@ -346,16 +326,14 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
             }
         case .retry:
             syncOrchestrator.retryRootActionIfPossible()
-        case .checkCloud, .downloadCloudDatabase:
-            syncOrchestrator.submitForegroundTrigger()
-        case .realignData, .syncNow, .sendCloudChanges, .cancel, .none:
-            selectedTab = 3
+        case .none:
+            break
         }
     }
 }
 
-private struct SupabaseManualSyncRootForegroundBanner: View {
-    let state: SupabaseManualSyncRootPresentationState
+private struct SyncRootForegroundBanner: View {
+    let state: SyncRootPresentationState
     let reduceMotion: Bool
     let action: () -> Void
 
@@ -368,34 +346,13 @@ private struct SupabaseManualSyncRootForegroundBanner: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(state.title)
+                Text(L(state.titleKey))
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let progress = state.progressState {
-                    Text(progress.message)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    if let countText = progress.countText {
-                        Text(countText)
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if let percentage = progress.percentage {
-                        ProgressView(value: percentage)
-                            .progressViewStyle(.linear)
-                            .frame(maxWidth: 180)
-                    } else if progress.isActive {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
-                } else if let detail = state.detail,
-                   !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(detail)
+                if let detailKey = state.detailKey {
+                    Text(L(detailKey))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -405,7 +362,7 @@ private struct SupabaseManualSyncRootForegroundBanner: View {
             Spacer(minLength: 8)
 
             if let actionTitle = publicRemediationActionTitle {
-                Button(actionTitle, action: action)
+                Button(L(actionTitle), action: action)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                     .fixedSize(horizontal: false, vertical: true)
@@ -420,7 +377,7 @@ private struct SupabaseManualSyncRootForegroundBanner: View {
                 .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(state.accessibilityLabel)
+        .accessibilityLabel(accessibilityLabel)
         .transition(reduceMotion ? .identity : .move(edge: .top).combined(with: .opacity))
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: state.kind)
     }
@@ -428,10 +385,20 @@ private struct SupabaseManualSyncRootForegroundBanner: View {
     private var publicRemediationActionTitle: String? {
         switch state.primaryActionID {
         case .signIn, .retry:
-            return state.primaryActionTitle
-        case .checkCloud, .downloadCloudDatabase, .realignData, .reviewChanges, .sendCloudChanges, .syncNow, .cancel, .none:
+            return state.primaryActionTitleKey
+        case .reviewChanges, .none:
             return nil
         }
+    }
+
+    private var accessibilityLabel: String {
+        [
+            L(state.titleKey),
+            state.detailKey.map { L($0) },
+            state.primaryActionTitleKey.map { L($0) }
+        ]
+        .compactMap { $0 }
+        .joined(separator: ". ")
     }
 
     private var iconTint: Color {
@@ -439,8 +406,6 @@ private struct SupabaseManualSyncRootForegroundBanner: View {
         case .hidden:
             return .secondary
         case .checking:
-            return .accentColor
-        case .changesFound:
             return .accentColor
         case .blockedAuth, .recoverableError:
             return .orange

@@ -14,7 +14,7 @@ struct CatalogIncrementalApplySummary: Equatable, Sendable {
 
     init() {}
 
-    init(_ summary: SupabaseSyncEventIncrementalApplySummary) {
+    init(_ summary: SyncIncrementalPullSummary) {
         targetedSuppliersFetched = summary.targetedSuppliersFetched
         targetedCategoriesFetched = summary.targetedCategoriesFetched
         targetedProductsFetched = summary.targetedProductsFetched
@@ -28,9 +28,8 @@ struct CatalogIncrementalApplySummary: Equatable, Sendable {
     }
 }
 
-extension SupabaseSyncEventIncrementalApplySummary {
+extension SyncIncrementalPullSummary {
     var catalogSummary: CatalogIncrementalApplySummary {
         CatalogIncrementalApplySummary(self)
     }
 }
-

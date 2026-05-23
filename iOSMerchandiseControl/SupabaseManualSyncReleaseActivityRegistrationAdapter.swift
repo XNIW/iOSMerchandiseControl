@@ -26,7 +26,12 @@ final class SyncActivityRegistrationAdapter: SyncActivityRegistrationProviding, 
     }
 
     func loadSyncActivityRegistrationSnapshot(ownerUserID: UUID) async throws -> SyncActivityRegistrationSnapshot {
-        SyncActivityRegistrationSnapshot(try await loadActivityRegistrationSnapshot(ownerUserID: ownerUserID))
+        let snapshot = try await loadActivityRegistrationSnapshot(ownerUserID: ownerUserID)
+        return SyncActivityRegistrationSnapshot(
+            readyToRegister: snapshot.readyToRegister,
+            waiting: snapshot.waiting,
+            notRegisterable: snapshot.notRegisterable
+        )
     }
 
     func registerActivities(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationResult {
@@ -73,7 +78,15 @@ final class SyncActivityRegistrationAdapter: SyncActivityRegistrationProviding, 
     }
 
     func registerSyncActivities(ownerUserID: UUID) async throws -> SyncActivityRegistrationResult {
-        SyncActivityRegistrationResult(try await registerActivities(ownerUserID: ownerUserID))
+        let result = try await registerActivities(ownerUserID: ownerUserID)
+        return SyncActivityRegistrationResult(
+            status: SyncActivityRegistrationStatus(result.status),
+            summary: SyncActivityRegistrationSummary(
+                registered: result.summary.registered,
+                waiting: result.summary.waiting,
+                notRegisterable: result.summary.notRegisterable
+            )
+        )
     }
 
     private func snapshot(ownerUserID: UUID) throws -> SupabaseManualSyncActivityRegistrationSnapshot {
@@ -108,6 +121,27 @@ final class SyncActivityRegistrationAdapter: SyncActivityRegistrationProviding, 
             return outcome.sent > 0 ? .partialRetryable : .retryableFailure
         case .blockedPayloadReplay, .blocked:
             return outcome.sent > 0 ? .partialRetryable : .blocked
+        }
+    }
+}
+
+private extension SyncActivityRegistrationStatus {
+    init(_ status: SupabaseManualSyncActivityRegistrationStatus) {
+        switch status {
+        case .success:
+            self = .success
+        case .empty:
+            self = .empty
+        case .partialRetryable:
+            self = .partialRetryable
+        case .authRequired:
+            self = .authRequired
+        case .retryableFailure:
+            self = .retryableFailure
+        case .blocked:
+            self = .blocked
+        case .cancelled:
+            self = .cancelled
         }
     }
 }

@@ -51,7 +51,15 @@ main() {
         repo-diff) handler=(mc_cmd_scan_repo_diff) ;;
         release-cta) handler=(mc_cmd_scan_release_cta) ;;
         no-legacy-runtime-path) handler=(mc_cmd_scan_no_legacy_runtime_path "${args[@]:2}") ;;
-        *) echo "Usage: scan sensitive|evidence|repo-diff|release-cta|no-legacy-runtime-path" >&2; exit "$MC_EXIT_MISCONFIGURED" ;;
+        automatic-contracts-clean) handler=(mc_cmd_scan_task117_static automatic-contracts-clean "${args[@]:2}") ;;
+        root-host-clean) handler=(mc_cmd_scan_task117_static root-host-clean "${args[@]:2}") ;;
+        options-observer-only) handler=(mc_cmd_scan_task117_static options-observer-only "${args[@]:2}") ;;
+        duplicate-sync-owner) handler=(mc_cmd_scan_task117_static duplicate-sync-owner "${args[@]:2}") ;;
+        incremental-apply-contract) handler=(mc_cmd_scan_task117_static incremental-apply-contract "${args[@]:2}") ;;
+        swiftdata-mainactor-heavy) handler=(mc_cmd_scan_task117_static swiftdata-mainactor-heavy "${args[@]:2}") ;;
+        l10n-sync-keys) handler=(mc_cmd_scan_task117_static l10n-sync-keys "${args[@]:2}") ;;
+        no-full-pull-normal-path) handler=(mc_cmd_scan_task117_static no-full-pull-normal-path "${args[@]:2}") ;;
+        *) echo "Usage: scan sensitive|evidence|repo-diff|release-cta|no-legacy-runtime-path|no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys" >&2; exit "$MC_EXIT_MISCONFIGURED" ;;
       esac
       ;;
     evidence) handler=(mc_cmd_evidence "${args[@]:1}") ;;

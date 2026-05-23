@@ -1172,6 +1172,8 @@
 "options.localDatabase.needsDownload.detail" = "Descarga la base cloud antes de confiar en los datos locales de este dispositivo.";
 "options.localDatabase.ready.title" = "Base local actualizada";
 "options.localDatabase.ready.detail" = "Este dispositivo tiene un punto cloud guardado.";
+"options.localDatabase.reconcile.title" = "Reconciliación necesaria";
+"options.localDatabase.reconcile.detail" = "Los conteos locales no coinciden con la nube. Ejecuta la sincronización de nuevo.";
 "options.localDatabase.needsCheck.title" = "La base local necesita revisión cloud";
 "options.localDatabase.needsCheck.detail" = "Revisa cloud antes de sincronizar más cambios.";
 "options.supabase.automaticSync.active.title" = "Sincronización automática activa";

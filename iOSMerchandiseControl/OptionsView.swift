@@ -22,8 +22,6 @@ struct OptionsView: View {
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let supabaseManualPushService: SupabaseManualPushService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
-    private let manualSyncViewModel: SupabaseManualSyncViewModel?
-    private let manualSyncCancelHandler: (() -> Void)?
 
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
@@ -37,16 +35,12 @@ struct OptionsView: View {
         supabaseInventoryService: SupabaseInventoryService? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         supabaseManualPushService: SupabaseManualPushService? = nil,
-        syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil,
-        manualSyncViewModel: SupabaseManualSyncViewModel? = nil,
-        manualSyncCancelHandler: (() -> Void)? = nil
+        syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
         self.supabaseManualPushService = supabaseManualPushService
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
-        self.manualSyncViewModel = manualSyncViewModel
-        self.manualSyncCancelHandler = manualSyncCancelHandler
     }
 
     // Opzioni tema (equivalenti alle scelte Android)
@@ -210,13 +204,7 @@ struct OptionsView: View {
             }
 
             SupabaseAutomaticSyncStatusCard(
-                context: modelContext,
                 authViewModel: supabaseAuthViewModel,
-                inventoryService: supabaseInventoryService,
-                pullPreviewService: supabasePullPreviewService,
-                manualPushService: supabaseManualPushService,
-                activityRecorder: syncEventOutboxDrainRecorder,
-                viewModel: manualSyncViewModel,
                 pendingCount: syncSummaryProvider.localPendingAttentionCount,
                 baselineSummary: syncSummaryProvider.supabaseBaselineSummary
             )
@@ -608,72 +596,55 @@ struct LocalDatabasePublicSummary: Equatable {
 // MARK: - Release automatic sync status surface
 
 private struct SupabaseAutomaticSyncStatusCard: View {
-    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var authViewModel: SupabaseAuthViewModel
-    @StateObject private var viewModel: SupabaseManualSyncViewModel
 
     private let pendingCount: Int
     private let baselineSummary: SupabaseCatalogBaselineDebugSummary
 
     init(
-        context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
-        inventoryService: SupabaseInventoryService?,
-        pullPreviewService: SupabasePullPreviewService?,
-        manualPushService: SupabaseManualPushService?,
-        activityRecorder: (any SyncEventRecording)?,
-        viewModel: SupabaseManualSyncViewModel? = nil,
         pendingCount: Int,
         baselineSummary: SupabaseCatalogBaselineDebugSummary
     ) {
         self.authViewModel = authViewModel
         self.pendingCount = pendingCount
         self.baselineSummary = baselineSummary
-
-        let resolvedViewModel = viewModel ?? SupabaseManualSyncReleaseFactory.makeViewModel(
-            context: context,
-            authViewModel: authViewModel,
-            inventoryService: inventoryService,
-            pullPreviewService: pullPreviewService,
-            manualPushService: manualPushService,
-            activityRecorder: activityRecorder
-        )
-        _viewModel = StateObject(wrappedValue: resolvedViewModel)
     }
 
     var body: some View {
-        let presentation = viewModel.presentationState
-        let visibleProgress = SyncStatusPresenter.visibleProgress(from: presentation.progressState)
+        let progress = CloudSyncProgressState.idle()
+        let isRunning = authViewModel.isTransitioning
+        let visibleProgress = SyncStatusPresenter.visibleProgress(from: progress)
 
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Label {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(title(for: presentation))
+                        Text(title(isRunning: isRunning))
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text(detail(for: presentation))
+                        Text(detail(isRunning: isRunning))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 } icon: {
-                    Image(systemName: systemImage(for: presentation))
-                        .foregroundStyle(tint(for: presentation))
+                    Image(systemName: systemImage(isRunning: isRunning))
+                        .foregroundStyle(tint(isRunning: isRunning))
                 }
                 .accessibilityElement(children: .combine)
 
                 Spacer(minLength: 8)
 
-                statusBadge(for: presentation)
+                statusBadge(isRunning: isRunning)
             }
 
             if let visibleProgress {
                 CloudSyncProgressInlineView(state: visibleProgress)
             } else if SyncStatusPresenter.shouldShowFallbackSpinner(
-                isRunning: presentation.isRunning,
-                progress: presentation.progressState
+                isRunning: isRunning,
+                progress: progress
             ) {
                 HStack(spacing: 10) {
                     ProgressView()
@@ -694,36 +665,10 @@ private struct SupabaseAutomaticSyncStatusCard: View {
                     L("options.supabase.automaticSync.lastSuccess"),
                     value: lastSuccessText
                 )
-
-                if let statusDetail = presentation.statusDetailText,
-                   !statusDetail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                   authViewModel.isSignedIn {
-                    Text(statusDetail)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
             }
             .font(.footnote)
         }
         .padding(.vertical, 4)
-        .onAppear(perform: syncAuthPresentationContext)
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            syncAuthPresentationContext()
-        }
-        .onChange(of: authViewModel.isTransitioning) { _, _ in
-            syncAuthPresentationContext()
-        }
-        .onChange(of: authViewModel.canSignIn) { _, _ in
-            syncAuthPresentationContext()
-        }
-        .onChange(of: authViewModel.sessionInfo?.userID) { _, _ in
-            syncAuthPresentationContext()
-        }
-        .onChange(of: authViewModel.isSignedIn) { _, _ in
-            syncAuthPresentationContext()
-        }
     }
 
     private var lastSuccessText: String {
@@ -734,28 +679,22 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         return appliedAt.formatted(date: .abbreviated, time: .shortened)
     }
 
-    private func title(for presentation: SupabaseManualSyncPresentationState) -> String {
-        if authViewModel.isTransitioning {
+    private func title(isRunning: Bool) -> String {
+        if isRunning {
             return L("options.supabase.automaticSync.running.title")
         }
         guard authViewModel.isSignedIn else {
             return L("options.supabase.automaticSync.signedOut.title")
         }
-        if presentation.isRunning || presentation.progressState.isActive {
-            return L("options.supabase.automaticSync.running.title")
-        }
         return L("options.supabase.automaticSync.active.title")
     }
 
-    private func detail(for presentation: SupabaseManualSyncPresentationState) -> String {
-        if authViewModel.isTransitioning {
+    private func detail(isRunning: Bool) -> String {
+        if isRunning {
             return L("options.supabase.automaticSync.running.detail")
         }
         guard authViewModel.isSignedIn else {
             return L("options.supabase.automaticSync.signedOut.detail")
-        }
-        if presentation.isRunning || presentation.progressState.isActive {
-            return L("options.supabase.automaticSync.running.detail")
         }
         if pendingCount > 0 {
             return L("options.supabase.automaticSync.pending.detail")
@@ -770,11 +709,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
     }
 
-    private func systemImage(for presentation: SupabaseManualSyncPresentationState) -> String {
+    private func systemImage(isRunning: Bool) -> String {
         if !authViewModel.isSignedIn {
             return "icloud.slash"
         }
-        if presentation.isRunning || presentation.progressState.isActive {
+        if isRunning {
             return "arrow.triangle.2.circlepath.icloud"
         }
         if pendingCount > 0 {
@@ -790,11 +729,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
     }
 
-    private func tint(for presentation: SupabaseManualSyncPresentationState) -> Color {
+    private func tint(isRunning: Bool) -> Color {
         if !authViewModel.isSignedIn {
             return .secondary
         }
-        if presentation.isRunning || presentation.progressState.isActive {
+        if isRunning {
             return .accentColor
         }
         if pendingCount > 0 {
@@ -811,11 +750,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
     }
 
     @ViewBuilder
-    private func statusBadge(for presentation: SupabaseManualSyncPresentationState) -> some View {
+    private func statusBadge(isRunning: Bool) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: statusBadgeSystemImage(for: presentation))
+            Image(systemName: statusBadgeSystemImage(isRunning: isRunning))
                 .imageScale(.small)
-            Text(statusBadgeText(for: presentation))
+            Text(statusBadgeText(isRunning: isRunning))
                 .lineLimit(1)
         }
         .font(.caption)
@@ -827,11 +766,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func statusBadgeText(for presentation: SupabaseManualSyncPresentationState) -> String {
+    private func statusBadgeText(isRunning: Bool) -> String {
         if !authViewModel.isSignedIn {
             return L("options.supabase.automaticSync.badge.signedOut")
         }
-        if presentation.isRunning || presentation.progressState.isActive {
+        if isRunning {
             return L("options.supabase.automaticSync.badge.running")
         }
         if pendingCount > 0 {
@@ -847,11 +786,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
     }
 
-    private func statusBadgeSystemImage(for presentation: SupabaseManualSyncPresentationState) -> String {
+    private func statusBadgeSystemImage(isRunning: Bool) -> String {
         if !authViewModel.isSignedIn {
             return "person.crop.circle.badge.exclamationmark"
         }
-        if presentation.isRunning || presentation.progressState.isActive {
+        if isRunning {
             return "arrow.triangle.2.circlepath"
         }
         if pendingCount > 0 {
@@ -866,582 +805,8 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             return "exclamationmark.triangle"
         }
     }
-
-    private func syncAuthPresentationContext() {
-        viewModel.applyAuthPresentationContext(
-            SupabaseManualSyncAuthPresentationContext(
-                isSignedIn: authViewModel.isSignedIn,
-                canSignIn: authViewModel.canSignIn,
-                isTransitioning: authViewModel.isTransitioning
-            )
-        )
-    }
 }
 
-#if DEBUG
-// MARK: - Developer manual sync diagnostics surface
-
-private struct SupabaseManualSyncReleaseCard: View {
-    @Environment(\.scenePhase) private var scenePhase
-    @ObservedObject private var authViewModel: SupabaseAuthViewModel
-    @StateObject private var viewModel: SupabaseManualSyncViewModel
-    private let cancelHandler: (() -> Void)?
-    @State private var activeRunTask: Task<Void, Never>?
-    @State private var isReviewSheetPresented = false
-    @State private var isApplyConfirmationPresented = false
-    @State private var isSendConfirmationPresented = false
-    @State private var isActivityRegistrationConfirmationPresented = false
-    @State private var activeApplyTask: Task<Void, Never>?
-    @State private var activeSendTask: Task<Void, Never>?
-    @State private var activeActivityRegistrationTask: Task<Void, Never>?
-    private let baselineDidChange: () -> Void
-
-    init(
-        context: ModelContext,
-        authViewModel: SupabaseAuthViewModel,
-        inventoryService: SupabaseInventoryService?,
-        pullPreviewService: SupabasePullPreviewService?,
-        manualPushService: SupabaseManualPushService?,
-        activityRecorder: (any SyncEventRecording)?,
-        viewModel: SupabaseManualSyncViewModel? = nil,
-        cancelHandler: (() -> Void)? = nil,
-        baselineDidChange: @escaping () -> Void = {}
-    ) {
-        self.authViewModel = authViewModel
-        self.cancelHandler = cancelHandler
-        self.baselineDidChange = baselineDidChange
-        let resolvedViewModel = viewModel ?? SupabaseManualSyncReleaseFactory.makeViewModel(
-            context: context,
-            authViewModel: authViewModel,
-            inventoryService: inventoryService,
-            pullPreviewService: pullPreviewService,
-            manualPushService: manualPushService,
-            activityRecorder: activityRecorder
-        )
-        _viewModel = StateObject(
-            wrappedValue: resolvedViewModel
-        )
-    }
-
-    var body: some View {
-        let presentation = viewModel.presentationState
-
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(presentation.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Spacer(minLength: 8)
-
-                    statusBadge(presentation)
-                }
-
-                if let subtitle = presentation.subtitle,
-                   !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(subtitle)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(presentation.accessibilityLabel)
-            .accessibilityHint(presentation.accessibilityHint ?? "")
-
-            if let statusDetailText = presentation.statusDetailText,
-               !statusDetailText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text(statusDetailText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityHidden(true)
-            }
-
-            if let summary = presentation.userFacingSummary,
-               !summary.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text(summary.message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityHidden(true)
-            }
-
-            if presentation.progressState.isActive || presentation.progressState.phase == .completedWithWarnings {
-                CloudSyncProgressInlineView(state: presentation.progressState)
-            } else if presentation.isRunning {
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text(L("options.supabase.manualSync.state.running.inline"))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityElement(children: .combine)
-            }
-
-            if let primaryAction = presentation.primaryAction {
-                Button {
-                    handle(action: primaryAction)
-                } label: {
-                    actionLabel(primaryAction)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(!primaryAction.isEnabled)
-                .accessibilityLabel(primaryAction.accessibilityLabel)
-                .accessibilityHint(primaryAction.accessibilityHint ?? "")
-            }
-
-            if let secondaryAction = presentation.secondaryAction {
-                Button {
-                    handle(action: secondaryAction)
-                } label: {
-                    actionLabel(secondaryAction)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .disabled(!secondaryAction.isEnabled)
-                .accessibilityLabel(secondaryAction.accessibilityLabel)
-                .accessibilityHint(secondaryAction.accessibilityHint ?? "")
-            }
-        }
-        .padding(.vertical, 4)
-        .onAppear {
-            syncAuthPresentationContext()
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                syncAuthPresentationContext()
-            } else if phase == .background {
-                cancelActiveRun()
-            }
-        }
-        .onChange(of: authViewModel.isTransitioning) { _, _ in
-            syncAuthPresentationContext()
-        }
-        .onChange(of: authViewModel.canSignIn) { _, _ in
-            syncAuthPresentationContext()
-        }
-        .onChange(of: authViewModel.sessionInfo?.userID) { _, _ in
-            resetAfterAccountChange()
-        }
-        .onChange(of: authViewModel.isSignedIn) { _, _ in
-            resetAfterAccountChange()
-        }
-        .onChange(of: viewModel.presentationState.reviewSheet) { _, reviewSheet in
-            if reviewSheet == nil {
-                isReviewSheetPresented = false
-            }
-        }
-        .onDisappear {
-            activeRunTask?.cancel()
-            activeRunTask = nil
-            activeApplyTask?.cancel()
-            activeApplyTask = nil
-            activeSendTask?.cancel()
-            activeSendTask = nil
-            activeActivityRegistrationTask?.cancel()
-            activeActivityRegistrationTask = nil
-            isApplyConfirmationPresented = false
-            isSendConfirmationPresented = false
-            isActivityRegistrationConfirmationPresented = false
-        }
-        .sheet(
-            isPresented: $isReviewSheetPresented,
-            onDismiss: { viewModel.markReviewDismissedWithoutDiscard() }
-        ) {
-            if let review = viewModel.presentationState.reviewSheet {
-                SupabaseManualSyncReviewSheet(
-                    review: review,
-                    primaryAction: {
-                        handle(reviewPrimaryAction: review.primaryActionID)
-                    },
-                    dismiss: {
-                        if viewModel.isApplyingLocalChanges {
-                            activeApplyTask?.cancel()
-                            activeApplyTask = nil
-                            return
-                        }
-                        confirmDiscardReview()
-                    }
-                )
-                .interactiveDismissDisabled(
-                    viewModel.isReviewMutationInProgress
-                )
-            }
-        }
-        .confirmationDialog(
-            L("options.supabase.manualSync.confirm.updateDevice.title"),
-            isPresented: $isApplyConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button(L("options.supabase.manualSync.confirm.updateDevice.cancel"), role: .cancel) {}
-            Button(L("options.supabase.manualSync.confirm.updateDevice.update")) {
-                startLocalApply()
-            }
-        } message: {
-            Text(L("options.supabase.manualSync.confirm.updateDevice.message"))
-        }
-        .confirmationDialog(
-            L("options.supabase.manualSync.confirm.send.title"),
-            isPresented: $isSendConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button(L("options.supabase.manualSync.confirm.send.cancel"), role: .cancel) {}
-            Button(L("options.supabase.manualSync.confirm.send.send")) {
-                startCatalogSend()
-            }
-        } message: {
-            Text(L("options.supabase.manualSync.confirm.send.message"))
-        }
-        .confirmationDialog(
-            L("options.supabase.manualSync.confirm.activity.title"),
-            isPresented: $isActivityRegistrationConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button(L("options.supabase.manualSync.confirm.activity.cancel"), role: .cancel) {}
-            Button(L("options.supabase.manualSync.confirm.activity.register")) {
-                startActivityRegistration()
-            }
-        } message: {
-            Text(L("options.supabase.manualSync.confirm.activity.message"))
-        }
-        .foregroundCloudWorkflowActivity(.manualSyncSheet, isActive: isReviewSheetPresented)
-        .foregroundCloudWorkflowActivity(
-            .confirmationDialog,
-            isActive: isApplyConfirmationPresented
-                || isSendConfirmationPresented
-                || isActivityRegistrationConfirmationPresented
-        )
-    }
-
-    private func handle(reviewPrimaryAction actionID: SupabaseManualSyncReviewPrimaryActionID) {
-        switch actionID {
-        case .updateDevice:
-            isApplyConfirmationPresented = true
-        case .sendCloudChanges:
-            isSendConfirmationPresented = true
-        case .registerCloudActivity:
-            isActivityRegistrationConfirmationPresented = true
-        case .recheck:
-            isReviewSheetPresented = false
-            startRun(for: .checkCloud)
-        case .signInAgain:
-            isReviewSheetPresented = false
-            authViewModel.signInWithGoogle()
-        case .openDatabase:
-            isReviewSheetPresented = false
-            NotificationCenter.default.post(name: .openDatabaseTabRequested, object: nil)
-        case .none:
-            break
-        }
-    }
-
-    private func startLocalApply() {
-        guard activeApplyTask == nil else { return }
-
-        activeApplyTask = Task { @MainActor in
-            await viewModel.applyStagedLocalChanges()
-            baselineDidChange()
-            activeApplyTask = nil
-            if !viewModel.isApplyingLocalChanges,
-               viewModel.presentationState.reviewSheet == nil {
-                isReviewSheetPresented = false
-            }
-        }
-    }
-
-    private func startCatalogSend() {
-        guard activeSendTask == nil else { return }
-
-        activeSendTask = Task { @MainActor in
-            await viewModel.sendConfirmedCatalogChanges()
-            activeSendTask = nil
-        }
-    }
-
-    private func startActivityRegistration() {
-        guard activeActivityRegistrationTask == nil else { return }
-
-        activeActivityRegistrationTask = Task { @MainActor in
-            await viewModel.confirmActivityRegistration()
-            activeActivityRegistrationTask = nil
-        }
-    }
-
-    @ViewBuilder
-    private func statusBadge(_ presentation: SupabaseManualSyncPresentationState) -> some View {
-        HStack(spacing: 4) {
-            if let symbol = presentation.statusBadgeSystemImage {
-                Image(systemName: symbol)
-                    .imageScale(.small)
-            }
-            Text(presentation.statusBadgeText)
-                .lineLimit(1)
-        }
-        .font(.caption)
-        .fontWeight(.medium)
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.secondary.opacity(0.10), in: Capsule())
-        .accessibilityElement(children: .combine)
-    }
-
-    private func actionLabel(_ action: SupabaseManualSyncPresentationAction) -> some View {
-        HStack(spacing: 8) {
-            if let systemImage = action.systemImage {
-                Image(systemName: systemImage)
-            }
-            Text(action.title)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, alignment: .center)
-    }
-
-    private func handle(action: SupabaseManualSyncPresentationAction) {
-        guard action.isEnabled else { return }
-
-        if action.id == .signIn {
-            authViewModel.signInWithGoogle()
-            return
-        }
-
-        if action.id == .cancel {
-            cancelActiveRun()
-            return
-        }
-
-        if action.id == .reviewChanges {
-            viewModel.markReviewingSemiAutomaticPlan()
-            isReviewSheetPresented = viewModel.presentationState.reviewSheet != nil
-            return
-        }
-
-        startRun(for: action.id)
-    }
-
-    private func startRun(for actionID: SupabaseManualSyncPresentationActionID) {
-        guard viewModel.canStart,
-              let mode = viewModel.runMode(for: actionID) else { return }
-
-        activeRunTask?.cancel()
-        activeRunTask = Task { @MainActor in
-            let directSync = actionID == .syncNow || actionID == .checkCloud || actionID == .downloadCloudDatabase
-            await viewModel.start(with: mode, syncHistoryAfterRun: directSync)
-            if directSync {
-                let hasPendingLocalWork = viewModel.privacySafeAggregatesSnapshot?.hasAnyPendingWork == true
-                if !hasPendingLocalWork {
-                    await viewModel.applyStagedLocalChangesIfNeeded()
-                }
-                await viewModel.prepareCatalogPushPlanForReview()
-                await viewModel.prepareProductPricePlansForReview()
-                if hasPendingLocalWork,
-                   viewModel.presentationState.reviewSheet != nil {
-                    isReviewSheetPresented = true
-                }
-                if !viewModel.isApplyingLocalChanges,
-                   viewModel.presentationState.reviewSheet == nil {
-                    isReviewSheetPresented = false
-                }
-            }
-            baselineDidChange()
-            activeRunTask = nil
-        }
-    }
-
-    private func cancelActiveRun() {
-        viewModel.requestLifecycleInterruptionForBackground()
-        activeRunTask?.cancel()
-        activeRunTask = nil
-        cancelHandler?()
-        activeApplyTask?.cancel()
-        activeApplyTask = nil
-        activeSendTask?.cancel()
-        activeSendTask = nil
-        activeActivityRegistrationTask?.cancel()
-        activeActivityRegistrationTask = nil
-    }
-
-    private func resetAfterAccountChange() {
-        activeRunTask?.cancel()
-        activeRunTask = nil
-        activeApplyTask?.cancel()
-        activeApplyTask = nil
-        activeSendTask?.cancel()
-        activeSendTask = nil
-        activeActivityRegistrationTask?.cancel()
-        activeActivityRegistrationTask = nil
-        isApplyConfirmationPresented = false
-        isSendConfirmationPresented = false
-        isActivityRegistrationConfirmationPresented = false
-        isReviewSheetPresented = false
-        viewModel.resetPresentationToIdleReady()
-        syncAuthPresentationContext()
-    }
-
-    private func confirmDiscardReview() {
-        viewModel.cancelReviewFlow()
-        isReviewSheetPresented = false
-    }
-
-    private func syncAuthPresentationContext() {
-        viewModel.applyAuthPresentationContext(
-            SupabaseManualSyncAuthPresentationContext(
-                isSignedIn: authViewModel.isSignedIn,
-                canSignIn: authViewModel.canSignIn,
-                isTransitioning: authViewModel.isTransitioning
-            )
-        )
-    }
-}
-
-private struct SupabaseManualSyncReviewSheet: View {
-    let review: SupabaseManualSyncReviewSheetState
-    let primaryAction: () -> Void
-    let dismiss: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(review.title)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Text(review.subtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    summaryCard
-
-                    if let progress = review.progressState {
-                        CloudSyncProgressInlineView(state: progress)
-                    }
-
-                    ForEach(review.sections) { section in
-                        reviewSection(section)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 22)
-                .padding(.bottom, 18)
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text(review.footerMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if review.primaryActionID != .none {
-                    Button {
-                        primaryAction()
-                    } label: {
-                        HStack(spacing: 8) {
-                            if review.primaryActionIsLoading {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else {
-                                Image(systemName: review.primaryActionSystemImage)
-                            }
-                            Text(review.primaryActionTitle)
-                        }
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(!review.primaryActionIsEnabled)
-                    .accessibilityLabel(review.primaryActionTitle)
-                }
-
-                Button(review.secondaryActionTitle) {
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
-                .accessibilityLabel(review.secondaryActionTitle)
-            }
-            .padding(20)
-        }
-        .presentationDetents([.medium, .large])
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(review.accessibilityLabel)
-    }
-
-    private func reviewSection(_ section: SupabaseManualSyncReviewSectionState) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: section.systemImage)
-                .font(.subheadline)
-                .foregroundStyle(tint(for: section.tone))
-                .frame(width: 24, height: 24)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(section.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(section.message)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var summaryCard: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: review.summarySystemImage)
-                .font(.headline)
-                .foregroundStyle(tint(for: review.summaryTone))
-                .frame(width: 26, height: 26)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(review.summaryTitle)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(review.summaryMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .accessibilityElement(children: .combine)
-    }
-
-    private func tint(for tone: SupabaseManualSyncReviewSectionTone) -> Color {
-        switch tone {
-        case .neutral:
-            return .accentColor
-        case .success:
-            return .green
-        case .attention:
-            return .orange
-        case .blocked:
-            return .red
-        }
-    }
-}
-
-#endif
 
 private struct CloudSyncProgressInlineView: View {
     let state: CloudSyncProgressState

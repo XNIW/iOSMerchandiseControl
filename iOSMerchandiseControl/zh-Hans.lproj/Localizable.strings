@@ -1172,6 +1172,8 @@
 "options.localDatabase.needsDownload.detail" = "请先下载云端数据库，再将此设备的本地数据作为依据。";
 "options.localDatabase.ready.title" = "本地数据库已更新";
 "options.localDatabase.ready.detail" = "此设备已有云端检查点。";
+"options.localDatabase.reconcile.title" = "需要重新校准";
+"options.localDatabase.reconcile.detail" = "本地计数与云端不一致。请再次运行同步。";
 "options.localDatabase.needsCheck.title" = "本地数据库需要云端检查";
 "options.localDatabase.needsCheck.detail" = "同步更多更改前，请先检查云端。";
 "options.supabase.automaticSync.active.title" = "自动同步已启用";

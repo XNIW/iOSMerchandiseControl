@@ -39,9 +39,11 @@ enum SupabaseManualSyncReleaseFactory {
             )
         }
         let incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)? = inventoryService.map {
-            SyncEventIncrementalPullService(
-                modelContainer: modelContainer,
-                remote: $0
+            ManualSyncIncrementalPullAdapter(
+                service: SyncEventIncrementalPullService(
+                    modelContainer: modelContainer,
+                    remote: $0
+                )
             )
         }
         let localPendingChangeCounter = LocalPendingChangePendingAdapter(context: context)
@@ -207,7 +209,7 @@ final class SyncHistorySessionPushAdapter: SyncHistorySessionPushProviding, Supa
             ownerUserID: ownerUserID,
             mode: SyncHistorySessionMode(mode),
             onProgress: onProgress
-        ).legacySummary
+        ).manualSummary
     }
 
     private nonisolated static func recordHistorySyncEvent(
@@ -234,6 +236,33 @@ final class SyncHistorySessionPushAdapter: SyncHistorySessionPushProviding, Supa
             clientEventID: "ios-history-\(ownerUserID.uuidString.lowercased())-\(UUID().uuidString.lowercased())"
         )
         _ = try await recorder.record(request)
+    }
+}
+
+@MainActor
+private final class ManualSyncIncrementalPullAdapter: SupabaseManualSyncIncrementalPullProviding {
+    private let service: SyncEventIncrementalPullService
+
+    init(service: SyncEventIncrementalPullService) {
+        self.service = service
+    }
+
+    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SupabaseSyncEventIncrementalApplySummary {
+        let summary = try await service.applyIncrementalRemoteChanges(ownerUserID: ownerUserID)
+        return SupabaseSyncEventIncrementalApplySummary(summary)
+    }
+}
+
+private extension SyncHistorySessionSummary {
+    var manualSummary: SupabaseManualSyncHistorySessionSummary {
+        SupabaseManualSyncHistorySessionSummary(
+            uploaded: uploaded,
+            inserted: inserted,
+            updated: updated,
+            skippedClean: skippedClean,
+            skippedDirtyLocal: skippedDirtyLocal,
+            skippedOversized: skippedOversized
+        )
     }
 }
 
@@ -391,6 +420,18 @@ final class SyncProductPriceAdapter: SyncProductPriceSyncProviding, SupabaseManu
             )
         }
         return result
+    }
+
+    func pushPendingProductPrices(ownerUserID: UUID) async throws -> SyncProductPricePushResult {
+        let plan = try await makePushPlan(ownerUserID: ownerUserID)
+        guard plan.isSafeForAggregatedPendingPush else {
+            return SyncProductPricePushResult(insertedCount: 0)
+        }
+        let result = try await push(plan: plan, ownerUserID: ownerUserID)
+        guard result.isVerifiedSuccess else {
+            return SyncProductPricePushResult(insertedCount: 0)
+        }
+        return SyncProductPricePushResult(insertedCount: result.insertedCount)
     }
 
     private func productPricePushFingerprint(_ plan: ProductPricePushDryRunPlan) -> String {
@@ -591,6 +632,28 @@ final class SyncCatalogPushAdapter: SyncCatalogPushProviding, SupabaseManualSync
             )
         }
         return result
+    }
+
+    func pushPendingCatalog(ownerUserID: UUID) async throws -> SyncCatalogPushResult {
+        let plan = try await makePushPlan(ownerUserID: ownerUserID)
+        guard plan.isSendable else {
+            return SyncCatalogPushResult()
+        }
+        let result = await execute(plan: plan, ownerUserID: ownerUserID)
+        guard result.status == .completed || result.status == .completedBaselineRefreshFailed else {
+            return SyncCatalogPushResult()
+        }
+        return SyncCatalogPushResult(
+            supplierCreates: result.supplierCreates,
+            supplierUpdates: result.supplierUpdates,
+            supplierLinks: result.supplierLinks,
+            categoryCreates: result.categoryCreates,
+            categoryUpdates: result.categoryUpdates,
+            categoryLinks: result.categoryLinks,
+            productCreates: result.productCreates,
+            productUpdates: result.productUpdates,
+            productLinks: result.productLinks
+        )
     }
 
     private func applyPendingStateTransition(

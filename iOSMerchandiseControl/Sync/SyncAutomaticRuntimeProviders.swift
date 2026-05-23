@@ -21,25 +21,6 @@ nonisolated enum SyncActivityRegistrationStatus: Equatable, Sendable {
     case retryableFailure
     case blocked
     case cancelled
-
-    init(_ legacy: SupabaseManualSyncActivityRegistrationStatus) {
-        switch legacy {
-        case .success:
-            self = .success
-        case .empty:
-            self = .empty
-        case .partialRetryable:
-            self = .partialRetryable
-        case .authRequired:
-            self = .authRequired
-        case .retryableFailure:
-            self = .retryableFailure
-        case .blocked:
-            self = .blocked
-        case .cancelled:
-            self = .cancelled
-        }
-    }
 }
 
 nonisolated struct SyncActivityRegistrationSnapshot: Equatable, Sendable {
@@ -51,14 +32,6 @@ nonisolated struct SyncActivityRegistrationSnapshot: Equatable, Sendable {
         self.readyToRegister = readyToRegister
         self.waiting = waiting
         self.notRegisterable = notRegisterable
-    }
-
-    init(_ legacy: SupabaseManualSyncActivityRegistrationSnapshot) {
-        self.init(
-            readyToRegister: legacy.readyToRegister,
-            waiting: legacy.waiting,
-            notRegisterable: legacy.notRegisterable
-        )
     }
 
     var hasAnyActivity: Bool {
@@ -76,14 +49,6 @@ nonisolated struct SyncActivityRegistrationSummary: Equatable, Sendable {
         self.waiting = waiting
         self.notRegisterable = notRegisterable
     }
-
-    init(_ legacy: SupabaseManualSyncActivityRegistrationSummary) {
-        self.init(
-            registered: legacy.registered,
-            waiting: legacy.waiting,
-            notRegisterable: legacy.notRegisterable
-        )
-    }
 }
 
 nonisolated struct SyncActivityRegistrationResult: Equatable, Sendable {
@@ -93,13 +58,6 @@ nonisolated struct SyncActivityRegistrationResult: Equatable, Sendable {
     init(status: SyncActivityRegistrationStatus, summary: SyncActivityRegistrationSummary) {
         self.status = status
         self.summary = summary
-    }
-
-    init(_ legacy: SupabaseManualSyncActivityRegistrationResult) {
-        self.init(
-            status: SyncActivityRegistrationStatus(legacy.status),
-            summary: SyncActivityRegistrationSummary(legacy.summary)
-        )
     }
 }
 
@@ -118,46 +76,101 @@ nonisolated struct SyncHistorySessionSummary: Equatable, Sendable {
     var hasWarnings: Bool {
         skippedDirtyLocal > 0 || skippedOversized > 0
     }
+}
 
-    var legacySummary: SupabaseManualSyncHistorySessionSummary {
-        SupabaseManualSyncHistorySessionSummary(
-            uploaded: uploaded,
-            inserted: inserted,
-            updated: updated,
-            skippedClean: skippedClean,
-            skippedDirtyLocal: skippedDirtyLocal,
-            skippedOversized: skippedOversized
+nonisolated struct SyncCatalogPushResult: Equatable, Sendable {
+    var supplierCreates: Int = 0
+    var supplierUpdates: Int = 0
+    var supplierLinks: Int = 0
+    var categoryCreates: Int = 0
+    var categoryUpdates: Int = 0
+    var categoryLinks: Int = 0
+    var productCreates: Int = 0
+    var productUpdates: Int = 0
+    var productLinks: Int = 0
+
+    var totalChanged: Int {
+        supplierCreates + supplierUpdates + supplierLinks
+            + categoryCreates + categoryUpdates + categoryLinks
+            + productCreates + productUpdates + productLinks
+    }
+}
+
+nonisolated struct SyncProductPricePushResult: Equatable, Sendable {
+    var insertedCount: Int = 0
+}
+
+nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {
+    var syncType: RuntimeSyncExecutionType
+    var eventsFetched: Int = 0
+    var eventsProcessed: Int = 0
+    var watermarkBefore: Int64 = 0
+    var watermarkAfter: Int64 = 0
+    var targetedSuppliersFetched: Int = 0
+    var targetedCategoriesFetched: Int = 0
+    var targetedProductsFetched: Int = 0
+    var targetedProductPricesFetched: Int = 0
+    var targetedHistoryFetched: Int = 0
+    var productsInserted: Int = 0
+    var productsUpdated: Int = 0
+    var productsTombstoned: Int = 0
+    var suppliersCreated: Int = 0
+    var categoriesCreated: Int = 0
+    var productPricesInserted: Int = 0
+    var productPriceIdentityLinked: Int = 0
+    var productPricesMissingRemotePruned: Int = 0
+    var historyInserted: Int = 0
+    var historyUpdated: Int = 0
+    var historyMissingRemoteTombstoned: Int = 0
+    var suppliersMissingRemoteTombstoned: Int = 0
+    var categoriesMissingRemoteTombstoned: Int = 0
+    var requiresFullRecoveryReason: String?
+    var eventPageFetchMs: Int = 0
+    var catalogFetchMs: Int = 0
+    var catalogApplyMs: Int = 0
+    var productPriceFetchMs: Int = 0
+    var productPriceApplyMs: Int = 0
+    var historyFetchMs: Int = 0
+    var historyApplyMs: Int = 0
+    var totalElapsedMs: Int = 0
+
+    static func noWork(watermark: Int64) -> Self {
+        SyncIncrementalPullSummary(
+            syncType: .checkpointIncremental,
+            watermarkBefore: watermark,
+            watermarkAfter: watermark
         )
+    }
+
+    var requiresFullRecovery: Bool {
+        requiresFullRecoveryReason != nil
+    }
+
+    var totalApplied: Int {
+        productsInserted
+            + productsUpdated
+            + productsTombstoned
+            + suppliersCreated
+            + categoriesCreated
+            + productPricesInserted
+            + productPriceIdentityLinked
+            + productPricesMissingRemotePruned
+            + historyInserted
+            + historyUpdated
+            + historyMissingRemoteTombstoned
+            + suppliersMissingRemoteTombstoned
+            + categoriesMissingRemoteTombstoned
     }
 }
 
 @MainActor
 protocol SyncCatalogPushProviding: AnyObject {
-    func makePushPlan(ownerUserID: UUID) async throws -> ManualPushPlan
-    func execute(plan: ManualPushPlan, ownerUserID: UUID) async -> SupabaseManualPushResult
+    func pushPendingCatalog(ownerUserID: UUID) async throws -> SyncCatalogPushResult
 }
 
 @MainActor
 protocol SyncProductPriceSyncProviding: AnyObject {
-    func makeApplyPlan(ownerUserID: UUID) async throws -> ProductPriceApplyPlan
-    func apply(plan: ProductPriceApplyPlan, ownerUserID: UUID) async throws -> ProductPriceApplyResult
-    func apply(
-        plan: ProductPriceApplyPlan,
-        ownerUserID: UUID,
-        onProgress: @escaping @MainActor @Sendable (ProductPricePagedApplyProgress) -> Void
-    ) async throws -> ProductPriceApplyResult
-    func makePushPlan(ownerUserID: UUID) async throws -> ProductPricePushDryRunPlan
-    func push(plan: ProductPricePushDryRunPlan, ownerUserID: UUID) async throws -> ProductPriceManualPushResult
-}
-
-extension SyncProductPriceSyncProviding {
-    func apply(
-        plan: ProductPriceApplyPlan,
-        ownerUserID: UUID,
-        onProgress: @escaping @MainActor @Sendable (ProductPricePagedApplyProgress) -> Void
-    ) async throws -> ProductPriceApplyResult {
-        try await apply(plan: plan, ownerUserID: ownerUserID)
-    }
+    func pushPendingProductPrices(ownerUserID: UUID) async throws -> SyncProductPricePushResult
 }
 
 @MainActor
@@ -175,7 +188,6 @@ protocol SyncHistorySessionPushProviding: AnyObject {
     ) async throws -> SyncHistorySessionSummary
 }
 
-@MainActor
 protocol SyncIncrementalPullProviding: AnyObject {
-    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SupabaseSyncEventIncrementalApplySummary
+    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SyncIncrementalPullSummary
 }

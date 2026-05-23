@@ -2,55 +2,115 @@ import Combine
 import Foundation
 import SwiftUI
 
+nonisolated enum SyncRootPresentationKind: Equatable, Sendable {
+    case hidden
+    case checking
+    case blockedAuth
+    case recoverableError
+}
+
+nonisolated enum SyncRootPresentationActionID: Equatable, Sendable {
+    case reviewChanges
+    case signIn
+    case retry
+}
+
+nonisolated struct SyncRootPresentationState: Equatable, Sendable {
+    var kind: SyncRootPresentationKind
+    var titleKey: String
+    var detailKey: String?
+    var primaryActionTitleKey: String?
+    var primaryActionID: SyncRootPresentationActionID?
+    var systemImage: String
+
+    static let hidden = SyncRootPresentationState(
+        kind: .hidden,
+        titleKey: "",
+        detailKey: nil,
+        primaryActionTitleKey: nil,
+        primaryActionID: nil,
+        systemImage: "icloud"
+    )
+
+    static let checking = SyncRootPresentationState(
+        kind: .checking,
+        titleKey: "options.supabase.manualSync.root.checking.title",
+        detailKey: "options.supabase.manualSync.root.checking.detail",
+        primaryActionTitleKey: nil,
+        primaryActionID: nil,
+        systemImage: "arrow.triangle.2.circlepath.icloud"
+    )
+
+    static let blockedAuth = SyncRootPresentationState(
+        kind: .blockedAuth,
+        titleKey: "options.supabase.manualSync.root.auth.title",
+        detailKey: "options.supabase.manualSync.root.auth.detail",
+        primaryActionTitleKey: "options.supabase.manualSync.root.action.signIn",
+        primaryActionID: .signIn,
+        systemImage: "person.crop.circle.badge.exclamationmark"
+    )
+
+    static let recoverableError = SyncRootPresentationState(
+        kind: .recoverableError,
+        titleKey: "options.supabase.manualSync.root.error.title",
+        detailKey: "options.supabase.manualSync.root.error.detail",
+        primaryActionTitleKey: "options.supabase.manualSync.root.action.retry",
+        primaryActionID: .retry,
+        systemImage: "exclamationmark.icloud"
+    )
+}
+
 @MainActor
 final class SyncOrchestrator: ObservableObject {
     let objectWillChange = ObservableObjectPublisher()
 
-    private let manualAdapter: any SyncOrchestratorLegacySyncAdapter
     private let automaticRuntime: any SyncAutomaticRuntimeProviding
     private let authViewModel: SupabaseAuthViewModel
     private let activityCenter: ForegroundCloudWorkflowActivityCenter
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
     private let stateStore: SyncStateStore
-    private var viewModelCancellable: AnyCancellable?
 
     private var currentScenePhase: ScenePhase = .inactive
     private var foregroundTask: Task<Void, Never>?
     private var didReachInteractiveUI = false
     private var hasDeferredForegroundCheck = false
-    private var deferredForegroundSource: SupabaseManualSyncSemiAutomaticTriggerSource?
+    private var deferredForegroundSource: SyncAutomaticTriggerSource?
     private var deferredForegroundForceIncremental = false
     private var syncEventSafetyLoopTask: Task<Void, Never>?
     private var reconnectScheduler: AutomaticSyncReconnectScheduler?
     private var reconnectObserver: AutomaticSyncNetworkReachabilityObserver?
 
     init(
-        manualAdapter: any SyncOrchestratorLegacySyncAdapter,
         automaticRuntime: any SyncAutomaticRuntimeProviding,
         authViewModel: SupabaseAuthViewModel,
         activityCenter: ForegroundCloudWorkflowActivityCenter,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?,
         stateStore: SyncStateStore? = nil
     ) {
-        self.manualAdapter = manualAdapter
         self.automaticRuntime = automaticRuntime
         self.authViewModel = authViewModel
         self.activityCenter = activityCenter
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.stateStore = stateStore ?? SyncStateStore()
-        self.viewModelCancellable = manualAdapter.objectWillChangePublisher.sink { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.objectWillChange.send()
-            }
+    }
+
+    var rootPresentationState: SyncRootPresentationState {
+        if authViewModel.isTransitioning || foregroundTask != nil || automaticRuntime.isRunning {
+            return .checking
         }
-    }
-
-    var manualSyncViewModel: SupabaseManualSyncViewModel {
-        manualAdapter.legacyManualSyncViewModel
-    }
-
-    var rootPresentationState: SupabaseManualSyncRootPresentationState {
-        manualAdapter.rootPresentationState
+        if !authViewModel.isSignedIn {
+            return .blockedAuth
+        }
+        switch stateStore.state.phase {
+        case .recoveryRequired, .failed:
+            return .recoverableError
+        case .blocked(.authRequired):
+            return .blockedAuth
+        case .checking, .pushing, .pullingEvents, .reconciling:
+            return .checking
+        case .idle, .blocked:
+            return .hidden
+        }
     }
 
     func bootstrap(scenePhase: ScenePhase) async {
@@ -125,7 +185,7 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func shouldShowRootBanner(
-        _ state: SupabaseManualSyncRootPresentationState,
+        _ state: SyncRootPresentationState,
         selectedTab: Int
     ) -> Bool {
         guard state.kind != .hidden else { return false }
@@ -137,25 +197,16 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func retryRootActionIfPossible() {
-        guard foregroundTask == nil,
-              let mode = manualAdapter.runMode(for: .retry) else { return }
-        foregroundTask = Task { @MainActor in
-            await manualAdapter.start(with: mode)
-            foregroundTask = nil
-        }
+        submitForegroundTrigger(source: .rootForeground, forceIncremental: true)
     }
 
     func submitForegroundTrigger(
-        source: SupabaseManualSyncSemiAutomaticTriggerSource = .rootForeground,
+        source: SyncAutomaticTriggerSource = .rootForeground,
         forceIncremental: Bool = false
     ) {
         recordRuntimeDiagnostic("foreground.requestedAt", Date().timeIntervalSince1970)
         recordRuntimeDiagnostic("foreground.source", source.diagnosticsName)
         recordRuntimeDiagnostic("foreground.forceIncremental", forceIncremental)
-        guard !isFullPullHarnessRunning else {
-            recordRuntimeDiagnostic("foreground.outcome", "blocked_full_pull_harness")
-            return
-        }
         let canRunForCurrentScene = currentScenePhase == .active || (forceIncremental && currentScenePhase != .background)
         guard canRunForCurrentScene else {
             recordRuntimeDiagnostic("foreground.outcome", "blocked_scene")
@@ -195,8 +246,9 @@ final class SyncOrchestrator: ObservableObject {
 
         recordRuntimeDiagnostic("foreground.outcome", action.diagnosticsScheduleName)
         foregroundTask = Task { @MainActor in
-            let didRun = await automaticRuntime.run(action: action, source: source.automaticTriggerSource)
+            let didRun = await automaticRuntime.run(action: action, source: source)
             foregroundTask = nil
+            objectWillChange.send()
             if forceIncremental,
                !didRun,
                currentScenePhase != .background,
@@ -216,9 +268,9 @@ final class SyncOrchestrator: ObservableObject {
         deferredForegroundSource = nil
         deferredForegroundForceIncremental = false
         automaticRuntime.cancel()
-        manualAdapter.requestLifecycleInterruptionForBackground()
         foregroundTask?.cancel()
         foregroundTask = nil
+        objectWillChange.send()
     }
 
     private func syncAuthPresentationContext() {
@@ -227,13 +279,7 @@ final class SyncOrchestrator: ObservableObject {
         recordRuntimeDiagnostic("auth.canSignIn", authViewModel.canSignIn)
         recordRuntimeDiagnostic("auth.isTransitioning", authViewModel.isTransitioning)
         recordRuntimeDiagnostic("auth.userIDPresent", authViewModel.sessionInfo?.userID != nil)
-        manualAdapter.applyAuthPresentationContext(
-            SupabaseManualSyncAuthPresentationContext(
-                isSignedIn: authViewModel.isSignedIn,
-                canSignIn: authViewModel.canSignIn,
-                isTransitioning: authViewModel.isTransitioning
-            )
-        )
+        objectWillChange.send()
     }
 
     private func startReconnectObserverIfNeeded() {
@@ -299,7 +345,7 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     private func deferForegroundCheck(
-        source: SupabaseManualSyncSemiAutomaticTriggerSource,
+        source: SyncAutomaticTriggerSource,
         forceIncremental: Bool
     ) {
         hasDeferredForegroundCheck = true
@@ -317,7 +363,7 @@ final class SyncOrchestrator: ObservableObject {
         submitForegroundTrigger(source: source, forceIncremental: forceIncremental)
     }
 
-    private func decideAction(source: SupabaseManualSyncSemiAutomaticTriggerSource) -> SyncAction {
+    private func decideAction(source: SyncAutomaticTriggerSource) -> SyncAction {
         SyncDecisionEngine.decide(
             SyncDecisionInput(
                 trigger: source.syncTrigger,
@@ -359,35 +405,11 @@ final class SyncOrchestrator: ObservableObject {
         #endif
     }
 
-    private var isFullPullHarnessRunning: Bool {
-        #if DEBUG
-        let environment = ProcessInfo.processInfo.environment
-        let value = environment["TASK115_IOS_FULL_PULL"]
-            ?? environment["TEST_RUNNER_TASK115_IOS_FULL_PULL"]
-            ?? environment["TASK114_IOS_FULL_PULL"]
-            ?? environment["TEST_RUNNER_TASK114_IOS_FULL_PULL"]
-        return value == "1" || value?.lowercased() == "true"
-        #else
-        return false
-        #endif
-    }
-
 }
 
-private extension SupabaseManualSyncSemiAutomaticTriggerSource {
-    var automaticTriggerSource: SyncAutomaticTriggerSource {
-        switch self {
-        case .releaseCard:
-            return .releaseCard
-        case .rootForeground:
-            return .rootForeground
-        case .networkReconnect:
-            return .networkReconnect
-        case .localMutation:
-            return .localMutation
-        case .remoteSyncEvent:
-            return .remoteSyncEvent
-        }
+private extension SyncAutomaticTriggerSource {
+    var diagnosticsName: String {
+        rawValue
     }
 
     var syncTrigger: SyncTrigger {
@@ -416,15 +438,6 @@ private extension SupabaseManualSyncSemiAutomaticTriggerSource {
 }
 
 private extension SyncAction {
-    var prefersIncrementalCompatibilityRun: Bool {
-        switch self {
-        case .pushPending, .drainEvents, .lightReconcile, .requestRecovery, .sequence:
-            return true
-        case .noOp, .bootstrap, .fullRecovery, .retryAfterBusy, .blocked:
-            return false
-        }
-    }
-
     var diagnosticsScheduleName: String {
         switch self {
         case .pushPending:

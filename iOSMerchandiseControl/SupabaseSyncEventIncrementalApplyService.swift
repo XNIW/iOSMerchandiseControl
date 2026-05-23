@@ -78,6 +78,111 @@ nonisolated struct SupabaseSyncEventIncrementalApplySummary: Sendable, Equatable
             + suppliersMissingRemoteTombstoned
             + categoriesMissingRemoteTombstoned
     }
+
+    init(
+        syncType: RuntimeSyncExecutionType,
+        eventsFetched: Int = 0,
+        eventsProcessed: Int = 0,
+        watermarkBefore: Int64 = 0,
+        watermarkAfter: Int64 = 0,
+        targetedSuppliersFetched: Int = 0,
+        targetedCategoriesFetched: Int = 0,
+        targetedProductsFetched: Int = 0,
+        targetedProductPricesFetched: Int = 0,
+        targetedHistoryFetched: Int = 0,
+        productsInserted: Int = 0,
+        productsUpdated: Int = 0,
+        productsTombstoned: Int = 0,
+        suppliersCreated: Int = 0,
+        categoriesCreated: Int = 0,
+        productPricesInserted: Int = 0,
+        productPriceIdentityLinked: Int = 0,
+        productPricesMissingRemotePruned: Int = 0,
+        historyInserted: Int = 0,
+        historyUpdated: Int = 0,
+        historyMissingRemoteTombstoned: Int = 0,
+        suppliersMissingRemoteTombstoned: Int = 0,
+        categoriesMissingRemoteTombstoned: Int = 0,
+        requiresFullRecoveryReason: String? = nil,
+        eventPageFetchMs: Int = 0,
+        catalogFetchMs: Int = 0,
+        catalogApplyMs: Int = 0,
+        productPriceFetchMs: Int = 0,
+        productPriceApplyMs: Int = 0,
+        historyFetchMs: Int = 0,
+        historyApplyMs: Int = 0,
+        totalElapsedMs: Int = 0
+    ) {
+        self.syncType = syncType
+        self.eventsFetched = eventsFetched
+        self.eventsProcessed = eventsProcessed
+        self.watermarkBefore = watermarkBefore
+        self.watermarkAfter = watermarkAfter
+        self.targetedSuppliersFetched = targetedSuppliersFetched
+        self.targetedCategoriesFetched = targetedCategoriesFetched
+        self.targetedProductsFetched = targetedProductsFetched
+        self.targetedProductPricesFetched = targetedProductPricesFetched
+        self.targetedHistoryFetched = targetedHistoryFetched
+        self.productsInserted = productsInserted
+        self.productsUpdated = productsUpdated
+        self.productsTombstoned = productsTombstoned
+        self.suppliersCreated = suppliersCreated
+        self.categoriesCreated = categoriesCreated
+        self.productPricesInserted = productPricesInserted
+        self.productPriceIdentityLinked = productPriceIdentityLinked
+        self.productPricesMissingRemotePruned = productPricesMissingRemotePruned
+        self.historyInserted = historyInserted
+        self.historyUpdated = historyUpdated
+        self.historyMissingRemoteTombstoned = historyMissingRemoteTombstoned
+        self.suppliersMissingRemoteTombstoned = suppliersMissingRemoteTombstoned
+        self.categoriesMissingRemoteTombstoned = categoriesMissingRemoteTombstoned
+        self.requiresFullRecoveryReason = requiresFullRecoveryReason
+        self.eventPageFetchMs = eventPageFetchMs
+        self.catalogFetchMs = catalogFetchMs
+        self.catalogApplyMs = catalogApplyMs
+        self.productPriceFetchMs = productPriceFetchMs
+        self.productPriceApplyMs = productPriceApplyMs
+        self.historyFetchMs = historyFetchMs
+        self.historyApplyMs = historyApplyMs
+        self.totalElapsedMs = totalElapsedMs
+    }
+
+    init(_ summary: SyncIncrementalPullSummary) {
+        self.init(
+            syncType: summary.syncType,
+            eventsFetched: summary.eventsFetched,
+            eventsProcessed: summary.eventsProcessed,
+            watermarkBefore: summary.watermarkBefore,
+            watermarkAfter: summary.watermarkAfter,
+            targetedSuppliersFetched: summary.targetedSuppliersFetched,
+            targetedCategoriesFetched: summary.targetedCategoriesFetched,
+            targetedProductsFetched: summary.targetedProductsFetched,
+            targetedProductPricesFetched: summary.targetedProductPricesFetched,
+            targetedHistoryFetched: summary.targetedHistoryFetched,
+            productsInserted: summary.productsInserted,
+            productsUpdated: summary.productsUpdated,
+            productsTombstoned: summary.productsTombstoned,
+            suppliersCreated: summary.suppliersCreated,
+            categoriesCreated: summary.categoriesCreated,
+            productPricesInserted: summary.productPricesInserted,
+            productPriceIdentityLinked: summary.productPriceIdentityLinked,
+            productPricesMissingRemotePruned: summary.productPricesMissingRemotePruned,
+            historyInserted: summary.historyInserted,
+            historyUpdated: summary.historyUpdated,
+            historyMissingRemoteTombstoned: summary.historyMissingRemoteTombstoned,
+            suppliersMissingRemoteTombstoned: summary.suppliersMissingRemoteTombstoned,
+            categoriesMissingRemoteTombstoned: summary.categoriesMissingRemoteTombstoned,
+            requiresFullRecoveryReason: summary.requiresFullRecoveryReason,
+            eventPageFetchMs: summary.eventPageFetchMs,
+            catalogFetchMs: summary.catalogFetchMs,
+            catalogApplyMs: summary.catalogApplyMs,
+            productPriceFetchMs: summary.productPriceFetchMs,
+            productPriceApplyMs: summary.productPriceApplyMs,
+            historyFetchMs: summary.historyFetchMs,
+            historyApplyMs: summary.historyApplyMs,
+            totalElapsedMs: summary.totalElapsedMs
+        )
+    }
 }
 
 nonisolated struct SupabaseSyncEventIncrementalApplyService {
@@ -104,11 +209,12 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
         modelContainer: ModelContainer,
         isAuthenticated: Bool
     ) async throws -> SupabaseSyncEventIncrementalApplySummary {
-        try await domainService.applyNextEvents(
+        let summary = try await domainService.applyNextEvents(
             ownerUserID: ownerUserID,
             modelContainer: modelContainer,
             isAuthenticated: isAuthenticated
         )
+        return SupabaseSyncEventIncrementalApplySummary(summary)
     }
 
     static func watermarkKey(ownerUserID: UUID) -> String {

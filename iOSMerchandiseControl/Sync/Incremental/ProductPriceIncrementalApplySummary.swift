@@ -10,7 +10,7 @@ struct ProductPriceIncrementalApplySummary: Equatable, Sendable {
 
     init() {}
 
-    init(_ summary: SupabaseSyncEventIncrementalApplySummary) {
+    init(_ summary: SyncIncrementalPullSummary) {
         targetedProductPricesFetched = summary.targetedProductPricesFetched
         inserted = summary.productPricesInserted
         remoteIdentityLinked = summary.productPriceIdentityLinked
@@ -18,9 +18,8 @@ struct ProductPriceIncrementalApplySummary: Equatable, Sendable {
     }
 }
 
-extension SupabaseSyncEventIncrementalApplySummary {
+extension SyncIncrementalPullSummary {
     var productPriceSummary: ProductPriceIncrementalApplySummary {
         ProductPriceIncrementalApplySummary(self)
     }
 }
-

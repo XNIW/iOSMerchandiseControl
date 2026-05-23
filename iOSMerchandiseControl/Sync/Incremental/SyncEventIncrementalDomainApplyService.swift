@@ -26,7 +26,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         ownerUserID: UUID,
         modelContainer: ModelContainer,
         isAuthenticated: Bool
-    ) async throws -> SupabaseSyncEventIncrementalApplySummary {
+    ) async throws -> SyncIncrementalPullSummary {
         let totalStarted = mcNowMillis()
         let watermarkScope = self.watermarkScope(ownerUserID: ownerUserID)
         let watermarkBefore = watermarkStore.watermark(for: watermarkScope)
@@ -39,7 +39,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         let eventFetchMs = mcNowMillis() - eventFetchStarted
         guard !events.isEmpty else {
             guard shouldRunLightReconcile(ownerUserID: ownerUserID) else {
-                var summary = SupabaseSyncEventIncrementalApplySummary.noWork(watermark: watermarkBefore)
+                var summary = SyncIncrementalPullSummary.noWork(watermark: watermarkBefore)
                 summary.eventPageFetchMs = eventFetchMs
                 summary.totalElapsedMs = mcNowMillis() - totalStarted
                 return summary
@@ -55,7 +55,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
             return summary
         }
 
-        var summary = SupabaseSyncEventIncrementalApplySummary(
+        var summary = SyncIncrementalPullSummary(
             syncType: .eventIncremental,
             eventsFetched: events.count,
             watermarkBefore: watermarkBefore,
@@ -157,7 +157,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         modelContainer: ModelContainer,
         isAuthenticated: Bool,
         watermark: Int64
-    ) async throws -> SupabaseSyncEventIncrementalApplySummary {
+    ) async throws -> SyncIncrementalPullSummary {
         let remoteCounts = try await inventoryService.fetchReconciliationRemoteCounts()
         let localCounts = try await Task.detached(priority: .utility) {
             let context = ModelContext(modelContainer)
@@ -166,14 +166,14 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
         let drift = SyncCountDriftReport.compare(local: localCounts, remote: remoteCounts)
         recordCanonicalDriftDiagnostics(drift)
         guard !drift.isAligned else {
-            return SupabaseSyncEventIncrementalApplySummary(
+            return SyncIncrementalPullSummary(
                 syncType: .lightReconcile,
                 watermarkBefore: watermark,
                 watermarkAfter: watermark
             )
         }
 
-        var summary = SupabaseSyncEventIncrementalApplySummary(
+        var summary = SyncIncrementalPullSummary(
             syncType: .lightReconcile,
             watermarkBefore: watermark,
             watermarkAfter: watermark

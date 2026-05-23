@@ -1,8 +1,7 @@
 import Foundation
 import SwiftData
 
-@MainActor
-final class SyncEventIncrementalPullService: SyncIncrementalPullProviding, SupabaseManualSyncIncrementalPullProviding {
+final class SyncEventIncrementalPullService: SyncIncrementalPullProviding {
     private let modelContainer: ModelContainer
     private let remote: SupabaseInventoryService
     private let defaults: UserDefaults
@@ -32,7 +31,7 @@ final class SyncEventIncrementalPullService: SyncIncrementalPullProviding, Supab
         self.domainApplyServiceFactory = domainApplyServiceFactory
     }
 
-    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SupabaseSyncEventIncrementalApplySummary {
+    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SyncIncrementalPullSummary {
         try await domainApplyServiceFactory(remote, defaults).applyNextEvents(
             ownerUserID: ownerUserID,
             modelContainer: modelContainer,
