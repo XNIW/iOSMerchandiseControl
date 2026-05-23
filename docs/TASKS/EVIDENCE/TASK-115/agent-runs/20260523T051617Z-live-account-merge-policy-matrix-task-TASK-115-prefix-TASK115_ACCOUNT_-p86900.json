@@ -1,0 +1,178 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-115/agent-runs/20260523T051617Z-live-account-merge-policy-matrix-task-TASK-115-prefix-TASK115_ACCOUNT_-p86900.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-115/agent-runs/20260523T051617Z-live-account-merge-policy-matrix-task-TASK-115-prefix-TASK115_ACCOUNT_-p86900.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-115/agent-runs/20260523T051617Z-live-account-merge-policy-matrix-task-TASK-115-prefix-TASK115_ACCOUNT_-p86900.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-auth-preflight-20260523T051617Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-113-07",
+    "CA-113-19",
+    "CA-113-30"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live account-merge-policy-matrix --task TASK-115 --prefix TASK115_ACCOUNT_",
+  "command_slug": "live-account-merge-policy-matrix-task-TASK-115-prefix-TASK115_ACCOUNT_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "physical",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": "<REDACTED>"
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 56068,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-115",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<REDACTED>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK115_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-115"
+  },
+  "exit_code": 2,
+  "git_sha": "b3f65de",
+  "next_action_recommended": "Sign in iOS and Android app targets, then implement/run scoped TASK115_ACCOUNT_ fixtures for A-L; unit-only evidence is not a critical PASS.",
+  "platform": "android",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "blockers": {},
+    "cleanupRequired": false,
+    "completedAt": "2026-05-23T05:17:13Z",
+    "coverageNote": "Critical TASK-115 account policy cannot pass with unit-only evidence. This command is BLOCKED until live app-auth is ready and scoped TASK115_ACCOUNT_ fixtures exercise A-L without cross-account leakage.",
+    "mutationMode": "strict-live-required; no mutation performed until iOS and Android app-auth are ready and scoped account fixtures exist",
+    "prefix": "TASK115_ACCOUNT_",
+    "scenarios": [
+      {
+        "expected": "bootstrap upload after user confirmation",
+        "liveStatus": "NOT_RUN",
+        "precondition": "local anonymous data + remote empty",
+        "scenario": "A",
+        "testID": "AP-A-01",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "user must choose; no silent merge",
+        "liveStatus": "NOT_RUN",
+        "precondition": "local anonymous data + remote non-empty",
+        "scenario": "B",
+        "testID": "AP-B-01",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "push pending, drain events, light reconcile",
+        "liveStatus": "NOT_RUN",
+        "precondition": "same account reconnect",
+        "scenario": "C",
+        "testID": "AP-C-01",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "no cross-account merge",
+        "liveStatus": "NOT_RUN",
+        "precondition": "switch account A to B",
+        "scenario": "D",
+        "testID": "AP-D-01",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "owner-bound pending restored",
+        "liveStatus": "NOT_RUN",
+        "precondition": "session lost then same account login",
+        "scenario": "E",
+        "testID": "AP-E-01",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "append-only conflict/stale",
+        "liveStatus": "NOT_RUN",
+        "precondition": "same barcode different price",
+        "scenario": "F",
+        "testID": "AP-F-01",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "remoteId/fingerprint/tombstone/userVisible policy",
+        "liveStatus": "NOT_RUN",
+        "precondition": "HistoryEntry local/remote",
+        "scenario": "G",
+        "testID": "AP-G-01",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "conflict; no silent resurrect",
+        "liveStatus": "NOT_RUN",
+        "precondition": "remote deleted while local edited offline",
+        "scenario": "H",
+        "testID": "AP-H-01",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "apply tombstone or conflict if newer pending",
+        "liveStatus": "NOT_RUN",
+        "precondition": "remote tombstone + local active",
+        "scenario": "I",
+        "testID": "AP-I-01/AP-I-02",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "remote timestamps/event id ordering",
+        "liveStatus": "NOT_RUN",
+        "precondition": "clock skew",
+        "scenario": "J",
+        "testID": "AP-J-01",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "remote source of truth; causal local pending only",
+        "liveStatus": "NOT_RUN",
+        "precondition": "multi-device same account",
+        "scenario": "K",
+        "testID": "AP-K-01",
+        "unitPolicyStatus": "PASS"
+      },
+      {
+        "expected": "never auto-upload to new account",
+        "liveStatus": "NOT_RUN",
+        "precondition": "anonymous store after logout",
+        "scenario": "L",
+        "testID": "AP-L-01",
+        "unitPolicyStatus": "PASS"
+      }
+    ],
+    "schemaVersion": "1.1",
+    "source": "live.account-merge-policy-matrix",
+    "status": "BLOCKED",
+    "strictLiveFixturesAvailable": false,
+    "taskId": "TASK-115"
+  },
+  "repo": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "blocked",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260523T051617Z-live-account-merge-policy-matrix-task-TASK-115-prefix-TASK115_ACCOUNT_-p86900",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "task_id": "TASK-115",
+  "test_prefix": "TASK115_ACCOUNT_",
+  "timestamp_end": "2026-05-23T05:17:13Z",
+  "timestamp_start": "2026-05-23T05:16:17Z",
+  "warnings": []
+}

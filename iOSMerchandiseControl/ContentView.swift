@@ -239,19 +239,10 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
 
     @ObservedObject private var activityCenter: ForegroundCloudWorkflowActivityCenter
     @ObservedObject private var authViewModel: SupabaseAuthViewModel
-    @StateObject private var viewModel: SupabaseManualSyncViewModel
+    @StateObject private var syncOrchestrator: SyncOrchestrator
     @Binding private var selectedTab: Int
-    @State private var foregroundTask: Task<Void, Never>?
-    @State private var didReachInteractiveUI = false
-    @State private var hasDeferredForegroundCheck = false
-    @State private var deferredForegroundSource: SupabaseManualSyncSemiAutomaticTriggerSource?
-    @State private var deferredForegroundForceIncremental = false
-    @State private var syncEventSafetyLoopTask: Task<Void, Never>?
-    @State private var reconnectScheduler: AutomaticSyncReconnectScheduler?
-    @State private var reconnectObserver: AutomaticSyncNetworkReachabilityObserver?
 
     private let content: (SupabaseManualSyncViewModel, @escaping () -> Void) -> Content
-    private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
 
     init(
         context: ModelContext,
@@ -265,125 +256,65 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
         activityCenter: ForegroundCloudWorkflowActivityCenter,
         @ViewBuilder content: @escaping (SupabaseManualSyncViewModel, @escaping () -> Void) -> Content
     ) {
-        _viewModel = StateObject(
-            wrappedValue: SupabaseManualSyncReleaseFactory.makeViewModel(
-                context: context,
+        _syncOrchestrator = StateObject(
+            wrappedValue: SyncOrchestrator(
+                manualSyncViewModel: SupabaseManualSyncReleaseFactory.makeViewModel(
+                    context: context,
+                    authViewModel: authViewModel,
+                    inventoryService: inventoryService,
+                    pullPreviewService: pullPreviewService,
+                    manualPushService: manualPushService,
+                    activityRecorder: activityRecorder
+                ),
                 authViewModel: authViewModel,
-                inventoryService: inventoryService,
-                pullPreviewService: pullPreviewService,
-                manualPushService: manualPushService,
-                activityRecorder: activityRecorder
+                activityCenter: activityCenter,
+                syncEventSignalWatcher: syncEventSignalWatcher
             )
         )
         _selectedTab = selectedTab
         _activityCenter = ObservedObject(wrappedValue: activityCenter)
         _authViewModel = ObservedObject(wrappedValue: authViewModel)
         self.content = content
-        self.syncEventSignalWatcher = syncEventSignalWatcher
     }
 
     var body: some View {
-        content(viewModel, cancelRootForegroundCheck)
+        content(syncOrchestrator.manualSyncViewModel, syncOrchestrator.cancelForegroundCheck)
             .safeAreaInset(edge: .top, spacing: 0) {
                 rootBanner
             }
             .task {
-                recordRuntimeDiagnostic("rootHost.taskStartedAt", Date().timeIntervalSince1970)
-                startReconnectObserverIfNeeded()
-                guard !didReachInteractiveUI else { return }
-                syncAuthPresentationContext()
-                await Task.yield()
-                didReachInteractiveUI = true
-                recordRuntimeDiagnostic("rootHost.didReachInteractiveUI", true)
-                reconnectScheduler?.setForeground(scenePhase == .active)
-                updateSyncEventSignalWatcher()
-                startSyncEventSafetyLoopIfNeeded()
-                startRootForegroundCheckIfAllowed(forceIncremental: true)
+                await syncOrchestrator.bootstrap(scenePhase: scenePhase)
             }
             .onChange(of: scenePhase) { _, phase in
-                switch phase {
-                case .active:
-                    reconnectScheduler?.setForeground(true)
-                    syncAuthPresentationContext()
-                    guard didReachInteractiveUI else { return }
-                    updateSyncEventSignalWatcher()
-                    startSyncEventSafetyLoopIfNeeded()
-                    startRootForegroundCheckIfAllowed(forceIncremental: true)
-                case .background:
-                    reconnectScheduler?.setForeground(false)
-                    syncEventSignalWatcher?.stop()
-                    stopSyncEventSafetyLoop()
-                    cancelRootForegroundCheck()
-                case .inactive:
-                    break
-                @unknown default:
-                    break
-                }
+                syncOrchestrator.handleScenePhaseChanged(phase)
             }
             .onChange(of: authViewModel.isTransitioning) { _, _ in
-                handleAuthPresentationChanged()
+                syncOrchestrator.handleAuthPresentationChanged()
             }
             .onChange(of: authViewModel.canSignIn) { _, _ in
-                handleAuthPresentationChanged()
+                syncOrchestrator.handleAuthPresentationChanged()
             }
             .onChange(of: authViewModel.sessionInfo?.userID) { _, _ in
-                handleAuthPresentationChanged()
+                syncOrchestrator.handleAuthPresentationChanged()
             }
             .onChange(of: authViewModel.isSignedIn) { _, _ in
-                handleAuthPresentationChanged()
+                syncOrchestrator.handleAuthPresentationChanged()
             }
             .onChange(of: activityCenter.activeReasons) { _, _ in
-                guard didReachInteractiveUI,
-                      hasDeferredForegroundCheck,
-                      !activityCenter.isBusy else { return }
-                let source = deferredForegroundSource ?? .rootForeground
-                hasDeferredForegroundCheck = false
-                deferredForegroundSource = nil
-                let forceIncremental = deferredForegroundForceIncremental
-                deferredForegroundForceIncremental = false
-                startRootForegroundCheckIfAllowed(source: source, forceIncremental: forceIncremental)
+                syncOrchestrator.resumeDeferredForegroundCheckIfReady()
             }
             .onReceive(NotificationCenter.default.publisher(for: .localPendingChangesDidChange)) { _ in
-                guard didReachInteractiveUI,
-                      scenePhase == .active else { return }
-                startRootForegroundCheckIfAllowed(source: .localMutation, forceIncremental: true)
+                syncOrchestrator.handleLocalPendingChanges()
             }
             .onDisappear {
-                stopSyncEventSafetyLoop()
-                reconnectObserver?.cancel()
-                reconnectObserver = nil
-                reconnectScheduler = nil
-                syncEventSignalWatcher?.stop()
+                syncOrchestrator.stop()
             }
-    }
-
-    private func handleAuthPresentationChanged() {
-        syncAuthPresentationContext()
-        updateSyncEventSignalWatcher()
-        guard didReachInteractiveUI,
-              scenePhase == .active else { return }
-        startRootForegroundCheckIfAllowed(forceIncremental: true)
-    }
-
-    private func syncAuthPresentationContext() {
-        authViewModel.refreshCurrentSessionSnapshot()
-        recordRuntimeDiagnostic("auth.isSignedIn", authViewModel.isSignedIn)
-        recordRuntimeDiagnostic("auth.canSignIn", authViewModel.canSignIn)
-        recordRuntimeDiagnostic("auth.isTransitioning", authViewModel.isTransitioning)
-        recordRuntimeDiagnostic("auth.userIDPresent", authViewModel.sessionInfo?.userID != nil)
-        viewModel.applyAuthPresentationContext(
-            SupabaseManualSyncAuthPresentationContext(
-                isSignedIn: authViewModel.isSignedIn,
-                canSignIn: authViewModel.canSignIn,
-                isTransitioning: authViewModel.isTransitioning
-            )
-        )
     }
 
     @ViewBuilder
     private var rootBanner: some View {
-        let state = viewModel.rootPresentationState
-        if shouldShowRootBanner(state) {
+        let state = syncOrchestrator.rootPresentationState
+        if syncOrchestrator.shouldShowRootBanner(state, selectedTab: selectedTab) {
             SupabaseManualSyncRootForegroundBanner(
                 state: state,
                 reduceMotion: reduceMotion,
@@ -392,173 +323,6 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
         }
-    }
-
-    private func shouldShowRootBanner(_ state: SupabaseManualSyncRootPresentationState) -> Bool {
-        guard state.kind != .hidden else { return false }
-        guard state.kind != .blockedAuth else { return false }
-        guard state.primaryActionID != nil || state.kind == .checking else { return false }
-        guard selectedTab != 3 else { return false }
-        guard !activityCenter.isBusy else { return false }
-        return true
-    }
-
-    private func startReconnectObserverIfNeeded() {
-        guard reconnectScheduler == nil,
-              reconnectObserver == nil else { return }
-        let scheduler = AutomaticSyncReconnectScheduler {
-            startRootForegroundCheckIfAllowed(source: .networkReconnect, forceIncremental: true)
-        }
-        scheduler.setForeground(scenePhase == .active)
-        let observer = AutomaticSyncNetworkReachabilityObserver(scheduler: scheduler)
-        observer.start()
-        reconnectScheduler = scheduler
-        reconnectObserver = observer
-    }
-
-    private func startSyncEventSafetyLoopIfNeeded() {
-        guard syncEventSafetyLoopTask == nil else { return }
-        syncEventSafetyLoopTask = Task { @MainActor in
-            let intervalNanoseconds: UInt64 = 5_000_000_000
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: intervalNanoseconds)
-                guard !Task.isCancelled else { break }
-                recordRuntimeDiagnostic("timer.intervalSeconds", 5)
-                recordRuntimeDiagnostic("timer.lastTickAt", Date().timeIntervalSince1970)
-                recordRuntimeDiagnostic("timer.didReachInteractiveUI", didReachInteractiveUI)
-                recordRuntimeDiagnostic("timer.sceneActive", scenePhase == .active)
-                recordRuntimeDiagnostic("timer.sceneBackground", scenePhase == .background)
-                guard didReachInteractiveUI,
-                      scenePhase != .background else { continue }
-                syncAuthPresentationContext()
-                updateSyncEventSignalWatcher()
-                recordRuntimeDiagnostic("timer.isSignedIn", authViewModel.isSignedIn)
-                guard authViewModel.isSignedIn else { continue }
-                startRootForegroundCheckIfAllowed(source: .remoteSyncEvent, forceIncremental: true)
-            }
-            syncEventSafetyLoopTask = nil
-        }
-    }
-
-    private func stopSyncEventSafetyLoop() {
-        syncEventSafetyLoopTask?.cancel()
-        syncEventSafetyLoopTask = nil
-    }
-
-    private func updateSyncEventSignalWatcher() {
-        recordRuntimeDiagnostic("watcher.updateAt", Date().timeIntervalSince1970)
-        guard didReachInteractiveUI,
-              scenePhase != .background,
-              authViewModel.isSignedIn,
-              let ownerUserID = authViewModel.sessionInfo?.userID else {
-            recordRuntimeDiagnostic("watcher.state", "stopped")
-            syncEventSignalWatcher?.stop()
-            return
-        }
-        recordRuntimeDiagnostic("watcher.state", "started")
-        syncEventSignalWatcher?.start(ownerUserID: ownerUserID) {
-            recordRuntimeDiagnostic("watcher.signalAt", Date().timeIntervalSince1970)
-            startRootForegroundCheckIfAllowed(source: .remoteSyncEvent, forceIncremental: true)
-        }
-    }
-
-    private func startRootForegroundCheckIfAllowed(
-        source: SupabaseManualSyncSemiAutomaticTriggerSource = .rootForeground,
-        forceIncremental: Bool = false
-    ) {
-        recordRuntimeDiagnostic("foreground.requestedAt", Date().timeIntervalSince1970)
-        recordRuntimeDiagnostic("foreground.source", source.diagnosticsName)
-        recordRuntimeDiagnostic("foreground.forceIncremental", forceIncremental)
-        guard !isTask114FullPullHarnessRunning else {
-            recordRuntimeDiagnostic("foreground.outcome", "blocked_full_pull_harness")
-            return
-        }
-        let canRunForCurrentScene = scenePhase == .active || (forceIncremental && scenePhase != .background)
-        guard canRunForCurrentScene else {
-            recordRuntimeDiagnostic("foreground.outcome", "blocked_scene")
-            return
-        }
-        guard foregroundTask == nil else {
-            hasDeferredForegroundCheck = true
-            deferredForegroundSource = source
-            deferredForegroundForceIncremental = deferredForegroundForceIncremental || forceIncremental
-            recordRuntimeDiagnostic("foreground.outcome", "deferred_existing_task")
-            return
-        }
-        guard !activityCenter.isBusy else {
-            hasDeferredForegroundCheck = true
-            deferredForegroundSource = source
-            deferredForegroundForceIncremental = deferredForegroundForceIncremental || forceIncremental
-            viewModel.markForegroundCheckSkippedBecauseBusy()
-            recordRuntimeDiagnostic("foreground.outcome", "deferred_busy")
-            return
-        }
-
-        recordRuntimeDiagnostic("foreground.outcome", forceIncremental ? "scheduled_incremental" : "scheduled_policy")
-        foregroundTask = Task { @MainActor in
-            let didRun: Bool
-            if forceIncremental {
-                didRun = await viewModel.startForegroundIncrementalCheckNow(source: source)
-            } else {
-                didRun = await viewModel.startForegroundSemiAutomaticCheckIfAllowed(source: source)
-            }
-            foregroundTask = nil
-            if forceIncremental,
-               !didRun,
-               scenePhase != .background,
-               !activityCenter.isBusy,
-               !hasDeferredForegroundCheck {
-                recordRuntimeDiagnostic("foreground.outcome", "retry_after_sync_busy")
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                startRootForegroundCheckIfAllowed(source: source, forceIncremental: true)
-                return
-            }
-            if hasDeferredForegroundCheck {
-                let source = deferredForegroundSource ?? .rootForeground
-                let forceIncremental = deferredForegroundForceIncremental
-                hasDeferredForegroundCheck = false
-                deferredForegroundSource = nil
-                deferredForegroundForceIncremental = false
-                startRootForegroundCheckIfAllowed(source: source, forceIncremental: forceIncremental)
-            }
-        }
-    }
-
-    private func recordRuntimeDiagnostic(_ key: String, _ value: String) {
-        #if DEBUG
-        UserDefaults.standard.set(value, forKey: "task114.runtime.\(key)")
-        #endif
-    }
-
-    private func recordRuntimeDiagnostic(_ key: String, _ value: Bool) {
-        #if DEBUG
-        UserDefaults.standard.set(value, forKey: "task114.runtime.\(key)")
-        #endif
-    }
-
-    private func recordRuntimeDiagnostic(_ key: String, _ value: TimeInterval) {
-        #if DEBUG
-        UserDefaults.standard.set(value, forKey: "task114.runtime.\(key)")
-        #endif
-    }
-
-    private var isTask114FullPullHarnessRunning: Bool {
-        #if DEBUG
-        let environment = ProcessInfo.processInfo.environment
-        let value = environment["TASK114_IOS_FULL_PULL"] ?? environment["TEST_RUNNER_TASK114_IOS_FULL_PULL"]
-        return value == "1" || value?.lowercased() == "true"
-        #else
-        return false
-        #endif
-    }
-
-    private func cancelRootForegroundCheck() {
-        hasDeferredForegroundCheck = false
-        deferredForegroundSource = nil
-        deferredForegroundForceIncremental = false
-        viewModel.requestLifecycleInterruptionForBackground()
-        foregroundTask?.cancel()
-        foregroundTask = nil
     }
 
     private func handleRootAction(_ actionID: SupabaseManualSyncPresentationActionID?) {
@@ -572,14 +336,9 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
                 selectedTab = 3
             }
         case .retry:
-            guard foregroundTask == nil,
-                  let mode = viewModel.runMode(for: .retry) else { return }
-            foregroundTask = Task { @MainActor in
-                await viewModel.start(with: mode)
-                foregroundTask = nil
-            }
+            syncOrchestrator.retryRootActionIfPossible()
         case .checkCloud, .downloadCloudDatabase:
-            startRootForegroundCheckIfAllowed()
+            syncOrchestrator.submitForegroundTrigger()
         case .realignData, .syncNow, .sendCloudChanges, .cancel, .none:
             selectedTab = 3
         }

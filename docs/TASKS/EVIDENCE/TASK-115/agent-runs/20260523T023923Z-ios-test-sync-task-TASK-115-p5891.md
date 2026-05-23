@@ -1,0 +1,39 @@
+# mc-agent report
+
+- **Schema**: 1.1
+- **Run ID**: 20260523T023923Z-ios-test-sync-task-TASK-115-p5891
+- **Task**: TASK-115
+- **Command**: `ios test sync --task TASK-115`
+- **Platform**: ios
+- **Safety**: safe-readonly
+- **Result**: pass (exit 0)
+- **Duration**: 26592 ms
+- **Repo**: <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+- **Branch**: main
+- **Git SHA**: f6efc84
+- **Dirty**: dirty
+- **Profile**: null
+- **Android offline tier**: none
+- **Cleanup plan ID**: n/a
+
+## Summary
+
+iOS test sync PASS. xcresult=/tmp/mc-agent-ios-test-sync-20260523T023923Z.xcresult
+
+## Counts
+
+- rows_created: 0
+- rows_deleted: 0
+- residue_count: 0
+
+## Artifacts
+
+- Markdown: `docs/TASKS/EVIDENCE/TASK-115/agent-runs/20260523T023923Z-ios-test-sync-task-TASK-115-p5891.md`
+- JSON: `docs/TASKS/EVIDENCE/TASK-115/agent-runs/20260523T023923Z-ios-test-sync-task-TASK-115-p5891.json`
+- Log: `docs/TASKS/EVIDENCE/TASK-115/agent-runs/20260523T023923Z-ios-test-sync-task-TASK-115-p5891.log`
+- xcresult: `/tmp/mc-agent-ios-test-sync-20260523T023923Z.xcresult`
+- screenshot: `n/a`
+
+## Next Action
+
+Continue next iOS or cross-platform gate.

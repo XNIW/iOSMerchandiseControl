@@ -564,27 +564,25 @@ nonisolated final class LocalPendingChangeAccumulator {
         entityRemoteID: UUID?,
         timestamp: Date
     ) {
-        let currentOperation = change.operation
-        if currentOperation == .create, operation == .delete, change.entityRemoteID == nil {
-            change.status = .superseded
-        } else if operation == .delete {
-            change.operation = .delete
-            change.changedFields = ["tombstone"]
-        } else if currentOperation == .create, operation == .update {
-            change.operation = .create
-            change.changedFields = change.changedFields + changedFields
-        } else if operation == .upsert || currentOperation == .upsert {
-            change.operation = .upsert
-            change.changedFields = change.changedFields + changedFields
-        } else {
-            change.operation = operation
-            change.changedFields = change.changedFields + changedFields
-        }
+        let coalesced = PendingChangeCoalescer.coalesce(
+            current: PendingChangeCoalescer.State(
+                operation: change.operation,
+                status: change.status,
+                changedFields: change.changedFields,
+                entityRemoteID: change.entityRemoteID
+            ),
+            incoming: operation,
+            changedFields: changedFields,
+            incomingEntityRemoteID: entityRemoteID
+        )
+        change.operation = coalesced.operation
+        change.status = coalesced.status
+        change.changedFields = coalesced.changedFields
+        change.entityRemoteID = coalesced.entityRemoteID
 
         change.origin = origin
         change.baselineFingerprintHash = baselineFingerprintHash ?? change.baselineFingerprintHash
         change.intendedFingerprintHash = intendedFingerprintHash ?? change.intendedFingerprintHash
-        change.entityRemoteID = entityRemoteID ?? change.entityRemoteID
         change.updatedAt = timestamp
     }
 

@@ -358,7 +358,7 @@ mc_supabase_seed() {
   mc_validate_task_prefix "$prefix" || return $?
   MC_TEST_PREFIX="$prefix"
   mc_set_pass_with_notes
-  MC_SUMMARY="Generic Supabase seed PASS_WITH_NOTES: TASK-113 does not define a production seed; use platform live-write harness for scoped data."
+  MC_SUMMARY="Generic Supabase seed PASS_WITH_NOTES: no production seed is defined; use platform live-write harness for scoped task data."
   MC_NEXT_ACTION="Run ios/android live-write or a task-specific backend seed."
   return "$MC_EXIT_PASS"
 }
@@ -1258,6 +1258,283 @@ PY
   return "$MC_EXIT_FAIL"
 }
 
+mc_live_account_merge_policy_matrix() {
+  local task_id="$1"
+  local prefix="$2"
+  MC_PLATFORM="live"
+  MC_SAFETY_LEVEL="live-readonly"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-115-04,CA-115-05,CA-115-06,CA-115-07,CA-115-08"
+  MC_TEST_PREFIX="$prefix"
+
+  local tests_status="PASS"
+  local ios_auth_status="PASS"
+  local android_auth_status="PASS"
+  if ! mc_ios_test sync; then
+    tests_status="FAIL"
+  fi
+  if ! mc_ios_auth_preflight; then
+    ios_auth_status="BLOCKED"
+  fi
+  if ! mc_android_auth_preflight; then
+    android_auth_status="BLOCKED"
+  fi
+  TASK_ID="$task_id" PREFIX="$prefix" TESTS_STATUS="$tests_status" IOS_AUTH_STATUS="$ios_auth_status" ANDROID_AUTH_STATUS="$android_auth_status" python3 - > /tmp/mc-agent-account-merge-policy.$$.json <<'PY'
+import json, os
+from datetime import datetime, timezone
+
+scenarios = [
+    ("A", "AP-A-01", "local anonymous data + remote empty", "bootstrap upload after user confirmation"),
+    ("B", "AP-B-01", "local anonymous data + remote non-empty", "user must choose; no silent merge"),
+    ("C", "AP-C-01", "same account reconnect", "push pending, drain events, light reconcile"),
+    ("D", "AP-D-01", "switch account A to B", "no cross-account merge"),
+    ("E", "AP-E-01", "session lost then same account login", "owner-bound pending restored"),
+    ("F", "AP-F-01", "same barcode different price", "append-only conflict/stale"),
+    ("G", "AP-G-01", "HistoryEntry local/remote", "remoteId/fingerprint/tombstone/userVisible policy"),
+    ("H", "AP-H-01", "remote deleted while local edited offline", "conflict; no silent resurrect"),
+    ("I", "AP-I-01/AP-I-02", "remote tombstone + local active", "apply tombstone or conflict if newer pending"),
+    ("J", "AP-J-01", "clock skew", "remote timestamps/event id ordering"),
+    ("K", "AP-K-01", "multi-device same account", "remote source of truth; causal local pending only"),
+    ("L", "AP-L-01", "anonymous store after logout", "never auto-upload to new account"),
+]
+tests_status = os.environ["TESTS_STATUS"]
+ios_auth_status = os.environ["IOS_AUTH_STATUS"]
+android_auth_status = os.environ["ANDROID_AUTH_STATUS"]
+blockers = {}
+if ios_auth_status != "PASS":
+    blockers["ios"] = "AUTH_SESSION_NOT_READY"
+if android_auth_status != "PASS":
+    blockers["android"] = "AUTH_SESSION_NOT_READY"
+strict_fixtures_available = False
+if tests_status != "PASS":
+    status = "FAIL"
+elif blockers or not strict_fixtures_available:
+    status = "BLOCKED"
+else:
+    status = "PASS"
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ["TASK_ID"],
+    "source": "live.account-merge-policy-matrix",
+    "status": status,
+    "prefix": os.environ["PREFIX"],
+    "completedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "mutationMode": "strict-live-required; no mutation performed until iOS and Android app-auth are ready and scoped account fixtures exist",
+    "blockers": blockers,
+    "strictLiveFixturesAvailable": strict_fixtures_available,
+    "scenarios": [
+        {"scenario": s, "testID": tid, "precondition": pre, "expected": expected, "unitPolicyStatus": tests_status, "liveStatus": "NOT_RUN"}
+        for s, tid, pre, expected in scenarios
+    ],
+    "coverageNote": "Critical TASK-115 account policy cannot pass with unit-only evidence. This command is BLOCKED until live app-auth is ready and scoped TASK115_ACCOUNT_ fixtures exercise A-L without cross-account leakage.",
+    "cleanupRequired": False,
+}, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-account-merge-policy.$$.json)"
+  rm -f /tmp/mc-agent-account-merge-policy.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  local matrix_status
+  matrix_status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  if [[ "$matrix_status" == "PASS" ]]; then
+    MC_SUMMARY="Live account-merge-policy-matrix PASS for ${prefix}: strict scoped A-L account policy fixtures passed."
+    MC_NEXT_ACTION="Run cleanup/residue for ${prefix}, then continue final gates."
+    return "$MC_EXIT_PASS"
+  fi
+  if [[ "$matrix_status" == "BLOCKED" ]]; then
+    MC_SUMMARY="Live account-merge-policy-matrix BLOCKED for ${prefix}: strict live A-L fixtures are not runnable yet."
+    MC_NEXT_ACTION="Sign in iOS and Android app targets, then implement/run scoped TASK115_ACCOUNT_ fixtures for A-L; unit-only evidence is not a critical PASS."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  MC_SUMMARY="Live account-merge-policy-matrix FAIL for ${prefix}: iOS account policy tests failed."
+  MC_NEXT_ACTION="Inspect iOS sync test report, fix account policy, then rerun."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_live_sync_performance_budget() {
+  local task_id="$1"
+  local prefix="$2"
+  local code runtime_json
+  MC_PLATFORM="live"
+  MC_SAFETY_LEVEL="live-readonly"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-115-13,CA-115-14,CA-115-15"
+  MC_TEST_PREFIX="$prefix"
+
+  MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS="${MC_SYNC_PERF_WAIT_SECONDS:-5}" mc_ios_runtime_ui_counts
+  code=$?
+  runtime_json="$MC_SYNC_JSON_RESULT"
+  if [[ "$code" -ne 0 ]]; then
+    MC_SYNC_JSON_RESULT="$runtime_json"
+    mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+    MC_SUMMARY="Live sync-performance-budget BLOCKED for ${prefix}: iOS runtime diagnostics unavailable."
+    MC_NEXT_ACTION="Install/launch the simulator app, sign in if required, then rerun sync-performance-budget."
+    return "$code"
+  fi
+  TASK_ID="$task_id" PREFIX="$prefix" RUNTIME_JSON="$runtime_json" python3 - > /tmp/mc-agent-sync-performance-budget.$$.json <<'PY'
+import json, os
+from datetime import datetime, timezone
+
+payload = json.loads(os.environ["RUNTIME_JSON"])
+runtime = payload.get("runtime", {}).get("diagnostics", {}).get("runtime", {})
+attempts = int(runtime.get("incremental.attemptWindow.count") or 0)
+progress_active = runtime.get("progress.isActive") is True
+progress_current = runtime.get("progress.current")
+progress_total = runtime.get("progress.total")
+spinner_zero = bool(progress_active and progress_current == 0 and progress_total == 0)
+last_total_elapsed = runtime.get("incremental.lastPage.totalElapsedMs") or runtime.get("incremental.lastTotalElapsedMs")
+last_sync_type = runtime.get("incremental.lastSyncType")
+failures = []
+if spinner_zero:
+    failures.append("spinner_zero_of_zero")
+if attempts > 12:
+    failures.append("sync_loop_attempts_over_12_per_window")
+if last_sync_type in ("FULL_PULL_BOOTSTRAP", "FULL_PULL_RECOVERY"):
+    failures.append("full_pull_in_foreground_runtime")
+status = "PASS" if not failures else "FAIL"
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ["TASK_ID"],
+    "source": "live.sync-performance-budget",
+    "status": status,
+    "prefix": os.environ["PREFIX"],
+    "completedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "budgets": {
+        "optionsColdRenderTargetMs": 500,
+        "progressUpdatesPerSecondMax": 3,
+        "normalDrainTargetMs": 5000,
+        "normalDrainAcceptableMs": 10000,
+        "physicalPostLoginNoInfiniteProgressSeconds": 60,
+    },
+    "observed": {
+        "optionsColdRenderMs": None,
+        "attemptsLastWindow": attempts,
+        "spinnerZeroOfZero": spinner_zero,
+        "lastIncrementalElapsedMs": last_total_elapsed,
+        "lastSyncType": last_sync_type,
+        "progressActive": progress_active,
+        "progressCurrent": progress_current,
+        "progressTotal": progress_total,
+    },
+    "failures": failures,
+    "runtime": payload.get("runtime", {}),
+}, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-sync-performance-budget.$$.json)"
+  rm -f /tmp/mc-agent-sync-performance-budget.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  if [[ "$(printf '%s' "$MC_SYNC_JSON_RESULT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))')" == "PASS" ]]; then
+    MC_SUMMARY="Live sync-performance-budget PASS for ${prefix}: no loop, no 0/0 spinner, no foreground full-pull signal in runtime diagnostics."
+    MC_NEXT_ACTION="Run physical-sync-acceptance and cross-platform gates."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="Live sync-performance-budget FAIL for ${prefix}: runtime diagnostics exceeded a sync/UI budget."
+  MC_NEXT_ACTION="Inspect observed/failures, fix Options/orchestrator loop, then rerun."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_live_physical_runtime_parity() {
+  local task_id="$1"
+  local prefix="$2"
+  local profile="$3"
+  local started physical_json ios_json android_json supabase_json code_p code_i code_a code_s code_launch
+  MC_PLATFORM="live"
+  MC_SAFETY_LEVEL="live-readonly"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-115-12,CA-115-13,CA-115-16"
+  MC_TEST_PREFIX="$prefix"
+  started="$(mc_now_iso)"
+
+  mc_ios_physical_runtime_counts_payload "live.physical-runtime-parity.iosPhysical" "${MC_IOS_PHYSICAL_PARITY_WAIT_SECONDS:-20}"
+  code_p=$?
+  physical_json="$MC_SYNC_JSON_RESULT"
+  MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=2 mc_ios_runtime_ui_counts
+  code_i=$?
+  ios_json="$MC_SYNC_JSON_RESULT"
+  mc_android_smoke device
+  code_launch=$?
+  if [[ "$code_launch" -ne 0 ]]; then
+    android_json="$(mc_sync_make_blocked_json "$task_id" "android" "${MC_SUMMARY:-Android runtime app launch failed.}")"
+    code_a="$MC_EXIT_BLOCKED"
+  else
+    mc_sync_counts_android "$task_id"
+    code_a=$?
+    android_json="$MC_SYNC_JSON_RESULT"
+  fi
+  mc_sync_counts_supabase "$task_id" "$profile"
+  code_s=$?
+  supabase_json="$MC_SYNC_JSON_RESULT"
+
+  TASK_ID="$task_id" PREFIX="$prefix" STARTED="$started" PHYSICAL_JSON="$physical_json" IOS_JSON="$ios_json" ANDROID_JSON="$android_json" SUPABASE_JSON="$supabase_json" CODES="$code_p,$code_i,$code_a,$code_s" python3 - > /tmp/mc-agent-physical-runtime-parity.$$.json <<'PY'
+import json, os
+from datetime import datetime, timezone
+
+sources = {
+    "supabase": json.loads(os.environ["SUPABASE_JSON"]),
+    "iosPhysical": json.loads(os.environ["PHYSICAL_JSON"]),
+    "iosSimulator": json.loads(os.environ["IOS_JSON"]),
+    "android": json.loads(os.environ["ANDROID_JSON"]),
+}
+fields = {
+    "products": ["active", "pending", "localOnly"],
+    "suppliers": ["active", "pending", "localOnly"],
+    "categories": ["active", "pending", "localOnly"],
+    "product_prices": ["active", "pending", "localOnly"],
+    "history_entries": ["userVisible", "pending", "localOnly"],
+}
+blocked = {name: payload.get("blocker") for name, payload in sources.items() if payload.get("status") == "BLOCKED"}
+ios_physical_runtime = sources["iosPhysical"].get("runtime", {}).get("diagnostics", {}).get("runtime", {})
+if ios_physical_runtime.get("auth.isSignedIn") is not True or ios_physical_runtime.get("auth.userIDPresent") is not True:
+    blocked["iosPhysical"] = "AUTH_SESSION_NOT_READY"
+drift = {}
+for table, table_fields in fields.items():
+    for field in table_fields:
+        values = {name: payload.get("counts", {}).get(table, {}).get(field) for name, payload in sources.items()}
+        comparable = {name: value for name, value in values.items() if value is not None}
+        if len(set(comparable.values())) > 1:
+            drift.setdefault(table, {})[field] = values
+status = "BLOCKED" if blocked else ("PASS" if not drift else "FAIL")
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ["TASK_ID"],
+    "source": "live.physical-runtime-parity",
+    "status": status,
+    "prefix": os.environ["PREFIX"],
+    "startedAt": os.environ["STARTED"],
+    "completedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "blockers": blocked,
+    "comparison": {"fields": fields},
+    "counts": {name: payload.get("counts", {}) for name, payload in sources.items()},
+    "runtime": {
+        "iosPhysical": sources["iosPhysical"].get("runtime", {}),
+        "iosSimulator": sources["iosSimulator"].get("runtime", {}),
+    },
+    "drift": drift,
+}, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-physical-runtime-parity.$$.json)"
+  rm -f /tmp/mc-agent-physical-runtime-parity.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  local status
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  case "$status" in
+    PASS)
+      MC_SUMMARY="Live physical-runtime-parity PASS for ${prefix}: Supabase, iOS physical, iOS simulator and Android counts align."
+      MC_NEXT_ACTION="Run final scans and cleanup/residue for created prefixes."
+      return "$MC_EXIT_PASS"
+      ;;
+    BLOCKED)
+      MC_SUMMARY="Live physical-runtime-parity BLOCKED for ${prefix}: one or more physical/runtime sources unavailable."
+      MC_NEXT_ACTION="Resolve device/auth/store blockers, then rerun physical-runtime-parity."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    *)
+      MC_SUMMARY="Live physical-runtime-parity FAIL for ${prefix}: count drift remains across runtime sources."
+      MC_NEXT_ACTION="Inspect drift, fix apply/push/store binding, then rerun."
+      return "$MC_EXIT_FAIL"
+      ;;
+  esac
+}
+
 mc_cmd_live() {
   local sub="${1:-}"
   shift || true
@@ -1268,7 +1545,7 @@ mc_cmd_live() {
   MC_PLATFORM="live"
   MC_SAFETY_LEVEL="live-write"
   MC_REQUIRES_LIVE="true"
-  MC_CA_REFS="CA-113-07,CA-113-19,CA-113-30"
+  MC_CA_REFS="CA-115-12,CA-115-16,CA-115-18"
   mc_validate_task_prefix "$prefix" || return $?
   mc_require_live || return $?
   MC_TEST_PREFIX="$prefix"
@@ -1285,11 +1562,23 @@ mc_cmd_live() {
       profile="${profile:-${MC_SUPABASE_PROFILE:-linked}}"
       mc_live_runtime_parity "$task_id" "$prefix" "$profile"
       ;;
+    physical-runtime-parity)
+      local profile
+      profile="$(mc_parse_opt --profile "$@" || true)"
+      profile="${profile:-${MC_SUPABASE_PROFILE:-linked}}"
+      mc_live_physical_runtime_parity "$task_id" "$prefix" "$profile"
+      ;;
     mutation-near-realtime)
       mc_live_mutation_near_realtime "$task_id" "$prefix"
       ;;
     offline-reconnect-sync)
       mc_live_offline_reconnect_sync "$task_id" "$prefix"
+      ;;
+    account-merge-policy-matrix)
+      mc_live_account_merge_policy_matrix "$task_id" "$prefix"
+      ;;
+    sync-performance-budget)
+      mc_live_sync_performance_budget "$task_id" "$prefix"
       ;;
     sync-matrix)
       if [[ "$task_id" == "TASK-114" ]]; then

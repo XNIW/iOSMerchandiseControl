@@ -48,9 +48,9 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapter: SupabaseManual
             )
         }
 
-        let service = SyncEventOutboxDrainService(context: context, recorder: recorder, clock: now)
-        let outcome = try await service.drainOnce(
-            ownerUserID: ownerUserID.uuidString.lowercased(),
+        let drainer = SyncEventOutboxDrainer(context: context, recorder: recorder, now: now)
+        let outcome = try await drainer.drainOnce(
+            ownerUserID: ownerUserID,
             limit: min(limit, before.readyToRegister)
         )
         try Task.checkCancellation()
@@ -69,8 +69,8 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapter: SupabaseManual
     }
 
     private func snapshot(ownerUserID: UUID) throws -> SupabaseManualSyncActivityRegistrationSnapshot {
-        let counts = try SyncEventOutboxLocalStore(context: context).fetchCounts(
-            ownerUserID: ownerUserID.uuidString.lowercased(),
+        let counts = try LocalOutboxStore(context: context).fetchCounts(
+            ownerUserID: ownerUserID,
             now: now()
         )
         let waiting = counts.pending + counts.failedRetryable

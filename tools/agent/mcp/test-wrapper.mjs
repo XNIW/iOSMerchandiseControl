@@ -23,8 +23,8 @@ function run(command, args, env = {}) {
 const preflight = await run("bash", [agent, "preflight"]);
 console.log("mc_preflight wrapper:", preflight.code === 0 || preflight.code === 2 ? "OK" : "FAIL", preflight.code);
 
-const report = await run("bash", [agent, "report", "--task", "TASK-114"]);
-console.log("mc_report_task114 wrapper:", report.code === 0 || report.code === 2 ? "OK" : "FAIL", report.code);
+const report = await run("bash", [agent, "report", "--task", "TASK-115"]);
+console.log("mc_report_task115 wrapper:", report.code === 0 || report.code === 2 ? "OK" : "FAIL", report.code);
 
 const self = await run("node", [server, "--self-test"], { MC_MCP_TIMEOUT_MS: "1" });
 console.log("mcp self-test:", self.code === 0 ? "OK" : "FAIL", self.code);
@@ -32,8 +32,8 @@ if (self.code !== 0) {
   console.log(self.out);
 }
 
-const help = await run("bash", [agent, "help-json"], { MC_TASK_ID: "TASK-114", MC_EVIDENCE_DIR: "docs/TASKS/EVIDENCE/TASK-114" });
+const help = await run("bash", [agent, "help-json"], { MC_TASK_ID: "TASK-115", MC_EVIDENCE_DIR: "docs/TASKS/EVIDENCE/TASK-115" });
 const hasTask114Sync = help.out.includes('"name":"sync counts"') && help.out.includes('"name":"live reconcile-counts"');
-console.log("task114 sync command contract:", hasTask114Sync ? "OK" : "FAIL");
+console.log("task115 sync command contract:", hasTask114Sync ? "OK" : "FAIL");
 
 process.exit((preflight.code === 3 || report.code === 3 || self.code !== 0 || !hasTask114Sync) ? 1 : 0);

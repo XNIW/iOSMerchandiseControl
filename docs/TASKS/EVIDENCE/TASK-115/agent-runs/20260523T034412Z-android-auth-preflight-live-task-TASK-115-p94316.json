@@ -1,0 +1,103 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-115/agent-runs/20260523T034412Z-android-auth-preflight-live-task-TASK-115-p94316.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-115/agent-runs/20260523T034412Z-android-auth-preflight-live-task-TASK-115-p94316.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-115/agent-runs/20260523T034412Z-android-auth-preflight-live-task-TASK-115-p94316.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-113-07",
+    "CA-113-19",
+    "CA-113-30"
+  ],
+  "cleanup_plan_id": null,
+  "command": "android auth-preflight --live --task TASK-115",
+  "command_slug": "android-auth-preflight-live-task-TASK-115",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "physical",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "clean",
+  "duration_ms": 20132,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-115",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK115_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-115"
+  },
+  "exit_code": 2,
+  "git_sha": "b3f65de",
+  "next_action_recommended": "Open the selected Android target, sign in to Supabase, then rerun the same command with MC_ANDROID_DEVICE_SERIAL=<REDACTED_SERIAL>.",
+  "platform": "android",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "adbState": "device",
+    "appInstalled": true,
+    "availableAdbDevices": [
+      {
+        "device": "OnePlus8",
+        "model": "IN2013",
+        "serial": "<REDACTED>",
+        "serialHash": "583da02ea2da",
+        "status": "device",
+        "targetType": "physical",
+        "transport": "1"
+      },
+      {
+        "device": "emu64a",
+        "model": "sdk_gphone64_arm64",
+        "serial": "<REDACTED>",
+        "serialHash": "04ab3fc382bf",
+        "status": "device",
+        "targetType": "emulator",
+        "transport": "2"
+      }
+    ],
+    "bootCompleted": "1",
+    "foregroundAppMatches": false,
+    "foregroundPackage": null,
+    "lockState": {
+      "locked": false,
+      "screenOn": true,
+      "unlocked": true
+    },
+    "schemaVersion": "1.1",
+    "selectedSerial": "<REDACTED>",
+    "selectedTargetType": "physical",
+    "source": "android.live-preflight"
+  },
+  "repo": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "blocked",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260523T034412Z-android-auth-preflight-live-task-TASK-115-p94316",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "task_id": "TASK-115",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-23T03:44:32Z",
+  "timestamp_start": "2026-05-23T03:44:12Z",
+  "warnings": []
+}

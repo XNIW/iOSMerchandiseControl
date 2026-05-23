@@ -11,7 +11,9 @@ struct iOSMerchandiseControlApp: App {
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
 
     init() {
-        let dependencies = Self.makeSupabaseDependencies()
+        let dependencies = Self.isRunningHostedXCTest
+            ? Self.makeHostedXCTestDependencies()
+            : Self.makeSupabaseDependencies()
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
         supabaseInventoryService = dependencies.inventoryService
         supabasePullPreviewService = dependencies.pullPreviewService
@@ -22,16 +24,20 @@ struct iOSMerchandiseControlApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(
-                supabaseInventoryService: supabaseInventoryService,
-                supabasePullPreviewService: supabasePullPreviewService,
-                supabaseManualPushService: supabaseManualPushService,
-                syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
-                syncEventSignalWatcher: syncEventSignalWatcher
-            )
-            .environmentObject(supabaseAuthViewModel)
-            .onOpenURL { url in
-                _ = supabaseAuthViewModel.handleOpenURL(url)
+            if Self.isRunningHostedXCTest {
+                HostedXCTestRootView()
+            } else {
+                ContentView(
+                    supabaseInventoryService: supabaseInventoryService,
+                    supabasePullPreviewService: supabasePullPreviewService,
+                    supabaseManualPushService: supabaseManualPushService,
+                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
+                    syncEventSignalWatcher: syncEventSignalWatcher
+                )
+                .environmentObject(supabaseAuthViewModel)
+                .onOpenURL { url in
+                    _ = supabaseAuthViewModel.handleOpenURL(url)
+                }
             }
         }
         .modelContainer(for: [
@@ -45,6 +51,21 @@ struct iOSMerchandiseControlApp: App {
             SyncEventOutboxEntry.self,
             LocalPendingChange.self
         ])
+    }
+
+    private static var isRunningHostedXCTest: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+
+    private static func makeHostedXCTestDependencies() -> SupabaseAppDependencies {
+        SupabaseAppDependencies(
+            authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .configMissing),
+            inventoryService: nil,
+            pullPreviewService: nil,
+            manualPushService: nil,
+            syncEventOutboxDrainRecorder: nil,
+            syncEventSignalWatcher: nil
+        )
     }
 
     private static func makeSupabaseDependencies() -> SupabaseAppDependencies {
@@ -102,6 +123,13 @@ struct iOSMerchandiseControlApp: App {
                 syncEventSignalWatcher: nil
             )
         }
+    }
+}
+
+private struct HostedXCTestRootView: View {
+    var body: some View {
+        Color.clear
+            .accessibilityHidden(true)
     }
 }
 

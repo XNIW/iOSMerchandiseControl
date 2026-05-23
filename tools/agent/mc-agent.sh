@@ -54,6 +54,7 @@ main() {
       esac
       ;;
     safety) handler=(mc_cmd_safety "${args[@]:1}") ;;
+    harness) handler=(mc_cmd_harness "${args[@]:1}") ;;
     ios) handler=(mc_cmd_ios "${args[@]:1}") ;;
     android) handler=(mc_cmd_android "${args[@]:1}") ;;
     sync) handler=(mc_cmd_sync "${args[@]:1}") ;;

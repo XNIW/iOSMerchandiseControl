@@ -102,7 +102,7 @@ PY
 
   export MC_REPORT_SCHEMA_VERSION="$MC_SCHEMA_VERSION"
   export MC_REPORT_RUN_ID="$MC_RUN_ID"
-  export MC_REPORT_TASK_ID="${MC_TASK_ID:-TASK-113}"
+  export MC_REPORT_TASK_ID="${MC_TASK_ID:-TASK-115}"
   export MC_REPORT_COMMAND="${MC_COMMAND:-unknown}"
   export MC_REPORT_COMMAND_SLUG="$MC_CMD_SLUG"
   export MC_REPORT_PLATFORM="${MC_PLATFORM:-general}"
@@ -197,7 +197,7 @@ PY
 
 - **Schema**: ${MC_SCHEMA_VERSION}
 - **Run ID**: ${MC_RUN_ID}
-- **Task**: ${MC_TASK_ID:-TASK-113}
+- **Task**: ${MC_TASK_ID:-TASK-115}
 - **Command**: \`${MC_COMMAND:-unknown}\`
 - **Platform**: ${MC_PLATFORM:-general}
 - **Safety**: ${MC_SAFETY_LEVEL:-safe-readonly}

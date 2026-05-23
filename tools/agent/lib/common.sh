@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 MC_AGENT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MC_AGENT_VERSION="0.2.0-task113"
+MC_AGENT_VERSION="0.3.0-task115"
 MC_SCHEMA_VERSION="1.1"
 
 MC_IOS_REPO="${MC_IOS_REPO:-/Users/minxiang/Desktop/iOSMerchandiseControl}"
@@ -10,8 +10,8 @@ MC_SUPABASE_REPO="${MC_SUPABASE_REPO:-/Users/minxiang/Desktop/MerchandiseControl
 MC_TASK_ID_EXPLICIT="${MC_TASK_ID+x}"
 MC_EVIDENCE_DIR_EXPLICIT="${MC_EVIDENCE_DIR+x}"
 MC_RUN_PREFIX_EXPLICIT="${MC_RUN_PREFIX+x}"
-MC_TASK_ID="${MC_TASK_ID:-TASK-113}"
-MC_EVIDENCE_DIR="${MC_EVIDENCE_DIR:-docs/TASKS/EVIDENCE/TASK-113}"
+MC_TASK_ID="${MC_TASK_ID:-TASK-115}"
+MC_EVIDENCE_DIR="${MC_EVIDENCE_DIR:-docs/TASKS/EVIDENCE/TASK-115}"
 
 MC_EXIT_PASS=0
 MC_EXIT_FAIL=1
@@ -245,12 +245,12 @@ mc_validate_task_prefix() {
   fi
   if [[ ! "$prefix" =~ ^TASK[0-9]{3,}_[A-Za-z0-9_.*-]*$ ]]; then
     MC_SUMMARY="Prefix must match TASKNNN_* scoped pattern."
-    MC_NEXT_ACTION="Example: --prefix TASK114_DRYRUN_ or --prefix 'TASK114_*'."
+    MC_NEXT_ACTION="Example: --prefix TASK115_DRYRUN_ or --prefix 'TASK115_*'."
     return "$MC_EXIT_REFUSED"
   fi
   if [[ "$require_offline" == "1" && "$prefix" != *OFFLINE* ]]; then
     MC_SUMMARY="Offline prefix must contain OFFLINE."
-    MC_NEXT_ACTION="Example: --prefix TASK114_OFFLINE_L2_"
+    MC_NEXT_ACTION="Example: --prefix TASK115_OFFLINE_L2_"
     return "$MC_EXIT_REFUSED"
   fi
   return "$MC_EXIT_PASS"
@@ -388,20 +388,20 @@ mc-agent.sh — agent-friendly CLI harness for iOS/Android/Supabase
 
 Usage:
   ./tools/agent/mc-agent.sh help | help-json | version
-  ./tools/agent/mc-agent.sh doctor | preflight | config validate | config print-redacted
+  ./tools/agent/mc-agent.sh doctor | preflight | harness doctor | config validate | config print-redacted
   ./tools/agent/mc-agent.sh list commands | list commands-json
   ./tools/agent/mc-agent.sh report --task <TASK-ID> | report --latest | report validate-json --path <file>
   ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task <TASK-ID> | scan repo-diff | scan release-cta
-  ./tools/agent/mc-agent.sh safety check-prefix --prefix TASK114_* | safety dry-run-required --command "<command>"
+  ./tools/agent/mc-agent.sh safety check-prefix --prefix TASK115_* | safety dry-run-required --command "<command>"
   ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|lifecycle|offline | ios smoke simulator|options|history
-  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-114
-  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios runtime-ui-counts --live --task TASK-114
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-115
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios runtime-ui-counts --live --task TASK-115
   ./tools/agent/mc-agent.sh android build debug|release | android test sync|offline | android offline-tier-status
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh android live-full-pull --live
-  ./tools/agent/mc-agent.sh android offline-write|reconnect-drain --tier L1|L2|L3 --prefix TASK114_OFFLINE_*
-  ./tools/agent/mc-agent.sh sync counts --task TASK-114 --source supabase|android|ios [--profile linked]
+  ./tools/agent/mc-agent.sh android offline-write|reconnect-drain --tier L1|L2|L3 --prefix TASK115_OFFLINE_*
+  ./tools/agent/mc-agent.sh sync counts --task TASK-115 --source supabase|android|ios [--profile linked]
   ./tools/agent/mc-agent.sh supabase status-redacted|verify-schema|verify-rls|verify-grants|residue-check --profile local|linked|dry-run-no-db
-  ./tools/agent/mc-agent.sh live sync-matrix|runtime-parity|mutation-near-realtime|offline-matrix|reconcile-counts|cleanup-and-verify --task TASK-114 --prefix TASK114_*
+  ./tools/agent/mc-agent.sh live sync-matrix|runtime-parity|physical-runtime-parity|mutation-near-realtime|offline-reconnect-sync|account-merge-policy-matrix|sync-performance-budget|offline-matrix|reconcile-counts|cleanup-and-verify --task TASK-115 --prefix TASK115_*
 
 Exit codes: 0=PASS 1=FAIL 2=BLOCKED 3=MISCONFIGURED 4=UNSAFE_OPERATION_REFUSED
 Reports: docs/TASKS/EVIDENCE/<task>/agent-runs/<timestamp>-<command>.{log,md,json}
@@ -413,7 +413,7 @@ mc_help_json() {
 {
   "schema_version": "1.1",
   "name": "mc-agent",
-  "version": "0.2.0-task113",
+  "version": "0.3.0-task115",
   "exit_codes": {
     "0": "PASS",
     "1": "FAIL",
@@ -426,19 +426,20 @@ mc_help_json() {
     {"name":"help-json","argv":["help-json"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"version","argv":["version"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"doctor","argv":["doctor"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"harness doctor","argv":["harness","doctor"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"preflight","argv":["preflight"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"config validate","argv":["config","validate"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"config print-redacted","argv":["config","print-redacted"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"list commands","argv":["list","commands"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"list commands-json","argv":["list","commands-json"],"platform":"general","safety_level":"safe-readonly"},
-    {"name":"report --task","argv":["report","--task","TASK-113"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"report --task","argv":["report","--task","TASK-115"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"report --latest","argv":["report","--latest"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"report validate-json","argv":["report","validate-json","--path","<file>"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan sensitive","argv":["scan","sensitive"],"platform":"general","safety_level":"safe-readonly"},
-    {"name":"scan evidence","argv":["scan","evidence","--task","TASK-113"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan evidence","argv":["scan","evidence","--task","TASK-115"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan repo-diff","argv":["scan","repo-diff"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan release-cta","argv":["scan","release-cta"],"platform":"general","safety_level":"safe-readonly"},
-    {"name":"safety check-prefix","argv":["safety","check-prefix","--prefix","TASK113_*"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"safety check-prefix","argv":["safety","check-prefix","--prefix","TASK115_*"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"safety dry-run-required","argv":["safety","dry-run-required","--command","<command>"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"ios build debug","argv":["ios","build","debug"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios build release","argv":["ios","build","release"],"platform":"ios","safety_level":"safe-readonly"},
@@ -449,10 +450,13 @@ mc_help_json() {
     {"name":"ios smoke options","argv":["ios","smoke","options"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios smoke history","argv":["ios","smoke","history"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios auth-preflight","argv":["ios","auth-preflight","--live"],"platform":"ios","safety_level":"live-write","requires_live":true},
-    {"name":"ios live-write","argv":["ios","live-write","--prefix","TASK113_*"],"platform":"ios","safety_level":"live-write","requires_live":true},
-    {"name":"ios live-full-pull","argv":["ios","live-full-pull","--live","--task","TASK-114"],"platform":"ios","safety_level":"live-write","requires_live":true},
-    {"name":"ios runtime-ui-counts","argv":["ios","runtime-ui-counts","--live","--task","TASK-114"],"platform":"ios","safety_level":"live-write","requires_live":true},
-    {"name":"ios cleanup-scoped","argv":["ios","cleanup-scoped","--prefix","TASK113_*","--dry-run"],"platform":"ios","safety_level":"cleanup-dry-run"},
+    {"name":"ios live-write","argv":["ios","live-write","--prefix","TASK115_*"],"platform":"ios","safety_level":"live-write","requires_live":true},
+    {"name":"ios live-full-pull","argv":["ios","live-full-pull","--live","--task","TASK-115"],"platform":"ios","safety_level":"live-write","requires_live":true},
+    {"name":"ios runtime-ui-counts","argv":["ios","runtime-ui-counts","--live","--task","TASK-115"],"platform":"ios","safety_level":"live-write","requires_live":true},
+    {"name":"ios physical-runtime-counts","argv":["ios","physical-runtime-counts","--live","--task","TASK-115"],"platform":"ios","safety_level":"live-readonly","requires_live":true},
+    {"name":"ios physical-auth-store-diagnostics","argv":["ios","physical-auth-store-diagnostics","--live","--task","TASK-115"],"platform":"ios","safety_level":"live-readonly","requires_live":true},
+    {"name":"ios physical-sync-acceptance","argv":["ios","physical-sync-acceptance","--live","--task","TASK-115"],"platform":"ios","safety_level":"live-readonly","requires_live":true},
+    {"name":"ios cleanup-scoped","argv":["ios","cleanup-scoped","--prefix","TASK115_*","--dry-run"],"platform":"ios","safety_level":"cleanup-dry-run"},
     {"name":"android build debug","argv":["android","build","debug"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android build release","argv":["android","build","release"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android test sync","argv":["android","test","sync"],"platform":"android","safety_level":"safe-readonly"},
@@ -460,29 +464,33 @@ mc_help_json() {
     {"name":"android smoke device","argv":["android","smoke","device"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android smoke options","argv":["android","smoke","options"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android auth-preflight","argv":["android","auth-preflight","--live"],"platform":"android","safety_level":"live-write","requires_live":true},
-    {"name":"android live-pull","argv":["android","live-pull","--prefix","TASK113_*"],"platform":"android","safety_level":"live-write","requires_live":true},
-    {"name":"android live-write","argv":["android","live-write","--prefix","TASK113_*"],"platform":"android","safety_level":"live-write","requires_live":true},
+    {"name":"android live-pull","argv":["android","live-pull","--prefix","TASK115_*"],"platform":"android","safety_level":"live-write","requires_live":true},
+    {"name":"android live-write","argv":["android","live-write","--prefix","TASK115_*"],"platform":"android","safety_level":"live-write","requires_live":true},
     {"name":"android live-full-pull","argv":["android","live-full-pull","--live"],"platform":"android","safety_level":"live-write","requires_live":true},
     {"name":"android offline-tier-status","argv":["android","offline-tier-status"],"platform":"android","safety_level":"safe-readonly"},
-    {"name":"android offline-write","argv":["android","offline-write","--tier","L1","--prefix","TASK113_OFFLINE_*"],"platform":"android","safety_level":"safe-readonly","android_offline_tier":"L1"},
-    {"name":"android reconnect-drain","argv":["android","reconnect-drain","--tier","L1","--prefix","TASK113_OFFLINE_*"],"platform":"android","safety_level":"safe-readonly","android_offline_tier":"L1"},
-    {"name":"sync counts","argv":["sync","counts","--task","TASK-114","--source","supabase","--profile","linked"],"platform":"sync","safety_level":"safe-readonly"},
+    {"name":"android offline-write","argv":["android","offline-write","--tier","L1","--prefix","TASK115_OFFLINE_*"],"platform":"android","safety_level":"safe-readonly","android_offline_tier":"L1"},
+    {"name":"android reconnect-drain","argv":["android","reconnect-drain","--tier","L1","--prefix","TASK115_OFFLINE_*"],"platform":"android","safety_level":"safe-readonly","android_offline_tier":"L1"},
+    {"name":"sync counts","argv":["sync","counts","--task","TASK-115","--source","supabase","--profile","linked"],"platform":"sync","safety_level":"safe-readonly"},
     {"name":"supabase start","argv":["supabase","start"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase status-redacted","argv":["supabase","status-redacted"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-schema","argv":["supabase","verify-schema"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-rls","argv":["supabase","verify-rls"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-grants","argv":["supabase","verify-grants"],"platform":"supabase","safety_level":"safe-readonly"},
-    {"name":"supabase explain-cleanup","argv":["supabase","explain-cleanup","--prefix","TASK113_*"],"platform":"supabase","safety_level":"cleanup-dry-run"},
-    {"name":"supabase cleanup dry-run","argv":["supabase","cleanup","--task","TASK-113","--prefix","TASK113_*","--dry-run"],"platform":"supabase","safety_level":"cleanup-dry-run","requires_cleanup":true},
-    {"name":"supabase cleanup execute","argv":["supabase","cleanup","--task","TASK-113","--prefix","TASK113_*","--execute","--cleanup-plan-id","<id>"],"platform":"supabase","safety_level":"cleanup-execute","requires_cleanup":true},
-    {"name":"supabase residue-check","argv":["supabase","residue-check","--prefix","TASK113_*","--profile","dry-run-no-db"],"platform":"supabase","safety_level":"safe-readonly"},
+    {"name":"supabase explain-cleanup","argv":["supabase","explain-cleanup","--prefix","TASK115_*"],"platform":"supabase","safety_level":"cleanup-dry-run"},
+    {"name":"supabase cleanup dry-run","argv":["supabase","cleanup","--task","TASK-115","--prefix","TASK115_*","--dry-run"],"platform":"supabase","safety_level":"cleanup-dry-run","requires_cleanup":true},
+    {"name":"supabase cleanup execute","argv":["supabase","cleanup","--task","TASK-115","--prefix","TASK115_*","--execute","--cleanup-plan-id","<id>"],"platform":"supabase","safety_level":"cleanup-execute","requires_cleanup":true},
+    {"name":"supabase residue-check","argv":["supabase","residue-check","--prefix","TASK115_*","--profile","dry-run-no-db"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase pooler-cooldown-check","argv":["supabase","pooler-cooldown-check"],"platform":"supabase","safety_level":"safe-readonly"},
-    {"name":"live sync-matrix","argv":["live","sync-matrix","--task","TASK-113","--prefix","TASK113_FINAL_*"],"platform":"live","safety_level":"live-write","requires_live":true},
-    {"name":"live reconcile-counts","argv":["live","reconcile-counts","--task","TASK-114","--prefix","TASK114_RECON_*"],"platform":"live","safety_level":"live-write","requires_live":true},
-    {"name":"live runtime-parity","argv":["live","runtime-parity","--task","TASK-114","--prefix","TASK114_RUNTIME_*"],"platform":"live","safety_level":"live-write","requires_live":true},
-    {"name":"live mutation-near-realtime","argv":["live","mutation-near-realtime","--task","TASK-114","--prefix","TASK114_REALTIME_*"],"platform":"live","safety_level":"live-write","requires_live":true},
-    {"name":"live offline-matrix","argv":["live","offline-matrix","--task","TASK-113","--prefix","TASK113_OFFLINE_*"],"platform":"live","safety_level":"live-write","requires_live":true},
-    {"name":"live cleanup-and-verify","argv":["live","cleanup-and-verify","--task","TASK-113","--prefix","TASK113_*"],"platform":"live","safety_level":"cleanup-execute","requires_cleanup":true}
+    {"name":"live sync-matrix","argv":["live","sync-matrix","--task","TASK-115","--prefix","TASK115_FINAL_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live reconcile-counts","argv":["live","reconcile-counts","--task","TASK-115","--prefix","TASK115_RECON_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live runtime-parity","argv":["live","runtime-parity","--task","TASK-115","--prefix","TASK115_RUNTIME_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live physical-runtime-parity","argv":["live","physical-runtime-parity","--task","TASK-115","--prefix","TASK115_PHYSICAL_*"],"platform":"live","safety_level":"live-readonly","requires_live":true},
+    {"name":"live mutation-near-realtime","argv":["live","mutation-near-realtime","--task","TASK-115","--prefix","TASK115_REALTIME_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live offline-reconnect-sync","argv":["live","offline-reconnect-sync","--task","TASK-115","--prefix","TASK115_OFFLINE_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live account-merge-policy-matrix","argv":["live","account-merge-policy-matrix","--task","TASK-115","--prefix","TASK115_ACCOUNT_*"],"platform":"live","safety_level":"live-readonly","requires_live":true},
+    {"name":"live sync-performance-budget","argv":["live","sync-performance-budget","--task","TASK-115","--prefix","TASK115_PERF_*"],"platform":"live","safety_level":"live-readonly","requires_live":true},
+    {"name":"live offline-matrix","argv":["live","offline-matrix","--task","TASK-115","--prefix","TASK115_OFFLINE_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live cleanup-and-verify","argv":["live","cleanup-and-verify","--task","TASK-115","--prefix","TASK115_*"],"platform":"live","safety_level":"cleanup-execute","requires_cleanup":true}
   ]
 }
 JSON
@@ -616,6 +624,100 @@ mc_cmd_preflight() {
   fi
   MC_NEXT_ACTION="Run build/test commands."
   return "$MC_EXIT_PASS"
+}
+
+mc_cmd_harness() {
+  local sub="${1:-doctor}"
+  case "$sub" in
+    doctor)
+      MC_PLATFORM="general"
+      MC_SAFETY_LEVEL="safe-readonly"
+      MC_CA_REFS="CA-115-16,CA-115-18"
+      local status="PASS"
+      local warnings=()
+      local checks=()
+
+      [[ "$MC_TASK_ID" != "TASK-113" ]] || warnings+=("default_task_still_TASK-113")
+      [[ -d "$MC_IOS_REPO" ]] && checks+=("ios_repo=present") || { status="FAIL"; checks+=("ios_repo=missing"); }
+      [[ -d "$MC_ANDROID_REPO" ]] && checks+=("android_repo=present") || { status="FAIL"; checks+=("android_repo=missing"); }
+      [[ -d "$MC_SUPABASE_REPO" ]] && checks+=("supabase_repo=present") || warnings+=("supabase_repo=missing_or_unavailable")
+      mkdir -p "$MC_EVIDENCE_ABS/agent-runs"
+      [[ -w "$MC_EVIDENCE_ABS/agent-runs" ]] && checks+=("evidence_dir=writable") || { status="FAIL"; checks+=("evidence_dir=not_writable"); }
+
+      mc_require_tool xcodebuild >/dev/null && checks+=("xcodebuild=present") || { status="FAIL"; checks+=("xcodebuild=missing"); }
+      mc_require_tool xcrun >/dev/null && checks+=("xcrun=present") || { status="FAIL"; checks+=("xcrun=missing"); }
+      mc_require_tool adb >/dev/null && checks+=("adb=present") || warnings+=("adb=missing")
+      mc_require_tool supabase >/dev/null && checks+=("supabase_cli=present") || warnings+=("supabase_cli=missing")
+
+      if xcrun simctl list devices --json >/dev/null 2>&1; then
+        checks+=("ios_simulators=listable")
+      else
+        warnings+=("ios_simulators_not_listable")
+      fi
+      if xcrun devicectl list devices >/dev/null 2>&1; then
+        checks+=("ios_physical_devices=listable")
+      else
+        warnings+=("ios_physical_devices_not_listable")
+      fi
+      if adb devices >/dev/null 2>&1; then
+        checks+=("android_devices=listable")
+      else
+        warnings+=("android_devices_not_listable")
+      fi
+
+      HARNESS_STATUS="$status" \
+      HARNESS_CHECKS="$(printf '%s\n' "${checks[@]}")" \
+      HARNESS_WARNINGS="$(printf '%s\n' "${warnings[@]}")" \
+      python3 - > /tmp/mc-agent-harness-doctor.$$.json <<'PY'
+import json, os
+from datetime import datetime, timezone
+
+checks = [line for line in os.environ.get("HARNESS_CHECKS", "").splitlines() if line]
+warnings = [line for line in os.environ.get("HARNESS_WARNINGS", "").splitlines() if line]
+status = os.environ["HARNESS_STATUS"]
+if status == "PASS" and warnings:
+    status = "PASS_WITH_NOTES"
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ.get("MC_TASK_ID", "TASK-115"),
+    "source": "harness.doctor",
+    "status": status,
+    "completedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "checks": checks,
+    "warnings": warnings,
+    "nextAction": "Resolve FAIL checks before gates; resolve warnings before physical/live acceptance if they apply."
+}, sort_keys=True))
+PY
+      MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-harness-doctor.$$.json)"
+      rm -f /tmp/mc-agent-harness-doctor.$$.json
+      mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+      local payload_status
+      payload_status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+      case "$payload_status" in
+        PASS)
+          MC_SUMMARY="Harness doctor PASS: required repos, tools and evidence directory are usable."
+          MC_NEXT_ACTION="Run config validate, build/test, then live gates as needed."
+          return "$MC_EXIT_PASS"
+          ;;
+        PASS_WITH_NOTES)
+          mc_set_pass_with_notes
+          MC_WARNINGS="$(IFS=,; printf '%s' "${warnings[*]}")"
+          MC_SUMMARY="Harness doctor PASS_WITH_NOTES: required core checks passed with optional device/tool warnings."
+          MC_NEXT_ACTION="Address listed warnings before physical iPhone, Android device or Supabase live gates."
+          return "$MC_EXIT_PASS"
+          ;;
+        *)
+          MC_SUMMARY="Harness doctor FAIL: core repo/tool/evidence checks are not usable."
+          MC_NEXT_ACTION="Fix failing harness doctor checks, then rerun."
+          return "$MC_EXIT_FAIL"
+          ;;
+      esac
+      ;;
+    *)
+      MC_SUMMARY="Unknown harness subcommand: ${sub}"
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
 }
 
 mc_cmd_report_validate_json() {

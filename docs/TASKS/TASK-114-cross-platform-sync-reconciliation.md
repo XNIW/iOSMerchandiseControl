@@ -4,16 +4,21 @@
 - **Task ID**: TASK-114
 - **Titolo**: Cross-platform automatic sync reconciliation Android/iOS/Supabase
 - **File task**: `docs/TASKS/TASK-114-cross-platform-sync-reconciliation.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: FIX
-- **Responsabile attuale**: USER / Physical iPhone login unblock
+- **Stato**: BLOCKED
+- **Fase attuale**: SUSPENDED
+- **Responsabile attuale**: USER / Suspended by override
 - **Data creazione**: 2026-05-21
-- **Ultimo aggiornamento**: 2026-05-22 19:07 -0400
+- **Ultimo aggiornamento**: 2026-05-22 23:08 -0400
 - **Ultimo agente che ha operato**: CODEX
 
 ## Dipendenze
 - **Dipende da**: TASK-112 (automatic sync — validation follow-up / blocker reale post-screenshot)
-- **Sblocca**: nessuno
+- **Sblocca**: TASK-115 come follow-up architetturale post-TASK-114
+
+## Stato corrente / sospensione
+TASK-114 e' sospesa per override esplicito utente del 2026-05-22 22:09 -0400. Il follow-up operativo residuo `ACTIVE / FIX` viene fermato per aprire **TASK-115 — iOS Sync Architecture Refactor** come unico task attivo. Al 2026-05-22 23:08 -0400 TASK-115 e' in `ACTIVE / REVIEW` dopo handoff execution Codex, non DONE.
+
+Questa sospensione non riscrive la cronologia storica di TASK-114: le sezioni DONE/FIX/evidence esistenti restano archivio. TASK-115 supersedes solo i problemi strutturali di sync iOS emersi dopo TASK-114.
 
 ## Scopo
 Risolvere la divergenza reale tra conteggi locali Android, iOS e Supabase dopo TASK-112: allineare pull/push/tombstone/checkpoint, correggere UX «up to date» falsa, aggiungere diagnostica e test di regressione.

@@ -33,9 +33,9 @@ Per Codex/Cursor:
 ```bash
 ./tools/agent/mc-agent.sh preflight
 ./tools/agent/mc-agent.sh android test offline
-./tools/agent/mc-agent.sh android offline-write --tier L2 --prefix TASK113_OFFLINE_L2_
+./tools/agent/mc-agent.sh android offline-write --tier L2 --prefix TASK115_OFFLINE_L2_
 ./tools/agent/mc-agent.sh report --latest
-./tools/agent/mc-agent.sh scan evidence --task TASK-113
+./tools/agent/mc-agent.sh scan evidence --task TASK-115
 ```
 
 Per operatore umano:
@@ -50,7 +50,7 @@ Per operatore umano:
 ./tools/agent/mc-agent.sh sync counts --task TASK-114 --source ios
 MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-114
 MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh android live-full-pull --live
-./tools/agent/mc-agent.sh supabase cleanup --task TASK-113 --prefix TASK113_DRYRUN_ --dry-run
+./tools/agent/mc-agent.sh supabase cleanup --task TASK-115 --prefix TASK115_DRYRUN_ --dry-run
 ```
 
 ## Exit code
@@ -107,9 +107,9 @@ MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live sync-matrix --task TASK-114 --pre
 ## Cleanup dry-run/execute
 
 ```bash
-./tools/agent/mc-agent.sh supabase cleanup --task TASK-113 --prefix TASK113_DRYRUN_ --dry-run
-MC_ALLOW_CLEANUP=1 ./tools/agent/mc-agent.sh supabase cleanup --task TASK-113 --prefix TASK113_DRYRUN_ --execute --cleanup-plan-id <id>
-./tools/agent/mc-agent.sh supabase residue-check --prefix TASK113_DRYRUN_ --profile dry-run-no-db
+./tools/agent/mc-agent.sh supabase cleanup --task TASK-115 --prefix TASK115_DRYRUN_ --dry-run
+MC_ALLOW_CLEANUP=1 ./tools/agent/mc-agent.sh supabase cleanup --task TASK-115 --prefix TASK115_DRYRUN_ --execute --cleanup-plan-id <id>
+./tools/agent/mc-agent.sh supabase residue-check --prefix TASK115_DRYRUN_ --profile dry-run-no-db
 ```
 
 Il dry-run genera un `cleanup_plan_id` in `agent-runs/cleanup-plans/`.
@@ -144,7 +144,7 @@ Il server MCP usa allowlist, `spawn` con argv array, timeout, cwd fissato al rep
 ## Troubleshooting
 
 - Xcode/simulator: imposta `MC_IOS_DESTINATION`; controlla il path `xcresult` nel report.
-- iOS Options JXA/Accessibility bloccato: `ios smoke options` puo' chiudere `PASS_WITH_NOTES` solo se esiste una evidence XcodeBuildMCP validata in `docs/TASKS/EVIDENCE/TASK-113/ios-options-xcodebuildmcp-fallback.txt`.
+- iOS Options JXA/Accessibility bloccato: `ios smoke options` puo' chiudere `PASS_WITH_NOTES` solo se esiste una evidence XcodeBuildMCP validata in `docs/TASKS/EVIDENCE/TASK-115/ios-options-xcodebuildmcp-fallback.txt`.
 - Android JDK/Gradle: `JAVA_TOOL_OPTIONS=-Djdk.attach.allowAttachSelf=true` e' impostato dal wrapper.
 - ADB device locked: sblocca schermo; piu' device richiedono `MC_ANDROID_DEVICE_SERIAL`.
 - App non installata/signed-out: i comandi smoke/auth-live tornano BLOCKED con next action.

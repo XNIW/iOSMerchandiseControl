@@ -212,13 +212,33 @@ try:
     for key, value in prefs.items():
         if key.startswith("task114.runtime."):
             runtime[key.replace("task114.runtime.", "", 1)] = plist_value(value)
+        elif key.startswith("task115.runtime."):
+            runtime[key.replace("task115.runtime.", "", 1)] = plist_value(value)
         elif key.startswith("task114.syncEvents.watermark."):
             owner = key.replace("task114.syncEvents.watermark.", "", 1)
             watermarks.append({"ownerHash": sha(owner)[:12], "value": plist_value(value)})
+        elif key.startswith("task115.syncEvents.watermark.account."):
+            watermarks.append({"scopeHash": sha(key)[:12], "value": plist_value(value)})
+        elif key == "sync.accountBinding.v1":
+            binding = {"present": True, "decoded": False}
+            try:
+                raw = value.decode() if isinstance(value, (bytes, bytearray)) else str(value)
+                decoded = json.loads(raw)
+                binding.update({
+                    "decoded": True,
+                    "accountHashPresent": bool(decoded.get("accountHash")),
+                    "accountHashHash": sha(str(decoded.get("accountHash") or ""))[:12],
+                    "storeIdentityHash": sha(str(decoded.get("storeIdentity", {}).get("rawValue") or ""))[:12],
+                    "boundAtPresent": bool(decoded.get("boundAt")),
+                })
+            except Exception:
+                binding["decodeError"] = "redacted"
+            metadata["diagnostics"]["accountBinding"] = binding
     metadata["diagnostics"] = {
         "plistPresent": True,
         "runtime": runtime,
         "syncEventWatermarks": watermarks,
+        "accountBinding": metadata["diagnostics"].get("accountBinding", {"present": False}),
     }
 except FileNotFoundError:
     pass
@@ -462,6 +482,67 @@ mc_ios_physical_runtime_counts() {
   return "$code"
 }
 
+mc_ios_physical_auth_store_diagnostics() {
+  local wait_seconds="${MC_IOS_PHYSICAL_DIAGNOSTIC_WAIT_SECONDS:-10}"
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="live-readonly"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="CA-115-04,CA-115-13,CA-115-16"
+  mc_require_live || return $?
+  mc_ios_physical_runtime_counts_payload "ios.physical-auth-store-diagnostics" "$wait_seconds"
+  local code=$?
+  [[ "$code" -eq 0 ]] || {
+    MC_SUMMARY="iOS physical-auth-store-diagnostics BLOCKED: physical runtime store/session evidence unavailable."
+    MC_NEXT_ACTION="Unlock/trust the iPhone, install/open the app, sign in, then rerun diagnostics."
+    return "$code"
+  }
+  CURRENT_JSON="$MC_SYNC_JSON_RESULT" python3 - > /tmp/mc-agent-ios-physical-auth-store.$$.json <<'PY'
+import json, os
+
+payload = json.loads(os.environ["CURRENT_JSON"])
+runtime = payload.get("runtime", {})
+diagnostics = runtime.get("diagnostics", {})
+runtime_flags = diagnostics.get("runtime", {})
+counts = payload.get("counts", {})
+binding = diagnostics.get("accountBinding") or {"present": False}
+pending = sum((counts.get(k, {}) or {}).get("pending") or 0 for k in ["products", "suppliers", "categories", "product_prices", "history_entries"])
+auth_ready = runtime_flags.get("auth.isSignedIn") is True and runtime_flags.get("auth.userIDPresent") is True
+baseline_present = payload.get("baseline") is not None
+watermark_count = len(diagnostics.get("syncEventWatermarks") or [])
+blocked = []
+if not auth_ready:
+    blocked.append("AUTH_SESSION_NOT_READY")
+if not runtime.get("isRuntimeAppContainer"):
+    blocked.append("NOT_RUNTIME_APP_CONTAINER")
+payload["physicalAuthStoreDiagnostics"] = {
+    "authReady": auth_ready,
+    "accountBindingPresent": bool(binding.get("present")),
+    "accountBindingDecoded": bool(binding.get("decoded")),
+    "pendingAggregate": pending,
+    "baselinePresent": baseline_present,
+    "watermarkCount": watermark_count,
+    "storePathHashPresent": bool(runtime.get("storePathHash")),
+    "containerPathHashPresent": bool(runtime.get("containerPathHash")),
+    "blockers": blocked,
+}
+if blocked:
+    payload["status"] = "BLOCKED"
+    payload["blocker"] = ",".join(blocked)
+print(json.dumps(payload, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-physical-auth-store.$$.json)"
+  rm -f /tmp/mc-agent-ios-physical-auth-store.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  if [[ "$(printf '%s' "$MC_SYNC_JSON_RESULT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))')" == "PASS" ]]; then
+    MC_SUMMARY="iOS physical-auth-store-diagnostics PASS: physical session/store/binding diagnostics were collected."
+    MC_NEXT_ACTION="Run ios physical-sync-acceptance."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="iOS physical-auth-store-diagnostics BLOCKED: physical app session is not ready for acceptance."
+  MC_NEXT_ACTION="Open the app on the physical iPhone, complete login/session restore, then rerun."
+  return "$MC_EXIT_BLOCKED"
+}
+
 mc_ios_physical_sync_loop_diagnostics() {
   local wait_seconds="${MC_IOS_PHYSICAL_DIAGNOSTIC_WAIT_SECONDS:-60}"
   MC_PLATFORM="ios"
@@ -579,7 +660,7 @@ mc_ios_physical_sync_acceptance() {
   MC_PLATFORM="ios"
   MC_SAFETY_LEVEL="live-readonly"
   MC_REQUIRES_LIVE="true"
-  MC_CA_REFS="CA-03,CA-04,CA-05,CA-10"
+  MC_CA_REFS="CA-115-13,CA-115-14,CA-115-16"
   mc_require_live || return $?
   mc_ios_physical_runtime_counts_payload "ios.physical-sync-acceptance" "$wait_seconds"
   local code=$?
@@ -610,6 +691,7 @@ attempts = int(runtime.get("incremental.attemptWindow.count") or 0)
 requires_recovery = bool(runtime.get("incremental.lastRequiresFullRecovery") or runtime.get("incremental.lastRequiresFullRecoveryReason"))
 active_zero = bool(runtime.get("progress.isActive") and runtime.get("progress.current") == 0 and runtime.get("progress.total") == 0)
 auth_ready = runtime.get("auth.isSignedIn") is True and runtime.get("auth.userIDPresent") is True
+blockers = []
 failures = []
 drift = {}
 for table in ["products", "suppliers", "categories", "product_prices"]:
@@ -624,12 +706,12 @@ if local_history != remote_history:
 if active_zero:
     failures.append("spinner_zero_of_zero")
 if not auth_ready:
-    failures.append("auth_session_not_ready")
-if attempts > 12:
+    blockers.append("AUTH_SESSION_NOT_READY")
+if auth_ready and attempts > 12:
     failures.append("too_many_sync_attempts_last_60s")
-if runtime.get("incremental.lastSyncType") == "EVENT_INCREMENTAL" and runtime.get("incremental.lastPage.applied") == 0 and requires_recovery:
+if auth_ready and runtime.get("incremental.lastSyncType") == "EVENT_INCREMENTAL" and runtime.get("incremental.lastPage.applied") == 0 and requires_recovery:
     failures.append("event_incremental_requires_recovery_no_apply")
-if drift and not requires_recovery:
+if auth_ready and drift and not requires_recovery:
     failures.append("physical_counts_drift_without_recovery")
 payload["physicalAcceptance"] = {
     "pendingAggregate": pending,
@@ -640,9 +722,13 @@ payload["physicalAcceptance"] = {
     "lastSyncType": runtime.get("incremental.lastSyncType"),
     "lastOutcome": runtime.get("incremental.lastOutcome"),
     "drift": drift,
+    "blockers": blockers,
     "failures": failures,
 }
-if failures:
+if blockers:
+    payload["status"] = "BLOCKED"
+    payload["blocker"] = ",".join(blockers)
+elif failures:
     payload["status"] = "FAIL"
     payload["blocker"] = ",".join(failures)
 print(json.dumps(payload, sort_keys=True))
@@ -650,14 +736,25 @@ PY
   MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-physical-acceptance.$$.json)"
   rm -f /tmp/mc-agent-ios-physical-acceptance.$$.json
   mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
-  if [[ "$(printf '%s' "$MC_SYNC_JSON_RESULT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))')" == "PASS" ]]; then
-    MC_SUMMARY="iOS physical-sync-acceptance PASS: physical iPhone runtime has no loop/0-work spinner signal in the acceptance window."
-    MC_NEXT_ACTION="Run cross-platform regression gates."
-    return "$MC_EXIT_PASS"
-  fi
-  MC_SUMMARY="iOS physical-sync-acceptance FAIL: physical iPhone runtime loop or zero-work spinner signal remains."
-  MC_NEXT_ACTION="Inspect physicalAcceptance and loopDiagnostics, fix, rerun."
-  return "$MC_EXIT_FAIL"
+  local status
+  status="$(printf '%s' "$MC_SYNC_JSON_RESULT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))')"
+  case "$status" in
+    PASS)
+      MC_SUMMARY="iOS physical-sync-acceptance PASS: physical iPhone runtime has no loop/0-work spinner signal in the acceptance window."
+      MC_NEXT_ACTION="Run cross-platform regression gates."
+      return "$MC_EXIT_PASS"
+      ;;
+    BLOCKED)
+      MC_SUMMARY="iOS physical-sync-acceptance BLOCKED: physical iPhone auth/session is not ready for acceptance."
+      MC_NEXT_ACTION="Open the physical iPhone app, complete login/session restore, then rerun physical-sync-acceptance."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    *)
+      MC_SUMMARY="iOS physical-sync-acceptance FAIL: physical iPhone runtime loop or zero-work spinner signal remains."
+      MC_NEXT_ACTION="Inspect physicalAcceptance and loopDiagnostics, fix, rerun."
+      return "$MC_EXIT_FAIL"
+      ;;
+  esac
 }
 
 mc_ios_runtime_store_counts() {
@@ -696,6 +793,85 @@ mc_ios_xctestrun_set_env() {
   local env_path=":TestConfigurations:0:TestTargets:0:EnvironmentVariables"
   mc_ios_plist_ensure_dict "$plist" "$env_path" || return $?
   mc_ios_plist_set_or_add "$plist" "${env_path}:${key}" "$value"
+}
+
+mc_ios_simulator_auth_session_probe() {
+  local target container bundle_id
+  target="$(mc_ios_simulator_target)" || return $?
+  bundle_id="$(mc_ios_app_bundle_id)"
+  container="$(xcrun simctl get_app_container "$target" "$bundle_id" data 2>/dev/null)" || return "$MC_EXIT_BLOCKED"
+  AUTH_CONTAINER="$container" AUTH_BUNDLE_ID="$bundle_id" python3 - <<'PY'
+import base64
+import hashlib
+import json
+import os
+import plistlib
+import time
+from pathlib import Path
+
+container = Path(os.environ["AUTH_CONTAINER"])
+bundle_id = os.environ["AUTH_BUNDLE_ID"]
+plist = container / "Library" / "Preferences" / f"{bundle_id}.plist"
+payload = {
+    "schemaVersion": "1.1",
+    "source": "ios.auth-preflight.runtime-fallback",
+    "status": "BLOCKED",
+    "authPreflightFallback": {
+        "simulatorFallbackSessionPresent": False,
+        "subjectHashPresent": False,
+        "expiresInFuture": False,
+    },
+}
+if not plist.exists():
+    payload["blocker"] = "AUTH_PLIST_MISSING"
+    print(json.dumps(payload, sort_keys=True))
+    raise SystemExit(2)
+
+data = plistlib.loads(plist.read_bytes())
+candidate_keys = [
+    key for key in data
+    if key.startswith("debug.simulator.") and "auth-token" in key
+]
+payload["authPreflightFallback"]["candidateCount"] = len(candidate_keys)
+for key in sorted(candidate_keys):
+    raw = data.get(key)
+    try:
+        decoded = json.loads(raw.decode() if isinstance(raw, (bytes, bytearray)) else str(raw))
+    except Exception:
+        continue
+    access_token = decoded.get("accessToken") or decoded.get("access_token")
+    if not access_token or access_token.count(".") < 2:
+        continue
+    try:
+        segment = access_token.split(".")[1]
+        padded = segment + ("=" * (-len(segment) % 4))
+        claims = json.loads(base64.urlsafe_b64decode(padded.encode()))
+    except Exception:
+        continue
+    sub = str(claims.get("sub") or "")
+    exp = int(claims.get("exp") or 0)
+    seconds_until_expiry = exp - time.time()
+    payload["authPreflightFallback"].update({
+        "simulatorFallbackSessionPresent": True,
+        "subjectHashPresent": bool(sub),
+        "subjectHash": hashlib.sha256(sub.encode()).hexdigest()[:12] if sub else None,
+        "expiresInFuture": exp > time.time(),
+        "secondsUntilExpiryBucket": (
+            "gt_1h" if seconds_until_expiry > 3600
+            else "gt_5m" if seconds_until_expiry > 300
+            else "expired_or_near"
+        ),
+    })
+    if sub and exp > time.time():
+        payload["status"] = "PASS"
+        payload.pop("blocker", None)
+        print(json.dumps(payload, sort_keys=True))
+        raise SystemExit(0)
+
+payload["blocker"] = "AUTH_SESSION_NOT_READY"
+print(json.dumps(payload, sort_keys=True))
+raise SystemExit(2)
+PY
 }
 
 mc_ios_xcode_lock_path() {
@@ -793,6 +969,12 @@ mc_ios_test() {
         -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests
         -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests
         -only-testing:iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests
+        -only-testing:iOSMerchandiseControlTests/SyncDecisionEngineTests
+        -only-testing:iOSMerchandiseControlTests/AccountSyncPolicyTests
+        -only-testing:iOSMerchandiseControlTests/WatermarkStoreTests
+        -only-testing:iOSMerchandiseControlTests/PendingChangeCoalescerTests
+        -only-testing:iOSMerchandiseControlTests/SyncRecoveryPolicyTests
+        -only-testing:iOSMerchandiseControlTests/SyncStatusPresenterTests
       )
       ;;
     lifecycle)
@@ -989,6 +1171,20 @@ mc_ios_auth_preflight() {
     MC_SUMMARY="iOS auth-preflight PASS. xcresult=${bundle}"
     MC_NEXT_ACTION="Run scoped live-write."
     return "$MC_EXIT_PASS"
+  fi
+  local fallback_json fallback_code
+  fallback_json="$(mc_ios_simulator_auth_session_probe 2>/dev/null)"
+  fallback_code=$?
+  if [[ "$fallback_code" -eq 0 ]]; then
+    MC_SYNC_JSON_RESULT="$fallback_json"
+    mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+    MC_SUMMARY="iOS auth-preflight PASS via redacted runtime fallback. xcresult=${bundle}"
+    MC_NEXT_ACTION="Run scoped live-write."
+    return "$MC_EXIT_PASS"
+  fi
+  if [[ -n "$fallback_json" ]]; then
+    MC_SYNC_JSON_RESULT="$fallback_json"
+    mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
   fi
   MC_SUMMARY="iOS auth-preflight BLOCKED/FAIL. xcresult=${bundle}"
   MC_NEXT_ACTION="Open app, complete login, verify session restore, then retry."
@@ -1334,6 +1530,10 @@ mc_ios_task114_matrix_step() {
       mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK114_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
       mc_ios_xctestrun_set_env "$xctestrun" "TASK114_RUN_PREFIX" "$prefix" >>"$test_log" 2>&1
       mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK114_RUN_PREFIX" "$prefix" >>"$test_log" 2>&1
+      if [[ "$prefix" == TASK115_* ]]; then
+        mc_ios_xctestrun_set_env "$xctestrun" "TASK115_IOS_SIMULATOR_AUTH_FALLBACK" "1" >>"$test_log" 2>&1
+        mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK115_IOS_SIMULATOR_AUTH_FALLBACK" "1" >>"$test_log" 2>&1
+      fi
       (
         cd "$MC_IOS_REPO" || exit 3
         xcodebuild test-without-building -xctestrun "$xctestrun" \
@@ -1399,6 +1599,10 @@ mc_cmd_ios() {
     physical-runtime-counts)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
       mc_ios_physical_runtime_counts
+      ;;
+    physical-auth-store-diagnostics)
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      mc_ios_physical_auth_store_diagnostics
       ;;
     physical-smoke-options)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }

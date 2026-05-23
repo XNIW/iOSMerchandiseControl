@@ -1,6 +1,6 @@
 {
   "name": "mc-agent-mcp",
-  "version": "0.2.0-task113",
+  "version": "0.2.0-task115",
   "private": true,
   "type": "module",
   "description": "Thin MCP adapter over tools/agent/mc-agent.sh",

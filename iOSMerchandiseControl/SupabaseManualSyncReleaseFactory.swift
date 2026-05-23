@@ -39,7 +39,7 @@ enum SupabaseManualSyncReleaseFactory {
             )
         }
         let incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)? = inventoryService.map {
-            SupabaseManualSyncReleaseIncrementalPullAdapter(
+            SyncEventIncrementalPullService(
                 modelContainer: modelContainer,
                 remote: $0
             )
@@ -97,31 +97,6 @@ enum SupabaseManualSyncReleaseFactory {
                     return .absent
                 }
             }
-        )
-    }
-}
-
-@MainActor
-private final class SupabaseManualSyncReleaseIncrementalPullAdapter: SupabaseManualSyncIncrementalPullProviding {
-    private let modelContainer: ModelContainer
-    private let remote: SupabaseInventoryService
-
-    init(
-        modelContainer: ModelContainer,
-        remote: SupabaseInventoryService
-    ) {
-        self.modelContainer = modelContainer
-        self.remote = remote
-    }
-
-    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SupabaseSyncEventIncrementalApplySummary {
-        try await SupabaseSyncEventIncrementalApplyService(
-            eventFetcher: remote,
-            inventoryService: remote
-        ).applyNextEvents(
-            ownerUserID: ownerUserID,
-            modelContainer: modelContainer,
-            isAuthenticated: true
         )
     }
 }

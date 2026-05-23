@@ -84,17 +84,20 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
     private let eventFetcher: any SupabaseSyncEventIncrementalFetching
     private let inventoryService: SupabaseInventoryService
     private let defaults: UserDefaults
+    private let watermarkStore: WatermarkStore
     private let limit: Int
 
     init(
         eventFetcher: any SupabaseSyncEventIncrementalFetching,
         inventoryService: SupabaseInventoryService,
         defaults: UserDefaults = .standard,
+        watermarkStore: WatermarkStore? = nil,
         limit: Int = 50
     ) {
         self.eventFetcher = eventFetcher
         self.inventoryService = inventoryService
         self.defaults = defaults
+        self.watermarkStore = watermarkStore ?? WatermarkStore(defaults: defaults)
         self.limit = max(1, min(limit, SupabaseSyncEventIncrementalLimits.maximumLimit))
     }
 
@@ -104,8 +107,8 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
         isAuthenticated: Bool
     ) async throws -> SupabaseSyncEventIncrementalApplySummary {
         let totalStarted = mcNowMillis()
-        let key = watermarkKey(ownerUserID: ownerUserID)
-        let watermarkBefore = Int64(defaults.object(forKey: key) as? Int ?? 0)
+        let watermarkScope = self.watermarkScope(ownerUserID: ownerUserID)
+        let watermarkBefore = watermarkStore.watermark(for: watermarkScope)
         let eventFetchStarted = mcNowMillis()
         let events = try await eventFetcher.fetchSyncEventsAfter(
             ownerUserID: ownerUserID,
@@ -145,7 +148,7 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
         summary.watermarkAfter = sortedEvents.map(\.id).max() ?? watermarkBefore
 
         guard eventIDs.hasWork else {
-            defaults.set(Int(summary.watermarkAfter), forKey: key)
+            watermarkStore.save(summary.watermarkAfter, for: watermarkScope)
             return summary
         }
 
@@ -255,7 +258,7 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
             }
         }
 
-        defaults.set(Int(summary.watermarkAfter), forKey: key)
+        watermarkStore.save(summary.watermarkAfter, for: watermarkScope)
         summary.totalElapsedMs = mcNowMillis() - totalStarted
         return summary
     }
@@ -629,7 +632,7 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
     }
 
     static func watermarkKey(ownerUserID: UUID) -> String {
-        "task114.syncEvents.watermark.\(ownerUserID.uuidString.lowercased())"
+        WatermarkStore.legacyWatermarkKey(ownerUserID: ownerUserID)
     }
 
     static func markWatermarkAfterFullRecovery(
@@ -637,11 +640,21 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
         watermark: Int64,
         defaults: UserDefaults = .standard
     ) {
+        let store = WatermarkStore(defaults: defaults)
+        store.save(watermark, for: WatermarkStore.Scope(ownerUserID: ownerUserID, storeIdentity: .anonymous))
         defaults.set(Int(watermark), forKey: watermarkKey(ownerUserID: ownerUserID))
     }
 
+    private func watermarkScope(ownerUserID: UUID) -> WatermarkStore.Scope {
+        let binding = AccountBindingStore(defaults: defaults).currentBinding
+        return WatermarkStore.Scope(
+            ownerUserID: ownerUserID,
+            storeIdentity: binding?.storeIdentity ?? .anonymous
+        )
+    }
+
     private func lightReconcileKey(ownerUserID: UUID) -> String {
-        "task114.syncEvents.lightReconcile.lastAt.\(ownerUserID.uuidString.lowercased())"
+        "task115.syncEvents.lightReconcile.lastAt.\(AccountBindingStore.accountHash(for: ownerUserID))"
     }
 
     private func shouldRunLightReconcile(ownerUserID: UUID) -> Bool {

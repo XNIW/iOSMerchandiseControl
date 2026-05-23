@@ -57,6 +57,11 @@ private struct SupabaseAuthLocalStorage: AuthLocalStorage {
         }
 
 #if DEBUG && targetEnvironment(simulator)
+        if shouldUseSimulatorFallbackOnly(),
+           let value = simulatorFallbackValue(key: key) {
+            return value
+        }
+
         do {
             if let value = try keychainStorage.retrieve(key: key) {
                 return value
@@ -108,6 +113,17 @@ private struct SupabaseAuthLocalStorage: AuthLocalStorage {
 
     private func simulatorFallbackKey(_ key: String) -> String {
         "debug.simulator.\(key)"
+    }
+
+    private func shouldUseSimulatorFallbackOnly() -> Bool {
+        let environment = ProcessInfo.processInfo.environment
+        return isEnabled(environment["TASK115_IOS_SIMULATOR_AUTH_FALLBACK"])
+            || isEnabled(environment["TEST_RUNNER_TASK115_IOS_SIMULATOR_AUTH_FALLBACK"])
+    }
+
+    private func isEnabled(_ value: String?) -> Bool {
+        guard let normalized = value?.lowercased() else { return false }
+        return normalized == "1" || normalized == "true"
     }
 #endif
 }

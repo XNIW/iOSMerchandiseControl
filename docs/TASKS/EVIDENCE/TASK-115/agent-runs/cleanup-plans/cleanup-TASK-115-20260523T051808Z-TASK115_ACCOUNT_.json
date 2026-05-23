@@ -1,0 +1,22 @@
+{
+  "cleanup_plan_id": "cleanup-TASK-115-20260523T051808Z-TASK115_ACCOUNT_",
+  "created_at": "2026-05-23T05:18:12Z",
+  "forbidden": [
+    "auth.users",
+    "truncate",
+    "reset db",
+    "global delete"
+  ],
+  "prefix": "TASK115_ACCOUNT_",
+  "profile": "linked",
+  "schema_version": "1.1",
+  "scope": [
+    "inventory_product_prices",
+    "inventory_products",
+    "inventory_suppliers",
+    "inventory_categories",
+    "shared_sheet_sessions",
+    "sync_events"
+  ],
+  "task_id": "TASK-115"
+}

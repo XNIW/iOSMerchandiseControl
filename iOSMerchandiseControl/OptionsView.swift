@@ -35,6 +35,8 @@ struct OptionsView: View {
     @State private var syncCountDriftReport: SyncCountDriftReport?
     @State private var syncCountDriftCheckFailed = false
     @State private var lastSyncCountDriftCheckedAt: Date?
+    @State private var accountSyncDecision: AccountSyncDecision?
+    @State private var isAccountDecisionSheetPresented = false
 
     private static let freshRemoteCountVerificationInterval: TimeInterval = 60
 
@@ -184,16 +186,28 @@ struct OptionsView: View {
             refreshLocalDatabaseSummary()
             refreshSupabaseBaselineSummary()
             refreshSyncCountDriftIfNeeded()
+            refreshAccountSyncDecision()
         }
         .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
             refreshLocalDatabaseSummary()
             refreshSupabaseBaselineSummary()
             refreshSyncCountDriftIfNeeded()
+            refreshAccountSyncDecision()
         }
         .onReceive(NotificationCenter.default.publisher(for: .historySessionsDidChange)) { _ in
             refreshLocalDatabaseSummary()
             refreshSupabaseBaselineSummary()
             refreshSyncCountDriftIfNeeded()
+            refreshAccountSyncDecision()
+        }
+        .sheet(isPresented: $isAccountDecisionSheetPresented) {
+            if let accountSyncDecision {
+                AccountSyncDecisionView(
+                    decision: accountSyncDecision,
+                    localSummary: localDatabaseSummary,
+                    onChoose: handleAccountSyncChoice
+                )
+            }
         }
     }
 
@@ -202,6 +216,11 @@ struct OptionsView: View {
             cloudAccountPublicHeader
 
             Divider()
+
+            if let accountSyncDecision {
+                accountSyncDecisionBanner(accountSyncDecision)
+                Divider()
+            }
 
             SupabaseAutomaticSyncStatusCard(
                 context: modelContext,
@@ -216,6 +235,33 @@ struct OptionsView: View {
             )
         }
         .padding(.vertical, 4)
+    }
+
+    private func accountSyncDecisionBanner(_ decision: AccountSyncDecision) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "person.crop.circle.badge.exclamationmark")
+                .foregroundStyle(.orange)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(accountDecisionTitle(decision))
+                    .font(.subheadline.weight(.semibold))
+                Text(L("options.accountDecision.banner.detail"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                isAccountDecisionSheetPresented = true
+            } label: {
+                Label(L("options.accountDecision.review"), systemImage: "checkmark.shield")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private var cloudAccountPublicHeader: some View {
@@ -548,6 +594,7 @@ struct OptionsView: View {
         } catch {
             localDatabaseSummary = .empty
         }
+        refreshAccountSyncDecision()
     }
 
     private func refreshSyncCountDriftIfNeeded() {
@@ -555,12 +602,14 @@ struct OptionsView: View {
             syncCountDriftReport = nil
             syncCountDriftCheckFailed = false
             lastSyncCountDriftCheckedAt = nil
+            refreshAccountSyncDecision()
             return
         }
         guard let service = supabaseInventoryService else {
             syncCountDriftReport = nil
             syncCountDriftCheckFailed = true
             lastSyncCountDriftCheckedAt = nil
+            refreshAccountSyncDecision()
             return
         }
         Task {
@@ -572,14 +621,113 @@ struct OptionsView: View {
                     syncCountDriftReport = report
                     syncCountDriftCheckFailed = false
                     lastSyncCountDriftCheckedAt = Date()
+                    refreshAccountSyncDecision()
                 }
             } catch {
                 await MainActor.run {
                     syncCountDriftReport = nil
                     syncCountDriftCheckFailed = true
                     lastSyncCountDriftCheckedAt = Date()
+                    refreshAccountSyncDecision()
                 }
             }
+        }
+    }
+
+    private func refreshAccountSyncDecision() {
+        guard supabaseAuthViewModel.isSignedIn,
+              let userID = supabaseAuthViewModel.sessionInfo?.userID else {
+            accountSyncDecision = nil
+            isAccountDecisionSheetPresented = false
+            return
+        }
+
+        let accountHash = AccountBindingStore.accountHash(for: userID)
+        let hasLocalData = localDatabaseSummary.products > 0
+            || localDatabaseSummary.suppliers > 0
+            || localDatabaseSummary.categories > 0
+            || localDatabaseSummary.productPrices > 0
+            || localDatabaseSummary.historySessions > 0
+        let binding = AccountBindingStore().currentBinding
+        let localStore: LocalStoreAccountState
+        let trigger: AccountSyncTrigger
+
+        if let binding, binding.accountHash != accountHash {
+            localStore = .bound(accountHash: binding.accountHash, hasData: hasLocalData)
+            trigger = .switchAccount(from: binding.accountHash, to: accountHash)
+        } else if let binding {
+            localStore = .bound(accountHash: binding.accountHash, hasData: hasLocalData)
+            trigger = .reconnect(accountHash: accountHash)
+        } else {
+            localStore = .anonymous(hasData: hasLocalData)
+            trigger = .login(accountHash: accountHash)
+        }
+
+        let decision = AccountSwitchPolicy.decide(
+            AccountSyncPolicyInput(
+                trigger: trigger,
+                localStore: localStore,
+                remoteDataset: remoteDatasetState,
+                pendingOwner: pendingOwnerState(currentAccountHash: accountHash, binding: binding)
+            )
+        )
+        accountSyncDecision = decision.requiresUserDecision ? decision : nil
+    }
+
+    private var remoteDatasetState: RemoteDatasetState {
+        guard !syncCountDriftCheckFailed,
+              let syncCountDriftReport else {
+            return .unknown
+        }
+        let remote = syncCountDriftReport.remote
+        return remote.products > 0
+            || remote.suppliers > 0
+            || remote.categories > 0
+            || remote.productPrices > 0
+            || remote.historySessions > 0 ? .nonEmpty : .empty
+    }
+
+    private func pendingOwnerState(
+        currentAccountHash: String,
+        binding: AccountBinding?
+    ) -> PendingOwnerState {
+        guard localPendingAttentionCount > 0 else { return .none }
+        guard let binding else { return .anonymous }
+        return binding.accountHash == currentAccountHash ? .sameAccount : .differentAccount
+    }
+
+    private func handleAccountSyncChoice(_ choice: AccountSyncUserChoice) {
+        switch choice {
+        case .cancel, .exportAndCancel:
+            isAccountDecisionSheetPresented = false
+        case .merge,
+             .replaceLocalWithCloud,
+             .uploadLocalToCloud,
+             .switchStore,
+             .createStoreAndPull:
+            isAccountDecisionSheetPresented = false
+        }
+    }
+
+    private func accountDecisionTitle(_ decision: AccountSyncDecision) -> String {
+        switch decision.action {
+        case .promptBootstrapUpload:
+            return L("options.accountDecision.bootstrap.title")
+        case .promptMergeReplaceUploadExportCancel:
+            return L("options.accountDecision.merge.title")
+        case .promptRemoteVerification:
+            return L("options.accountDecision.verify.title")
+        case .promptSwitchStoreOrCreateStore:
+            return L("options.accountDecision.switch.title")
+        case .noOp,
+             .pushPendingDrainEventsLightReconcile,
+             .markConflictStale,
+             .applyRemoteTombstone,
+             .dedupeHistoryFingerprint,
+             .useRemoteOrdering,
+             .drainEventsLightReconcile,
+             .keepAnonymousOrPreviousOwnerBound:
+            return L("options.accountDecision.title")
         }
     }
 
@@ -625,6 +773,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
 
     private let pendingCount: Int
     private let baselineSummary: SupabaseCatalogBaselineDebugSummary
+    private let summaryProvider = OptionsSyncSummaryProvider()
 
     init(
         context: ModelContext,
@@ -654,6 +803,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
 
     var body: some View {
         let presentation = viewModel.presentationState
+        let visibleProgress = summaryProvider.visibleProgress(for: presentation)
 
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -679,9 +829,9 @@ private struct SupabaseAutomaticSyncStatusCard: View {
                 statusBadge(for: presentation)
             }
 
-            if presentation.progressState.isActive || presentation.progressState.phase == .completedWithWarnings {
-                CloudSyncProgressInlineView(state: presentation.progressState)
-            } else if presentation.isRunning {
+            if let visibleProgress {
+                CloudSyncProgressInlineView(state: visibleProgress)
+            } else if summaryProvider.shouldShowFallbackSpinner(for: presentation) {
                 HStack(spacing: 10) {
                     ProgressView()
                     Text(L("options.supabase.automaticSync.running.inline"))

@@ -13,7 +13,11 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var isTask104Pass2: Bool { prefix.hasPrefix("TASK104_PASS2_") }
         var isTask112: Bool { prefix.hasPrefix("TASK112_") }
         var isTask114: Bool { prefix.hasPrefix("TASK114_") }
+        var isTask115: Bool { prefix.hasPrefix("TASK115_") }
         var logPrefix: String {
+            if isTask115 {
+                return "TASK115"
+            }
             if isTask114 {
                 return "TASK114"
             }
@@ -1317,10 +1321,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         guard enqueue.kind == .enqueued || enqueue.kind == .duplicateNoOp || enqueue.kind == .skippedNoOp else {
             throw HarnessError.unexpectedCatalogPushStatus("sync_event_enqueue_failed")
         }
-        let authService = SupabaseAuthService(provider: runtime.provider)
         let recorder = SupabaseSyncEventLiveRecorder(
             configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
-            sessionProvider: authService,
+            sessionProvider: Task115StaticSyncEventSessionProvider(session: runtime.session),
             transport: SupabaseSyncEventRPCTransport(clientProvider: runtime.provider)
         )
         let drain = try await SyncEventOutboxDrainService(context: context, recorder: recorder)
@@ -1401,10 +1404,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         guard enqueue.kind == .enqueued || enqueue.kind == .duplicateNoOp || enqueue.kind == .skippedNoOp else {
             throw HarnessError.unexpectedCatalogPushStatus("price_sync_event_enqueue_failed")
         }
-        let authService = SupabaseAuthService(provider: runtime.provider)
         let recorder = SupabaseSyncEventLiveRecorder(
             configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
-            sessionProvider: authService,
+            sessionProvider: Task115StaticSyncEventSessionProvider(session: runtime.session),
             transport: SupabaseSyncEventRPCTransport(clientProvider: runtime.provider)
         )
         let drain = try await SyncEventOutboxDrainService(context: context, recorder: recorder)
@@ -1443,10 +1445,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
     ) async throws {
         guard result.uploadedCount > 0, result.pushedRemoteIDs.isEmpty == false else { return }
         let sortedIDs = result.pushedRemoteIDs.sorted { $0.uuidString < $1.uuidString }
-        let authService = SupabaseAuthService(provider: runtime.provider)
         let recorder = SupabaseSyncEventLiveRecorder(
             configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
-            sessionProvider: authService,
+            sessionProvider: Task115StaticSyncEventSessionProvider(session: runtime.session),
             transport: SupabaseSyncEventRPCTransport(clientProvider: runtime.provider)
         )
         let request = SyncEventRecordRequest(
@@ -1950,6 +1951,14 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         )
     }
 
+    private struct Task115StaticSyncEventSessionProvider: SyncEventLiveRecorderSessionProviding {
+        let session: SupabaseAuthSessionInfo
+
+        func currentSyncEventRecorderSession() async -> SyncEventLiveRecorderSession? {
+            SyncEventLiveRecorderSession(userID: session.userID, isExpired: session.isExpired)
+        }
+    }
+
     private func requireLiveAcceptanceEnabled() throws {
         let environment = ProcessInfo.processInfo.environment
         let task103Value = (environment["TASK103_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK103_LIVE_ACCEPTANCE"])?.lowercased()
@@ -1989,8 +1998,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 || prefix.hasPrefix("TASK104_PASS2_")
                 || prefix.hasPrefix("TASK112_")
                 || prefix.hasPrefix("TASK114_")
+                || prefix.hasPrefix("TASK115_")
         ), prefix.hasSuffix("_") else {
-            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._ or TASK114_..._.")
+            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._ or TASK115_..._.")
         }
         return Fixture(prefix: prefix)
     }
