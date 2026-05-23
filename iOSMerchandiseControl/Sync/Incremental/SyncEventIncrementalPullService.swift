@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @MainActor
-final class SyncEventIncrementalPullService: SupabaseManualSyncIncrementalPullProviding {
+final class SyncEventIncrementalPullService: SyncIncrementalPullProviding, SupabaseManualSyncIncrementalPullProviding {
     private let modelContainer: ModelContainer
     private let remote: SupabaseInventoryService
     private let defaults: UserDefaults

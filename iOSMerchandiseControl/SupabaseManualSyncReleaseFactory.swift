@@ -17,22 +17,22 @@ enum SupabaseManualSyncReleaseFactory {
         }
         let remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)? = remotePreviewAdapter.map { $0 }
         let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = manualPushService.map {
-            SupabaseManualSyncReleasePushAdapter(
+            SyncCatalogPushAdapter(
                 context: context,
                 manualPushService: $0
             )
         }
         let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = inventoryService.map {
-            SupabaseManualSyncReleaseProductPriceAdapter(
+            SyncProductPriceAdapter(
                 modelContainer: modelContainer,
                 remote: $0
             )
         }
         let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = activityRecorder.map {
-            SupabaseManualSyncReleaseActivityRegistrationAdapter(context: context, recorder: $0)
+            SyncActivityRegistrationAdapter(context: context, recorder: $0)
         }
         let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = inventoryService.map {
-            SupabaseManualSyncReleaseHistorySessionAdapter(
+            SyncHistorySessionPushAdapter(
                 modelContainer: modelContainer,
                 remote: $0,
                 recorder: activityRecorder
@@ -102,7 +102,7 @@ enum SupabaseManualSyncReleaseFactory {
 }
 
 @MainActor
-final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHistorySessionSyncProviding {
+final class SyncHistorySessionPushAdapter: SyncHistorySessionPushProviding, SupabaseManualSyncHistorySessionSyncProviding {
     private let modelContainer: ModelContainer
     private let remote: SupabaseInventoryService
     private let recorder: (any SyncEventRecording)?
@@ -119,9 +119,9 @@ final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHi
 
     func syncHistorySessions(
         ownerUserID: UUID,
-        mode: SupabaseManualSyncHistorySessionMode,
+        mode: SyncHistorySessionMode,
         onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
-    ) async throws -> SupabaseManualSyncHistorySessionSummary {
+    ) async throws -> SyncHistorySessionSummary {
         let modelContainer = self.modelContainer
         let remote = self.remote
         let recorder = self.recorder
@@ -149,7 +149,7 @@ final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHi
                         remoteIDs: push.pushedRemoteIDs
                     )
                 }
-                return SupabaseManualSyncHistorySessionSummary(
+                return SyncHistorySessionSummary(
                     uploaded: push.uploadedCount,
                     skippedClean: push.skippedCleanCount,
                     skippedOversized: push.skippedOversizedCount
@@ -187,7 +187,7 @@ final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHi
                     remoteIDs: push.pushedRemoteIDs
                 )
             }
-            return SupabaseManualSyncHistorySessionSummary(
+            return SyncHistorySessionSummary(
                 uploaded: push.uploadedCount,
                 inserted: initialPull.insertedCount + confirmPull.insertedCount,
                 updated: initialPull.updatedCount + confirmPull.updatedCount,
@@ -196,6 +196,18 @@ final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHi
                 skippedOversized: push.skippedOversizedCount
             )
         }.value
+    }
+
+    func syncHistorySessions(
+        ownerUserID: UUID,
+        mode: SupabaseManualSyncHistorySessionMode,
+        onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
+    ) async throws -> SupabaseManualSyncHistorySessionSummary {
+        try await syncHistorySessions(
+            ownerUserID: ownerUserID,
+            mode: SyncHistorySessionMode(mode),
+            onProgress: onProgress
+        ).legacySummary
     }
 
     private nonisolated static func recordHistorySyncEvent(
@@ -225,8 +237,19 @@ final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHi
     }
 }
 
+private extension SyncHistorySessionMode {
+    init(_ manualMode: SupabaseManualSyncHistorySessionMode) {
+        switch manualMode {
+        case .fullReconciliation:
+            self = .fullReconciliation
+        case .incremental:
+            self = .incremental
+        }
+    }
+}
+
 @MainActor
-final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding {
+final class SyncProductPriceAdapter: SyncProductPriceSyncProviding, SupabaseManualSyncProductPriceSyncProviding {
     private let modelContainer: ModelContainer
     private let remote: SupabaseInventoryService
     private var stagedPendingBatchesByFingerprint: [String: LocalPendingAggregatedProductPriceBatch] = [:]
@@ -465,7 +488,7 @@ final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManualSyncProd
 }
 
 @MainActor
-final class SupabaseManualSyncReleasePushAdapter: SupabaseManualSyncCatalogPushProviding {
+final class SyncCatalogPushAdapter: SyncCatalogPushProviding, SupabaseManualSyncCatalogPushProviding {
     private let context: ModelContext
     private let manualPushService: SupabaseManualPushService
     private let preflightService: SupabaseManualPushPreflightService

@@ -5,7 +5,7 @@ import SwiftData
 protocol SyncAutomaticRuntimeProviding: AnyObject {
     var isRunning: Bool { get }
 
-    func run(action: SyncAction, source: SupabaseManualSyncSemiAutomaticTriggerSource) async -> Bool
+    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> Bool
     func cancel()
 }
 
@@ -13,7 +13,7 @@ protocol SyncAutomaticRuntimeProviding: AnyObject {
 final class SyncNoopAutomaticRuntime: SyncAutomaticRuntimeProviding {
     var isRunning: Bool { false }
 
-    func run(action: SyncAction, source: SupabaseManualSyncSemiAutomaticTriggerSource) async -> Bool {
+    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> Bool {
         false
     }
 
@@ -23,22 +23,22 @@ final class SyncNoopAutomaticRuntime: SyncAutomaticRuntimeProviding {
 @MainActor
 final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
     private let authViewModel: SupabaseAuthViewModel
-    private let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)?
-    private let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)?
-    private let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)?
-    private let incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)?
-    private let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)?
+    private let catalogPushProvider: (any SyncCatalogPushProviding)?
+    private let productPriceProvider: (any SyncProductPriceSyncProviding)?
+    private let historySessionProvider: (any SyncHistorySessionPushProviding)?
+    private let incrementalPullProvider: (any SyncIncrementalPullProviding)?
+    private let activityRegistrationProvider: (any SyncActivityRegistrationProviding)?
     private let defaults: UserDefaults
 
     private var activeTask: Task<Void, Never>?
 
     init(
         authViewModel: SupabaseAuthViewModel,
-        catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)?,
-        productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)?,
-        historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)?,
-        incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)?,
-        activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)?,
+        catalogPushProvider: (any SyncCatalogPushProviding)?,
+        productPriceProvider: (any SyncProductPriceSyncProviding)?,
+        historySessionProvider: (any SyncHistorySessionPushProviding)?,
+        incrementalPullProvider: (any SyncIncrementalPullProviding)?,
+        activityRegistrationProvider: (any SyncActivityRegistrationProviding)?,
         defaults: UserDefaults = .standard
     ) {
         self.authViewModel = authViewModel
@@ -54,7 +54,7 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
         activeTask != nil
     }
 
-    func run(action: SyncAction, source: SupabaseManualSyncSemiAutomaticTriggerSource) async -> Bool {
+    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> Bool {
         guard activeTask == nil else { return false }
         guard authViewModel.isSignedIn,
               let ownerUserID = authViewModel.sessionInfo?.userID else {
@@ -135,7 +135,7 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
         }
 
         if didWork, let activityRegistrationProvider {
-            _ = try await activityRegistrationProvider.registerActivities(ownerUserID: ownerUserID)
+            _ = try await activityRegistrationProvider.registerSyncActivities(ownerUserID: ownerUserID)
         }
 
         return didWork
@@ -143,7 +143,7 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
 
     private func drainRemoteEvents(
         ownerUserID: UUID,
-        source: SupabaseManualSyncSemiAutomaticTriggerSource
+        source: SyncAutomaticTriggerSource
     ) async throws -> Bool {
         guard let incrementalPullProvider else {
             recordDiagnostic("incremental.lastOutcome", "blocked_missing_provider")
@@ -154,7 +154,7 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
         return summary.eventsFetched > 0 || summary.totalApplied > 0 || summary.requiresFullRecovery
     }
 
-    private func recordAttempt(source: SupabaseManualSyncSemiAutomaticTriggerSource) {
+    private func recordAttempt(source: SyncAutomaticTriggerSource) {
         #if DEBUG
         let startKey = "task115.runtime.incremental.attemptWindow.startAt"
         let countKey = "task115.runtime.incremental.attemptWindow.count"
@@ -167,13 +167,13 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
             defaults.set(1, forKey: countKey)
         }
         defaults.set(now, forKey: "task115.runtime.incremental.lastAttemptAt")
-        defaults.set(source.diagnosticsName, forKey: "task115.runtime.incremental.lastSource")
+        defaults.set(source.rawValue, forKey: "task115.runtime.incremental.lastSource")
         #endif
     }
 
     private func recordIncrementalSummary(
         _ summary: SupabaseSyncEventIncrementalApplySummary,
-        source: SupabaseManualSyncSemiAutomaticTriggerSource
+        source: SyncAutomaticTriggerSource
     ) {
         #if DEBUG
         defaults.set(summary.syncType.rawValue, forKey: "task115.runtime.incremental.lastSyncType")
@@ -183,7 +183,7 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
         defaults.set(summary.totalElapsedMs, forKey: "task115.runtime.incremental.lastPage.totalElapsedMs")
         defaults.set(summary.totalElapsedMs, forKey: "task115.runtime.incremental.lastTotalElapsedMs")
         defaults.set(summary.requiresFullRecovery, forKey: "task115.runtime.incremental.requiresFullRecovery")
-        defaults.set(source.diagnosticsName, forKey: "task115.runtime.incremental.lastCompletedSource")
+        defaults.set(source.rawValue, forKey: "task115.runtime.incremental.lastCompletedSource")
         #endif
     }
 
@@ -221,33 +221,33 @@ enum SyncAutomaticRuntimeFactory {
         activityRecorder: (any SyncEventRecording)?
     ) -> any SyncAutomaticRuntimeProviding {
         let modelContainer = context.container
-        let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = manualPushService.map {
-            SupabaseManualSyncReleasePushAdapter(
+        let catalogPushProvider: (any SyncCatalogPushProviding)? = manualPushService.map {
+            SyncCatalogPushAdapter(
                 context: context,
                 manualPushService: $0
             )
         }
-        let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = inventoryService.map {
-            SupabaseManualSyncReleaseProductPriceAdapter(
+        let productPriceProvider: (any SyncProductPriceSyncProviding)? = inventoryService.map {
+            SyncProductPriceAdapter(
                 modelContainer: modelContainer,
                 remote: $0
             )
         }
-        let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = inventoryService.map {
-            SupabaseManualSyncReleaseHistorySessionAdapter(
+        let historySessionProvider: (any SyncHistorySessionPushProviding)? = inventoryService.map {
+            SyncHistorySessionPushAdapter(
                 modelContainer: modelContainer,
                 remote: $0,
                 recorder: activityRecorder
             )
         }
-        let incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)? = inventoryService.map {
+        let incrementalPullProvider: (any SyncIncrementalPullProviding)? = inventoryService.map {
             SyncEventIncrementalPullService(
                 modelContainer: modelContainer,
                 remote: $0
             )
         }
-        let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = activityRecorder.map {
-            SupabaseManualSyncReleaseActivityRegistrationAdapter(context: context, recorder: $0)
+        let activityRegistrationProvider: (any SyncActivityRegistrationProviding)? = activityRecorder.map {
+            SyncActivityRegistrationAdapter(context: context, recorder: $0)
         }
         return SyncAutomaticRuntime(
             authViewModel: authViewModel,

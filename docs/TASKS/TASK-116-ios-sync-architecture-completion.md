@@ -8,7 +8,7 @@
 - **Fase attuale**: REVIEW
 - **Responsabile attuale**: CLAUDE / Reviewer
 - **Data creazione**: 2026-05-23
-- **Ultimo aggiornamento**: 2026-05-23 14:34 -0400
+- **Ultimo aggiornamento**: 2026-05-23 15:08 -0400
 - **Ultimo agente che ha operato**: CODEX
 - **Readiness**: READY_FOR_REVIEW; not DONE.
 
@@ -296,6 +296,7 @@ Rule: test first, substitute, then remove/deprecate; no premature delete.
 - 2026-05-23 12:37 -0400 CODEX: automatic runtime path moved off VM/compatibility adapter; harness gates added; build/test/scans/live-readonly evidence collected; task moved to `ACTIVE / REVIEW`, not DONE.
 - 2026-05-23 14:28 -0400 CODEX: severe review/fix on `origin/main` `e0a540f`. Confirmed MASTER/TASK tracking, split `SyncEventIncrementalDomainApplyService.swift` into `Sync/Incremental`, added concrete `CatalogIncrementalApplyService`, `ProductPriceIncrementalApplyService`, `HistoryIncrementalApplyService`, hardened `scan no-legacy-runtime-path` to fail on missing physical domain services/dispatcher references, reran iOS builds/tests and critical architecture gates. Task remains `ACTIVE / REVIEW`, not DONE.
 - 2026-05-23 14:34 -0400 CODEX: moved shared incremental apply helpers from legacy-named `SupabaseSyncEventIncrementalApplyService.swift` into `Sync/Incremental/SyncEventIncrementalApplyHelpers.swift`; legacy file is now summary/protocol/compat wrapper only. Reran Debug/Release builds, sync tests and static/live architecture gates PASS.
+- 2026-05-23 15:08 -0400 CODEX: final review/fix cleanup. Introduced `SyncAutomaticRuntimeProviders.swift` with automatic provider protocols/DTO wrappers named `Sync*`, renamed automatic adapters to `SyncCatalogPushAdapter`, `SyncProductPriceAdapter`, `SyncHistorySessionPushAdapter`, `SyncActivityRegistrationAdapter`, kept old `SupabaseManualSync*Providing` protocols only for manual VM compatibility, and hardened `scan no-legacy-runtime-path` to fail if `SyncAutomaticRuntime.swift` regresses to `ManualSync` provider/adapter names. `HistorySessionSyncService` remains a retained domain helper behind `HistoryIncrementalApplyService`, not automatic owner. Reran static/live architecture gates and iOS Debug/Release/sync tests PASS.
 
 ## Handoff post-execution
 ### Summary
@@ -304,6 +305,7 @@ TASK-116 execution plus severe review/fix is complete enough for review. `SyncOr
 ### Key files changed
 - `iOSMerchandiseControl/Sync/SyncOrchestrator.swift`
 - `iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift`
+- `iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift`
 - `iOSMerchandiseControl/ContentView.swift`
 - `iOSMerchandiseControl/Sync/SupabaseManualSyncCompatibilityAdapter.swift`
 - `iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalPullService.swift`
@@ -313,6 +315,8 @@ TASK-116 execution plus severe review/fix is complete enough for review. `SyncOr
 - `iOSMerchandiseControl/Sync/Incremental/HistoryIncrementalApplyService.swift`
 - `iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalApplyHelpers.swift`
 - `iOSMerchandiseControl/SupabaseSyncEventIncrementalApplyService.swift`
+- `iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift`
+- `iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`
 - `tools/agent/*`
 
 ### Checks
@@ -323,6 +327,14 @@ TASK-116 execution plus severe review/fix is complete enough for review. `SyncOr
 - iOS sync tests: PASS (`agent-runs/20260523T183345Z-ios-test-sync-task-TASK-116-p91525.md`).
 - Harness syntax after scan hardening: PASS (`bash -n tools/agent/mc-agent.sh && bash -n tools/agent/lib/*.sh`).
 - Sensitive/evidence scans: PASS (`agent-runs/20260523T182750Z-scan-sensitive-task-TASK-116-p75575.md`, `agent-runs/20260523T182750Z-scan-evidence-task-TASK-116-p75576.md`).
+- Final-cleanup `scan no-legacy-runtime-path`: PASS (`agent-runs/20260523T191433Z-scan-no-legacy-runtime-path-task-TASK-116-p31795.md`).
+- Final-cleanup `live no-legacy-runtime-path`: PASS (`agent-runs/20260523T191643Z-live-no-legacy-runtime-path-task-TASK-116-p34394.md`).
+- Final-cleanup `live no-full-pull-normal-path`: PASS after serial rerun (`agent-runs/20260523T191649Z-live-no-full-pull-normal-path-task-TASK-116-p35191.md`).
+- Final-cleanup iOS Debug/Release build: PASS (`agent-runs/20260523T191436Z-ios-build-debug-task-TASK-116-p32264.md`, `agent-runs/20260523T191450Z-ios-build-release-task-TASK-116-p32902.md`).
+- Final-cleanup iOS sync tests: PASS (`agent-runs/20260523T191617Z-ios-test-sync-task-TASK-116-p33680.md`).
+- Final-cleanup sensitive/evidence scans: PASS (`agent-runs/20260523T191129Z-scan-sensitive-task-TASK-116-p13972.md`, `agent-runs/20260523T191132Z-scan-evidence-task-TASK-116-p14282.md`).
+- Final-cleanup report latest: PASS (`agent-runs/20260523T191145Z-report-latest-task-TASK-116-p21793.md`).
+- `git diff --check`: PASS.
 - Android build/test/lint: PASS.
 - Performance budget: PASS after stale attempt-window fix.
 - Supabase RLS/grants: PASS.

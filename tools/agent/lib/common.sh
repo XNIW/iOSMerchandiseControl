@@ -1039,8 +1039,8 @@ patterns = [
         "automatic_runtime_legacy_facade_reference",
         "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
         automatic_runtime,
-        r"SupabaseManualSyncViewModel|SupabaseManualSyncCompatibilityAdapter|SupabaseSyncEventIncrementalApplyService|SupabaseManualSyncReleaseFactory",
-        "automatic runtime must not reference legacy VM, compatibility adapter, legacy incremental apply, or legacy release factory",
+        r"SupabaseManualSyncViewModel|SupabaseManualSyncCompatibilityAdapter|SupabaseSyncEventIncrementalApplyService|SupabaseManualSyncReleaseFactory|SupabaseManualSync[A-Za-z0-9_]*Providing|SupabaseManualSyncRelease[A-Za-z0-9_]*Adapter",
+        "automatic runtime must not reference legacy VM, compatibility adapter, legacy incremental apply, legacy release factory, or ManualSync-named automatic provider protocols/adapters",
     ),
     (
         "automatic_runtime_missing",

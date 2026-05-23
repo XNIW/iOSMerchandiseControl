@@ -126,9 +126,9 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapterTests: XCTestCas
     private func makeAdapter(
         context: ModelContext,
         recorder: any SyncEventRecording
-    ) -> SupabaseManualSyncReleaseActivityRegistrationAdapter {
+    ) -> SyncActivityRegistrationAdapter {
         let fixedNow = now
-        return SupabaseManualSyncReleaseActivityRegistrationAdapter(
+        return SyncActivityRegistrationAdapter(
             context: context,
             recorder: recorder,
             now: { fixedNow },

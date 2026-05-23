@@ -195,7 +195,7 @@ final class SyncOrchestrator: ObservableObject {
 
         recordRuntimeDiagnostic("foreground.outcome", action.diagnosticsScheduleName)
         foregroundTask = Task { @MainActor in
-            let didRun = await automaticRuntime.run(action: action, source: source)
+            let didRun = await automaticRuntime.run(action: action, source: source.automaticTriggerSource)
             foregroundTask = nil
             if forceIncremental,
                !didRun,
@@ -375,6 +375,21 @@ final class SyncOrchestrator: ObservableObject {
 }
 
 private extension SupabaseManualSyncSemiAutomaticTriggerSource {
+    var automaticTriggerSource: SyncAutomaticTriggerSource {
+        switch self {
+        case .releaseCard:
+            return .releaseCard
+        case .rootForeground:
+            return .rootForeground
+        case .networkReconnect:
+            return .networkReconnect
+        case .localMutation:
+            return .localMutation
+        case .remoteSyncEvent:
+            return .remoteSyncEvent
+        }
+    }
+
     var syncTrigger: SyncTrigger {
         switch self {
         case .releaseCard:

@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @MainActor
-final class SupabaseManualSyncReleaseActivityRegistrationAdapter: SupabaseManualSyncActivityRegistrationProviding {
+final class SyncActivityRegistrationAdapter: SyncActivityRegistrationProviding, SupabaseManualSyncActivityRegistrationProviding {
     private let context: ModelContext
     private let recorder: any SyncEventRecording
     private let now: () -> Date
@@ -23,6 +23,10 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapter: SupabaseManual
     func loadActivityRegistrationSnapshot(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationSnapshot {
         try Task.checkCancellation()
         return try snapshot(ownerUserID: ownerUserID)
+    }
+
+    func loadSyncActivityRegistrationSnapshot(ownerUserID: UUID) async throws -> SyncActivityRegistrationSnapshot {
+        SyncActivityRegistrationSnapshot(try await loadActivityRegistrationSnapshot(ownerUserID: ownerUserID))
     }
 
     func registerActivities(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationResult {
@@ -66,6 +70,10 @@ final class SupabaseManualSyncReleaseActivityRegistrationAdapter: SupabaseManual
             status: status(outcome: outcome, after: after),
             summary: summary
         )
+    }
+
+    func registerSyncActivities(ownerUserID: UUID) async throws -> SyncActivityRegistrationResult {
+        SyncActivityRegistrationResult(try await registerActivities(ownerUserID: ownerUserID))
     }
 
     private func snapshot(ownerUserID: UUID) throws -> SupabaseManualSyncActivityRegistrationSnapshot {

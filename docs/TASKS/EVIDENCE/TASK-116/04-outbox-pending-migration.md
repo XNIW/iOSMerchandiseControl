@@ -3,7 +3,7 @@
 ## Implemented
 - Automatic push execution moved from `SupabaseManualSyncViewModel` to `SyncAutomaticRuntime`.
 - Catalog, ProductPrice and History pending push providers are invoked directly by the automatic runtime.
-- Activity registration/outbox drain is invoked through `SupabaseManualSyncReleaseActivityRegistrationAdapter`, not through the VM.
+- Activity registration/outbox drain is invoked through `SyncActivityRegistrationAdapter`, not through the VM.
 - `LocalOutboxStore` remains owner-bound and `PendingChangeCoalescer` remains unchanged.
 
 ## Safety

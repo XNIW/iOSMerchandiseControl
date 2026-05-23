@@ -442,7 +442,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertTrue(factorySource.contains("let modelContainer = context.container"))
         XCTAssertTrue(factorySource.contains("remotePreviewAdapter = pullPreviewService.map"))
         XCTAssertTrue(factorySource.contains("SupabaseManualSyncPullPreviewAdapter(service: $0, modelContainer: modelContainer)"))
-        XCTAssertTrue(factorySource.contains("SupabaseManualSyncReleasePushAdapter"))
+        XCTAssertTrue(factorySource.contains("SyncCatalogPushAdapter"))
         XCTAssertTrue(factorySource.contains("remotePreviewProvider: remotePreviewProvider"))
         XCTAssertTrue(factorySource.contains("catalogPushProvider: catalogPushProvider"))
         XCTAssertTrue(factorySource.contains("remotePreviewStaging: remotePreviewAdapter"))
@@ -451,7 +451,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         XCTAssertTrue(factorySource.contains("localApplyModelContainer: modelContainer"))
         XCTAssertTrue(factorySource.contains("activityRecorder: (any SyncEventRecording)? = nil"))
         XCTAssertTrue(factorySource.contains("activityRegistrationProvider"))
-        XCTAssertTrue(factorySource.contains("SupabaseManualSyncReleaseActivityRegistrationAdapter"))
+        XCTAssertTrue(factorySource.contains("SyncActivityRegistrationAdapter"))
         XCTAssertFalse(factorySource.contains("supportsGuidedManualSync: true"))
         XCTAssertFalse(factorySource.contains("SyncEventOutboxDrainService"))
     }

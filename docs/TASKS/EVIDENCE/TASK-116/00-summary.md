@@ -5,7 +5,7 @@
 - **Phase**: ACTIVE / REVIEW
 - **Responsible**: CLAUDE / Reviewer
 - **Execution start**: 2026-05-23 12:09 -0400
-- **Latest severe review/fix**: 2026-05-23 14:34 -0400
+- **Latest severe review/fix**: 2026-05-23 15:08 -0400
 - **Target for this run**: ACTIVE / REVIEW, not DONE.
 
 ## User override
@@ -58,10 +58,29 @@ The user explicitly approved TASK-116 execution end-to-end and instructed Codex 
 - Physical iPhone diagnostics/acceptance remain BLOCKED by device/auth/store readiness: `p72498`, `p72994`.
 - Account matrix strict-live remains BLOCKED by fixture/device readiness: `p73594`.
 
+## Final cleanup review/fix update
+- `HEAD` and `origin/main` were verified equal at `e462b6e8e9ee0aba623f991b8a6023417bb27957` before the final local cleanup changes.
+- `SyncAutomaticRuntime` now depends on `Sync*Providing` protocols and `Sync*` DTO wrappers from `SyncAutomaticRuntimeProviders.swift`, not on `SupabaseManualSync*Providing` protocol names.
+- Automatic adapters are now named `SyncCatalogPushAdapter`, `SyncProductPriceAdapter`, `SyncHistorySessionPushAdapter` and `SyncActivityRegistrationAdapter`.
+- Old `SupabaseManualSync*Providing` protocols remain inside the manual VM boundary for explicit manual UI compatibility only.
+- `scan no-legacy-runtime-path` now also fails if `SyncAutomaticRuntime.swift` regresses to `SupabaseManualSync*Providing` or `SupabaseManualSyncRelease*Adapter` names.
+- Final cleanup static no-legacy-runtime-path PASS: `agent-runs/20260523T191433Z-scan-no-legacy-runtime-path-task-TASK-116-p31795.md`.
+- Final cleanup live no-legacy-runtime-path PASS: `agent-runs/20260523T191643Z-live-no-legacy-runtime-path-task-TASK-116-p34394.md`.
+- Final cleanup live no-full-pull-normal-path PASS after serial rerun: `agent-runs/20260523T191649Z-live-no-full-pull-normal-path-task-TASK-116-p35191.md`.
+- Final cleanup iOS Debug/Release build PASS: `agent-runs/20260523T191436Z-ios-build-debug-task-TASK-116-p32264.md`, `agent-runs/20260523T191450Z-ios-build-release-task-TASK-116-p32902.md`.
+- Final cleanup iOS sync tests PASS: `agent-runs/20260523T191617Z-ios-test-sync-task-TASK-116-p33680.md`.
+- Final cleanup live near-realtime retry BLOCKED by Android serial readiness: `agent-runs/20260523T190940Z-live-mutation-near-realtime-task-TASK-116-prefix-TASK116_REALTIME_-p10315.md`.
+- Final cleanup live offline reconnect retry BLOCKED by Android serial readiness: `agent-runs/20260523T190944Z-live-offline-reconnect-sync-task-TASK-116-prefix-TASK116_OFFLINE_-p10795.md`.
+- Final cleanup physical iPhone acceptance retry BLOCKED by device/login readiness: `agent-runs/20260523T190948Z-ios-physical-sync-acceptance-live-task-TASK-116-p11262.md`.
+- Final cleanup account matrix retry BLOCKED by app sign-in/fixture readiness: `agent-runs/20260523T191009Z-live-account-merge-policy-matrix-task-TASK-116-prefix-TASK116_ACCOUNT_-p11775.md`.
+- Final cleanup sensitive/evidence scans PASS: `agent-runs/20260523T191129Z-scan-sensitive-task-TASK-116-p13972.md`, `agent-runs/20260523T191132Z-scan-evidence-task-TASK-116-p14282.md`.
+- Final cleanup report latest PASS: `agent-runs/20260523T191145Z-report-latest-task-TASK-116-p21793.md`.
+- Final cleanup `git diff --check` PASS.
+
 ## Review blockers carried forward
 - Android physical serial `8ac48ff0` was not available to the live harness during final live gates; Android auth, near-realtime, offline reconnect and runtime parity are BLOCKED, not PASS.
-- Physical iPhone diagnostics/acceptance/parity are BLOCKED by device/auth/store readiness.
-- Account matrix A-L strict-live is BLOCKED by live fixture/device availability.
+- Physical iPhone diagnostics/acceptance/parity are BLOCKED by device/auth/store readiness; latest acceptance retry remains BLOCKED.
+- Account matrix A-L strict-live is BLOCKED by live fixture/device/sign-in availability; latest retry remains BLOCKED.
 - Domain apply logic is automatic-path legacy-free and now physically split into dispatcher + Catalog/ProductPrice/History service files. DONE still requires live/device/account blockers to pass or explicit user acceptance.
 
 ## Safety notes

@@ -42,3 +42,17 @@ Generated during S116-B preflight/inventory on 2026-05-23.
 - `SyncEventIncrementalPullService.swift` constructs `SyncEventIncrementalDomainApplyService`, not `SupabaseSyncEventIncrementalApplyService`.
 - `SyncEventIncrementalDomainApplyService.swift` now exists under `Sync/Incremental` and dispatches to physical `CatalogIncrementalApplyService`, `ProductPriceIncrementalApplyService`, `HistoryIncrementalApplyService`.
 - Hardened gate `scan no-legacy-runtime-path` now fails if the physical domain service files are missing or the dispatcher does not reference them.
+
+## Final cleanup classification — 2026-05-23 15:08 -0400
+| Use | Classification | Decision |
+|---|---|---|
+| `SyncAutomaticRuntime.swift` provider dependencies | automatic runtime dependency | Renamed to `SyncCatalogPushProviding`, `SyncProductPriceSyncProviding`, `SyncHistorySessionPushProviding`, `SyncIncrementalPullProviding`, `SyncActivityRegistrationProviding`. No `SupabaseManualSync*Providing` dependency remains in this file. |
+| `SyncAutomaticRuntimeProviders.swift` DTO/result boundary | automatic runtime contract | Adds `SyncActivityRegistration*` and `SyncHistorySessionSummary` wrappers so automatic provider protocols expose `Sync*` contracts; legacy DTO conversion is limited to adapter compatibility shims. |
+| `SyncCatalogPushAdapter`, `SyncProductPriceAdapter`, `SyncHistorySessionPushAdapter`, `SyncActivityRegistrationAdapter` | automatic/domain adapters | Renamed from `SupabaseManualSyncRelease*Adapter` naming; may still conform to old manual protocols for VM compatibility. |
+| `SupabaseManualSyncViewModel` | manual-only facade | Still present for Options/manual UI and explicit manual actions; forbidden as automatic owner. |
+| `SupabaseManualSyncCompatibilityAdapter` | manual/root presentation compatibility | Still present to expose manual VM state to root/presentation; no automatic foreground methods. |
+| `SupabaseManualSyncReleaseFactory` | manual VM factory | Still composes manual VM dependencies; not automatic runtime composition root. |
+| `SupabaseSyncEventIncrementalApplyService` | compat wrapper | Summary/protocol/wrapper only; not constructed by `SyncEventIncrementalPullService`. |
+| `HistorySessionSyncService` | retained domain helper | Kept as official history helper behind `HistoryIncrementalApplyService`; not a competing automatic runtime owner. |
+
+Final gate hardening: `scan no-legacy-runtime-path` fails if `SyncAutomaticRuntime.swift` references `SupabaseManualSync*Providing` or `SupabaseManualSyncRelease*Adapter` names.
