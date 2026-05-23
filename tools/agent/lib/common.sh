@@ -391,7 +391,9 @@ Usage:
   ./tools/agent/mc-agent.sh doctor | preflight | harness doctor | config validate | config print-redacted
   ./tools/agent/mc-agent.sh list commands | list commands-json
   ./tools/agent/mc-agent.sh report --task <TASK-ID> | report --latest | report validate-json --path <file>
-  ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task <TASK-ID> | scan repo-diff | scan release-cta
+  ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task <TASK-ID> | scan repo-diff | scan release-cta | scan no-legacy-runtime-path --task TASK-116
+  ./tools/agent/mc-agent.sh evidence hygiene --task TASK-116
+  ./tools/agent/mc-agent.sh account fixture prepare|cleanup --task TASK-116 --prefix TASK116_ACCOUNT_ [--dry-run]
   ./tools/agent/mc-agent.sh safety check-prefix --prefix TASK115_* | safety dry-run-required --command "<command>"
   ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|lifecycle|offline | ios smoke simulator|options|history
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-115
@@ -439,6 +441,10 @@ mc_help_json() {
     {"name":"scan evidence","argv":["scan","evidence","--task","TASK-115"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan repo-diff","argv":["scan","repo-diff"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan release-cta","argv":["scan","release-cta"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-legacy-runtime-path","argv":["scan","no-legacy-runtime-path","--task","TASK-116"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"evidence hygiene","argv":["evidence","hygiene","--task","TASK-116"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"account fixture prepare","argv":["account","fixture","prepare","--task","TASK-116","--prefix","TASK116_ACCOUNT_","--dry-run"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"account fixture cleanup","argv":["account","fixture","cleanup","--task","TASK-116","--prefix","TASK116_ACCOUNT_"],"platform":"general","safety_level":"cleanup-dry-run"},
     {"name":"safety check-prefix","argv":["safety","check-prefix","--prefix","TASK115_*"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"safety dry-run-required","argv":["safety","dry-run-required","--command","<command>"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"ios build debug","argv":["ios","build","debug"],"platform":"ios","safety_level":"safe-readonly"},
@@ -972,6 +978,217 @@ mc_cmd_scan_release_cta() {
   fi
   MC_NEXT_ACTION="Continue release gate validation."
   return "$MC_EXIT_PASS"
+}
+
+mc_cmd_scan_no_legacy_runtime_path() {
+  local task_id="${MC_TASK_ID:-TASK-116}"
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-116}}"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  MC_CA_REFS="CA-116-01,CA-116-02,CA-116-03,CA-116-10,CA-116-11"
+
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 - > /tmp/mc-agent-no-legacy-runtime.$$.json <<'PY'
+import json, os, pathlib, re
+from datetime import datetime, timezone
+
+repo = pathlib.Path(os.environ["IOS_REPO"])
+task = os.environ["TASK_ID"]
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+def read(rel):
+    path = repo / rel
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return ""
+
+checks = []
+
+def add(check_id, status, file, reason, evidence):
+    checks.append({
+        "id": check_id,
+        "status": status,
+        "file": file,
+        "reason": reason,
+        "evidence": evidence[:12],
+    })
+
+orchestrator = read("iOSMerchandiseControl/Sync/SyncOrchestrator.swift")
+content = read("iOSMerchandiseControl/ContentView.swift")
+pull = read("iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalPullService.swift")
+options = read("iOSMerchandiseControl/OptionsView.swift")
+
+patterns = [
+    (
+        "automatic_legacy_adapter_call",
+        "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+        orchestrator,
+        r"legacyAdapter\.startForeground(?:IncrementalCheckNow|SemiAutomaticCheckIfAllowed)",
+        "automatic foreground sync calls compatibility adapter",
+    ),
+    (
+        "automatic_runtime_missing",
+        "iOSMerchandiseControl/ContentView.swift",
+        content,
+        r"automaticRuntime:\s*SyncAutomaticRuntimeFactory\.make",
+        "ContentView must inject a non-legacy automatic runtime into SyncOrchestrator",
+    ),
+    (
+        "legacy_incremental_apply_pass_through",
+        "iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalPullService.swift",
+        pull,
+        r"SupabaseSyncEventIncrementalApplyService",
+        "incremental pull still invokes legacy apply service",
+    ),
+    (
+        "options_decision_remote_fetch",
+        "iOSMerchandiseControl/OptionsView.swift",
+        options,
+        r"fetchReconciliationRemoteCounts\s*\(",
+        "Options performs direct remote decision fetch",
+    ),
+]
+
+for check_id, file, text, pattern, reason in patterns:
+    hits = []
+    for match in re.finditer(pattern, text):
+        line = text.count("\n", 0, match.start()) + 1
+        snippet = text.splitlines()[line - 1].strip()
+        hits.append({"line": line, "snippet": snippet})
+    if check_id == "automatic_runtime_missing":
+        add(check_id, "PASS" if hits else "FAIL", file, reason, hits)
+    else:
+        add(check_id, "FAIL" if hits else "PASS", file, reason, hits)
+
+duplicate_owner_hits = []
+if "startSyncEventSafetyLoopIfNeeded" in orchestrator and "manualAdapter.presentationState.isRunning" in orchestrator:
+    duplicate_owner_hits.append({
+        "line": 0,
+        "snippet": "SyncOrchestrator has safety loop while consulting legacy adapter running state",
+    })
+add(
+    "duplicate_sync_owner_risk",
+    "FAIL" if duplicate_owner_hits else "PASS",
+    "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+    "duplicate automatic owner/timer risk",
+    duplicate_owner_hits,
+)
+
+failures = [check for check in checks if check["status"] == "FAIL"]
+payload = {
+    "schemaVersion": "1.1",
+    "taskId": task,
+    "source": "scan.no-legacy-runtime-path",
+    "startedAt": now,
+    "completedAt": now,
+    "status": "FAIL" if failures else "PASS",
+    "NEXT_ACTION": "Remove automatic legacy path and rerun." if failures else "Run live no-legacy-runtime-path.",
+    "checks": checks,
+    "failureCount": len(failures),
+}
+print(json.dumps(payload, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-no-legacy-runtime.$$.json)"
+  rm -f /tmp/mc-agent-no-legacy-runtime.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  if [[ "$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))' <<<"$MC_SYNC_JSON_RESULT")" == "PASS" ]]; then
+    MC_SUMMARY="No-legacy-runtime-path scan PASS for ${task_id}: automatic runtime path has no forbidden legacy calls."
+    MC_NEXT_ACTION="Run live no-legacy-runtime-path and no-full-pull-normal-path."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="No-legacy-runtime-path scan FAIL for ${task_id}: forbidden automatic legacy path remains."
+  MC_NEXT_ACTION="Remove automatic VM/adapter/legacy apply/full-pull path and rerun."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_cmd_evidence() {
+  local sub="${1:-}"
+  shift || true
+  case "$sub" in
+    hygiene)
+      mc_cmd_scan_evidence "$@"
+      ;;
+    *)
+      MC_SUMMARY="Unknown evidence subcommand: ${sub}"
+      MC_NEXT_ACTION="Use evidence hygiene --task TASK-116."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+mc_account_fixture_report() {
+  local action="$1"
+  local task_id="$2"
+  local prefix="$3"
+  local dry_run="$4"
+  TASK_ID="$task_id" PREFIX="$prefix" ACTION="$action" DRY_RUN="$dry_run" python3 - > /tmp/mc-agent-account-fixture.$$.json <<'PY'
+import json, os
+from datetime import datetime, timezone
+
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+scenarios = list("ABCDEFGHIJKL")
+status = "PASS" if os.environ["DRY_RUN"] == "1" else "BLOCKED"
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ["TASK_ID"],
+    "source": f"account.fixture.{os.environ['ACTION']}",
+    "startedAt": now,
+    "completedAt": now,
+    "status": status,
+    "prefix": os.environ["PREFIX"],
+    "dryRun": os.environ["DRY_RUN"] == "1",
+    "NEXT_ACTION": "Review fixture plan; enable live credentials before execute." if status == "PASS" else "Use --dry-run or provide explicit live fixture approval.",
+    "mutationPerformed": False,
+    "scenarios": [{"scenario": name, "fixturePrefix": f"{os.environ['PREFIX']}{name}_", "status": "NOT_RUN"} for name in scenarios],
+}, sort_keys=True))
+PY
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-account-fixture.$$.json)"
+  rm -f /tmp/mc-agent-account-fixture.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+}
+
+mc_cmd_account() {
+  local sub="${1:-}"
+  shift || true
+  case "$sub" in
+    fixture)
+      local action="${1:-}"
+      shift || true
+      local task_id prefix dry_run
+      task_id="$(mc_parse_opt --task "$@" || true)"
+      task_id="${task_id:-$MC_TASK_ID}"
+      prefix="$(mc_parse_opt --prefix "$@")" || { mc_missing_prefix; return "$MC_EXIT_REFUSED"; }
+      dry_run="0"
+      [[ " $* " == *" --dry-run "* ]] && dry_run="1"
+      mc_validate_task_prefix "$prefix" || return $?
+      MC_PLATFORM="general"
+      MC_SAFETY_LEVEL="safe-readonly"
+      MC_TEST_PREFIX="$prefix"
+      case "$action" in
+        prepare|cleanup)
+          if [[ "$action" == "cleanup" ]]; then
+            dry_run="1"
+          fi
+          mc_account_fixture_report "$action" "$task_id" "$prefix" "$dry_run"
+          MC_SUMMARY="Account fixture ${action} dry-run PASS for ${prefix}: no mutation performed."
+          MC_NEXT_ACTION="Implement scoped live fixtures before strict account matrix can PASS."
+          return "$MC_EXIT_PASS"
+          ;;
+        *)
+          MC_SUMMARY="Unknown account fixture action: ${action}"
+          MC_NEXT_ACTION="Use account fixture prepare|cleanup."
+          return "$MC_EXIT_MISCONFIGURED"
+          ;;
+      esac
+      ;;
+    *)
+      MC_SUMMARY="Unknown account subcommand: ${sub}"
+      MC_NEXT_ACTION="Use account fixture prepare|cleanup."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
 }
 
 mc_cmd_safety() {

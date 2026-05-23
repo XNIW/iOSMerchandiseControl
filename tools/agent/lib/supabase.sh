@@ -1342,7 +1342,7 @@ PY
   fi
   if [[ "$matrix_status" == "BLOCKED" ]]; then
     MC_SUMMARY="Live account-merge-policy-matrix BLOCKED for ${prefix}: strict live A-L fixtures are not runnable yet."
-    MC_NEXT_ACTION="Sign in iOS and Android app targets, then implement/run scoped TASK115_ACCOUNT_ fixtures for A-L; unit-only evidence is not a critical PASS."
+    MC_NEXT_ACTION="Sign in iOS and Android app targets, then implement/run scoped ${prefix} fixtures for A-L; unit-only evidence is not a critical PASS."
     return "$MC_EXIT_BLOCKED"
   fi
   MC_SUMMARY="Live account-merge-policy-matrix FAIL for ${prefix}: iOS account policy tests failed."
@@ -1371,12 +1371,18 @@ mc_live_sync_performance_budget() {
     return "$code"
   fi
   TASK_ID="$task_id" PREFIX="$prefix" RUNTIME_JSON="$runtime_json" python3 - > /tmp/mc-agent-sync-performance-budget.$$.json <<'PY'
-import json, os
+import json, os, time
 from datetime import datetime, timezone
 
 payload = json.loads(os.environ["RUNTIME_JSON"])
 runtime = payload.get("runtime", {}).get("diagnostics", {}).get("runtime", {})
 attempts = int(runtime.get("incremental.attemptWindow.count") or 0)
+window_start = runtime.get("incremental.attemptWindow.startAt")
+try:
+    if window_start is not None and time.time() - float(window_start) > 60:
+        attempts = 0
+except Exception:
+    pass
 progress_active = runtime.get("progress.isActive") is True
 progress_current = runtime.get("progress.current")
 progress_total = runtime.get("progress.total")
@@ -1541,6 +1547,59 @@ mc_cmd_live() {
   local task_id prefix
   task_id="$(mc_parse_opt --task "$@" || true)"
   task_id="${task_id:-$MC_TASK_ID}"
+  case "$sub" in
+    no-legacy-runtime-path)
+      MC_PLATFORM="live"
+      MC_SAFETY_LEVEL="live-readonly"
+      MC_REQUIRES_LIVE="true"
+      MC_CA_REFS="CA-116-01,CA-116-02,CA-116-03,CA-116-10,CA-116-11"
+      mc_require_live || return $?
+      mc_cmd_scan_no_legacy_runtime_path --task "$task_id"
+      return $?
+      ;;
+    no-full-pull-normal-path)
+      MC_PLATFORM="live"
+      MC_SAFETY_LEVEL="live-readonly"
+      MC_REQUIRES_LIVE="true"
+      MC_CA_REFS="CA-116-10,CA-116-11"
+      mc_require_live || return $?
+      TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 - > /tmp/mc-agent-no-full-pull-normal.$$.json <<'PY'
+import json, os, pathlib, re
+from datetime import datetime, timezone
+
+repo = pathlib.Path(os.environ["IOS_REPO"])
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+orchestrator = (repo / "iOSMerchandiseControl/Sync/SyncOrchestrator.swift").read_text(encoding="utf-8")
+vm = (repo / "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift").read_text(encoding="utf-8")
+failures = []
+if re.search(r"(legacyAdapter|manualAdapter)\.startForegroundSemiAutomaticCheckIfAllowed", orchestrator):
+    failures.append({"id": "normal_foreground_can_reach_legacy_semi_auto", "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift"})
+if failures and "performForegroundFullRecoveryIfNeeded" in vm and re.search(r"performForegroundAutomaticSync[\\s\\S]*performForegroundFullRecoveryIfNeeded", vm):
+    failures.append({"id": "legacy_vm_foreground_auto_can_request_full_recovery", "file": "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift"})
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ["TASK_ID"],
+    "source": "live.no-full-pull-normal-path",
+    "startedAt": now,
+    "completedAt": now,
+    "status": "FAIL" if failures else "PASS",
+    "NEXT_ACTION": "Remove normal foreground reachability to legacy/full recovery path." if failures else "Continue runtime gates.",
+    "failures": failures,
+}, sort_keys=True))
+PY
+      MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-no-full-pull-normal.$$.json)"
+      rm -f /tmp/mc-agent-no-full-pull-normal.$$.json
+      mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+      if [[ "$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))' <<<"$MC_SYNC_JSON_RESULT")" == "PASS" ]]; then
+        MC_SUMMARY="Live no-full-pull-normal-path PASS for ${task_id}."
+        MC_NEXT_ACTION="Run live performance and sync gates."
+        return "$MC_EXIT_PASS"
+      fi
+      MC_SUMMARY="Live no-full-pull-normal-path FAIL for ${task_id}: normal foreground can still reach full-pull-capable legacy path."
+      MC_NEXT_ACTION="Remove foreground legacy/full-pull reachability and rerun."
+      return "$MC_EXIT_FAIL"
+      ;;
+  esac
   prefix="$(mc_parse_opt --prefix "$@")" || { mc_missing_prefix; return "$MC_EXIT_REFUSED"; }
   MC_PLATFORM="live"
   MC_SAFETY_LEVEL="live-write"

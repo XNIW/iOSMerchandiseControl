@@ -102,7 +102,7 @@ enum SupabaseManualSyncReleaseFactory {
 }
 
 @MainActor
-private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHistorySessionSyncProviding {
+final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManualSyncHistorySessionSyncProviding {
     private let modelContainer: ModelContainer
     private let remote: SupabaseInventoryService
     private let recorder: (any SyncEventRecording)?
@@ -226,7 +226,7 @@ private final class SupabaseManualSyncReleaseHistorySessionAdapter: SupabaseManu
 }
 
 @MainActor
-private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding {
+final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding {
     private let modelContainer: ModelContainer
     private let remote: SupabaseInventoryService
     private var stagedPendingBatchesByFingerprint: [String: LocalPendingAggregatedProductPriceBatch] = [:]
@@ -465,7 +465,7 @@ private final class SupabaseManualSyncReleaseProductPriceAdapter: SupabaseManual
 }
 
 @MainActor
-private final class SupabaseManualSyncReleasePushAdapter: SupabaseManualSyncCatalogPushProviding {
+final class SupabaseManualSyncReleasePushAdapter: SupabaseManualSyncCatalogPushProviding {
     private let context: ModelContext
     private let manualPushService: SupabaseManualPushService
     private let preflightService: SupabaseManualPushPreflightService

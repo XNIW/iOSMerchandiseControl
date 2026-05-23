@@ -4,12 +4,18 @@
 - **Task ID**: TASK-115
 - **Titolo**: iOS Sync Architecture Refactor
 - **File task**: `docs/TASKS/TASK-115-ios-sync-architecture-refactor.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
+- **Stato**: BLOCKED
+- **Fase attuale**: SUPERSEDED_BY_TASK-116 / REVIEW
 - **Responsabile attuale**: CLAUDE / Reviewer
 - **Data creazione**: 2026-05-22
-- **Ultimo aggiornamento**: 2026-05-23 02:05 -0400
+- **Ultimo aggiornamento**: 2026-05-23 12:09 -0400
 - **Ultimo agente che ha operato**: CODEX
+
+## Superseded by TASK-116
+- **Stato operativo**: TASK-115 resta non-DONE e viene bloccato/superseded da TASK-116.
+- **Motivo**: TASK-115 ha creato l'orchestrator e alleggerito parte della UI, ma il runtime automatico resta misto: `SyncOrchestrator` usa ancora `SupabaseManualSyncCompatibilityAdapter`, il VM legacy resta workhorse e `SyncEventIncrementalPullService` passa ancora dall'apply legacy.
+- **Follow-up attivo**: `docs/TASKS/TASK-116-ios-sync-architecture-completion.md` completa la migrazione architetturale e conserva TASK-115 come baseline tecnica/storica.
+- **Vincolo**: non marcare TASK-115 DONE; non cancellare la cronologia TASK-115.
 
 ## Dipendenze e relazione con TASK-114
 - **Dipende da**: TASK-114 come baseline storica e post-regression evidence.

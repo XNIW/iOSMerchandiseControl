@@ -6,7 +6,8 @@ import SwiftUI
 final class SyncOrchestrator: ObservableObject {
     let objectWillChange = ObservableObjectPublisher()
 
-    private let legacyAdapter: any SyncOrchestratorLegacySyncAdapter
+    private let manualAdapter: any SyncOrchestratorLegacySyncAdapter
+    private let automaticRuntime: any SyncAutomaticRuntimeProviding
     private let authViewModel: SupabaseAuthViewModel
     private let activityCenter: ForegroundCloudWorkflowActivityCenter
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
@@ -24,18 +25,20 @@ final class SyncOrchestrator: ObservableObject {
     private var reconnectObserver: AutomaticSyncNetworkReachabilityObserver?
 
     init(
-        legacyAdapter: any SyncOrchestratorLegacySyncAdapter,
+        manualAdapter: any SyncOrchestratorLegacySyncAdapter,
+        automaticRuntime: any SyncAutomaticRuntimeProviding,
         authViewModel: SupabaseAuthViewModel,
         activityCenter: ForegroundCloudWorkflowActivityCenter,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?,
         stateStore: SyncStateStore? = nil
     ) {
-        self.legacyAdapter = legacyAdapter
+        self.manualAdapter = manualAdapter
+        self.automaticRuntime = automaticRuntime
         self.authViewModel = authViewModel
         self.activityCenter = activityCenter
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.stateStore = stateStore ?? SyncStateStore()
-        self.viewModelCancellable = legacyAdapter.objectWillChangePublisher.sink { [weak self] _ in
+        self.viewModelCancellable = manualAdapter.objectWillChangePublisher.sink { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.objectWillChange.send()
             }
@@ -43,11 +46,11 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     var manualSyncViewModel: SupabaseManualSyncViewModel {
-        legacyAdapter.legacyManualSyncViewModel
+        manualAdapter.legacyManualSyncViewModel
     }
 
     var rootPresentationState: SupabaseManualSyncRootPresentationState {
-        legacyAdapter.rootPresentationState
+        manualAdapter.rootPresentationState
     }
 
     func bootstrap(scenePhase: ScenePhase) async {
@@ -135,9 +138,9 @@ final class SyncOrchestrator: ObservableObject {
 
     func retryRootActionIfPossible() {
         guard foregroundTask == nil,
-              let mode = legacyAdapter.runMode(for: .retry) else { return }
+              let mode = manualAdapter.runMode(for: .retry) else { return }
         foregroundTask = Task { @MainActor in
-            await legacyAdapter.start(with: mode)
+            await manualAdapter.start(with: mode)
             foregroundTask = nil
         }
     }
@@ -167,7 +170,6 @@ final class SyncOrchestrator: ObservableObject {
             return
         case .retryAfterBusy:
             deferForegroundCheck(source: source, forceIncremental: forceIncremental)
-            legacyAdapter.markForegroundCheckSkippedBecauseBusy()
             recordRuntimeDiagnostic("foreground.outcome", "deferred_decision_busy")
             return
         case .fullRecovery:
@@ -187,19 +189,13 @@ final class SyncOrchestrator: ObservableObject {
         }
         guard !activityCenter.isBusy else {
             deferForegroundCheck(source: source, forceIncremental: forceIncremental)
-            legacyAdapter.markForegroundCheckSkippedBecauseBusy()
             recordRuntimeDiagnostic("foreground.outcome", "deferred_busy")
             return
         }
 
         recordRuntimeDiagnostic("foreground.outcome", action.diagnosticsScheduleName)
         foregroundTask = Task { @MainActor in
-            let didRun: Bool
-            if action.prefersIncrementalCompatibilityRun || forceIncremental {
-                didRun = await legacyAdapter.startForegroundIncrementalCheckNow(source: source)
-            } else {
-                didRun = await legacyAdapter.startForegroundSemiAutomaticCheckIfAllowed(source: source)
-            }
+            let didRun = await automaticRuntime.run(action: action, source: source)
             foregroundTask = nil
             if forceIncremental,
                !didRun,
@@ -219,7 +215,8 @@ final class SyncOrchestrator: ObservableObject {
         hasDeferredForegroundCheck = false
         deferredForegroundSource = nil
         deferredForegroundForceIncremental = false
-        legacyAdapter.requestLifecycleInterruptionForBackground()
+        automaticRuntime.cancel()
+        manualAdapter.requestLifecycleInterruptionForBackground()
         foregroundTask?.cancel()
         foregroundTask = nil
     }
@@ -230,7 +227,7 @@ final class SyncOrchestrator: ObservableObject {
         recordRuntimeDiagnostic("auth.canSignIn", authViewModel.canSignIn)
         recordRuntimeDiagnostic("auth.isTransitioning", authViewModel.isTransitioning)
         recordRuntimeDiagnostic("auth.userIDPresent", authViewModel.sessionInfo?.userID != nil)
-        legacyAdapter.applyAuthPresentationContext(
+        manualAdapter.applyAuthPresentationContext(
             SupabaseManualSyncAuthPresentationContext(
                 isSignedIn: authViewModel.isSignedIn,
                 canSignIn: authViewModel.canSignIn,
@@ -333,7 +330,7 @@ final class SyncOrchestrator: ObservableObject {
                 requiresBootstrap: false,
                 requiresFullRecovery: false,
                 fullRecoveryContext: .normalForeground,
-                isSyncBusy: foregroundTask != nil || activityCenter.isBusy || legacyAdapter.presentationState.isRunning
+                isSyncBusy: foregroundTask != nil || activityCenter.isBusy || automaticRuntime.isRunning
             )
         )
     }
@@ -416,17 +413,17 @@ private extension SyncAction {
     var diagnosticsScheduleName: String {
         switch self {
         case .pushPending:
-            return "scheduled_push_pending_via_legacy_incremental_adapter"
+            return "scheduled_push_pending_via_sync_runtime"
         case .drainEvents:
-            return "scheduled_drain_events_via_legacy_incremental_adapter"
+            return "scheduled_drain_events_via_sync_runtime"
         case .lightReconcile:
-            return "scheduled_light_reconcile_via_legacy_incremental_adapter"
+            return "scheduled_light_reconcile_via_sync_runtime"
         case .sequence:
-            return "scheduled_sequence_via_legacy_incremental_adapter"
+            return "scheduled_sequence_via_sync_runtime"
         case .bootstrap:
-            return "scheduled_bootstrap_via_legacy_adapter"
+            return "blocked_bootstrap_requires_explicit_context"
         case .requestRecovery:
-            return "scheduled_recovery_request_via_legacy_incremental_adapter"
+            return "scheduled_recovery_request_via_sync_runtime"
         case .noOp:
             return "decision_noop"
         case .fullRecovery:

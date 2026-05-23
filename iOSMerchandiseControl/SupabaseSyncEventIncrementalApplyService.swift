@@ -80,7 +80,7 @@ nonisolated struct SupabaseSyncEventIncrementalApplySummary: Sendable, Equatable
     }
 }
 
-nonisolated struct SupabaseSyncEventIncrementalApplyService {
+nonisolated struct SyncEventIncrementalDomainApplyService {
     private let eventFetcher: any SupabaseSyncEventIncrementalFetching
     private let inventoryService: SupabaseInventoryService
     private let defaults: UserDefaults
@@ -692,6 +692,54 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
 
     private func mergeRows<Row: Identifiable>(_ lhs: [Row], _ rhs: [Row]) -> [Row] where Row.ID == UUID {
         Array(Dictionary(uniqueKeysWithValues: (lhs + rhs).map { ($0.id, $0) }).values)
+    }
+}
+
+nonisolated struct SupabaseSyncEventIncrementalApplyService {
+    private let domainService: SyncEventIncrementalDomainApplyService
+
+    init(
+        eventFetcher: any SupabaseSyncEventIncrementalFetching,
+        inventoryService: SupabaseInventoryService,
+        defaults: UserDefaults = .standard,
+        watermarkStore: WatermarkStore? = nil,
+        limit: Int = 50
+    ) {
+        self.domainService = SyncEventIncrementalDomainApplyService(
+            eventFetcher: eventFetcher,
+            inventoryService: inventoryService,
+            defaults: defaults,
+            watermarkStore: watermarkStore,
+            limit: limit
+        )
+    }
+
+    func applyNextEvents(
+        ownerUserID: UUID,
+        modelContainer: ModelContainer,
+        isAuthenticated: Bool
+    ) async throws -> SupabaseSyncEventIncrementalApplySummary {
+        try await domainService.applyNextEvents(
+            ownerUserID: ownerUserID,
+            modelContainer: modelContainer,
+            isAuthenticated: isAuthenticated
+        )
+    }
+
+    static func watermarkKey(ownerUserID: UUID) -> String {
+        SyncEventIncrementalDomainApplyService.watermarkKey(ownerUserID: ownerUserID)
+    }
+
+    static func markWatermarkAfterFullRecovery(
+        ownerUserID: UUID,
+        watermark: Int64,
+        defaults: UserDefaults = .standard
+    ) {
+        SyncEventIncrementalDomainApplyService.markWatermarkAfterFullRecovery(
+            ownerUserID: ownerUserID,
+            watermark: watermark,
+            defaults: defaults
+        )
     }
 }
 

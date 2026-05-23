@@ -898,6 +898,50 @@ mc_cmd_sync() {
   local sub="${1:-}"
   shift || true
   case "$sub" in
+    doctor)
+      local task_id
+      task_id="$(mc_parse_opt --task "$@" || true)"
+      task_id="${task_id:-$MC_TASK_ID}"
+      MC_PLATFORM="general"
+      MC_SAFETY_LEVEL="safe-readonly"
+      TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 - > /tmp/mc-agent-sync-doctor.$$.json <<'PY'
+import json, os, pathlib, subprocess
+from datetime import datetime, timezone
+
+repo = pathlib.Path(os.environ["IOS_REPO"])
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+files = [
+    "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+    "iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalPullService.swift",
+    "iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+    "iOSMerchandiseControl/Sync/Incremental/WatermarkStore.swift",
+]
+checks = [{"file": f, "exists": (repo / f).exists()} for f in files]
+dirty = subprocess.run(["git", "-C", str(repo), "status", "--short"], text=True, capture_output=True).stdout.splitlines()
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ["TASK_ID"],
+    "source": "sync.doctor",
+    "startedAt": now,
+    "completedAt": now,
+    "status": "PASS" if all(item["exists"] for item in checks) else "FAIL",
+    "NEXT_ACTION": "Run scan no-legacy-runtime-path, build and sync tests.",
+    "checks": checks,
+    "dirtyFileCount": len(dirty),
+}, sort_keys=True))
+PY
+      MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-sync-doctor.$$.json)"
+      rm -f /tmp/mc-agent-sync-doctor.$$.json
+      mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+      if [[ "$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))' <<<"$MC_SYNC_JSON_RESULT")" == "PASS" ]]; then
+        MC_SUMMARY="Sync doctor PASS for ${task_id}."
+        MC_NEXT_ACTION="Run scan no-legacy-runtime-path."
+        return "$MC_EXIT_PASS"
+      fi
+      MC_SUMMARY="Sync doctor FAIL for ${task_id}: required sync files missing."
+      MC_NEXT_ACTION="Restore required sync files or update task planning."
+      return "$MC_EXIT_FAIL"
+      ;;
     counts)
       local task_id source profile
       task_id="$(mc_parse_opt --task "$@" || true)"

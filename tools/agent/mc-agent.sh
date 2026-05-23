@@ -50,9 +50,12 @@ main() {
         evidence) handler=(mc_cmd_scan_evidence "${args[@]:2}") ;;
         repo-diff) handler=(mc_cmd_scan_repo_diff) ;;
         release-cta) handler=(mc_cmd_scan_release_cta) ;;
-        *) echo "Usage: scan sensitive|evidence|repo-diff|release-cta" >&2; exit "$MC_EXIT_MISCONFIGURED" ;;
+        no-legacy-runtime-path) handler=(mc_cmd_scan_no_legacy_runtime_path "${args[@]:2}") ;;
+        *) echo "Usage: scan sensitive|evidence|repo-diff|release-cta|no-legacy-runtime-path" >&2; exit "$MC_EXIT_MISCONFIGURED" ;;
       esac
       ;;
+    evidence) handler=(mc_cmd_evidence "${args[@]:1}") ;;
+    account) handler=(mc_cmd_account "${args[@]:1}") ;;
     safety) handler=(mc_cmd_safety "${args[@]:1}") ;;
     harness) handler=(mc_cmd_harness "${args[@]:1}") ;;
     ios) handler=(mc_cmd_ios "${args[@]:1}") ;;

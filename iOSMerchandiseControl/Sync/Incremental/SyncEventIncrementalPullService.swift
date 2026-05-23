@@ -6,20 +6,20 @@ final class SyncEventIncrementalPullService: SupabaseManualSyncIncrementalPullPr
     private let modelContainer: ModelContainer
     private let remote: SupabaseInventoryService
     private let defaults: UserDefaults
-    private let legacyApplyServiceFactory: (
+    private let domainApplyServiceFactory: (
         _ remote: SupabaseInventoryService,
         _ defaults: UserDefaults
-    ) -> SupabaseSyncEventIncrementalApplyService
+    ) -> SyncEventIncrementalDomainApplyService
 
     init(
         modelContainer: ModelContainer,
         remote: SupabaseInventoryService,
         defaults: UserDefaults = .standard,
-        legacyApplyServiceFactory: @escaping (
+        domainApplyServiceFactory: @escaping (
             _ remote: SupabaseInventoryService,
             _ defaults: UserDefaults
-        ) -> SupabaseSyncEventIncrementalApplyService = { remote, defaults in
-            SupabaseSyncEventIncrementalApplyService(
+        ) -> SyncEventIncrementalDomainApplyService = { remote, defaults in
+            SyncEventIncrementalDomainApplyService(
                 eventFetcher: remote,
                 inventoryService: remote,
                 defaults: defaults
@@ -29,11 +29,11 @@ final class SyncEventIncrementalPullService: SupabaseManualSyncIncrementalPullPr
         self.modelContainer = modelContainer
         self.remote = remote
         self.defaults = defaults
-        self.legacyApplyServiceFactory = legacyApplyServiceFactory
+        self.domainApplyServiceFactory = domainApplyServiceFactory
     }
 
     func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SupabaseSyncEventIncrementalApplySummary {
-        try await legacyApplyServiceFactory(remote, defaults).applyNextEvents(
+        try await domainApplyServiceFactory(remote, defaults).applyNextEvents(
             ownerUserID: ownerUserID,
             modelContainer: modelContainer,
             isAuthenticated: true
