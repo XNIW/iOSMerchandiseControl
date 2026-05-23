@@ -42,6 +42,55 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
         XCTAssertEqual(summary.productPrices, 1)
     }
 
+    func testSyncCountDriftRefreshUsesFreshRemoteSnapshotWithoutRefetching() async throws {
+        let context = try makeContext()
+        var clock = Date(timeIntervalSince1970: 100)
+        let provider = OptionsSyncSummaryProvider(now: { clock })
+        let remoteFetcher = OptionsRemoteCountFetcher(snapshot: .zero)
+        let ownerID = UUID()
+
+        provider.refreshAll(
+            context: context,
+            authSnapshot: OptionsSyncAuthSnapshot(isSignedIn: true, userID: ownerID),
+            remoteCountFetcher: remoteFetcher,
+            pendingChanges: []
+        )
+        try await waitForDriftReport(provider)
+
+        let firstFetchCount = await remoteFetcher.numberOfFetches()
+        XCTAssertEqual(firstFetchCount, 1)
+        XCTAssertEqual(provider.syncCountDriftReport?.local.products, 0)
+        XCTAssertEqual(provider.syncCountDriftReport?.remote.products, 0)
+        XCTAssertFalse(provider.needsRemoteCountVerification)
+
+        context.insert(Product(barcode: "local-only"))
+        try context.save()
+        clock = clock.addingTimeInterval(30)
+
+        provider.refreshAll(
+            context: context,
+            authSnapshot: OptionsSyncAuthSnapshot(isSignedIn: true, userID: ownerID),
+            remoteCountFetcher: remoteFetcher,
+            pendingChanges: []
+        )
+
+        let cachedRefreshFetchCount = await remoteFetcher.numberOfFetches()
+        XCTAssertEqual(cachedRefreshFetchCount, 1)
+        XCTAssertEqual(provider.syncCountDriftReport?.local.products, 1)
+        XCTAssertEqual(provider.syncCountDriftReport?.remote.products, 0)
+        XCTAssertEqual(provider.syncCountDriftReport?.mismatches, [.products])
+        XCTAssertFalse(provider.needsRemoteCountVerification)
+
+        clock = clock.addingTimeInterval(31)
+        provider.refreshAll(
+            context: context,
+            authSnapshot: OptionsSyncAuthSnapshot(isSignedIn: true, userID: ownerID),
+            remoteCountFetcher: remoteFetcher,
+            pendingChanges: []
+        )
+        try await waitForFetchCount(remoteFetcher, expected: 2)
+    }
+
     private func makeContext() throws -> ModelContext {
         let schema = Schema([
             Product.self,
@@ -58,5 +107,46 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
         let container = try ModelContainer(for: schema, configurations: [configuration])
         Self.retainedContainers.append(container)
         return ModelContext(container)
+    }
+
+    private func waitForDriftReport(_ provider: OptionsSyncSummaryProvider) async throws {
+        for _ in 0..<50 {
+            if provider.syncCountDriftReport != nil || provider.syncCountDriftCheckFailed {
+                return
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for sync count drift refresh.")
+    }
+
+    private func waitForFetchCount(
+        _ remoteFetcher: OptionsRemoteCountFetcher,
+        expected: Int
+    ) async throws {
+        for _ in 0..<50 {
+            if await remoteFetcher.numberOfFetches() == expected {
+                return
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for remote count fetch \(expected).")
+    }
+}
+
+private actor OptionsRemoteCountFetcher: OptionsSyncRemoteCountFetching {
+    private let snapshot: SyncInventoryCountSnapshot
+    private(set) var fetchCount = 0
+
+    init(snapshot: SyncInventoryCountSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func fetchReconciliationRemoteCounts() async throws -> SyncInventoryCountSnapshot {
+        fetchCount += 1
+        return snapshot
+    }
+
+    func numberOfFetches() -> Int {
+        fetchCount
     }
 }

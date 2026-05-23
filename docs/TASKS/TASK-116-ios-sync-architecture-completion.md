@@ -8,7 +8,7 @@
 - **Fase attuale**: REVIEW
 - **Responsabile attuale**: CLAUDE / Reviewer
 - **Data creazione**: 2026-05-23
-- **Ultimo aggiornamento**: 2026-05-23 15:08 -0400
+- **Ultimo aggiornamento**: 2026-05-23 15:54 -0400
 - **Ultimo agente che ha operato**: CODEX
 - **Readiness**: READY_FOR_REVIEW; not DONE.
 
@@ -297,6 +297,7 @@ Rule: test first, substitute, then remove/deprecate; no premature delete.
 - 2026-05-23 14:28 -0400 CODEX: severe review/fix on `origin/main` `e0a540f`. Confirmed MASTER/TASK tracking, split `SyncEventIncrementalDomainApplyService.swift` into `Sync/Incremental`, added concrete `CatalogIncrementalApplyService`, `ProductPriceIncrementalApplyService`, `HistoryIncrementalApplyService`, hardened `scan no-legacy-runtime-path` to fail on missing physical domain services/dispatcher references, reran iOS builds/tests and critical architecture gates. Task remains `ACTIVE / REVIEW`, not DONE.
 - 2026-05-23 14:34 -0400 CODEX: moved shared incremental apply helpers from legacy-named `SupabaseSyncEventIncrementalApplyService.swift` into `Sync/Incremental/SyncEventIncrementalApplyHelpers.swift`; legacy file is now summary/protocol/compat wrapper only. Reran Debug/Release builds, sync tests and static/live architecture gates PASS.
 - 2026-05-23 15:08 -0400 CODEX: final review/fix cleanup. Introduced `SyncAutomaticRuntimeProviders.swift` with automatic provider protocols/DTO wrappers named `Sync*`, renamed automatic adapters to `SyncCatalogPushAdapter`, `SyncProductPriceAdapter`, `SyncHistorySessionPushAdapter`, `SyncActivityRegistrationAdapter`, kept old `SupabaseManualSync*Providing` protocols only for manual VM compatibility, and hardened `scan no-legacy-runtime-path` to fail if `SyncAutomaticRuntime.swift` regresses to `ManualSync` provider/adapter names. `HistorySessionSyncService` remains a retained domain helper behind `HistoryIncrementalApplyService`, not automatic owner. Reran static/live architecture gates and iOS Debug/Release/sync tests PASS.
+- 2026-05-23 15:54 -0400 CODEX: user-requested severe review with direct fixes. Confirmed `HEAD=origin/main=98920f8ff4064867181e71c1c6e78993fe46c7f4` before local review fixes, found Options remote-count refresh could cancel/restart fresh remote checks too often, fixed `OptionsSyncSummaryProvider` with signed-in auth snapshot boundary, `OptionsSyncRemoteCountFetching`, in-flight guard and 60s cached remote-count reuse, added regression test, and widened canonical `ios test sync` to include existing ProductPrice apply and HistorySession tests. Task remains `ACTIVE / REVIEW`, not DONE.
 
 ## Handoff post-execution
 ### Summary
@@ -317,6 +318,8 @@ TASK-116 execution plus severe review/fix is complete enough for review. `SyncOr
 - `iOSMerchandiseControl/SupabaseSyncEventIncrementalApplyService.swift`
 - `iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift`
 - `iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`
+- `iOSMerchandiseControl/Sync/Presentation/OptionsSyncSummaryProvider.swift`
+- `iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests.swift`
 - `tools/agent/*`
 
 ### Checks
@@ -339,6 +342,13 @@ TASK-116 execution plus severe review/fix is complete enough for review. `SyncOr
 - Performance budget: PASS after stale attempt-window fix.
 - Supabase RLS/grants: PASS.
 - Cleanup/residue `TASK116_*`: PASS/0.
+- Review rerun iOS Debug/Release build: PASS (`agent-runs/20260523T194331Z-ios-build-debug-task-TASK-116-p54844.md`, `agent-runs/20260523T194338Z-ios-build-release-task-TASK-116-p55368.md`).
+- Review rerun iOS sync tests: PASS after test fix and suite widening (`agent-runs/20260523T194020Z-ios-test-sync-task-TASK-116-p53802.md`). First attempt failed due test-code actor assertion issue only (`p52792`), then fixed.
+- Review rerun architecture gates: `scan no-legacy-runtime-path` PASS (`agent-runs/20260523T194510Z-scan-no-legacy-runtime-path-task-TASK-116-p56199.md`), `live no-legacy-runtime-path` PASS (`agent-runs/20260523T194510Z-live-no-legacy-runtime-path-task-TASK-116-p56201.md`), `live no-full-pull-normal-path` PASS after serial rerun (`agent-runs/20260523T194516Z-live-no-full-pull-normal-path-task-TASK-116-p57695.md`).
+- Review rerun Options/performance budget: PASS (`agent-runs/20260523T194521Z-live-sync-performance-budget-task-TASK-116-prefix-TASK116_PERF_-p58179.md`).
+- Review rerun Supabase read-only: status/RLS/grants PASS (`agent-runs/20260523T194537Z-supabase-status-redacted-task-TASK-116-p58880.md`, `agent-runs/20260523T194541Z-supabase-verify-rls-task-TASK-116-profile-linked-p59316.md`, `agent-runs/20260523T194550Z-supabase-verify-grants-task-TASK-116-profile-linked-p59833.md`).
+- Review rerun live blockers: runtime parity BLOCKED (`agent-runs/20260523T194600Z-live-runtime-parity-task-TASK-116-prefix-TASK116_RUNTIME_-p60350.md`), near-realtime BLOCKED (`p62188`), offline reconnect BLOCKED (`p62658`), physical diagnostics BLOCKED (`p63133`), physical sync acceptance BLOCKED (`p63640`), account matrix BLOCKED (`p64142`).
+- Review rerun cleanup/residue: scoped cleanup executed only for `TASK116_REALTIME_`, `TASK116_OFFLINE_`, `TASK116_ACCOUNT_`, `TASK116_PERF_`, `TASK116_PHYSICAL_`, `TASK116_RUNTIME_`; residue checks PASS/0 (`p73466`, `p74012`, `p74579`, `p75097`, `p75631`, `p76166`).
 
 ### Blockers for DONE
 - Physical iPhone diagnostics/acceptance/parity: BLOCKED by device/auth/store readiness (`p72498`, `p72994`).

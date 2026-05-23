@@ -966,6 +966,8 @@ mc_ios_test() {
         -only-testing:iOSMerchandiseControlTests/SyncCountReconciliationTests
         -only-testing:iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests
         -only-testing:iOSMerchandiseControlTests/SupabasePullApplyServiceTests
+        -only-testing:iOSMerchandiseControlTests/SupabaseProductPriceApplyServiceTests
+        -only-testing:iOSMerchandiseControlTests/HistorySessionSyncServiceTests
         -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests
         -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests
         -only-testing:iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests

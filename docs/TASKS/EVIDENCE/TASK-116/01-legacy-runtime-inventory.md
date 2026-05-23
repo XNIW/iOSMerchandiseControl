@@ -2,7 +2,9 @@
 
 Generated during S116-B preflight/inventory on 2026-05-23.
 
-## Static call graph findings
+## Initial S116-B static call graph findings (superseded)
+These findings describe the repository before the TASK-116 execution/fix sequence. The current post-fix classification is below and in the final-cleanup sections.
+
 - `ContentView.swift` constructs `SyncOrchestrator` with `SupabaseManualSyncCompatibilityAdapter(viewModel: SupabaseManualSyncReleaseFactory.makeViewModel(...))`.
 - `SyncOrchestrator.swift` uses `legacyAdapter` for automatic foreground execution and busy state.
 - `SupabaseManualSyncCompatibilityAdapter.swift` forwards automatic calls to `SupabaseManualSyncViewModel`.
@@ -56,3 +58,11 @@ Generated during S116-B preflight/inventory on 2026-05-23.
 | `HistorySessionSyncService` | retained domain helper | Kept as official history helper behind `HistoryIncrementalApplyService`; not a competing automatic runtime owner. |
 
 Final gate hardening: `scan no-legacy-runtime-path` fails if `SyncAutomaticRuntime.swift` references `SupabaseManualSync*Providing` or `SupabaseManualSyncRelease*Adapter` names.
+
+## Current review classification — 2026-05-23 15:54 -0400
+- Automatic runtime path verified: SwiftUI trigger -> `SyncOrchestrator` -> `SyncDecisionEngine` -> `SyncAutomaticRuntime` -> push/drain services -> `SyncEventIncrementalPullService` -> `SyncEventIncrementalDomainApplyService` -> Catalog/ProductPrice/History incremental services -> `WatermarkStore`.
+- Normal automatic runtime path does not call `SupabaseManualSyncViewModel`, `SupabaseManualSyncCompatibilityAdapter`, `SupabaseSyncEventIncrementalApplyService`, or `SupabaseManualSyncReleaseFactory`.
+- `SupabaseManualSyncViewModel` remains as manual/presentation facade for explicit manual UI only.
+- `SupabaseManualSyncCompatibilityAdapter` remains as root/manual presentation compatibility wrapper, not automatic owner.
+- `SupabaseSyncEventIncrementalApplyService` remains as legacy-named compatibility wrapper around the domain apply service.
+- `OptionsSyncSummaryProvider` remains observer/presenter-side; review fix adds fresh remote-count snapshot reuse and in-flight guarding so repeated local refreshes do not restart remote checks within the freshness window.

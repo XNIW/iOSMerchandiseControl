@@ -2,6 +2,17 @@ import Combine
 import Foundation
 import SwiftData
 
+nonisolated struct OptionsSyncAuthSnapshot: Equatable, Sendable {
+    var isSignedIn: Bool
+    var userID: UUID?
+}
+
+protocol OptionsSyncRemoteCountFetching: Sendable {
+    func fetchReconciliationRemoteCounts() async throws -> SyncInventoryCountSnapshot
+}
+
+extension SupabaseInventoryService: OptionsSyncRemoteCountFetching {}
+
 @MainActor
 final class OptionsSyncSummaryProvider: ObservableObject {
     @Published private(set) var supabaseBaselineSummary: SupabaseCatalogBaselineDebugSummary = .absent
@@ -13,9 +24,17 @@ final class OptionsSyncSummaryProvider: ObservableObject {
     @Published private(set) var localPendingAttentionCount = 0
 
     private static let freshRemoteCountVerificationInterval: TimeInterval = 60
+    private let now: () -> Date
     private var driftTask: Task<Void, Never>?
+    private var driftTaskID: UUID?
+    private var isRemoteCountVerificationInFlight = false
+    private var lastRemoteCountSnapshot: SyncInventoryCountSnapshot?
     private var isSignedIn = false
     private var currentUserID: UUID?
+
+    init(now: @escaping () -> Date = Date.init) {
+        self.now = now
+    }
 
     var hasSyncCountDrift: Bool {
         syncCountDriftReport?.isAligned == false
@@ -26,7 +45,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
         if syncCountDriftCheckFailed { return true }
         guard syncCountDriftReport != nil else { return true }
         guard let lastSyncCountDriftCheckedAt else { return true }
-        return Date().timeIntervalSince(lastSyncCountDriftCheckedAt) > Self.freshRemoteCountVerificationInterval
+        return now().timeIntervalSince(lastSyncCountDriftCheckedAt) > Self.freshRemoteCountVerificationInterval
     }
 
     func refreshAll(
@@ -35,11 +54,28 @@ final class OptionsSyncSummaryProvider: ObservableObject {
         inventoryService: SupabaseInventoryService?,
         pendingChanges: [LocalPendingChange]
     ) {
-        updateAuthSnapshot(authViewModel)
+        refreshAll(
+            context: context,
+            authSnapshot: OptionsSyncAuthSnapshot(
+                isSignedIn: authViewModel.isSignedIn,
+                userID: authViewModel.sessionInfo?.userID
+            ),
+            remoteCountFetcher: inventoryService,
+            pendingChanges: pendingChanges
+        )
+    }
+
+    func refreshAll(
+        context: ModelContext,
+        authSnapshot: OptionsSyncAuthSnapshot,
+        remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?,
+        pendingChanges: [LocalPendingChange]
+    ) {
+        updateAuthSnapshot(authSnapshot)
         refreshLocalDatabaseSummary(context: context)
         refreshSupabaseBaselineSummary(context: context)
         refreshLocalPendingAttentionCount(pendingChanges)
-        refreshSyncCountDriftIfNeeded(context: context, inventoryService: inventoryService)
+        refreshSyncCountDriftIfNeeded(context: context, remoteCountFetcher: remoteCountFetcher)
         refreshAccountSyncDecision()
     }
 
@@ -75,9 +111,14 @@ final class OptionsSyncSummaryProvider: ObservableObject {
         accountSyncDecision = nil
     }
 
-    private func updateAuthSnapshot(_ authViewModel: SupabaseAuthViewModel) {
-        isSignedIn = authViewModel.isSignedIn
-        currentUserID = authViewModel.sessionInfo?.userID
+    private func updateAuthSnapshot(_ authSnapshot: OptionsSyncAuthSnapshot) {
+        let previousUserID = currentUserID
+        isSignedIn = authSnapshot.isSignedIn
+        currentUserID = authSnapshot.userID
+
+        if previousUserID != currentUserID {
+            resetRemoteCountVerification(clearFailure: true)
+        }
     }
 
     private func refreshSupabaseBaselineSummary(context: ModelContext) {
@@ -112,44 +153,108 @@ final class OptionsSyncSummaryProvider: ObservableObject {
 
     private func refreshSyncCountDriftIfNeeded(
         context: ModelContext,
-        inventoryService: SupabaseInventoryService?
+        remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?
     ) {
         guard isSignedIn else {
-            driftTask?.cancel()
+            resetRemoteCountVerification(clearFailure: true)
             syncCountDriftReport = nil
-            syncCountDriftCheckFailed = false
-            lastSyncCountDriftCheckedAt = nil
             refreshAccountSyncDecision()
             return
         }
-        guard let service = inventoryService else {
-            driftTask?.cancel()
+        guard let service = remoteCountFetcher else {
+            resetRemoteCountVerification(clearFailure: false)
             syncCountDriftReport = nil
             syncCountDriftCheckFailed = true
-            lastSyncCountDriftCheckedAt = nil
             refreshAccountSyncDecision()
             return
         }
 
-        driftTask?.cancel()
+        if !needsRemoteCountVerification,
+           let lastRemoteCountSnapshot {
+            updateDriftReport(context: context, remote: lastRemoteCountSnapshot, checkedAt: lastSyncCountDriftCheckedAt)
+            return
+        }
+
+        guard !isRemoteCountVerificationInFlight else {
+            if let lastRemoteCountSnapshot {
+                updateDriftReport(context: context, remote: lastRemoteCountSnapshot, checkedAt: lastSyncCountDriftCheckedAt)
+            }
+            return
+        }
+
+        let requestedUserID = currentUserID
+        let taskID = UUID()
+        driftTaskID = taskID
+        isRemoteCountVerificationInFlight = true
         driftTask = Task { @MainActor [weak self] in
             do {
                 let remote = try await service.fetchReconciliationRemoteCounts()
                 try Task.checkCancellation()
                 let local = try LocalDatabasePublicSummary.makeReconciliationAware(context: context)
                 let report = SyncCountDriftReport.compare(local: local, remote: remote)
+                guard self?.driftTaskID == taskID,
+                      self?.currentUserID == requestedUserID else {
+                    return
+                }
+                self?.lastRemoteCountSnapshot = remote
                 self?.syncCountDriftReport = report
                 self?.syncCountDriftCheckFailed = false
-                self?.lastSyncCountDriftCheckedAt = Date()
+                self?.lastSyncCountDriftCheckedAt = self?.now()
+                self?.isRemoteCountVerificationInFlight = false
+                self?.driftTask = nil
+                self?.driftTaskID = nil
                 self?.refreshAccountSyncDecision()
             } catch is CancellationError {
+                if self?.driftTaskID == taskID {
+                    self?.isRemoteCountVerificationInFlight = false
+                    self?.driftTask = nil
+                    self?.driftTaskID = nil
+                }
                 return
             } catch {
+                guard self?.driftTaskID == taskID,
+                      self?.currentUserID == requestedUserID else {
+                    return
+                }
+                self?.lastRemoteCountSnapshot = nil
                 self?.syncCountDriftReport = nil
                 self?.syncCountDriftCheckFailed = true
-                self?.lastSyncCountDriftCheckedAt = Date()
+                self?.lastSyncCountDriftCheckedAt = self?.now()
+                self?.isRemoteCountVerificationInFlight = false
+                self?.driftTask = nil
+                self?.driftTaskID = nil
                 self?.refreshAccountSyncDecision()
             }
+        }
+    }
+
+    private func updateDriftReport(
+        context: ModelContext,
+        remote: SyncInventoryCountSnapshot,
+        checkedAt: Date?
+    ) {
+        do {
+            let local = try LocalDatabasePublicSummary.makeReconciliationAware(context: context)
+            syncCountDriftReport = SyncCountDriftReport.compare(local: local, remote: remote)
+            syncCountDriftCheckFailed = false
+            lastSyncCountDriftCheckedAt = checkedAt
+        } catch {
+            syncCountDriftReport = nil
+            syncCountDriftCheckFailed = true
+            lastSyncCountDriftCheckedAt = now()
+        }
+        refreshAccountSyncDecision()
+    }
+
+    private func resetRemoteCountVerification(clearFailure: Bool) {
+        driftTask?.cancel()
+        driftTask = nil
+        driftTaskID = nil
+        isRemoteCountVerificationInFlight = false
+        lastRemoteCountSnapshot = nil
+        lastSyncCountDriftCheckedAt = nil
+        if clearFailure {
+            syncCountDriftCheckFailed = false
         }
     }
 

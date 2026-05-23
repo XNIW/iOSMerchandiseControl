@@ -28,6 +28,9 @@ The automatic runtime boundary now uses `Sync*Providing` protocols and `Sync*` D
 - Severe-fix Debug/Release build PASS: `agent-runs/20260523T183154Z-ios-build-debug-task-TASK-116-p90096.md`, `agent-runs/20260523T183216Z-ios-build-release-task-TASK-116-p90756.md`
 - Final cleanup Debug/Release build PASS: `agent-runs/20260523T191436Z-ios-build-debug-task-TASK-116-p32264.md`, `agent-runs/20260523T191450Z-ios-build-release-task-TASK-116-p32902.md`
 - Final cleanup iOS sync tests PASS: `agent-runs/20260523T191617Z-ios-test-sync-task-TASK-116-p33680.md`
+- Review rerun iOS sync tests PASS with canonical suite widened to existing ProductPrice apply and HistorySession tests: `agent-runs/20260523T194020Z-ios-test-sync-task-TASK-116-p53802.md`
 
 ## Reviewer note
 The severe review found the previous file split insufficient. This FIX addressed that gap by adding physical Catalog/ProductPrice/History services and by hardening the architecture gate so a future DTO-only split cannot pass as domain-service completion. TASK-116 still must not be marked DONE until live/device/account blockers pass or are explicitly accepted by the user as external.
+
+Review rerun note: `ProductPriceIncrementalApplyService` still reports `missingRemotePruned`; this is treated as targeted remote-missing cleanup for requested ids, not a normal foreground full pull or main-thread full ProductPrice scan. It remains a review note, not DONE evidence for live/account/device criteria.

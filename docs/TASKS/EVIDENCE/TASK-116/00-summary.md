@@ -5,7 +5,7 @@
 - **Phase**: ACTIVE / REVIEW
 - **Responsible**: CLAUDE / Reviewer
 - **Execution start**: 2026-05-23 12:09 -0400
-- **Latest severe review/fix**: 2026-05-23 15:08 -0400
+- **Latest severe review/fix**: 2026-05-23 15:54 -0400
 - **Target for this run**: ACTIVE / REVIEW, not DONE.
 
 ## User override
@@ -82,6 +82,18 @@ The user explicitly approved TASK-116 execution end-to-end and instructed Codex 
 - Physical iPhone diagnostics/acceptance/parity are BLOCKED by device/auth/store readiness; latest acceptance retry remains BLOCKED.
 - Account matrix A-L strict-live is BLOCKED by live fixture/device/sign-in availability; latest retry remains BLOCKED.
 - Domain apply logic is automatic-path legacy-free and now physically split into dispatcher + Catalog/ProductPrice/History service files. DONE still requires live/device/account blockers to pass or explicit user acceptance.
+
+## User-requested severe review rerun — 2026-05-23 15:54 -0400
+- Git/GitHub verification before local review fixes: branch `main`, `HEAD=98920f8ff4064867181e71c1c6e78993fe46c7f4`, `origin/main=98920f8ff4064867181e71c1c6e78993fe46c7f4`, `git ls-remote origin main=98920f8ff4064867181e71c1c6e78993fe46c7f4`, `origin/main..HEAD` empty. No `BRANCH_OR_REMOTE_MISMATCH` at review start.
+- Direct review fix: `OptionsSyncSummaryProvider` now reuses a fresh remote count snapshot for 60s, keeps an in-flight guard, and invalidates the cached remote snapshot on account changes. This keeps Options observer-only under repeated local refreshes and avoids repeated remote count fetch cancellation/restart loops.
+- Test/harness fix: `OptionsLocalDatabaseSummaryTests` now covers cached remote-count reuse with local recompute, and canonical `ios test sync` now includes existing `SupabaseProductPriceApplyServiceTests` and `HistorySessionSyncServiceTests`.
+- Review rerun iOS Debug/Release build PASS: `agent-runs/20260523T194331Z-ios-build-debug-task-TASK-116-p54844.md`, `agent-runs/20260523T194338Z-ios-build-release-task-TASK-116-p55368.md`.
+- Review rerun iOS sync tests PASS: `agent-runs/20260523T194020Z-ios-test-sync-task-TASK-116-p53802.md`. Earlier rerun `p52792` failed on test actor assertion syntax introduced during review and was fixed before this PASS.
+- Review rerun critical architecture gates PASS: `agent-runs/20260523T194510Z-scan-no-legacy-runtime-path-task-TASK-116-p56199.md`, `agent-runs/20260523T194510Z-live-no-legacy-runtime-path-task-TASK-116-p56201.md`, `agent-runs/20260523T194516Z-live-no-full-pull-normal-path-task-TASK-116-p57695.md`.
+- Review rerun Options/performance budget PASS: `agent-runs/20260523T194521Z-live-sync-performance-budget-task-TASK-116-prefix-TASK116_PERF_-p58179.md`.
+- Review rerun Supabase status/RLS/grants PASS: `agent-runs/20260523T194537Z-supabase-status-redacted-task-TASK-116-p58880.md`, `agent-runs/20260523T194541Z-supabase-verify-rls-task-TASK-116-profile-linked-p59316.md`, `agent-runs/20260523T194550Z-supabase-verify-grants-task-TASK-116-profile-linked-p59833.md`.
+- Review rerun live gates remain BLOCKED, not PASS: runtime parity `p60350`, near-realtime `p62188`, offline reconnect `p62658`, physical diagnostics `p63133`, physical sync acceptance `p63640`, account matrix `p64142`.
+- Review cleanup/residue scoped prefixes PASS/0 after dry-run + execute + residue-check: `TASK116_REALTIME_` `p73466`, `TASK116_OFFLINE_` `p74012`, `TASK116_ACCOUNT_` `p74579`, `TASK116_PERF_` `p75097`, `TASK116_PHYSICAL_` `p75631`, `TASK116_RUNTIME_` `p76166`.
 
 ## Safety notes
 - No push to remote.
