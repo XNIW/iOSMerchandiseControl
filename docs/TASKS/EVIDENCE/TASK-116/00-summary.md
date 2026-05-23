@@ -5,6 +5,7 @@
 - **Phase**: ACTIVE / REVIEW
 - **Responsible**: CLAUDE / Reviewer
 - **Execution start**: 2026-05-23 12:09 -0400
+- **Latest severe review/fix**: 2026-05-23 14:34 -0400
 - **Target for this run**: ACTIVE / REVIEW, not DONE.
 
 ## User override
@@ -40,11 +41,28 @@ The user explicitly approved TASK-116 execution end-to-end and instructed Codex 
 - Supabase RLS/grants PASS: `agent-runs/20260523T163743Z-supabase-verify-rls-task-TASK-116-profile-linked-p39559.md`, `agent-runs/20260523T163753Z-supabase-verify-grants-task-TASK-116-profile-linked-p40080.md`
 - Cleanup/residue PASS/0 for `TASK116_REALTIME_`, `TASK116_OFFLINE_`, `TASK116_ACCOUNT_`, `TASK116_PERF_`, `TASK116_PHYSICAL_`, `TASK116_RUNTIME_`.
 
+## Severe review/fix update
+- GitHub/main verification commands were rerun after `git fetch --prune`: local branch `main`, `HEAD=e0a540f6871be474a7f8266f5e5d60f4ca1b7e6f`, `origin/main=e0a540f6871be474a7f8266f5e5d60f4ca1b7e6f`, `git ls-remote origin main=e0a540f6871be474a7f8266f5e5d60f4ca1b7e6f`, and `origin/main..HEAD` was empty.
+- `SyncEventIncrementalDomainApplyService.swift` now exists under `iOSMerchandiseControl/Sync/Incremental/`.
+- Concrete physical domain services now exist: `CatalogIncrementalApplyService.swift`, `ProductPriceIncrementalApplyService.swift`, `HistoryIncrementalApplyService.swift`.
+- Shared incremental apply helpers now live under `Sync/Incremental/SyncEventIncrementalApplyHelpers.swift`; `SupabaseSyncEventIncrementalApplyService.swift` is now protocol/summary/compat wrapper only.
+- `SyncEventIncrementalPullService` still dispatches to `SyncEventIncrementalDomainApplyService` and does not construct `SupabaseSyncEventIncrementalApplyService`.
+- Hardened static gate now fails if the physical domain service files are missing or if the dispatcher does not reference those services.
+- Severe-fix static no-legacy-runtime-path PASS: `agent-runs/20260523T183127Z-scan-no-legacy-runtime-path-task-TASK-116-p89574.md`.
+- Severe-fix live no-legacy-runtime-path PASS: `agent-runs/20260523T183411Z-live-no-legacy-runtime-path-task-TASK-116-p92254.md`.
+- Severe-fix live no-full-pull-normal-path PASS: `agent-runs/20260523T183412Z-live-no-full-pull-normal-path-task-TASK-116-p92253.md`.
+- Severe-fix iOS Debug/Release build PASS: `agent-runs/20260523T183154Z-ios-build-debug-task-TASK-116-p90096.md`, `agent-runs/20260523T183216Z-ios-build-release-task-TASK-116-p90756.md`.
+- Severe-fix iOS sync tests PASS: `agent-runs/20260523T183345Z-ios-test-sync-task-TASK-116-p91525.md`.
+- Severe-fix sensitive/evidence scans PASS: `agent-runs/20260523T182750Z-scan-sensitive-task-TASK-116-p75575.md`, `agent-runs/20260523T182750Z-scan-evidence-task-TASK-116-p75576.md`.
+- Live near-realtime/offline remain BLOCKED by Android serial readiness: `p71553`, `p72022`.
+- Physical iPhone diagnostics/acceptance remain BLOCKED by device/auth/store readiness: `p72498`, `p72994`.
+- Account matrix strict-live remains BLOCKED by fixture/device readiness: `p73594`.
+
 ## Review blockers carried forward
 - Android physical serial `8ac48ff0` was not available to the live harness during final live gates; Android auth, near-realtime, offline reconnect and runtime parity are BLOCKED, not PASS.
 - Physical iPhone diagnostics/acceptance/parity are BLOCKED by device/auth/store readiness.
 - Account matrix A-L strict-live is BLOCKED by live fixture/device availability.
-- Domain apply logic is automatic-path legacy-free, but reviewer may request a deeper physical file split into separate Catalog/ProductPrice/History service files before DONE.
+- Domain apply logic is automatic-path legacy-free and now physically split into dispatcher + Catalog/ProductPrice/History service files. DONE still requires live/device/account blockers to pass or explicit user acceptance.
 
 ## Safety notes
 - No push to remote.

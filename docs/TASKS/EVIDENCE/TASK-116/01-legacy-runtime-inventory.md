@@ -34,3 +34,11 @@ Generated during S116-B preflight/inventory on 2026-05-23.
 - `SyncEventIncrementalPullService` remains pass-through to `SupabaseSyncEventIncrementalApplyService`.
 - Any foreground/timer/realtime/local mutation path calls `FULL_PULL`.
 - Options or ContentView makes sync decisions or remote fetches as source of truth.
+
+## Severe review/fix delta — 2026-05-23 14:28 -0400
+- `HEAD` and `origin/main` were verified equal at `e0a540f6871be474a7f8266f5e5d60f4ca1b7e6f` before this FIX.
+- `SyncOrchestrator.submitForegroundTrigger` schedules `automaticRuntime.run(action:source:)`; forbidden `legacyAdapter.startForegroundIncrementalCheckNow` / `legacyAdapter.startForegroundSemiAutomaticCheckIfAllowed` are absent.
+- `SyncAutomaticRuntime.swift` does not reference `SupabaseManualSyncViewModel`, `SupabaseManualSyncCompatibilityAdapter`, `SupabaseSyncEventIncrementalApplyService` or `SupabaseManualSyncReleaseFactory`.
+- `SyncEventIncrementalPullService.swift` constructs `SyncEventIncrementalDomainApplyService`, not `SupabaseSyncEventIncrementalApplyService`.
+- `SyncEventIncrementalDomainApplyService.swift` now exists under `Sync/Incremental` and dispatches to physical `CatalogIncrementalApplyService`, `ProductPriceIncrementalApplyService`, `HistoryIncrementalApplyService`.
+- Hardened gate `scan no-legacy-runtime-path` now fails if the physical domain service files are missing or the dispatcher does not reference them.

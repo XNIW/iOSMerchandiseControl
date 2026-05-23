@@ -3,7 +3,11 @@
 ## Implemented
 - `SyncAutomaticRuntime` owns automatic execution for push/drain/light reconcile decisions.
 - `SyncEventIncrementalPullService` owns the incremental pull provider boundary and no longer passes through the legacy `SupabaseSyncEventIncrementalApplyService`.
-- `SyncEventIncrementalDomainApplyService` owns event fetch/apply/watermark behavior previously hidden behind the legacy service name.
+- `SyncEventIncrementalDomainApplyService` now lives in `iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalDomainApplyService.swift` and owns event fetch/dispatch/watermark behavior previously hidden behind the legacy service name.
+- `CatalogIncrementalApplyService` now lives in `iOSMerchandiseControl/Sync/Incremental/CatalogIncrementalApplyService.swift` and owns targeted Product/Supplier/Category apply plus missing remote tombstone handling.
+- `ProductPriceIncrementalApplyService` now lives in `iOSMerchandiseControl/Sync/Incremental/ProductPriceIncrementalApplyService.swift` and owns targeted price fetch/apply, append/link/idempotent behavior and missing remote prune.
+- `HistoryIncrementalApplyService` now lives in `iOSMerchandiseControl/Sync/Incremental/HistoryIncrementalApplyService.swift` and owns targeted history/session fetch/apply plus missing remote tombstone handling.
+- `SyncEventIncrementalApplyHelpers` now lives in `iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalApplyHelpers.swift`; the legacy-named file no longer hides Product/Supplier/Category/Price/History helper implementation.
 - `SupabaseSyncEventIncrementalApplyService` remains as compatibility wrapper for manual/test legacy callers.
 
 ## Domain behavior retained
@@ -13,9 +17,9 @@
 - `WatermarkStore` is still account/store-bound and saves only after the domain apply sequence completes.
 
 ## Tests/gates
-- iOS sync tests PASS after refactor: `agent-runs/20260523T162955Z-ios-test-sync-task-TASK-116-p21120.md`
-- Debug build PASS: `agent-runs/20260523T162939Z-ios-build-debug-task-TASK-116-p20511.md`
-- Release build PASS: `agent-runs/20260523T163013Z-ios-build-release-task-TASK-116-p21745.md`
+- Severe-fix no-legacy-runtime-path PASS with physical service checks: `agent-runs/20260523T183127Z-scan-no-legacy-runtime-path-task-TASK-116-p89574.md`
+- Severe-fix iOS sync tests PASS after physical split: `agent-runs/20260523T183345Z-ios-test-sync-task-TASK-116-p91525.md`
+- Severe-fix Debug/Release build PASS: `agent-runs/20260523T183154Z-ios-build-debug-task-TASK-116-p90096.md`, `agent-runs/20260523T183216Z-ios-build-release-task-TASK-116-p90756.md`
 
 ## Reviewer note
-The large apply implementation is now under the new operational type `SyncEventIncrementalDomainApplyService`, but full file-level decomposition into separate Catalog/ProductPrice/History files is intentionally left as review-visible residual cleanup before DONE. The automatic runtime is legacy-free by gate; TASK-116 must not be marked DONE until reviewer accepts or requests deeper physical file split.
+The severe review found the previous file split insufficient. This FIX addressed that gap by adding physical Catalog/ProductPrice/History services and by hardening the architecture gate so a future DTO-only split cannot pass as domain-service completion. TASK-116 still must not be marked DONE until live/device/account blockers pass or are explicitly accepted by the user as external.

@@ -8,7 +8,7 @@
 - **Fase attuale**: REVIEW
 - **Responsabile attuale**: CLAUDE / Reviewer
 - **Data creazione**: 2026-05-23
-- **Ultimo aggiornamento**: 2026-05-23 12:37 -0400
+- **Ultimo aggiornamento**: 2026-05-23 14:34 -0400
 - **Ultimo agente che ha operato**: CODEX
 - **Readiness**: READY_FOR_REVIEW; not DONE.
 
@@ -294,10 +294,12 @@ Rule: test first, substitute, then remove/deprecate; no premature delete.
 ## Execution log
 - 2026-05-23 12:09 -0400 CODEX: S116-A created because TASK-116 files were absent; user override promoted task directly to `ACTIVE / EXECUTION`. Runtime implementation pending.
 - 2026-05-23 12:37 -0400 CODEX: automatic runtime path moved off VM/compatibility adapter; harness gates added; build/test/scans/live-readonly evidence collected; task moved to `ACTIVE / REVIEW`, not DONE.
+- 2026-05-23 14:28 -0400 CODEX: severe review/fix on `origin/main` `e0a540f`. Confirmed MASTER/TASK tracking, split `SyncEventIncrementalDomainApplyService.swift` into `Sync/Incremental`, added concrete `CatalogIncrementalApplyService`, `ProductPriceIncrementalApplyService`, `HistoryIncrementalApplyService`, hardened `scan no-legacy-runtime-path` to fail on missing physical domain services/dispatcher references, reran iOS builds/tests and critical architecture gates. Task remains `ACTIVE / REVIEW`, not DONE.
+- 2026-05-23 14:34 -0400 CODEX: moved shared incremental apply helpers from legacy-named `SupabaseSyncEventIncrementalApplyService.swift` into `Sync/Incremental/SyncEventIncrementalApplyHelpers.swift`; legacy file is now summary/protocol/compat wrapper only. Reran Debug/Release builds, sync tests and static/live architecture gates PASS.
 
 ## Handoff post-execution
 ### Summary
-TASK-116 execution is complete enough for review. `SyncOrchestrator` now executes automatic push/drain/light-reconcile through `SyncAutomaticRuntime`, not through `SupabaseManualSyncCompatibilityAdapter` or `SupabaseManualSyncViewModel`. `SyncEventIncrementalPullService` no longer constructs `SupabaseSyncEventIncrementalApplyService`; the old type remains as compatibility wrapper around `SyncEventIncrementalDomainApplyService`.
+TASK-116 execution plus severe review/fix is complete enough for review. `SyncOrchestrator` now executes automatic push/drain/light-reconcile through `SyncAutomaticRuntime`, not through `SupabaseManualSyncCompatibilityAdapter` or `SupabaseManualSyncViewModel`. `SyncEventIncrementalPullService` no longer constructs `SupabaseSyncEventIncrementalApplyService`; the old type remains as compatibility wrapper around `SyncEventIncrementalDomainApplyService`. The domain dispatcher now lives physically under `Sync/Incremental` and calls concrete Catalog/ProductPrice/History apply services.
 
 ### Key files changed
 - `iOSMerchandiseControl/Sync/SyncOrchestrator.swift`
@@ -305,22 +307,29 @@ TASK-116 execution is complete enough for review. `SyncOrchestrator` now execute
 - `iOSMerchandiseControl/ContentView.swift`
 - `iOSMerchandiseControl/Sync/SupabaseManualSyncCompatibilityAdapter.swift`
 - `iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalPullService.swift`
+- `iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalDomainApplyService.swift`
+- `iOSMerchandiseControl/Sync/Incremental/CatalogIncrementalApplyService.swift`
+- `iOSMerchandiseControl/Sync/Incremental/ProductPriceIncrementalApplyService.swift`
+- `iOSMerchandiseControl/Sync/Incremental/HistoryIncrementalApplyService.swift`
+- `iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalApplyHelpers.swift`
 - `iOSMerchandiseControl/SupabaseSyncEventIncrementalApplyService.swift`
 - `tools/agent/*`
 
 ### Checks
-- `scan no-legacy-runtime-path`: PASS.
-- `live no-legacy-runtime-path`: PASS.
-- `live no-full-pull-normal-path`: PASS.
-- iOS debug/release build: PASS.
-- iOS sync tests: PASS.
+- `scan no-legacy-runtime-path`: PASS after hardened physical service checks (`agent-runs/20260523T183127Z-scan-no-legacy-runtime-path-task-TASK-116-p89574.md`).
+- `live no-legacy-runtime-path`: PASS (`agent-runs/20260523T183411Z-live-no-legacy-runtime-path-task-TASK-116-p92254.md`).
+- `live no-full-pull-normal-path`: PASS (`agent-runs/20260523T183412Z-live-no-full-pull-normal-path-task-TASK-116-p92253.md`).
+- iOS debug/release build: PASS (`agent-runs/20260523T183154Z-ios-build-debug-task-TASK-116-p90096.md`, `agent-runs/20260523T183216Z-ios-build-release-task-TASK-116-p90756.md`).
+- iOS sync tests: PASS (`agent-runs/20260523T183345Z-ios-test-sync-task-TASK-116-p91525.md`).
+- Harness syntax after scan hardening: PASS (`bash -n tools/agent/mc-agent.sh && bash -n tools/agent/lib/*.sh`).
+- Sensitive/evidence scans: PASS (`agent-runs/20260523T182750Z-scan-sensitive-task-TASK-116-p75575.md`, `agent-runs/20260523T182750Z-scan-evidence-task-TASK-116-p75576.md`).
 - Android build/test/lint: PASS.
 - Performance budget: PASS after stale attempt-window fix.
 - Supabase RLS/grants: PASS.
 - Cleanup/residue `TASK116_*`: PASS/0.
 
 ### Blockers for DONE
-- Physical iPhone acceptance/parity: BLOCKED by device/auth/store readiness.
-- Android physical live gates: BLOCKED because serial `8ac48ff0` was unavailable to the harness.
-- Account matrix A-L strict-live: BLOCKED by live fixture/device availability.
-- Reviewer decision needed on whether the current `SyncEventIncrementalDomainApplyService` split is enough for REVIEW or requires a FIX to split Catalog/ProductPrice/History into separate physical files before DONE.
+- Physical iPhone diagnostics/acceptance/parity: BLOCKED by device/auth/store readiness (`p72498`, `p72994`).
+- Android physical live gates: BLOCKED because serial `8ac48ff0` was unavailable to the harness (`p71553`, `p72022`).
+- Account matrix A-L strict-live: BLOCKED by live fixture/device availability (`p73594`).
+- Domain services now have physical files and are enforced by the hardened no-legacy scanner; DONE still requires live/device/account acceptance or explicit user acceptance of external blockers.

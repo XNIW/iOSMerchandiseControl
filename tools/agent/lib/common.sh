@@ -1016,17 +1016,31 @@ def add(check_id, status, file, reason, evidence):
     })
 
 orchestrator = read("iOSMerchandiseControl/Sync/SyncOrchestrator.swift")
+automatic_runtime = read("iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift")
 content = read("iOSMerchandiseControl/ContentView.swift")
 pull = read("iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalPullService.swift")
+domain = read("iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalDomainApplyService.swift")
 options = read("iOSMerchandiseControl/OptionsView.swift")
+domain_service_files = {
+    "catalog": "iOSMerchandiseControl/Sync/Incremental/CatalogIncrementalApplyService.swift",
+    "product_prices": "iOSMerchandiseControl/Sync/Incremental/ProductPriceIncrementalApplyService.swift",
+    "history": "iOSMerchandiseControl/Sync/Incremental/HistoryIncrementalApplyService.swift",
+}
 
 patterns = [
     (
         "automatic_legacy_adapter_call",
         "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
         orchestrator,
-        r"legacyAdapter\.startForeground(?:IncrementalCheckNow|SemiAutomaticCheckIfAllowed)",
+        r"(?:legacyAdapter|manualAdapter)\.startForeground(?:IncrementalCheckNow|SemiAutomaticCheckIfAllowed)|via_legacy_incremental_adapter",
         "automatic foreground sync calls compatibility adapter",
+    ),
+    (
+        "automatic_runtime_legacy_facade_reference",
+        "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        automatic_runtime,
+        r"SupabaseManualSyncViewModel|SupabaseManualSyncCompatibilityAdapter|SupabaseSyncEventIncrementalApplyService|SupabaseManualSyncReleaseFactory",
+        "automatic runtime must not reference legacy VM, compatibility adapter, legacy incremental apply, or legacy release factory",
     ),
     (
         "automatic_runtime_missing",
@@ -1061,6 +1075,53 @@ for check_id, file, text, pattern, reason in patterns:
         add(check_id, "PASS" if hits else "FAIL", file, reason, hits)
     else:
         add(check_id, "FAIL" if hits else "PASS", file, reason, hits)
+
+submit_body = ""
+submit_match = re.search(r"func\s+submitForegroundTrigger[\s\S]*?\n    func\s+cancelForegroundCheck", orchestrator)
+if submit_match:
+    submit_body = submit_match.group(0)
+submit_manual_hits = []
+for match in re.finditer(r"manualAdapter\.|legacyAdapter\.|legacyManualSyncViewModel", submit_body):
+    line = orchestrator.count("\n", 0, submit_match.start() + match.start()) + 1 if submit_match else 0
+    submit_manual_hits.append({
+        "line": line,
+        "snippet": orchestrator.splitlines()[line - 1].strip() if line else match.group(0),
+    })
+add(
+    "submit_foreground_manual_facade_reference",
+    "FAIL" if submit_manual_hits else "PASS",
+    "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+    "submitForegroundTrigger must schedule SyncAutomaticRuntime without manual facade calls",
+    submit_manual_hits,
+)
+
+missing_domain_files = []
+for domain_name, rel in domain_service_files.items():
+    if not (repo / rel).exists():
+        missing_domain_files.append({"line": 0, "snippet": f"missing {rel}"})
+add(
+    "domain_service_files_present",
+    "FAIL" if missing_domain_files else "PASS",
+    "iOSMerchandiseControl/Sync/Incremental",
+    "Catalog/ProductPrice/History domain service files must be physical services, not DTO-only summaries",
+    missing_domain_files,
+)
+
+domain_dispatch_hits = []
+for service_name in [
+    "CatalogIncrementalApplyService",
+    "ProductPriceIncrementalApplyService",
+    "HistoryIncrementalApplyService",
+]:
+    if service_name not in domain:
+        domain_dispatch_hits.append({"line": 0, "snippet": f"missing dispatcher reference to {service_name}"})
+add(
+    "domain_dispatcher_uses_real_services",
+    "FAIL" if domain_dispatch_hits else "PASS",
+    "iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalDomainApplyService.swift",
+    "SyncEventIncrementalDomainApplyService must dispatch to concrete domain services",
+    domain_dispatch_hits,
+)
 
 duplicate_owner_hits = []
 if "startSyncEventSafetyLoopIfNeeded" in orchestrator and "manualAdapter.presentationState.isRunning" in orchestrator:
