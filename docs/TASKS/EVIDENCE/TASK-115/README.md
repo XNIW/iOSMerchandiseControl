@@ -7,8 +7,9 @@ Evidence folder for TASK-115 iOS Sync Architecture Refactor.
 - **Phase**: REVIEW
 - **Scope**: iOS Sync Architecture Refactor, slice-based.
 - **Runtime execution**: approved by user override on 2026-05-22 22:18 -0400.
-- **Live/build/test gates**: non-live gates PASS; live/physical gates are recorded under `agent-runs/` with PASS/BLOCKED semantics.
+- **Live/build/test gates**: non-live gates PASS; live/physical gates are summarized in `00-summary.md` with PASS/BLOCKED semantics.
 - **DONE status**: not DONE; physical iPhone, runtime parity, near-realtime, offline reconnect and strict live account matrix still need PASS.
+- **Raw run logs**: previous `agent-runs/` transcripts were archived outside the repository at `/Users/minxiang/Desktop/TASK-115-agent-runs-archive-20260523/agent-runs/` to keep TASK-115 evidence commit size under control.
 
 ## Planned evidence files
 - `00-summary.md` — planning summary, status ledger, and final review verdict.

@@ -7,9 +7,13 @@
 - **Execution start**: 2026-05-22 22:18 -0400
 - **Execution handoff**: 2026-05-22 23:08 -0400
 - **Review continuation**: 2026-05-23 01:24 -0400
+- **Architectural review/fix continuation**: 2026-05-23 02:04 -0400
 
 ## Execution override
 The user explicitly approved TASK-115 execution end-to-end and instructed Codex to promote TASK-115 from `ACTIVE / PLANNING` to `ACTIVE / EXECUTION`.
+
+## Evidence hygiene note
+Raw `agent-runs/` transcripts were removed from git tracking during the 2026-05-23 architectural review/fix because they accounted for hundreds of files and roughly 41 MB of local evidence noise. The archived raw files are available locally at `/Users/minxiang/Desktop/TASK-115-agent-runs-archive-20260523/agent-runs/`; the repo retains this summary and the evidence index as the canonical lightweight evidence ledger. Future generated `docs/TASKS/EVIDENCE/TASK-115/agent-runs/` files are ignored by `.gitignore`.
 
 ## Initial repo state
 - iOS repo: `/Users/minxiang/Desktop/iOSMerchandiseControl`, branch `main`, dirty with S115-A markdown changes.
@@ -51,6 +55,8 @@ The user explicitly approved TASK-115 execution end-to-end and instructed Codex 
 - Sensitive/evidence scans PASS: `agent-runs/20260523T030758Z-scan-sensitive-task-TASK-115-p36423.md`, `agent-runs/20260523T030758Z-scan-evidence-task-TASK-115-p36455.md`
 - Sensitive/evidence scans PASS after review continuation: `agent-runs/20260523T033432Z-scan-sensitive-task-TASK-115-p70838.md`, `agent-runs/20260523T033432Z-scan-evidence-task-TASK-115-p70837.md`; follow-up evidence scan PASS after markdown updates: `agent-runs/20260523T033456Z-scan-evidence-task-TASK-115-p77012.md`.
 - Latest sensitive/evidence scans PASS after tracking updates: `agent-runs/20260523T052602Z-scan-sensitive-task-TASK-115-p13012.md`, `agent-runs/20260523T052602Z-scan-evidence-task-TASK-115-p13013.md`; latest report `p23861`.
+- Architectural review/fix Swift gates PASS: debug `agent-runs/20260523T060153Z-ios-build-debug-task-TASK-115-p43123.md`, release `agent-runs/20260523T060210Z-ios-build-release-task-TASK-115-p43862.md`, sync tests `agent-runs/20260523T060346Z-ios-test-sync-task-TASK-115-p44679.md` (raw files archived outside git as noted above).
+- Post-cleanup scans PASS: evidence `agent-runs/20260523T060516Z-scan-evidence-task-TASK-115-p45767.md`, sensitive `agent-runs/20260523T060521Z-scan-sensitive-task-TASK-115-p46209.md` (new raw files ignored by `.gitignore`).
 
 ## Blockers
 - Physical iPhone diagnostics/acceptance remains BLOCKED by physical device/auth/store readiness.

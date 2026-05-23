@@ -55,6 +55,7 @@ struct iOSMerchandiseControlApp: App {
 
     private static var isRunningHostedXCTest: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            && ProcessInfo.processInfo.environment["TASK115_REAL_ROOT_LIFECYCLE_TEST"] != "1"
     }
 
     private static func makeHostedXCTestDependencies() -> SupabaseAppDependencies {

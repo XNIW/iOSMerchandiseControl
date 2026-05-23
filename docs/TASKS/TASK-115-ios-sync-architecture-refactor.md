@@ -8,7 +8,7 @@
 - **Fase attuale**: REVIEW
 - **Responsabile attuale**: CLAUDE / Reviewer
 - **Data creazione**: 2026-05-22
-- **Ultimo aggiornamento**: 2026-05-23 01:24 -0400
+- **Ultimo aggiornamento**: 2026-05-23 02:05 -0400
 - **Ultimo agente che ha operato**: CODEX
 
 ## Dipendenze e relazione con TASK-114
@@ -329,6 +329,73 @@ TASK-115 may be DONE only in future execution when:
 ```text
 Review TASK-115 planning only. Verify all required sections, harness strategy, account policy A-L, CA/test matrix, safety gates and execution slices are complete. Do not start runtime execution. Return READY_FOR_PLANNING_REVIEW or CHANGES_REQUIRED.
 ```
+
+## Fix continuation (Codex) — 2026-05-23 02:05 -0400
+
+### Obiettivo compreso
+Eseguire una review/fix architetturale mirata su TASK-115, per verificare se il refactor e' strutturale o solo un layer sopra `SupabaseManualSyncViewModel`. Questo e' un override utente esplicito rispetto alla fase `ACTIVE / REVIEW`: Codex ha operato solo per audit/fix mirato e restituisce il task a review. TASK-115 resta `ACTIVE / REVIEW`, non `DONE`.
+
+### File controllati
+- GitHub/main e repo locale risultano allineati: `HEAD == origin/main == 73b83ba`.
+- Controllati: `iOSMerchandiseControl/Sync/SyncOrchestrator.swift`, `ContentView.swift`, `iOSMerchandiseControlApp.swift`, `OptionsView.swift`, `Sync/Incremental/*`, `Sync/Outbox/*`, `Sync/Presentation/*`, `SupabaseManualSyncViewModel.swift`, `SupabaseSyncEventIncrementalApplyService.swift`, `iOSMerchandiseControlTests/AccountSyncPolicyTests.swift`, questo task file, `docs/TASKS/EVIDENCE/TASK-115/00-summary.md`.
+
+### Piano minimo
+1. Rendere esplicito il compatibility layer se il vecchio VM resta necessario.
+2. Far passare il core decisionale da `SyncDecisionEngine` / `SyncStateStore` e metricare il safety loop.
+3. Rendere `OptionsView` observer-only spostando fetch/refresh in provider.
+4. Non presentare DTO summary vuoti come servizi incremental reali.
+5. Verificare owner-bound outbox/pending e aggiungere copertura anti leakage.
+6. Limitare il workaround XCTest root ai test puri e aggiungere un test root reale con dipendenze fake.
+7. Ridurre evidence rumorosa e rieseguire scan.
+
+### Modifiche fatte
+- `SyncOrchestrator` ora usa `SupabaseManualSyncCompatibilityAdapter` come adapter esplicito verso il vecchio VM, registra decisioni in `SyncStateStore`, invoca `SyncDecisionEngine`, blocca `fullRecovery` nei normali trigger foreground, e mantiene il safety loop come incremental-only metricato/single-flight.
+- `OptionsView` non contiene piu' direttamente `refreshLocalDatabaseSummary`, `refreshSupabaseBaselineSummary`, `refreshSyncCountDriftIfNeeded` o `refreshAccountSyncDecision`; questi refresh sono stati spostati in `OptionsSyncSummaryProvider`.
+- Gli ex `CatalogIncrementalApplyService`, `ProductPriceIncrementalApplyService`, `HistoryIncrementalApplyService` vuoti sono stati rimossi e sostituiti da summary DTO (`*ApplySummary`), cosi' non vengono piu' presentati come apply services reali.
+- `SyncEventIncrementalPullService` resta compatibility/pass-through, ma ora ha factory iniettata verso `SupabaseSyncEventIncrementalApplyService` e documenta il limite.
+- `LocalOutboxStore` documenta il limite di facade legacy owner-bound; aggiunto test per verificare che il coalescing non mischi owner diversi con la stessa logical key.
+- `HostedXCTestRootView` resta neutro solo per unit test puri; aggiunto `TASK115_REAL_ROOT_LIFECYCLE_TEST=1` e un test lifecycle/root reale con dipendenze Supabase fake/nil.
+- Evidence cleanup: `docs/TASKS/EVIDENCE/TASK-115/agent-runs/` aveva 485 file tracciati e circa 41 MB locali. I raw run sono stati archiviati fuori repo in `/Users/minxiang/Desktop/TASK-115-agent-runs-archive-20260523/agent-runs/`; il repo mantiene `00-summary.md`/`README.md` e ignora futuri raw runs.
+
+### File legacy / adapter ancora reali
+- `iOSMerchandiseControl/SupabaseManualSyncViewModel.swift`: resta workhorse legacy per manual/foreground sync.
+- `iOSMerchandiseControl/Sync/SupabaseManualSyncCompatibilityAdapter.swift`: adapter esplicito verso il VM legacy.
+- `iOSMerchandiseControl/SupabaseSyncEventIncrementalApplyService.swift`: resta owner legacy dell'apply incrementale reale.
+- `iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalPullService.swift`: compatibility boundary/pass-through documentato verso il legacy apply service.
+- `iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift`: composition root che costruisce ancora il VM legacy.
+- `iOSMerchandiseControl/SupabasePullApplyService.swift`, `SupabaseProductPriceApplyService.swift`, `HistorySessionSyncService`: servizi domain legacy ancora usati dal path apply esistente.
+
+### File realmente architetturali
+- `iOSMerchandiseControl/Sync/SyncOrchestrator.swift`, `SyncDecisionEngine.swift`, `SyncState.swift`, `SyncStateStore.swift`, `SyncTrigger.swift`, `SyncRecoveryPolicy.swift`.
+- `iOSMerchandiseControl/Sync/Account/*`.
+- `iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift`, `PendingChangeCoalescer.swift`, `SyncEventOutboxRecorder.swift`, `SyncEventOutboxDrainer.swift`.
+- `iOSMerchandiseControl/Sync/Incremental/WatermarkStore.swift` e i nuovi `*ApplySummary.swift` come DTO, non come servizi apply.
+- `iOSMerchandiseControl/Sync/Recovery/*`.
+- `iOSMerchandiseControl/Sync/Presentation/OptionsSyncSummaryProvider.swift`, `SyncStatusPresenter.swift`.
+
+### Check eseguiti
+- ✅ ESEGUITO — Build Debug: `./tools/agent/mc-agent.sh ios build debug --task TASK-115` PASS, latest report `agent-runs/20260523T060153Z-ios-build-debug-task-TASK-115-p43123.md`.
+- ✅ ESEGUITO — Build Release: `./tools/agent/mc-agent.sh ios build release --task TASK-115` PASS, latest report `agent-runs/20260523T060210Z-ios-build-release-task-TASK-115-p43862.md`.
+- ✅ ESEGUITO — Test sync: `./tools/agent/mc-agent.sh ios test sync --task TASK-115` PASS, latest report `agent-runs/20260523T060346Z-ios-test-sync-task-TASK-115-p44679.md`.
+- ✅ ESEGUITO — Nessun warning nuovo introdotto per i gate eseguiti: i build Debug/Release PASS non hanno esposto warning bloccanti nuovi nei report controllati.
+- ✅ ESEGUITO — Coerenza con planning: fix limitati a orchestrator adapter/state, Options provider, incremental naming, outbox owner boundary, XCTest root, evidence cleanup.
+- ✅ ESEGUITO — Evidence scan post-cleanup: `./tools/agent/mc-agent.sh scan evidence --task TASK-115` PASS, `agent-runs/20260523T060516Z-scan-evidence-task-TASK-115-p45767.md`.
+- ✅ ESEGUITO — Sensitive scan post-cleanup: `./tools/agent/mc-agent.sh scan sensitive --task TASK-115` PASS, `agent-runs/20260523T060521Z-scan-sensitive-task-TASK-115-p46209.md`.
+- ⚠️ NON ESEGUIBILE — iPhone physical post-login / strict account matrix: non rieseguiti perche' restano i blocker gia' classificati su device fisico/account fixture strict-live.
+- ❌ NON ESEGUITO — Gate live completi gia' PASS non toccati: non rifatti come da richiesta utente, perche' non sono stati toccati runtime live/Supabase/harness live.
+
+### Rischi rimasti
+- Verdict architetturale: **CHANGES_REQUIRED**. Il refactor e' ora piu' onesto e tracciabile, ma il core apply incrementale reale non e' ancora estratto da `SupabaseSyncEventIncrementalApplyService` e il VM legacy resta necessario via adapter.
+- I nuovi `*ApplySummary` sono DTO; non soddisfano da soli l'obiettivo di servizi apply catalog/price/history indipendenti.
+- `SyncOrchestrator` decide e metrica, ma l'esecuzione operativa resta delegata al VM legacy; review deve decidere se questa compatibilita' e' sufficiente come step intermedio o se serve una nuova FIX di estrazione domain services.
+- Evidence raw non e' piu' nel repo; resta disponibile nell'archivio locale indicato sopra.
+
+### Handoff post-fix
+- **Prossima fase**: REVIEW.
+- **Prossimo agente**: CLAUDE / Reviewer.
+- **Verdict proposto**: CHANGES_REQUIRED.
+- **BLOCKED confermati**: iPhone physical diagnostics/acceptance/runtime parity e account matrix strict-live A-L.
+- **Nota di stato**: TASK-115 resta `ACTIVE / REVIEW`, non `DONE`, finche' iPhone physical e account matrix strict-live non passano.
 
 ### Future S115-B prompt
 ```text

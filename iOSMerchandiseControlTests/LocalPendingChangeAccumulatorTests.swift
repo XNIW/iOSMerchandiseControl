@@ -374,6 +374,40 @@ final class LocalPendingChangeAccumulatorTests: XCTestCase {
         XCTAssertEqual(try provider.loadSnapshot(ownerUserID: nil), .empty)
     }
 
+    func testTask115CoalescingSameLogicalKeyDoesNotCrossOwnerBoundary() throws {
+        let context = try makeContext()
+        let remoteID = UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
+        let ownerAProduct = Product(barcode: "TASK115_OWNER_SHARED", remoteID: remoteID)
+        let ownerBProduct = Product(barcode: "TASK115_OWNER_SHARED", remoteID: remoteID)
+        context.insert(ownerAProduct)
+        context.insert(ownerBProduct)
+
+        try LocalPendingChangeAccumulator(context: context, ownerUserID: ownerA)
+            .recordProductChange(
+                product: ownerAProduct,
+                operation: .update,
+                origin: .manualCatalogSave,
+                changedFields: ["productName"]
+            )
+        try LocalPendingChangeAccumulator(context: context, ownerUserID: ownerB)
+            .recordProductChange(
+                product: ownerBProduct,
+                operation: .delete,
+                origin: .manualCatalogSave,
+                changedFields: ["tombstone"]
+            )
+
+        let changes = try fetchChanges(context)
+
+        XCTAssertEqual(changes.count, 2)
+        XCTAssertEqual(
+            Set(changes.compactMap(\.ownerUserID)),
+            Set([ownerA.uuidString.lowercased(), ownerB.uuidString.lowercased()])
+        )
+        XCTAssertEqual(changes.first { $0.ownerUserID == ownerA.uuidString.lowercased() }?.operation, .update)
+        XCTAssertEqual(changes.first { $0.ownerUserID == ownerB.uuidString.lowercased() }?.operation, .delete)
+    }
+
     private func recordRemoteProduct(
         remoteID: UUID,
         barcode: String,

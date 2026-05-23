@@ -30,15 +30,8 @@ struct OptionsView: View {
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     @Query private var localPendingChanges: [LocalPendingChange]
-    @State private var supabaseBaselineSummary: SupabaseCatalogBaselineDebugSummary = .absent
-    @State private var localDatabaseSummary: LocalDatabasePublicSummary = .empty
-    @State private var syncCountDriftReport: SyncCountDriftReport?
-    @State private var syncCountDriftCheckFailed = false
-    @State private var lastSyncCountDriftCheckedAt: Date?
-    @State private var accountSyncDecision: AccountSyncDecision?
+    @StateObject private var syncSummaryProvider = OptionsSyncSummaryProvider()
     @State private var isAccountDecisionSheetPresented = false
-
-    private static let freshRemoteCountVerificationInterval: TimeInterval = 60
 
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
@@ -183,28 +176,22 @@ struct OptionsView: View {
         }
         .navigationTitle(L("options.title"))
         .onAppear {
-            refreshLocalDatabaseSummary()
-            refreshSupabaseBaselineSummary()
-            refreshSyncCountDriftIfNeeded()
-            refreshAccountSyncDecision()
+            refreshOptionsSummaryProvider()
         }
         .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
-            refreshLocalDatabaseSummary()
-            refreshSupabaseBaselineSummary()
-            refreshSyncCountDriftIfNeeded()
-            refreshAccountSyncDecision()
+            refreshOptionsSummaryProvider()
         }
         .onReceive(NotificationCenter.default.publisher(for: .historySessionsDidChange)) { _ in
-            refreshLocalDatabaseSummary()
-            refreshSupabaseBaselineSummary()
-            refreshSyncCountDriftIfNeeded()
-            refreshAccountSyncDecision()
+            refreshOptionsSummaryProvider()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .localPendingChangesDidChange)) { _ in
+            refreshOptionsSummaryProvider()
         }
         .sheet(isPresented: $isAccountDecisionSheetPresented) {
-            if let accountSyncDecision {
+            if let accountSyncDecision = syncSummaryProvider.accountSyncDecision {
                 AccountSyncDecisionView(
                     decision: accountSyncDecision,
-                    localSummary: localDatabaseSummary,
+                    localSummary: syncSummaryProvider.localDatabaseSummary,
                     onChoose: handleAccountSyncChoice
                 )
             }
@@ -217,7 +204,7 @@ struct OptionsView: View {
 
             Divider()
 
-            if let accountSyncDecision {
+            if let accountSyncDecision = syncSummaryProvider.accountSyncDecision {
                 accountSyncDecisionBanner(accountSyncDecision)
                 Divider()
             }
@@ -230,8 +217,8 @@ struct OptionsView: View {
                 manualPushService: supabaseManualPushService,
                 activityRecorder: syncEventOutboxDrainRecorder,
                 viewModel: manualSyncViewModel,
-                pendingCount: localPendingAttentionCount,
-                baselineSummary: supabaseBaselineSummary
+                pendingCount: syncSummaryProvider.localPendingAttentionCount,
+                baselineSummary: syncSummaryProvider.supabaseBaselineSummary
             )
         }
         .padding(.vertical, 4)
@@ -358,20 +345,20 @@ struct OptionsView: View {
             .accessibilityElement(children: .combine)
 
             VStack(alignment: .leading, spacing: 8) {
-                LabeledContent(L("options.localDatabase.products"), value: "\(localDatabaseSummary.products)")
-                LabeledContent(L("options.localDatabase.suppliers"), value: "\(localDatabaseSummary.suppliers)")
-                LabeledContent(L("options.localDatabase.categories"), value: "\(localDatabaseSummary.categories)")
-                LabeledContent(L("options.localDatabase.prices"), value: "\(localDatabaseSummary.productPrices)")
-                LabeledContent(L("options.localDatabase.historySessions"), value: "\(localDatabaseSummary.historySessions)")
+                LabeledContent(L("options.localDatabase.products"), value: "\(syncSummaryProvider.localDatabaseSummary.products)")
+                LabeledContent(L("options.localDatabase.suppliers"), value: "\(syncSummaryProvider.localDatabaseSummary.suppliers)")
+                LabeledContent(L("options.localDatabase.categories"), value: "\(syncSummaryProvider.localDatabaseSummary.categories)")
+                LabeledContent(L("options.localDatabase.prices"), value: "\(syncSummaryProvider.localDatabaseSummary.productPrices)")
+                LabeledContent(L("options.localDatabase.historySessions"), value: "\(syncSummaryProvider.localDatabaseSummary.historySessions)")
 
-                if localPendingAttentionCount > 0 {
+                if syncSummaryProvider.localPendingAttentionCount > 0 {
                     LabeledContent(
                         L("options.localDatabase.pending"),
-                        value: "\(localPendingAttentionCount)"
+                        value: "\(syncSummaryProvider.localPendingAttentionCount)"
                     )
                 }
 
-                if let appliedAt = supabaseBaselineSummary.appliedAt {
+                if let appliedAt = syncSummaryProvider.supabaseBaselineSummary.appliedAt {
                     LabeledContent(
                         L("options.supabase.baseline.lastPull"),
                         value: appliedAt.formatted(date: .abbreviated, time: .shortened)
@@ -447,43 +434,23 @@ struct OptionsView: View {
     }
 
     private var hasSyncCountDrift: Bool {
-        syncCountDriftReport?.isAligned == false
-    }
-
-    private var hasFreshRemoteCountVerification: Bool {
-        guard let lastSyncCountDriftCheckedAt else {
-            return false
-        }
-        return Date().timeIntervalSince(lastSyncCountDriftCheckedAt) <= Self.freshRemoteCountVerificationInterval
-    }
-
-    private var needsRemoteCountVerification: Bool {
-        guard supabaseAuthViewModel.state == .signedIn else {
-            return false
-        }
-        if syncCountDriftCheckFailed {
-            return true
-        }
-        guard syncCountDriftReport != nil else {
-            return true
-        }
-        return !hasFreshRemoteCountVerification
+        syncSummaryProvider.hasSyncCountDrift
     }
 
     private var localDatabaseTitle: String {
-        if localDatabaseSummary.isCatalogEmpty {
+        if syncSummaryProvider.localDatabaseSummary.isCatalogEmpty {
             return L("options.localDatabase.empty.title")
         }
-        if localPendingAttentionCount > 0 {
+        if syncSummaryProvider.localPendingAttentionCount > 0 {
             return L("options.localDatabase.pending.title")
         }
         if hasSyncCountDrift {
             return L("options.localDatabase.reconcile.title")
         }
-        if needsRemoteCountVerification {
+        if syncSummaryProvider.needsRemoteCountVerification {
             return L("options.localDatabase.needsCheck.title")
         }
-        switch supabaseBaselineSummary.status {
+        switch syncSummaryProvider.supabaseBaselineSummary.status {
         case .absent:
             return L("options.localDatabase.needsDownload.title")
         case .valid:
@@ -494,19 +461,19 @@ struct OptionsView: View {
     }
 
     private var localDatabaseDetail: String {
-        if localDatabaseSummary.isCatalogEmpty {
+        if syncSummaryProvider.localDatabaseSummary.isCatalogEmpty {
             return L("options.localDatabase.empty.detail")
         }
-        if localPendingAttentionCount > 0 {
+        if syncSummaryProvider.localPendingAttentionCount > 0 {
             return L("options.localDatabase.pending.detail")
         }
         if hasSyncCountDrift {
             return L("options.localDatabase.reconcile.detail")
         }
-        if needsRemoteCountVerification {
+        if syncSummaryProvider.needsRemoteCountVerification {
             return L("options.localDatabase.needsCheck.detail")
         }
-        switch supabaseBaselineSummary.status {
+        switch syncSummaryProvider.supabaseBaselineSummary.status {
         case .absent:
             return L("options.localDatabase.needsDownload.detail")
         case .valid:
@@ -517,17 +484,17 @@ struct OptionsView: View {
     }
 
     private var localDatabaseSystemImage: String {
-        if localDatabaseSummary.isCatalogEmpty {
+        if syncSummaryProvider.localDatabaseSummary.isCatalogEmpty {
             return "tray"
         }
         if hasSyncCountDrift {
             return "exclamationmark.arrow.triangle.2.circlepath"
         }
-        if needsRemoteCountVerification {
+        if syncSummaryProvider.needsRemoteCountVerification {
             return "exclamationmark.triangle.fill"
         }
-        switch supabaseBaselineSummary.status {
-        case .valid where localPendingAttentionCount == 0:
+        switch syncSummaryProvider.supabaseBaselineSummary.status {
+        case .valid where syncSummaryProvider.localPendingAttentionCount == 0:
             return "checkmark.seal.fill"
         case .absent:
             return "arrow.down.circle.fill"
@@ -539,16 +506,16 @@ struct OptionsView: View {
     }
 
     private var localDatabaseColor: Color {
-        if localDatabaseSummary.isCatalogEmpty {
+        if syncSummaryProvider.localDatabaseSummary.isCatalogEmpty {
             return .secondary
         }
-        if localPendingAttentionCount > 0 || hasSyncCountDrift {
+        if syncSummaryProvider.localPendingAttentionCount > 0 || hasSyncCountDrift {
             return .orange
         }
-        if needsRemoteCountVerification {
+        if syncSummaryProvider.needsRemoteCountVerification {
             return .orange
         }
-        switch supabaseBaselineSummary.status {
+        switch syncSummaryProvider.supabaseBaselineSummary.status {
         case .valid:
             return .green
         case .absent:
@@ -556,144 +523,6 @@ struct OptionsView: View {
         case .stale, .accountMismatch, .incomplete:
             return .orange
         }
-    }
-
-    private var localPendingAttentionCount: Int {
-        localPendingChanges.filter(isLocalPendingChangeRelevantToCurrentAccount).count
-    }
-
-    private func isLocalPendingChangeRelevantToCurrentAccount(_ change: LocalPendingChange) -> Bool {
-        guard !change.status.isTerminal else { return false }
-        guard let currentOwner = supabaseAuthViewModel.sessionInfo?.userID.uuidString.lowercased() else {
-            return change.ownerUserID == nil
-        }
-        return change.ownerUserID == currentOwner
-    }
-
-    private func refreshSupabaseBaselineSummary() {
-        do {
-            supabaseBaselineSummary = try SupabaseCatalogBaselineReader().debugSummary(
-                context: modelContext,
-                currentUserUUID: supabaseAuthViewModel.sessionInfo?.userID
-            )
-        } catch {
-            supabaseBaselineSummary = .absent
-        }
-    }
-
-    private func refreshLocalDatabaseSummary() {
-        do {
-            let snapshot = try LocalDatabasePublicSummary.makeReconciliationAware(context: modelContext)
-            localDatabaseSummary = LocalDatabasePublicSummary(
-                products: snapshot.products,
-                suppliers: snapshot.suppliers,
-                categories: snapshot.categories,
-                productPrices: snapshot.productPrices,
-                historySessions: snapshot.historySessions
-            )
-        } catch {
-            localDatabaseSummary = .empty
-        }
-        refreshAccountSyncDecision()
-    }
-
-    private func refreshSyncCountDriftIfNeeded() {
-        guard supabaseAuthViewModel.state == .signedIn else {
-            syncCountDriftReport = nil
-            syncCountDriftCheckFailed = false
-            lastSyncCountDriftCheckedAt = nil
-            refreshAccountSyncDecision()
-            return
-        }
-        guard let service = supabaseInventoryService else {
-            syncCountDriftReport = nil
-            syncCountDriftCheckFailed = true
-            lastSyncCountDriftCheckedAt = nil
-            refreshAccountSyncDecision()
-            return
-        }
-        Task {
-            do {
-                let remote = try await service.fetchReconciliationRemoteCounts()
-                let local = try LocalDatabasePublicSummary.makeReconciliationAware(context: modelContext)
-                let report = SyncCountDriftReport.compare(local: local, remote: remote)
-                await MainActor.run {
-                    syncCountDriftReport = report
-                    syncCountDriftCheckFailed = false
-                    lastSyncCountDriftCheckedAt = Date()
-                    refreshAccountSyncDecision()
-                }
-            } catch {
-                await MainActor.run {
-                    syncCountDriftReport = nil
-                    syncCountDriftCheckFailed = true
-                    lastSyncCountDriftCheckedAt = Date()
-                    refreshAccountSyncDecision()
-                }
-            }
-        }
-    }
-
-    private func refreshAccountSyncDecision() {
-        guard supabaseAuthViewModel.isSignedIn,
-              let userID = supabaseAuthViewModel.sessionInfo?.userID else {
-            accountSyncDecision = nil
-            isAccountDecisionSheetPresented = false
-            return
-        }
-
-        let accountHash = AccountBindingStore.accountHash(for: userID)
-        let hasLocalData = localDatabaseSummary.products > 0
-            || localDatabaseSummary.suppliers > 0
-            || localDatabaseSummary.categories > 0
-            || localDatabaseSummary.productPrices > 0
-            || localDatabaseSummary.historySessions > 0
-        let binding = AccountBindingStore().currentBinding
-        let localStore: LocalStoreAccountState
-        let trigger: AccountSyncTrigger
-
-        if let binding, binding.accountHash != accountHash {
-            localStore = .bound(accountHash: binding.accountHash, hasData: hasLocalData)
-            trigger = .switchAccount(from: binding.accountHash, to: accountHash)
-        } else if let binding {
-            localStore = .bound(accountHash: binding.accountHash, hasData: hasLocalData)
-            trigger = .reconnect(accountHash: accountHash)
-        } else {
-            localStore = .anonymous(hasData: hasLocalData)
-            trigger = .login(accountHash: accountHash)
-        }
-
-        let decision = AccountSwitchPolicy.decide(
-            AccountSyncPolicyInput(
-                trigger: trigger,
-                localStore: localStore,
-                remoteDataset: remoteDatasetState,
-                pendingOwner: pendingOwnerState(currentAccountHash: accountHash, binding: binding)
-            )
-        )
-        accountSyncDecision = decision.requiresUserDecision ? decision : nil
-    }
-
-    private var remoteDatasetState: RemoteDatasetState {
-        guard !syncCountDriftCheckFailed,
-              let syncCountDriftReport else {
-            return .unknown
-        }
-        let remote = syncCountDriftReport.remote
-        return remote.products > 0
-            || remote.suppliers > 0
-            || remote.categories > 0
-            || remote.productPrices > 0
-            || remote.historySessions > 0 ? .nonEmpty : .empty
-    }
-
-    private func pendingOwnerState(
-        currentAccountHash: String,
-        binding: AccountBinding?
-    ) -> PendingOwnerState {
-        guard localPendingAttentionCount > 0 else { return .none }
-        guard let binding else { return .anonymous }
-        return binding.accountHash == currentAccountHash ? .sameAccount : .differentAccount
     }
 
     private func handleAccountSyncChoice(_ choice: AccountSyncUserChoice) {
@@ -705,6 +534,18 @@ struct OptionsView: View {
              .uploadLocalToCloud,
              .switchStore,
              .createStoreAndPull:
+            isAccountDecisionSheetPresented = false
+        }
+    }
+
+    private func refreshOptionsSummaryProvider() {
+        syncSummaryProvider.refreshAll(
+            context: modelContext,
+            authViewModel: supabaseAuthViewModel,
+            inventoryService: supabaseInventoryService,
+            pendingChanges: localPendingChanges
+        )
+        if syncSummaryProvider.accountSyncDecision == nil {
             isAccountDecisionSheetPresented = false
         }
     }
@@ -773,7 +614,6 @@ private struct SupabaseAutomaticSyncStatusCard: View {
 
     private let pendingCount: Int
     private let baselineSummary: SupabaseCatalogBaselineDebugSummary
-    private let summaryProvider = OptionsSyncSummaryProvider()
 
     init(
         context: ModelContext,
@@ -803,7 +643,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
 
     var body: some View {
         let presentation = viewModel.presentationState
-        let visibleProgress = summaryProvider.visibleProgress(for: presentation)
+        let visibleProgress = SyncStatusPresenter.visibleProgress(from: presentation.progressState)
 
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -831,7 +671,10 @@ private struct SupabaseAutomaticSyncStatusCard: View {
 
             if let visibleProgress {
                 CloudSyncProgressInlineView(state: visibleProgress)
-            } else if summaryProvider.shouldShowFallbackSpinner(for: presentation) {
+            } else if SyncStatusPresenter.shouldShowFallbackSpinner(
+                isRunning: presentation.isRunning,
+                progress: presentation.progressState
+            ) {
                 HStack(spacing: 10) {
                     ProgressView()
                     Text(L("options.supabase.automaticSync.running.inline"))

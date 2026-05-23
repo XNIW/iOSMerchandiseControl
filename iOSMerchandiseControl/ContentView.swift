@@ -258,13 +258,15 @@ private struct SupabaseManualSyncForegroundRootHost<Content: View>: View {
     ) {
         _syncOrchestrator = StateObject(
             wrappedValue: SyncOrchestrator(
-                manualSyncViewModel: SupabaseManualSyncReleaseFactory.makeViewModel(
-                    context: context,
-                    authViewModel: authViewModel,
-                    inventoryService: inventoryService,
-                    pullPreviewService: pullPreviewService,
-                    manualPushService: manualPushService,
-                    activityRecorder: activityRecorder
+                legacyAdapter: SupabaseManualSyncCompatibilityAdapter(
+                    viewModel: SupabaseManualSyncReleaseFactory.makeViewModel(
+                        context: context,
+                        authViewModel: authViewModel,
+                        inventoryService: inventoryService,
+                        pullPreviewService: pullPreviewService,
+                        manualPushService: manualPushService,
+                        activityRecorder: activityRecorder
+                    )
                 ),
                 authViewModel: authViewModel,
                 activityCenter: activityCenter,

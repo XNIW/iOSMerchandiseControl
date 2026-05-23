@@ -5,6 +5,10 @@ import SwiftData
 struct LocalOutboxStore {
     private let backingStore: SyncEventOutboxLocalStore
 
+    /// Compatibility facade over the existing sync-event outbox table.
+    /// Owner binding is enforced on every read; local mutation coalescing remains owned by
+    /// `LocalPendingChangeAccumulator` + `PendingChangeCoalescer` until the legacy manual
+    /// push adapters are fully retired.
     init(context: ModelContext) {
         self.backingStore = SyncEventOutboxLocalStore(context: context)
     }

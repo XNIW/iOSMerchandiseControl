@@ -7,3 +7,6 @@ iOSMerchandiseControl/SupabaseConfig.plist
 tools/agent/config.env
 tools/agent/mcp/node_modules/
 tools/agent/**/*.tmp
+
+# TASK-115 raw harness transcripts are archived outside git; keep the curated summary in docs.
+docs/TASKS/EVIDENCE/TASK-115/agent-runs/

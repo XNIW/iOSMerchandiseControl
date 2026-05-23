@@ -1,3 +1,0 @@
-=== mc-agent harness doctor --task TASK-115 ===
-{"checks": ["ios_repo=present", "android_repo=present", "supabase_repo=present", "evidence_dir=writable", "xcodebuild=present", "xcrun=present", "adb=present", "supabase_cli=present", "ios_simulators=listable", "ios_physical_devices=listable", "android_devices=listable"], "completedAt": "2026-05-23T02:59:05Z", "nextAction": "Resolve FAIL checks before gates; resolve warnings before physical/live acceptance if they apply.", "schemaVersion": "1.1", "source": "harness.doctor", "status": "PASS", "taskId": "TASK-115", "warnings": []}
-<HOME_REDACTED>/Desktop/iOSMerchandiseControl/tools/agent/lib/common.sh: line 668: warnings[@]: unbound variable
