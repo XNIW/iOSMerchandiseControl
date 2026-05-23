@@ -1,0 +1,295 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-117/agent-runs/20260523T222053Z-scan-l10n-sync-keys-task-TASK-117-p37624.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-117/agent-runs/20260523T222053Z-scan-l10n-sync-keys-task-TASK-117-p37624.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-117/agent-runs/20260523T222053Z-scan-l10n-sync-keys-task-TASK-117-p37624.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [],
+  "cleanup_plan_id": null,
+  "command": "scan l10n-sync-keys --task TASK-117",
+  "command_slug": "scan-l10n-sync-keys-task-TASK-117",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 222,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-117",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK117_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-117"
+  },
+  "exit_code": 0,
+  "git_sha": "3174652",
+  "next_action_recommended": "Use this report in TASK-117 evidence matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Use this report in TASK-117 evidence matrix.",
+    "checks": [
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "27 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/it.lproj/Localizable.strings",
+        "id": "it_lproj_options_supabase_automaticSync__present",
+        "reason": "Locale must include sync keys with prefix options.supabase.automaticSync.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "8 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/it.lproj/Localizable.strings",
+        "id": "it_lproj_options_supabase_automaticSync_root__present",
+        "reason": "Locale must include sync keys with prefix options.supabase.automaticSync.root.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "15 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/it.lproj/Localizable.strings",
+        "id": "it_lproj_options_cloud_account__present",
+        "reason": "Locale must include sync keys with prefix options.cloud.account.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "20 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/it.lproj/Localizable.strings",
+        "id": "it_lproj_options_localDatabase__present",
+        "reason": "Locale must include sync keys with prefix options.localDatabase.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "27 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/en.lproj/Localizable.strings",
+        "id": "en_lproj_options_supabase_automaticSync__present",
+        "reason": "Locale must include sync keys with prefix options.supabase.automaticSync.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "8 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/en.lproj/Localizable.strings",
+        "id": "en_lproj_options_supabase_automaticSync_root__present",
+        "reason": "Locale must include sync keys with prefix options.supabase.automaticSync.root.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "15 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/en.lproj/Localizable.strings",
+        "id": "en_lproj_options_cloud_account__present",
+        "reason": "Locale must include sync keys with prefix options.cloud.account.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "20 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/en.lproj/Localizable.strings",
+        "id": "en_lproj_options_localDatabase__present",
+        "reason": "Locale must include sync keys with prefix options.localDatabase.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "27 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/es.lproj/Localizable.strings",
+        "id": "es_lproj_options_supabase_automaticSync__present",
+        "reason": "Locale must include sync keys with prefix options.supabase.automaticSync.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "8 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/es.lproj/Localizable.strings",
+        "id": "es_lproj_options_supabase_automaticSync_root__present",
+        "reason": "Locale must include sync keys with prefix options.supabase.automaticSync.root.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "15 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/es.lproj/Localizable.strings",
+        "id": "es_lproj_options_cloud_account__present",
+        "reason": "Locale must include sync keys with prefix options.cloud.account.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "20 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/es.lproj/Localizable.strings",
+        "id": "es_lproj_options_localDatabase__present",
+        "reason": "Locale must include sync keys with prefix options.localDatabase.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "27 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings",
+        "id": "zh_Hans_lproj_options_supabase_automaticSync__present",
+        "reason": "Locale must include sync keys with prefix options.supabase.automaticSync.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "8 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings",
+        "id": "zh_Hans_lproj_options_supabase_automaticSync_root__present",
+        "reason": "Locale must include sync keys with prefix options.supabase.automaticSync.root.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "15 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings",
+        "id": "zh_Hans_lproj_options_cloud_account__present",
+        "reason": "Locale must include sync keys with prefix options.cloud.account.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "20 key(s)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings",
+        "id": "zh_Hans_lproj_options_localDatabase__present",
+        "reason": "Locale must include sync keys with prefix options.localDatabase.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/it.lproj/Localizable.strings",
+        "id": "it.lproj_sync_key_parity",
+        "reason": "Locale must contain the same EN sync/status keys.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/en.lproj/Localizable.strings",
+        "id": "en.lproj_sync_key_parity",
+        "reason": "Locale must contain the same EN sync/status keys.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/es.lproj/Localizable.strings",
+        "id": "es.lproj_sync_key_parity",
+        "reason": "Locale must contain the same EN sync/status keys.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/zh-Hans.lproj/Localizable.strings",
+        "id": "zh_Hans.lproj_sync_key_parity",
+        "reason": "Locale must contain the same EN sync/status keys.",
+        "status": "PASS"
+      }
+    ],
+    "completedAt": "2026-05-23T22:20:53Z",
+    "failureCount": 0,
+    "schemaVersion": "1.1",
+    "source": "scan.l10n-sync-keys",
+    "startedAt": "2026-05-23T22:20:53Z",
+    "status": "PASS",
+    "taskId": "TASK-117"
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "pass",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260523T222053Z-scan-l10n-sync-keys-task-TASK-117-p37624",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "task_id": "TASK-117",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-23T22:20:53Z",
+  "timestamp_start": "2026-05-23T22:20:53Z",
+  "warnings": []
+}

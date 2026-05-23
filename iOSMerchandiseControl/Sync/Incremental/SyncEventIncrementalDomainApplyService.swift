@@ -184,19 +184,19 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
 
     private func recordCanonicalDriftDiagnostics(_ drift: SyncCountDriftReport) {
         #if DEBUG
-        defaults.set(drift.local.products, forKey: "task114.runtime.reconcile.local.products")
-        defaults.set(drift.local.suppliers, forKey: "task114.runtime.reconcile.local.suppliers")
-        defaults.set(drift.local.categories, forKey: "task114.runtime.reconcile.local.categories")
-        defaults.set(drift.local.productPrices, forKey: "task114.runtime.reconcile.local.productPrices")
-        defaults.set(drift.local.historySessions, forKey: "task114.runtime.reconcile.local.historySessions")
-        defaults.set(drift.remote.products, forKey: "task114.runtime.reconcile.remote.products")
-        defaults.set(drift.remote.suppliers, forKey: "task114.runtime.reconcile.remote.suppliers")
-        defaults.set(drift.remote.categories, forKey: "task114.runtime.reconcile.remote.categories")
-        defaults.set(drift.remote.productPrices, forKey: "task114.runtime.reconcile.remote.productPrices")
-        defaults.set(drift.remote.historySessions, forKey: "task114.runtime.reconcile.remote.historySessions")
+        defaults.set(drift.local.products, forKey: "sync.runtime.reconcile.local.products")
+        defaults.set(drift.local.suppliers, forKey: "sync.runtime.reconcile.local.suppliers")
+        defaults.set(drift.local.categories, forKey: "sync.runtime.reconcile.local.categories")
+        defaults.set(drift.local.productPrices, forKey: "sync.runtime.reconcile.local.productPrices")
+        defaults.set(drift.local.historySessions, forKey: "sync.runtime.reconcile.local.historySessions")
+        defaults.set(drift.remote.products, forKey: "sync.runtime.reconcile.remote.products")
+        defaults.set(drift.remote.suppliers, forKey: "sync.runtime.reconcile.remote.suppliers")
+        defaults.set(drift.remote.categories, forKey: "sync.runtime.reconcile.remote.categories")
+        defaults.set(drift.remote.productPrices, forKey: "sync.runtime.reconcile.remote.productPrices")
+        defaults.set(drift.remote.historySessions, forKey: "sync.runtime.reconcile.remote.historySessions")
         defaults.set(
             drift.mismatches.map(\.rawValue).joined(separator: ","),
-            forKey: "task114.runtime.reconcile.mismatches"
+            forKey: "sync.runtime.reconcile.mismatches"
         )
         #endif
     }
@@ -228,7 +228,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
     }
 
     private func lightReconcileKey(ownerUserID: UUID) -> String {
-        "task115.syncEvents.lightReconcile.lastAt.\(AccountBindingStore.accountHash(for: ownerUserID))"
+        "sync.events.lightReconcile.lastAt.\(AccountBindingStore.accountHash(for: ownerUserID))"
     }
 
     private func shouldRunLightReconcile(ownerUserID: UUID) -> Bool {

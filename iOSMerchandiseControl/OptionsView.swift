@@ -303,7 +303,7 @@ struct OptionsView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "person.crop.circle.badge.plus")
-                    Text(L("options.supabase.manualSync.action.signIn"))
+                    Text(L("options.cloud.account.action.signIn"))
                 }
                 .frame(minWidth: 112, alignment: .center)
             }

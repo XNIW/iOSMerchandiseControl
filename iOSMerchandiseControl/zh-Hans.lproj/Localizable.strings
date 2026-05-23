@@ -1158,6 +1158,7 @@
 "options.cloud.account.signingOut.detail" = "正在清除此设备上的云端会话。";
 "options.cloud.account.failed.title" = "账号需要检查";
 "options.cloud.account.failed.detail" = "无法验证云端访问。请重试或检查账号。";
+"options.cloud.account.action.signIn" = "登录";
 "options.localDatabase.products" = "商品";
 "options.localDatabase.suppliers" = "供应商";
 "options.localDatabase.categories" = "分类";
@@ -1195,6 +1196,14 @@
 "options.supabase.automaticSync.badge.signedOut" = "需要登录";
 "options.supabase.automaticSync.badge.scheduled" = "准备中";
 "options.supabase.automaticSync.badge.actionNeeded" = "需检查";
+"options.supabase.automaticSync.root.checking.title" = "正在检查更新…";
+"options.supabase.automaticSync.root.checking.detail" = "你可以继续使用应用。";
+"options.supabase.automaticSync.root.auth.title" = "请重新登录以检查云端";
+"options.supabase.automaticSync.root.auth.detail" = "访问有效前，自动检查会暂停。";
+"options.supabase.automaticSync.root.error.title" = "云端检查失败";
+"options.supabase.automaticSync.root.error.detail" = "你可以随时重试。";
+"options.supabase.automaticSync.root.action.signIn" = "登录";
+"options.supabase.automaticSync.root.action.retry" = "重试";
 "options.supabase.manualSync.state.idle.title" = "云端同步";
 "options.supabase.manualSync.state.idle.subtitle" = "云端同步始终由你手动控制。";
 "options.supabase.manualSync.state.running.title" = "操作进行中…";

@@ -1,0 +1,5 @@
+=== mc-agent ios smoke options --task TASK-117 ===
+legacy sim_ui/JXA options smoke returned 1; evaluating XcodeBuildMCP fallback evidence.
+[sim_ui] OK: App com.niwcyber.iOSMerchandiseControl lanciata
+[sim_ui] ERROR: Elemento 'Opzioni' non trovato entro 15s
+NOT_FOUND

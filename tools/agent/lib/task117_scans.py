@@ -193,6 +193,13 @@ def options_observer_only():
         r"fetchReconciliationRemoteCounts\s*\(",
         "Options view must not directly perform remote decision fetches.",
     )
+    check_absent(
+        checks,
+        "options_automatic_ui_no_manual_l10n_keys",
+        options,
+        r"options\.supabase\.manualSync\.(root|action\.signIn)",
+        "Options automatic/account UI must not use manualSync localization keys.",
+    )
     return checks
 
 
@@ -207,6 +214,26 @@ def duplicate_sync_owner():
         r"manualAdapter|legacyAdapter|legacyManualSyncViewModel|SyncOrchestratorLegacySyncAdapter|SupabaseManualSync[A-Za-z0-9_]*",
         "SyncOrchestrator must not depend on manual/legacy facade types.",
     )
+    check_absent(
+        checks,
+        "orchestrator_no_manual_root_l10n_keys",
+        orchestrator,
+        r"options\.supabase\.manualSync\.root",
+        "Automatic root banner must use automatic sync localization keys.",
+    )
+    for rel in [
+        orchestrator,
+        "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "iOSMerchandiseControl/Sync/SyncStateStore.swift",
+        "iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalDomainApplyService.swift",
+    ]:
+        check_absent(
+            checks,
+            f"{pathlib.Path(rel).stem}_no_task115_runtime_keys",
+            rel,
+            r"task115\.runtime|task114\.runtime|task115\.syncEvents\.lightReconcile",
+            "Automatic runtime diagnostics must not write task115/task114 legacy runtime keys.",
+        )
     body, offset = extract_body(
         text,
         r"func\s+submitForegroundTrigger",
@@ -328,6 +355,7 @@ def l10n_sync_keys():
     locales = ["it.lproj", "en.lproj", "es.lproj", "zh-Hans.lproj"]
     required_prefixes = [
         "options.supabase.automaticSync.",
+        "options.supabase.automaticSync.root.",
         "options.cloud.account.",
         "options.localDatabase.",
     ]

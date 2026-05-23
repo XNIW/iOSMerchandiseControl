@@ -16,6 +16,10 @@ final class WatermarkStoreTests: XCTestCase {
         XCTAssertEqual(store.watermark(for: accountA), 42)
         XCTAssertEqual(store.watermark(for: accountB), 0)
         XCTAssertEqual(store.watermark(for: storeB), 0)
+        XCTAssertEqual(
+            defaults.integer(forKey: WatermarkStore.watermarkKey(accountHash: "account-a", storeIdentity: LocalStoreIdentity(rawValue: "store-a"))),
+            42
+        )
     }
 
     func testWatermarkDoesNotMoveBackwards() {
@@ -42,5 +46,16 @@ final class WatermarkStoreTests: XCTestCase {
         let scope = WatermarkStore.Scope(ownerUserID: ownerID, storeIdentity: .anonymous)
 
         XCTAssertEqual(store.watermark(for: scope), 77)
+    }
+
+    func testLegacyAccountWatermarkCanBeReadDuringMigration() {
+        let suiteName = "WatermarkStoreTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = WatermarkStore(defaults: defaults)
+        let scope = WatermarkStore.Scope(accountHash: "account-a", storeIdentity: LocalStoreIdentity(rawValue: "store-a"))
+        defaults.set(88, forKey: WatermarkStore.legacyAccountWatermarkKey(accountHash: "account-a", storeIdentity: LocalStoreIdentity(rawValue: "store-a")))
+
+        XCTAssertEqual(store.watermark(for: scope), 88)
     }
 }

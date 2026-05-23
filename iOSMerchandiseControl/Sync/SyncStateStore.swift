@@ -6,7 +6,7 @@ final class SyncStateStore {
     private let defaults: UserDefaults
     private let keyPrefix: String
 
-    init(defaults: UserDefaults = .standard, keyPrefix: String = "task115.runtime.orchestrator") {
+    init(defaults: UserDefaults = .standard, keyPrefix: String = "sync.runtime.orchestrator") {
         self.defaults = defaults
         self.keyPrefix = keyPrefix
     }
@@ -78,4 +78,3 @@ private extension SyncBlockReason {
         }
     }
 }
-

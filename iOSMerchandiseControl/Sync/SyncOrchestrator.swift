@@ -34,8 +34,8 @@ nonisolated struct SyncRootPresentationState: Equatable, Sendable {
 
     static let checking = SyncRootPresentationState(
         kind: .checking,
-        titleKey: "options.supabase.manualSync.root.checking.title",
-        detailKey: "options.supabase.manualSync.root.checking.detail",
+        titleKey: "options.supabase.automaticSync.root.checking.title",
+        detailKey: "options.supabase.automaticSync.root.checking.detail",
         primaryActionTitleKey: nil,
         primaryActionID: nil,
         systemImage: "arrow.triangle.2.circlepath.icloud"
@@ -43,18 +43,18 @@ nonisolated struct SyncRootPresentationState: Equatable, Sendable {
 
     static let blockedAuth = SyncRootPresentationState(
         kind: .blockedAuth,
-        titleKey: "options.supabase.manualSync.root.auth.title",
-        detailKey: "options.supabase.manualSync.root.auth.detail",
-        primaryActionTitleKey: "options.supabase.manualSync.root.action.signIn",
+        titleKey: "options.supabase.automaticSync.root.auth.title",
+        detailKey: "options.supabase.automaticSync.root.auth.detail",
+        primaryActionTitleKey: "options.supabase.automaticSync.root.action.signIn",
         primaryActionID: .signIn,
         systemImage: "person.crop.circle.badge.exclamationmark"
     )
 
     static let recoverableError = SyncRootPresentationState(
         kind: .recoverableError,
-        titleKey: "options.supabase.manualSync.root.error.title",
-        detailKey: "options.supabase.manualSync.root.error.detail",
-        primaryActionTitleKey: "options.supabase.manualSync.root.action.retry",
+        titleKey: "options.supabase.automaticSync.root.error.title",
+        detailKey: "options.supabase.automaticSync.root.error.detail",
+        primaryActionTitleKey: "options.supabase.automaticSync.root.action.retry",
         primaryActionID: .retry,
         systemImage: "exclamationmark.icloud"
     )
@@ -383,25 +383,25 @@ final class SyncOrchestrator: ObservableObject {
 
     private func recordRuntimeDiagnostic(_ key: String, _ value: String) {
         #if DEBUG
-        UserDefaults.standard.set(value, forKey: "task115.runtime.\(key)")
+        UserDefaults.standard.set(value, forKey: "sync.runtime.\(key)")
         #endif
     }
 
     private func recordRuntimeDiagnostic(_ key: String, _ value: Bool) {
         #if DEBUG
-        UserDefaults.standard.set(value, forKey: "task115.runtime.\(key)")
+        UserDefaults.standard.set(value, forKey: "sync.runtime.\(key)")
         #endif
     }
 
     private func recordRuntimeDiagnostic(_ key: String, _ value: Int) {
         #if DEBUG
-        UserDefaults.standard.set(value, forKey: "task115.runtime.\(key)")
+        UserDefaults.standard.set(value, forKey: "sync.runtime.\(key)")
         #endif
     }
 
     private func recordRuntimeDiagnostic(_ key: String, _ value: TimeInterval) {
         #if DEBUG
-        UserDefaults.standard.set(value, forKey: "task115.runtime.\(key)")
+        UserDefaults.standard.set(value, forKey: "sync.runtime.\(key)")
         #endif
     }
 

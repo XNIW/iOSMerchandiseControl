@@ -210,15 +210,19 @@ try:
     runtime = {}
     watermarks = []
     for key, value in prefs.items():
-        if key.startswith("task114.runtime."):
-            runtime[key.replace("task114.runtime.", "", 1)] = plist_value(value)
+        if key.startswith("sync.runtime."):
+            runtime[key.replace("sync.runtime.", "", 1)] = plist_value(value)
+        elif key.startswith("task114.runtime."):
+            runtime.setdefault(key.replace("task114.runtime.", "", 1), plist_value(value))
         elif key.startswith("task115.runtime."):
-            runtime[key.replace("task115.runtime.", "", 1)] = plist_value(value)
+            runtime.setdefault(key.replace("task115.runtime.", "", 1), plist_value(value))
+        elif key.startswith("sync.events.watermark.account."):
+            watermarks.append({"scopeHash": sha(key)[:12], "value": plist_value(value), "source": "sync"})
         elif key.startswith("task114.syncEvents.watermark."):
             owner = key.replace("task114.syncEvents.watermark.", "", 1)
-            watermarks.append({"ownerHash": sha(owner)[:12], "value": plist_value(value)})
+            watermarks.append({"ownerHash": sha(owner)[:12], "value": plist_value(value), "source": "legacyOwner"})
         elif key.startswith("task115.syncEvents.watermark.account."):
-            watermarks.append({"scopeHash": sha(key)[:12], "value": plist_value(value)})
+            watermarks.append({"scopeHash": sha(key)[:12], "value": plist_value(value), "source": "legacyAccount"})
         elif key == "sync.accountBinding.v1":
             binding = {"present": True, "decoded": False}
             try:

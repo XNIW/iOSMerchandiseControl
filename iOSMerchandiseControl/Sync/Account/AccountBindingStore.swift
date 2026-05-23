@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-final class AccountBindingStore {
+nonisolated final class AccountBindingStore {
     private let defaults: UserDefaults
     private let key: String
 

@@ -1158,6 +1158,7 @@
 "options.cloud.account.signingOut.detail" = "Clearing the cloud session on this device.";
 "options.cloud.account.failed.title" = "Account needs attention";
 "options.cloud.account.failed.detail" = "Cloud access could not be verified. Try again or check the account.";
+"options.cloud.account.action.signIn" = "Sign in";
 "options.localDatabase.products" = "Products";
 "options.localDatabase.suppliers" = "Suppliers";
 "options.localDatabase.categories" = "Categories";
@@ -1195,6 +1196,14 @@
 "options.supabase.automaticSync.badge.signedOut" = "Sign-in required";
 "options.supabase.automaticSync.badge.scheduled" = "Preparing";
 "options.supabase.automaticSync.badge.actionNeeded" = "Needs check";
+"options.supabase.automaticSync.root.checking.title" = "Checking for updates…";
+"options.supabase.automaticSync.root.checking.detail" = "You can keep using the app.";
+"options.supabase.automaticSync.root.auth.title" = "Sign in again to check the cloud";
+"options.supabase.automaticSync.root.auth.detail" = "Automatic checks stay paused until access is valid.";
+"options.supabase.automaticSync.root.error.title" = "Cloud check failed";
+"options.supabase.automaticSync.root.error.detail" = "You can retry whenever you want.";
+"options.supabase.automaticSync.root.action.signIn" = "Sign in";
+"options.supabase.automaticSync.root.action.retry" = "Retry";
 "options.supabase.manualSync.state.idle.title" = "Cloud synchronization";
 "options.supabase.manualSync.state.idle.subtitle" = "Cloud synchronization stays manual and under your control.";
 "options.supabase.manualSync.state.running.title" = "Operation in progress…";

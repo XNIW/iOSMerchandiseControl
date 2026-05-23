@@ -147,8 +147,8 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
 
     private func recordAttempt(source: SyncAutomaticTriggerSource) {
         #if DEBUG
-        let startKey = "task115.runtime.incremental.attemptWindow.startAt"
-        let countKey = "task115.runtime.incremental.attemptWindow.count"
+        let startKey = "sync.runtime.incremental.attemptWindow.startAt"
+        let countKey = "sync.runtime.incremental.attemptWindow.count"
         let now = Date().timeIntervalSince1970
         if let start = defaults.object(forKey: startKey) as? Double,
            now - start <= 60 {
@@ -157,8 +157,8 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
             defaults.set(now, forKey: startKey)
             defaults.set(1, forKey: countKey)
         }
-        defaults.set(now, forKey: "task115.runtime.incremental.lastAttemptAt")
-        defaults.set(source.rawValue, forKey: "task115.runtime.incremental.lastSource")
+        defaults.set(now, forKey: "sync.runtime.incremental.lastAttemptAt")
+        defaults.set(source.rawValue, forKey: "sync.runtime.incremental.lastSource")
         #endif
     }
 
@@ -167,32 +167,32 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
         source: SyncAutomaticTriggerSource
     ) {
         #if DEBUG
-        defaults.set(summary.syncType.rawValue, forKey: "task115.runtime.incremental.lastSyncType")
-        defaults.set(summary.eventsFetched, forKey: "task115.runtime.incremental.lastEventsFetched")
-        defaults.set(summary.eventsProcessed, forKey: "task115.runtime.incremental.lastEventsProcessed")
-        defaults.set(summary.totalApplied, forKey: "task115.runtime.incremental.lastApplied")
-        defaults.set(summary.totalElapsedMs, forKey: "task115.runtime.incremental.lastPage.totalElapsedMs")
-        defaults.set(summary.totalElapsedMs, forKey: "task115.runtime.incremental.lastTotalElapsedMs")
-        defaults.set(summary.requiresFullRecovery, forKey: "task115.runtime.incremental.requiresFullRecovery")
-        defaults.set(source.rawValue, forKey: "task115.runtime.incremental.lastCompletedSource")
+        defaults.set(summary.syncType.rawValue, forKey: "sync.runtime.incremental.lastSyncType")
+        defaults.set(summary.eventsFetched, forKey: "sync.runtime.incremental.lastEventsFetched")
+        defaults.set(summary.eventsProcessed, forKey: "sync.runtime.incremental.lastEventsProcessed")
+        defaults.set(summary.totalApplied, forKey: "sync.runtime.incremental.lastApplied")
+        defaults.set(summary.totalElapsedMs, forKey: "sync.runtime.incremental.lastPage.totalElapsedMs")
+        defaults.set(summary.totalElapsedMs, forKey: "sync.runtime.incremental.lastTotalElapsedMs")
+        defaults.set(summary.requiresFullRecovery, forKey: "sync.runtime.incremental.requiresFullRecovery")
+        defaults.set(source.rawValue, forKey: "sync.runtime.incremental.lastCompletedSource")
         #endif
     }
 
     private func recordDiagnostic(_ key: String, _ value: String) {
         #if DEBUG
-        defaults.set(value, forKey: "task115.runtime.automatic.\(key)")
+        defaults.set(value, forKey: "sync.runtime.automatic.\(key)")
         #endif
     }
 
     private func recordDiagnostic(_ key: String, _ value: Int) {
         #if DEBUG
-        defaults.set(value, forKey: "task115.runtime.automatic.\(key)")
+        defaults.set(value, forKey: "sync.runtime.automatic.\(key)")
         #endif
     }
 
     private func recordDiagnostic(_ key: String, _ value: TimeInterval) {
         #if DEBUG
-        defaults.set(value, forKey: "task115.runtime.automatic.\(key)")
+        defaults.set(value, forKey: "sync.runtime.automatic.\(key)")
         #endif
     }
 

@@ -8,9 +8,9 @@
 - **Fase attuale**: BLOCKED_EXTERNAL_LIVE_GATES
 - **Responsabile attuale**: USER / External live-device prerequisites
 - **Data creazione**: 2026-05-23
-- **Ultimo aggiornamento**: 2026-05-23 17:48:36 -0400
-- **Ultimo agente che ha operato**: CODEX / Cursor Executor
-- **Readiness**: LOCAL_ARCHITECTURE_EXECUTION_PASS; external live/device gates blocked.
+- **Ultimo aggiornamento**: 2026-05-23 18:19:39 -0400
+- **Ultimo agente che ha operato**: CODEX / Review+Fix Executor
+- **Readiness**: LOCAL_REVIEW_FIX_PASS_WITH_RESIDUAL_ARCHITECTURE_CAVEAT; external live/device gates blocked.
 - **Motivo transizione**: User override explicit end-to-end execution authorization.
 
 ## Vincoli del turno
@@ -214,3 +214,84 @@ Sintesi: CA-117-01...15, 17...21 PASS; CA-117-16 BLOCKED_EXTERNAL per Options sm
 
 #### Handoff
 TASK-117 resta `ACTIVE / BLOCKED_EXTERNAL_LIVE_GATES`, non `DONE` e non `REVIEW`. Prossimo passo concreto: risolvere prerequisiti live/tooling e rerun dei gate bloccati, poi riportare a review solo con CA-117-16 e CA-117-22 PASS reali.
+
+### Review/Fix recheck after `Task 117 E` / `3174652` - 2026-05-23 18:19:39 -0400
+
+#### User override
+
+L'utente ha richiesto una review severa repo-grounded dopo commit `Task 117 E` / `3174652`, autorizzando fix diretti piccoli/medi e chiedendo esplicitamente di non dichiarare DONE.
+
+#### Obiettivo compreso
+
+Verificare dal codice corrente, non dal report, che il path automatico iOS sia pulito da VM/adapter/factory manuali, che Options sia observer-only, che full pull non sia raggiungibile dai trigger normali, che i nomi legacy automatici siano rinominati in modo sicuro, e che i gate harness richiesti vengano rilanciati.
+
+#### File controllati
+
+- `ContentView.swift`, `OptionsView.swift`
+- `Sync/SyncOrchestrator.swift`
+- `Sync/SyncAutomaticRuntime.swift`
+- `Sync/SyncAutomaticRuntimeProviders.swift`
+- `Sync/Incremental/*`
+- `Sync/Account/*`
+- `SupabaseManualSyncReleaseFactory.swift`
+- `SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`
+- `SupabaseSyncEventIncrementalApplyService.swift`
+- `iOSMerchandiseControl.xcodeproj/project.pbxproj`
+- `Localizable.strings` IT/EN/ES/ZH
+- `tools/agent/lib/ios.sh`
+- `tools/agent/lib/task117_scans.py`
+- `docs/TASKS/EVIDENCE/TASK-117/agent-runs/*`
+
+#### Piano minimo
+
+1. Confermare `HEAD`/origin/GitHub su `3174652`.
+2. Verificare call graph reale automatico e assenza path verso VM/compatibility adapter/release factory.
+3. Applicare solo fix locali sicuri: chiavi automatiche legacy, diagnostica runtime, fallback watermark, warning actor-isolation circoscritti.
+4. Rilanciare i gate harness richiesti e aggiornare evidence/task.
+
+#### Modifiche fatte
+
+- `SyncOrchestrator.swift`: root banner automatico usa `options.supabase.automaticSync.root.*`; diagnostica DEBUG scrive `sync.runtime.*`.
+- `OptionsView.swift`: CTA accesso account usa `options.cloud.account.action.signIn`, non una chiave `manualSync`.
+- `Localizable.strings` IT/EN/ES/ZH: aggiunte chiavi automatiche root e account sign-in.
+- `SyncAutomaticRuntime.swift`, `SyncStateStore.swift`, `SyncEventIncrementalDomainApplyService.swift`: rinominate diagnostiche automatiche `task115/task114` in `sync.runtime.*` / `sync.events.*`.
+- `WatermarkStore.swift`: watermark nuovo su `sync.events.watermark.account.*` con fallback read-only per chiavi legacy `task115.syncEvents.watermark.account.*` e `task114.syncEvents.watermark.*`.
+- `LocalStoreIdentity.swift`, `AccountBindingStore.swift`, `WatermarkStore.swift`: marcati `nonisolated` per rimuovere warning actor-isolation preesistenti nel path incremental.
+- `tools/agent/lib/ios.sh`: parser runtime/watermark aggiornato a `sync.*` con fallback legacy.
+- `tools/agent/lib/task117_scans.py`: scan TASK-117 rafforzata contro regressioni `manualSync` nella UI automatica e `task115/task114` nelle diagnostiche runtime automatiche.
+- Test aggiornati per watermark migration e chiavi root automatiche.
+- Evidence aggiornata: `docs/TASKS/EVIDENCE/TASK-117/28-review-3174652.md` e `26-final-acceptance-matrix.md`.
+
+#### Problemi trovati
+
+- ✅ Fix diretto: automatic root/Options usavano ancora chiavi `manualSync` per copy pubblica automatica/account.
+- ✅ Fix diretto: diagnostiche automatiche scrivevano ancora `task115.runtime.*`, `task114.runtime.reconcile.*` e `task115.syncEvents.lightReconcile.*`.
+- ✅ Fix diretto: warning actor-isolation preesistenti su `SyncEventIncrementalDomainApplyService`/`WatermarkStore` rimossi con `nonisolated` su store/identity safe.
+- ⚠️ Residuo architetturale: il path automatico non raggiunge VM/compatibility adapter/release factory proibiti, ma i concrete adapter di push automatico sono ancora condivisi con il boundary manuale e alcuni contratti provider restano `@MainActor`. Non blocca i CA locali attuali, ma impedisce di dichiarare architettura "perfetta" o definitivamente pulita senza futuro split dei provider automatici.
+- ⚠️ Repo hygiene: bundle `agent-runs` moderato ma rumoroso; alcuni vecchi log pre-fix citano compile di `SupabaseManualSyncCompatibilityAdapter.swift`. Sensitive scan PASS; cleanup consigliato solo dopo accettazione, preservando latest JSON/MD/log per ogni gate.
+
+#### Check eseguiti
+
+- ✅ ESEGUITO — HEAD/local/origin/GitHub: `HEAD`, `origin/main`, `FETCH_HEAD`, `git ls-remote origin main` e GitHub API = `3174652eb5a726635aa7377e70775de449a7dfd7` (`Task 117 E`).
+- ✅ ESEGUITO — Call graph automatico: `ContentView -> AppSyncRootHost -> SyncOrchestrator -> SyncAutomaticRuntime -> Sync* provider/domain services` verificato staticamente; dettagli in evidence `28-review-3174652.md`.
+- ✅ ESEGUITO — `SupabaseManualSyncCompatibilityAdapter.swift`: file assente e nessun riferimento in `project.pbxproj`/sorgenti runtime.
+- ✅ ESEGUITO — Options observer-only: nessun avvio sync/full pull da `OptionsView`; scan `no-legacy-runtime-path` PASS `p36744`.
+- ✅ ESEGUITO — Full pull non raggiungibile da foreground/realtime/reconnect/local mutation: scan `no-full-pull-normal-path` PASS `p36815`.
+- ✅ ESEGUITO — Build compila Debug: `p38477` PASS.
+- ✅ ESEGUITO — Build compila Release: `p39085` PASS.
+- ✅ ESEGUITO — iOS sync tests: `p40121` PASS.
+- ✅ ESEGUITO — no-legacy-runtime-path: `p36744` PASS.
+- ✅ ESEGUITO — no-full-pull-normal-path: `p36815` PASS.
+- ✅ ESEGUITO — l10n sync keys: `p37624` PASS.
+- ✅ ESEGUITO — swiftdata-mainactor-heavy: `p37634` PASS.
+- ✅ ESEGUITO — Sensitive scan: `p50035` PASS.
+- ✅ ESEGUITO — Evidence scan: `p58094` PASS.
+- ✅ ESEGUITO — Nessun warning nuovo introdotto verificabile: build post-fix non mostra piu' warning `SyncEventIncrementalDomainApplyService`/`WatermarkStore`; restano warning preesistenti fuori scope nei log test.
+- ⚠️ NON ESEGUIBILE — Options smoke: `p48482` BLOCKED da legacy sim_ui/Accessibility/JXA (`osascript`); next action: grant/verify macOS Accessibility o smoke manuale.
+- ⚠️ NON ESEGUIBILE — Physical iPhone / Android live / account matrix: non rilanciati come PASS per prerequisiti esterni ancora assenti (`MC_ANDROID_DEVICE_SERIAL`, sessioni/app login/fixture live/Supabase linked readiness).
+
+#### Handoff post-fix/review
+
+TASK-117 resta `ACTIVE / BLOCKED_EXTERNAL_LIVE_GATES`, non `DONE` e non `REVIEW`.
+
+Stato consigliato: `BLOCKED_EXTERNAL_LIVE_GATES` finche' CA-117-16 e CA-117-22 non diventano PASS reali o non vengono accettati esplicitamente dall'utente. Prima di un claim architetturale finale "pulita/perfetta", valutare un follow-up di split automatic provider/domain services fuori dai concrete adapter manual-boundary.

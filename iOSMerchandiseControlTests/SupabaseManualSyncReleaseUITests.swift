@@ -600,9 +600,11 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
     func testTask092RootForegroundCopyIsLocalizedNotHardcodedInSwift() throws {
         let swiftSources = try [
             "iOSMerchandiseControl/ContentView.swift",
+            "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
             "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
         ].map(readSource).joined(separator: "\n")
 
+        XCTAssertTrue(swiftSources.contains("options.supabase.automaticSync.root.checking.title"))
         XCTAssertTrue(swiftSources.contains("options.supabase.manualSync.root.changes.title"))
         for literal in [
             "Cloud updates are ready",

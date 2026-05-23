@@ -1,7 +1,7 @@
 import Foundation
 
-struct WatermarkStore {
-    struct Scope: Equatable, Hashable, Sendable {
+nonisolated struct WatermarkStore {
+    nonisolated struct Scope: Equatable, Hashable, Sendable {
         var accountHash: String
         var storeIdentity: LocalStoreIdentity
         var legacyOwnerUserID: UUID?
@@ -40,8 +40,11 @@ struct WatermarkStore {
         if let value = int64(forKey: key(for: scope)) {
             return value
         }
+        if let legacy = int64(forKey: Self.legacyAccountWatermarkKey(accountHash: scope.accountHash, storeIdentity: scope.storeIdentity)) {
+            return legacy
+        }
         if let ownerUserID = scope.legacyOwnerUserID,
-           let legacy = int64(forKey: Self.legacyWatermarkKey(ownerUserID: ownerUserID)) {
+           let legacy = int64(forKey: Self.legacyOwnerWatermarkKey(ownerUserID: ownerUserID)) {
             return legacy
         }
         return 0
@@ -61,11 +64,22 @@ struct WatermarkStore {
         let normalizedAccount = accountHash.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let accountComponent = normalizedAccount.isEmpty ? "anonymous" : normalizedAccount
         let storeComponent = storeIdentity.rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return "sync.events.watermark.account.\(accountComponent).store.\(storeComponent.isEmpty ? "anonymous" : storeComponent)"
+    }
+
+    static func legacyAccountWatermarkKey(accountHash: String, storeIdentity: LocalStoreIdentity) -> String {
+        let normalizedAccount = accountHash.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let accountComponent = normalizedAccount.isEmpty ? "anonymous" : normalizedAccount
+        let storeComponent = storeIdentity.rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return "task115.syncEvents.watermark.account.\(accountComponent).store.\(storeComponent.isEmpty ? "anonymous" : storeComponent)"
     }
 
-    static func legacyWatermarkKey(ownerUserID: UUID) -> String {
+    static func legacyOwnerWatermarkKey(ownerUserID: UUID) -> String {
         "task114.syncEvents.watermark.\(ownerUserID.uuidString.lowercased())"
+    }
+
+    static func legacyWatermarkKey(ownerUserID: UUID) -> String {
+        legacyOwnerWatermarkKey(ownerUserID: ownerUserID)
     }
 
     private func int64(forKey key: String) -> Int64? {

@@ -1158,6 +1158,7 @@
 "options.cloud.account.signingOut.detail" = "Limpiando la sesión cloud en este dispositivo.";
 "options.cloud.account.failed.title" = "La cuenta necesita atención";
 "options.cloud.account.failed.detail" = "No se pudo verificar el acceso cloud. Reintenta o revisa la cuenta.";
+"options.cloud.account.action.signIn" = "Iniciar sesión";
 "options.localDatabase.products" = "Productos";
 "options.localDatabase.suppliers" = "Proveedores";
 "options.localDatabase.categories" = "Categorías";
@@ -1195,6 +1196,14 @@
 "options.supabase.automaticSync.badge.signedOut" = "Requiere acceso";
 "options.supabase.automaticSync.badge.scheduled" = "Preparando";
 "options.supabase.automaticSync.badge.actionNeeded" = "Revisar";
+"options.supabase.automaticSync.root.checking.title" = "Comprobando actualizaciones…";
+"options.supabase.automaticSync.root.checking.detail" = "Puedes seguir usando la app.";
+"options.supabase.automaticSync.root.auth.title" = "Inicia sesión de nuevo para revisar la nube";
+"options.supabase.automaticSync.root.auth.detail" = "La comprobación automática queda pausada hasta que el acceso sea válido.";
+"options.supabase.automaticSync.root.error.title" = "La comprobación de la nube falló";
+"options.supabase.automaticSync.root.error.detail" = "Puedes reintentar cuando quieras.";
+"options.supabase.automaticSync.root.action.signIn" = "Iniciar sesión";
+"options.supabase.automaticSync.root.action.retry" = "Reintentar";
 "options.supabase.manualSync.state.idle.title" = "Sincronización en la nube";
 "options.supabase.manualSync.state.idle.subtitle" = "La sincronización en la nube sigue siendo manual y bajo tu control.";
 "options.supabase.manualSync.state.running.title" = "Operación en curso…";

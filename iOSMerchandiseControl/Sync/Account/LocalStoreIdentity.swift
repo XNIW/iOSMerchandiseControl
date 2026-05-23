@@ -1,6 +1,6 @@
 import Foundation
 
-struct LocalStoreIdentity: RawRepresentable, Codable, Equatable, Hashable, Sendable {
+nonisolated struct LocalStoreIdentity: RawRepresentable, Codable, Equatable, Hashable, Sendable {
     let rawValue: String
 
     init(rawValue: String) {
@@ -14,7 +14,7 @@ struct LocalStoreIdentity: RawRepresentable, Codable, Equatable, Hashable, Senda
     static let anonymous = LocalStoreIdentity(rawValue: "anonymous")
 }
 
-struct AccountBinding: Codable, Equatable, Sendable {
+nonisolated struct AccountBinding: Codable, Equatable, Sendable {
     var accountHash: String
     var storeIdentity: LocalStoreIdentity
     var boundAt: Date
