@@ -1,0 +1,1704 @@
+=== mc-agent scan dead-code --task TASK-119 --strict ===
+{
+  "NEXT_ACTION": "Use this read-only inventory to decide future delete candidates; do not delete without xcode-membership/build/test evidence.",
+  "checks": [
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 87,
+        "samples": [
+          {
+            "file": "tools/agent/lib/sync_architecture_scans.py",
+            "line": 326,
+            "snippet": "\"HistorySessionSyncService\","
+          },
+          {
+            "file": "tools/agent/lib/sync_architecture_scans.py",
+            "line": 407,
+            "snippet": "stale_exception_hits = _line_hits(project_rel, r\"AutomaticPushServices|SupabaseManual|Compatibility|Adapter|HistorySessionSyncService\")"
+          },
+          {
+            "file": "tools/agent/lib/task117_scans.py",
+            "line": 94,
+            "snippet": "\"iOSMerchandiseControl/HistorySessionSyncService.swift\","
+          },
+          {
+            "file": "iOSMerchandiseControl/HistoryView.swift",
+            "line": 33,
+            "snippet": "private let historySessionSyncService: HistorySessionSyncService?"
+          },
+          {
+            "file": "iOSMerchandiseControl/HistoryView.swift",
+            "line": 72,
+            "snippet": "init(historySessionSyncService: HistorySessionSyncService? = nil) {"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 132,
+            "snippet": "let service = HistorySessionSyncService(remote: remote)"
+          },
+          {
+            "file": "iOSMerchandiseControl/ContentView.swift",
+            "line": 105,
+            "snippet": "private let historySessionSyncService: HistorySessionSyncService?"
+          },
+          {
+            "file": "iOSMerchandiseControl/ContentView.swift",
+            "line": 127,
+            "snippet": "HistorySessionSyncService(remote: $0)"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+            "line": 842,
+            "snippet": "let service = HistorySessionSyncService(remote: remote)"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Incremental/HistoryIncrementalApplyService.swift",
+            "line": 35,
+            "snippet": "let service = HistorySessionSyncService(remote: inventoryService)"
+          }
+        ],
+        "symbol": "HistorySessionSyncService",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/HistorySessionSyncService.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/HistorySessionSyncService.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 17,
+        "samples": [
+          {
+            "file": "docs/TASKS/TASK-085-production-ready-hardening-ios.md",
+            "line": 807,
+            "snippet": "| **File letti** | `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-085-production-ready-hardening-ios.md`; `iOSMerchandiseControl/Models.swift`; servizi iOS `SupabaseProductPriceApplyServi"
+          },
+          {
+            "file": "docs/TASKS/TASK-080-supabase-productprice-sync-ios.md",
+            "line": 28,
+            "snippet": "- **Push remoto** controllato (servizio `SupabaseProductPriceManualPushService` + dry-run; oggi **DEBUG-heavy** via `ProductPriceManualPushDebugViewModel`, non card Release)."
+          },
+          {
+            "file": "docs/TASKS/TASK-080-supabase-productprice-sync-ios.md",
+            "line": 96,
+            "snippet": "- **`SupabaseProductPricePushDryRunService`** + **`ProductPriceManualPushDebugViewModel`:** flusso dry-run / snapshot / push in contesto **DEBUG**, non equivalRelease card TASK-079"
+          },
+          {
+            "file": "docs/TASKS/TASK-080-supabase-productprice-sync-ios.md",
+            "line": 159,
+            "snippet": "4. **Push prezzi** con flusso **DEBUG** (`ProductPriceManualPushDebugViewModel`): duplicazione UX rispetto alla card Release; va **consolidato** dietro le stesse regole di TASK-079"
+          },
+          {
+            "file": "docs/TASKS/TASK-108-supabase-sync-unification-ios.md",
+            "line": 2183,
+            "snippet": "- Debug-only hardening: `ProductPriceManualPushDebugViewModel.swift`, `SupabasePushPreflightViewModel.swift`, `SupabaseSyncEventDebugFormatting.swift`, `SupabaseSyncEventDebugViewM"
+          },
+          {
+            "file": "docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md",
+            "line": 248,
+            "snippet": "| `iOSMerchandiseControl/ProductPriceManualPushDebugViewModel.swift` | move / unknown | Debug/manual product price UI model. | Manual/debug only; delete only if unsupported and unr"
+          },
+          {
+            "file": "docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md",
+            "line": 272,
+            "snippet": "| `ProductPriceManualPushDebugViewModel.swift` | Debug/manual naming. | Delete only if debug/manual support decision says unsupported and no references. |"
+          },
+          {
+            "file": "docs/TASKS/TASK-051-supabase-productprice-push-live-manuale-controllato-ios.md",
+            "line": 181,
+            "snippet": "| VM / controller DEBUG | `ProductPriceManualPushDebugViewModel` | Se il progetto **non** usa VM dedicati in Options, usare un **controller** / `@Observable` coerente con lo stile "
+          },
+          {
+            "file": "docs/TASKS/TASK-051-supabase-productprice-push-live-manuale-controllato-ios.md",
+            "line": 425,
+            "snippet": "- Modifica: `SupabaseInventoryService.swift` *(solo se necessario)*, `OptionsView.swift`, `Localizable.strings` \u00d74, test; ViewModel/controller **`ProductPriceManualPushDebugViewMod"
+          },
+          {
+            "file": "docs/TASKS/TASK-051-supabase-productprice-push-live-manuale-controllato-ios.md",
+            "line": 520,
+            "snippet": "- Aggiunto `ProductPriceManualPushDebugViewModel.swift` con stato volatile D51-15, anti parallelismo preview/push, invalidazione snapshot, cancellation e guardia doppio tap."
+          }
+        ],
+        "symbol": "ProductPriceManualPushDebugViewModel",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/ProductPriceManualPushDebugViewModel.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/ProductPriceManualPushDebugViewModel.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 18,
+        "samples": [
+          {
+            "file": "docs/TASKS/TASK-079-supabase-guided-catalog-push-ios.md",
+            "line": 752,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-047-supabase-manual-push-scoped-debug-dataset-ios.md",
+            "line": 212,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-041-supabase-manual-push-preflight-dry-run-tombstone-compliant-ios.md",
+            "line": 500,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift`: aggiunti `ManualPushPreview`, `ManualPushPlan`, `PushCandidate`, `PushCandidateAction`, `PushBlockedReason`, `Pus"
+          },
+          {
+            "file": "docs/TASKS/TASK-041-supabase-manual-push-preflight-dry-run-tombstone-compliant-ios.md",
+            "line": 551,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-042-supabase-manual-push-preflight-ui-optionsview-dry-run-ios.md",
+            "line": 38,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-042-supabase-manual-push-preflight-ui-optionsview-dry-run-ios.md",
+            "line": 197,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift` (solo se strettamente necessario)"
+          },
+          {
+            "file": "docs/TASKS/TASK-042-supabase-manual-push-preflight-ui-optionsview-dry-run-ios.md",
+            "line": 254,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-042-supabase-manual-push-preflight-ui-optionsview-dry-run-ios.md",
+            "line": 356,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-069-supabase-manual-sync-local-pending-readonly-ios.md",
+            "line": 101,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-045-supabase-live-manual-validation-ios-small-dataset.md",
+            "line": 580,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift`"
+          }
+        ],
+        "symbol": "SupabaseManualPushPreflightModels",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualPushPreflightModels.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 69,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+            "line": 129,
+            "snippet": "private let preflightService: SupabaseManualPushPreflightService"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+            "line": 142,
+            "snippet": "preflightService: SupabaseManualPushPreflightService = SupabaseManualPushPreflightService(),"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabasePushPreflightViewModel.swift",
+            "line": 63,
+            "snippet": "private let service: SupabaseManualPushPreflightService"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabasePushPreflightViewModel.swift",
+            "line": 71,
+            "snippet": "service: SupabaseManualPushPreflightService = SupabaseManualPushPreflightService(),"
+          },
+          {
+            "file": "iOSMerchandiseControl/LocalPendingAggregatedPushPlanner.swift",
+            "line": 206,
+            "snippet": "private let preflightService: SupabaseManualPushPreflightService"
+          },
+          {
+            "file": "iOSMerchandiseControl/LocalPendingAggregatedPushPlanner.swift",
+            "line": 220,
+            "snippet": "preflightService: SupabaseManualPushPreflightService = SupabaseManualPushPreflightService(),"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 535,
+            "snippet": "private let preflightService: SupabaseManualPushPreflightService"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 542,
+            "snippet": "preflightService: SupabaseManualPushPreflightService = SupabaseManualPushPreflightService(),"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 481,
+            "snippet": "> **2026-05-08 15:40 -0400 \u2014 EXECUTION TASK-079 completata / handoff REVIEW (override utente):** implementato push catalogo guidato Release **Controlla cloud \u2192 Rivedi \u2192 Conferma \u2192 "
+          },
+          {
+            "file": "docs/TASKS/TASK-084-android-ios-cross-platform-parity.md",
+            "line": 728,
+            "snippet": "| iOS sync | `SupabasePullPreviewService.swift`, `SupabasePullPreviewModels.swift`, `SupabasePullApplyService.swift`, `SupabaseManualPushService.swift`, `SupabaseManualPushPrefligh"
+          }
+        ],
+        "symbol": "SupabaseManualPushPreflightService",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualPushPreflightService.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualPushPreflightService.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 116,
+        "samples": [
+          {
+            "file": "tools/agent/lib/task117_scans.py",
+            "line": 551,
+            "snippet": "r\"SupabaseManualPushService|manualPushService\","
+          },
+          {
+            "file": "tools/agent/lib/task117_scans.py",
+            "line": 552,
+            "snippet": "\"Root sync wiring must not pass SupabaseManualPushService to automatic runtime.\","
+          },
+          {
+            "file": "tools/agent/lib/task117_scans.py",
+            "line": 558,
+            "snippet": "r\"SupabaseManualPushService|manualPushService\","
+          },
+          {
+            "file": "tools/agent/lib/task117_scans.py",
+            "line": 565,
+            "snippet": "r\"SupabaseManualPushService\\?|manualPushService\\s*:\","
+          },
+          {
+            "file": "tools/agent/lib/task117_scans.py",
+            "line": 566,
+            "snippet": "\"SyncAutomaticRuntimeFactory.make must not accept SupabaseManualPushService.\","
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabasePushPreflightViewModel.swift",
+            "line": 65,
+            "snippet": "private let manualPushService: SupabaseManualPushService?"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabasePushPreflightViewModel.swift",
+            "line": 73,
+            "snippet": "manualPushService: SupabaseManualPushService? = nil,"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 11,
+            "snippet": "manualPushService: SupabaseManualPushService? = nil,"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 534,
+            "snippet": "private let manualPushService: SupabaseManualPushService"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 541,
+            "snippet": "manualPushService: SupabaseManualPushService,"
+          }
+        ],
+        "symbol": "SupabaseManualPushService",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualPushService.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualPushService.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 16,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 406,
+            "snippet": "let telemetryResult = SupabaseManualSyncAggregatedPushOutboxProducer(context: context).produce("
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 609,
+            "snippet": "let telemetry = SupabaseManualSyncAggregatedPushOutboxProducer(context: context).produce("
+          },
+          {
+            "file": "docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md",
+            "line": 403,
+            "snippet": "**File controllati prima dell'EXECUTION:** `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`; `docs/TASKS/TASK-095-policy-lifecycle-background-ios.md"
+          },
+          {
+            "file": "docs/TASKS/TASK-094-smart-aggregated-push-ios.md",
+            "line": 182,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncAggregatedPushOutboxProducer.swift` *(nuovo)*"
+          },
+          {
+            "file": "docs/TASKS/TASK-094-smart-aggregated-push-ios.md",
+            "line": 259,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncAggregatedPushOutboxProducer.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-095-policy-lifecycle-background-ios.md",
+            "line": 21,
+            "snippet": "- **Dipende da:** **TASK-094 DONE / Chiusura \u2014 REVIEW PASS** \u2014 push intelligente aggregato (`LocalPendingAggregatedPushPlanner`, adapter Release catalogo/ProductPrice, outbox aggre"
+          },
+          {
+            "file": "docs/TASKS/TASK-095-policy-lifecycle-background-ios.md",
+            "line": 42,
+            "snippet": "- **Push aggregato:** **TASK-094** \u2014 `LocalPendingAggregatedPushPlanner` (batch bounded, cap, fingerprint), riuso `SupabaseManualPushService` / ProductPrice manual push, `SupabaseM"
+          },
+          {
+            "file": "docs/TASKS/TASK-095-policy-lifecycle-background-ios.md",
+            "line": 62,
+            "snippet": "File di riferimento *(solo elenco planning; nessuna modifica in questo turno)*: `LocalPendingAggregatedPushPlanner.swift`, `SupabaseManualSyncAggregatedPushOutboxProducer.swift`, `"
+          },
+          {
+            "file": "docs/TASKS/TASK-095-policy-lifecycle-background-ios.md",
+            "line": 250,
+            "snippet": "- Pending / push: `LocalPendingChange.swift`, `LocalPendingAggregatedPushPlanner.swift`, `SupabaseManualSyncAggregatedPushOutboxProducer.swift`, `SupabaseManualSyncLocalPendingSnap"
+          },
+          {
+            "file": "docs/TASKS/TASK-095-policy-lifecycle-background-ios.md",
+            "line": 350,
+            "snippet": "- **S95-A \u2014 file reali controllati:** `ContentView.swift`, `iOSMerchandiseControlApp.swift`, `OptionsView.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncSemiAutoma"
+          }
+        ],
+        "symbol": "SupabaseManualSyncAggregatedPushOutboxProducer",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 11,
+        "samples": [
+          {
+            "file": "docs/TASKS/TASK-108-supabase-sync-unification-ios.md",
+            "line": 1295,
+            "snippet": "- Rifinita Wave 1: copy Release senza jargon vietato, committer dedicato `SupabaseManualSyncBaselineCommitter` per mantenere il boundary del ViewModel, localizzazioni aggiornate EN"
+          },
+          {
+            "file": "docs/TASKS/TASK-108-supabase-sync-unification-ios.md",
+            "line": 1643,
+            "snippet": "- `SupabaseManualSyncBaselineCommitter.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-108-supabase-sync-unification-ios.md",
+            "line": 1723,
+            "snippet": "- iOS: `SupabaseProductPriceApplyService.swift`, `SupabaseProductPricePreviewService.swift`, `SupabaseInventoryService.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualS"
+          },
+          {
+            "file": "docs/TASKS/TASK-108-supabase-sync-unification-ios.md",
+            "line": 1914,
+            "snippet": "- iOS: `SupabaseProductPriceApplyService.swift`, `SupabasePullApplyService.swift`, `HistorySessionSyncService.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncCoordi"
+          },
+          {
+            "file": "docs/TASKS/TASK-108-supabase-sync-unification-ios.md",
+            "line": 1938,
+            "snippet": "- iOS codice: `SupabaseProductPriceApplyService.swift`, `SupabasePullApplyService.swift`, `HistorySessionSyncService.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyn"
+          },
+          {
+            "file": "docs/TASKS/TASK-108-supabase-sync-unification-ios.md",
+            "line": 2033,
+            "snippet": "- iOS: `ContentView.swift`, `OptionsView.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncReleaseFactory.swift`, `SupabaseManualSyncRemotePreview.swift`, `SupabaseMa"
+          },
+          {
+            "file": "docs/TASKS/EVIDENCE/TASK-108/70-background-sync-worker-refactor.md",
+            "line": 41,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncBaselineCommitter.swift`"
+          },
+          {
+            "file": "docs/TASKS/EVIDENCE/TASK-108/75-reset-clean-seed-preflight.md",
+            "line": 19,
+            "snippet": "- iOS: `ContentView.swift`, `OptionsView.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncReleaseFactory.swift`, `SupabaseManualSyncRemotePreview.swift`, `SupabaseMa"
+          },
+          {
+            "file": "docs/TASKS/EVIDENCE/TASK-108/52-performance-preflight-repo-state.md",
+            "line": 25,
+            "snippet": "- iOS code read: `SupabaseProductPriceApplyService.swift`, `SupabaseProductPricePreviewService.swift`, `SupabaseInventoryService.swift`, `SupabaseManualSyncViewModel.swift`, `Supab"
+          },
+          {
+            "file": "docs/TASKS/EVIDENCE/TASK-117/03-legacy-file-classification.md",
+            "line": 26,
+            "snippet": "| `SupabaseManualSyncBaselineCommitter.swift` | `MOVE_TO_SYNC_DOMAIN` | Baseline commit can be domain/shared, but naming must be cleaned after proof. |"
+          }
+        ],
+        "symbol": "SupabaseManualSyncBaselineCommitter",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncBaselineCommitter.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncBaselineCommitter.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 33,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "line": 604,
+            "snippet": "private let coordinator: any SupabaseManualSyncCoordinating"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "line": 679,
+            "snippet": "coordinator: any SupabaseManualSyncCoordinating,"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 719,
+            "snippet": "> **2026-05-07 21:02 -04 \u2014 EXECUTION TASK-066 completata / handoff REVIEW (user override controllato):** creato **`docs/TASKS/TASK-066-supabase-manual-sync-viewmodel-states-ios.md`"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 1074,
+            "snippet": "- **TASK-066:** resta **DONE / Chiusura**; ViewModel Release-oriented `SupabaseManualSyncViewModel` + DI `SupabaseManualSyncCoordinating` implementato e verificato."
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 1109,
+            "snippet": "- **TASK-066** (**DONE / Chiusura**) \u2014 ViewModel/stati non-DEBUG per sync guidata: `SupabaseManualSyncViewModel`, DI `SupabaseManualSyncCoordinating`, XCTest dedicati; review **APP"
+          },
+          {
+            "file": "docs/TASKS/TASK-071-supabase-manual-sync-remote-preview-readonly-adapter-ios.md",
+            "line": 109,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-067-supabase-manual-sync-release-ui-optionsview-ios.md",
+            "line": 20,
+            "snippet": "- **TASK-066 DONE / Chiusura** \u2014 `SupabaseManualSyncViewModel` non-DEBUG + DI `SupabaseManualSyncCoordinating`."
+          },
+          {
+            "file": "docs/TASKS/TASK-067-supabase-manual-sync-release-ui-optionsview-ios.md",
+            "line": 76,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-073-supabase-manual-sync-live-wiring-ios.md",
+            "line": 382,
+            "snippet": "- `SupabaseManualSyncCoordinating.swift` \u2014 solo se il protocollo deve espandere (evitare se possibile)."
+          },
+          {
+            "file": "docs/TASKS/TASK-069-supabase-manual-sync-local-pending-readonly-ios.md",
+            "line": 99,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift`"
+          }
+        ],
+        "symbol": "SupabaseManualSyncCoordinating",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 112,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift",
+            "line": 3,
+            "snippet": "/// Abstraction over `SupabaseManualSyncCoordinator` for test doubles and SwiftUI-facing layers (TASK-066)."
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift",
+            "line": 9,
+            "snippet": "extension SupabaseManualSyncCoordinator: SupabaseManualSyncCoordinating {}"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 51,
+            "snippet": "let dependencies = SupabaseManualSyncCoordinator.Dependencies("
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 65,
+            "snippet": "coordinator: SupabaseManualSyncCoordinator(dependencies: dependencies),"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 539,
+            "snippet": "> **2026-05-07 \u2014 ROADMAP BACKLOG TASK-072\u2013075 (storico roadmap):** aggiunta roadmap documentale per portare Supabase iOS da infrastruttura/slice controllate a una prima esperienza "
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 712,
+            "snippet": "> **2026-05-07 22:03 -04 \u2014 EXECUTION TASK-069 avviata (user override controllato):** creato **`docs/TASKS/TASK-069-supabase-manual-sync-local-pending-readonly-ios.md`** e promosso "
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 721,
+            "snippet": "> **2026-05-07 \u2014 EXECUTION TASK-065 completata / handoff REVIEW:** creato **`docs/TASKS/TASK-065-supabase-manual-sync-coordinator-dryrun-ios.md`**; implementati `SupabaseManualSync"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 733,
+            "snippet": "> **2026-05-07 \u2014 PLANNING TASK-063 (solo markdown):** creato **`docs/TASKS/TASK-063-supabase-production-safe-sync-orchestrator-planning-ios.md`** \u2014 planning orchestratore sync **pr"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 1106,
+            "snippet": "- **TASK-063** (**DONE / Chiusura**) \u2014 roadmap orchestratore **production-safe** (**solo markdown**): coordinator preferito **`SupabaseManualSyncCoordinator`**, decisioni **D63-01\u2026"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 1108,
+            "snippet": "- **TASK-065** (**DONE / Chiusura**) \u2014 coordinator sync manuale **dry-run/mock**: `SupabaseManualSyncCoordinator` + tipi `SupabaseManualSync*` + XCTest `SupabaseManualSyncCoordinat"
+          }
+        ],
+        "symbol": "SupabaseManualSyncCoordinator",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncCoordinator.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncCoordinator.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 25,
+        "samples": [
+          {
+            "file": "docs/TASKS/TASK-071-supabase-manual-sync-remote-preview-readonly-adapter-ios.md",
+            "line": 108,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncCoordinatorModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-071-supabase-manual-sync-remote-preview-readonly-adapter-ios.md",
+            "line": 236,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncCoordinatorModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md",
+            "line": 403,
+            "snippet": "**File controllati prima dell'EXECUTION:** `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`; `docs/TASKS/TASK-095-policy-lifecycle-background-ios.md"
+          },
+          {
+            "file": "docs/TASKS/TASK-072-supabase-release-cta-controlla-cloud-ios.md",
+            "line": 272,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncCoordinatorModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-072-supabase-release-cta-controlla-cloud-ios.md",
+            "line": 393,
+            "snippet": "- File modificati da TASK-072: `OptionsView.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncReleaseFactory.swift`, `SupabaseManualSyncCoordinatorModels.swift`, `Loc"
+          },
+          {
+            "file": "docs/TASKS/TASK-094-smart-aggregated-push-ios.md",
+            "line": 75,
+            "snippet": "- **Release / sync manuale:** `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncCoordinator.swift`, `SupabaseManualSyncCoordinatorModels.swift`, `SupabaseManualSyncReleaseFac"
+          },
+          {
+            "file": "docs/TASKS/TASK-095-policy-lifecycle-background-ios.md",
+            "line": 350,
+            "snippet": "- **S95-A \u2014 file reali controllati:** `ContentView.swift`, `iOSMerchandiseControlApp.swift`, `OptionsView.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncSemiAutoma"
+          },
+          {
+            "file": "docs/TASKS/TASK-067-supabase-manual-sync-release-ui-optionsview-ios.md",
+            "line": 78,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncCoordinatorModels.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-073-supabase-manual-sync-live-wiring-ios.md",
+            "line": 379,
+            "snippet": "- `SupabaseManualSyncCoordinatorModels.swift` \u2014 se servono esiti/causali aggiuntivi (minimo necessario)."
+          },
+          {
+            "file": "docs/TASKS/TASK-065-supabase-manual-sync-coordinator-dryrun-ios.md",
+            "line": 113,
+            "snippet": "| `iOSMerchandiseControl/SupabaseManualSyncCoordinatorModels.swift` | Enum/struct: mode, phase, outcome, summary, privacy counts, copy UX |"
+          }
+        ],
+        "symbol": "SupabaseManualSyncCoordinatorModels",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncCoordinatorModels.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncCoordinatorModels.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 29,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "line": 624,
+            "snippet": "private let lifecycleRunGate: SupabaseManualSyncLifecycleRunGate"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "line": 700,
+            "snippet": "lifecycleRunGate: SupabaseManualSyncLifecycleRunGate? = nil,"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "line": 743,
+            "snippet": "self.lifecycleRunGate = SupabaseManualSyncLifecycleRunGate("
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 327,
+            "snippet": "> **2026-05-10 11:56 -0400 \u2014 EXECUTION TASK-095 completata / handoff REVIEW:** implementata policy lifecycle/background iOS foreground-first con `SupabaseManualSyncLifecycleRunGate"
+          },
+          {
+            "file": "docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md",
+            "line": 23,
+            "snippet": "- **Dipende da:** **TASK-095 DONE / Chiusura \u2014 REVIEW PASS** \u2014 `SupabaseManualSyncLifecycleRunGate`, single-flight root/Opzioni/sheet Release, preflight/budget, UX interrupt/ripres"
+          },
+          {
+            "file": "docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md",
+            "line": 43,
+            "snippet": "- **Lifecycle:** RunGate minimale TASK-095 (`SupabaseManualSyncLifecycleRunGate`), single-flight, preflight auth/owner/rete/stato app, budget bounded, priorit\u00e0 mutazione interrotta"
+          },
+          {
+            "file": "docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md",
+            "line": 375,
+            "snippet": "Nessun file in questo turno. In futura EXECUTION candidati tipici: `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncLifecycleRunGate.swift`, test `SupabaseManualSyncViewMode"
+          },
+          {
+            "file": "docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md",
+            "line": 403,
+            "snippet": "**File controllati prima dell'EXECUTION:** `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`; `docs/TASKS/TASK-095-policy-lifecycle-background-ios.md"
+          },
+          {
+            "file": "docs/TASKS/TASK-108-supabase-sync-unification-ios.md",
+            "line": 723,
+            "snippet": "- [ ] **VIETATI** ripetizioni automatiche preview/pull causa combo **`.onAppear`**, **`scenePhase == .active`**, pi\u00f9 **`onChange`** senza **gate/dedupe/debounce** (**CA-T108-12**):"
+          },
+          {
+            "file": "docs/TASKS/TASK-108-supabase-sync-unification-ios.md",
+            "line": 792,
+            "snippet": "**Auto/incremental sync lifecycle:** eventuali file esistenti o nuovi **piccoli** per launch/foreground gate, ad esempio `SupabaseManualSyncLifecycleRunGate.swift`, `CloudSyncAutoP"
+          }
+        ],
+        "symbol": "SupabaseManualSyncLifecycleRunGate",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncLifecycleRunGate.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncLifecycleRunGate.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 35,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 54,
+            "snippet": "pendingSnapshot: SupabaseManualSyncLocalPendingSnapshotProvider("
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 710,
+            "snippet": "> **2026-05-07 22:25 -04 \u2014 REVIEW+FIX TASK-068/TASK-069 APPROVED_FIXED_DIRECTLY / DONE (user override):** review completa chiusa. **TASK-068** approvato e chiuso **DONE / Chiusura*"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 711,
+            "snippet": "> **2026-05-07 22:13 -04 \u2014 EXECUTION TASK-069 completata / handoff REVIEW:** implementato provider locale read-only `SupabaseManualSyncLocalPendingSnapshotProvider` per pending agg"
+          },
+          {
+            "file": "docs/TASKS/TASK-071-supabase-manual-sync-remote-preview-readonly-adapter-ios.md",
+            "line": 112,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md",
+            "line": 403,
+            "snippet": "**File controllati prima dell'EXECUTION:** `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-096-release-semi-auto-acceptance-ios.md`; `docs/TASKS/TASK-095-policy-lifecycle-background-ios.md"
+          },
+          {
+            "file": "docs/TASKS/TASK-079-supabase-guided-catalog-push-ios.md",
+            "line": 758,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-094-smart-aggregated-push-ios.md",
+            "line": 167,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-094-smart-aggregated-push-ios.md",
+            "line": 270,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-095-policy-lifecycle-background-ios.md",
+            "line": 21,
+            "snippet": "- **Dipende da:** **TASK-094 DONE / Chiusura \u2014 REVIEW PASS** \u2014 push intelligente aggregato (`LocalPendingAggregatedPushPlanner`, adapter Release catalogo/ProductPrice, outbox aggre"
+          },
+          {
+            "file": "docs/TASKS/TASK-095-policy-lifecycle-background-ios.md",
+            "line": 52,
+            "snippet": "- **Snapshot read-only** (`SupabaseManualSyncLocalPendingSnapshotProvider`, conteggi aggregati) alimenta copy Release **privacy-safe**."
+          }
+        ],
+        "symbol": "SupabaseManualSyncLocalPendingSnapshotProvider",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 3,
+        "samples": [
+          {
+            "file": "docs/TASKS/TASK-118-ios-sync-automatic-domain-split-finalization.md",
+            "line": 78,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncOutboxProducerConversions.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-118-ios-sync-automatic-domain-split-finalization.md",
+            "line": 103,
+            "snippet": "- Conversioni outbox da result manuali spostate in `SupabaseManualSyncOutboxProducerConversions.swift`, esclusa dal boundary automatico."
+          },
+          {
+            "file": "docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md",
+            "line": 246,
+            "snippet": "| `iOSMerchandiseControl/SupabaseManualSyncOutboxProducerConversions.swift` | move / audit | Manual result to outbox conversion helpers. | Manual-only; automatic path must not refe"
+          }
+        ],
+        "symbol": "SupabaseManualSyncOutboxProducerConversions",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncOutboxProducerConversions.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncOutboxProducerConversions.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 10,
+        "samples": [
+          {
+            "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+            "line": 180,
+            "snippet": "- `SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`: mapping esplicito tra DTO manuali e DTO automatici puliti."
+          },
+          {
+            "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+            "line": 237,
+            "snippet": "- `SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-118-ios-sync-automatic-domain-split-finalization.md",
+            "line": 65,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 458,
+            "snippet": "- iOS runtime: `ContentView.swift`, `OptionsView.swift`, `SupabaseManualSyncReleaseFactory.swift`, `SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`, `SupabaseSyncEventI"
+          },
+          {
+            "file": "docs/TASKS/TASK-116-ios-sync-architecture-completion.md",
+            "line": 320,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-081-supabase-sync-events-outbox-drain-release-ios.md",
+            "line": 278,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-081-supabase-sync-events-outbox-drain-release-ios.md",
+            "line": 314,
+            "snippet": "- Architettura: `OptionsView` resta solo presentation/wiring; nessun riferimento diretto a `SyncEventOutboxDrainService` o `drainOnce` nella card Release. Il drain reale \u00e8 confinat"
+          },
+          {
+            "file": "docs/TASKS/TASK-081-supabase-sync-events-outbox-drain-release-ios.md",
+            "line": 319,
+            "snippet": "- Duplicati: verificato che `SupabaseManualSyncReleaseActivityRegistrationAdapter.swift` e `SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift` esistono una sola volta"
+          },
+          {
+            "file": "docs/TASKS/EVIDENCE/TASK-118/01-execution-audit.md",
+            "line": 69,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`"
+          },
+          {
+            "file": "iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift",
+            "line": 464,
+            "snippet": "let adapterSource = try readSource(\"iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift\")"
+          }
+        ],
+        "symbol": "SupabaseManualSyncReleaseActivityRegistrationAdapter",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 167,
+        "samples": [
+          {
+            "file": "tools/agent/lib/common.sh",
+            "line": 1407,
+            "snippet": "r\"SupabaseManualSyncViewModel|SupabaseManualSyncCompatibilityAdapter|SupabaseSyncEventIncrementalApplyService|SupabaseManualSyncReleaseFactory|SupabaseManualSync[A-Za-z0-9_]*Provid"
+          },
+          {
+            "file": "tools/agent/lib/task117_scans.py",
+            "line": 163,
+            "snippet": "r\"SupabaseManualSyncReleaseFactory|\""
+          },
+          {
+            "file": "tools/agent/lib/task117_scans.py",
+            "line": 246,
+            "snippet": "r\"SupabaseManualSyncViewModel|SupabaseManualSyncReleaseFactory|SupabaseManualSyncCompatibilityAdapter\","
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 525,
+            "snippet": "> **2026-05-08 00:41 -0400 \u2014 EXECUTION TASK-073 S73-a avviata/cablata (override utente, NON DONE):** cablata preview remota read-only in Release: `OptionsView` passa il `SupabasePu"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 533,
+            "snippet": "> **2026-05-08 00:12 -04 \u2014 EXECUTION TASK-072 completata / handoff REVIEW:** implementata card Release nativa **Sincronizzazione cloud** in `OptionsView` guidata da `SupabaseManual"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 711,
+            "snippet": "> **2026-05-07 22:13 -04 \u2014 EXECUTION TASK-069 completata / handoff REVIEW:** implementato provider locale read-only `SupabaseManualSyncLocalPendingSnapshotProvider` per pending agg"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 712,
+            "snippet": "> **2026-05-07 22:03 -04 \u2014 EXECUTION TASK-069 avviata (user override controllato):** creato **`docs/TASKS/TASK-069-supabase-manual-sync-local-pending-readonly-ios.md`** e promosso "
+          },
+          {
+            "file": "docs/TASKS/TASK-085-production-ready-hardening-ios.md",
+            "line": 807,
+            "snippet": "| **File letti** | `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-085-production-ready-hardening-ios.md`; `iOSMerchandiseControl/Models.swift`; servizi iOS `SupabaseProductPriceApplyServi"
+          },
+          {
+            "file": "docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md",
+            "line": 431,
+            "snippet": "**File controllati prima dell'EXECUTION codice:** `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`; `docs/CODEX-EXECUTION-PROTOCOL.md`; `AGENTS.md`; "
+          },
+          {
+            "file": "docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md",
+            "line": 433,
+            "snippet": "**Punto d'ingresso reale identificato:** flusso Release in `SupabaseManualSyncViewModel` + `SupabaseManualSyncReleaseFactory`; pending locali in `LocalPendingChange` / `LocalPendin"
+          }
+        ],
+        "symbol": "SupabaseManualSyncReleaseFactory",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 33,
+        "samples": [
+          {
+            "file": "docs/TASKS/TASK-085-production-ready-hardening-ios.md",
+            "line": 1243,
+            "snippet": "| **File letti** | iOS `DatabaseView.swift`, `OptionsView.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncRemotePreview.swift`, test Release UI. |"
+          },
+          {
+            "file": "docs/TASKS/TASK-085-production-ready-hardening-ios.md",
+            "line": 1273,
+            "snippet": "- **File letti:** `DatabaseView.swift`, `OptionsView.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncRemotePreview.swift`, test Release UI."
+          },
+          {
+            "file": "docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md",
+            "line": 431,
+            "snippet": "**File controllati prima dell'EXECUTION codice:** `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`; `docs/CODEX-EXECUTION-PROTOCOL.md`; `AGENTS.md`; "
+          },
+          {
+            "file": "docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md",
+            "line": 443,
+            "snippet": "**File modificati:** `SupabaseManualSyncRemotePreview.swift`; `SupabaseManualSyncCoordinator.swift`; `SupabaseManualSyncViewModel.swift`; `SupabaseSyncPlanContract.swift`; `Supabas"
+          },
+          {
+            "file": "docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md",
+            "line": 503,
+            "snippet": "**File controllati in review:** tutti i file modificati dichiarati nel prompt, inclusi tracking, evidenze, `SupabaseManualSyncRemotePreview.swift`, `SupabaseManualSyncCoordinator.s"
+          },
+          {
+            "file": "docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md",
+            "line": 505,
+            "snippet": "**File modificati finali:** `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`; `docs/TASKS/EVIDENCE/TASK-099/anti-scope.md`; `docs/TASKS/EVIDENCE/TASK"
+          },
+          {
+            "file": "docs/TASKS/TASK-071-supabase-manual-sync-remote-preview-readonly-adapter-ios.md",
+            "line": 132,
+            "snippet": "- Aggiunto `SupabaseManualSyncRemotePreview.swift` con:"
+          },
+          {
+            "file": "docs/TASKS/TASK-071-supabase-manual-sync-remote-preview-readonly-adapter-ios.md",
+            "line": 234,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncRemotePreview.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-078-supabase-mutative-sync-pull-apply-ios.md",
+            "line": 127,
+            "snippet": "10. **File/test/rollback:** file previsti: `SupabaseManualSyncRemotePreview.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncReleaseFactory.swift`, `OptionsView.swif"
+          },
+          {
+            "file": "docs/TASKS/TASK-078-supabase-mutative-sync-pull-apply-ios.md",
+            "line": 149,
+            "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncRemotePreview.swift`"
+          }
+        ],
+        "symbol": "SupabaseManualSyncRemotePreview",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncRemotePreview.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncRemotePreview.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 27,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "line": 168,
+            "snippet": "policy: SupabaseManualSyncSemiAutomaticPolicy,"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "line": 623,
+            "snippet": "private let semiAutomaticPolicy: SupabaseManualSyncSemiAutomaticPolicy"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "line": 699,
+            "snippet": "semiAutomaticPolicy: SupabaseManualSyncSemiAutomaticPolicy = SupabaseManualSyncSemiAutomaticPolicy(),"
+          },
+          {
+            "file": "docs/TASKS/TASK-108-supabase-sync-unification-ios.md",
+            "line": 788,
+            "snippet": "Auth/sync VM: `SupabaseAuthViewModel.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncCoordinator*.swift`, `SupabaseManualSyncReleaseFactory.swift`, `SupabaseManualS"
+          },
+          {
+            "file": "docs/TASKS/TASK-095-policy-lifecycle-background-ios.md",
+            "line": 350,
+            "snippet": "- **S95-A \u2014 file reali controllati:** `ContentView.swift`, `iOSMerchandiseControlApp.swift`, `OptionsView.swift`, `SupabaseManualSyncViewModel.swift`, `SupabaseManualSyncSemiAutoma"
+          },
+          {
+            "file": "docs/TASKS/TASK-091-supabase-smart-semi-automatic-sync-ios.md",
+            "line": 416,
+            "snippet": "| `iOSMerchandiseControl/SupabaseManualSyncSemiAutomaticPolicy.swift` | Nuova policy semi-auto: cooldown, anti-reentrancy, auth/owner guard, staged-plan guard | No | No | S\u00ec, layer"
+          },
+          {
+            "file": "docs/TASKS/TASK-091-supabase-smart-semi-automatic-sync-ios.md",
+            "line": 441,
+            "snippet": "- Aggiunto `SupabaseManualSyncSemiAutomaticPolicy` con cooldown default 30 minuti, anti-reentrancy, blocco auth/owner/sessione, blocco staged plan non risolto."
+          },
+          {
+            "file": "docs/TASKS/TASK-091-supabase-smart-semi-automatic-sync-ios.md",
+            "line": 454,
+            "snippet": "| `git status` finale | \u2705 ESEGUITO | Worktree finale: modifiche Swift/UI/test/localizzazioni/tracking TASK-091; nuovo `SupabaseManualSyncSemiAutomaticPolicy.swift`; TASK-091 resta "
+          },
+          {
+            "file": "docs/TASKS/TASK-092-lightweight-auto-pull-foreground-ios.md",
+            "line": 36,
+            "snippet": "- La policy semi-auto \u00e8 in `SupabaseManualSyncSemiAutomaticPolicy` (cooldown default **30 min**, blocchi: capability cloud, running, auth/owner, staged non risolto)."
+          },
+          {
+            "file": "docs/TASKS/TASK-092-lightweight-auto-pull-foreground-ios.md",
+            "line": 200,
+            "snippet": "- Riusare `SupabaseManualSyncSemiAutomaticPolicy` / guard auth-owner / staged plan / anti-reentrancy."
+          }
+        ],
+        "symbol": "SupabaseManualSyncSemiAutomaticPolicy",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncSemiAutomaticPolicy.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncSemiAutomaticPolicy.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 374,
+        "samples": [
+          {
+            "file": "tools/agent/lib/common.sh",
+            "line": 1407,
+            "snippet": "r\"SupabaseManualSyncViewModel|SupabaseManualSyncCompatibilityAdapter|SupabaseSyncEventIncrementalApplyService|SupabaseManualSyncReleaseFactory|SupabaseManualSync[A-Za-z0-9_]*Provid"
+          },
+          {
+            "file": "tools/agent/lib/supabase.sh",
+            "line": 1573,
+            "snippet": "vm = (repo / \"iOSMerchandiseControl/SupabaseManualSyncViewModel.swift\").read_text(encoding=\"utf-8\")"
+          },
+          {
+            "file": "tools/agent/lib/supabase.sh",
+            "line": 1578,
+            "snippet": "failures.append({\"id\": \"legacy_vm_foreground_auto_can_request_full_recovery\", \"file\": \"iOSMerchandiseControl/SupabaseManualSyncViewModel.swift\"})"
+          },
+          {
+            "file": "tools/agent/lib/task117_scans.py",
+            "line": 164,
+            "snippet": "r\"SupabaseManualSyncViewModel\""
+          },
+          {
+            "file": "tools/agent/lib/task117_scans.py",
+            "line": 246,
+            "snippet": "r\"SupabaseManualSyncViewModel|SupabaseManualSyncReleaseFactory|SupabaseManualSyncCompatibilityAdapter\","
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 13,
+            "snippet": ") -> SupabaseManualSyncViewModel {"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 64,
+            "snippet": "return SupabaseManualSyncViewModel("
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 147,
+            "snippet": "> **2026-05-15 02:25 -0400 \u2014 REVIEW COMPLETA TASK-109 / CHANGES_REQUIRED:** Codex ha eseguito review repo-grounded/runtime-grounded, applicando un fix iOS mirato: `SupabaseManualSy"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 465,
+            "snippet": "> **2026-05-08 \u2014 PLANNING TASK-081 avviato (solo markdown, planning-only):** creato **`docs/TASKS/TASK-081-supabase-sync-events-outbox-drain-release-ios.md`**; progetto da **IDLE \u2192"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 481,
+            "snippet": "> **2026-05-08 15:40 -0400 \u2014 EXECUTION TASK-079 completata / handoff REVIEW (override utente):** implementato push catalogo guidato Release **Controlla cloud \u2192 Rivedi \u2192 Conferma \u2192 "
+          }
+        ],
+        "symbol": "SupabaseManualSyncViewModel",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 78,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseTask088ProductPriceSmokeService.swift",
+            "line": 119,
+            "snippet": "let pushResult = try await SupabaseProductPriceManualPushService(remote: inventoryService).push(snapshot: snapshot)"
+          },
+          {
+            "file": "iOSMerchandiseControl/ProductPriceManualPushDebugViewModel.swift",
+            "line": 248,
+            "snippet": "let service = SupabaseProductPriceManualPushService(remote: remote, options: options)"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 369,
+            "snippet": "result = try await SupabaseProductPriceManualPushService(remote: remote).push(snapshot: snapshot)"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 419,
+            "snippet": "> **2026-05-09 \u2014 EXECUTION TASK-085 S85-E performance/recovery / PARTIAL:** verifiche recovery/sync iOS PASS dopo micro-fix test stale: il guard TASK-071 non vieta piu' `SupabasePr"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 791,
+            "snippet": "> **2026-05-06 (EXECUTION controllata / pre-code gate \u2014 TASK-051, user override):** **TASK-051** passa ad **ACTIVE / EXECUTION** con responsabile **Codex / Executor**. Prima attivi"
+          },
+          {
+            "file": "docs/TASKS/TASK-085-production-ready-hardening-ios.md",
+            "line": 807,
+            "snippet": "| **File letti** | `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-085-production-ready-hardening-ios.md`; `iOSMerchandiseControl/Models.swift`; servizi iOS `SupabaseProductPriceApplyServi"
+          },
+          {
+            "file": "docs/TASKS/TASK-085-production-ready-hardening-ios.md",
+            "line": 1195,
+            "snippet": "- Aggiornato `SupabaseManualSyncRemotePreviewTests.testTask071ProductionSourcesAvoidForbiddenWriteAndAutomationScope`: rimosso il divieto su `SupabaseProductPriceManualPushService`"
+          },
+          {
+            "file": "docs/TASKS/TASK-085-production-ready-hardening-ios.md",
+            "line": 1202,
+            "snippet": "| iOS XCTest recovery/sync | \u2705 ESEGUITO | `xcodebuild test ... SupabaseManualSyncRemotePreviewTests, SupabaseManualSyncReleaseUITests, SupabaseManualSyncCoordinatorTests, SupabaseP"
+          },
+          {
+            "file": "docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md",
+            "line": 431,
+            "snippet": "**File controllati prima dell'EXECUTION codice:** `docs/MASTER-PLAN.md`; `docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`; `docs/CODEX-EXECUTION-PROTOCOL.md`; `AGENTS.md`; "
+          },
+          {
+            "file": "docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md",
+            "line": 443,
+            "snippet": "**File modificati:** `SupabaseManualSyncRemotePreview.swift`; `SupabaseManualSyncCoordinator.swift`; `SupabaseManualSyncViewModel.swift`; `SupabaseSyncPlanContract.swift`; `Supabas"
+          }
+        ],
+        "symbol": "SupabaseProductPriceManualPushService",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SupabaseProductPriceManualPushService.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SupabaseProductPriceManualPushService.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 16,
+        "samples": [
+          {
+            "file": "tools/agent/lib/sync.sh",
+            "line": 916,
+            "snippet": "\"iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift\","
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+            "line": 93,
+            "snippet": "let counts = try LocalOutboxStore(context: context).fetchCounts("
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+            "line": 920,
+            "snippet": "let counts = try LocalOutboxStore(context: context).fetchCounts(ownerUserID: ownerUserID, now: now())"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+            "line": 940,
+            "snippet": "let before = try LocalOutboxStore(context: context).fetchCounts(ownerUserID: ownerUserID, now: now())"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+            "line": 956,
+            "snippet": "let after = try LocalOutboxStore(context: context).fetchCounts(ownerUserID: ownerUserID, now: now())"
+          },
+          {
+            "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+            "line": 55,
+            "snippet": "-> LocalOutboxStore / PendingChangeCoalescer"
+          },
+          {
+            "file": "docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md",
+            "line": 210,
+            "snippet": "| Outbox compatibility facade | `LocalOutboxStore` documents compatibility with existing sync-event outbox table and legacy manual adapters. | Automatic outbox writer independent f"
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 81,
+            "snippet": "| `LocalPendingChange` | Pending local changes | Owner optional, anonymous/unbound policy implicita | `LocalOutboxStore` + `AccountBindingStore` | Pending migration semantics |"
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 112,
+            "snippet": "- `LocalOutboxStore.swift`: wrapper owner-bound su `LocalPendingChange` e future outbox entries."
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 362,
+            "snippet": "- `LocalOutboxStore` documenta il limite di facade legacy owner-bound; aggiunto test per verificare che il coalescing non mischi owner diversi con la stessa logical key."
+          }
+        ],
+        "symbol": "LocalOutboxStore",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 7,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+            "line": 60,
+            "snippet": "let drainer = SyncEventOutboxDrainer(context: context, recorder: recorder, now: now)"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+            "line": 951,
+            "snippet": "let outcome = try await SyncEventOutboxDrainer("
+          },
+          {
+            "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+            "line": 56,
+            "snippet": "-> SyncEventOutboxRecorder / SyncEventOutboxDrainer"
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 115,
+            "snippet": "- `SyncEventOutboxDrainer.swift`: retry seriale, backoff, fail-safe on RLS/auth/network."
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 377,
+            "snippet": "- `iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift`, `PendingChangeCoalescer.swift`, `SyncEventOutboxRecorder.swift`, `SyncEventOutboxDrainer.swift`."
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 451,
+            "snippet": "- Aggiunti outbox/pending boundaries: `LocalOutboxStore`, `PendingChangeCoalescer`, `SyncEventOutboxRecorder`, `SyncEventOutboxDrainer`; `LocalPendingChange` usa coalescing condivi"
+          },
+          {
+            "file": "docs/TASKS/TASK-116-ios-sync-architecture-completion.md",
+            "line": 85,
+            "snippet": "-> SyncEventOutboxRecorder / SyncEventOutboxDrainer"
+          }
+        ],
+        "symbol": "SyncEventOutboxDrainer",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 6,
+        "samples": [
+          {
+            "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+            "line": 56,
+            "snippet": "-> SyncEventOutboxRecorder / SyncEventOutboxDrainer"
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 75,
+            "snippet": "| `SyncEventRecording.swift` / `SyncEventRPCRequestMapper.swift` | Record/map RPC sync events | Necessita outbox retry e redaction guarantees | `SyncEventOutboxRecorder` / mapper t"
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 114,
+            "snippet": "- `SyncEventOutboxRecorder.swift`: record RPC or enqueue when unavailable."
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 377,
+            "snippet": "- `iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift`, `PendingChangeCoalescer.swift`, `SyncEventOutboxRecorder.swift`, `SyncEventOutboxDrainer.swift`."
+          },
+          {
+            "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+            "line": 451,
+            "snippet": "- Aggiunti outbox/pending boundaries: `LocalOutboxStore`, `PendingChangeCoalescer`, `SyncEventOutboxRecorder`, `SyncEventOutboxDrainer`; `LocalPendingChange` usa coalescing condivi"
+          },
+          {
+            "file": "docs/TASKS/TASK-116-ios-sync-architecture-completion.md",
+            "line": 85,
+            "snippet": "-> SyncEventOutboxRecorder / SyncEventOutboxDrainer"
+          }
+        ],
+        "symbol": "SyncEventOutboxRecorder",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 33,
+        "samples": [
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 465,
+            "snippet": "> **2026-05-08 \u2014 PLANNING TASK-081 avviato (solo markdown, planning-only):** creato **`docs/TASKS/TASK-081-supabase-sync-events-outbox-drain-release-ios.md`**; progetto da **IDLE \u2192"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 739,
+            "snippet": "> **2026-05-07 \u2014 EXECUTION TASK-061 completata / handoff REVIEW:** Codex/Cursor ha implementato la UI DEBUG minima per drain manuale outbox `sync_events`: nuovo `SyncEventOutboxDra"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 742,
+            "snippet": "> **2026-05-07 \u2014 PLANNING TASK-061 (solo markdown):** creato **`docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md`** \u2014 UI DEBUG iOS **planning-only** per drain "
+          },
+          {
+            "file": "docs/TASKS/TASK-080-supabase-productprice-sync-ios.md",
+            "line": 692,
+            "snippet": "- \u2705 ESEGUITO \u2014 Anti-scope grep richiesto su `iOSMerchandiseControl/**/*.swift`: solo match preesistenti in outbox DEBUG/RPC (`SyncEventOutboxDrainDebugViewModel`, `SyncEventOutboxD"
+          },
+          {
+            "file": "docs/TASKS/TASK-073-supabase-manual-sync-live-wiring-ios.md",
+            "line": 101,
+            "snippet": "| **Outbox DEBUG** | **`SyncEventOutboxDrainDebugViewModel`** + card `#if DEBUG` in `OptionsView` restano separati dalla run Release; eventuale integrazione \u00abdentro run guidata\u00bb e\u2019"
+          },
+          {
+            "file": "docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md",
+            "line": 115,
+            "snippet": "### 4.1 `SyncEventOutboxDrainDebugViewModel` (futuro)"
+          },
+          {
+            "file": "docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md",
+            "line": 460,
+            "snippet": "| **D61-24** | **Naming definitivo** dei nuovi file va confermato in **Planning Review**; **default:** ViewModel dedicato **`SyncEventOutboxDrainDebugViewModel.swift`** + **subview"
+          },
+          {
+            "file": "docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md",
+            "line": 473,
+            "snippet": "1. Aggiungere ViewModel leggero **`SyncEventOutboxDrainDebugViewModel`** + card DEBUG con pattern **requestID** e guard double-tap."
+          },
+          {
+            "file": "docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md",
+            "line": 483,
+            "snippet": "- **Preferenza attuale:** `SyncEventOutboxDrainDebugViewModel.swift` (+ test omonimo)."
+          },
+          {
+            "file": "docs/TASKS/TASK-061-supabase-sync-events-manual-drain-debug-ui-ios.md",
+            "line": 485,
+            "snippet": "- Nuovo *(indicativo)*: `SyncEventOutboxDrainDebugViewModel.swift`."
+          }
+        ],
+        "symbol": "SyncEventOutboxDrainDebugViewModel",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SyncEventOutboxDrainDebugViewModel.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SyncEventOutboxDrainDebugViewModel.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 161,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxDrainDebugViewModel.swift",
+            "line": 87,
+            "snippet": "let service = SyncEventOutboxDrainService("
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+            "line": 15,
+            "snippet": "limit: Int = SyncEventOutboxDrainService.hardLimit"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+            "line": 20,
+            "snippet": "self.limit = min(max(0, limit), SyncEventOutboxDrainService.hardLimit)"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+            "line": 6,
+            "snippet": "private let service: SyncEventOutboxDrainService"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+            "line": 13,
+            "snippet": "self.service = SyncEventOutboxDrainService("
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+            "line": 22,
+            "snippet": "limit: Int = SyncEventOutboxDrainService.hardLimit"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 451,
+            "snippet": "> **2026-05-08 20:16 -0400 \u2014 REVIEW/FIX/CHIUSURA TASK-082 DONE:** review completa su diff e codice reale completata con fix minimi: guard apply locale fail-closed quando owner/sess"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 453,
+            "snippet": "> **2026-05-08 20:02 -0400 \u2014 EXECUTION TASK-082 completata / handoff REVIEW:** implementata cutline Release iniziale: contratto `SupabaseSyncPlan` con resolver stati/CTA/conteggi/s"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 459,
+            "snippet": "> **2026-05-08 19:09 -0400 \u2014 REVIEW/FIX/CHIUSURA TASK-081 DONE:** review tecnica, UX/UI, architetturale e anti-scope completata. Fix diretti minimi: summary Release non pi\u00f9 troncat"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 461,
+            "snippet": "> **2026-05-08 18:26 -0400 \u2014 EXECUTION TASK-081 completata / handoff REVIEW:** implementato drain Release manuale e confermato delle attivit\u00e0 locali dentro **Controlla cloud \u2192 Rive"
+          }
+        ],
+        "symbol": "SyncEventOutboxDrainService",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SyncEventOutboxDrainService.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SyncEventOutboxDrainService.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 56,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+            "line": 12,
+            "snippet": "let produceOutboxOutcome = SyncEventOutboxEnqueueService(context: context).enqueue"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+            "line": 6,
+            "snippet": "private let enqueueService: SyncEventOutboxEnqueueService"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+            "line": 9,
+            "snippet": "self.enqueueService = SyncEventOutboxEnqueueService(context: context)"
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 759,
+            "snippet": "> **2026-05-07 \u2014 EXECUTION TASK-057 Slice E completata / handoff REVIEW:** Codex ha implementato solo **Slice E**: facade locale `SyncEventOutboxEnqueueService` per enqueue outbox "
+          },
+          {
+            "file": "docs/MASTER-PLAN.md",
+            "line": 764,
+            "snippet": "> **2026-05-06 \u2014 Rifinitura planning TASK-057 (solo markdown):** addendum execution-ready in `TASK-057`: **D57-11** atomicit\u00e0/best-effort (enqueue fallito \u2260 push failed); **D57-12*"
+          },
+          {
+            "file": "docs/TASKS/TASK-060-supabase-sync-events-outbox-drain-g2-ios.md",
+            "line": 25,
+            "snippet": "- **TASK-057** (DONE) \u2014 `SyncEventOutboxEnqueueService` enqueue locale da outcome push manuali"
+          },
+          {
+            "file": "docs/TASKS/TASK-060-supabase-sync-events-outbox-drain-g2-ios.md",
+            "line": 55,
+            "snippet": "| **TASK-057** | `SyncEventOutboxEnqueueService` \u2014 enqueue solo da outcome **terminali** push manuali catalog/ProductPrice; dedupe `ownerUserID + clientEventID`; **nessuna rete** |"
+          },
+          {
+            "file": "docs/TASKS/TASK-060-supabase-sync-events-outbox-drain-g2-ios.md",
+            "line": 293,
+            "snippet": "- `iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-058-supabase-record-sync-event-live-recorder-planning-ios.md",
+            "line": 24,
+            "snippet": "- **TASK-057** \u2014 **DONE** (**Slice E**): enqueue locale **`SyncEventOutboxEnqueueService`** da outcome terminali manual push/catalog/prices (**no RPC**)."
+          },
+          {
+            "file": "docs/TASKS/TASK-058-supabase-record-sync-event-live-recorder-planning-ios.md",
+            "line": 315,
+            "snippet": "| *Non toccati in Slice F:* `SyncEventOutboxEnqueueService.swift` (solo **documentazione interplay \u00a79**) | Evitare creeping processor logic |"
+          }
+        ],
+        "symbol": "SyncEventOutboxEnqueueService",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 151,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxDrainService.swift",
+            "line": 75,
+            "snippet": "private let fetchRetryable: (String, Date, Int?) throws -> [SyncEventOutboxEntry]"
+          },
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxDrainService.swift",
+            "line": 126,
+            "snippet": "fetchRetryable: @escaping (String, Date, Int?) throws -> [SyncEventOutboxEntry],"
+          },
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxDrainService.swift",
+            "line": 277,
+            "snippet": "to entry: SyncEventOutboxEntry,"
+          },
+          {
+            "file": "iOSMerchandiseControl/OptionsView.swift",
+            "line": 1036,
+            "snippet": "SyncEventOutboxEntry.self,"
+          },
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+            "line": 162,
+            "snippet": "private let fetchExistingEntry: (String, String) throws -> SyncEventOutboxEntry?"
+          },
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+            "line": 163,
+            "snippet": "private let addEntry: (SyncEventOutboxEntry) throws -> Void"
+          },
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+            "line": 178,
+            "snippet": "var descriptor = FetchDescriptor<SyncEventOutboxEntry>("
+          },
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+            "line": 183,
+            "snippet": "SortDescriptor(\\SyncEventOutboxEntry.createdAt, order: .forward),"
+          },
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+            "line": 184,
+            "snippet": "SortDescriptor(\\SyncEventOutboxEntry.id, order: .forward)"
+          },
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+            "line": 208,
+            "snippet": "fetchExistingEntry: @escaping (String, String) throws -> SyncEventOutboxEntry?,"
+          }
+        ],
+        "symbol": "SyncEventOutboxEntry",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SyncEventOutboxEntry.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SyncEventOutboxEntry.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "delete_candidate": false,
+        "reference_count_excluding_self": 21,
+        "samples": [
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxEntry.swift",
+            "line": 251,
+            "snippet": "var state: SyncEventOutboxState {"
+          },
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxEntry.swift",
+            "line": 252,
+            "snippet": "SyncEventOutboxState("
+          },
+          {
+            "file": "iOSMerchandiseControl/SyncEventOutboxEntry.swift",
+            "line": 266,
+            "snippet": "func apply(_ state: SyncEventOutboxState) {"
+          },
+          {
+            "file": "docs/TASKS/TASK-060-supabase-sync-events-outbox-drain-g2-ios.md",
+            "line": 292,
+            "snippet": "- `iOSMerchandiseControl/SyncEventOutboxState.swift`"
+          },
+          {
+            "file": "docs/TASKS/TASK-101-production-readiness-privacy-rls-security-audit.md",
+            "line": 243,
+            "snippet": "- iOS core: `SupabaseConfig.swift`, `SupabaseClientProvider.swift`, `SupabaseAuthService.swift`, `SupabaseAuthViewModel.swift`, `SupabaseInventoryService.swift`, `SupabaseManualPus"
+          },
+          {
+            "file": "docs/TASKS/TASK-101-production-readiness-privacy-rls-security-audit.md",
+            "line": 362,
+            "snippet": "- iOS review/fix: `SupabaseInventoryService.swift`, `SupabaseManualPushService.swift`, `SyncEventOutboxEnqueueService.swift`, `SyncEventOutboxState.swift`, UI account/logging files"
+          },
+          {
+            "file": "docs/TASKS/TASK-055-supabase-sync-events-outbox-foundation-ios.md",
+            "line": 351,
+            "snippet": "- `iOSMerchandiseControl/SyncEventOutboxState.swift` \u2014 enum stati/error kind, snapshot state machine pura, mapping errori, sanitizer privacy-safe."
+          },
+          {
+            "file": "docs/TASKS/TASK-056-supabase-record-sync-event-contract-dryrun-ios.md",
+            "line": 21,
+            "snippet": "- **TASK-055** \u2014 **DONE** (solo **Slice C**): outbox SwiftData locale + state machine pura (`SyncEventOutboxEntry`, `SyncEventOutboxState`, factory/store/tests) \u2014 **nessun** networ"
+          },
+          {
+            "file": "docs/TASKS/TASK-056-supabase-record-sync-event-contract-dryrun-ios.md",
+            "line": 252,
+            "snippet": "2. **Reuse TASK-055:** dove possibile riusare **`SyncEventOutboxEntry`**, **`SyncEventOutboxStatus`**, **`SyncEventOutboxErrorKind`** (e concetti gia\u2019 in **`SyncEventOutboxState`**"
+          },
+          {
+            "file": "docs/TASKS/TASK-059-supabase-sync-events-outbox-drain-ios.md",
+            "line": 44,
+            "snippet": "- `SyncEventOutboxState.swift` \u2014 enum status/kind, `SyncEventOutboxStateMachine`, sanitizer privacy"
+          }
+        ],
+        "symbol": "SyncEventOutboxState",
+        "xcode_membership_detected": false
+      },
+      "file": "iOSMerchandiseControl/SyncEventOutboxState.swift",
+      "fix_hint": "Deletion is allowed only after reference scan, Xcode membership audit, build/test plan, and reviewer acceptance.",
+      "id": "dead_code_candidate:iOSMerchandiseControl/SyncEventOutboxState.swift",
+      "reason": "Read-only delete-candidate inventory; no deletion performed.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T02:13:36+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "dead-code",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.dead-code",
+  "started_at": "2026-05-24T02:13:36+00:00",
+  "status": "PASS",
+  "summary": "dead-code: PASS (0 failing checks, 27 total checks)",
+  "taskId": "TASK-119",
+  "task_id": "TASK-119"
+}

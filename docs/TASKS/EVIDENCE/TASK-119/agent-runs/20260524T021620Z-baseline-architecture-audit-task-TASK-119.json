@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.1",
+  "run_id": "20260524T021620Z-baseline-architecture-audit-task-TASK-119",
+  "task_id": "TASK-119",
+  "command": "manual baseline architecture audit from read-only scanner outputs",
+  "command_slug": "baseline-architecture-audit-task-TASK-119",
+  "platform": "general",
+  "safety_level": "safe-readonly-static-audit",
+  "requires_live": false,
+  "requires_cleanup": false,
+  "profile": "null",
+  "android_offline_tier": "none",
+  "timestamp_start": "2026-05-24T02:16:20Z",
+  "timestamp_end": "2026-05-24T02:16:20Z",
+  "duration_ms": 0,
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "branch": "main",
+  "git_sha": "3bcb58f",
+  "dirty_state": "dirty",
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_TASK_ID": "TASK-119"
+  },
+  "device_simulator_redacted": {
+    "ios_destination": "n/a",
+    "android_serial": "<REDACTED>"
+  },
+  "test_prefix": null,
+  "cleanup_plan_id": null,
+  "result": "pass_with_notes",
+  "exit_code": 0,
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "residue_count": 0,
+  "raw_log_redacted": true,
+  "artifact_paths": {
+    "markdown": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T021620Z-baseline-architecture-audit-task-TASK-119.md",
+    "json": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T021620Z-baseline-architecture-audit-task-TASK-119.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T021620Z-baseline-architecture-audit-task-TASK-119.log",
+    "xcresult": null,
+    "screenshot": null
+  },
+  "ca_refs": [
+    "CA-119-01",
+    "CA-119-02",
+    "CA-119-03",
+    "CA-119-04",
+    "CA-119-10",
+    "CA-119-11",
+    "CA-119-21",
+    "CA-119-24",
+    "CA-119-27",
+    "CA-119-34",
+    "CA-119-39"
+  ],
+  "warnings": [
+    "sync-architecture currently fails because target directories are missing, AutomaticPushServices/SupabaseInventoryService exceed god-file thresholds, runtime is MainActor-bound, and single-flight is still activeTask-based.",
+    "manual-boundary currently fails because SupabaseInventoryService exposes manual-only remote payload/method symbols.",
+    "Swift refactor remains blocked by TASK-119 local-only tracking mismatch versus origin/main and GitHub rendered main."
+  ],
+  "checks": [
+    {
+      "id": "before_architecture_map_recorded",
+      "status": "PASS_WITH_NOTES",
+      "evidence": "ContentView -> AppSyncRootHost -> SyncOrchestrator/SyncAutomaticRuntime -> AutomaticPushServices/SupabaseInventoryService is recorded in markdown."
+    },
+    {
+      "id": "god_file_inventory_recorded",
+      "status": "PASS_WITH_NOTES",
+      "evidence": "AutomaticPushServices.swift=986 lines, SupabaseInventoryService.swift=1861 lines, SupabaseManualSyncViewModel.swift=6550 lines, HistorySessionSyncService.swift=680 lines."
+    },
+    {
+      "id": "baseline_scan_matrix_recorded",
+      "status": "PASS_WITH_NOTES",
+      "evidence": "Initial TASK-119 scan/test evidence paths are listed in markdown."
+    }
+  ],
+  "next_action_recommended": "Resolve or explicitly accept the TASK-119 local-only tracking mismatch before production Swift refactor."
+}

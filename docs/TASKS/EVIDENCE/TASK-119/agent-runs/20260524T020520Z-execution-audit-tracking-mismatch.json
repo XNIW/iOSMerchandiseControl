@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.1",
+  "run_id": "20260524T020520Z-execution-audit-tracking-mismatch",
+  "task_id": "TASK-119",
+  "command": "manual execution-audit tracking mismatch documentation",
+  "command_slug": "execution-audit-tracking-mismatch",
+  "platform": "general",
+  "safety_level": "safe-readonly-tracking-only",
+  "requires_live": false,
+  "requires_cleanup": false,
+  "profile": "null",
+  "android_offline_tier": "none",
+  "timestamp_start": "2026-05-24T02:05:20Z",
+  "timestamp_end": "2026-05-24T02:05:20Z",
+  "duration_ms": 0,
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "branch": "main",
+  "git_sha": "3bcb58f",
+  "dirty_state": "dirty",
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_TASK_ID": "TASK-119"
+  },
+  "device_simulator_redacted": {
+    "ios_destination": "n/a",
+    "android_serial": "<REDACTED>"
+  },
+  "test_prefix": null,
+  "cleanup_plan_id": null,
+  "result": "blocked_external",
+  "status_taxonomy": "BLOCKED_HEAD_OR_TRACKING_MISMATCH",
+  "exit_code": 2,
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "residue_count": 0,
+  "raw_log_redacted": true,
+  "artifact_paths": {
+    "markdown": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T020520Z-execution-audit-tracking-mismatch.md",
+    "json": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T020520Z-execution-audit-tracking-mismatch.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T020520Z-execution-audit-tracking-mismatch.log",
+    "xcresult": null,
+    "screenshot": null
+  },
+  "ca_refs": [
+    "CA-119-21",
+    "CA-119-22",
+    "CA-119-23"
+  ],
+  "warnings": [
+    "TASK-119 tracking files are local-only and absent from origin/main and GitHub rendered main."
+  ],
+  "checks": [
+    {
+      "id": "head_origin_github_branch_consistent",
+      "status": "PASS",
+      "evidence": "HEAD/origin/ls-remote/GitHub branch API all point to 3bcb58f9bb921e92b31f2c89de622ffbd6d11694."
+    },
+    {
+      "id": "task119_tracking_on_github_main",
+      "status": "BLOCKED_HEAD_OR_TRACKING_MISMATCH",
+      "evidence": "TASK-119 task file and evidence README are local-only; GitHub contents API returned 404 for both."
+    }
+  ],
+  "next_action_recommended": "Continue harness/audit-local work only; do not start Swift refactor until local-only tracking mismatch is resolved or explicitly accepted."
+}

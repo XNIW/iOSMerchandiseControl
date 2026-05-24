@@ -1,0 +1,3 @@
+=== mc-agent report validate-json --task TASK-119 --path docs/TASKS/EVIDENCE/TASK-119/agent-runs ===
+INVALID
+docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T020520Z-execution-audit-tracking-mismatch.json: profile, android_offline_tier, duration_ms, env_redacted, device_simulator_redacted, test_prefix, cleanup_plan_id, rows_created, rows_deleted, residue_count, ca_refs, warnings, artifact_paths.xcresult, artifact_paths.screenshot

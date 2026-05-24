@@ -57,6 +57,10 @@ main() {
         repo-diff) handler=(mc_cmd_scan_repo_diff) ;;
         release-cta) handler=(mc_cmd_scan_release_cta) ;;
         sync-boundaries) handler=(mc_cmd_scan_task117_static sync-boundaries "${args[@]:2}") ;;
+        sync-architecture) handler=(mc_cmd_scan_task119_static sync-architecture "${args[@]:2}") ;;
+        manual-boundary) handler=(mc_cmd_scan_task119_static manual-boundary "${args[@]:2}") ;;
+        dead-code) handler=(mc_cmd_scan_task119_static dead-code "${args[@]:2}") ;;
+        xcode-membership) handler=(mc_cmd_scan_task119_static xcode-membership "${args[@]:2}") ;;
         no-legacy-runtime-path) handler=(mc_cmd_scan_no_legacy_runtime_path "${args[@]:2}") ;;
         automatic-contracts-clean) handler=(mc_cmd_scan_task117_static automatic-contracts-clean "${args[@]:2}") ;;
         root-host-clean) handler=(mc_cmd_scan_task117_static root-host-clean "${args[@]:2}") ;;
@@ -66,7 +70,7 @@ main() {
         swiftdata-mainactor-heavy) handler=(mc_cmd_scan_task117_static swiftdata-mainactor-heavy "${args[@]:2}") ;;
         l10n-sync-keys) handler=(mc_cmd_scan_task117_static l10n-sync-keys "${args[@]:2}") ;;
         no-full-pull-normal-path) handler=(mc_cmd_scan_task117_static no-full-pull-normal-path "${args[@]:2}") ;;
-        *) echo "Usage: scan sensitive|evidence|repo-diff|release-cta|no-legacy-runtime-path|no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys" >&2; exit "$MC_EXIT_MISCONFIGURED" ;;
+        *) echo "Usage: scan sensitive|evidence|repo-diff|release-cta|sync-architecture|manual-boundary|dead-code|xcode-membership|no-legacy-runtime-path|no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys" >&2; exit "$MC_EXIT_MISCONFIGURED" ;;
       esac
       ;;
     evidence) handler=(mc_cmd_evidence "${args[@]:1}") ;;

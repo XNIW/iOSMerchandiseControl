@@ -997,6 +997,12 @@ mc_ios_test() {
         -only-testing:iOSMerchandiseControlTests/Task118AutomaticDomainTests
       )
       ;;
+    automatic-architecture)
+      MC_CA_REFS="CA-119-01,CA-119-08,CA-119-09,CA-119-19,CA-119-24,CA-119-33,CA-119-36,CA-119-37"
+      tests=(
+        -only-testing:iOSMerchandiseControlTests/Task119AutomaticArchitectureTests
+      )
+      ;;
     lifecycle)
       tests=(
         -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncLifecycleRunGateTests

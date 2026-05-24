@@ -1,0 +1,7 @@
+TASK-119 execution-audit tracking mismatch
+local HEAD/origin/GitHub branch: 3bcb58f9bb921e92b31f2c89de622ffbd6d11694
+GitHub contents API for TASK-119 task file: 404 Not Found
+GitHub contents API for TASK-119 evidence README: 404 Not Found
+dirty state: dirty
+result: BLOCKED_HEAD_OR_TRACKING_MISMATCH for Swift refactor
+NEXT_ACTION: Continue harness/audit-local work only; do not start Swift refactor until mismatch is resolved or accepted.

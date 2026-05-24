@@ -1,0 +1,187 @@
+=== mc-agent scan sync-architecture --task TASK-119 --strict ===
+{
+  "NEXT_ACTION": "Resolve failing ownership/structure checks before REVIEW; do not treat file moves alone as completion.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Core",
+      "reason": "Target architecture directory is missing.",
+      "status": "FAIL"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Decision",
+      "reason": "Target architecture directory is missing.",
+      "status": "FAIL"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Catalog",
+      "reason": "Target architecture directory is missing.",
+      "status": "FAIL"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/ProductPrice",
+      "reason": "Target architecture directory is missing.",
+      "status": "FAIL"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/History",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/History",
+      "reason": "Target architecture directory is missing.",
+      "status": "FAIL"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Outbox",
+      "reason": "Target architecture directory is missing.",
+      "status": "FAIL"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Pull",
+      "reason": "Target architecture directory is missing.",
+      "status": "FAIL"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Presentation",
+      "reason": "Target architecture directory is missing.",
+      "status": "FAIL"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Manual",
+      "reason": "Target architecture directory is missing.",
+      "status": "FAIL"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Shared",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Shared",
+      "reason": "Target architecture directory is missing.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "line_count": 986,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "reason": "986 lines; threshold is 600.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "line_count": 266,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "reason": "266 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 1861,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/SupabaseInventoryService.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/SupabaseInventoryService.swift",
+      "reason": "1861 lines; threshold is 600.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [
+        {
+          "line": 5,
+          "snippet": "@MainActor"
+        },
+        {
+          "line": 8,
+          "snippet": "@MainActor"
+        },
+        {
+          "line": 10,
+          "snippet": "@MainActor"
+        },
+        {
+          "line": 14,
+          "snippet": "@MainActor"
+        },
+        {
+          "line": 25,
+          "snippet": "@MainActor"
+        },
+        {
+          "line": 214,
+          "snippet": "@MainActor"
+        }
+      ],
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "fix_hint": "Move non-UI work to an engine/service that is not MainActor-isolated; keep a UI facade only where SwiftUI needs it.",
+      "id": "automatic_core_non_ui_mainactor",
+      "reason": "Automatic runtime contains @MainActor markers.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "activeTask_in_runtime": true,
+        "single_flight_file_exists": false
+      },
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "fix_hint": "Extract single-flight/cancel/retry semantics into the automatic engine layer and cover it with tests.",
+      "id": "single_flight_owned_by_automatic_engine",
+      "reason": "Runtime still appears to own activeTask without a dedicated AutomaticSyncSingleFlight component.",
+      "status": "FAIL"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "fix_hint": "Use ModelContainer + fresh ModelContext for automatic/background SwiftData work.",
+      "id": "fresh_model_context:iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "reason": "File appears to create SwiftData context from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
+      "fix_hint": "Use ModelContainer + fresh ModelContext for automatic/background SwiftData work.",
+      "id": "fresh_model_context:iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
+      "reason": "File appears to create SwiftData context from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+      "fix_hint": "Use ModelContainer + fresh ModelContext for automatic/background SwiftData work.",
+      "id": "fresh_model_context:iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+      "reason": "File does not show a fresh ModelContext from ModelContainer.",
+      "status": "FAIL"
+    }
+  ],
+  "completed_at": "2026-05-24T02:13:26+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "sync-architecture",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.sync-architecture",
+  "started_at": "2026-05-24T02:13:26+00:00",
+  "status": "FAIL",
+  "summary": "sync-architecture: FAIL (15 failing checks, 18 total checks)",
+  "taskId": "TASK-119",
+  "task_id": "TASK-119"
+}

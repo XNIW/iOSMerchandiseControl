@@ -20,6 +20,14 @@ const TOOLS = [
   { name: "mc_task118_scan_no_full_pull_normal_path", args: ["scan", "no-full-pull-normal-path", "--task"], taskArg: true, defaultTask: "TASK-118", suffixArgs: ["--strict"], live: false, cleanup: false },
   { name: "mc_task118_ios_test_automatic_domain", args: ["ios", "test", "automatic-domain", "--task"], taskArg: true, defaultTask: "TASK-118", live: false, cleanup: false },
   { name: "mc_task118_report_validate_json", args: ["report", "validate-json", "--task"], taskArg: true, defaultTask: "TASK-118", suffixArgs: ["--path"], reportPathArg: true, defaultPath: "docs/TASKS/EVIDENCE/TASK-118/agent-runs", live: false, cleanup: false },
+  { name: "mc_task119_head_consistency", args: ["git", "head-consistency", "--task"], taskArg: true, defaultTask: "TASK-119", live: false, cleanup: false },
+  { name: "mc_task119_preflight_head_consistency", args: ["preflight", "--require-head-consistency", "--task"], taskArg: true, defaultTask: "TASK-119", live: false, cleanup: false },
+  { name: "mc_task119_scan_sync_architecture", args: ["scan", "sync-architecture", "--task"], taskArg: true, defaultTask: "TASK-119", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task119_scan_manual_boundary", args: ["scan", "manual-boundary", "--task"], taskArg: true, defaultTask: "TASK-119", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task119_scan_dead_code", args: ["scan", "dead-code", "--task"], taskArg: true, defaultTask: "TASK-119", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task119_scan_xcode_membership", args: ["scan", "xcode-membership", "--task"], taskArg: true, defaultTask: "TASK-119", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task119_ios_test_automatic_architecture", args: ["ios", "test", "automatic-architecture", "--task"], taskArg: true, defaultTask: "TASK-119", live: false, cleanup: false },
+  { name: "mc_task119_report_validate_json", args: ["report", "validate-json", "--task"], taskArg: true, defaultTask: "TASK-119", suffixArgs: ["--path"], reportPathArg: true, defaultPath: "docs/TASKS/EVIDENCE/TASK-119/agent-runs", live: false, cleanup: false },
   { name: "mc_report", args: ["report", "--task", "TASK-115"], live: false, cleanup: false },
   { name: "mc_report_task115", args: ["report", "--task", "TASK-115"], live: false, cleanup: false },
   { name: "mc_ios_build_debug", args: ["ios", "build", "debug"], live: false, cleanup: false },
@@ -148,6 +156,9 @@ async function selfTest() {
       !names.has("mc_task118_head_consistency") ||
       !names.has("mc_task118_scan_sync_boundaries") ||
       !names.has("mc_task118_ios_test_automatic_domain") ||
+      !names.has("mc_task119_scan_sync_architecture") ||
+      !names.has("mc_task119_scan_manual_boundary") ||
+      !names.has("mc_task119_ios_test_automatic_architecture") ||
       !names.has("mc_android_test_offline") ||
       !names.has("mc_sync_counts_supabase_task115") ||
       !names.has("mc_live_sync_matrix_task115")) {
@@ -176,7 +187,7 @@ const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/
 const { CallToolRequestSchema, ListToolsRequestSchema } = await import("@modelcontextprotocol/sdk/types.js");
 
 const server = new Server(
-  { name: "mc-agent-mcp", version: "0.3.0-task118" },
+  { name: "mc-agent-mcp", version: "0.4.0-task119" },
   { capabilities: { tools: {} } }
 );
 

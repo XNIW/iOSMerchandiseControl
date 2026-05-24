@@ -424,11 +424,12 @@ Usage:
   ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task <TASK-ID> | scan repo-diff | scan release-cta | scan no-legacy-runtime-path --task TASK-117
   ./tools/agent/mc-agent.sh scan sync-boundaries --task TASK-118 --strict
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path --task TASK-118 --strict
+  ./tools/agent/mc-agent.sh scan sync-architecture|manual-boundary|dead-code|xcode-membership --task TASK-119 --strict
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys --task TASK-117
   ./tools/agent/mc-agent.sh evidence hygiene|bundle --task TASK-117
   ./tools/agent/mc-agent.sh account fixture prepare|cleanup --task TASK-116 --prefix TASK116_ACCOUNT_ [--dry-run]
   ./tools/agent/mc-agent.sh safety check-prefix --prefix TASK115_* | safety dry-run-required --command "<command>"
-  ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|automatic-domain|lifecycle|offline | ios smoke simulator|options|history
+  ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|automatic-domain|automatic-architecture|lifecycle|offline | ios smoke simulator|options|history
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-115
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios runtime-ui-counts --live --task TASK-115
   ./tools/agent/mc-agent.sh android build debug|release | android test sync|offline | android offline-tier-status
@@ -479,6 +480,10 @@ mc_help_json() {
     {"name":"scan release-cta","argv":["scan","release-cta"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan sync-boundaries","argv":["scan","sync-boundaries","--task","TASK-118","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-full-pull-normal-path task118","argv":["scan","no-full-pull-normal-path","--task","TASK-118","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan sync-architecture task119","argv":["scan","sync-architecture","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan manual-boundary task119","argv":["scan","manual-boundary","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan dead-code task119","argv":["scan","dead-code","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan xcode-membership task119","argv":["scan","xcode-membership","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-legacy-runtime-path","argv":["scan","no-legacy-runtime-path","--task","TASK-116"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-full-pull-normal-path","argv":["scan","no-full-pull-normal-path","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan automatic-contracts-clean","argv":["scan","automatic-contracts-clean","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
@@ -498,6 +503,7 @@ mc_help_json() {
     {"name":"ios build release","argv":["ios","build","release"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test sync","argv":["ios","test","sync"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test automatic-domain","argv":["ios","test","automatic-domain","--task","TASK-118"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test automatic-architecture","argv":["ios","test","automatic-architecture","--task","TASK-119"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test lifecycle","argv":["ios","test","lifecycle"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test offline","argv":["ios","test","offline"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios smoke simulator","argv":["ios","smoke","simulator"],"platform":"ios","safety_level":"safe-readonly"},
@@ -1296,6 +1302,52 @@ mc_cmd_scan_task117_static() {
     *)
       MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
       MC_NEXT_ACTION="Fix scanner command/configuration."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+mc_cmd_scan_task119_static() {
+  local scan_name="$1"
+  shift || true
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-119}}"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  case "$scan_name" in
+    sync-architecture) MC_CA_REFS="CA-119-01,CA-119-03,CA-119-04,CA-119-05,CA-119-06,CA-119-29,CA-119-30,CA-119-31,CA-119-39" ;;
+    manual-boundary) MC_CA_REFS="CA-119-01,CA-119-02,CA-119-19,CA-119-33" ;;
+    dead-code) MC_CA_REFS="CA-119-10,CA-119-11,CA-119-27" ;;
+    xcode-membership) MC_CA_REFS="CA-119-10,CA-119-34" ;;
+    *) MC_CA_REFS="CA-119-21,CA-119-22,CA-119-23,CA-119-24" ;;
+  esac
+
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 "$MC_AGENT_ROOT/lib/task119_scans.py" "$scan_name" > /tmp/mc-agent-task119-static.$$.json
+  local scan_code=$?
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task119-static.$$.json)"
+  rm -f /tmp/mc-agent-task119-static.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  case "$scan_code" in
+    0)
+      MC_SUMMARY="${scan_name} scan PASS for ${task_id}."
+      MC_NEXT_ACTION="Use this report in ${task_id} evidence matrix."
+      return "$MC_EXIT_PASS"
+      ;;
+    1)
+      MC_SUMMARY="${scan_name} scan FAIL for ${task_id}: TASK-119 architecture/boundary checks found required future work."
+      MC_NEXT_ACTION="Fix failing checks during TASK-119 execution, then rerun ${scan_name}."
+      return "$MC_EXIT_FAIL"
+      ;;
+    2)
+      MC_SUMMARY="${scan_name} scan BLOCKED_EXTERNAL for ${task_id}."
+      MC_NEXT_ACTION="Resolve the listed external prerequisite and rerun ${scan_name}."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    *)
+      MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
+      MC_NEXT_ACTION="Fix TASK-119 scanner command/configuration."
       return "$MC_EXIT_MISCONFIGURED"
       ;;
   esac
