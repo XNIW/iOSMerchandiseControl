@@ -6,12 +6,12 @@
 - **File task**: `docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-119/`
 - **Stato**: ACTIVE
-- **Fase attuale**: EXECUTION-AUDIT — HARNESS_BASELINE_COMPLETE / BLOCKED_HEAD_OR_TRACKING_MISMATCH_FOR_SWIFT_REFACTOR
-- **Responsabile attuale**: CODEX / Executor
+- **Fase attuale**: REVIEW — EXECUTION_COMPLETE_LOCAL_GATES_PASS / HANDOFF_TO_CLAUDE
+- **Responsabile attuale**: CLAUDE / Reviewer
 - **Data creazione**: 2026-05-24
 - **Ultimo aggiornamento**: 2026-05-24
 - **Ultimo agente che ha operato**: CODEX / Executor
-- **Readiness**: EXECUTION-AUDIT_HARNESS_BASELINE_COMPLETE. TASK-119 harness commands and baseline audit evidence exist locally. Swift refactor remains blocked until the local-only TASK-119 tracking mismatch versus `origin/main` / GitHub rendered `main` is resolved or explicitly accepted as local-only execution.
+- **Readiness**: LOCAL_REVIEW_READY. HEAD/tracking mismatch resolved, TASK-119 harness/baseline pushed, progressive Swift refactor completed locally, critical local gates PASS. Not DONE; live gates were not run because no explicit live approval was requested for this refactor.
 - **Tipo task**: cleanup/refactor architetturale, non feature task.
 - **User override registrato**: l'utente ha chiesto esplicitamente a Codex di creare tracking PLANNING nonostante `AGENTS.md` definisca Codex come executor/fixer. Override limitato a markdown/tracking/evidence README; nessuna modifica Swift/Kotlin/SQL, nessun build/test runtime, nessun live Supabase, nessun cleanup.
 
@@ -754,6 +754,116 @@ Next concrete action: choose one before production Swift refactor:
 2. dare accettazione esplicita a procedere local-only despite mismatch.
 
 Until then, only additional read-only audit/harness work should continue. Do not mark REVIEW or DONE.
+
+### EXECUTION — HEAD realignment and progressive Swift refactor — 2026-05-24
+
+#### Obiettivo compreso
+Rimuovere il blocker `BLOCKED_HEAD_OR_TRACKING_MISMATCH_FOR_SWIFT_REFACTOR`, pubblicare la baseline harness/task su `origin/main`, poi procedere con refactor Swift progressivo solo dopo gate HEAD/preflight/config PASS. Completare split automatic-domain, engine/single-flight/cancel policy, boundary automatic/manual e prove locali senza dichiarare DONE.
+
+#### File controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`
+- `docs/TASKS/EVIDENCE/TASK-119/README.md`
+- `iOSMerchandiseControl/Sync/AutomaticPushServices.swift`
+- `iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift`
+- `iOSMerchandiseControl/Sync/Automatic/Core/*`
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/*`
+- `iOSMerchandiseControl/Sync/Automatic/ProductPrice/*`
+- `iOSMerchandiseControl/Sync/Automatic/History/*`
+- `iOSMerchandiseControl/Sync/Automatic/Outbox/*`
+- `iOSMerchandiseControl/Sync/Automatic/Decision/*`
+- `iOSMerchandiseControl/Sync/Automatic/Pull/*`
+- `iOSMerchandiseControl/Sync/Automatic/Presentation/*`
+- `iOSMerchandiseControl/Sync/Manual/*`
+- `iOSMerchandiseControl/Sync/Shared/*`
+- `iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift`
+- `iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift`
+- `tools/agent/mc-agent.sh`
+- `tools/agent/lib/common.sh`
+- `tools/agent/lib/sync_architecture_scans.py`
+
+#### Piano minimo
+1. Commit/push della baseline TASK-119 harness/planning/evidence gia' local-only.
+2. Rerun HEAD/preflight/config TASK-119 via harness canonico.
+3. Rerun baseline scans/test TASK-119.
+4. Aggiungere test architetturale failing per engine/single-flight/cancel policy.
+5. Spezzare `AutomaticPushServices.swift` in file automatic-domain coesi.
+6. Estrarre `AutomaticSyncEngine`, `AutomaticSyncSingleFlight`, `AutomaticSyncCancellationPolicy` e facade runtime.
+7. Rerun scans/build/test/smoke/hygiene finali via harness.
+8. Aggiornare tracking e consegnare a review, non DONE.
+
+#### Modifiche fatte
+- Risolto il mismatch HEAD/tracking: commit `5454070e9937ea55b6a68e731b44eaef1ec14b22` (`TASK-119 harness baseline`) pushato su `origin/main`; `git head-consistency`, preflight e config TASK-119 PASS dopo push.
+- Verificato che `origin/main` / GitHub contengano il task file TASK-119, evidence README e harness TASK-119.
+- Aggiunto test TASK-119 RED iniziale per richiedere engine dedicato, single-flight, cancellation policy e rimozione `activeTask` da `SyncAutomaticRuntime.swift`.
+- Spezzato `AutomaticPushServices.swift` nei domini:
+  - `Sync/Automatic/Catalog/CatalogRemoteWriting.swift`
+  - `Sync/Automatic/Catalog/CatalogPushPayloads.swift`
+  - `Sync/Automatic/Catalog/CatalogPushService.swift`
+  - `Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift`
+  - `Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift`
+  - `Sync/Automatic/ProductPrice/ProductPricePushService.swift`
+  - `Sync/Automatic/History/HistorySessionAutomaticPushService.swift`
+  - `Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift`
+  - `Sync/Automatic/Outbox/SyncActivityRegistrationService.swift`
+- Creati boundary marker per `Sync/Automatic/Decision`, `Pull`, `Presentation`, `Sync/Manual` e `Sync/Shared`.
+- Estratto `AutomaticSyncEngine` actor non-UI, con `AutomaticSyncSingleFlight` e `AutomaticSyncCancellationPolicy`; `SyncAutomaticRuntime` resta facade `@MainActor` per auth/UI boundary e delega l'esecuzione non-UI all'engine.
+- Rimosso `activeTask` dal runtime automatico; single-flight/cancel sono ora owned dall'engine.
+- Mantenuto `ModelContainer` + fresh `ModelContext` nei servizi automatici split.
+- Tenuto `HistorySessionSyncService` fuori da delete/split distruttivo: il nuovo automatic history push e' in `HistorySessionAutomaticPushService`, ma il servizio storico resta condiviso finche' reference scan/test non autorizzano un intervento piu' profondo.
+- Aggiornato `Task118AutomaticDomainTests` per riconoscere che la redazione errori runtime ora vive anche in `AutomaticSyncEngine.swift`.
+- Aggiornato `scan no-full-pull-normal-path --task TASK-119 --strict` per usare `task119_scans.py` / `sync_architecture_scans.py`, mantenendo `task117_scans.py` per compatibilita' storica TASK-117/TASK-118.
+- Aggiornato help/CA refs harness per il gate TASK-119 no-full-pull.
+- Corretto warning Swift 6 in `SyncActivityRegistrationService` usando `SyncEventOutboxLocalStore` diretto per i conteggi e helper `status` nonisolated.
+
+#### Check eseguiti
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh git head-consistency --task TASK-119` PASS dopo push baseline: `20260524T022406Z-git-head-consistency-task-TASK-119-p57249`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh preflight --require-head-consistency --task TASK-119` PASS dopo push baseline: `20260524T022406Z-preflight-require-head-consistency-task-TASK-119-p57248`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh config validate --task TASK-119` PASS dopo push baseline: `20260524T022406Z-config-validate-task-TASK-119-p57301`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh scan sync-boundaries --task TASK-119 --strict` PASS finale: `20260524T025800Z-scan-sync-boundaries-task-TASK-119-strict-p99167`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh scan no-full-pull-normal-path --task TASK-119 --strict` PASS finale: `20260524T025235Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p93424`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh scan sync-architecture --task TASK-119 --strict` PASS finale: `20260524T025235Z-scan-sync-architecture-task-TASK-119-strict-p93354`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh scan manual-boundary --task TASK-119 --strict` PASS finale: `20260524T025235Z-scan-manual-boundary-task-TASK-119-strict-p93423`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh scan dead-code --task TASK-119 --strict` PASS finale: `20260524T025800Z-scan-dead-code-task-TASK-119-strict-p99166`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh scan xcode-membership --task TASK-119 --strict` PASS finale: `20260524T025235Z-scan-xcode-membership-task-TASK-119-strict-p93425`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios build debug --task TASK-119` PASS finale: `20260524T025239Z-ios-build-debug-task-TASK-119-p94980`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios build release --task TASK-119` PASS finale: `20260524T025251Z-ios-build-release-task-TASK-119-p95591`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios test automatic-domain --task TASK-119` PASS finale: `20260524T025408Z-ios-test-automatic-domain-task-TASK-119-p96385`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios test sync --task TASK-119` PASS finale: `20260524T025433Z-ios-test-sync-task-TASK-119-p97120`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios test automatic-architecture --task TASK-119` PASS finale: `20260524T025706Z-ios-test-automatic-architecture-task-TASK-119-p97953`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios smoke options --task TASK-119` PASS finale: `20260524T025717Z-ios-smoke-options-task-TASK-119-p98542`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh supabase status-redacted --task TASK-119` PASS read-only: `20260524T025027Z-supabase-status-redacted-task-TASK-119-p87039`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh scan sensitive --task TASK-119` PASS finale: `20260524T030035Z-scan-sensitive-task-TASK-119-p7960`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh scan evidence --task TASK-119` PASS finale: `20260524T030035Z-scan-evidence-task-TASK-119-p7959`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh report validate-json --task TASK-119 --path docs/TASKS/EVIDENCE/TASK-119/agent-runs` PASS finale: `20260524T030035Z-report-validate-json-task-TASK-119-path-docs-TASKS-EVIDENCE-TASK-119-agent-runs-p8007`.
+- ✅ ESEGUITO — `git diff --check` PASS.
+- ✅ ESEGUITO — warning review su build logs: restano solo warning ambientali AppIntents metadata; i warning Swift 6 introdotti nel nuovo outbox service sono stati rimossi.
+- ❌ NON ESEGUITO — live matrix/reconcile TASK-119; non richiesti per il refactor locale e non autorizzati con `MC_ALLOW_LIVE=1`.
+- ❌ NON ESEGUITO — cleanup/residue; nessuna riga live sintetica creata, quindi cleanup non richiesto.
+- ❌ NON ESEGUITO — migration/schema/RLS/grants/RPC; vietati da TASK-119 e non necessari.
+
+#### Evidence prodotte
+Evidence principale sotto `docs/TASKS/EVIDENCE/TASK-119/agent-runs/`:
+- HEAD/preflight/config post-push: `20260524T022406Z-{git-head-consistency,preflight-require-head-consistency,config-validate}-task-TASK-119-*`.
+- Baseline FAIL/RED attesi prima del refactor: `20260524T022453Z-scan-sync-architecture-*`, `20260524T022453Z-scan-manual-boundary-*`, `20260524T022727Z-ios-test-automatic-architecture-*`.
+- Gate finali locali PASS: `20260524T025235Z-scan-*`, `20260524T025239Z-ios-build-debug-*`, `20260524T025251Z-ios-build-release-*`, `20260524T025408Z-ios-test-automatic-domain-*`, `20260524T025433Z-ios-test-sync-*`, `20260524T025706Z-ios-test-automatic-architecture-*`, `20260524T025717Z-ios-smoke-options-*`, `20260524T025800Z-scan-*`, `20260524T025818Z-report-validate-json-*`.
+
+#### Rischi rimasti
+- Manual sync e' ancora supportata come boundary esplicito; le scans automatic/manual e `ios test sync` sono verdi, ma non e' stato eseguito un live/manual flow end-to-end in questo turno.
+- `HistorySessionSyncService` resta condiviso/retained; non e' stato cancellato perche' la reference scan non autorizza una deletion sicura.
+- `SupabaseInventoryService.swift` resta grande e shared remote service; automatic writes sono stretti da protocolli automatic-domain, ma uno split piu' profondo resta follow-up candidate se richiesto.
+- Live gates TASK-119 sono NOT_RUN per assenza di autorizzazione `MC_ALLOW_LIVE=1`; non contano come PASS e non sono necessari per il passaggio a local review.
+- Cleanup e residue sono NOT_RUN/not required perche' non sono state create righe live sintetiche.
+
+#### Handoff post-execution verso Claude
+Stato proposto: `ACTIVE / REVIEW — EXECUTION_COMPLETE_LOCAL_GATES_PASS`.
+
+Reviewer focus:
+- Verificare che lo split da `AutomaticPushServices.swift` riduca davvero ownership confusion e non sia solo rename/move.
+- Verificare che `AutomaticSyncEngine` sia un core non-UI sufficiente e che il `@MainActor` residuo in `SyncAutomaticRuntime` sia facade/presentation/auth boundary.
+- Verificare che il routing TASK-119 di `scan no-full-pull-normal-path` non rompa compatibilita' TASK-117/TASK-118.
+- Valutare se il retained shared `HistorySessionSyncService` e `SupabaseInventoryService` richiedano una task successiva o siano accettabili per TASK-119.
+- Non marcare DONE senza review approval e senza decisione esplicita sui live/device blocker NOT_RUN.
 
 ## Prompt future EXECUTION-AUDIT
 Usare questo prompt solo dopo review/approvazione planning:

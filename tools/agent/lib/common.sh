@@ -424,7 +424,7 @@ Usage:
   ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task <TASK-ID> | scan repo-diff | scan release-cta | scan no-legacy-runtime-path --task TASK-117
   ./tools/agent/mc-agent.sh scan sync-boundaries --task TASK-118 --strict
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path --task TASK-118 --strict
-  ./tools/agent/mc-agent.sh scan sync-architecture|manual-boundary|dead-code|xcode-membership --task TASK-119 --strict
+  ./tools/agent/mc-agent.sh scan sync-architecture|manual-boundary|dead-code|xcode-membership|no-full-pull-normal-path --task TASK-119 --strict
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys --task TASK-117
   ./tools/agent/mc-agent.sh evidence hygiene|bundle --task TASK-117
   ./tools/agent/mc-agent.sh account fixture prepare|cleanup --task TASK-116 --prefix TASK116_ACCOUNT_ [--dry-run]
@@ -484,6 +484,7 @@ mc_help_json() {
     {"name":"scan manual-boundary task119","argv":["scan","manual-boundary","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan dead-code task119","argv":["scan","dead-code","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan xcode-membership task119","argv":["scan","xcode-membership","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-full-pull-normal-path task119","argv":["scan","no-full-pull-normal-path","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-legacy-runtime-path","argv":["scan","no-legacy-runtime-path","--task","TASK-116"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-full-pull-normal-path","argv":["scan","no-full-pull-normal-path","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan automatic-contracts-clean","argv":["scan","automatic-contracts-clean","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
@@ -1321,6 +1322,7 @@ mc_cmd_scan_task119_static() {
     manual-boundary) MC_CA_REFS="CA-119-01,CA-119-02,CA-119-19,CA-119-33" ;;
     dead-code) MC_CA_REFS="CA-119-10,CA-119-11,CA-119-27" ;;
     xcode-membership) MC_CA_REFS="CA-119-10,CA-119-34" ;;
+    no-full-pull-normal-path) MC_CA_REFS="CA-119-08,CA-119-37" ;;
     *) MC_CA_REFS="CA-119-21,CA-119-22,CA-119-23,CA-119-24" ;;
   esac
 

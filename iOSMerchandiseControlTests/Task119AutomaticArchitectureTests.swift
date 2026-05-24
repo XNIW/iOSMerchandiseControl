@@ -61,4 +61,22 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: sharedScanner.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: taskScanner.path))
     }
+
+    func testAutomaticRuntimeUsesDedicatedEngineSingleFlightAndCancellationPolicy() throws {
+        let engineURL = repositoryRoot.appendingPathComponent("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift")
+        let singleFlightURL = repositoryRoot.appendingPathComponent("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift")
+        let cancellationURL = repositoryRoot.appendingPathComponent("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift")
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: engineURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: singleFlightURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: cancellationURL.path))
+
+        let engine = try String(contentsOf: engineURL, encoding: .utf8)
+        let runtime = try source("iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift")
+
+        XCTAssertFalse(engine.contains("@MainActor"), "AutomaticSyncEngine must keep non-UI work off MainActor")
+        XCTAssertFalse(runtime.contains("activeTask"), "SyncAutomaticRuntime facade must not own placeholder single-flight state")
+        XCTAssertTrue(engine.contains("AutomaticSyncSingleFlight"))
+        XCTAssertTrue(engine.contains("AutomaticSyncCancellationPolicy"))
+    }
 }

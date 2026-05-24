@@ -1,0 +1,344 @@
+=== mc-agent scan sync-architecture --task TASK-119 --strict ===
+{
+  "NEXT_ACTION": "Resolve failing ownership/structure checks before REVIEW; do not treat file moves alone as completion.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Core",
+      "reason": "Target architecture directory is present.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Decision",
+      "reason": "Target architecture directory is present.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Catalog",
+      "reason": "Target architecture directory is present.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/ProductPrice",
+      "reason": "Target architecture directory is present.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/History",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/History",
+      "reason": "Target architecture directory is present.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Outbox",
+      "reason": "Target architecture directory is present.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Pull",
+      "reason": "Target architecture directory is present.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Automatic/Presentation",
+      "reason": "Target architecture directory is present.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Manual",
+      "reason": "Target architecture directory is present.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Shared",
+      "fix_hint": "Create the target domain directory during TASK-119 refactor and move only cohesive ownership into it.",
+      "id": "target_dir:iOSMerchandiseControl/Sync/Shared",
+      "reason": "Target architecture directory is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 81,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "reason": "81 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 338,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "reason": "338 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 12,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+      "reason": "12 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 19,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+      "reason": "19 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 216,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+      "reason": "216 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 3,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+      "reason": "3 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 23,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+      "reason": "23 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 4,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+      "reason": "4 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 87,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "reason": "87 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 88,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+      "reason": "88 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 89,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "reason": "89 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 4,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticPresentationBoundary.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticPresentationBoundary.swift",
+      "reason": "4 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 25,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+      "reason": "25 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 267,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "reason": "267 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 7,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+      "reason": "7 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 4,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+      "reason": "4 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 1,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "reason": "1 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "line_count": 117,
+        "threshold": 600
+      },
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "fix_hint": "Split by domain responsibility or document reviewer-approved justification if retained.",
+      "id": "god_file:iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "reason": "117 lines; threshold is 600.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+      "fix_hint": "Move non-UI work to an engine/service that is not MainActor-isolated; keep MainActor usage in the SwiftUI facade only.",
+      "id": "automatic_core_non_ui_mainactor",
+      "reason": "Automatic engine has no @MainActor marker.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "activeTask_in_runtime": false,
+        "cancellation_file_exists": true,
+        "engine_references_cancellation_policy": true,
+        "engine_references_single_flight": true,
+        "single_flight_file_exists": true
+      },
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "fix_hint": "Extract single-flight/cancel/retry semantics into the automatic engine layer and cover it with tests.",
+      "id": "single_flight_owned_by_automatic_engine",
+      "reason": "Dedicated single-flight/cancellation ownership is present in AutomaticSyncEngine.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "fix_hint": "Use ModelContainer + fresh ModelContext for automatic/background SwiftData work.",
+      "id": "fresh_model_context:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "reason": "File appears to create SwiftData context from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "fix_hint": "Use ModelContainer + fresh ModelContext for automatic/background SwiftData work.",
+      "id": "fresh_model_context:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "reason": "File appears to create SwiftData context from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "fix_hint": "Use ModelContainer + fresh ModelContext for automatic/background SwiftData work.",
+      "id": "fresh_model_context:iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "reason": "File appears to create SwiftData context from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "fix_hint": "Use ModelContainer + fresh ModelContext for automatic/background SwiftData work.",
+      "id": "fresh_model_context:iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "reason": "File appears to create SwiftData context from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
+      "fix_hint": "Use ModelContainer + fresh ModelContext for automatic/background SwiftData work.",
+      "id": "fresh_model_context:iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
+      "reason": "File appears to create SwiftData context from ModelContainer.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T02:44:35+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "sync-architecture",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.sync-architecture",
+  "started_at": "2026-05-24T02:44:35+00:00",
+  "status": "PASS",
+  "summary": "sync-architecture: PASS (0 failing checks, 35 total checks)",
+  "taskId": "TASK-119",
+  "task_id": "TASK-119"
+}

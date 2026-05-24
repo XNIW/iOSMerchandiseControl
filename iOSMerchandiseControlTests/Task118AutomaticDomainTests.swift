@@ -241,9 +241,11 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
     func testAutomaticRuntimeErrorDiagnosticsUseSharedRedaction() throws {
         let runtime = try readSource("iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift")
+        let engine = try readSource("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift")
+        let automaticRuntimeSources = runtime + "\n" + engine
 
-        XCTAssertTrue(runtime.contains("SyncEventOutboxPrivacySanitizer.sanitizeErrorMessage"))
-        XCTAssertFalse(runtime.contains(#"with: "<UUID>""#))
+        XCTAssertTrue(automaticRuntimeSources.contains("SyncEventOutboxPrivacySanitizer.sanitizeErrorMessage"))
+        XCTAssertFalse(automaticRuntimeSources.contains(#"with: "<UUID>""#))
     }
 
     func testOptionsStatusCardReadsAutomaticRunOutcome() throws {

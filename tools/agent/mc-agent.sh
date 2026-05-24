@@ -69,7 +69,16 @@ main() {
         incremental-apply-contract) handler=(mc_cmd_scan_task117_static incremental-apply-contract "${args[@]:2}") ;;
         swiftdata-mainactor-heavy) handler=(mc_cmd_scan_task117_static swiftdata-mainactor-heavy "${args[@]:2}") ;;
         l10n-sync-keys) handler=(mc_cmd_scan_task117_static l10n-sync-keys "${args[@]:2}") ;;
-        no-full-pull-normal-path) handler=(mc_cmd_scan_task117_static no-full-pull-normal-path "${args[@]:2}") ;;
+        no-full-pull-normal-path)
+          local scan_task_id
+          scan_task_id="$(mc_parse_opt --task "${args[@]:2}" 2>/dev/null || true)"
+          scan_task_id="${scan_task_id:-${MC_TASK_ID:-}}"
+          if [[ "$scan_task_id" == "TASK-119" ]]; then
+            handler=(mc_cmd_scan_task119_static no-full-pull-normal-path "${args[@]:2}")
+          else
+            handler=(mc_cmd_scan_task117_static no-full-pull-normal-path "${args[@]:2}")
+          fi
+          ;;
         *) echo "Usage: scan sensitive|evidence|repo-diff|release-cta|sync-architecture|manual-boundary|dead-code|xcode-membership|no-legacy-runtime-path|no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys" >&2; exit "$MC_EXIT_MISCONFIGURED" ;;
       esac
       ;;

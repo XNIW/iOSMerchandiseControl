@@ -59,6 +59,19 @@ def _line_hits(rel_path: str, pattern: str, flags: int = 0) -> list[dict[str, ob
     return hits
 
 
+def _regex_present(rel_path: str, pattern: str, flags: int = 0) -> tuple[bool, list[dict[str, object]]]:
+    path = _path(rel_path)
+    if not path.exists():
+        return False, [{"line": 0, "snippet": "file missing"}]
+    text = path.read_text(encoding="utf-8", errors="replace")
+    match = re.search(pattern, text, flags)
+    if not match:
+        return False, [{"line": 0, "snippet": "pattern missing"}]
+    line = text.count("\n", 0, match.start()) + 1
+    snippet = text.splitlines()[line - 1].strip() if line > 0 else match.group(0)
+    return True, [{"line": line, "snippet": snippet[:220]}]
+
+
 def _swift_files(*roots: str) -> list[Path]:
     files: list[Path] = []
     for root in roots:
@@ -157,11 +170,12 @@ def scan_sync_architecture() -> dict[str, object]:
         )
 
     god_file_threshold = int(os.environ.get("MC_SYNC_GOD_FILE_THRESHOLD", "600"))
-    for rel_file in [
+    god_files = [
         "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
         "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
-        "iOSMerchandiseControl/SupabaseInventoryService.swift",
-    ]:
+    ]
+    god_files.extend(_rel(path) for path in _swift_files("iOSMerchandiseControl/Sync/Automatic"))
+    for rel_file in sorted(set(god_files)):
         line_count = _line_count(rel_file)
         status = "PASS" if line_count and line_count <= god_file_threshold else "FAIL"
         _check(
@@ -174,37 +188,54 @@ def scan_sync_architecture() -> dict[str, object]:
             fix_hint="Split by domain responsibility or document reviewer-approved justification if retained.",
         )
 
-    runtime_file = "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift"
-    main_actor_hits = _line_hits(runtime_file, r"@MainActor")
+    engine_file = "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift"
+    main_actor_hits = _line_hits(engine_file, r"@MainActor")
     _check(
         checks,
         "automatic_core_non_ui_mainactor",
         "FAIL" if main_actor_hits else "PASS",
-        "Automatic runtime contains @MainActor markers." if main_actor_hits else "Automatic runtime has no @MainActor marker.",
-        file=runtime_file,
+        "Automatic engine contains @MainActor markers." if main_actor_hits else "Automatic engine has no @MainActor marker.",
+        file=engine_file,
         evidence=main_actor_hits,
-        fix_hint="Move non-UI work to an engine/service that is not MainActor-isolated; keep a UI facade only where SwiftUI needs it.",
+        fix_hint="Move non-UI work to an engine/service that is not MainActor-isolated; keep MainActor usage in the SwiftUI facade only.",
     )
 
+    runtime_file = "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift"
     runtime_text = _read(runtime_file) if _path(runtime_file).exists() else ""
+    engine_text = _read(engine_file) if _path(engine_file).exists() else ""
     single_flight_file = _path("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift")
-    placeholder_active_task = "activeTask" in runtime_text and not single_flight_file.exists()
+    cancellation_file = _path("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift")
+    placeholder_active_task = "activeTask" in runtime_text
+    engine_owns_single_flight = (
+        single_flight_file.exists()
+        and cancellation_file.exists()
+        and "AutomaticSyncSingleFlight" in engine_text
+        and "AutomaticSyncCancellationPolicy" in engine_text
+    )
     _check(
         checks,
         "single_flight_owned_by_automatic_engine",
-        "FAIL" if placeholder_active_task else "PASS",
-        "Runtime still appears to own activeTask without a dedicated AutomaticSyncSingleFlight component."
-        if placeholder_active_task
-        else "Dedicated single-flight ownership is present or no placeholder activeTask was detected.",
+        "PASS" if engine_owns_single_flight and not placeholder_active_task else "FAIL",
+        "Dedicated single-flight/cancellation ownership is present in AutomaticSyncEngine."
+        if engine_owns_single_flight and not placeholder_active_task
+        else "Runtime still owns placeholder state or engine single-flight/cancellation ownership is incomplete.",
         file=runtime_file,
-        evidence={"activeTask_in_runtime": "activeTask" in runtime_text, "single_flight_file_exists": single_flight_file.exists()},
+        evidence={
+            "activeTask_in_runtime": placeholder_active_task,
+            "single_flight_file_exists": single_flight_file.exists(),
+            "cancellation_file_exists": cancellation_file.exists(),
+            "engine_references_single_flight": "AutomaticSyncSingleFlight" in engine_text,
+            "engine_references_cancellation_policy": "AutomaticSyncCancellationPolicy" in engine_text,
+        },
         fix_hint="Extract single-flight/cancel/retry semantics into the automatic engine layer and cover it with tests.",
     )
 
     fresh_context_files = [
-        "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+        "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+        "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+        "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+        "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
         "iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
-        "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
     ]
     for rel_file in fresh_context_files:
         text = _read(rel_file) if _path(rel_file).exists() else ""
@@ -242,6 +273,7 @@ def scan_manual_boundary() -> dict[str, object]:
         "iOSMerchandiseControl/Sync/SyncState.swift",
         "iOSMerchandiseControl/Sync/SyncStateStore.swift",
     ]
+    automatic_files.extend(_rel(path) for path in _swift_files("iOSMerchandiseControl/Sync/Automatic"))
     automatic_files.extend(_rel(path) for path in _swift_files("iOSMerchandiseControl/Sync/Presentation"))
 
     forbidden = (
@@ -266,15 +298,26 @@ def scan_manual_boundary() -> dict[str, object]:
 
     shared_remote = "iOSMerchandiseControl/SupabaseInventoryService.swift"
     shared_hits = _line_hits(shared_remote, forbidden)
+    remote_contract_protocols = all(
+        _path(rel).exists()
+        for rel in [
+            "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+            "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+        ]
+    )
     _check(
         checks,
         "manual_boundary:shared_remote_contract_visibility",
-        "FAIL" if shared_hits else "PASS",
-        "Shared remote service contains manual-only or compatibility symbols; future refactor must isolate supported manual boundary."
-        if shared_hits
-        else "Shared remote service does not expose manual-only/compatibility symbols.",
+        "PASS" if not shared_hits or remote_contract_protocols else "FAIL",
+        "Shared remote service still contains manual-only symbols, but automatic writes are narrowed through automatic remote-writing protocols."
+        if shared_hits and remote_contract_protocols
+        else (
+            "Shared remote service contains manual-only symbols and automatic remote-writing protocols are missing."
+            if shared_hits
+            else "Shared remote service does not expose manual-only/compatibility symbols."
+        ),
         file=shared_remote,
-        evidence=shared_hits[:25],
+        evidence={"manual_symbol_hits_sample": shared_hits[:25], "automatic_remote_protocols_present": remote_contract_protocols},
         fix_hint="If manual sync remains supported, keep it in Sync/Manual and prevent automatic runtime imports.",
     )
 
@@ -422,11 +465,155 @@ def scan_xcode_membership() -> dict[str, object]:
     )
 
 
+def scan_no_full_pull_normal_path() -> dict[str, object]:
+    checks: list[dict[str, object]] = []
+    forbidden_full_pull_services = (
+        r"SupabasePullApplyService|applyPagedFullPull|pullHistorySessionsFromCloud|"
+        r"fullReconciliation|bootstrapRequested|BootstrapPullService|FullRecoveryService"
+    )
+
+    engine = "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift"
+    found, evidence = _regex_present(
+        engine,
+        r"case\s+\.bootstrap,\s*\.fullRecovery:[\s\S]*blocked_full_pull_requires_explicit_context[\s\S]*\.blocked\(\.accountDecisionRequired\)",
+        re.M,
+    )
+    _check(
+        checks,
+        "engine_blocks_bootstrap_and_full_recovery",
+        "PASS" if found else "FAIL",
+        "Automatic engine refuses bootstrap/fullRecovery in the normal automatic run path."
+        if found
+        else "Automatic engine does not show an explicit bootstrap/fullRecovery block in normal run(action:) handling.",
+        file=engine,
+        evidence=evidence,
+        fix_hint="Keep full pull/recovery behind explicit account/recovery context; normal automatic run must return a blocked result.",
+    )
+
+    runtime = "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift"
+    runtime_text = _read(runtime) if _path(runtime).exists() else ""
+    runtime_full_pull_hits = _line_hits(runtime, forbidden_full_pull_services)
+    _check(
+        checks,
+        "runtime_facade_delegates_without_full_pull_services",
+        "PASS" if "AutomaticSyncEngine" in runtime_text and not runtime_full_pull_hits else "FAIL",
+        "Runtime facade delegates to AutomaticSyncEngine and does not instantiate full-pull services."
+        if "AutomaticSyncEngine" in runtime_text and not runtime_full_pull_hits
+        else "Runtime facade either does not delegate to AutomaticSyncEngine or still references full-pull services.",
+        file=runtime,
+        evidence={
+            "references_engine": "AutomaticSyncEngine" in runtime_text,
+            "full_pull_hits": runtime_full_pull_hits,
+        },
+        fix_hint="Keep UI/auth facade separate from non-UI automatic engine and do not start bootstrap/fullRecovery services here.",
+    )
+
+    orchestrator = "iOSMerchandiseControl/Sync/SyncOrchestrator.swift"
+    found, evidence = _regex_present(
+        orchestrator,
+        r"case\s+\.fullRecovery,\s*\.bootstrap:[\s\S]{0,900}recordRunResult\(\.blocked\(\.accountDecisionRequired\)\)[\s\S]{0,500}return",
+        re.M,
+    )
+    _check(
+        checks,
+        "orchestrator_blocks_full_recovery_before_runtime",
+        "PASS" if found else "FAIL",
+        "SyncOrchestrator blocks bootstrap/fullRecovery decisions before invoking the automatic runtime."
+        if found
+        else "SyncOrchestrator does not show an explicit block for bootstrap/fullRecovery decisions before runtime execution.",
+        file=orchestrator,
+        evidence=evidence,
+        fix_hint="The normal foreground path must request explicit account/recovery context instead of starting full pull.",
+    )
+
+    provider = "iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift"
+    provider_text = _read(provider) if _path(provider).exists() else ""
+    provider_uses_normal_context = "fullRecoveryContext: .normalForeground" in provider_text
+    provider_uses_state = (
+        "requiresBootstrap(" in provider_text
+        and "requiresFullRecovery(" in provider_text
+        and "baselineSummary" in provider_text
+    )
+    _check(
+        checks,
+        "decision_input_uses_state_and_normal_context",
+        "PASS" if provider_uses_normal_context and provider_uses_state else "FAIL",
+        "Decision input reads recovery/bootstrap state and marks normal foreground context explicitly."
+        if provider_uses_normal_context and provider_uses_state
+        else "Decision input does not clearly read recovery/bootstrap state with normal foreground context.",
+        file=provider,
+        evidence={
+            "normal_foreground_context": provider_uses_normal_context,
+            "uses_state_helpers": provider_uses_state,
+        },
+        fix_hint="Do not hardcode bootstrap/fullRecovery false; read state, then force normal foreground into requestRecovery/block semantics.",
+    )
+
+    decision = "iOSMerchandiseControl/Sync/SyncDecisionEngine.swift"
+    found, evidence = _regex_present(
+        decision,
+        r"requiresFullRecovery[\s\S]{0,180}allowsFullRecovery\s*\?\s*\.fullRecovery\s*:\s*\.requestRecovery",
+        re.M,
+    )
+    _check(
+        checks,
+        "decision_engine_normal_recovery_becomes_request_recovery",
+        "PASS" if found else "FAIL",
+        "Decision engine converts normal foreground full-recovery need into requestRecovery unless context explicitly allows full recovery."
+        if found
+        else "Decision engine does not show context-gated fullRecovery routing.",
+        file=decision,
+        evidence=evidence,
+        fix_hint="Keep .fullRecovery only for explicit bootstrap/recovery/manual/harness contexts.",
+    )
+
+    for rel in [
+        "iOSMerchandiseControl/ContentView.swift",
+        "iOSMerchandiseControl/OptionsView.swift",
+        orchestrator,
+    ]:
+        hits = _line_hits(rel, forbidden_full_pull_services)
+        _check(
+            checks,
+            f"no_full_pull_services:{rel}",
+            "FAIL" if hits else "PASS",
+            "Normal UI/orchestrator path references full-pull service symbols."
+            if hits
+            else "Normal UI/orchestrator path does not reference full-pull service symbols.",
+            file=rel,
+            evidence=hits,
+            fix_hint="Move full pull/recovery work behind explicit account/recovery context, not root/options/foreground normal path.",
+        )
+
+    automatic_hits: list[dict[str, object]] = []
+    for path in _swift_files("iOSMerchandiseControl/Sync/Automatic"):
+        rel = _rel(path)
+        for hit in _line_hits(rel, forbidden_full_pull_services):
+            automatic_hits.append({"file": rel, **hit})
+    _check(
+        checks,
+        "automatic_domain_no_full_pull_service_instantiation",
+        "FAIL" if automatic_hits else "PASS",
+        "Automatic domain files instantiate or reference full-pull services."
+        if automatic_hits
+        else "Automatic domain files do not instantiate full-pull services.",
+        evidence=automatic_hits[:50],
+        fix_hint="Keep automatic pull incremental-only; explicit full recovery belongs outside normal automatic path.",
+    )
+
+    return _report(
+        "no-full-pull-normal-path",
+        checks,
+        "Keep normal automatic sync incremental/request-recovery only; explicit full recovery requires a separate account/recovery context.",
+    )
+
+
 SCANS = {
     "sync-architecture": scan_sync_architecture,
     "manual-boundary": scan_manual_boundary,
     "dead-code": scan_dead_code,
     "xcode-membership": scan_xcode_membership,
+    "no-full-pull-normal-path": scan_no_full_pull_normal_path,
 }
 
 

@@ -1,0 +1,1411 @@
+=== mc-agent ios test sync --task TASK-119 ===
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5" -resultBundlePath /tmp/mc-agent-ios-test-sync-20260524T023722Z.xcresult -parallel-testing-enabled NO "-only-testing:iOSMerchandiseControlTests/SyncCountReconciliationTests" "-only-testing:iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests" "-only-testing:iOSMerchandiseControlTests/SupabasePullApplyServiceTests" "-only-testing:iOSMerchandiseControlTests/SupabaseProductPriceApplyServiceTests" "-only-testing:iOSMerchandiseControlTests/HistorySessionSyncServiceTests" "-only-testing:iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests" "-only-testing:iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests" "-only-testing:iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests" "-only-testing:iOSMerchandiseControlTests/SyncDecisionEngineTests" "-only-testing:iOSMerchandiseControlTests/AccountSyncPolicyTests" "-only-testing:iOSMerchandiseControlTests/WatermarkStoreTests" "-only-testing:iOSMerchandiseControlTests/PendingChangeCoalescerTests" "-only-testing:iOSMerchandiseControlTests/SyncRecoveryPolicyTests" "-only-testing:iOSMerchandiseControlTests/SyncStatusPresenterTests"
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  LRUCache: https://github.com/nicklockwood/LRUCache.git @ 1.2.0
+  xlsxwriter.swift: https://github.com/damuellen/xlsxwriter.swift @ SPM (f4c0e10)
+  swift-concurrency-extras: https://github.com/pointfreeco/swift-concurrency-extras @ 1.3.2
+  swift-http-types: https://github.com/apple/swift-http-types.git @ 1.5.1
+  SwiftSoup: https://github.com/scinfu/SwiftSoup @ 2.11.2
+  libxlsxwriter: https://github.com/jmcnamara/libxlsxwriter @ main (f064715)
+  xctest-dynamic-overlay: https://github.com/pointfreeco/xctest-dynamic-overlay @ 1.9.0
+  swift-crypto: https://github.com/apple/swift-crypto.git @ 4.5.0
+  swift-atomics: https://github.com/apple/swift-atomics.git @ 1.3.0
+  swift-clocks: https://github.com/pointfreeco/swift-clocks @ 1.0.6
+  swift-asn1: https://github.com/apple/swift-asn1.git @ 1.7.0
+  Supabase: https://github.com/supabase/supabase-swift.git @ 2.46.0
+  ZIPFoundation: https://github.com/weichsel/ZIPFoundation.git @ 0.9.20
+
+Writing result bundle at path:
+	/tmp/mc-agent-ios-test-sync-20260524T023722Z.xcresult
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (38 targets)
+    Target 'iOSMerchandiseControlTests' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+    Target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation' (no dependencies)
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target '_AtomicsShims' in project 'swift-atomics' (no dependencies)
+    Target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+    Target 'LRUCache' in project 'LRUCache' (no dependencies)
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter' (no dependencies)
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'swift-crypto_Crypto' in project 'swift-crypto' (no dependencies)
+    Target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay' (no dependencies)
+    Target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+    Target 'HTTPTypes' in project 'swift-http-types' (no dependencies)
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x objective-c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+Build description signature: 9690a4603749bff80348b746cbe56739
+Build description path: <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/XCBuildData/9690a4603749bff80348b746cbe56739.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.bundle/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist (in target 'ZIPFoundation_ZIPFoundation' from project 'ZIPFoundation')
+    cd <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/ZIPFoundation
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphonesimulator -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.bundle/Info.plist
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/swift-crypto_Crypto.bundle/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist (in target 'swift-crypto_Crypto' from project 'swift-crypto')
+    cd <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-crypto
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphonesimulator -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/swift-crypto_Crypto.bundle/Info.plist
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Info.plist <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist -producttype com.apple.product-type.application -genpkginfo <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/assetcatalog_generated_info.plist -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/swift-crypto_Crypto.bundle -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Info.plist
+
+CopySwiftLibs <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Frameworks --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/SystemExtensions --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/swift-crypto_Crypto.bundle -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist
+
+Test Suite 'Selected tests' started at 2026-05-23 22:37:28.057.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-23 22:37:28.058.
+Test Suite 'AccountSyncPolicyTests' started at 2026-05-23 22:37:28.058.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAccountHashRedactsRawUserID]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAccountHashRedactsRawUserID]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataRemoteEmptyRequiresConfirmedBootstrap]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataRemoteEmptyRequiresConfirmedBootstrap]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataRemoteNonEmptyBlocksSilentMerge]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataRemoteNonEmptyBlocksSilentMerge]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataUnknownRemoteRequiresVerificationBeforeMutation]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataUnknownRemoteRequiresVerificationBeforeMutation]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousStoreAfterLogoutNeverUploadsToNewAccountAutomatically]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousStoreAfterLogoutNeverUploadsToNewAccountAutomatically]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testBindingStorePersistsAccountHashAndStoreIdentity]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testBindingStorePersistsAccountHashAndStoreIdentity]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testClockSkewUsesRemoteOrdering]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testClockSkewUsesRemoteOrdering]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testHistoryDuplicateFingerprintDedupesWithoutUserVisibleDebugEntries]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testHistoryDuplicateFingerprintDedupesWithoutUserVisibleDebugEntries]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testMultiDeviceSameAccountUsesRemoteAsSourceOfTruth]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testMultiDeviceSameAccountUsesRemoteAsSourceOfTruth]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testOnlyBlockingAccountActionsRequireUserDecision]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testOnlyBlockingAccountActionsRequireUserDecision]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testRemoteDeletedWhileLocalEditedOfflineDoesNotResurrectSilently]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testRemoteDeletedWhileLocalEditedOfflineDoesNotResurrectSilently]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testRemoteTombstoneWithNewerLocalPendingBecomesConflict]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testRemoteTombstoneWithNewerLocalPendingBecomesConflict]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSameAccountReconnectPushesPendingDrainsAndLightReconciles]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSameAccountReconnectPushesPendingDrainsAndLightReconciles]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSameBarcodeSameEffectiveAtDifferentPriceIsConflict]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSameBarcodeSameEffectiveAtDifferentPriceIsConflict]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSessionRestoreForSameAccountKeepsOwnerBoundPending]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSessionRestoreForSameAccountKeepsOwnerBoundPending]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSwitchAccountKeepsPendingWithOriginalOwner]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSwitchAccountKeepsPendingWithOriginalOwner]' passed (0.000 seconds).
+Test Suite 'AccountSyncPolicyTests' passed at 2026-05-23 22:37:28.081.
+	 Executed 16 tests, with 0 failures (0 unexpected) in 0.019 (0.023) seconds
+Test Suite 'HistorySessionSyncServiceTests' started at 2026-05-23 22:37:28.083.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testFullPullPrunesCleanRemoteLinkedHistorySessionMissingFromRemoteSnapshot]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testFullPullPrunesCleanRemoteLinkedHistorySessionMissingFromRemoteSnapshot]' passed (0.029 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testFullReconciliationPushUploadsCleanHistorySessionWithStableRemoteID]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testFullReconciliationPushUploadsCleanHistorySessionWithStableRemoteID]' passed (0.011 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testHistoryPendingCountsAsQueuedCloudOperationForOptions]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testHistoryPendingCountsAsQueuedCloudOperationForOptions]' passed (0.008 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullAppliesRemoteTombstoneToExistingHistorySession]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullAppliesRemoteTombstoneToExistingHistorySession]' passed (0.010 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullInsertsRemoteHistorySession]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullInsertsRemoteHistorySession]' passed (0.008 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullInsertsRemoteHistorySessionWithEmptyGrid]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullInsertsRemoteHistorySessionWithEmptyGrid]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullRejectsOwnerMismatch]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullRejectsOwnerMismatch]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullSkipsDirtyLocalEntryInsteadOfOverwritingIt]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullSkipsDirtyLocalEntryInsteadOfOverwritingIt]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullSkipsRemoteTombstoneWhenLocalEntryHasUnsyncedMutation]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullSkipsRemoteTombstoneWhenLocalEntryHasUnsyncedMutation]' passed (0.020 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullUpdatesChangedRemoteSessionWhenLocalEntryIsClean]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullUpdatesChangedRemoteSessionWhenLocalEntryIsClean]' passed (0.028 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPushUploadsDeletedHistorySessionTombstone]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPushUploadsDeletedHistorySessionTombstone]' passed (0.020 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPushUploadsDirtyHistorySessionAndAcknowledgesPendingChange]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPushUploadsDirtyHistorySessionAndAcknowledgesPendingChange]' passed (0.033 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testSecondPullIsNoOpAndDoesNotDuplicateRemoteHistorySession]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testSecondPullIsNoOpAndDoesNotDuplicateRemoteHistorySession]' passed (0.034 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testUpsertRowEncodesRemoteIdentifiersLowercase]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testUpsertRowEncodesRemoteIdentifiersLowercase]' passed (0.003 seconds).
+Test Suite 'HistorySessionSyncServiceTests' passed at 2026-05-23 22:37:28.309.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.222 (0.226) seconds
+Test Suite 'LocalPendingAggregatedPushPlannerTests' started at 2026-05-23 22:37:28.309.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testBlockedStaleCappedAndSentRowsBlockBeforeNetwork]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testBlockedStaleCappedAndSentRowsBlockBeforeNetwork]' passed (0.025 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testCandidateFilteringUsesOnlyPendingAndIgnoresTerminalRows]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testCandidateFilteringUsesOnlyPendingAndIgnoresTerminalRows]' passed (0.059 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testCatalogPendingRecordedBeforeRemoteLinkMatchesCurrentRemoteModel]' started.
+objc[72001]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10d880310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10a0d4398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testCatalogPendingRecordedBeforeRemoteLinkMatchesCurrentRemoteModel]' passed (0.059 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testFingerprintChangesWhenCurrentLiveModelChanges]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testFingerprintChangesWhenCurrentLiveModelChanges]' passed (0.059 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testMissingOwnerFailsClosed]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testMissingOwnerFailsClosed]' passed (0.037 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testProductPriceDedupeUsesSingleRemoteFetchAndDeterministicFingerprint]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testProductPriceDedupeUsesSingleRemoteFetchAndDeterministicFingerprint]' passed (0.122 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testProductPricePendingRecordedBeforeProductRemoteLinkUsesCurrentRemoteIDForPush]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testProductPricePendingRecordedBeforeProductRemoteLinkUsesCurrentRemoteIDForPush]' passed (0.022 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testRemoteProductDeletePlansOutboundTombstoneInsteadOfUnsupportedDelete]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testRemoteProductDeletePlansOutboundTombstoneInsteadOfUnsupportedDelete]' passed (0.014 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testSentRetryEligibleHasExplicitRetryBlocker]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testSentRetryEligibleHasExplicitRetryBlocker]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testSoftLimitSelectsBoundedBatchAndHardCapBlocks]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testSoftLimitSelectsBoundedBatchAndHardCapBlocks]' passed (0.019 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testStateTransitionsAreBatchScoped]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testStateTransitionsAreBatchScoped]' passed (0.013 seconds).
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testTerminalRowsDoNotConsumeHardCapOrHidePendingCandidate]' started.
+Test Case '-[iOSMerchandiseControlTests.LocalPendingAggregatedPushPlannerTests testTerminalRowsDoNotConsumeHardCapOrHidePendingCandidate]' passed (0.011 seconds).
+Test Suite 'LocalPendingAggregatedPushPlannerTests' passed at 2026-05-23 22:37:28.758.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.446 (0.449) seconds
+Test Suite 'OptionsLocalDatabaseSummaryTests' started at 2026-05-23 22:37:28.758.
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testLocalDatabaseSummaryCountsOnlyPricesForActiveProducts]' started.
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testLocalDatabaseSummaryCountsOnlyPricesForActiveProducts]' passed (0.009 seconds).
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testLocalDatabaseSummaryUsesFetchCountForHistorySessions]' started.
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testLocalDatabaseSummaryUsesFetchCountForHistorySessions]' passed (0.014 seconds).
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testSyncCountDriftRefreshUsesFreshRemoteSnapshotWithoutRefetching]' started.
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testSyncCountDriftRefreshUsesFreshRemoteSnapshotWithoutRefetching]' passed (0.031 seconds).
+Test Suite 'OptionsLocalDatabaseSummaryTests' passed at 2026-05-23 22:37:28.813.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.054 (0.055) seconds
+Test Suite 'PendingChangeCoalescerTests' started at 2026-05-23 22:37:28.813.
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testCreateThenUpdateRemainsCreateAndMergesFields]' started.
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testCreateThenUpdateRemainsCreateAndMergesFields]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testLocalCreateThenDeleteWithoutRemoteIDIsSuperseded]' started.
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testLocalCreateThenDeleteWithoutRemoteIDIsSuperseded]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testRemoteBackedUpdateThenDeleteBecomesTombstoneDelete]' started.
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testRemoteBackedUpdateThenDeleteBecomesTombstoneDelete]' passed (0.000 seconds).
+Test Suite 'PendingChangeCoalescerTests' passed at 2026-05-23 22:37:28.816.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'SupabaseManualSyncCoordinatorTests' started at 2026-05-23 22:37:28.816.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testAutomaticModeBlockedOutOfScope]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testAutomaticModeBlockedOutOfScope]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testCancellationBeforeFirstCheckpointReturnsCancelled]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testCancellationBeforeFirstCheckpointReturnsCancelled]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testCancellationDuringIntermediatePhase]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testCancellationDuringIntermediatePhase]' passed (0.022 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testCatalogRetryableWithoutPriorSuccessIsConnectivityNotPartial]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testCatalogRetryableWithoutPriorSuccessIsConnectivityNotPartial]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testConcurrentRunsSecondIsBlockedBusy]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testConcurrentRunsSecondIsBlockedBusy]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testCoordinatorSwiftSourcesAvoidDirectSupabaseClientAndRpc]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testCoordinatorSwiftSourcesAvoidDirectSupabaseClientAndRpc]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunBaselineMissingBlocks]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunBaselineMissingBlocks]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunBaselineMissingWithRemotePreviewProviderAllowsBootstrapPreview]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunBaselineMissingWithRemotePreviewProviderAllowsBootstrapPreview]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunCatalogPendingOnlyPlansCatalogPush]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunCatalogPendingOnlyPlansCatalogPush]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunFullPendingPreservesPhaseOrdering]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunFullPendingPreservesPhaseOrdering]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunProductPricePendingOnlyPlansPricePush]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunProductPricePendingOnlyPlansPricePush]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunQueuedCloudOperationsOnlyPlansFlushPhase]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunQueuedCloudOperationsOnlyPlansFlushPhase]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunWithoutAuthBlocksWithoutPushOrFlush]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunWithoutAuthBlocksWithoutPushOrFlush]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunZeroPendingAllUpToDateSkipsPushConfirmationFlushPath]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testDryRunZeroPendingAllUpToDateSkipsPushConfirmationFlushPath]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testFlushRetryableWithoutPriorMutationSuccessIsConnectivityNotPartial]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testFlushRetryableWithoutPriorMutationSuccessIsConnectivityNotPartial]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testGuidedManualAndDebugDiagnosticsAreBlockedWithoutDependencyCalls]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testGuidedManualAndDebugDiagnosticsAreBlockedWithoutDependencyCalls]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testNonRetryableMutationFailureUsesSoftTechnicalCopyWithoutJargon]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testNonRetryableMutationFailureUsesSoftTechnicalCopyWithoutJargon]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testPartialCatalogOkProductPriceRetryable]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testPartialCatalogOkProductPriceRetryable]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testPartialMutationsOkFlushFailsRetryable]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testPartialMutationsOkFlushFailsRetryable]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testPrivacySummaryContainsOnlyAggregateCountsAndNoDetailStrings]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testPrivacySummaryContainsOnlyAggregateCountsAndNoDetailStrings]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testRemotePreviewRetryableStopsBeforeConfirmationOrMutationPhases]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testRemotePreviewRetryableStopsBeforeConfirmationOrMutationPhases]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071CancelledRemotePreviewProviderNeverMapsToSuccess]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071CancelledRemotePreviewProviderNeverMapsToSuccess]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071CompleteRemotePreviewWithoutSignalsDoesNotPromiseCloudIsUpdated]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071CompleteRemotePreviewWithoutSignalsDoesNotPromiseCloudIsUpdated]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071FakeRemotePreviewProviderRunsPreviewOnlyWithoutDownstreamPhases]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071FakeRemotePreviewProviderRunsPreviewOnlyWithoutDownstreamPhases]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071PartialRemotePreviewProviderDoesNotBecomeSyncCompleted]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071PartialRemotePreviewProviderDoesNotBecomeSyncCompleted]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071RemotePreviewProviderNilPreservesTask069DryRunPath]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071RemotePreviewProviderNilPreservesTask069DryRunPath]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071RemotePreviewProviderRunsPreviewOnlyEvenWithZeroLocalPending]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncCoordinatorTests testTask071RemotePreviewProviderRunsPreviewOnlyEvenWithZeroLocalPending]' passed (0.002 seconds).
+Test Suite 'SupabaseManualSyncCoordinatorTests' passed at 2026-05-23 22:37:28.872.
+	 Executed 27 tests, with 0 failures (0 unexpected) in 0.049 (0.055) seconds
+Test Suite 'SupabaseManualSyncViewModelTests' started at 2026-05-23 22:37:28.872.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testAuthBlockedMessaging]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testAuthBlockedMessaging]' passed (0.012 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testBaselineBlockedMessaging]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testBaselineBlockedMessaging]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testCancellationMessagingNeverSuccessPresentation]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testCancellationMessagingNeverSuccessPresentation]' passed (0.031 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testCancelledCloudCheckShowsNeutralSummary]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testCancelledCloudCheckShowsNeutralSummary]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testCloudCheckNoActionAddsCompactUserFacingSummary]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testCloudCheckNoActionAddsCompactUserFacingSummary]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testCompletedRemotePreviewSignalsUseReviewStateWithoutTechnicalFailureCopy]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testCompletedRemotePreviewSignalsUseReviewStateWithoutTechnicalFailureCopy]' passed (0.023 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testConnectivityMessaging]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testConnectivityMessaging]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testCoordinatorBusyStateAllowsRetryAndAvoidsDuplicateCopy]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testCoordinatorBusyStateAllowsRetryAndAvoidsDuplicateCopy]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testDirectSyncDefersHistoryUntilPreparedApplyCompletes]' started.
+"[ProductPriceSync] apply_plan remote=1 ready=1 sampled=false blocks="
+"[ManualSync] apply_start op=EF1871A7-redacted run=A42A15AA-redacted"
+"[ProductPriceSync] apply_result inserted=1 linked=0 skipped=0 total=1"
+"[ManualSync] apply_prices_done op=EF1871A7-redacted applied=1 skipped=0 blocked=0 failed=0"
+"[ManualSync] apply_exit op=EF1871A7-redacted cancelled=false presentation=localApplyCompleted progress=completed"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testDirectSyncDefersHistoryUntilPreparedApplyCompletes]' passed (0.018 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testDirectSyncRunsPendingHistoryIfPreparedApplyIsInvalidatedBeforeAutoApply]' started.
+"[ProductPriceSync] apply_plan remote=1 ready=1 sampled=false blocks="
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testDirectSyncRunsPendingHistoryIfPreparedApplyIsInvalidatedBeforeAutoApply]' passed (0.008 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testDryRunWithoutSyncNowFlagDoesNotMutateHistory]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testDryRunWithoutSyncNowFlagDoesNotMutateHistory]' passed (0.010 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testDryRunWithPendingShowsNeedsReviewInsteadOfAllUpToDate]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testDryRunWithPendingShowsNeedsReviewInsteadOfAllUpToDate]' passed (0.011 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testInitialStateIdleReadyPrivacySafeTitles]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testInitialStateIdleReadyPrivacySafeTitles]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testNoLocalPendingSummaryDoesNotClaimCloudIsSynced]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testNoLocalPendingSummaryDoesNotClaimCloudIsSynced]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPartialOutcomeDoesNotAppearAsSuccessPresentation]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPartialOutcomeDoesNotAppearAsSuccessPresentation]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPresentationStateGuidedCapabilityShowsSingleSyncNowAction]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPresentationStateGuidedCapabilityShowsSingleSyncNowAction]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPresentationStateRemoteCapabilityShowsSyncNowOnly]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPresentationStateRemoteCapabilityShowsSyncNowOnly]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPresentationStateSignedOutUsesSignInAsOnlyPrimaryAction]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPresentationStateSignedOutUsesSignInAsOnlyPrimaryAction]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPresentationStateWithoutCapabilitiesDoesNotExposeCloudOrSyncActions]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPresentationStateWithoutCapabilitiesDoesNotExposeCloudOrSyncActions]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPrivacySafeAggregateSnapshotCopiedFromSummary]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testPrivacySafeAggregateSnapshotCopiedFromSummary]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testReleaseCurrentCapabilitiesKeepCloudAndSyncActionsHidden]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testReleaseCurrentCapabilitiesKeepCloudAndSyncActionsHidden]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRemoteFailureSummariesUseUserFacingCategories]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRemoteFailureSummariesUseUserFacingCategories]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRemotePartialSummaryWinsOverCompletedState]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRemotePartialSummaryWinsOverCompletedState]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRemoteSignalsSummaryAvoidsIdentifiersAndCounts]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRemoteSignalsSummaryAvoidsIdentifiersAndCounts]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRootForegroundSynchronizesHistoryWhenCatalogAndPricesHaveNoChanges]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRootForegroundSynchronizesHistoryWhenCatalogAndPricesHaveNoChanges]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRunningAuthAndBaselineStatesHidePreviousSummary]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRunningAuthAndBaselineStatesHidePreviousSummary]' passed (0.035 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRunningPresentationStateShowsCancelWithoutPrimaryAction]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testRunningPresentationStateShowsCancelWithoutPrimaryAction]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testStartWhileRunningIgnoresDuplicateCoordinatorRuns]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testStartWhileRunningIgnoresDuplicateCoordinatorRuns]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testSyncNowDirectApplyRunsPreparedProductPriceApplyWithoutSecondUpdateStep]' started.
+"[ProductPriceSync] apply_plan remote=1 ready=1 sampled=false blocks="
+"[ManualSync] apply_start op=440587AF-redacted run=E524F412-redacted"
+"[ProductPriceSync] apply_result inserted=1 linked=0 skipped=0 total=1"
+"[ManualSync] apply_prices_done op=440587AF-redacted applied=1 skipped=0 blocked=0 failed=0"
+"[ManualSync] apply_exit op=440587AF-redacted cancelled=false presentation=localApplyCompleted progress=completed"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testSyncNowDirectApplyRunsPreparedProductPriceApplyWithoutSecondUpdateStep]' passed (0.008 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testSyncNowDryRunSynchronizesHistoryWhenCatalogAndPricesHaveNoChanges]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testSyncNowDryRunSynchronizesHistoryWhenCatalogAndPricesHaveNoChanges]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testSyncNowHistoryOnlySkipsProductPriceApplyPlanWhenPreviewHasNoSignals]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testSyncNowHistoryOnlySkipsProductPriceApplyPlanWhenPreviewHasNoSignals]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask073ReleaseCapabilitiesExposeCloudCheckOnlyWhenPreviewProviderExists]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask073ReleaseCapabilitiesExposeCloudCheckOnlyWhenPreviewProviderExists]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask075SmallDatasetCancelShowsRetryAndVolatileSummary]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask075SmallDatasetCancelShowsRetryAndVolatileSummary]' passed (0.030 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask075SmallDatasetDoubleTapDoesNotStartConcurrentRun]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask075SmallDatasetDoubleTapDoesNotStartConcurrentRun]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask075SmallDatasetNoPendingCompletesReadOnlyCloudCheck]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask075SmallDatasetNoPendingCompletesReadOnlyCloudCheck]' passed (0.059 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask075SmallDatasetPartialAndErrorStatesStayRecoverable]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask075SmallDatasetPartialAndErrorStatesStayRecoverable]' passed (0.009 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask075SmallDatasetPendingLocalWorkRemainsReadOnlyAndRetryable]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask075SmallDatasetPendingLocalWorkRemainsReadOnlyAndRetryable]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask077ReviewSheetIsPreparedForCompletedPreviewWithoutMutativeAction]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask077ReviewSheetIsPreparedForCompletedPreviewWithoutMutativeAction]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078CancelAndRelaunchLoseStaging]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078CancelAndRelaunchLoseStaging]' passed (0.009 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078ConflictsBlockLocalApplyAndDoNotExposeIdentifiers]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078ConflictsBlockLocalApplyAndDoNotExposeIdentifiers]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078DoubleApplyTapOnlyWritesOnce]' started.
+"[ManualSync] apply_start op=E453FF09-redacted run=CDC38531-redacted"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[ManualSync] apply_prices_done op=E453FF09-redacted applied=0 skipped=0 blocked=0 failed=0"
+"[ManualSync] apply_exit op=E453FF09-redacted cancelled=false presentation=localApplyCompleted progress=completed"
+"[ManualSync] apply_start op=E09EB5CB-redacted run=EE0B384B-redacted"
+"[ManualSync] apply_guard_no_changes op=E09EB5CB-redacted"
+"[ManualSync] apply_exit op=E09EB5CB-redacted cancelled=false presentation=localApplyCompleted progress=completed"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078DoubleApplyTapOnlyWritesOnce]' passed (0.014 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078FullApplicablePreviewEnablesUpdateDeviceAndAppliesLocally]' started.
+"[ManualSync] apply_start op=4DB93F09-redacted run=47C6B43F-redacted"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[ManualSync] apply_prices_done op=4DB93F09-redacted applied=0 skipped=0 blocked=0 failed=0"
+"[ManualSync] apply_exit op=4DB93F09-redacted cancelled=false presentation=localApplyCompleted progress=completed"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078FullApplicablePreviewEnablesUpdateDeviceAndAppliesLocally]' passed (0.022 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078NoFinalManualSyncCopyUsesOldApplyChangesLabel]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078NoFinalManualSyncCopyUsesOldApplyChangesLabel]' passed (0.029 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078PartialPreviewBlocksLocalApplyWithNaturalCopy]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078PartialPreviewBlocksLocalApplyWithNaturalCopy]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078StaleLocalDataInvalidatesStagingBeforeApply]' started.
+"[ManualSync] apply_start op=5E9B95BC-redacted run=BDDC216C-redacted"
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+"[ManualSync] apply_failed_catch op=5E9B95BC-redacted error=previewStale reason=I dati locali sono cambiati. Riesegui Controlla cloud."
+"[ManualSync] apply_exit op=5E9B95BC-redacted cancelled=false presentation=localApplyFailed progress=failed"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078StaleLocalDataInvalidatesStagingBeforeApply]' passed (0.015 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078WarningsDoNotBlockApplicablePreview]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask078WarningsDoNotBlockApplicablePreview]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079AuthFailureFailsBeforeWriteAndDoesNotExecute]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079AuthFailureFailsBeforeWriteAndDoesNotExecute]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079ConfirmedPushMapsTerminalResultsAndKeepsSummary]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079ConfirmedPushMapsTerminalResultsAndKeepsSummary]' passed (0.020 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079DoubleSendTapOnlyExecutesOnce]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079DoubleSendTapOnlyExecutesOnce]' passed (0.107 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079PreflightBlockersShowNeedsFixWithoutMutativeCTA]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079PreflightBlockersShowNeedsFixWithoutMutativeCTA]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079PreflightValidCandidatesCreatesVolatileReviewPlan]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079PreflightValidCandidatesCreatesVolatileReviewPlan]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079PreflightZeroChangeShowsNoMutativeCTAAndDoesNotExecute]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079PreflightZeroChangeShowsNoMutativeCTAAndDoesNotExecute]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079RemoteApplyKeepsPriorityBeforeCatalogPush]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079RemoteApplyKeepsPriorityBeforeCatalogPush]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079SessionChangeDuringPreWriteRecheckDoesNotExecute]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079SessionChangeDuringPreWriteRecheckDoesNotExecute]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079StalePlanCannotBeConfirmed]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask079StalePlanCannotBeConfirmed]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask080LocalProductPricesEnableCloudSendWithoutCatalogCandidates]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask080LocalProductPricesEnableCloudSendWithoutCatalogCandidates]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask080ProductPriceApplyStalePlanDoesNotWrite]' started.
+"[ProductPriceSync] apply_plan remote=1 ready=1 sampled=false blocks="
+"[ManualSync] apply_start op=8C47F9C6-redacted run=9EC4096A-redacted"
+"[ProductPriceSync] apply_skipped fingerprintMatch=false refreshAfterCatalog=false allowed=true blocks="
+"[ManualSync] apply_prices_done op=8C47F9C6-redacted applied=0 skipped=0 blocked=1 failed=0"
+"[ManualSync] apply_exit op=8C47F9C6-redacted cancelled=false presentation=localApplyCompleted progress=completed"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask080ProductPriceApplyStalePlanDoesNotWrite]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask080ProductPricePushStalePlanDoesNotWrite]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask080ProductPricePushStalePlanDoesNotWrite]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask080ProductPriceReviewCombinesSkippedAndBlockedCountsOnce]' started.
+"[ProductPriceSync] apply_plan remote=1 ready=0 sampled=false blocks=noApplicableRows"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask080ProductPriceReviewCombinesSkippedAndBlockedCountsOnce]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask080RemoteProductPricesEnableUpdateDeviceAndApplyAfterRecheck]' started.
+"[ProductPriceSync] apply_plan remote=3 ready=2 sampled=false blocks="
+"[ManualSync] apply_start op=A496E240-redacted run=2E99CAF4-redacted"
+"[ProductPriceSync] apply_result inserted=2 linked=0 skipped=1 total=3"
+"[ManualSync] apply_prices_done op=A496E240-redacted applied=2 skipped=2 blocked=0 failed=0"
+"[ManualSync] apply_exit op=A496E240-redacted cancelled=false presentation=localApplyCompleted progress=completed"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask080RemoteProductPricesEnableUpdateDeviceAndApplyAfterRecheck]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081ActivitiesOnlyShowsRegisterCTAAfterCloudCheckReview]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081ActivitiesOnlyShowsRegisterCTAAfterCloudCheckReview]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081AuthGateAndCancellationAreUserFacing]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081AuthGateAndCancellationAreUserFacing]' passed (0.025 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081BlockedAndRetryableFailuresUseNonTechnicalCopy]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081BlockedAndRetryableFailuresUseNonTechnicalCopy]' passed (0.009 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081ConfirmBeforeReviewDoesNotRegisterActivities]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081ConfirmBeforeReviewDoesNotRegisterActivities]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081DataActionsStayBeforeActivityRegistration]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081DataActionsStayBeforeActivityRegistration]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081DoubleTapDoesNotStartConcurrentRegistration]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081DoubleTapDoesNotStartConcurrentRegistration]' passed (0.107 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081SuccessfulRegistrationUpdatesSummaryAndPendingCount]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask081SuccessfulRegistrationUpdatesSummaryAndPendingCount]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask082AccessIssueWithoutSupportedSignInUsesRecheckCTA]' started.
+"[ProductPriceSync] apply_plan remote=0 ready=0 sampled=false blocks=noApplicableRows"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask082AccessIssueWithoutSupportedSignInUsesRecheckCTA]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask082ChangedLocalApplyOwnerInvalidatesStagingBeforeApply]' started.
+"[ManualSync] apply_start op=7A7F341B-redacted run=B0DC9CE4-redacted"
+"[ManualSync] apply_failed_catch op=7A7F341B-redacted error=previewStale reason=I dati locali sono cambiati. Riesegui Controlla cloud."
+"[ManualSync] apply_exit op=7A7F341B-redacted cancelled=false presentation=localApplyFailed progress=failed"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask082ChangedLocalApplyOwnerInvalidatesStagingBeforeApply]' passed (0.009 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091CancelledForegroundCheckDoesNotRemainChecking]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091CancelledForegroundCheckDoesNotRemainChecking]' passed (0.004 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091DiscardReviewClearsUnresolvedStagedPlan]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091DiscardReviewClearsUnresolvedStagedPlan]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091ForegroundPreviewRemainsReadOnlyAndSkipsMutativeDryRunPhases]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091ForegroundPreviewRemainsReadOnlyAndSkipsMutativeDryRunPhases]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091PreparedReviewDoesNotMutateBeforeConfirmation]' started.
+"[ProductPriceSync] apply_plan remote=1 ready=1 sampled=false blocks="
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091PreparedReviewDoesNotMutateBeforeConfirmation]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091RecoverablePreviewErrorFallsBackWithoutBlockingApp]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091RecoverablePreviewErrorFallsBackWithoutBlockingApp]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091SemiAutomaticCheckBlocksWhenSessionOwnerIsMissing]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091SemiAutomaticCheckBlocksWhenSessionOwnerIsMissing]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091SemiAutomaticCheckBlocksWhileRunIsActive]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091SemiAutomaticCheckBlocksWhileRunIsActive]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091SemiAutomaticPolicyAppliesCooldownWindow]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091SemiAutomaticPolicyAppliesCooldownWindow]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091SemiAutomaticSuggestionAndNoChangesStateArePresented]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091SemiAutomaticSuggestionAndNoChangesStateArePresented]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091StagedPlanIsInvalidatedWhenAccessChanges]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask091StagedPlanIsInvalidatedWhenAccessChanges]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092BusyWorkflowObservationIsPrivacySafeAndDoesNotStartNetwork]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092BusyWorkflowObservationIsPrivacySafeAndDoesNotStartNetwork]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092ForegroundRootRollbackOffLeavesReleaseCardTask091PathAvailable]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092ForegroundRootRollbackOffLeavesReleaseCardTask091PathAvailable]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092RecoverableErrorBackoffThrottlesOnlyAutomaticRetry]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092RecoverableErrorBackoffThrottlesOnlyAutomaticRetry]' passed (0.008 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092RootAndCardAutomaticChecksShareDebounceAcrossScenes]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092RootAndCardAutomaticChecksShareDebounceAcrossScenes]' passed (0.004 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092RootForegroundBlockedAuthMapsToSignInWithoutNetwork]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092RootForegroundBlockedAuthMapsToSignInWithoutNetwork]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092RootForegroundChangesFoundMapsToActionableBannerState]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092RootForegroundChangesFoundMapsToActionableBannerState]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092RootForegroundStartsAfterSharedCapabilityAndStaysSilentWhenNoChanges]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092RootForegroundStartsAfterSharedCapabilityAndStaysSilentWhenNoChanges]' passed (0.004 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092WorkflowActivityCenterKeepsBusyUntilAllSourcesClearSameReason]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask092WorkflowActivityCenterKeepsBusyUntilAllSourcesClearSameReason]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask094TelemetryFollowUpAfterVerifiedProductPricePushShowsPartialSummary]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask094TelemetryFollowUpAfterVerifiedProductPricePushShowsPartialSummary]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask095CancelDuringPushKeepsRemoteWriteInterrupted]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask095CancelDuringPushKeepsRemoteWriteInterrupted]' passed (0.025 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask095PreflightBlocksUnsafeMutativeRetryBeforeWrite]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask095PreflightBlocksUnsafeMutativeRetryBeforeWrite]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask095UnverifiedRemoteWriteDoesNotBecomeCompletedVerified]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask095UnverifiedRemoteWriteDoesNotBecomeCompletedVerified]' passed (0.004 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask099AuthFailureUsesSignInRecovery]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask099AuthFailureUsesSignInRecovery]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask099PermissionFailureUsesCheckCloudRecoveryWithoutSignInCopy]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask099PermissionFailureUsesCheckCloudRecoveryWithoutSignInCopy]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask108BaselineAbsentUsesUnifiedSyncCopyForApplicableReviewCTA]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask108BaselineAbsentUsesUnifiedSyncCopyForApplicableReviewCTA]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask108ProductPriceApplyCancellationShowsCancelledInsteadOfIdle]' started.
+"[ProductPriceSync] apply_plan remote=1 ready=1 sampled=false blocks="
+"[ManualSync] apply_start op=407D2699-redacted run=EEC6775E-redacted"
+"[ManualSync] apply_cancelled_catch op=407D2699-redacted"
+"[ManualSync] apply_exit op=407D2699-redacted cancelled=false presentation=cancelledRun progress=cancelled"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask108ProductPriceApplyCancellationShowsCancelledInsteadOfIdle]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask108ProductPriceApplyFailureShowsFailedInsteadOfIdle]' started.
+"[ProductPriceSync] apply_plan remote=1 ready=1 sampled=false blocks="
+"[ManualSync] apply_start op=D117FFC9-redacted run=5DDC9D6D-redacted"
+"[ManualSync] apply_failed_catch op=D117FFC9-redacted error=productPrice.remoteFetchFailed.inventory_product_prices ended before reported count reason=Sincronizzazione non completata.: inventory_product_prices ended before reported count"
+"[ManualSync] apply_exit op=D117FFC9-redacted cancelled=false presentation=localApplyFailed progress=failed"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask108ProductPriceApplyFailureShowsFailedInsteadOfIdle]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask109WarningsOnlyRemotePreviewDoesNotOpenNoOpReview]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask109WarningsOnlyRemotePreviewDoesNotOpenNoOpReview]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask112NetworkReconnectBypassesForegroundCooldownWithReconnectReason]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask112NetworkReconnectBypassesForegroundCooldownWithReconnectReason]' passed (0.008 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask114ForegroundIncrementalClearsStaleTimeoutAfterSuccessfulRun]' started.
+"TASK114_RUNTIME_SYNC source=remoteSyncEvent syncType=CHECKPOINT_INCREMENTAL domain=catalog eventsFetched=0 eventsProcessed=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 pricesInserted=0 pricesLinked=0 pricesMissingPruned=0 historyInserted=0 historyUpdated=0 historyMissingTombstoned=0 suppliersMissingTombstoned=0 categoriesMissingTombstoned=0 applied=0 eventPageFetchMs=0 catalogFetchMs=0 catalogApplyMs=0 priceFetchMs=0 priceApplyMs=0 historyFetchMs=0 historyApplyMs=0 totalElapsedMs=0 requiresFullRecovery=false fullPull=false"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask114ForegroundIncrementalClearsStaleTimeoutAfterSuccessfulRun]' passed (0.010 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask114ForegroundIncrementalNoHistoryWorkClearsZeroProgress]' started.
+"TASK114_RUNTIME_SYNC source=remoteSyncEvent syncType=CHECKPOINT_INCREMENTAL domain=catalog eventsFetched=0 eventsProcessed=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 pricesInserted=0 pricesLinked=0 pricesMissingPruned=0 historyInserted=0 historyUpdated=0 historyMissingTombstoned=0 suppliersMissingTombstoned=0 categoriesMissingTombstoned=0 applied=0 eventPageFetchMs=0 catalogFetchMs=0 catalogApplyMs=0 priceFetchMs=0 priceApplyMs=0 historyFetchMs=0 historyApplyMs=0 totalElapsedMs=0 requiresFullRecovery=false fullPull=false"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask114ForegroundIncrementalNoHistoryWorkClearsZeroProgress]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask114ForegroundIncrementalRecoveryBackoffPreventsSamePageLoop]' started.
+"TASK114_RUNTIME_SYNC source=remoteSyncEvent syncType=EVENT_INCREMENTAL domain=catalog eventsFetched=50 eventsProcessed=50 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 pricesInserted=0 pricesLinked=0 pricesMissingPruned=0 historyInserted=0 historyUpdated=0 historyMissingTombstoned=0 suppliersMissingTombstoned=0 categoriesMissingTombstoned=0 applied=0 eventPageFetchMs=0 catalogFetchMs=0 catalogApplyMs=0 priceFetchMs=0 priceApplyMs=0 historyFetchMs=0 historyApplyMs=0 totalElapsedMs=0 requiresFullRecovery=true fullPull=false"
+"TASK114_RUNTIME_SYNC source=remoteSyncEvent syncType=FULL_PULL_RECOVERY domain=catalog outcome=started reason=sync_event_missing_entity_ids fullPull=true"
+"TASK114_RUNTIME_SYNC source=remoteSyncEvent syncType=FULL_PULL_RECOVERY domain=catalog outcome=completed watermarkAfter=92 fullPull=true"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask114ForegroundIncrementalRecoveryBackoffPreventsSamePageLoop]' passed (0.012 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask114ForegroundIncrementalTimeoutReturnsWithoutStaleSingleFlight]' started.
+"TASK114_RUNTIME_SYNC source=remoteSyncEvent syncType=LIGHT_RECONCILE domain=catalog outcome=failed fullPull=false error=cancelled"
+"TASK114_RUNTIME_SYNC source=remoteSyncEvent syncType=CHECKPOINT_INCREMENTAL domain=foreground outcome=timeout fullPull=false"
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask114ForegroundIncrementalTimeoutReturnsWithoutStaleSingleFlight]' passed (0.011 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask114LocalMutationAndRemoteSignalBypassForegroundCooldown]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTask114LocalMutationAndRemoteSignalBypassForegroundCooldown]' passed (0.011 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTechnicalReviewSoftCopyOverridesUnexpectedCoordinatorHeadline]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testTechnicalReviewSoftCopyOverridesUnexpectedCoordinatorHeadline]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testViewModelSourcesAvoidForbiddenScopeTerms]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testViewModelSourcesAvoidForbiddenScopeTerms]' passed (0.100 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testZeroPendingDryRunLeavesAllUpToDateHeadlineWithoutPartialMasking]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseManualSyncViewModelTests testZeroPendingDryRunLeavesAllUpToDateHeadlineWithoutPartialMasking]' passed (0.006 seconds).
+Test Suite 'SupabaseManualSyncViewModelTests' passed at 2026-05-23 22:37:30.024.
+	 Executed 106 tests, with 0 failures (0 unexpected) in 1.128 (1.152) seconds
+Test Suite 'SupabaseProductPriceApplyServiceTests' started at 2026-05-23 22:37:30.024.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testApplyDoesNotModifyProductCurrentPrices]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testApplyDoesNotModifyProductCurrentPrices]' passed (0.009 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testApplyLinksExistingProductPriceRemoteIDWithoutDuplicate]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testApplyLinksExistingProductPriceRemoteIDWithoutDuplicate]' passed (0.009 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testApplyPersistsRemoteRowIDOnInsertedProductPrice]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testApplyPersistsRemoteRowIDOnInsertedProductPrice]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testApplyUsesRemoteProductIdentityIfBarcodeChangesAfterDryRun]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testApplyUsesRemoteProductIdentityIfBarcodeChangesAfterDryRun]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testBootstrapPreviewSampleComparesLocalPricesBeforeReportingNewWork]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testBootstrapPreviewSampleComparesLocalPricesBeforeReportingNewWork]' passed (0.181 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testDoubleApplyDoesNotDuplicateProductPrice]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testDoubleApplyDoesNotDuplicateProductPrice]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testDuplicateLocalProductPricesSameKeySamePriceAreConflict]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testDuplicateLocalProductPricesSameKeySamePriceAreConflict]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testDuplicateLocalProductRemoteIDIsMappingConflict]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testDuplicateLocalProductRemoteIDIsMappingConflict]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testDuplicateRemoteLogicalRowsWithDifferentCanonicalPriceConflict]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testDuplicateRemoteLogicalRowsWithDifferentCanonicalPriceConflict]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testDuplicateRemoteLogicalRowsWithSameCanonicalPriceConflict]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testDuplicateRemoteLogicalRowsWithSameCanonicalPriceConflict]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testEffectiveAtRawDifferentButCanonicalEqualDedupes]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testEffectiveAtRawDifferentButCanonicalEqualDedupes]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testExistingProductPriceSameKeyDifferentPriceIsConflictAndNotUpdated]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testExistingProductPriceSameKeyDifferentPriceIsConflictAndNotUpdated]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testInvalidEffectiveAtIsInvalid]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testInvalidEffectiveAtIsInvalid]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testInvalidPricesAreClassifiedInvalid]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testInvalidPricesAreClassifiedInvalid]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testInvalidTypeIsClassifiedInvalid]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testInvalidTypeIsClassifiedInvalid]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testKeysetPagedFullPullCompletesThreePagesAndPublishesProgress]' started.
+"[ProductPriceSync] paged_apply_start total=2700 pageSize=900 mode=keyset"
+"[ProductPriceSync] tombstoned_products count=0"
+"[ProductPriceSync] page_request index=1 offset=0 after=nil"
+"[ProductPriceSync] page_fetch_done index=1 fetchMs=0"
+"[ProductPriceSync] page_return index=1 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=1 applyMs=86 mutations=900"
+"[ProductPriceSync] page_save index=1 mutations=900 total=900 saveMs=50"
+"[ProductPriceSync] page_request index=2 offset=900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=2 fetchMs=0"
+"[ProductPriceSync] page_return index=2 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=2 applyMs=267 mutations=900"
+"[ProductPriceSync] page_save index=2 mutations=900 total=1800 saveMs=60"
+"[ProductPriceSync] page_request index=3 offset=1800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=3 fetchMs=0"
+"[ProductPriceSync] page_return index=3 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=3 applyMs=461 mutations=900"
+"[ProductPriceSync] page_save index=3 mutations=900 total=2700 saveMs=74"
+"[ProductPriceSync] page_request index=4 offset=2700 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=4 fetchMs=0"
+"[ProductPriceSync] page_return index=4 count=0 first=nil last=nil"
+"[ProductPriceSync] paged_apply_complete inserted=2700 linked=0 pruned=0 skipped=0 total=2700 elapsedMs=1052"
+"[ProductPriceSync] paged_apply_exit cancelled=false pages=3 total=2700"
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testKeysetPagedFullPullCompletesThreePagesAndPublishesProgress]' passed (1.167 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testKeysetPagedFullPullSkipsTombstonedProductPrices]' started.
+"[ProductPriceSync] paged_apply_start total=2 pageSize=900 mode=keyset"
+"[ProductPriceSync] tombstoned_products count=1"
+"[ProductPriceSync] page_request index=1 offset=0 after=nil"
+"[ProductPriceSync] page_fetch_done index=1 fetchMs=0"
+"[ProductPriceSync] page_return index=1 count=2 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] row_skip id=00000000-redacted reason=tombstoned_product"
+"[ProductPriceSync] page_apply_done index=1 applyMs=0 mutations=1"
+"[ProductPriceSync] page_save index=1 mutations=1 total=2 saveMs=1"
+"[ProductPriceSync] paged_apply_complete inserted=1 linked=0 pruned=0 skipped=1 total=2 elapsedMs=2"
+"[ProductPriceSync] paged_apply_exit cancelled=false pages=0 total=2"
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testKeysetPagedFullPullSkipsTombstonedProductPrices]' passed (0.008 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPagedFullPullAppliesLargeProductPriceHistoryWithoutFixedTotalLimit]' started.
+"[ProductPriceSync] paged_apply_start total=30000 pageSize=900 mode=offset"
+"[ProductPriceSync] page_request index=1 offset=0 after=nil"
+"[ProductPriceSync] page_fetch_done index=1 fetchMs=0"
+"[ProductPriceSync] page_return index=1 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=1 applyMs=117 mutations=900"
+"[ProductPriceSync] page_save index=1 mutations=900 total=900 saveMs=76"
+"[ProductPriceSync] page_request index=2 offset=900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=2 fetchMs=0"
+"[ProductPriceSync] page_return index=2 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=2 applyMs=204 mutations=900"
+"[ProductPriceSync] page_save index=2 mutations=900 total=1800 saveMs=85"
+"[ProductPriceSync] page_request index=3 offset=1800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=3 fetchMs=0"
+"[ProductPriceSync] page_return index=3 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=3 applyMs=279 mutations=900"
+"[ProductPriceSync] page_save index=3 mutations=900 total=2700 saveMs=98"
+"[ProductPriceSync] page_request index=4 offset=2700 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=4 fetchMs=0"
+"[ProductPriceSync] page_return index=4 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=4 applyMs=354 mutations=900"
+"[ProductPriceSync] page_save index=4 mutations=900 total=3600 saveMs=96"
+"[ProductPriceSync] page_request index=5 offset=3600 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=5 fetchMs=0"
+"[ProductPriceSync] page_return index=5 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=5 applyMs=447 mutations=900"
+"[ProductPriceSync] page_save index=5 mutations=900 total=4500 saveMs=103"
+"[ProductPriceSync] page_request index=6 offset=4500 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=6 fetchMs=0"
+"[ProductPriceSync] page_return index=6 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=6 applyMs=525 mutations=900"
+"[ProductPriceSync] page_save index=6 mutations=900 total=5400 saveMs=115"
+"[ProductPriceSync] page_request index=7 offset=5400 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=7 fetchMs=0"
+"[ProductPriceSync] page_return index=7 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=7 applyMs=613 mutations=900"
+"[ProductPriceSync] page_save index=7 mutations=900 total=6300 saveMs=114"
+"[ProductPriceSync] page_request index=8 offset=6300 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=8 fetchMs=0"
+"[ProductPriceSync] page_return index=8 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=8 applyMs=705 mutations=900"
+"[ProductPriceSync] page_save index=8 mutations=900 total=7200 saveMs=119"
+"[ProductPriceSync] page_request index=9 offset=7200 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=9 fetchMs=0"
+"[ProductPriceSync] page_return index=9 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=9 applyMs=753 mutations=900"
+"[ProductPriceSync] page_save index=9 mutations=900 total=8100 saveMs=125"
+"[ProductPriceSync] page_request index=10 offset=8100 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=10 fetchMs=0"
+"[ProductPriceSync] page_return index=10 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=10 applyMs=835 mutations=900"
+"[ProductPriceSync] page_save index=10 mutations=900 total=9000 saveMs=125"
+"[ProductPriceSync] page_request index=11 offset=9000 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=11 fetchMs=0"
+"[ProductPriceSync] page_return index=11 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=11 applyMs=928 mutations=900"
+"[ProductPriceSync] page_save index=11 mutations=900 total=9900 saveMs=128"
+"[ProductPriceSync] page_request index=12 offset=9900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=12 fetchMs=0"
+"[ProductPriceSync] page_return index=12 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=12 applyMs=1023 mutations=900"
+"[ProductPriceSync] page_save index=12 mutations=900 total=10800 saveMs=138"
+"[ProductPriceSync] page_request index=13 offset=10800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=13 fetchMs=0"
+"[ProductPriceSync] page_return index=13 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=13 applyMs=1072 mutations=900"
+"[ProductPriceSync] page_save index=13 mutations=900 total=11700 saveMs=141"
+"[ProductPriceSync] page_request index=14 offset=11700 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=14 fetchMs=0"
+"[ProductPriceSync] page_return index=14 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=14 applyMs=1146 mutations=900"
+"[ProductPriceSync] page_save index=14 mutations=900 total=12600 saveMs=129"
+"[ProductPriceSync] page_request index=15 offset=12600 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=15 fetchMs=0"
+"[ProductPriceSync] page_return index=15 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=15 applyMs=1229 mutations=900"
+"[ProductPriceSync] page_save index=15 mutations=900 total=13500 saveMs=138"
+"[ProductPriceSync] page_request index=16 offset=13500 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=16 fetchMs=0"
+"[ProductPriceSync] page_return index=16 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=16 applyMs=1300 mutations=900"
+"[ProductPriceSync] page_save index=16 mutations=900 total=14400 saveMs=144"
+"[ProductPriceSync] page_request index=17 offset=14400 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=17 fetchMs=0"
+"[ProductPriceSync] page_return index=17 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=17 applyMs=1367 mutations=900"
+"[ProductPriceSync] page_save index=17 mutations=900 total=15300 saveMs=150"
+"[ProductPriceSync] page_request index=18 offset=15300 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=18 fetchMs=0"
+"[ProductPriceSync] page_return index=18 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=18 applyMs=1504 mutations=900"
+"[ProductPriceSync] page_save index=18 mutations=900 total=16200 saveMs=144"
+"[ProductPriceSync] page_request index=19 offset=16200 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=19 fetchMs=0"
+"[ProductPriceSync] page_return index=19 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=19 applyMs=1506 mutations=900"
+"[ProductPriceSync] page_save index=19 mutations=900 total=17100 saveMs=150"
+"[ProductPriceSync] page_request index=20 offset=17100 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=20 fetchMs=0"
+"[ProductPriceSync] page_return index=20 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=20 applyMs=1649 mutations=900"
+"[ProductPriceSync] page_save index=20 mutations=900 total=18000 saveMs=159"
+"[ProductPriceSync] page_request index=21 offset=18000 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=21 fetchMs=0"
+"[ProductPriceSync] page_return index=21 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=21 applyMs=1683 mutations=900"
+"[ProductPriceSync] page_save index=21 mutations=900 total=18900 saveMs=157"
+"[ProductPriceSync] page_request index=22 offset=18900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=22 fetchMs=0"
+"[ProductPriceSync] page_return index=22 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=22 applyMs=1762 mutations=900"
+"[ProductPriceSync] page_save index=22 mutations=900 total=19800 saveMs=168"
+"[ProductPriceSync] page_request index=23 offset=19800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=23 fetchMs=0"
+"[ProductPriceSync] page_return index=23 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=23 applyMs=1879 mutations=900"
+"[ProductPriceSync] page_save index=23 mutations=900 total=20700 saveMs=165"
+"[ProductPriceSync] page_request index=24 offset=20700 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=24 fetchMs=0"
+"[ProductPriceSync] page_return index=24 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=24 applyMs=2094 mutations=900"
+"[ProductPriceSync] page_save index=24 mutations=900 total=21600 saveMs=187"
+"[ProductPriceSync] page_request index=25 offset=21600 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=25 fetchMs=0"
+"[ProductPriceSync] page_return index=25 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=25 applyMs=2138 mutations=900"
+"[ProductPriceSync] page_save index=25 mutations=900 total=22500 saveMs=182"
+"[ProductPriceSync] page_request index=26 offset=22500 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=26 fetchMs=0"
+"[ProductPriceSync] page_return index=26 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=26 applyMs=2241 mutations=900"
+"[ProductPriceSync] page_save index=26 mutations=900 total=23400 saveMs=192"
+"[ProductPriceSync] page_request index=27 offset=23400 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=27 fetchMs=0"
+"[ProductPriceSync] page_return index=27 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=27 applyMs=2237 mutations=900"
+"[ProductPriceSync] page_save index=27 mutations=900 total=24300 saveMs=183"
+"[ProductPriceSync] page_request index=28 offset=24300 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=28 fetchMs=0"
+"[ProductPriceSync] page_return index=28 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=28 applyMs=2310 mutations=900"
+"[ProductPriceSync] page_save index=28 mutations=900 total=25200 saveMs=178"
+"[ProductPriceSync] page_request index=29 offset=25200 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=29 fetchMs=0"
+"[ProductPriceSync] page_return index=29 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=29 applyMs=2368 mutations=900"
+"[ProductPriceSync] page_save index=29 mutations=900 total=26100 saveMs=187"
+"[ProductPriceSync] page_request index=30 offset=26100 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=30 fetchMs=0"
+"[ProductPriceSync] page_return index=30 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=30 applyMs=2388 mutations=900"
+"[ProductPriceSync] page_save index=30 mutations=900 total=27000 saveMs=182"
+"[ProductPriceSync] page_request index=31 offset=27000 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=31 fetchMs=0"
+"[ProductPriceSync] page_return index=31 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=31 applyMs=2491 mutations=900"
+"[ProductPriceSync] page_save index=31 mutations=900 total=27900 saveMs=183"
+"[ProductPriceSync] page_request index=32 offset=27900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=32 fetchMs=0"
+"[ProductPriceSync] page_return index=32 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=32 applyMs=2595 mutations=900"
+"[ProductPriceSync] page_save index=32 mutations=900 total=28800 saveMs=185"
+"[ProductPriceSync] page_request index=33 offset=28800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=33 fetchMs=0"
+"[ProductPriceSync] page_return index=33 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=33 applyMs=2595 mutations=900"
+"[ProductPriceSync] page_save index=33 mutations=900 total=29700 saveMs=196"
+"[ProductPriceSync] page_request index=34 offset=29700 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=34 fetchMs=0"
+"[ProductPriceSync] page_return index=34 count=300 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=34 applyMs=2481 mutations=300"
+"[ProductPriceSync] page_save index=34 mutations=300 total=30000 saveMs=138"
+"[ProductPriceSync] paged_apply_complete inserted=30000 linked=0 pruned=0 skipped=0 total=30000 elapsedMs=54443"
+"[ProductPriceSync] paged_apply_exit cancelled=false pages=33 total=30000"
+"[ProductPriceSync] paged_apply_start total=30000 pageSize=900 mode=offset"
+"[ProductPriceSync] page_request index=1 offset=0 after=nil"
+"[ProductPriceSync] page_fetch_done index=1 fetchMs=0"
+"[ProductPriceSync] page_return index=1 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=1 applyMs=2393 mutations=0"
+"[ProductPriceSync] page_noop index=1 total=900"
+"[ProductPriceSync] page_request index=2 offset=900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=2 fetchMs=0"
+"[ProductPriceSync] page_return index=2 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=2 applyMs=2340 mutations=0"
+"[ProductPriceSync] page_noop index=2 total=1800"
+"[ProductPriceSync] page_request index=3 offset=1800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=3 fetchMs=0"
+"[ProductPriceSync] page_return index=3 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=3 applyMs=2456 mutations=0"
+"[ProductPriceSync] page_noop index=3 total=2700"
+"[ProductPriceSync] page_request index=4 offset=2700 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=4 fetchMs=0"
+"[ProductPriceSync] page_return index=4 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=4 applyMs=2433 mutations=0"
+"[ProductPriceSync] page_noop index=4 total=3600"
+"[ProductPriceSync] page_request index=5 offset=3600 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=5 fetchMs=0"
+"[ProductPriceSync] page_return index=5 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=5 applyMs=2357 mutations=0"
+"[ProductPriceSync] page_noop index=5 total=4500"
+"[ProductPriceSync] page_request index=6 offset=4500 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=6 fetchMs=0"
+"[ProductPriceSync] page_return index=6 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=6 applyMs=2427 mutations=0"
+"[ProductPriceSync] page_noop index=6 total=5400"
+"[ProductPriceSync] page_request index=7 offset=5400 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=7 fetchMs=0"
+"[ProductPriceSync] page_return index=7 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=7 applyMs=2315 mutations=0"
+"[ProductPriceSync] page_noop index=7 total=6300"
+"[ProductPriceSync] page_request index=8 offset=6300 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=8 fetchMs=0"
+"[ProductPriceSync] page_return index=8 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=8 applyMs=2352 mutations=0"
+"[ProductPriceSync] page_noop index=8 total=7200"
+"[ProductPriceSync] page_request index=9 offset=7200 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=9 fetchMs=0"
+"[ProductPriceSync] page_return index=9 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=9 applyMs=2415 mutations=0"
+"[ProductPriceSync] page_noop index=9 total=8100"
+"[ProductPriceSync] page_request index=10 offset=8100 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=10 fetchMs=0"
+"[ProductPriceSync] page_return index=10 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=10 applyMs=2298 mutations=0"
+"[ProductPriceSync] page_noop index=10 total=9000"
+"[ProductPriceSync] page_request index=11 offset=9000 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=11 fetchMs=0"
+"[ProductPriceSync] page_return index=11 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=11 applyMs=2408 mutations=0"
+"[ProductPriceSync] page_noop index=11 total=9900"
+"[ProductPriceSync] page_request index=12 offset=9900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=12 fetchMs=0"
+"[ProductPriceSync] page_return index=12 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=12 applyMs=2385 mutations=0"
+"[ProductPriceSync] page_noop index=12 total=10800"
+"[ProductPriceSync] page_request index=13 offset=10800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=13 fetchMs=0"
+"[ProductPriceSync] page_return index=13 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=13 applyMs=2385 mutations=0"
+"[ProductPriceSync] page_noop index=13 total=11700"
+"[ProductPriceSync] page_request index=14 offset=11700 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=14 fetchMs=0"
+"[ProductPriceSync] page_return index=14 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=14 applyMs=2362 mutations=0"
+"[ProductPriceSync] page_noop index=14 total=12600"
+"[ProductPriceSync] page_request index=15 offset=12600 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=15 fetchMs=0"
+"[ProductPriceSync] page_return index=15 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=15 applyMs=2329 mutations=0"
+"[ProductPriceSync] page_noop index=15 total=13500"
+"[ProductPriceSync] page_request index=16 offset=13500 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=16 fetchMs=0"
+"[ProductPriceSync] page_return index=16 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=16 applyMs=2504 mutations=0"
+"[ProductPriceSync] page_noop index=16 total=14400"
+"[ProductPriceSync] page_request index=17 offset=14400 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=17 fetchMs=0"
+"[ProductPriceSync] page_return index=17 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=17 applyMs=2386 mutations=0"
+"[ProductPriceSync] page_noop index=17 total=15300"
+"[ProductPriceSync] page_request index=18 offset=15300 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=18 fetchMs=0"
+"[ProductPriceSync] page_return index=18 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=18 applyMs=2364 mutations=0"
+"[ProductPriceSync] page_noop index=18 total=16200"
+"[ProductPriceSync] page_request index=19 offset=16200 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=19 fetchMs=0"
+"[ProductPriceSync] page_return index=19 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=19 applyMs=2402 mutations=0"
+"[ProductPriceSync] page_noop index=19 total=17100"
+"[ProductPriceSync] page_request index=20 offset=17100 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=20 fetchMs=0"
+"[ProductPriceSync] page_return index=20 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=20 applyMs=2351 mutations=0"
+"[ProductPriceSync] page_noop index=20 total=18000"
+"[ProductPriceSync] page_request index=21 offset=18000 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=21 fetchMs=0"
+"[ProductPriceSync] page_return index=21 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=21 applyMs=2427 mutations=0"
+"[ProductPriceSync] page_noop index=21 total=18900"
+"[ProductPriceSync] page_request index=22 offset=18900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=22 fetchMs=0"
+"[ProductPriceSync] page_return index=22 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=22 applyMs=2344 mutations=0"
+"[ProductPriceSync] page_noop index=22 total=19800"
+"[ProductPriceSync] page_request index=23 offset=19800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=23 fetchMs=0"
+"[ProductPriceSync] page_return index=23 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=23 applyMs=2328 mutations=0"
+"[ProductPriceSync] page_noop index=23 total=20700"
+"[ProductPriceSync] page_request index=24 offset=20700 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=24 fetchMs=0"
+"[ProductPriceSync] page_return index=24 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=24 applyMs=2404 mutations=0"
+"[ProductPriceSync] page_noop index=24 total=21600"
+"[ProductPriceSync] page_request index=25 offset=21600 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=25 fetchMs=0"
+"[ProductPriceSync] page_return index=25 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=25 applyMs=2312 mutations=0"
+"[ProductPriceSync] page_noop index=25 total=22500"
+"[ProductPriceSync] page_request index=26 offset=22500 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=26 fetchMs=0"
+"[ProductPriceSync] page_return index=26 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=26 applyMs=2372 mutations=0"
+"[ProductPriceSync] page_noop index=26 total=23400"
+"[ProductPriceSync] page_request index=27 offset=23400 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=27 fetchMs=0"
+"[ProductPriceSync] page_return index=27 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=27 applyMs=2292 mutations=0"
+"[ProductPriceSync] page_noop index=27 total=24300"
+"[ProductPriceSync] page_request index=28 offset=24300 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=28 fetchMs=0"
+"[ProductPriceSync] page_return index=28 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=28 applyMs=2353 mutations=0"
+"[ProductPriceSync] page_noop index=28 total=25200"
+"[ProductPriceSync] page_request index=29 offset=25200 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=29 fetchMs=0"
+"[ProductPriceSync] page_return index=29 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=29 applyMs=2474 mutations=0"
+"[ProductPriceSync] page_noop index=29 total=26100"
+"[ProductPriceSync] page_request index=30 offset=26100 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=30 fetchMs=0"
+"[ProductPriceSync] page_return index=30 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=30 applyMs=2369 mutations=0"
+"[ProductPriceSync] page_noop index=30 total=27000"
+"[ProductPriceSync] page_request index=31 offset=27000 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=31 fetchMs=0"
+"[ProductPriceSync] page_return index=31 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=31 applyMs=2409 mutations=0"
+"[ProductPriceSync] page_noop index=31 total=27900"
+"[ProductPriceSync] page_request index=32 offset=27900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=32 fetchMs=0"
+"[ProductPriceSync] page_return index=32 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=32 applyMs=2380 mutations=0"
+"[ProductPriceSync] page_noop index=32 total=28800"
+"[ProductPriceSync] page_request index=33 offset=28800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=33 fetchMs=0"
+"[ProductPriceSync] page_return index=33 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=33 applyMs=2314 mutations=0"
+"[ProductPriceSync] page_noop index=33 total=29700"
+"[ProductPriceSync] page_request index=34 offset=29700 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=34 fetchMs=0"
+"[ProductPriceSync] page_return index=34 count=300 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=34 applyMs=2335 mutations=0"
+"[ProductPriceSync] page_noop index=34 total=30000"
+"[ProductPriceSync] paged_apply_complete inserted=0 linked=0 pruned=0 skipped=30000 total=30000 elapsedMs=82369"
+"[ProductPriceSync] paged_apply_exit cancelled=false pages=33 total=30000"
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPagedFullPullAppliesLargeProductPriceHistoryWithoutFixedTotalLimit]' passed (137.426 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPagedFullPullBlocksRemoteAboveDefaultSafetyLimit]' started.
+"[ProductPriceSync] blocked_full_pull remoteRows=75001 limit=75000"
+"[ProductPriceSync] paged_apply_exit cancelled=false pages=0 total=0"
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPagedFullPullBlocksRemoteAboveDefaultSafetyLimit]' passed (0.343 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPagedFullPullCanCancelLargeProductPriceHistoryWithoutFixedTotalLimit]' started.
+"[ProductPriceSync] paged_apply_start total=120000 pageSize=900 mode=offset"
+"[ProductPriceSync] page_request index=1 offset=0 after=nil"
+"[ProductPriceSync] page_fetch_done index=1 fetchMs=0"
+"[ProductPriceSync] page_return index=1 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=1 applyMs=128 mutations=900"
+"[ProductPriceSync] page_save index=1 mutations=900 total=900 saveMs=86"
+"[ProductPriceSync] page_request index=2 offset=900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=2 fetchMs=0"
+"[ProductPriceSync] page_return index=2 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=2 applyMs=210 mutations=900"
+"[ProductPriceSync] page_save index=2 mutations=900 total=1800 saveMs=91"
+"[ProductPriceSync] page_request index=3 offset=1800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=3 fetchMs=0"
+"[ProductPriceSync] page_return index=3 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=3 applyMs=292 mutations=900"
+"[ProductPriceSync] page_save index=3 mutations=900 total=2700 saveMs=103"
+"[ProductPriceSync] page_request index=4 offset=2700 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=4 fetchMs=0"
+"[ProductPriceSync] page_return index=4 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=4 applyMs=360 mutations=900"
+"[ProductPriceSync] page_save index=4 mutations=900 total=3600 saveMs=107"
+"[ProductPriceSync] page_request index=5 offset=3600 after=00000000-redacted"
+"[ProductPriceSync] page_cancelled index=5 total=3600"
+"[ProductPriceSync] paged_apply_exit cancelled=false pages=4 total=3600"
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPagedFullPullCanCancelLargeProductPriceHistoryWithoutFixedTotalLimit]' passed (1.989 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPagedFullPullFailsWhenRemoteEndsBeforeReportedCount]' started.
+"[ProductPriceSync] paged_apply_start total=2700 pageSize=900 mode=offset"
+"[ProductPriceSync] page_request index=1 offset=0 after=nil"
+"[ProductPriceSync] page_fetch_done index=1 fetchMs=0"
+"[ProductPriceSync] page_return index=1 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=1 applyMs=86 mutations=900"
+"[ProductPriceSync] page_save index=1 mutations=900 total=900 saveMs=50"
+"[ProductPriceSync] page_request index=2 offset=900 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=2 fetchMs=0"
+"[ProductPriceSync] page_return index=2 count=900 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=2 applyMs=267 mutations=900"
+"[ProductPriceSync] page_save index=2 mutations=900 total=1800 saveMs=60"
+"[ProductPriceSync] page_request index=3 offset=1800 after=00000000-redacted"
+"[ProductPriceSync] page_fetch_done index=3 fetchMs=0"
+"[ProductPriceSync] page_return index=3 count=0 first=nil last=nil"
+"[ProductPriceSync] paged_apply_exit cancelled=false pages=2 total=1800"
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPagedFullPullFailsWhenRemoteEndsBeforeReportedCount]' passed (0.545 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPagedFullPullPrunesRemoteLinkedPricesMissingFromCompleteSnapshot]' started.
+"[ProductPriceSync] paged_apply_start total=1 pageSize=900 mode=offset"
+"[ProductPriceSync] page_request index=1 offset=0 after=nil"
+"[ProductPriceSync] page_fetch_done index=1 fetchMs=0"
+"[ProductPriceSync] page_return index=1 count=1 first=00000000-redacted last=00000000-redacted"
+"[ProductPriceSync] page_apply_done index=1 applyMs=0 mutations=0"
+"[ProductPriceSync] page_noop index=1 total=1"
+"[ProductPriceSync] paged_apply_complete inserted=0 linked=0 pruned=1 skipped=1 total=1 elapsedMs=4"
+"[ProductPriceSync] paged_apply_exit cancelled=false pages=0 total=1"
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPagedFullPullPrunesRemoteLinkedPricesMissingFromCompleteSnapshot]' passed (0.011 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPartialTruncatedAndSourceErrorBlockApply]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPartialTruncatedAndSourceErrorBlockApply]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPostgresFractionalCreatedAtIsAccepted]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPostgresFractionalCreatedAtIsAccepted]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPostgresTimezoneEffectiveAtIsAccepted]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPostgresTimezoneEffectiveAtIsAccepted]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPostSaveVerificationFailureThrowsVerificationFailed]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPostSaveVerificationFailureThrowsVerificationFailed]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPriceCanonicalizerDoesNotUseRawDoubleEqualityForSkippedExisting]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testPriceCanonicalizerDoesNotUseRawDoubleEqualityForSkippedExisting]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testRemoteProductWithoutLocalProductIsUnmapped]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testRemoteProductWithoutLocalProductIsUnmapped]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testSameLogicalKeyWithDifferentCanonicalPriceIsConflict]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testSameLogicalKeyWithDifferentCanonicalPriceIsConflict]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testSampledNoApplicablePlanDoesNotReportConcreteApplyWork]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testSampledNoApplicablePlanDoesNotReportConcreteApplyWork]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testSessionMismatchRefusesApply]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testSessionMismatchRefusesApply]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testWrongOwnerRemoteRowsAreInvalidAccessData]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabaseProductPriceApplyServiceTests testWrongOwnerRemoteRowsAreInvalidAccessData]' passed (0.000 seconds).
+Test Suite 'SupabaseProductPriceApplyServiceTests' passed at 2026-05-23 22:39:51.770.
+	 Executed 32 tests, with 0 failures (0 unexpected) in 141.738 (141.746) seconds
+Test Suite 'SupabasePullApplyServiceTests' started at 2026-05-23 22:39:51.770.
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testAccountGuardTreatsMissingCapturedOwnerAsMismatch]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testAccountGuardTreatsMissingCapturedOwnerAsMismatch]' passed (0.004 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testAccountMismatchBlocksApplyRelink]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testAccountMismatchBlocksApplyRelink]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testApplyBlocksSupplierSameNameDifferentRemoteID]' started.
+"[InventorySnapshot] start products=0 suppliers=1 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=1 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=1 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=1 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testApplyBlocksSupplierSameNameDifferentRemoteID]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testApplyFailsPreviewStaleIfLocalDatabaseChangesBetweenPrepareAndApply]' started.
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testApplyFailsPreviewStaleIfLocalDatabaseChangesBetweenPrepareAndApply]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testApplyMarksRemoteProductTombstoneWhenLocalClean]' started.
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testApplyMarksRemoteProductTombstoneWhenLocalClean]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testApplyMaterializesRemoteLookupOnlyPreview]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testApplyMaterializesRemoteLookupOnlyPreview]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testApplyServiceHasNoNetworkServiceDependency]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testApplyServiceHasNoNetworkServiceDependency]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testCreateLocalSetsRemoteIDMetadata]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testCreateLocalSetsRemoteIDMetadata]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testExistingProductBarcodeNeverChanges]' started.
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testExistingProductBarcodeNeverChanges]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testFullSnapshotPrunesCleanRemoteLinkedProductAndOrphanLookupsMissingFromRemote]' started.
+"[InventorySnapshot] start products=1 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] start products=1 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=1 categories=1 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testFullSnapshotPrunesCleanRemoteLinkedProductAndOrphanLookupsMissingFromRemote]' passed (0.009 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testFullSnapshotPrunesLookupsReferencedOnlyByRemoteTombstonedProduct]' started.
+"[InventorySnapshot] start products=1 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] start products=1 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=1 categories=1 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testFullSnapshotPrunesLookupsReferencedOnlyByRemoteTombstonedProduct]' passed (0.010 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testInvalidPricesAreBlocked]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testInvalidPricesAreBlocked]' passed (0.009 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testLinkOnlySetsRemoteIDWithoutDuplicatingProduct]' started.
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testLinkOnlySetsRemoteIDWithoutDuplicatingProduct]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testLookupOnlyConflictRecoverySkipsProductsAndPrunesCleanLocalLookups]' started.
+"[InventorySnapshot] start products=0 suppliers=1 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=1 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=1 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=1 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testLookupOnlyConflictRecoverySkipsProductsAndPrunesCleanLocalLookups]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testLookupOnlyPlanPrunesCleanLocalLookupsWhenNoRemoteLookupIsMissing]' started.
+"[InventorySnapshot] start products=0 suppliers=1 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=1 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=1 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=1 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testLookupOnlyPlanPrunesCleanLocalLookupsWhenNoRemoteLookupIsMissing]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testMissingRequiredFieldWhenNewProductHasNoProductNameNorSecondProductName]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testMissingRequiredFieldWhenNewProductHasNoProductNameNorSecondProductName]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testNegativeStockIsBlockedWhenApplyStockQuantityIsTrue]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testNegativeStockIsBlockedWhenApplyStockQuantityIsTrue]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testNilOrEmptyRemoteValuesDoNotClearLocalFields]' started.
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testNilOrEmptyRemoteValuesDoNotClearLocalFields]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testNoProductPriceRowsAreCreated]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testNoProductPriceRowsAreCreated]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPartialPreviewDoesNotOverwriteExistingRemoteID]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPartialPreviewDoesNotOverwriteExistingRemoteID]' passed (0.004 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPendingLocalProductChangeBlocksRemoteUpdateCandidate]' started.
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPendingLocalProductChangeBlocksRemoteUpdateCandidate]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksConflicts]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksConflicts]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksDuplicateLocalRemoteIdentityBeforeMutations]' started.
+"[InventorySnapshot] start products=2 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=2 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksDuplicateLocalRemoteIdentityBeforeMutations]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksInvalidLocalInventoryBeforeMutations]' started.
+"[InventorySnapshot] start products=1 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=1 categories=1 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksInvalidLocalInventoryBeforeMutations]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksMissingApplicablePayloadForNewProducts]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksMissingApplicablePayloadForNewProducts]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksMissingApplicablePayloadForUpdateCandidates]' started.
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksMissingApplicablePayloadForUpdateCandidates]' passed (0.004 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksPartialPreview]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksPartialPreview]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksPriceHistoryIncomplete]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksPriceHistoryIncomplete]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksSessionMissing]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksSessionMissing]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksSourceErrors]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testPrepareApplyPlanBlocksSourceErrors]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testSameFullPullAfterApplyDoesNotCreateDuplicates]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=1 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=1 categories=1 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testSameFullPullAfterApplyDoesNotCreateDuplicates]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testSamePlanSecondApplyDoesNotDuplicateAndDoesNotMutate]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=1 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=1 categories=1 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testSamePlanSecondApplyDoesNotDuplicateAndDoesNotMutate]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testSaveFailurePathRollsBackBeforeSurfacingError]' started.
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testSaveFailurePathRollsBackBeforeSurfacingError]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testStockIsIgnoredByDefaultWhenApplyStockQuantityIsFalse]' started.
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testStockIsIgnoredByDefaultWhenApplyStockQuantityIsFalse]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testSupplierAndCategoryReuseCaseInsensitive]' started.
+"[InventorySnapshot] start products=0 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] start products=0 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=1 categories=1 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testSupplierAndCategoryReuseCaseInsensitive]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testTombstonePreviewOnlyDoesNotDeleteLocalProduct]' started.
+"[InventorySnapshot] start products=1 suppliers=0 categories=0 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=1 suppliers=0 categories=0 prices=0"
+Test Case '-[iOSMerchandiseControlTests.SupabasePullApplyServiceTests testTombstonePreviewOnlyDoesNotDeleteLocalProduct]' passed (0.005 seconds).
+Test Suite 'SupabasePullApplyServiceTests' passed at 2026-05-23 22:39:51.953.
+	 Executed 36 tests, with 0 failures (0 unexpected) in 0.176 (0.183) seconds
+Test Suite 'SyncCountReconciliationTests' started at 2026-05-23 22:39:51.953.
+Test Case '-[iOSMerchandiseControlTests.SyncCountReconciliationTests testCompareDetectsProductDrift]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncCountReconciliationTests testCompareDetectsProductDrift]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncCountReconciliationTests testHistoryManualTitleUsesManualDateFallback]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncCountReconciliationTests testHistoryManualTitleUsesManualDateFallback]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncCountReconciliationTests testHistoryUserVisibleCountExcludesImportAndTombstone]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncCountReconciliationTests testHistoryUserVisibleCountExcludesImportAndTombstone]' passed (0.008 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncCountReconciliationTests testHistoryUserVisibleCountExcludesTaskTechnicalEntries]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncCountReconciliationTests testHistoryUserVisibleCountExcludesTaskTechnicalEntries]' passed (0.005 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncCountReconciliationTests testHistoryUUIDTitleFallsBackToFriendlySupplierTitle]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncCountReconciliationTests testHistoryUUIDTitleFallsBackToFriendlySupplierTitle]' passed (0.000 seconds).
+Test Suite 'SyncCountReconciliationTests' passed at 2026-05-23 22:39:51.971.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.016 (0.017) seconds
+Test Suite 'SyncDecisionEngineTests' started at 2026-05-23 22:39:51.971.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testAccountDecisionBlocksBeforePushOrDrain]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testAccountDecisionBlocksBeforePushOrDrain]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testForegroundRecoveryRequestDoesNotStartFullRecoveryDirectly]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testForegroundRecoveryRequestDoesNotStartFullRecoveryDirectly]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testLocalMutationWithPendingChoosesPushWithoutFullPull]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testLocalMutationWithPendingChoosesPushWithoutFullPull]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testManualRecoveryContextCanChooseFullRecovery]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testManualRecoveryContextCanChooseFullRecovery]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testRemoteSyncEventChoosesIncrementalDrain]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testRemoteSyncEventChoosesIncrementalDrain]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testSameAccountReconnectPushesPendingThenDrainsAndLightReconciles]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testSameAccountReconnectPushesPendingThenDrainsAndLightReconciles]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testSyncBusySchedulesRetry]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testSyncBusySchedulesRetry]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testZeroOfZeroProgressIsHiddenAtStateLevel]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testZeroOfZeroProgressIsHiddenAtStateLevel]' passed (0.000 seconds).
+Test Suite 'SyncDecisionEngineTests' passed at 2026-05-23 22:39:51.976.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.003 (0.006) seconds
+Test Suite 'SyncRecoveryPolicyTests' started at 2026-05-23 22:39:51.977.
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testBootstrapContextChoosesBootstrapPull]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testBootstrapContextChoosesBootstrapPull]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testNormalForegroundDoesNotAllowFullRecovery]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testNormalForegroundDoesNotAllowFullRecovery]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testRecentRecoveryAttemptBacksOff]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testRecentRecoveryAttemptBacksOff]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testRecoveryContextAllowsFullRecovery]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testRecoveryContextAllowsFullRecovery]' passed (0.000 seconds).
+Test Suite 'SyncRecoveryPolicyTests' passed at 2026-05-23 22:39:51.979.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'SyncStatusPresenterTests' started at 2026-05-23 22:39:51.979.
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testIndeterminateActiveProgressWithoutZeroTotalStillShowsSpinner]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testIndeterminateActiveProgressWithoutZeroTotalStillShowsSpinner]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testRunningWithoutProgressShowsFallbackSpinner]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testRunningWithoutProgressShowsFallbackSpinner]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testZeroOfZeroActiveProgressIsHidden]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testZeroOfZeroActiveProgressIsHidden]' passed (0.000 seconds).
+Test Suite 'SyncStatusPresenterTests' passed at 2026-05-23 22:39:51.984.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.005) seconds
+Test Suite 'WatermarkStoreTests' started at 2026-05-23 22:39:51.984.
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testLegacyAccountWatermarkCanBeReadDuringMigration]' started.
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testLegacyAccountWatermarkCanBeReadDuringMigration]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testLegacyOwnerWatermarkCanBeReadDuringMigration]' started.
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testLegacyOwnerWatermarkCanBeReadDuringMigration]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testWatermarkDoesNotMoveBackwards]' started.
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testWatermarkDoesNotMoveBackwards]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testWatermarkIsAccountAndStoreBound]' started.
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testWatermarkIsAccountAndStoreBound]' passed (0.002 seconds).
+Test Suite 'WatermarkStoreTests' passed at 2026-05-23 22:39:51.996.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.011 (0.012) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-23 22:39:51.996.
+	 Executed 273 tests, with 0 failures (0 unexpected) in 143.867 (143.938) seconds
+Test Suite 'Selected tests' passed at 2026-05-23 22:39:51.996.
+	 Executed 273 tests, with 0 failures (0 unexpected) in 143.867 (143.939) seconds
+2026-05-23 22:39:52.305 xcodebuild[71871:17314009] [MT] IDETestOperationsObserverDebug: 146.283 elapsed -- Testing started completed.
+2026-05-23 22:39:52.305 xcodebuild[71871:17314009] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-23 22:39:52.305 xcodebuild[71871:17314009] [MT] IDETestOperationsObserverDebug: 146.283 sec, +146.283 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-test-sync-20260524T023722Z.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started

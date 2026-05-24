@@ -1,0 +1,45 @@
+=== mc-agent scan xcode-membership --task TASK-119 --strict ===
+{
+  "NEXT_ACTION": "Rerun after every TASK-119 file move/delete; FAIL must block REVIEW.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl.xcodeproj/project.pbxproj",
+      "fix_hint": "After every move/delete, audit explicit refs, build phases, synchronized exceptions, tests, and scripts.",
+      "id": "xcode_filesystem_synchronized_group",
+      "reason": "Project uses filesystem synchronized groups.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "explicit_swift_ref_count": 1,
+        "missing_refs": []
+      },
+      "file": "iOSMerchandiseControl.xcodeproj/project.pbxproj",
+      "fix_hint": "Remove stale membership/build-phase refs after move/delete.",
+      "id": "xcode_explicit_swift_refs_exist",
+      "reason": "All explicit Swift file references found in project.pbxproj exist.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl.xcodeproj/project.pbxproj",
+      "fix_hint": "Any future move/delete must rerun xcode-membership and inspect synchronized exceptions.",
+      "id": "xcode_sync_exception_audit",
+      "reason": "Read-only project membership audit completed for TASK-119-sensitive symbols.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T02:24:53+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "xcode-membership",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.xcode-membership",
+  "started_at": "2026-05-24T02:24:53+00:00",
+  "status": "PASS",
+  "summary": "xcode-membership: PASS (0 failing checks, 3 total checks)",
+  "taskId": "TASK-119",
+  "task_id": "TASK-119"
+}

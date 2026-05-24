@@ -1,0 +1,123 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T024033Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p73897.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T024033Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p73897.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T024033Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p73897.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-117-20",
+    "CA-117-21"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan no-full-pull-normal-path --task TASK-119 --strict",
+  "command_slug": "scan-no-full-pull-normal-path-task-TASK-119-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 244,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-119",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK119_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-119"
+  },
+  "exit_code": 1,
+  "git_sha": "5454070",
+  "next_action_recommended": "Fix failing checks and rerun no-full-pull-normal-path.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Fix failing source/call-graph checks and rerun.",
+    "checks": [
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "pattern missing"
+          }
+        ],
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "id": "runtime_blocks_bootstrap_and_full_recovery",
+        "reason": "Automatic runtime must refuse bootstrap/full recovery in normal run(action:) path.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": [
+          {
+            "line": 0,
+            "snippet": "pattern missing"
+          }
+        ],
+        "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+        "id": "orchestrator_normal_decision_has_no_bootstrap_or_full_recovery",
+        "reason": "Normal foreground decision input must not request bootstrap/full recovery.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/ContentView.swift",
+        "id": "root_and_options_do_not_call_full_pull_services",
+        "reason": "Root app view must not call full pull/recovery services.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/OptionsView.swift",
+        "id": "options_do_not_call_full_pull_services",
+        "reason": "Options public view must not call full pull/recovery services.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+        "id": "orchestrator_submit_body_does_not_start_full_pull",
+        "reason": "SyncOrchestrator normal trigger path must not start full pull services.",
+        "status": "PASS"
+      }
+    ],
+    "completedAt": "2026-05-24T02:40:33Z",
+    "failureCount": 2,
+    "schemaVersion": "1.1",
+    "source": "scan.no-full-pull-normal-path",
+    "startedAt": "2026-05-24T02:40:33Z",
+    "status": "FAIL",
+    "taskId": "TASK-119"
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "fail",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T024033Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p73897",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "task_id": "TASK-119",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T02:40:33Z",
+  "timestamp_start": "2026-05-24T02:40:33Z",
+  "warnings": []
+}
