@@ -1,6 +1,6 @@
 import Foundation
 
-enum SyncTrigger: Equatable {
+nonisolated enum SyncTrigger: Equatable, Sendable {
     case appForeground
     case networkAvailable
     case authChanged

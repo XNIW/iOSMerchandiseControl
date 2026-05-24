@@ -45,6 +45,10 @@ struct SyncState: Equatable {
 
 enum SyncOutcome: Equatable {
     case succeeded
+    case noWork
     case failed
     case blocked(SyncBlockReason)
+    case busy
+    case cancelled
+    case scheduledRetry
 }

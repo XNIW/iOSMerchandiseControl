@@ -61,6 +61,32 @@ nonisolated struct SyncActivityRegistrationResult: Equatable, Sendable {
     }
 }
 
+nonisolated struct SyncCatalogPushPlan: Equatable, Sendable {
+    var ownerUserID: UUID
+    var pendingChangeCount: Int
+    var generatedAt: Date
+    var idempotencyKey: String
+    var blockers: [String]
+
+    init(
+        ownerUserID: UUID,
+        pendingChangeCount: Int,
+        generatedAt: Date = Date(),
+        idempotencyKey: String = UUID().uuidString.lowercased(),
+        blockers: [String] = []
+    ) {
+        self.ownerUserID = ownerUserID
+        self.pendingChangeCount = max(0, pendingChangeCount)
+        self.generatedAt = generatedAt
+        self.idempotencyKey = idempotencyKey
+        self.blockers = blockers
+    }
+
+    var hasWork: Bool {
+        pendingChangeCount > 0 && blockers.isEmpty
+    }
+}
+
 nonisolated struct SyncHistorySessionSummary: Equatable, Sendable {
     var uploaded: Int = 0
     var inserted: Int = 0
@@ -78,7 +104,41 @@ nonisolated struct SyncHistorySessionSummary: Equatable, Sendable {
     }
 }
 
+nonisolated struct SyncHistorySessionPushPlan: Equatable, Sendable {
+    var ownerUserID: UUID
+    var pendingChangeCount: Int
+    var generatedAt: Date
+    var idempotencyKey: String
+
+    init(
+        ownerUserID: UUID,
+        pendingChangeCount: Int,
+        generatedAt: Date = Date(),
+        idempotencyKey: String = UUID().uuidString.lowercased()
+    ) {
+        self.ownerUserID = ownerUserID
+        self.pendingChangeCount = max(0, pendingChangeCount)
+        self.generatedAt = generatedAt
+        self.idempotencyKey = idempotencyKey
+    }
+}
+
+nonisolated struct SyncHistorySessionPushResult: Equatable, Sendable {
+    var plan: SyncHistorySessionPushPlan?
+    var summary: SyncHistorySessionSummary
+
+    init(plan: SyncHistorySessionPushPlan? = nil, summary: SyncHistorySessionSummary = SyncHistorySessionSummary()) {
+        self.plan = plan
+        self.summary = summary
+    }
+
+    var totalChanged: Int {
+        summary.totalChanged
+    }
+}
+
 nonisolated struct SyncCatalogPushResult: Equatable, Sendable {
+    var plan: SyncCatalogPushPlan? = nil
     var supplierCreates: Int = 0
     var supplierUpdates: Int = 0
     var supplierLinks: Int = 0
@@ -96,8 +156,97 @@ nonisolated struct SyncCatalogPushResult: Equatable, Sendable {
     }
 }
 
+nonisolated struct SyncProductPricePushPlan: Equatable, Sendable {
+    var ownerUserID: UUID
+    var pendingChangeCount: Int
+    var generatedAt: Date
+    var idempotencyKey: String
+    var blockers: [String]
+
+    init(
+        ownerUserID: UUID,
+        pendingChangeCount: Int,
+        generatedAt: Date = Date(),
+        idempotencyKey: String = UUID().uuidString.lowercased(),
+        blockers: [String] = []
+    ) {
+        self.ownerUserID = ownerUserID
+        self.pendingChangeCount = max(0, pendingChangeCount)
+        self.generatedAt = generatedAt
+        self.idempotencyKey = idempotencyKey
+        self.blockers = blockers
+    }
+
+    var hasWork: Bool {
+        pendingChangeCount > 0 && blockers.isEmpty
+    }
+}
+
 nonisolated struct SyncProductPricePushResult: Equatable, Sendable {
+    var plan: SyncProductPricePushPlan? = nil
     var insertedCount: Int = 0
+    var orphanedCount: Int = 0
+    var tombstonedCount: Int = 0
+}
+
+nonisolated enum SyncAutomaticRunStatus: String, CaseIterable, Equatable, Sendable, Hashable {
+    case success
+    case noWork
+    case blocked
+    case busy
+    case failed
+    case cancelled
+    case scheduledRetry
+}
+
+nonisolated struct SyncAutomaticRunResult: Equatable, Sendable {
+    var status: SyncAutomaticRunStatus
+    var didWork: Bool
+    var blockReason: SyncBlockReason?
+    var errorCode: String?
+    var scheduledRetryAfter: TimeInterval?
+
+    init(
+        status: SyncAutomaticRunStatus,
+        didWork: Bool,
+        blockReason: SyncBlockReason? = nil,
+        errorCode: String? = nil,
+        scheduledRetryAfter: TimeInterval? = nil
+    ) {
+        self.status = status
+        self.didWork = didWork
+        self.blockReason = blockReason
+        self.errorCode = errorCode
+        self.scheduledRetryAfter = scheduledRetryAfter
+    }
+
+    static func success(didWork: Bool) -> SyncAutomaticRunResult {
+        SyncAutomaticRunResult(status: .success, didWork: didWork)
+    }
+
+    static func noWork() -> SyncAutomaticRunResult {
+        SyncAutomaticRunResult(status: .noWork, didWork: false)
+    }
+
+    static func blocked(_ reason: SyncBlockReason) -> SyncAutomaticRunResult {
+        SyncAutomaticRunResult(status: .blocked, didWork: false, blockReason: reason)
+    }
+
+    static func busy() -> SyncAutomaticRunResult {
+        SyncAutomaticRunResult(status: .busy, didWork: false)
+    }
+
+    static func failed(errorCode: String?) -> SyncAutomaticRunResult {
+        SyncAutomaticRunResult(status: .failed, didWork: false, errorCode: errorCode)
+    }
+
+    static func cancelled() -> SyncAutomaticRunResult {
+        SyncAutomaticRunResult(status: .cancelled, didWork: false)
+    }
+
+    static func scheduledRetry(after delay: TimeInterval? = nil) -> SyncAutomaticRunResult {
+        SyncAutomaticRunResult(status: .scheduledRetry, didWork: false, scheduledRetryAfter: delay)
+    }
 }
 
 nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {
@@ -163,23 +312,19 @@ nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {
     }
 }
 
-@MainActor
 protocol SyncCatalogPushProviding: AnyObject {
     func pushPendingCatalog(ownerUserID: UUID) async throws -> SyncCatalogPushResult
 }
 
-@MainActor
 protocol SyncProductPriceSyncProviding: AnyObject {
     func pushPendingProductPrices(ownerUserID: UUID) async throws -> SyncProductPricePushResult
 }
 
-@MainActor
 protocol SyncActivityRegistrationProviding: AnyObject {
     func loadSyncActivityRegistrationSnapshot(ownerUserID: UUID) async throws -> SyncActivityRegistrationSnapshot
     func registerSyncActivities(ownerUserID: UUID) async throws -> SyncActivityRegistrationResult
 }
 
-@MainActor
 protocol SyncHistorySessionPushProviding: AnyObject {
     func syncHistorySessions(
         ownerUserID: UUID,

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 MC_AGENT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MC_AGENT_VERSION="0.3.0-task115"
+MC_AGENT_VERSION="0.4.0-task118"
 MC_SCHEMA_VERSION="1.1"
 
 MC_IOS_REPO="${MC_IOS_REPO:-/Users/minxiang/Desktop/iOSMerchandiseControl}"
@@ -84,6 +84,12 @@ mc_load_config() {
       [[ -z "$had_evidence_dir" ]] && MC_EVIDENCE_DIR="docs/TASKS/EVIDENCE/${inferred_task_id}"
       [[ -z "$had_run_prefix" ]] && MC_RUN_PREFIX="${inferred_task_id/-/}_RUN_"
     fi
+  fi
+  if [[ -n "$had_task_id" && -z "$had_evidence_dir" && "$MC_TASK_ID" =~ ^TASK-[0-9]{3,}$ ]]; then
+    MC_EVIDENCE_DIR="docs/TASKS/EVIDENCE/${MC_TASK_ID}"
+  fi
+  if [[ -n "$had_task_id" && -z "$had_run_prefix" && "$MC_TASK_ID" =~ ^TASK-[0-9]{3,}$ ]]; then
+    MC_RUN_PREFIX="${MC_TASK_ID/-/}_RUN_"
   fi
 
   export MC_IOS_REPO MC_ANDROID_REPO MC_SUPABASE_REPO MC_TASK_ID MC_EVIDENCE_DIR
@@ -341,6 +347,10 @@ mc_set_pass_with_notes() {
   MC_RESULT_OVERRIDE="pass_with_notes"
 }
 
+mc_task118_evidence_context_mismatch() {
+  [[ "$MC_TASK_ID" == "TASK-118" && "$MC_EVIDENCE_DIR" != "docs/TASKS/EVIDENCE/TASK-118" ]]
+}
+
 mc_run_wrapped() {
   MC_COMMAND="$1"
   shift
@@ -353,6 +363,25 @@ mc_run_wrapped() {
   MC_TIMESTAMP_START_ISO="$(mc_now_iso)"
   MC_START_MS="$(mc_now_ms)"
   mc_git_context "$MC_IOS_REPO"
+  if mc_task118_evidence_context_mismatch; then
+    local requested_evidence_dir end_ms duration_ms exit_code
+    requested_evidence_dir="$MC_EVIDENCE_DIR"
+    MC_EVIDENCE_DIR="docs/TASKS/EVIDENCE/TASK-118"
+    mc_refresh_evidence_abs
+    mc_report_init_paths
+    mc_report_log "=== mc-agent ${MC_COMMAND} ==="
+    exit_code="$MC_EXIT_MISCONFIGURED"
+    end_ms="$(mc_now_ms)"
+    duration_ms=$((end_ms - MC_START_MS))
+    MC_TIMESTAMP_END_ISO="$(mc_now_iso)"
+    MC_SUMMARY="TASK-118 evidence context MISCONFIGURED: requested evidence dir '${requested_evidence_dir}' is outside docs/TASKS/EVIDENCE/TASK-118."
+    MC_NEXT_ACTION="Pass --task TASK-118 or set MC_TASK_ID=TASK-118 without overriding MC_EVIDENCE_DIR."
+    mc_report_write "$exit_code" "$MC_SUMMARY" "$MC_NEXT_ACTION" "$duration_ms" 0 0 0 ""
+    if [[ "${MC_QUIET:-0}" != "1" ]]; then
+      mc_print_final_summary "$exit_code"
+    fi
+    return "$exit_code"
+  fi
   mc_report_init_paths
   mc_report_log "=== mc-agent ${MC_COMMAND} ==="
 
@@ -388,15 +417,18 @@ mc-agent.sh — agent-friendly CLI harness for iOS/Android/Supabase
 
 Usage:
   ./tools/agent/mc-agent.sh help | help-json | version
-  ./tools/agent/mc-agent.sh doctor | preflight | harness doctor | config validate | config print-redacted
+  ./tools/agent/mc-agent.sh doctor | preflight [--require-head-consistency] | harness doctor | config validate | config print-redacted
   ./tools/agent/mc-agent.sh list commands | list commands-json
-  ./tools/agent/mc-agent.sh report --task <TASK-ID> | report --latest | report validate-json --path <file>
+  ./tools/agent/mc-agent.sh git head-consistency --task TASK-118
+  ./tools/agent/mc-agent.sh report --task <TASK-ID> | report --latest | report validate-json --task <TASK-ID> --path <file-or-dir>
   ./tools/agent/mc-agent.sh scan sensitive [path...] | scan evidence --task <TASK-ID> | scan repo-diff | scan release-cta | scan no-legacy-runtime-path --task TASK-117
+  ./tools/agent/mc-agent.sh scan sync-boundaries --task TASK-118 --strict
+  ./tools/agent/mc-agent.sh scan no-full-pull-normal-path --task TASK-118 --strict
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys --task TASK-117
   ./tools/agent/mc-agent.sh evidence hygiene|bundle --task TASK-117
   ./tools/agent/mc-agent.sh account fixture prepare|cleanup --task TASK-116 --prefix TASK116_ACCOUNT_ [--dry-run]
   ./tools/agent/mc-agent.sh safety check-prefix --prefix TASK115_* | safety dry-run-required --command "<command>"
-  ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|lifecycle|offline | ios smoke simulator|options|history
+  ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|automatic-domain|lifecycle|offline | ios smoke simulator|options|history
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-115
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios runtime-ui-counts --live --task TASK-115
   ./tools/agent/mc-agent.sh android build debug|release | android test sync|offline | android offline-tier-status
@@ -416,7 +448,7 @@ mc_help_json() {
 {
   "schema_version": "1.1",
   "name": "mc-agent",
-  "version": "0.3.0-task115",
+  "version": "0.4.0-task118",
   "exit_codes": {
     "0": "PASS",
     "1": "FAIL",
@@ -431,6 +463,8 @@ mc_help_json() {
     {"name":"doctor","argv":["doctor"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"harness doctor","argv":["harness","doctor"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"preflight","argv":["preflight"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"preflight require head consistency","argv":["preflight","--require-head-consistency","--task","TASK-118"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"git head-consistency","argv":["git","head-consistency","--task","TASK-118"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"config validate","argv":["config","validate"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"config print-redacted","argv":["config","print-redacted"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"list commands","argv":["list","commands"],"platform":"general","safety_level":"safe-readonly"},
@@ -438,10 +472,13 @@ mc_help_json() {
     {"name":"report --task","argv":["report","--task","TASK-115"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"report --latest","argv":["report","--latest"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"report validate-json","argv":["report","validate-json","--path","<file>"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"report validate-json task118","argv":["report","validate-json","--task","TASK-118","--path","docs/TASKS/EVIDENCE/TASK-118/agent-runs"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan sensitive","argv":["scan","sensitive"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan evidence","argv":["scan","evidence","--task","TASK-115"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan repo-diff","argv":["scan","repo-diff"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan release-cta","argv":["scan","release-cta"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan sync-boundaries","argv":["scan","sync-boundaries","--task","TASK-118","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-full-pull-normal-path task118","argv":["scan","no-full-pull-normal-path","--task","TASK-118","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-legacy-runtime-path","argv":["scan","no-legacy-runtime-path","--task","TASK-116"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-full-pull-normal-path","argv":["scan","no-full-pull-normal-path","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan automatic-contracts-clean","argv":["scan","automatic-contracts-clean","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
@@ -460,6 +497,7 @@ mc_help_json() {
     {"name":"ios build debug","argv":["ios","build","debug"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios build release","argv":["ios","build","release"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test sync","argv":["ios","test","sync"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test automatic-domain","argv":["ios","test","automatic-domain","--task","TASK-118"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test lifecycle","argv":["ios","test","lifecycle"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test offline","argv":["ios","test","offline"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios smoke simulator","argv":["ios","smoke","simulator"],"platform":"ios","safety_level":"safe-readonly"},
@@ -589,7 +627,167 @@ for c in data["commands"]:
   esac
 }
 
+mc_git_github_url_from_origin() {
+  local remote_url="$1"
+  python3 - "$remote_url" <<'PY'
+import re
+import sys
+
+value = sys.argv[1].strip()
+if value.endswith(".git"):
+    value = value[:-4]
+if value.startswith("git@github.com:"):
+    value = "https://github.com/" + value.split(":", 1)[1]
+elif value.startswith("https://github.com/"):
+    pass
+elif value.startswith("http://github.com/"):
+    value = "https://" + value[len("http://"):]
+else:
+    value = ""
+if value and re.match(r"^https://github\.com/[^/]+/[^/]+$", value):
+    print(value)
+PY
+}
+
+mc_git_head_consistency() {
+  local task_id repo local_head origin_main ls_remote remote_url github_url rendered_status rendered_contains rendered_sample status payload
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-$MC_TASK_ID}"
+  repo="$MC_IOS_REPO"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  MC_CA_REFS="CA-118-25"
+
+  local_head="$(git -C "$repo" rev-parse HEAD 2>/dev/null || true)"
+  origin_main="$(git -C "$repo" rev-parse origin/main 2>/dev/null || true)"
+  ls_remote="$(git -C "$repo" ls-remote origin main 2>/dev/null | awk 'NR == 1 {print $1}' || true)"
+  remote_url="$(git -C "$repo" remote get-url origin 2>/dev/null || true)"
+  github_url="$(mc_git_github_url_from_origin "$remote_url")"
+  rendered_status="NOT_RUN"
+  rendered_contains="false"
+  rendered_sample=""
+  if [[ -n "$github_url" && -n "$ls_remote" ]] && command -v curl >/dev/null 2>&1; then
+    local rendered_tmp
+    rendered_tmp="$(mktemp)"
+    if curl -L --max-time 20 -s "${github_url}/commits/main" > "$rendered_tmp"; then
+      rendered_status="FETCHED"
+      if grep -Fq "$ls_remote" "$rendered_tmp"; then
+        rendered_contains="true"
+      fi
+      rendered_sample="$(grep -Eo '[0-9a-f]{40}' "$rendered_tmp" | head -1 || true)"
+    else
+      rendered_status="BLOCKED"
+    fi
+    rm -f "$rendered_tmp"
+  elif [[ -z "$github_url" ]]; then
+    rendered_status="MISCONFIGURED"
+  else
+    rendered_status="BLOCKED"
+  fi
+
+  payload="$(
+    TASK_ID="$task_id" LOCAL_HEAD="$local_head" ORIGIN_MAIN="$origin_main" LS_REMOTE="$ls_remote" \
+    REMOTE_URL="$remote_url" GITHUB_URL="$github_url" RENDERED_STATUS="$rendered_status" \
+    RENDERED_CONTAINS="$rendered_contains" RENDERED_SAMPLE="$rendered_sample" python3 - <<'PY'
+import json
+import os
+from datetime import datetime, timezone
+
+def sha_ok(value):
+    return isinstance(value, str) and len(value) == 40 and all(c in "0123456789abcdef" for c in value.lower())
+
+local_head = os.environ.get("LOCAL_HEAD", "")
+origin_main = os.environ.get("ORIGIN_MAIN", "")
+ls_remote = os.environ.get("LS_REMOTE", "")
+rendered_contains = os.environ.get("RENDERED_CONTAINS") == "true"
+rendered_status = os.environ.get("RENDERED_STATUS", "NOT_RUN")
+checks = []
+for name, value in [
+    ("local_head", local_head),
+    ("origin_main", origin_main),
+    ("ls_remote_origin_main", ls_remote),
+]:
+    checks.append({
+        "id": name,
+        "status": "PASS" if sha_ok(value) else "MISCONFIGURED",
+        "value": value or None,
+    })
+values = [value for value in [local_head, origin_main, ls_remote] if sha_ok(value)]
+all_git_values_match = len(values) == 3 and len(set(values)) == 1
+checks.append({
+    "id": "local_origin_remote_match",
+    "status": "PASS" if all_git_values_match else "BLOCKED",
+    "value": {"local": local_head or None, "origin": origin_main or None, "remote": ls_remote or None},
+})
+checks.append({
+    "id": "github_rendered_main_contains_remote_sha",
+    "status": "PASS" if rendered_status == "FETCHED" and rendered_contains else "BLOCKED",
+    "value": {
+        "githubUrl": os.environ.get("GITHUB_URL") or None,
+        "renderedStatus": rendered_status,
+        "renderedSample": os.environ.get("RENDERED_SAMPLE") or None,
+    },
+})
+statuses = [item["status"] for item in checks]
+if "MISCONFIGURED" in statuses:
+    status = "MISCONFIGURED"
+elif all(item["status"] == "PASS" for item in checks):
+    status = "PASS"
+else:
+    status = "BLOCKED"
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ.get("TASK_ID", "TASK-118"),
+    "source": "git.head-consistency",
+    "startedAt": now,
+    "completedAt": now,
+    "status": status,
+    "remoteUrlRedacted": os.environ.get("REMOTE_URL", ""),
+    "checks": checks,
+    "NEXT_ACTION": "Proceed with TASK-118 gates." if status == "PASS" else "Stop TASK-118 and resolve HEAD mismatch or GitHub rendered-main access.",
+}, sort_keys=True))
+PY
+  )"
+  MC_SYNC_JSON_RESULT="$payload"
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","MISCONFIGURED"))' <<<"$payload")"
+  case "$status" in
+    PASS)
+      MC_SUMMARY="HEAD consistency PASS for ${task_id}: local HEAD, origin/main, remote main and GitHub rendered main agree."
+      MC_NEXT_ACTION="Continue TASK-118 preflight/scans."
+      return "$MC_EXIT_PASS"
+      ;;
+    BLOCKED)
+      MC_SUMMARY="HEAD consistency BLOCKED for ${task_id}: local/origin/remote/GitHub rendered main do not all agree."
+      MC_NEXT_ACTION="Riallineare branch/origin/GitHub main prima di qualunque execution."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    *)
+      MC_SUMMARY="HEAD consistency MISCONFIGURED for ${task_id}: git remote or GitHub rendered main could not be verified."
+      MC_NEXT_ACTION="Fix git/GitHub harness configuration, then rerun head-consistency."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+mc_cmd_git() {
+  local sub="${1:-}"
+  shift || true
+  case "$sub" in
+    head-consistency) mc_git_head_consistency "$@" ;;
+    *)
+      MC_SUMMARY="Unknown git subcommand: ${sub}"
+      MC_NEXT_ACTION="Use git head-consistency --task TASK-118."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
 mc_cmd_preflight() {
+  local require_head=0
+  mc_parse_flag --require-head-consistency "$@" && require_head=1
   local blocked=0 misconfigured=0 summary=""
   local repo_name var path
   for repo_name in IOS ANDROID SUPABASE; do
@@ -637,6 +835,14 @@ mc_cmd_preflight() {
   if [[ "$blocked" -gt 0 ]]; then
     MC_NEXT_ACTION="Install/start optional tools for live/device/Supabase commands."
     return "$MC_EXIT_BLOCKED"
+  fi
+  if [[ "$require_head" == "1" ]]; then
+    local preflight_summary="$summary"
+    mc_git_head_consistency --task "$MC_TASK_ID"
+    local head_code=$?
+    summary="${preflight_summary}"$'\n'"HEAD consistency: ${MC_SUMMARY}"
+    MC_SUMMARY="$summary"
+    [[ "$head_code" -eq "$MC_EXIT_PASS" ]] || return "$head_code"
   fi
   MC_NEXT_ACTION="Run build/test commands."
   return "$MC_EXIT_PASS"
@@ -738,8 +944,23 @@ PY
 
 mc_cmd_report_validate_json() {
   local paths=()
+  local task_id=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --task)
+        [[ -n "${2:-}" ]] || {
+          MC_SUMMARY="--task requires a value."
+          return "$MC_EXIT_MISCONFIGURED"
+        }
+        task_id="$2"
+        mc_set_task_context "$task_id"
+        shift 2
+        ;;
+      --task=*)
+        task_id="${1#*=}"
+        mc_set_task_context "$task_id"
+        shift
+        ;;
       --path)
         [[ -n "${2:-}" ]] || {
           MC_SUMMARY="--path requires a value."
@@ -761,6 +982,25 @@ mc_cmd_report_validate_json() {
   if [[ ${#paths[@]} -eq 0 ]]; then
     MC_SUMMARY="--path is required."
     return "$MC_EXIT_MISCONFIGURED"
+  fi
+  if [[ "$MC_TASK_ID" == "TASK-118" ]]; then
+    local canonical_abs input_abs input_path
+    canonical_abs="$MC_IOS_REPO/docs/TASKS/EVIDENCE/TASK-118"
+    for input_path in "${paths[@]}"; do
+      if [[ "$input_path" == /* ]]; then
+        input_abs="$input_path"
+      else
+        input_abs="$MC_IOS_REPO/$input_path"
+      fi
+      case "$input_abs" in
+        "$canonical_abs"|"$canonical_abs"/*) ;;
+        *)
+          MC_SUMMARY="TASK-118 JSON validation path MISCONFIGURED: ${input_path} is outside docs/TASKS/EVIDENCE/TASK-118."
+          MC_NEXT_ACTION="Validate only TASK-118 evidence reports."
+          return "$MC_EXIT_MISCONFIGURED"
+          ;;
+      esac
+    done
   fi
   local expanded=()
   local path
@@ -1031,6 +1271,11 @@ mc_cmd_scan_task117_static() {
   MC_PLATFORM="general"
   MC_SAFETY_LEVEL="safe-readonly"
   MC_REQUIRES_LIVE="false"
+  case "${task_id}:${scan_name}" in
+    TASK-118:sync-boundaries) MC_CA_REFS="CA-118-01,CA-118-02,CA-118-03,CA-118-04,CA-118-05,CA-118-06,CA-118-10,CA-118-12,CA-118-13,CA-118-21" ;;
+    TASK-118:no-full-pull-normal-path) MC_CA_REFS="CA-118-07,CA-118-08,CA-118-09,CA-118-14,CA-118-22" ;;
+    *) MC_CA_REFS="${MC_CA_REFS:-CA-117-20,CA-117-21}" ;;
+  esac
 
   TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 "$MC_AGENT_ROOT/lib/task117_scans.py" "$scan_name" > /tmp/mc-agent-task117-static.$$.json
   local scan_code=$?
@@ -1040,7 +1285,7 @@ mc_cmd_scan_task117_static() {
   case "$scan_code" in
     0)
       MC_SUMMARY="${scan_name} scan PASS for ${task_id}."
-      MC_NEXT_ACTION="Use this report in TASK-117 evidence matrix."
+      MC_NEXT_ACTION="Use this report in ${task_id} evidence matrix."
       return "$MC_EXIT_PASS"
       ;;
     1)

@@ -1,6 +1,6 @@
 import Foundation
 
-struct SyncDecisionInput: Equatable {
+nonisolated struct SyncDecisionInput: Equatable, Sendable {
     var trigger: SyncTrigger
     var isAuthenticated: Bool
     var isNetworkAvailable: Bool
@@ -12,6 +12,7 @@ struct SyncDecisionInput: Equatable {
     var requiresFullRecovery: Bool
     var fullRecoveryContext: SyncFullRecoveryContext
     var isSyncBusy: Bool
+    var hasStateReadFailure: Bool
 
     init(
         trigger: SyncTrigger,
@@ -24,7 +25,8 @@ struct SyncDecisionInput: Equatable {
         requiresBootstrap: Bool = false,
         requiresFullRecovery: Bool = false,
         fullRecoveryContext: SyncFullRecoveryContext = .normalForeground,
-        isSyncBusy: Bool = false
+        isSyncBusy: Bool = false,
+        hasStateReadFailure: Bool = false
     ) {
         self.trigger = trigger
         self.isAuthenticated = isAuthenticated
@@ -37,17 +39,18 @@ struct SyncDecisionInput: Equatable {
         self.requiresFullRecovery = requiresFullRecovery
         self.fullRecoveryContext = fullRecoveryContext
         self.isSyncBusy = isSyncBusy
+        self.hasStateReadFailure = hasStateReadFailure
     }
 }
 
-enum SyncFullRecoveryContext: Equatable {
+nonisolated enum SyncFullRecoveryContext: Equatable, Sendable {
     case normalForeground
     case bootstrap
     case recovery
     case manual
     case harness
 
-    var allowsFullRecovery: Bool {
+    nonisolated var allowsFullRecovery: Bool {
         switch self {
         case .bootstrap, .recovery, .manual, .harness:
             return true
@@ -57,13 +60,14 @@ enum SyncFullRecoveryContext: Equatable {
     }
 }
 
-enum SyncBlockReason: Equatable {
+nonisolated enum SyncBlockReason: Equatable, Sendable, Hashable {
     case authRequired
     case networkUnavailable
     case accountDecisionRequired
+    case localStateUnavailable
 }
 
-indirect enum SyncAction: Equatable {
+nonisolated indirect enum SyncAction: Equatable, Sendable {
     case noOp
     case pushPending
     case drainEvents
@@ -75,7 +79,7 @@ indirect enum SyncAction: Equatable {
     case blocked(SyncBlockReason)
     case sequence([SyncAction])
 
-    var containsFullRecovery: Bool {
+    nonisolated var containsFullRecovery: Bool {
         switch self {
         case .fullRecovery:
             return true
@@ -88,7 +92,7 @@ indirect enum SyncAction: Equatable {
     }
 }
 
-enum SyncDecisionEngine {
+nonisolated enum SyncDecisionEngine {
     static func decide(_ input: SyncDecisionInput) -> SyncAction {
         guard input.isAuthenticated else {
             return .blocked(.authRequired)
@@ -98,6 +102,9 @@ enum SyncDecisionEngine {
         }
         if input.requiresAccountDecision {
             return .blocked(.accountDecisionRequired)
+        }
+        if input.hasStateReadFailure {
+            return .blocked(.localStateUnavailable)
         }
         if input.isSyncBusy {
             return .retryAfterBusy

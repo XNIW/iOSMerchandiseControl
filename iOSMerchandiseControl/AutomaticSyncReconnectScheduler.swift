@@ -2,8 +2,13 @@ import Foundation
 import Network
 
 nonisolated enum AutomaticSyncNetworkStatus: Equatable, Sendable {
+    case unknown
     case satisfied
     case unsatisfied
+}
+
+nonisolated enum AutomaticSyncPolicy {
+    static let defaultForegroundDebounce: TimeInterval = 2
 }
 
 @MainActor
@@ -16,7 +21,7 @@ final class AutomaticSyncReconnectScheduler: @unchecked Sendable {
     private var pendingTask: Task<Void, Never>?
 
     init(
-        debounce: TimeInterval = SupabaseManualSyncSemiAutomaticPolicy.defaultForegroundDebounce,
+        debounce: TimeInterval = AutomaticSyncPolicy.defaultForegroundDebounce,
         trigger: @escaping @MainActor @Sendable () -> Void
     ) {
         self.debounce = max(0, debounce)
@@ -35,6 +40,8 @@ final class AutomaticSyncReconnectScheduler: @unchecked Sendable {
         lastStatus = status
 
         switch status {
+        case .unknown:
+            cancelPendingIntent()
         case .satisfied:
             guard previousStatus == .unsatisfied,
                   isForeground else { return }
@@ -72,11 +79,16 @@ final class AutomaticSyncReconnectScheduler: @unchecked Sendable {
 @MainActor
 final class AutomaticSyncNetworkReachabilityObserver {
     private let scheduler: AutomaticSyncReconnectScheduler
+    private let statusHandler: @MainActor @Sendable (AutomaticSyncNetworkStatus) -> Void
     private var monitor: NWPathMonitor?
     private var queue: DispatchQueue?
 
-    init(scheduler: AutomaticSyncReconnectScheduler) {
+    init(
+        scheduler: AutomaticSyncReconnectScheduler,
+        statusHandler: @escaping @MainActor @Sendable (AutomaticSyncNetworkStatus) -> Void = { _ in }
+    ) {
         self.scheduler = scheduler
+        self.statusHandler = statusHandler
     }
 
     func start() {
@@ -84,9 +96,11 @@ final class AutomaticSyncNetworkReachabilityObserver {
         let monitor = NWPathMonitor()
         let queue = DispatchQueue(label: "AutomaticSyncNetworkReachabilityObserver")
         let scheduler = scheduler
+        let statusHandler = self.statusHandler
         monitor.pathUpdateHandler = { path in
             let status: AutomaticSyncNetworkStatus = path.status == .satisfied ? .satisfied : .unsatisfied
-            Task { @MainActor [scheduler] in
+            Task { @MainActor [scheduler, statusHandler] in
+                statusHandler(status)
                 scheduler.receive(status)
             }
         }

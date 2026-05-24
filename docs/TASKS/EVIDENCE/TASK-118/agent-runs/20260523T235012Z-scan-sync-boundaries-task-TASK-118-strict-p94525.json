@@ -1,0 +1,670 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-118/agent-runs/20260523T235012Z-scan-sync-boundaries-task-TASK-118-strict-p94525.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-118/agent-runs/20260523T235012Z-scan-sync-boundaries-task-TASK-118-strict-p94525.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-118/agent-runs/20260523T235012Z-scan-sync-boundaries-task-TASK-118-strict-p94525.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-118-01",
+    "CA-118-02",
+    "CA-118-03",
+    "CA-118-04",
+    "CA-118-05",
+    "CA-118-06",
+    "CA-118-10",
+    "CA-118-12",
+    "CA-118-13",
+    "CA-118-21"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan sync-boundaries --task TASK-118 --strict",
+  "command_slug": "scan-sync-boundaries-task-TASK-118-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 436,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-118",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK118_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-118"
+  },
+  "exit_code": 0,
+  "git_sha": "315c2f1",
+  "next_action_recommended": "Use this report in TASK-118 evidence matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Use this report in TASK-118 evidence matrix.",
+    "checks": [
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift",
+        "id": "task118_automatic_no_manual_symbol_AutomaticSyncReconnectScheduler",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/ContentView.swift",
+        "id": "task118_automatic_no_manual_symbol_ContentView",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/HistorySessionSyncService.swift",
+        "id": "task118_automatic_no_manual_symbol_HistorySessionSyncService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/OptionsView.swift",
+        "id": "task118_automatic_no_manual_symbol_OptionsView",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/SupabaseInventoryService.swift",
+        "id": "task118_automatic_no_manual_symbol_SupabaseInventoryService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/SupabaseSyncEventDTOs.swift",
+        "id": "task118_automatic_no_manual_symbol_SupabaseSyncEventDTOs",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/SupabaseSyncEventIncrementalApplyService.swift",
+        "id": "task118_automatic_no_manual_symbol_SupabaseSyncEventIncrementalApplyService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/SupabaseSyncEventLiveRecorder.swift",
+        "id": "task118_automatic_no_manual_symbol_SupabaseSyncEventLiveRecorder",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/SupabaseSyncEventRPCTransport.swift",
+        "id": "task118_automatic_no_manual_symbol_SupabaseSyncEventRPCTransport",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/SupabaseSyncEventRealtimeWatcher.swift",
+        "id": "task118_automatic_no_manual_symbol_SupabaseSyncEventRealtimeWatcher",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Account/AccountBindingStore.swift",
+        "id": "task118_automatic_no_manual_symbol_AccountBindingStore",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Account/AccountSwitchPolicy.swift",
+        "id": "task118_automatic_no_manual_symbol_AccountSwitchPolicy",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift",
+        "id": "task118_automatic_no_manual_symbol_AccountSyncDecision",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecisionView.swift",
+        "id": "task118_automatic_no_manual_symbol_AccountSyncDecisionView",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+        "id": "task118_automatic_no_manual_symbol_LocalStoreIdentity",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+        "id": "task118_automatic_no_manual_symbol_AutomaticPushServices",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Incremental/CatalogIncrementalApplyService.swift",
+        "id": "task118_automatic_no_manual_symbol_CatalogIncrementalApplyService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Incremental/CatalogIncrementalApplySummary.swift",
+        "id": "task118_automatic_no_manual_symbol_CatalogIncrementalApplySummary",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Incremental/HistoryIncrementalApplyService.swift",
+        "id": "task118_automatic_no_manual_symbol_HistoryIncrementalApplyService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Incremental/HistoryIncrementalApplySummary.swift",
+        "id": "task118_automatic_no_manual_symbol_HistoryIncrementalApplySummary",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Incremental/ProductPriceIncrementalApplyService.swift",
+        "id": "task118_automatic_no_manual_symbol_ProductPriceIncrementalApplyService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Incremental/ProductPriceIncrementalApplySummary.swift",
+        "id": "task118_automatic_no_manual_symbol_ProductPriceIncrementalApplySummary",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalApplyHelpers.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncEventIncrementalApplyHelpers",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalDomainApplyService.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncEventIncrementalDomainApplyService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Incremental/SyncEventIncrementalPullService.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncEventIncrementalPullService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Incremental/WatermarkStore.swift",
+        "id": "task118_automatic_no_manual_symbol_WatermarkStore",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+        "id": "task118_automatic_no_manual_symbol_LocalOutboxStore",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+        "id": "task118_automatic_no_manual_symbol_PendingChangeCoalescer",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncEventOutboxDrainer",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncEventOutboxRecorder",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Presentation/OptionsSyncSummaryProvider.swift",
+        "id": "task118_automatic_no_manual_symbol_OptionsSyncSummaryProvider",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Presentation/SyncStatusPresenter.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncStatusPresenter",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Recovery/BootstrapPullService.swift",
+        "id": "task118_automatic_no_manual_symbol_BootstrapPullService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Recovery/DriftReconciliationService.swift",
+        "id": "task118_automatic_no_manual_symbol_DriftReconciliationService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Recovery/FullRecoveryService.swift",
+        "id": "task118_automatic_no_manual_symbol_FullRecoveryService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncAutomaticRuntime",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncAutomaticRuntimeProviders",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncDecisionEngine.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncDecisionEngine",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncDecisionInputProvider",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncOrchestrator",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncRecoveryPolicy",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncState.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncState",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncStateStore.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncStateStore",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncTrigger.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncTrigger",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/SyncEventOutboxDrainService.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncEventOutboxDrainService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncEventOutboxEnqueueService",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/SyncEventOutboxEntry.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncEventOutboxEntry",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/SyncEventOutboxState.swift",
+        "id": "task118_automatic_no_manual_symbol_SyncEventOutboxState",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+        "id": "task118_automatic_no_manual_symbol_iOSMerchandiseControlApp",
+        "reason": "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/ContentView.swift",
+        "id": "task118_content_no_manual_push_service_wiring",
+        "reason": "Root sync wiring must not pass SupabaseManualPushService to automatic runtime.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+        "id": "task118_app_no_manual_push_service_root_dependency",
+        "reason": "App dependency root must not wire manual push service into the automatic path.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "id": "task118_runtime_factory_no_manual_push_argument",
+        "reason": "SyncAutomaticRuntimeFactory.make must not accept SupabaseManualPushService.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "id": "task118_runtime_no_catalog_adapter_manual_push",
+        "reason": "Automatic runtime must not construct SyncCatalogPushAdapter with manualPushService.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+            "line": 20,
+            "snippet": "let plan = SyncCatalogPushPlan("
+          }
+        ],
+        "file": "iOSMerchandiseControl/AppNavigationNotifications.swift; iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift; iOSMerchandiseControl/BarcodeScannerView.swift; iOSMerchandiseControl/CloudSyncOverviewState.swift; iOSMerchandiseControl/ContentView.swift; iOSMerchandiseControl/DatabaseView.swift; ...",
+        "id": "task118_type_present_SyncCatalogPushPlan",
+        "reason": "TASK-118 automatic domain type SyncCatalogPushPlan must exist.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 637,
+            "snippet": "func pushPendingCatalog(ownerUserID: UUID) async throws -> SyncCatalogPushResult {"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 640,
+            "snippet": "return SyncCatalogPushResult()"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 644,
+            "snippet": "return SyncCatalogPushResult()"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 646,
+            "snippet": "return SyncCatalogPushResult("
+          }
+        ],
+        "file": "iOSMerchandiseControl/AppNavigationNotifications.swift; iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift; iOSMerchandiseControl/BarcodeScannerView.swift; iOSMerchandiseControl/CloudSyncOverviewState.swift; iOSMerchandiseControl/ContentView.swift; iOSMerchandiseControl/DatabaseView.swift; ...",
+        "id": "task118_type_present_SyncCatalogPushResult",
+        "reason": "TASK-118 automatic domain type SyncCatalogPushResult must exist.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+            "line": 50,
+            "snippet": "let plan = SyncProductPricePushPlan("
+          }
+        ],
+        "file": "iOSMerchandiseControl/AppNavigationNotifications.swift; iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift; iOSMerchandiseControl/BarcodeScannerView.swift; iOSMerchandiseControl/CloudSyncOverviewState.swift; iOSMerchandiseControl/ContentView.swift; iOSMerchandiseControl/DatabaseView.swift; ...",
+        "id": "task118_type_present_SyncProductPricePushPlan",
+        "reason": "TASK-118 automatic domain type SyncProductPricePushPlan must exist.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 425,
+            "snippet": "func pushPendingProductPrices(ownerUserID: UUID) async throws -> SyncProductPricePushResult {"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 428,
+            "snippet": "return SyncProductPricePushResult(insertedCount: 0)"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 432,
+            "snippet": "return SyncProductPricePushResult(insertedCount: 0)"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
+            "line": 434,
+            "snippet": "return SyncProductPricePushResult(insertedCount: result.insertedCount)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/AppNavigationNotifications.swift; iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift; iOSMerchandiseControl/BarcodeScannerView.swift; iOSMerchandiseControl/CloudSyncOverviewState.swift; iOSMerchandiseControl/ContentView.swift; iOSMerchandiseControl/DatabaseView.swift; ...",
+        "id": "task118_type_present_SyncProductPricePushResult",
+        "reason": "TASK-118 automatic domain type SyncProductPricePushResult must exist.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+            "line": 107,
+            "snippet": "nonisolated struct SyncHistorySessionPushPlan: Equatable, Sendable {"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+            "line": 127,
+            "snippet": "var plan: SyncHistorySessionPushPlan?"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+            "line": 130,
+            "snippet": "init(plan: SyncHistorySessionPushPlan? = nil, summary: SyncHistorySessionSummary = SyncHistorySessionSummary()) {"
+          }
+        ],
+        "file": "iOSMerchandiseControl/AppNavigationNotifications.swift; iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift; iOSMerchandiseControl/BarcodeScannerView.swift; iOSMerchandiseControl/CloudSyncOverviewState.swift; iOSMerchandiseControl/ContentView.swift; iOSMerchandiseControl/DatabaseView.swift; ...",
+        "id": "task118_type_present_SyncHistorySessionPushPlan",
+        "reason": "TASK-118 automatic domain type SyncHistorySessionPushPlan must exist.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+            "line": 126,
+            "snippet": "nonisolated struct SyncHistorySessionPushResult: Equatable, Sendable {"
+          }
+        ],
+        "file": "iOSMerchandiseControl/AppNavigationNotifications.swift; iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift; iOSMerchandiseControl/BarcodeScannerView.swift; iOSMerchandiseControl/CloudSyncOverviewState.swift; iOSMerchandiseControl/ContentView.swift; iOSMerchandiseControl/DatabaseView.swift; ...",
+        "id": "task118_type_present_SyncHistorySessionPushResult",
+        "reason": "TASK-118 automatic domain type SyncHistorySessionPushResult must exist.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+            "line": 80,
+            "snippet": "func registerSyncActivities(ownerUserID: UUID) async throws -> SyncActivityRegistrationResult {"
+          },
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+            "line": 82,
+            "snippet": "return SyncActivityRegistrationResult("
+          }
+        ],
+        "file": "iOSMerchandiseControl/AppNavigationNotifications.swift; iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift; iOSMerchandiseControl/BarcodeScannerView.swift; iOSMerchandiseControl/CloudSyncOverviewState.swift; iOSMerchandiseControl/ContentView.swift; iOSMerchandiseControl/DatabaseView.swift; ...",
+        "id": "task118_type_present_SyncActivityRegistrationResult",
+        "reason": "TASK-118 automatic domain type SyncActivityRegistrationResult must exist.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+            "line": 9,
+            "snippet": "func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+            "line": 18,
+            "snippet": "func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+            "line": 59,
+            "snippet": "func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {"
+          }
+        ],
+        "file": "iOSMerchandiseControl/AppNavigationNotifications.swift; iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift; iOSMerchandiseControl/BarcodeScannerView.swift; iOSMerchandiseControl/CloudSyncOverviewState.swift; iOSMerchandiseControl/ContentView.swift; iOSMerchandiseControl/DatabaseView.swift; ...",
+        "id": "task118_type_present_SyncAutomaticRunResult",
+        "reason": "TASK-118 automatic domain type SyncAutomaticRunResult must exist.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "id": "task118_runtime_run_not_bool",
+        "reason": "Automatic runtime run() must return SyncAutomaticRunResult, not Bool.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+        "id": "task118_provider_protocols_not_mainactor",
+        "reason": "Automatic provider protocols must not be @MainActor.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/OptionsView.swift",
+        "id": "task118_options_no_idle_progress_hardcode",
+        "reason": "Options/root banner must observe real sync state rather than hardcoded idle progress.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/OptionsView.swift",
+            "line": 30,
+            "snippet": "@ObservedObject private var syncStateStore: SyncStateStore"
+          },
+          {
+            "file": "iOSMerchandiseControl/OptionsView.swift",
+            "line": 31,
+            "snippet": "@StateObject private var syncSummaryProvider = OptionsSyncSummaryProvider()"
+          },
+          {
+            "file": "iOSMerchandiseControl/OptionsView.swift",
+            "line": 37,
+            "snippet": "syncStateStore: SyncStateStore = SyncStateStore(),"
+          },
+          {
+            "file": "iOSMerchandiseControl/OptionsView.swift",
+            "line": 37,
+            "snippet": "syncStateStore: SyncStateStore = SyncStateStore(),"
+          },
+          {
+            "file": "iOSMerchandiseControl/OptionsView.swift",
+            "line": 602,
+            "snippet": "private let syncState: SyncState"
+          }
+        ],
+        "file": "iOSMerchandiseControl/OptionsView.swift; iOSMerchandiseControl/Sync/Presentation/OptionsSyncSummaryProvider.swift; iOSMerchandiseControl/Sync/SyncStateStore.swift",
+        "id": "task118_options_observes_sync_state",
+        "reason": "Options/root banner must read real runtime/sync state through sync presentation/state APIs.",
+        "status": "PASS"
+      }
+    ],
+    "completedAt": "2026-05-23T23:50:12Z",
+    "failureCount": 0,
+    "schemaVersion": "1.1",
+    "source": "scan.sync-boundaries",
+    "startedAt": "2026-05-23T23:50:12Z",
+    "status": "PASS",
+    "taskId": "TASK-118"
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "pass",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260523T235012Z-scan-sync-boundaries-task-TASK-118-strict-p94525",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "task_id": "TASK-118",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-23T23:50:12Z",
+  "timestamp_start": "2026-05-23T23:50:11Z",
+  "warnings": []
+}

@@ -77,6 +77,73 @@ def file_exists(checks, check_id, rel, reason):
     })
 
 
+def all_swift_sources():
+    return sorted(
+        path.relative_to(REPO).as_posix()
+        for path in (REPO / "iOSMerchandiseControl").rglob("*.swift")
+        if path.is_file()
+    )
+
+
+def task118_automatic_source_files():
+    explicit = {
+        "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+        "iOSMerchandiseControl/ContentView.swift",
+        "iOSMerchandiseControl/OptionsView.swift",
+        "iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift",
+        "iOSMerchandiseControl/HistorySessionSyncService.swift",
+        "iOSMerchandiseControl/SupabaseInventoryService.swift",
+    }
+    for rel in all_swift_sources():
+        name = pathlib.Path(rel).name
+        parts = pathlib.Path(rel).parts
+        if rel.startswith("iOSMerchandiseControl/Sync/"):
+            explicit.add(rel)
+        elif name.startswith("SyncEventOutbox") or name.startswith("SupabaseSyncEvent"):
+            explicit.add(rel)
+    excluded_tokens = (
+        "/Manual/",
+        "ManualSync",
+        "Debug",
+        "Preview",
+        "Task087",
+        "Sandbox",
+    )
+    return [
+        rel for rel in sorted(explicit)
+        if (REPO / rel).exists() and not any(token in rel for token in excluded_tokens)
+    ]
+
+
+def check_absent_in_files(checks, check_id_prefix, files, pattern, reason, flags=0):
+    for rel in files:
+        check_absent(
+            checks,
+            f"{check_id_prefix}_{pathlib.Path(rel).stem}",
+            rel,
+            pattern,
+            reason,
+            flags,
+        )
+
+
+def check_present_any(checks, check_id, files, pattern, reason, flags=0):
+    evidence = []
+    for rel in files:
+        hits = line_hits(read(rel), pattern, flags)
+        for hit in hits[:5]:
+            evidence.append({"file": rel, **hit})
+        if evidence:
+            break
+    checks.append({
+        "id": check_id,
+        "status": "PASS" if evidence else "FAIL",
+        "file": "; ".join(files[:6]) + ("; ..." if len(files) > 6 else ""),
+        "reason": reason,
+        "evidence": evidence[:20] if evidence else [{"line": 0, "snippet": "pattern missing"}],
+    })
+
+
 def extract_body(text, start_pattern, end_pattern):
     start = re.search(start_pattern, text)
     if not start:
@@ -411,6 +478,8 @@ def no_legacy_runtime_path():
 
 
 def no_full_pull_normal_path():
+    if TASK == "TASK-118":
+        return task118_no_full_pull_normal_path()
     checks = []
     runtime = "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift"
     orchestrator = "iOSMerchandiseControl/Sync/SyncOrchestrator.swift"
@@ -456,6 +525,172 @@ def no_full_pull_normal_path():
     return checks
 
 
+def task118_sync_boundaries():
+    checks = []
+    automatic_files = task118_automatic_source_files()
+    all_files = all_swift_sources()
+    forbidden_manual_symbols = (
+        r"\bSupabaseManualSync[A-Za-z0-9_]*\b|"
+        r"\bManualPushPlan\b|"
+        r"\bSupabaseManualPushResult\b|"
+        r"\bProductPriceManualPushResult\b|"
+        r"\bProductPriceManualPushSnapshot\b|"
+        r"\bProductPriceManualPushSnapshotFactory\b"
+    )
+    check_absent_in_files(
+        checks,
+        "task118_automatic_no_manual_symbol",
+        automatic_files,
+        forbidden_manual_symbols,
+        "TASK-118 automatic sources must not contain manual sync symbols or manual DTO/result types.",
+    )
+    check_absent(
+        checks,
+        "task118_content_no_manual_push_service_wiring",
+        "iOSMerchandiseControl/ContentView.swift",
+        r"SupabaseManualPushService|manualPushService",
+        "Root sync wiring must not pass SupabaseManualPushService to automatic runtime.",
+    )
+    check_absent(
+        checks,
+        "task118_app_no_manual_push_service_root_dependency",
+        "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+        r"SupabaseManualPushService|manualPushService",
+        "App dependency root must not wire manual push service into the automatic path.",
+    )
+    check_absent(
+        checks,
+        "task118_runtime_factory_no_manual_push_argument",
+        "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        r"SupabaseManualPushService\?|manualPushService\s*:",
+        "SyncAutomaticRuntimeFactory.make must not accept SupabaseManualPushService.",
+    )
+    check_absent(
+        checks,
+        "task118_runtime_no_catalog_adapter_manual_push",
+        "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        r"SyncCatalogPushAdapter[\s\S]*manualPushService",
+        "Automatic runtime must not construct SyncCatalogPushAdapter with manualPushService.",
+        re.M,
+    )
+    for type_name in [
+        "SyncCatalogPushPlan",
+        "SyncCatalogPushResult",
+        "SyncProductPricePushPlan",
+        "SyncProductPricePushResult",
+        "SyncHistorySessionPushPlan",
+        "SyncHistorySessionPushResult",
+        "SyncActivityRegistrationResult",
+        "SyncAutomaticRunResult",
+    ]:
+        check_present_any(
+            checks,
+            f"task118_type_present_{type_name}",
+            all_files,
+            rf"\b{type_name}\b",
+            f"TASK-118 automatic domain type {type_name} must exist.",
+        )
+    check_absent(
+        checks,
+        "task118_runtime_run_not_bool",
+        "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        r"func\s+run\s*\([^)]*\)\s*async\s*->\s*Bool",
+        "Automatic runtime run() must return SyncAutomaticRunResult, not Bool.",
+        re.M,
+    )
+    check_absent(
+        checks,
+        "task118_provider_protocols_not_mainactor",
+        "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+        r"@MainActor\s+(?:public\s+|internal\s+)?protocol\s+Sync[A-Za-z0-9_]*Providing",
+        "Automatic provider protocols must not be @MainActor.",
+        re.M,
+    )
+    check_absent(
+        checks,
+        "task118_options_no_idle_progress_hardcode",
+        "iOSMerchandiseControl/OptionsView.swift",
+        r"CloudSyncProgressState\.idle\(\)",
+        "Options/root banner must observe real sync state rather than hardcoded idle progress.",
+    )
+    check_present_any(
+        checks,
+        "task118_options_observes_sync_state",
+        [
+            "iOSMerchandiseControl/OptionsView.swift",
+            "iOSMerchandiseControl/Sync/Presentation/OptionsSyncSummaryProvider.swift",
+            "iOSMerchandiseControl/Sync/SyncStateStore.swift",
+        ],
+        r"SyncStateStore|SyncState|OptionsSyncSummaryProvider|SyncStatusPresenter",
+        "Options/root banner must read real runtime/sync state through sync presentation/state APIs.",
+    )
+    return checks
+
+
+def task118_no_full_pull_normal_path():
+    checks = []
+    orchestrator = "iOSMerchandiseControl/Sync/SyncOrchestrator.swift"
+    runtime = "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift"
+    content = "iOSMerchandiseControl/ContentView.swift"
+    options = "iOSMerchandiseControl/OptionsView.swift"
+    check_present_any(
+        checks,
+        "task118_decision_input_provider_present",
+        all_swift_sources(),
+        r"SyncDecisionInputProvider|SyncDecisionInputSnapshot|SyncDecisionSnapshotProvider",
+        "TASK-118 must add a real decision input/snapshot provider.",
+    )
+    check_absent(
+        checks,
+        "task118_no_hardcoded_network_available",
+        orchestrator,
+        r"isNetworkAvailable:\s*true",
+        "SyncDecisionEngine input must use real reachability, not hardcoded network availability.",
+    )
+    check_absent(
+        checks,
+        "task118_no_hardcoded_bootstrap_false",
+        orchestrator,
+        r"requiresBootstrap:\s*false",
+        "Bootstrap status must come from real state, not a hardcoded false.",
+    )
+    check_absent(
+        checks,
+        "task118_no_hardcoded_full_recovery_false",
+        orchestrator,
+        r"requiresFullRecovery:\s*false",
+        "Full recovery status must come from real state, not a hardcoded false.",
+    )
+    check_absent(
+        checks,
+        "task118_no_source_localmutation_pending_proxy",
+        orchestrator,
+        r"hasPendingLocalChanges:\s*source\s*==\s*\.localMutation",
+        "Pending local changes/outbox must be read from real stores, not inferred from trigger source.",
+    )
+    check_absent(
+        checks,
+        "task118_runtime_no_bool_success_failure_ambiguity",
+        runtime,
+        r"catch[\s\S]*return\s+true|case\s+\.none:[\s\S]*return\s+true",
+        "Runtime result semantics must not collapse failure/no-work into true.",
+        re.M,
+    )
+    for rel, check_id in [
+        (content, "task118_content_no_full_pull_services"),
+        (options, "task118_options_no_full_pull_services"),
+        (orchestrator, "task118_orchestrator_no_full_pull_services"),
+    ]:
+        check_absent(
+            checks,
+            check_id,
+            rel,
+            r"SupabasePullApplyService|applyPagedFullPull|pullHistorySessionsFromCloud|fullReconciliation|bootstrapRequested",
+            "Foreground/timer/realtime/local mutation normal path must not call full pull services.",
+        )
+    return checks
+
+
 def evidence_bundle():
     checks = []
     evidence_dir = REPO / f"docs/TASKS/EVIDENCE/{TASK}"
@@ -486,6 +721,7 @@ def evidence_bundle():
 
 
 SCAN_MAP = {
+    "sync-boundaries": task118_sync_boundaries,
     "automatic-contracts-clean": automatic_contracts_clean,
     "root-host-clean": root_host_clean,
     "options-observer-only": options_observer_only,
@@ -522,7 +758,7 @@ def main():
         "startedAt": started,
         "completedAt": now(),
         "status": status,
-        "NEXT_ACTION": "Fix failing source/call-graph checks and rerun." if failures else "Use this report in TASK-117 evidence matrix.",
+        "NEXT_ACTION": "Fix failing source/call-graph checks and rerun." if failures else f"Use this report in {TASK} evidence matrix.",
         "failureCount": len(failures),
         "checks": checks,
     }

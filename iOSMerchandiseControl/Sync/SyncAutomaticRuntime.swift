@@ -1,11 +1,13 @@
 import Foundation
 import SwiftData
 
-@MainActor
 protocol SyncAutomaticRuntimeProviding: AnyObject {
+    @MainActor
     var isRunning: Bool { get }
 
-    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> Bool
+    @MainActor
+    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult
+    @MainActor
     func cancel()
 }
 
@@ -13,8 +15,8 @@ protocol SyncAutomaticRuntimeProviding: AnyObject {
 final class SyncNoopAutomaticRuntime: SyncAutomaticRuntimeProviding {
     var isRunning: Bool { false }
 
-    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> Bool {
-        false
+    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
+        .noWork()
     }
 
     func cancel() {}
@@ -54,12 +56,12 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
         activeTask != nil
     }
 
-    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> Bool {
-        guard activeTask == nil else { return false }
+    func run(action: SyncAction, source: SyncAutomaticTriggerSource) async -> SyncAutomaticRunResult {
+        guard activeTask == nil else { return .busy() }
         guard authViewModel.isSignedIn,
               let ownerUserID = authViewModel.sessionInfo?.userID else {
             recordDiagnostic("lastOutcome", "blocked_auth")
-            return false
+            return .blocked(.authRequired)
         }
         recordAttempt(source: source)
         var didRun = false
@@ -73,25 +75,32 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
             for step in action.flattenedAutomaticSteps {
                 try Task.checkCancellation()
                 switch step {
+                case .blocked(let reason):
+                    recordDiagnostic("lastOutcome", "blocked_\(reason)")
+                    return .blocked(reason)
                 case .pushPending:
                     didRun = try await pushPending(ownerUserID: ownerUserID) || didRun
                 case .drainEvents, .lightReconcile, .requestRecovery:
                     didRun = try await drainRemoteEvents(ownerUserID: ownerUserID, source: source) || didRun
                 case .bootstrap, .fullRecovery:
                     recordDiagnostic("lastOutcome", "blocked_full_pull_requires_explicit_context")
-                case .noOp, .retryAfterBusy, .blocked, .sequence:
+                    return .blocked(.accountDecisionRequired)
+                case .retryAfterBusy:
+                    recordDiagnostic("lastOutcome", "scheduled_retry")
+                    return .scheduledRetry(after: 2)
+                case .noOp, .sequence:
                     break
                 }
             }
             recordDiagnostic("lastOutcome", didRun ? "completed" : "no_work")
-            return true
+            return didRun ? .success(didWork: true) : .noWork()
         } catch is CancellationError {
             recordDiagnostic("lastOutcome", "cancelled")
-            return false
+            return .cancelled()
         } catch {
             recordDiagnostic("lastOutcome", "failed")
             recordDiagnostic("lastError", safeErrorDescription(error))
-            return true
+            return .failed(errorCode: safeErrorDescription(error))
         }
     }
 
@@ -197,8 +206,8 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
     }
 
     private func safeErrorDescription(_ error: Error) -> String {
-        String(describing: error)
-            .replacingOccurrences(of: #"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}"#, with: "<UUID>", options: .regularExpression)
+        SyncEventOutboxPrivacySanitizer.sanitizeErrorMessage(String(describing: error))
+            ?? "automatic_sync_error"
     }
 }
 
@@ -208,24 +217,17 @@ enum SyncAutomaticRuntimeFactory {
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
         inventoryService: SupabaseInventoryService?,
-        manualPushService: SupabaseManualPushService?,
         activityRecorder: (any SyncEventRecording)?
     ) -> any SyncAutomaticRuntimeProviding {
         let modelContainer = context.container
-        let catalogPushProvider: (any SyncCatalogPushProviding)? = manualPushService.map {
-            SyncCatalogPushAdapter(
-                context: context,
-                manualPushService: $0
-            )
+        let catalogPushProvider: (any SyncCatalogPushProviding)? = inventoryService.map {
+            CatalogPushService(modelContainer: modelContainer, remote: $0)
         }
         let productPriceProvider: (any SyncProductPriceSyncProviding)? = inventoryService.map {
-            SyncProductPriceAdapter(
-                modelContainer: modelContainer,
-                remote: $0
-            )
+            ProductPricePushService(modelContainer: modelContainer, remote: $0)
         }
         let historySessionProvider: (any SyncHistorySessionPushProviding)? = inventoryService.map {
-            SyncHistorySessionPushAdapter(
+            HistorySessionPushService(
                 modelContainer: modelContainer,
                 remote: $0,
                 recorder: activityRecorder
@@ -237,9 +239,10 @@ enum SyncAutomaticRuntimeFactory {
                 remote: $0
             )
         }
-        let activityRegistrationProvider: (any SyncActivityRegistrationProviding)? = activityRecorder.map {
-            SyncActivityRegistrationAdapter(context: context, recorder: $0)
-        }
+        let activityRegistrationProvider: (any SyncActivityRegistrationProviding)? = SyncActivityRegistrationService(
+            modelContainer: modelContainer,
+            recorder: activityRecorder
+        )
         return SyncAutomaticRuntime(
             authViewModel: authViewModel,
             catalogPushProvider: catalogPushProvider,

@@ -17,7 +17,6 @@ final class Task115RealRootLifecycleTests: XCTestCase {
         let root = ContentView(
             supabaseInventoryService: nil,
             supabasePullPreviewService: nil,
-            supabaseManualPushService: nil,
             syncEventOutboxDrainRecorder: nil,
             syncEventSignalWatcher: nil
         )
@@ -49,4 +48,3 @@ final class Task115RealRootLifecycleTests: XCTestCase {
         return container
     }
 }
-

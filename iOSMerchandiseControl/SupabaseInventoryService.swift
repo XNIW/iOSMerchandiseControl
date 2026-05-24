@@ -450,6 +450,95 @@ actor SupabaseInventoryService {
         }
     }
 
+    func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
+        let ownerUserID = try await requireAuthenticatedSession()
+        guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
+        }
+        return try await insertAutomaticRows(
+            payloads,
+            table: "inventory_suppliers",
+            columns: "id,owner_user_id,name,updated_at,deleted_at"
+        )
+    }
+
+    func updateSupplier(id: UUID, payload: SyncAutomaticSupplierUpdatePayload) async throws -> RemoteInventorySupplierRow {
+        try await updateAutomaticRow(
+            payload,
+            table: "inventory_suppliers",
+            columns: "id,owner_user_id,name,updated_at,deleted_at",
+            id: id
+        )
+    }
+
+    func createCategories(_ payloads: [SyncAutomaticCategoryCreatePayload]) async throws -> [RemoteInventoryCategoryRow] {
+        let ownerUserID = try await requireAuthenticatedSession()
+        guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
+        }
+        return try await insertAutomaticRows(
+            payloads,
+            table: "inventory_categories",
+            columns: "id,owner_user_id,name,updated_at,deleted_at"
+        )
+    }
+
+    func updateCategory(id: UUID, payload: SyncAutomaticCategoryUpdatePayload) async throws -> RemoteInventoryCategoryRow {
+        try await updateAutomaticRow(
+            payload,
+            table: "inventory_categories",
+            columns: "id,owner_user_id,name,updated_at,deleted_at",
+            id: id
+        )
+    }
+
+    func createProducts(_ payloads: [SyncAutomaticProductCreatePayload]) async throws -> [RemoteInventoryProductRow] {
+        let ownerUserID = try await requireAuthenticatedSession()
+        guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
+        }
+        return try await insertAutomaticRows(
+            payloads,
+            table: "inventory_products",
+            columns: Self.productColumns
+        )
+    }
+
+    func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow {
+        try await updateAutomaticRow(
+            payload,
+            table: "inventory_products",
+            columns: Self.productColumns,
+            id: id
+        )
+    }
+
+    func insertProductPrices(_ payloads: [SyncAutomaticProductPricePayload]) async throws -> [RemoteInventoryProductPriceRow] {
+        let ownerUserID = try await requireAuthenticatedSession()
+        guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
+            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
+        }
+        do {
+            return try await clientProvider.client
+                .from("inventory_product_prices")
+                .upsert(payloads, onConflict: "id")
+                .select("id,owner_user_id,product_id,type,price,effective_at,source,note,created_at")
+                .execute()
+                .value
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
     func upsertSharedSheetSessions(
         _ rows: [SharedSheetSessionUpsertRow],
         ownerUserID: UUID
@@ -1127,6 +1216,63 @@ actor SupabaseInventoryService {
                 .execute()
                 .value
             return rows
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func insertAutomaticRows<Row: Decodable & Sendable>(
+        _ payloads: some Encodable,
+        table: String,
+        columns: String
+    ) async throws -> [Row] {
+        do {
+            return try await clientProvider.client
+                .from(table)
+                .insert(payloads)
+                .select(columns)
+                .execute()
+                .value
+        } catch let error as DecodingError {
+            throw mapDecodingError(error)
+        } catch let error as PostgrestError {
+            throw mapPostgrestError(error)
+        } catch let error as URLError {
+            throw SupabaseInventoryServiceError.networkError(
+                statusCode: nil,
+                message: error.localizedDescription
+            )
+        } catch {
+            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+        }
+    }
+
+    private func updateAutomaticRow<Row: Decodable & Sendable>(
+        _ payload: some Encodable,
+        table: String,
+        columns: String,
+        id: UUID
+    ) async throws -> Row {
+        let ownerUserID = try await requireAuthenticatedSession()
+        do {
+            return try await clientProvider.client
+                .from(table)
+                .update(payload)
+                .eq("id", value: id.uuidString)
+                .eq("owner_user_id", value: ownerUserID.uuidString)
+                .select(columns)
+                .single()
+                .execute()
+                .value
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {

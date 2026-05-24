@@ -100,7 +100,6 @@ extension View {
 struct ContentView: View {
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
-    private let supabaseManualPushService: SupabaseManualPushService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
     private let historySessionSyncService: HistorySessionSyncService?
@@ -111,18 +110,17 @@ struct ContentView: View {
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @StateObject private var excelSession = ExcelSessionViewModel()
     @StateObject private var foregroundActivityCenter = ForegroundCloudWorkflowActivityCenter()
+    @StateObject private var syncStateStore = SyncStateStore()
     @State private var selectedTab = 0
 
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
-        supabaseManualPushService: SupabaseManualPushService? = nil,
         syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
-        self.supabaseManualPushService = supabaseManualPushService
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.historySessionSyncService = supabaseInventoryService.map {
@@ -146,9 +144,9 @@ struct ContentView: View {
             context: modelContext,
             authViewModel: supabaseAuthViewModel,
             inventoryService: supabaseInventoryService,
-            manualPushService: supabaseManualPushService,
             activityRecorder: syncEventOutboxDrainRecorder,
             syncEventSignalWatcher: syncEventSignalWatcher,
+            syncStateStore: syncStateStore,
             selectedTab: $selectedTab,
             activityCenter: foregroundActivityCenter
         ) {
@@ -212,7 +210,7 @@ struct ContentView: View {
                 OptionsView(
                     supabaseInventoryService: supabaseInventoryService,
                     supabasePullPreviewService: supabasePullPreviewService,
-                    supabaseManualPushService: supabaseManualPushService,
+                    syncStateStore: syncStateStore,
                     syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder
                 )
             }
@@ -239,9 +237,9 @@ private struct AppSyncRootHost<Content: View>: View {
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
         inventoryService: SupabaseInventoryService?,
-        manualPushService: SupabaseManualPushService?,
         activityRecorder: (any SyncEventRecording)?,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?,
+        syncStateStore: SyncStateStore,
         selectedTab: Binding<Int>,
         activityCenter: ForegroundCloudWorkflowActivityCenter,
         @ViewBuilder content: @escaping () -> Content
@@ -252,12 +250,13 @@ private struct AppSyncRootHost<Content: View>: View {
                     context: context,
                     authViewModel: authViewModel,
                     inventoryService: inventoryService,
-                    manualPushService: manualPushService,
                     activityRecorder: activityRecorder
                 ),
                 authViewModel: authViewModel,
                 activityCenter: activityCenter,
-                syncEventSignalWatcher: syncEventSignalWatcher
+                syncEventSignalWatcher: syncEventSignalWatcher,
+                stateStore: syncStateStore,
+                decisionInputProvider: SyncDecisionInputProvider(modelContainer: context.container)
             )
         )
         _selectedTab = selectedTab

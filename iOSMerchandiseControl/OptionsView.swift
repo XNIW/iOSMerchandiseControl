@@ -20,7 +20,6 @@ struct LanguageOption: Identifiable {
 struct OptionsView: View {
     private let supabaseInventoryService: SupabaseInventoryService?
     private let supabasePullPreviewService: SupabasePullPreviewService?
-    private let supabaseManualPushService: SupabaseManualPushService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
 
     @Environment(\.modelContext) private var modelContext
@@ -28,18 +27,20 @@ struct OptionsView: View {
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
     @Query private var localPendingChanges: [LocalPendingChange]
+    @ObservedObject private var syncStateStore: SyncStateStore
     @StateObject private var syncSummaryProvider = OptionsSyncSummaryProvider()
     @State private var isAccountDecisionSheetPresented = false
 
+    @MainActor
     init(
         supabaseInventoryService: SupabaseInventoryService? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
-        supabaseManualPushService: SupabaseManualPushService? = nil,
+        syncStateStore: SyncStateStore,
         syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil
     ) {
         self.supabaseInventoryService = supabaseInventoryService
         self.supabasePullPreviewService = supabasePullPreviewService
-        self.supabaseManualPushService = supabaseManualPushService
+        _syncStateStore = ObservedObject(wrappedValue: syncStateStore)
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
     }
 
@@ -205,6 +206,7 @@ struct OptionsView: View {
 
             SupabaseAutomaticSyncStatusCard(
                 authViewModel: supabaseAuthViewModel,
+                syncState: syncStateStore.state,
                 pendingCount: syncSummaryProvider.localPendingAttentionCount,
                 baselineSummary: syncSummaryProvider.supabaseBaselineSummary
             )
@@ -598,23 +600,26 @@ struct LocalDatabasePublicSummary: Equatable {
 private struct SupabaseAutomaticSyncStatusCard: View {
     @ObservedObject private var authViewModel: SupabaseAuthViewModel
 
+    private let syncState: SyncState
     private let pendingCount: Int
     private let baselineSummary: SupabaseCatalogBaselineDebugSummary
 
     init(
         authViewModel: SupabaseAuthViewModel,
+        syncState: SyncState,
         pendingCount: Int,
         baselineSummary: SupabaseCatalogBaselineDebugSummary
     ) {
         self.authViewModel = authViewModel
+        self.syncState = syncState
         self.pendingCount = pendingCount
         self.baselineSummary = baselineSummary
     }
 
     var body: some View {
-        let progress = CloudSyncProgressState.idle()
-        let isRunning = authViewModel.isTransitioning
-        let visibleProgress = SyncStatusPresenter.visibleProgress(from: progress)
+        let progress = progressState
+        let isRunning = authViewModel.isTransitioning || syncState.phase.isAutomaticWorkActive
+        let visibleProgress = progress.flatMap(SyncStatusPresenter.visibleProgress(from:))
 
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -642,10 +647,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
 
             if let visibleProgress {
                 CloudSyncProgressInlineView(state: visibleProgress)
-            } else if SyncStatusPresenter.shouldShowFallbackSpinner(
-                isRunning: isRunning,
-                progress: progress
-            ) {
+            } else if let progress,
+                      SyncStatusPresenter.shouldShowFallbackSpinner(
+                        isRunning: isRunning,
+                        progress: progress
+                      ) {
                 HStack(spacing: 10) {
                     ProgressView()
                     Text(L("options.supabase.automaticSync.running.inline"))
@@ -671,6 +677,21 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         .padding(.vertical, 4)
     }
 
+    private var progressState: CloudSyncProgressState? {
+        guard syncState.phase.isAutomaticWorkActive else { return nil }
+        let progress = syncState.progress
+        return CloudSyncProgressState.running(
+            phase: syncState.phase.cloudProgressPhase,
+            domain: nil,
+            current: progress?.current,
+            total: progress?.total,
+            message: L("options.supabase.automaticSync.running.inline"),
+            canCancel: false,
+            isBlockingApply: false,
+            allowsLocalWork: true
+        )
+    }
+
     private var lastSuccessText: String {
         guard let appliedAt = baselineSummary.appliedAt,
               baselineSummary.status == .valid else {
@@ -686,6 +707,20 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         guard authViewModel.isSignedIn else {
             return L("options.supabase.automaticSync.signedOut.title")
         }
+        switch syncState.lastOutcome {
+        case .failed:
+            return L("options.supabase.automaticSync.failed.title")
+        case .blocked:
+            return L("options.supabase.automaticSync.blocked.title")
+        case .scheduledRetry:
+            return L("options.supabase.automaticSync.retry.title")
+        case .busy:
+            return L("options.supabase.automaticSync.busy.title")
+        case .cancelled:
+            return L("options.supabase.automaticSync.cancelled.title")
+        case .succeeded, .noWork, .none:
+            break
+        }
         return L("options.supabase.automaticSync.active.title")
     }
 
@@ -695,6 +730,22 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
         guard authViewModel.isSignedIn else {
             return L("options.supabase.automaticSync.signedOut.detail")
+        }
+        switch syncState.lastOutcome {
+        case .failed:
+            return L("options.supabase.automaticSync.failed.detail")
+        case .blocked:
+            return L("options.supabase.automaticSync.blocked.detail")
+        case .scheduledRetry:
+            return L("options.supabase.automaticSync.retry.detail")
+        case .busy:
+            return L("options.supabase.automaticSync.busy.detail")
+        case .cancelled:
+            return L("options.supabase.automaticSync.cancelled.detail")
+        case .noWork:
+            return L("options.supabase.automaticSync.noWork.detail")
+        case .succeeded, .none:
+            break
         }
         if pendingCount > 0 {
             return L("options.supabase.automaticSync.pending.detail")
@@ -736,6 +787,16 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         if isRunning {
             return .accentColor
         }
+        switch syncState.lastOutcome {
+        case .failed, .blocked:
+            return .red
+        case .scheduledRetry, .busy:
+            return .orange
+        case .cancelled:
+            return .secondary
+        case .noWork, .succeeded, .none:
+            break
+        }
         if pendingCount > 0 {
             return .orange
         }
@@ -773,6 +834,22 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         if isRunning {
             return L("options.supabase.automaticSync.badge.running")
         }
+        switch syncState.lastOutcome {
+        case .failed:
+            return L("options.supabase.automaticSync.badge.failed")
+        case .blocked:
+            return L("options.supabase.automaticSync.badge.blocked")
+        case .scheduledRetry:
+            return L("options.supabase.automaticSync.badge.retry")
+        case .busy:
+            return L("options.supabase.automaticSync.badge.busy")
+        case .cancelled:
+            return L("options.supabase.automaticSync.badge.cancelled")
+        case .noWork:
+            return L("options.supabase.automaticSync.badge.noWork")
+        case .succeeded, .none:
+            break
+        }
         if pendingCount > 0 {
             return L("options.supabase.automaticSync.badge.pending")
         }
@@ -792,6 +869,22 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
         if isRunning {
             return "arrow.triangle.2.circlepath"
+        }
+        switch syncState.lastOutcome {
+        case .failed:
+            return "exclamationmark.triangle.fill"
+        case .blocked:
+            return "hand.raised.fill"
+        case .scheduledRetry:
+            return "clock.arrow.circlepath"
+        case .busy:
+            return "hourglass"
+        case .cancelled:
+            return "xmark.circle"
+        case .noWork:
+            return "checkmark.circle"
+        case .succeeded, .none:
+            break
         }
         if pendingCount > 0 {
             return "clock"
@@ -928,7 +1021,7 @@ struct OptionRow: View {
 
 #Preview {
     NavigationStack {
-        OptionsView()
+        OptionsView(syncStateStore: SyncStateStore())
     }
     .environmentObject(SupabaseAuthViewModel(authService: nil))
     .modelContainer(

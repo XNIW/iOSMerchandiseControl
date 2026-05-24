@@ -36,6 +36,10 @@ final class OptionsSyncSummaryProvider: ObservableObject {
         self.now = now
     }
 
+    deinit {
+        driftTask?.cancel()
+    }
+
     var hasSyncCountDrift: Bool {
         syncCountDriftReport?.isAligned == false
     }

@@ -38,6 +38,19 @@ Per Codex/Cursor:
 ./tools/agent/mc-agent.sh scan evidence --task TASK-115
 ```
 
+TASK-118 harness gates:
+
+```bash
+./tools/agent/mc-agent.sh git head-consistency --task TASK-118
+./tools/agent/mc-agent.sh preflight --require-head-consistency --task TASK-118
+./tools/agent/mc-agent.sh scan sync-boundaries --task TASK-118 --strict
+./tools/agent/mc-agent.sh scan no-full-pull-normal-path --task TASK-118 --strict
+./tools/agent/mc-agent.sh ios test automatic-domain --task TASK-118
+./tools/agent/mc-agent.sh report validate-json --task TASK-118 --path docs/TASKS/EVIDENCE/TASK-118/agent-runs
+```
+
+Per TASK-118 ogni comando deve usare `--task TASK-118` oppure `MC_TASK_ID=TASK-118`; evidence prodotta fuori da `docs/TASKS/EVIDENCE/TASK-118/` e' misconfigurata. Gli scan storici TASK-116/TASK-117 chiudono TASK-118 solo se eseguiti con semantica CA-118 e evidence TASK-118.
+
 Per operatore umano:
 
 ```bash

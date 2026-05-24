@@ -14,6 +14,12 @@ const TIMEOUT_MS = Number(process.env.MC_MCP_TIMEOUT_MS || 120000);
 
 const TOOLS = [
   { name: "mc_preflight", args: ["preflight"], live: false, cleanup: false },
+  { name: "mc_task118_head_consistency", args: ["git", "head-consistency", "--task"], taskArg: true, defaultTask: "TASK-118", live: false, cleanup: false },
+  { name: "mc_task118_preflight_head_consistency", args: ["preflight", "--require-head-consistency", "--task"], taskArg: true, defaultTask: "TASK-118", live: false, cleanup: false },
+  { name: "mc_task118_scan_sync_boundaries", args: ["scan", "sync-boundaries", "--task"], taskArg: true, defaultTask: "TASK-118", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task118_scan_no_full_pull_normal_path", args: ["scan", "no-full-pull-normal-path", "--task"], taskArg: true, defaultTask: "TASK-118", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task118_ios_test_automatic_domain", args: ["ios", "test", "automatic-domain", "--task"], taskArg: true, defaultTask: "TASK-118", live: false, cleanup: false },
+  { name: "mc_task118_report_validate_json", args: ["report", "validate-json", "--task"], taskArg: true, defaultTask: "TASK-118", suffixArgs: ["--path"], reportPathArg: true, defaultPath: "docs/TASKS/EVIDENCE/TASK-118/agent-runs", live: false, cleanup: false },
   { name: "mc_report", args: ["report", "--task", "TASK-115"], live: false, cleanup: false },
   { name: "mc_report_task115", args: ["report", "--task", "TASK-115"], live: false, cleanup: false },
   { name: "mc_ios_build_debug", args: ["ios", "build", "debug"], live: false, cleanup: false },
@@ -41,6 +47,22 @@ function validatePrefix(prefix) {
     !prefix.includes("..");
 }
 
+function validateTaskId(task) {
+  return typeof task === "string" && /^TASK-[0-9]{3,}$/.test(task);
+}
+
+function validateEvidencePath(task, candidate) {
+  if (!validateTaskId(task) || typeof candidate !== "string" || candidate.includes("..") || /[;&|`$<>]/.test(candidate)) {
+    return false;
+  }
+  const relRoot = `docs/TASKS/EVIDENCE/${task}`;
+  const absRoot = path.join(MC_IOS_REPO, relRoot);
+  return candidate === relRoot ||
+    candidate.startsWith(`${relRoot}/`) ||
+    candidate === absRoot ||
+    candidate.startsWith(`${absRoot}/`);
+}
+
 function buildArgs(tool, provided = {}) {
   if (tool.live && process.env.MC_ALLOW_LIVE !== "1") {
     throw new Error("Refused: MC_ALLOW_LIVE=1 is required by the CLI safety contract.");
@@ -49,6 +71,14 @@ function buildArgs(tool, provided = {}) {
     throw new Error("Refused: MC_ALLOW_CLEANUP=1 is required by the CLI safety contract.");
   }
   const args = [...tool.args];
+  let task = tool.defaultTask || provided.task;
+  if (tool.taskArg) {
+    task = provided.task || tool.defaultTask;
+    if (!validateTaskId(task)) {
+      throw new Error("Invalid or missing TASK id.");
+    }
+    args.push(task);
+  }
   if (tool.prefixArg) {
     const prefix = provided.prefix;
     if (!validatePrefix(prefix)) {
@@ -61,6 +91,16 @@ function buildArgs(tool, provided = {}) {
       throw new Error("Invalid Supabase profile.");
     }
     args.push("--profile", provided.profile);
+  }
+  if (tool.suffixArgs) {
+    args.push(...tool.suffixArgs);
+  }
+  if (tool.reportPathArg) {
+    const reportPath = provided.path || tool.defaultPath;
+    if (!validateEvidencePath(task, reportPath)) {
+      throw new Error("Invalid evidence path for task.");
+    }
+    args.push(reportPath);
   }
   return args;
 }
@@ -105,6 +145,9 @@ async function selfTest() {
   const names = new Set(TOOLS.map((tool) => tool.name));
   if (!names.has("mc_preflight") ||
       !names.has("mc_report_task115") ||
+      !names.has("mc_task118_head_consistency") ||
+      !names.has("mc_task118_scan_sync_boundaries") ||
+      !names.has("mc_task118_ios_test_automatic_domain") ||
       !names.has("mc_android_test_offline") ||
       !names.has("mc_sync_counts_supabase_task115") ||
       !names.has("mc_live_sync_matrix_task115")) {
@@ -133,7 +176,7 @@ const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/
 const { CallToolRequestSchema, ListToolsRequestSchema } = await import("@modelcontextprotocol/sdk/types.js");
 
 const server = new Server(
-  { name: "mc-agent-mcp", version: "0.2.0-task115" },
+  { name: "mc-agent-mcp", version: "0.3.0-task118" },
   { capabilities: { tools: {} } }
 );
 
@@ -145,6 +188,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       type: "object",
       properties: {
         ...(tool.prefixArg ? { prefix: { type: "string", description: "TASK* prefix required" } } : {}),
+        ...(tool.taskArg ? { task: { type: "string", pattern: "^TASK-[0-9]{3,}$", description: "Task id, defaults to the tool task when omitted" } } : {}),
+        ...(tool.reportPathArg ? { path: { type: "string", description: "Evidence path under docs/TASKS/EVIDENCE/<task>" } } : {}),
         ...(tool.profileArg ? { profile: { type: "string", enum: ["local", "linked", "dry-run-no-db"] } } : {}),
       },
       required: tool.prefixArg ? ["prefix"] : [],

@@ -1,13 +1,13 @@
 import Foundation
 
-enum PendingChangeCoalescer {
-    struct State: Equatable, Sendable {
+nonisolated enum PendingChangeCoalescer {
+    nonisolated struct State: Equatable, Sendable {
         var operation: LocalPendingChangeOperation
         var status: LocalPendingChangeStatus
         var changedFields: [String]
         var entityRemoteID: UUID?
 
-        init(
+        nonisolated init(
             operation: LocalPendingChangeOperation,
             status: LocalPendingChangeStatus = .pending,
             changedFields: [String],
@@ -22,7 +22,7 @@ enum PendingChangeCoalescer {
         }
     }
 
-    static func coalesce(
+    nonisolated static func coalesce(
         current: State,
         incoming: LocalPendingChangeOperation,
         changedFields: [String],
@@ -51,7 +51,7 @@ enum PendingChangeCoalescer {
         return result
     }
 
-    private static func mergeFields(_ lhs: [String], _ rhs: [String]) -> [String] {
+    nonisolated private static func mergeFields(_ lhs: [String], _ rhs: [String]) -> [String] {
         LocalPendingChange.decodeChangedFields(
             LocalPendingChange.encodeChangedFields(lhs + rhs)
         )

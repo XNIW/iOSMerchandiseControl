@@ -40,16 +40,23 @@ main() {
   local handler=()
   case "$cmd" in
     version) handler=(mc_cmd_version) ;;
-    doctor|preflight) handler=(mc_cmd_preflight) ;;
+    doctor|preflight) handler=(mc_cmd_preflight "${args[@]:1}") ;;
     config) handler=(mc_cmd_config "${args[@]:1}") ;;
     list) handler=(mc_cmd_list "${args[@]:1}") ;;
     report) handler=(mc_cmd_report "${args[@]:1}") ;;
+    git)
+      case "${args[1]:-}" in
+        head-consistency) handler=(mc_cmd_git head-consistency "${args[@]:2}") ;;
+        *) echo "Usage: git head-consistency --task <TASK-ID>" >&2; exit "$MC_EXIT_MISCONFIGURED" ;;
+      esac
+      ;;
     scan)
       case "${args[1]:-}" in
         sensitive) handler=(mc_cmd_scan_sensitive "${args[@]:2}") ;;
         evidence) handler=(mc_cmd_scan_evidence "${args[@]:2}") ;;
         repo-diff) handler=(mc_cmd_scan_repo_diff) ;;
         release-cta) handler=(mc_cmd_scan_release_cta) ;;
+        sync-boundaries) handler=(mc_cmd_scan_task117_static sync-boundaries "${args[@]:2}") ;;
         no-legacy-runtime-path) handler=(mc_cmd_scan_no_legacy_runtime_path "${args[@]:2}") ;;
         automatic-contracts-clean) handler=(mc_cmd_scan_task117_static automatic-contracts-clean "${args[@]:2}") ;;
         root-host-clean) handler=(mc_cmd_scan_task117_static root-host-clean "${args[@]:2}") ;;

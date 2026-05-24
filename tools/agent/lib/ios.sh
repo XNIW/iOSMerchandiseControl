@@ -983,6 +983,20 @@ mc_ios_test() {
         -only-testing:iOSMerchandiseControlTests/SyncStatusPresenterTests
       )
       ;;
+    automatic-domain)
+      MC_CA_REFS="CA-118-06,CA-118-07,CA-118-08,CA-118-11,CA-118-12,CA-118-16"
+      tests=(
+        -only-testing:iOSMerchandiseControlTests/SyncDecisionEngineTests
+        -only-testing:iOSMerchandiseControlTests/AccountSyncPolicyTests
+        -only-testing:iOSMerchandiseControlTests/WatermarkStoreTests
+        -only-testing:iOSMerchandiseControlTests/PendingChangeCoalescerTests
+        -only-testing:iOSMerchandiseControlTests/SyncRecoveryPolicyTests
+        -only-testing:iOSMerchandiseControlTests/SyncStatusPresenterTests
+        -only-testing:iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests
+        -only-testing:iOSMerchandiseControlTests/HistorySessionSyncServiceTests
+        -only-testing:iOSMerchandiseControlTests/Task118AutomaticDomainTests
+      )
+      ;;
     lifecycle)
       tests=(
         -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncLifecycleRunGateTests

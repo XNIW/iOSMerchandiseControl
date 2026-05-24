@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @MainActor
-final class SyncActivityRegistrationAdapter: SyncActivityRegistrationProviding, SupabaseManualSyncActivityRegistrationProviding {
+final class SyncActivityRegistrationAdapter: SupabaseManualSyncActivityRegistrationProviding {
     private let context: ModelContext
     private let recorder: any SyncEventRecording
     private let now: () -> Date

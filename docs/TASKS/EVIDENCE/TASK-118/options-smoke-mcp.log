@@ -1,0 +1,11 @@
+TASK-118 Options smoke MCP fallback
+status=PASS
+primary_harness=./tools/agent/mc-agent.sh ios smoke options --task TASK-118
+primary_harness_status=BLOCKED
+primary_blocker=legacy JXA/Accessibility could not find Simulator window
+fallback_build_run=XcodeBuildMCP build_run_sim SUCCEEDED
+fallback_navigation=tap x=352 y=835 SUCCEEDED
+fallback_ui_assertion=AX heading "Opzioni" visible
+screenshot=docs/TASKS/EVIDENCE/TASK-118/options-smoke-mcp-screenshot.jpg
+live_supabase=NOT_RUN
+mutation=none

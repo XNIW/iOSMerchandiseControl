@@ -69,6 +69,7 @@ final class SyncOrchestrator: ObservableObject {
     private let activityCenter: ForegroundCloudWorkflowActivityCenter
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
     private let stateStore: SyncStateStore
+    private let decisionInputProvider: any SyncDecisionInputProviding
 
     private var currentScenePhase: ScenePhase = .inactive
     private var foregroundTask: Task<Void, Never>?
@@ -85,13 +86,15 @@ final class SyncOrchestrator: ObservableObject {
         authViewModel: SupabaseAuthViewModel,
         activityCenter: ForegroundCloudWorkflowActivityCenter,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?,
-        stateStore: SyncStateStore? = nil
+        stateStore: SyncStateStore? = nil,
+        decisionInputProvider: any SyncDecisionInputProviding
     ) {
         self.automaticRuntime = automaticRuntime
         self.authViewModel = authViewModel
         self.activityCenter = activityCenter
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.stateStore = stateStore ?? SyncStateStore()
+        self.decisionInputProvider = decisionInputProvider
     }
 
     var rootPresentationState: SyncRootPresentationState {
@@ -212,27 +215,6 @@ final class SyncOrchestrator: ObservableObject {
             recordRuntimeDiagnostic("foreground.outcome", "blocked_scene")
             return
         }
-        let action = decideAction(source: source)
-        stateStore.recordDecision(trigger: source.syncTrigger, action: action)
-        switch action {
-        case .blocked(let reason):
-            stateStore.updatePhase(.blocked(reason), outcome: .blocked(reason))
-            recordRuntimeDiagnostic("foreground.outcome", "blocked_\(reason)")
-            return
-        case .retryAfterBusy:
-            deferForegroundCheck(source: source, forceIncremental: forceIncremental)
-            recordRuntimeDiagnostic("foreground.outcome", "deferred_decision_busy")
-            return
-        case .fullRecovery:
-            recordRuntimeDiagnostic("foreground.outcome", "blocked_full_recovery_requires_explicit_context")
-            stateStore.updatePhase(.recoveryRequired)
-            return
-        case .noOp:
-            recordRuntimeDiagnostic("foreground.outcome", "decision_noop")
-            return
-        case .pushPending, .drainEvents, .lightReconcile, .bootstrap, .requestRecovery, .sequence:
-            break
-        }
         guard foregroundTask == nil else {
             deferForegroundCheck(source: source, forceIncremental: forceIncremental)
             recordRuntimeDiagnostic("foreground.outcome", "deferred_existing_task")
@@ -244,13 +226,42 @@ final class SyncOrchestrator: ObservableObject {
             return
         }
 
-        recordRuntimeDiagnostic("foreground.outcome", action.diagnosticsScheduleName)
         foregroundTask = Task { @MainActor in
-            let didRun = await automaticRuntime.run(action: action, source: source)
+            let action = await decideAction(source: source)
+            stateStore.recordDecision(trigger: source.syncTrigger, action: action)
+            switch action {
+            case .blocked(let reason):
+                stateStore.recordRunResult(.blocked(reason))
+                recordRuntimeDiagnostic("foreground.outcome", "blocked_\(reason)")
+                completeForegroundTask()
+                return
+            case .retryAfterBusy:
+                deferForegroundCheck(source: source, forceIncremental: forceIncremental)
+                stateStore.recordRunResult(.scheduledRetry(after: 2))
+                recordRuntimeDiagnostic("foreground.outcome", "deferred_decision_busy")
+                completeForegroundTask(runDeferred: false)
+                return
+            case .fullRecovery, .bootstrap:
+                recordRuntimeDiagnostic("foreground.outcome", "blocked_full_recovery_requires_explicit_context")
+                stateStore.updatePhase(.recoveryRequired)
+                stateStore.recordRunResult(.blocked(.accountDecisionRequired))
+                completeForegroundTask()
+                return
+            case .noOp:
+                stateStore.recordRunResult(.noWork())
+                recordRuntimeDiagnostic("foreground.outcome", "decision_noop")
+                completeForegroundTask()
+                return
+            case .pushPending, .drainEvents, .lightReconcile, .requestRecovery, .sequence:
+                stateStore.updatePhase(action.runningPhase)
+            }
+            recordRuntimeDiagnostic("foreground.outcome", action.diagnosticsScheduleName)
+            let result = await automaticRuntime.run(action: action, source: source)
+            stateStore.recordRunResult(result)
             foregroundTask = nil
             objectWillChange.send()
             if forceIncremental,
-               !didRun,
+               result.status == .busy,
                currentScenePhase != .background,
                !activityCenter.isBusy,
                !hasDeferredForegroundCheck {
@@ -289,7 +300,15 @@ final class SyncOrchestrator: ObservableObject {
             self?.submitForegroundTrigger(source: .networkReconnect, forceIncremental: true)
         }
         scheduler.setForeground(currentScenePhase == .active)
-        let observer = AutomaticSyncNetworkReachabilityObserver(scheduler: scheduler)
+        let decisionInputProvider = decisionInputProvider
+        let observer = AutomaticSyncNetworkReachabilityObserver(
+            scheduler: scheduler,
+            statusHandler: { status in
+                Task {
+                    await decisionInputProvider.updateNetworkStatus(status)
+                }
+            }
+        )
         observer.start()
         reconnectScheduler = scheduler
         reconnectObserver = observer
@@ -340,6 +359,11 @@ final class SyncOrchestrator: ObservableObject {
         recordRuntimeDiagnostic("watcher.state", "started")
         syncEventSignalWatcher?.start(ownerUserID: ownerUserID) { [weak self] in
             self?.recordRuntimeDiagnostic("watcher.signalAt", Date().timeIntervalSince1970)
+            if let provider = self?.decisionInputProvider {
+                Task {
+                    await provider.recordRealtimeEvent()
+                }
+            }
             self?.submitForegroundTrigger(source: .remoteSyncEvent, forceIncremental: true)
         }
     }
@@ -363,21 +387,23 @@ final class SyncOrchestrator: ObservableObject {
         submitForegroundTrigger(source: source, forceIncremental: forceIncremental)
     }
 
-    private func decideAction(source: SyncAutomaticTriggerSource) -> SyncAction {
-        SyncDecisionEngine.decide(
-            SyncDecisionInput(
-                trigger: source.syncTrigger,
-                isAuthenticated: authViewModel.isSignedIn,
-                isNetworkAvailable: true,
-                requiresAccountDecision: false,
-                hasPendingLocalChanges: source == .localMutation,
-                hasRemoteSyncEvent: source == .remoteSyncEvent,
-                hasRemoteVerificationDrift: source.requestsLightReconcile,
-                requiresBootstrap: false,
-                requiresFullRecovery: false,
-                fullRecoveryContext: .normalForeground,
-                isSyncBusy: foregroundTask != nil || activityCenter.isBusy || automaticRuntime.isRunning
-            )
+    private func completeForegroundTask(runDeferred: Bool = true) {
+        foregroundTask = nil
+        objectWillChange.send()
+        if runDeferred {
+            runDeferredForegroundCheckIfNeeded()
+        }
+    }
+
+    private func decideAction(source: SyncAutomaticTriggerSource) async -> SyncAction {
+        let snapshot = await decisionInputProvider.makeSnapshot(
+            triggerSource: source,
+            isAuthenticated: authViewModel.isSignedIn,
+            ownerUserID: authViewModel.sessionInfo?.userID,
+            isSyncBusy: activityCenter.isBusy || automaticRuntime.isRunning
+        )
+        return SyncDecisionEngine.decide(
+            snapshot.input
         )
     }
 
@@ -408,33 +434,7 @@ final class SyncOrchestrator: ObservableObject {
 }
 
 private extension SyncAutomaticTriggerSource {
-    var diagnosticsName: String {
-        rawValue
-    }
-
-    var syncTrigger: SyncTrigger {
-        switch self {
-        case .releaseCard:
-            return .manualRefresh
-        case .rootForeground:
-            return .appForeground
-        case .networkReconnect:
-            return .networkAvailable
-        case .localMutation:
-            return .localMutation
-        case .remoteSyncEvent:
-            return .remoteSyncEvent
-        }
-    }
-
-    var requestsLightReconcile: Bool {
-        switch self {
-        case .releaseCard, .rootForeground, .networkReconnect:
-            return true
-        case .localMutation, .remoteSyncEvent:
-            return false
-        }
-    }
+    var diagnosticsName: String { rawValue }
 }
 
 private extension SyncAction {
@@ -460,6 +460,23 @@ private extension SyncAction {
             return "deferred_decision_busy"
         case .blocked(let reason):
             return "blocked_\(reason)"
+        }
+    }
+
+    var runningPhase: SyncPhase {
+        switch self {
+        case .pushPending:
+            return .pushing
+        case .drainEvents:
+            return .pullingEvents
+        case .lightReconcile, .requestRecovery:
+            return .reconciling
+        case .sequence(let actions):
+            return actions.first?.runningPhase ?? .checking
+        case .bootstrap, .fullRecovery:
+            return .recoveryRequired
+        case .noOp, .retryAfterBusy, .blocked:
+            return .checking
         }
     }
 }

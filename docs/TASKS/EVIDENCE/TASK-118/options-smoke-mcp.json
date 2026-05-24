@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.1",
+  "task_id": "TASK-118",
+  "source": "xcodebuildmcp.options-smoke",
+  "status": "PASS",
+  "primary_harness_status": "BLOCKED",
+  "primary_harness_report": "docs/TASKS/EVIDENCE/TASK-118/agent-runs/20260523T235852Z-ios-smoke-options-task-TASK-118-p6951.json",
+  "fallback": "XcodeBuildMCP build_run_sim + tap + snapshot_ui + screenshot",
+  "simulator": "iPhone 17 Pro",
+  "bundle_id": "com.niwcyber.iOSMerchandiseControl",
+  "screenshot": "docs/TASKS/EVIDENCE/TASK-118/options-smoke-mcp-screenshot.jpg",
+  "assertions": [
+    "app build/run succeeded",
+    "Options tab was reachable",
+    "Options heading was visible",
+    "settings content was visible"
+  ],
+  "redaction": "no secrets captured"
+}

@@ -1,8 +1,9 @@
 import Foundation
+import Combine
 
 @MainActor
-final class SyncStateStore {
-    private(set) var state = SyncState()
+final class SyncStateStore: ObservableObject {
+    @Published private(set) var state = SyncState()
     private let defaults: UserDefaults
     private let keyPrefix: String
 
@@ -33,6 +34,60 @@ final class SyncStateStore {
             lastVerifiedAt: state.lastVerifiedAt,
             lastOutcome: outcome ?? state.lastOutcome
         )
+    }
+
+    func recordRunResult(_ result: SyncAutomaticRunResult, now: Date = Date()) {
+        let phase: SyncPhase
+        let outcome: SyncOutcome
+        let verifiedAt: Date?
+
+        switch result.status {
+        case .success:
+            phase = .idle
+            outcome = .succeeded
+            verifiedAt = now
+        case .noWork:
+            phase = .idle
+            outcome = .noWork
+            verifiedAt = now
+        case .blocked:
+            let reason = result.blockReason ?? .accountDecisionRequired
+            phase = .blocked(reason)
+            outcome = .blocked(reason)
+            verifiedAt = state.lastVerifiedAt
+        case .busy:
+            phase = .checking
+            outcome = .busy
+            verifiedAt = state.lastVerifiedAt
+        case .failed:
+            phase = .failed
+            outcome = .failed
+            verifiedAt = state.lastVerifiedAt
+        case .cancelled:
+            phase = .idle
+            outcome = .cancelled
+            verifiedAt = state.lastVerifiedAt
+        case .scheduledRetry:
+            phase = .checking
+            outcome = .scheduledRetry
+            verifiedAt = state.lastVerifiedAt
+        }
+
+        state = SyncState(
+            phase: phase,
+            progress: nil,
+            lastVerifiedAt: verifiedAt,
+            lastOutcome: outcome
+        )
+        defaults.set(result.status.rawValue, forKey: "\(keyPrefix).lastRunStatus")
+        defaults.set(result.didWork, forKey: "\(keyPrefix).lastRunDidWork")
+        defaults.set(now.timeIntervalSince1970, forKey: "\(keyPrefix).lastRunCompletedAt")
+        if let errorCode = result.errorCode {
+            defaults.set(errorCode, forKey: "\(keyPrefix).lastRunErrorCode")
+        }
+        if let blockReason = result.blockReason {
+            defaults.set(blockReason.diagnosticsName, forKey: "\(keyPrefix).lastRunBlockReason")
+        }
     }
 }
 
@@ -75,6 +130,7 @@ private extension SyncBlockReason {
         case .authRequired: "authRequired"
         case .networkUnavailable: "networkUnavailable"
         case .accountDecisionRequired: "accountDecisionRequired"
+        case .localStateUnavailable: "localStateUnavailable"
         }
     }
 }
