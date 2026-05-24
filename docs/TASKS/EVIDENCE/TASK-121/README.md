@@ -2,9 +2,14 @@
 
 ## Stato
 - **Task**: TASK-121 — iOS Sync Architecture Full Purification and Legacy Eradication
-- **Stato corrente**: ACTIVE / PLANNING — READY_FOR_PLANNING_REVIEW
-- **Scope di questa fase**: planning-only. Nessun Swift/Kotlin/SQL, nessun build/test runtime, nessun Supabase live, nessun cleanup, nessuna migration/RLS/grant/RPC/schema change, nessun push GitHub.
+- **Stato corrente**: ACTIVE / FIX — CHANGES_REQUIRED
+- **Scope di questa fase**: final independent review evidence and targeted scanner/tracking fix. Nessuna nuova feature utente, nessun Supabase live, nessun cleanup, nessuna migration/RLS/grant/RPC/schema change, nessun push GitHub in questo review pass.
 - **Frase obbligatoria**: TASK-121 is created to plan the final architecture purification. Completion requires execution, review, and user acceptance.
+- **Verdict corrente**: `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`, non DONE.
+- **Reviewed SHA corrente**: local `HEAD`, `origin/main` e GitHub canonical `main` allineati su `a7564857128d08d4e15eaf0977617fbd8a91806a`.
+- **Commit architetturale storico citato da evidence precedenti**: `2ac8cb02587657307a0ec136e8153f6ee29808a2`.
+- **Blocco P1**: `iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift` resta un mega-service Remote multi-domain; `scan sync-architecture --task TASK-121 --strict` ora fallisce correttamente dopo il fix scanner `remote_transport_is_thin`.
+- **Final review corrente**: `docs/TASKS/EVIDENCE/TASK-121/final-review.md`.
 
 ## Evidence root futura
 La root unica per report di Execution/Review/Fix TASK-121 è:
@@ -15,7 +20,7 @@ docs/TASKS/EVIDENCE/TASK-121/agent-runs/
 
 Report generati altrove sono `MISCONFIGURED`.
 
-La futura Execution deve creare e mantenere:
+La Execution/Review/Fix deve creare e mantenere:
 
 ```text
 docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-help-json.json
@@ -27,7 +32,7 @@ docs/TASKS/EVIDENCE/TASK-121/sync-inventory.csv
 docs/TASKS/EVIDENCE/TASK-121/sync-inventory.json
 ```
 
-Questi file sono pianificati qui, non creati come output runtime in questa fase planning-only.
+Questi file sono ora evidence runtime/tracking di TASK-121. Live e cleanup restano `NOT_RUN` salvo override separato.
 
 ## Metadata obbligatori
 Ogni comando wrapped deve produrre `.md`, `.json`, `.log` sotto `agent-runs/` con JSON schema `1.1` e:

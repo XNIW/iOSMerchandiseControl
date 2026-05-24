@@ -1,0 +1,6 @@
+=== mc-agent ios smoke options --task TASK-121 ===
+legacy sim_ui/JXA options smoke returned 1; evaluating XcodeBuildMCP fallback evidence.
+XcodeBuildMCP fallback evidence accepted: docs/TASKS/EVIDENCE/TASK-121/ios-options-xcodebuildmcp-fallback.txt
+[sim_ui] OK: App com.niwcyber.iOSMerchandiseControl lanciata
+[sim_ui] ERROR: JXA timeout dopo 30s
+NOT_FOUND

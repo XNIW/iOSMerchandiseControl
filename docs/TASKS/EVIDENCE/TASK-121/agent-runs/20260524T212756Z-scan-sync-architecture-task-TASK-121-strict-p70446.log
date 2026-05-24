@@ -1,0 +1,312 @@
+=== mc-agent scan sync-architecture --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.sync-architecture",
+  "scan": "sync-architecture",
+  "status": "FAIL",
+  "result_status": "FAIL",
+  "summary": "sync-architecture: FAIL (6 checks)",
+  "started_at": "2026-05-24T21:27:56+00:00",
+  "completed_at": "2026-05-24T21:27:56+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "retry_policy_exists",
+      "status": "PASS",
+      "reason": "AutomaticSyncRetryPolicy exists.",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift"
+    },
+    {
+      "id": "facade_not_typealias",
+      "status": "PASS",
+      "reason": "Runtime facade is not a fake typealias."
+    },
+    {
+      "id": "root_runtime_no_behavior",
+      "status": "PASS",
+      "reason": "Root SyncAutomaticRuntime is deleted or zero-behavior shim.",
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift"
+    },
+    {
+      "id": "root_providers_no_behavior",
+      "status": "PASS",
+      "reason": "Root providers deleted or zero-behavior marker.",
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift"
+    },
+    {
+      "id": "domain_no_concrete_supabase_transport",
+      "status": "PASS",
+      "reason": "Automatic/Manual/Recovery/Shared domain files depend on protocols/adapters, not the concrete Supabase transport client.",
+      "evidence": {
+        "hit_count": 0,
+        "hits": []
+      }
+    },
+    {
+      "id": "remote_transport_is_thin",
+      "status": "FAIL",
+      "reason": "SupabaseTransportClient is a thin transport host, not the old multi-domain mega-service under a new name.",
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "evidence": {
+        "line_count": 1866,
+        "max_expected_lines": 500,
+        "direct_domain_conformances": [
+          {
+            "line": 57,
+            "snippet": "extension SupabaseTransportClient: OptionsSyncRemoteCountFetching {}"
+          },
+          {
+            "line": 58,
+            "snippet": "extension SupabaseTransportClient: SupabaseInventoryFetching {}"
+          },
+          {
+            "line": 59,
+            "snippet": "extension SupabaseTransportClient: SupabaseProductPriceKeysetFetching {}"
+          },
+          {
+            "line": 60,
+            "snippet": "extension SupabaseTransportClient: SupabaseProductPriceDeletedProductFetching {}"
+          },
+          {
+            "line": 61,
+            "snippet": "extension SupabaseTransportClient: SupabaseProductPriceManualPushRemoteAccessing {}"
+          },
+          {
+            "line": 62,
+            "snippet": "extension SupabaseTransportClient: SupabaseProductPricePushDryRunRemoteFetching {}"
+          },
+          {
+            "line": 63,
+            "snippet": "extension SupabaseTransportClient: SyncAutomaticIncrementalRemote {}"
+          }
+        ],
+        "domain_method_hits": [
+          {
+            "line": 428,
+            "snippet": "func updateProduct(id: UUID, payload: SupabaseManualPushProductUpdatePayload) async throws -> RemoteInventoryProductRow {"
+          },
+          {
+            "line": 461,
+            "snippet": "func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {"
+          },
+          {
+            "line": 473,
+            "snippet": "func updateSupplier(id: UUID, payload: SyncAutomaticSupplierUpdatePayload) async throws -> RemoteInventorySupplierRow {"
+          },
+          {
+            "line": 482,
+            "snippet": "func createCategories(_ payloads: [SyncAutomaticCategoryCreatePayload]) async throws -> [RemoteInventoryCategoryRow] {"
+          },
+          {
+            "line": 494,
+            "snippet": "func updateCategory(id: UUID, payload: SyncAutomaticCategoryUpdatePayload) async throws -> RemoteInventoryCategoryRow {"
+          },
+          {
+            "line": 503,
+            "snippet": "func createProducts(_ payloads: [SyncAutomaticProductCreatePayload]) async throws -> [RemoteInventoryProductRow] {"
+          },
+          {
+            "line": 515,
+            "snippet": "func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow {"
+          },
+          {
+            "line": 524,
+            "snippet": "func insertProductPrices(_ payloads: [SyncAutomaticProductPricePayload]) async throws -> [RemoteInventoryProductPriceRow] {"
+          },
+          {
+            "line": 550,
+            "snippet": "func upsertSharedSheetSessions("
+          },
+          {
+            "line": 807,
+            "snippet": "func fetchSyncEventsAfter(ownerUserID: UUID, afterID: Int64, limit: Int) async throws -> [RemoteSyncEventRow] {"
+          },
+          {
+            "line": 918,
+            "snippet": "func fetchReconciliationRemoteCounts() async throws -> SyncInventoryCountSnapshot {"
+          },
+          {
+            "line": 1010,
+            "snippet": "func fetchProductPricesForPushDryRunDedupePage("
+          },
+          {
+            "line": 1063,
+            "snippet": "func insertProductPriceManualPushPayloads(_ payloads: [ProductPriceManualPushPayload]) async throws -> [RemoteInventoryProductPriceRow] {"
+          },
+          {
+            "line": 1094,
+            "snippet": "func fetchProductPricesForManualPushVerificationPage("
+          }
+        ],
+        "debug_task_hooks": [
+          {
+            "line": 102,
+            "snippet": "nonisolated static let task087Prefix = \"TASK087_\""
+          },
+          {
+            "line": 103,
+            "snippet": "private static let task087UpperBound = \"TASK087`\""
+          },
+          {
+            "line": 104,
+            "snippet": "private static let task087SupplierNames = [\"TASK087_SUP\", \"TASK087_SUPPLIER\"]"
+          },
+          {
+            "line": 105,
+            "snippet": "private static let task087CategoryNames = [\"TASK087_CAT\", \"TASK087_CATEGORY\"]"
+          },
+          {
+            "line": 106,
+            "snippet": "private static let task087ProductBarcodes = [\"TASK087_BAR_A\", \"TASK087_BAR_I\"]"
+          },
+          {
+            "line": 107,
+            "snippet": "nonisolated static let task088Prefix = \"TASK088_\""
+          },
+          {
+            "line": 108,
+            "snippet": "private static let task088UpperBound = \"TASK088`\""
+          },
+          {
+            "line": 109,
+            "snippet": "private static let task088SupplierName = \"TASK088_SUPPLIER\""
+          },
+          {
+            "line": 110,
+            "snippet": "private static let task088CategoryName = \"TASK088_CATEGORY\""
+          },
+          {
+            "line": 111,
+            "snippet": "private static let task088ProductBarcode = \"TASK088_BAR_PRICE\""
+          },
+          {
+            "line": 112,
+            "snippet": "private static let task088ProductName = \"TASK088_PRODUCT\""
+          },
+          {
+            "line": 136,
+            "snippet": "guard suppliers.allSatisfy({ $0.ownerUserID == ownerUserID && $0.name.hasPrefix(Self.task087Prefix) }),"
+          },
+          {
+            "line": 137,
+            "snippet": "categories.allSatisfy({ $0.ownerUserID == ownerUserID && $0.name.hasPrefix(Self.task087Prefix) }),"
+          },
+          {
+            "line": 140,
+            "snippet": "&& $0.barcode.hasPrefix(Self.task087Prefix)"
+          },
+          {
+            "line": 141,
+            "snippet": "&& Self.task087ProductBarcodes.contains($0.barcode)"
+          },
+          {
+            "line": 146,
+            "snippet": "message: \"TASK087 owner or prefix mismatch\""
+          },
+          {
+            "line": 164,
+            "snippet": "&& Self.task087SupplierNames.contains($0.name)"
+          },
+          {
+            "line": 167,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 supplier collision.\")"
+          },
+          {
+            "line": 179,
+            "snippet": "&& Self.task087CategoryNames.contains($0.name)"
+          },
+          {
+            "line": 182,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 category collision.\")"
+          },
+          {
+            "line": 194,
+            "snippet": "&& Self.task087ProductBarcodes.contains($0.barcode)"
+          },
+          {
+            "line": 197,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 product collision.\")"
+          },
+          {
+            "line": 203,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 duplicate product collision.\")"
+          },
+          {
+            "line": 231,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 product seed read-back mismatch.\")"
+          },
+          {
+            "line": 240,
+            "snippet": "guard barcode.hasPrefix(Self.task087Prefix),"
+          },
+          {
+            "line": 241,
+            "snippet": "Self.task087ProductBarcodes.contains(barcode),"
+          },
+          {
+            "line": 242,
+            "snippet": "newProductName.hasPrefix(Self.task087Prefix) else {"
+          },
+          {
+            "line": 243,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 scoped update rejected.\")"
+          },
+          {
+            "line": 252,
+            "snippet": "message: \"TASK087 owner or barcode mismatch\""
+          },
+          {
+            "line": 281,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 product read-back mismatch.\")"
+          },
+          {
+            "line": 306,
+            "snippet": "&& $0.name == Self.task088SupplierName"
+          },
+          {
+            "line": 309,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK088 supplier collision.\")"
+          },
+          {
+            "line": 321,
+            "snippet": "&& $0.name == Self.task088CategoryName"
+          },
+          {
+            "line": 324,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK088 category collision.\")"
+          },
+          {
+            "line": 336,
+            "snippet": "&& $0.barcode == Self.task088ProductBarcode"
+          },
+          {
+            "line": 339,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK088 product collision.\")"
+          },
+          {
+            "line": 353,
+            "snippet": "product.barcode == Self.task088ProductBarcode,"
+          },
+          {
+            "line": 355,
+            "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK088 product seed read-back mismatch.\")"
+          },
+          {
+            "line": 375,
+            "snippet": "message: \"TASK088 owner mismatch\""
+          },
+          {
+            "line": 1305,
+            "snippet": ".in(\"name\", values: Self.task087SupplierNames)"
+          }
+        ]
+      },
+      "fix_hint": "Move domain-specific Supabase calls into focused Remote/Manual/Recovery adapters; keep the transport to shared client/session/error helpers only."
+    }
+  ],
+  "NEXT_ACTION": "Move/delete root runtime/provider legacy, implement retry ownership, and split Remote mega-service behavior into focused adapters."
+}

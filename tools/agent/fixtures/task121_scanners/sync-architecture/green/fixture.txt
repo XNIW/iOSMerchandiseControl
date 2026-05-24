@@ -1,1 +1,4 @@
-green fixture placeholder for sync-architecture
+GREEN: SupabaseTransportClient is a thin client/session/error helper below the
+line budget, and catalog, product-price, history, sync-event, manual, and
+recovery Supabase operations live in focused adapters. Expected: scan
+sync-architecture --task TASK-121 --strict returns PASS.

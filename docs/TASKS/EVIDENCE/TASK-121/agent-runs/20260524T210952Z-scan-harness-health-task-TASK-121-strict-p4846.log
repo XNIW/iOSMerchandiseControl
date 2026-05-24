@@ -1,0 +1,166 @@
+=== mc-agent scan harness-health --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.harness-health",
+  "scan": "harness-health",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "harness-health: PASS (21 checks)",
+  "started_at": "2026-05-24T21:09:53+00:00",
+  "completed_at": "2026-05-24T21:09:53+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/harness_routing/green/tools/agent/mc-agent.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/fixtures/task120_scanners/harness_routing/green/tools/agent/mc-agent.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/harness_routing/red/tools/agent/mc-agent.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/fixtures/task120_scanners/harness_routing/red/tools/agent/mc-agent.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/status_taxonomy/green/tools/agent/lib/report.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/fixtures/task120_scanners/status_taxonomy/green/tools/agent/lib/report.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/status_taxonomy/green/tools/agent/mc-agent.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/fixtures/task120_scanners/status_taxonomy/green/tools/agent/mc-agent.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/status_taxonomy/red/tools/agent/lib/report.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/fixtures/task120_scanners/status_taxonomy/red/tools/agent/lib/report.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/status_taxonomy/red/tools/agent/mc-agent.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/fixtures/task120_scanners/status_taxonomy/red/tools/agent/mc-agent.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/lib/android.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/lib/android.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/lib/common.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/lib/common.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/lib/ios.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/lib/ios.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/lib/redact.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/lib/redact.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/lib/report.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/lib/report.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/lib/supabase.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/lib/supabase.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/lib/sync.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/lib/sync.sh",
+      "evidence": ""
+    },
+    {
+      "id": "bash_n:tools/agent/mc-agent.sh",
+      "status": "PASS",
+      "reason": "Shell parses.",
+      "file": "tools/agent/mc-agent.sh",
+      "evidence": ""
+    },
+    {
+      "id": "py_compile:tools/agent/lib/sync_architecture_scans.py",
+      "status": "PASS",
+      "reason": "Python compiles.",
+      "file": "tools/agent/lib/sync_architecture_scans.py",
+      "evidence": ""
+    },
+    {
+      "id": "py_compile:tools/agent/lib/task117_scans.py",
+      "status": "PASS",
+      "reason": "Python compiles.",
+      "file": "tools/agent/lib/task117_scans.py",
+      "evidence": ""
+    },
+    {
+      "id": "py_compile:tools/agent/lib/task119_scans.py",
+      "status": "PASS",
+      "reason": "Python compiles.",
+      "file": "tools/agent/lib/task119_scans.py",
+      "evidence": ""
+    },
+    {
+      "id": "py_compile:tools/agent/lib/task120_scans.py",
+      "status": "PASS",
+      "reason": "Python compiles.",
+      "file": "tools/agent/lib/task120_scans.py",
+      "evidence": ""
+    },
+    {
+      "id": "py_compile:tools/agent/lib/task121_scans.py",
+      "status": "PASS",
+      "reason": "Python compiles.",
+      "file": "tools/agent/lib/task121_scans.py",
+      "evidence": ""
+    },
+    {
+      "id": "node_check:tools/agent/mcp/server.mjs",
+      "status": "PASS",
+      "reason": "MCP JavaScript parses.",
+      "file": "tools/agent/mcp/server.mjs",
+      "evidence": ""
+    },
+    {
+      "id": "node_check:tools/agent/mcp/test-wrapper.mjs",
+      "status": "PASS",
+      "reason": "MCP JavaScript parses.",
+      "file": "tools/agent/mcp/test-wrapper.mjs",
+      "evidence": ""
+    }
+  ],
+  "NEXT_ACTION": "Fix harness syntax before scanner execution."
+}

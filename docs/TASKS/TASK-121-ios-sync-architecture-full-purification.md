@@ -6,14 +6,14 @@
 - **File task**: `docs/TASKS/TASK-121-ios-sync-architecture-full-purification.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-121/`
 - **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE / Reviewer
+- **Fase attuale**: FIX
+- **Responsabile attuale**: CODEX / Fixer
 - **Data creazione**: 2026-05-24
-- **Ultimo aggiornamento**: 2026-05-24 15:42 -0400
-- **Ultimo agente che ha operato**: CODEX / Fixer
-- **Readiness**: ARCHITECTURE_TARGET_MET. Handoff `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`. Non DONE. Canonical GitHub `main`, `origin/main` and local `HEAD` were aligned after the authorized push; root sync-related forbidden files are absent and `Sync/Remote/SupabaseTransportClient.swift` plus Remote adapters are present.
+- **Ultimo aggiornamento**: 2026-05-24 17:21 -0400
+- **Ultimo agente che ha operato**: CODEX / Reviewer
+- **Readiness**: CHANGES_REQUIRED. Handoff `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`. Non DONE. Local `HEAD`, `origin/main` and GitHub canonical `main` are aligned on `a7564857128d08d4e15eaf0977617fbd8a91806a`; `2ac8cb02587657307a0ec136e8153f6ee29808a2` remains the historical architecture commit referenced by earlier evidence. Root sync-related forbidden files are absent, but `Sync/Remote/SupabaseTransportClient.swift` is still a multi-domain Remote mega-service, so `ARCHITECTURE_TARGET_MET` is not approved.
 - **Tipo task**: planning/refactor governance architetturale iOS; nessuna nuova feature utente.
-- **User override registrato**: l'utente ha prima chiesto a Codex di creare il planning TASK-121, poi ha autorizzato review/fix, continuation FIX e infine commit/push su GitHub `main` per chiudere il blocker canonical alignment. Nessun Supabase live, cleanup, migration/RLS/grant/RPC/schema change eseguito.
+- **User override registrato**: l'utente ha prima chiesto a Codex di creare il planning TASK-121, poi ha autorizzato review/fix, continuation FIX e commit/push su GitHub `main` per chiudere il blocker canonical alignment; infine ha richiesto a Codex una review severa indipendente nonostante il workflow standard assegni la review a Claude. Nessun Supabase live, cleanup, migration/RLS/grant/RPC/schema change eseguito.
 
 TASK-121 is created to plan the final architecture purification. Completion requires execution, review, and user acceptance.
 
@@ -1137,3 +1137,56 @@ Handoff post-fix:
 `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`.
 
 Non DONE. Non dichiarare produzione globale. Claude deve verificare evidence, canonical alignment e PASS_WITH_NOTES non bloccante prima di qualunque accettazione finale.
+
+## Final independent review — 2026-05-24
+
+Stato: `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`.
+Responsabile attuale: `CODEX / Fixer`.
+Ultimo agente: `CODEX / Reviewer`.
+
+User override: l'utente ha richiesto a Codex una review completa, severa e repo-grounded dopo il precedente handoff `ARCHITECTURE_TARGET_MET`. Questo override confligge con il ruolo standard Codex=executor/fixer e Claude=reviewer, ma e' stato seguito per richiesta esplicita. Nessun DONE dichiarato, nessun Supabase live/cleanup/migration/RLS/grant/RPC/schema change e nessun push GitHub in questo pass.
+
+Grounding SHA:
+- local `HEAD`: `a7564857128d08d4e15eaf0977617fbd8a91806a`;
+- `origin/main`: `a7564857128d08d4e15eaf0977617fbd8a91806a`;
+- GitHub canonical `main`: `a7564857128d08d4e15eaf0977617fbd8a91806a`;
+- commit che contiene le modifiche architetturali TASK-121 finali prima della successiva evidence commit: `2ac8cb02587657307a0ec136e8153f6ee29808a2`;
+- il mismatch tra `a756485...` e `2ac8cb0...` e' quindi spiegato come HEAD corrente vs commit architetturale storico, non come divergenza local/origin/GitHub.
+
+Findings:
+- P1: `iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift` non e' un transport/client sottile. E' ancora un mega-service multi-domain da 1866 righe con conformita' dirette a protocolli catalog/product-price/manual/dry-run/incremental, metodi Supabase catalog/product-price/history/sync-event/manual e hook debug `TASK087`/`TASK088`.
+- P1: gli adapter Remote (`CatalogRemoteSupabaseAdapter`, `ProductPriceRemoteSupabaseAdapter`, `HistorySessionRemoteSupabaseAdapter`, `SyncEventRemoteSupabaseAdapter`) esistono ma sono prevalentemente deleganti, quindi lo split non ha ancora spostato davvero il comportamento fuori dal transport.
+- P1: lo scanner `sync-architecture` precedente era un falso negativo, perche' passava anche con il mega-service rinominato sotto `Sync/Remote`.
+- PASS: root residue reale assente localmente e su GitHub canonical; `iOSMerchandiseControl/SupabaseInventoryService.swift` e' assente/404 e non ci sono duplicati root+moved.
+- PASS: Shared risulta puro al controllo statico richiesto; Manual non perde DTO/factory/view model dentro Automatic; Outbox resta infrastruttura condivisa classificata fuori da `Sync/Shared`.
+- PASS_WITH_NOTES: Options smoke resta accettabile solo come fallback XcodeBuildMCP per JXA/Accessibility tooling-blocked, non come prova live globale.
+- NOT_RUN: live reconcile, live sync matrix e cleanup restano intenzionalmente non eseguiti e non contano come PASS.
+
+Fix applicati durante review:
+- rafforzato `tools/agent/lib/task121_scans.py` con check `remote_transport_is_thin` in `scan_sync_architecture`;
+- aggiornate fixture `tools/agent/fixtures/task121_scanners/sync-architecture/` per coprire RED mega-service rinominato e GREEN transport sottile;
+- creato `docs/TASKS/EVIDENCE/TASK-121/final-review.md`;
+- aggiornati tracking/evidence per sostituire il verdict corrente con `CHANGES_REQUIRED`.
+
+Check eseguiti:
+- ✅ ESEGUITO — HEAD/preflight/config: PASS (`20260524T210617Z-git-head-consistency-task-TASK-121-p2043`, `20260524T210617Z-preflight-require-head-consistency-task-TASK-121-p2042`, `20260524T210617Z-config-validate-task-TASK-121-p2085`).
+- ✅ ESEGUITO — GitHub/local alignment: PASS su `a7564857128d08d4e15eaf0977617fbd8a91806a`; raw GitHub verificato con Python urllib no-cache per root old path `404` e Remote transport/adapters `200`.
+- ✅ ESEGUITO — Root residue indipendente: PASS; root forbidden files 0, duplicate root+moved 0.
+- ✅ ESEGUITO — Scanner matrix: PASS per task-docs, master-plan-consistency, harness-routing, harness-health, mcp-wrapper, status-taxonomy, evidence-metadata, sync-inventory, retry-ownership, manual-boundary, root-residue, shared-purity, dead-code, xcode-membership, duplicate-symbols, source-format e scanner-self-tests; `sync-architecture` ora FAIL correttamente dopo fix scanner (`20260524T211916Z-scan-sync-architecture-task-TASK-121-strict-p40244`).
+- ✅ ESEGUITO — Build Debug: PASS (`20260524T211032Z-ios-build-debug-task-TASK-121-p13238`).
+- ✅ ESEGUITO — Build Release: PASS (`20260524T211046Z-ios-build-release-task-TASK-121-p13956`).
+- ✅ ESEGUITO — Test automatic-architecture/domain/sync/manual regression: PASS (`20260524T211201Z-ios-test-automatic-architecture-task-TASK-121-p14753`, `20260524T211224Z-ios-test-automatic-domain-task-TASK-121-p15486`, `20260524T211235Z-ios-test-sync-task-TASK-121-p16090`, `20260524T211507Z-ios-test-manual-sync-regression-task-TASK-121-p16952`).
+- ✅ ESEGUITO — Options smoke: PASS_WITH_NOTES (`20260524T211520Z-ios-smoke-options-task-TASK-121-p17571`).
+- ✅ ESEGUITO — Supabase read-only/status/safety: PASS (`20260524T211023Z-supabase-status-redacted-task-TASK-121-p12132`, `20260524T211023Z-supabase-contract-sync-schema-task-TASK-121-read-only-p12133`, `20260524T211559Z-scan-sensitive-task-TASK-121-p18305`, `20260524T211559Z-scan-evidence-task-TASK-121-p18304`, `20260524T211559Z-report-validate-json-task-TASK-121-path-docs-TASKS-EVIDENCE-TASK-121-agent-runs-p18356`).
+- ✅ ESEGUITO — Post-tracking validation: PASS per `task-docs`, `master-plan-consistency`, `evidence-metadata`, `source-format`, `scanner-self-tests`, `scan evidence`, `report validate-json`; `sync-architecture` resta FAIL correttamente sul blocker Remote mega-service (`20260524T212756Z-scan-sync-architecture-task-TASK-121-strict-p70446`).
+- ✅ ESEGUITO — `git diff --check`: PASS finale, no output.
+
+Rischi rimasti:
+- P1 aperto: split Remote reale ancora da fare; finche' il comportamento resta concentrato in `SupabaseTransportClient`, l'architettura ideale TASK-121 non e' raggiunta.
+- Warning Swift/AppIntents restano presenti in build Release/Debug e sono trattati come preesistenti rispetto a questo review pass, non come regressione nuova.
+- Test e scanner passano molte superfici, ma non dimostrano ancora che il transport sia sottile; il nuovo scanner ora blocca questo caso.
+
+Handoff post-review:
+`TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`.
+
+Next action: spostare il comportamento Supabase multi-domain fuori da `SupabaseTransportClient` verso adapter Remote/Manual/Recovery focalizzati, mantenendo il transport come host sottile per client/session/errori condivisi; poi rieseguire `sync-architecture`, scanner matrix, build/test/smoke e Supabase read-only. Non DONE.

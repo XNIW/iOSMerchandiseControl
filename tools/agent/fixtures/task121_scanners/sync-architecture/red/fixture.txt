@@ -1,1 +1,4 @@
-red fixture placeholder for sync-architecture
+RED: SupabaseTransportClient is renamed but still owns catalog, product-price,
+history, sync-event, manual preview/dry-run, and TASK087/TASK088 debug hooks.
+Expected: scan sync-architecture --task TASK-121 --strict returns FAIL because
+Remote adapters only delegate into a multi-domain transport mega-service.

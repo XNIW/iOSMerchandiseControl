@@ -1,0 +1,51 @@
+=== mc-agent scan sync-architecture --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.sync-architecture",
+  "scan": "sync-architecture",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "sync-architecture: PASS (5 checks)",
+  "started_at": "2026-05-24T21:10:13+00:00",
+  "completed_at": "2026-05-24T21:10:13+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "retry_policy_exists",
+      "status": "PASS",
+      "reason": "AutomaticSyncRetryPolicy exists.",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift"
+    },
+    {
+      "id": "facade_not_typealias",
+      "status": "PASS",
+      "reason": "Runtime facade is not a fake typealias."
+    },
+    {
+      "id": "root_runtime_no_behavior",
+      "status": "PASS",
+      "reason": "Root SyncAutomaticRuntime is deleted or zero-behavior shim.",
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift"
+    },
+    {
+      "id": "root_providers_no_behavior",
+      "status": "PASS",
+      "reason": "Root providers deleted or zero-behavior marker.",
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift"
+    },
+    {
+      "id": "domain_no_concrete_supabase_transport",
+      "status": "PASS",
+      "reason": "Automatic/Manual/Recovery/Shared domain files depend on protocols/adapters, not the concrete Supabase transport client.",
+      "evidence": {
+        "hit_count": 0,
+        "hits": []
+      }
+    }
+  ],
+  "NEXT_ACTION": "Move/delete root runtime/provider legacy and implement retry ownership."
+}

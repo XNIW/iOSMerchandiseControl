@@ -1,8 +1,14 @@
 # TASK-121 final architecture certification
 
-Verdict: `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`.
+Supersession note (2026-05-24 17:21 -0400): this certification is no longer the current approval verdict. It is retained as historical evidence for the earlier canonical alignment pass. The current final review is `docs/TASKS/EVIDENCE/TASK-121/final-review.md`.
 
-This canonical alignment pass physically eradicated the remaining local root residues, removed the legacy `SupabaseInventoryService` production symbol, committed the TASK-121 fix set, pushed it to GitHub `main`, and verified canonical GitHub after the push. It does not mark TASK-121 DONE.
+Current verdict: `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`.
+
+Reason: independent review verified local/origin/GitHub alignment on `a7564857128d08d4e15eaf0977617fbd8a91806a` and root residue count 0, but found that `iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift` remains a 1866-line multi-domain Remote mega-service. The prior `sync-architecture` scanner accepted this as PASS; the scanner has been strengthened and now fails correctly at `20260524T211916Z-scan-sync-architecture-task-TASK-121-strict-p40244`.
+
+Historical verdict below was superseded: `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`.
+
+This canonical alignment pass physically eradicated the remaining local root residues, removed the legacy `SupabaseInventoryService` production symbol, committed the TASK-121 fix set, pushed it to GitHub `main`, and verified canonical GitHub after the push. It does not mark TASK-121 DONE and no longer approves the architecture target after the later review finding.
 
 ## Canonical GitHub alignment certification
 

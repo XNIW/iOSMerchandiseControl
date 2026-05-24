@@ -523,6 +523,9 @@ def scan_sync_architecture() -> dict[str, object]:
     provider = path("iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift")
     runtime_text = read("iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift")
     provider_text = read("iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift")
+    transport_rel = "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift"
+    transport = read(transport_rel)
+    transport_lines = transport.splitlines()
     concrete_transport_hits = []
     for candidate in swift_files("iOSMerchandiseControl/Sync"):
         rel_path = rel(candidate)
@@ -530,6 +533,15 @@ def scan_sync_architecture() -> dict[str, object]:
             continue
         for hit in line_hits(rel_path, r"\bSupabaseTransportClient\b"):
             concrete_transport_hits.append({"file": rel_path, **hit})
+    direct_domain_conformances = line_hits(
+        transport_rel,
+        r"extension\s+SupabaseTransportClient:\s+(OptionsSyncRemoteCountFetching|SupabaseInventoryFetching|SupabaseProductPriceKeysetFetching|SupabaseProductPriceDeletedProductFetching|SupabaseProductPriceManualPushRemoteAccessing|SupabaseProductPricePushDryRunRemoteFetching|SyncAutomaticIncrementalRemote)\b",
+    )
+    domain_method_hits = line_hits(
+        transport_rel,
+        r"\bfunc\s+(createSuppliers|updateSupplier|createCategories|updateCategory|createProducts|updateProduct|insertProductPrices|upsertSharedSheetSessions|fetchSyncEventsAfter|fetchReconciliationRemoteCounts|fetchProductPricesForPushDryRunDedupePage|insertProductPriceManualPushPayloads|fetchProductPricesForManualPushVerificationPage)\b",
+    )
+    debug_task_hooks = line_hits(transport_rel, r"\bTASK08[78]\b|task08[78]")
     check(checks, "retry_policy_exists", "PASS" if retry_exists else "FAIL", "AutomaticSyncRetryPolicy exists.", file="iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift")
     check(checks, "facade_not_typealias", "PASS" if "typealias AutomaticSyncRuntimeFacade = SyncAutomaticRuntime" not in facade else "FAIL", "Runtime facade is not a fake typealias.")
     check(checks, "root_runtime_no_behavior", "PASS" if not root_runtime.exists() or len(runtime_text.strip().splitlines()) <= 20 else "FAIL", "Root SyncAutomaticRuntime is deleted or zero-behavior shim.", file=rel(root_runtime))
@@ -542,7 +554,22 @@ def scan_sync_architecture() -> dict[str, object]:
         "Automatic/Manual/Recovery/Shared domain files depend on protocols/adapters, not the concrete Supabase transport client.",
         evidence={"hit_count": len(concrete_transport_hits), "hits": concrete_transport_hits[:80]},
     )
-    return report("sync-architecture", checks, "Move/delete root runtime/provider legacy and implement retry ownership.")
+    check(
+        checks,
+        "remote_transport_is_thin",
+        "PASS" if len(transport_lines) <= 500 and not direct_domain_conformances and not domain_method_hits and not debug_task_hooks else "FAIL",
+        "SupabaseTransportClient is a thin transport host, not the old multi-domain mega-service under a new name.",
+        file=transport_rel,
+        evidence={
+            "line_count": len(transport_lines),
+            "max_expected_lines": 500,
+            "direct_domain_conformances": direct_domain_conformances[:40],
+            "domain_method_hits": domain_method_hits[:80],
+            "debug_task_hooks": debug_task_hooks[:40],
+        },
+        fix_hint="Move domain-specific Supabase calls into focused Remote/Manual/Recovery adapters; keep the transport to shared client/session/error helpers only.",
+    )
+    return report("sync-architecture", checks, "Move/delete root runtime/provider legacy, implement retry ownership, and split Remote mega-service behavior into focused adapters.")
 
 
 def scan_retry_ownership() -> dict[str, object]:

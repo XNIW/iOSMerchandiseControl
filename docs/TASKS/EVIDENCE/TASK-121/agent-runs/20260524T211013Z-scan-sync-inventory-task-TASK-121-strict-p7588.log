@@ -1,0 +1,39 @@
+=== mc-agent scan sync-inventory --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.sync-inventory",
+  "scan": "sync-inventory",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "sync-inventory: PASS (3 checks)",
+  "started_at": "2026-05-24T21:10:14+00:00",
+  "completed_at": "2026-05-24T21:10:14+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "inventory_non_empty",
+      "status": "PASS",
+      "reason": "Sync/root inventory has relevant files.",
+      "evidence": {
+        "count": 128
+      }
+    },
+    {
+      "id": "no_uncategorized",
+      "status": "PASS",
+      "reason": "No relevant file is UNCATEGORIZED.",
+      "evidence": []
+    },
+    {
+      "id": "outbox_not_keep_shared_pure",
+      "status": "PASS",
+      "reason": "Sync/Outbox is not globally treated as KEEP_SHARED_PURE.",
+      "evidence": []
+    }
+  ],
+  "NEXT_ACTION": "Resolve UNCATEGORIZED files and review generated sync-inventory.csv/json."
+}

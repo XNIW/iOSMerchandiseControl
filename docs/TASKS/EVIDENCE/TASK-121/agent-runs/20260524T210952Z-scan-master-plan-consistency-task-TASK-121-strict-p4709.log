@@ -1,0 +1,42 @@
+=== mc-agent scan master-plan-consistency --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.master-plan-consistency",
+  "scan": "master-plan-consistency",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "master-plan-consistency: PASS (3 checks)",
+  "started_at": "2026-05-24T21:09:52+00:00",
+  "completed_at": "2026-05-24T21:09:52+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "objective_is_task121",
+      "status": "PASS",
+      "reason": "Current objective block is TASK-121.",
+      "file": "docs/MASTER-PLAN.md"
+    },
+    {
+      "id": "single_current_task121",
+      "status": "PASS",
+      "reason": "Exactly one operative current task is TASK-121.",
+      "file": "docs/MASTER-PLAN.md",
+      "evidence": {
+        "current_ids": [
+          "121"
+        ]
+      }
+    },
+    {
+      "id": "task120_superseded_not_done",
+      "status": "PASS",
+      "reason": "TASK-120 is superseded and not DONE.",
+      "file": "docs/MASTER-PLAN.md"
+    }
+  ],
+  "NEXT_ACTION": "Keep only TASK-121 as current objective; historical ACTIVE headings are allowed only outside current task fields."
+}

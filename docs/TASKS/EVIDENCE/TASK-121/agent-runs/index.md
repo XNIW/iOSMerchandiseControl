@@ -4,6 +4,18 @@ Generated during the post-TASK-121 architecture review/fix pass on 2026-05-24.
 
 Updated during the continuation root-residue eradication and canonical GitHub alignment pass on 2026-05-24.
 
+Updated during the independent final review pass on 2026-05-24 17:21 -0400.
+
+Current verdict: `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`, not DONE.
+
+Current reviewed SHA:
+- local `HEAD`: `a7564857128d08d4e15eaf0977617fbd8a91806a`
+- `origin/main`: `a7564857128d08d4e15eaf0977617fbd8a91806a`
+- GitHub canonical `main`: `a7564857128d08d4e15eaf0977617fbd8a91806a`
+- historical architecture commit referenced by earlier evidence: `2ac8cb02587657307a0ec136e8153f6ee29808a2`
+
+Blocking review finding: `iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift` remains a multi-domain mega-service; the strengthened `sync-architecture` scanner now fails correctly.
+
 ## Discovery and preflight
 
 - PASS: `git head-consistency --task TASK-121`
@@ -33,7 +45,7 @@ Discovery evidence:
 
 - PASS: `scan source-format --task TASK-121 --strict`
 - PASS: `scan sync-inventory --task TASK-121 --strict`
-- PASS: `scan sync-architecture --task TASK-121 --strict`
+- FAIL: `scan sync-architecture --task TASK-121 --strict` after scanner strengthening (`20260524T211916Z-scan-sync-architecture-task-TASK-121-strict-p40244`); earlier PASS refs are superseded false negatives for the Remote mega-service case.
 - PASS: `scan retry-ownership --task TASK-121 --strict`
 - PASS: `scan manual-boundary --task TASK-121 --strict`
 - PASS: `scan shared-purity --task TASK-121 --strict`
@@ -90,6 +102,54 @@ Options fallback evidence:
 - PASS: `git diff --check`
 
 Live and cleanup gates were NOT_RUN by design and are not counted as PASS.
+
+## Independent final review rerun — 2026-05-24 17:21 -0400
+
+- PASS: `git head-consistency --task TASK-121` (`20260524T210617Z-git-head-consistency-task-TASK-121-p2043`)
+- PASS: `preflight --require-head-consistency --task TASK-121` (`20260524T210617Z-preflight-require-head-consistency-task-TASK-121-p2042`)
+- PASS: `config validate --task TASK-121` (`20260524T210617Z-config-validate-task-TASK-121-p2085`)
+- PASS: `scan task-docs --task TASK-121 --strict` (`20260524T210952Z-scan-task-docs-task-TASK-121-strict-p4708`)
+- PASS: `scan master-plan-consistency --task TASK-121 --strict` (`20260524T210952Z-scan-master-plan-consistency-task-TASK-121-strict-p4709`)
+- PASS: `scan harness-routing --task TASK-121 --strict` (`20260524T210952Z-scan-harness-routing-task-TASK-121-strict-p4859`)
+- PASS: `scan harness-health --task TASK-121 --strict` (`20260524T210952Z-scan-harness-health-task-TASK-121-strict-p4846`)
+- PASS: `scan mcp-wrapper --task TASK-121 --strict` (`20260524T210952Z-scan-mcp-wrapper-task-TASK-121-strict-p4831`)
+- PASS: `scan status-taxonomy --task TASK-121 --strict` (`20260524T210952Z-scan-status-taxonomy-task-TASK-121-strict-p4851`)
+- PASS: `scan evidence-metadata --task TASK-121 --strict` (`20260524T210952Z-scan-evidence-metadata-task-TASK-121-strict-p4855`)
+- PASS: `scan sync-inventory --task TASK-121 --strict` (`20260524T211013Z-scan-sync-inventory-task-TASK-121-strict-p7588`)
+- FAIL: `scan sync-architecture --task TASK-121 --strict` after scanner fix (`20260524T211916Z-scan-sync-architecture-task-TASK-121-strict-p40244`)
+- PASS: `scan retry-ownership --task TASK-121 --strict` (`20260524T211013Z-scan-retry-ownership-task-TASK-121-strict-p7617`)
+- PASS: `scan manual-boundary --task TASK-121 --strict` (`20260524T211013Z-scan-manual-boundary-task-TASK-121-strict-p7653`)
+- PASS: `scan root-residue --task TASK-121 --strict` (`20260524T211013Z-scan-root-residue-task-TASK-121-strict-p7684`)
+- PASS: `scan shared-purity --task TASK-121 --strict` (`20260524T211013Z-scan-shared-purity-task-TASK-121-strict-p7628`)
+- PASS: `scan dead-code --task TASK-121 --strict` (`20260524T211013Z-scan-dead-code-task-TASK-121-strict-p7704`)
+- PASS: `scan xcode-membership --task TASK-121 --strict` (`20260524T211013Z-scan-xcode-membership-task-TASK-121-strict-p7625`)
+- PASS: `scan duplicate-symbols --task TASK-121 --strict` (`20260524T211013Z-scan-duplicate-symbols-task-TASK-121-strict-p7639`)
+- PASS: `scan source-format --task TASK-121 --strict` after scanner fix (`20260524T211916Z-scan-source-format-task-TASK-121-strict-p40218`)
+- PASS: `scan scanner-self-tests --task TASK-121 --strict` after scanner fix (`20260524T211916Z-scan-scanner-self-tests-task-TASK-121-strict-p40243`)
+- PASS: `ios build debug --task TASK-121` (`20260524T211032Z-ios-build-debug-task-TASK-121-p13238`)
+- PASS: `ios build release --task TASK-121` (`20260524T211046Z-ios-build-release-task-TASK-121-p13956`)
+- PASS: `ios test automatic-architecture --task TASK-121` (`20260524T211201Z-ios-test-automatic-architecture-task-TASK-121-p14753`)
+- PASS: `ios test automatic-domain --task TASK-121` (`20260524T211224Z-ios-test-automatic-domain-task-TASK-121-p15486`)
+- PASS: `ios test sync --task TASK-121` (`20260524T211235Z-ios-test-sync-task-TASK-121-p16090`)
+- PASS: `ios test manual-sync-regression --task TASK-121` (`20260524T211507Z-ios-test-manual-sync-regression-task-TASK-121-p16952`)
+- PASS_WITH_NOTES: `ios smoke options --task TASK-121` (`20260524T211520Z-ios-smoke-options-task-TASK-121-p17571`)
+- PASS: `supabase status-redacted --task TASK-121` (`20260524T211023Z-supabase-status-redacted-task-TASK-121-p12132`)
+- PASS: `supabase contract sync-schema --task TASK-121 --read-only` (`20260524T211023Z-supabase-contract-sync-schema-task-TASK-121-read-only-p12133`)
+- PASS: `scan sensitive --task TASK-121` (`20260524T211559Z-scan-sensitive-task-TASK-121-p18305`)
+- PASS: `scan evidence --task TASK-121` (`20260524T211559Z-scan-evidence-task-TASK-121-p18304`)
+- PASS: `report validate-json --task TASK-121 --path docs/TASKS/EVIDENCE/TASK-121/agent-runs` (`20260524T211559Z-report-validate-json-task-TASK-121-path-docs-TASKS-EVIDENCE-TASK-121-agent-runs-p18356`)
+- PASS: `git diff --check` after tracking edits; no output.
+
+Post-tracking validation refs:
+- PASS: `scan task-docs --task TASK-121 --strict` (`20260524T212741Z-scan-task-docs-task-TASK-121-strict-p69155`)
+- PASS: `scan master-plan-consistency --task TASK-121 --strict` (`20260524T212741Z-scan-master-plan-consistency-task-TASK-121-strict-p69154`)
+- PASS: `scan evidence-metadata --task TASK-121 --strict` (`20260524T212741Z-scan-evidence-metadata-task-TASK-121-strict-p69156`)
+- PASS: `scan source-format --task TASK-121 --strict` (`20260524T212559Z-scan-source-format-task-TASK-121-strict-p44756`)
+- FAIL: `scan sync-architecture --task TASK-121 --strict` (`20260524T212756Z-scan-sync-architecture-task-TASK-121-strict-p70446`); `remote_transport_is_thin` evidence: line count 1866, direct domain conformances 7, domain method hits 14, debug task hooks 40.
+- PASS: `scan scanner-self-tests --task TASK-121 --strict` (`20260524T212607Z-scan-scanner-self-tests-task-TASK-121-strict-p46364`)
+- PASS: `scan evidence --task TASK-121` (`20260524T212756Z-scan-evidence-task-TASK-121-p70413`)
+- PASS: `report validate-json --task TASK-121 --path docs/TASKS/EVIDENCE/TASK-121/agent-runs` (`20260524T212834Z-report-validate-json-task-TASK-121-path-docs-TASKS-EVIDENCE-TASK-121-agent-runs-p91739`)
+- PASS: `git diff --check`, no output.
 
 ## Final anti-false-positive architecture certification
 

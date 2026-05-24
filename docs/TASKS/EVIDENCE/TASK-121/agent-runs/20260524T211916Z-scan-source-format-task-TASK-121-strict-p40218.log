@@ -1,0 +1,25 @@
+=== mc-agent scan source-format --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.source-format",
+  "scan": "source-format",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "source-format: PASS (1 checks)",
+  "started_at": "2026-05-24T21:19:16+00:00",
+  "completed_at": "2026-05-24T21:19:16+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "no_minified_core_files",
+      "status": "PASS",
+      "reason": "Sync/harness/MCP core files are readable.",
+      "evidence": []
+    }
+  ],
+  "NEXT_ACTION": "Format one-line/minified core files before semantic Swift refactor."
+}

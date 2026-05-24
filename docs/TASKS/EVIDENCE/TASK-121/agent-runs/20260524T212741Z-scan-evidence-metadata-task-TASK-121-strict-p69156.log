@@ -1,0 +1,43 @@
+=== mc-agent scan evidence-metadata --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.evidence-metadata",
+  "scan": "evidence-metadata",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "evidence-metadata: PASS (4 checks)",
+  "started_at": "2026-05-24T21:27:41+00:00",
+  "completed_at": "2026-05-24T21:27:41+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "exists:docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-help-json.json",
+      "status": "PASS",
+      "reason": "Discovery evidence file exists.",
+      "file": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-help-json.json"
+    },
+    {
+      "id": "exists:docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-commands-json.json",
+      "status": "PASS",
+      "reason": "Discovery evidence file exists.",
+      "file": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-commands-json.json"
+    },
+    {
+      "id": "exists:docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-discovery-summary.md",
+      "status": "PASS",
+      "reason": "Discovery evidence file exists.",
+      "file": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-discovery-summary.md"
+    },
+    {
+      "id": "agent_run_json_metadata",
+      "status": "PASS",
+      "reason": "Agent-run JSON reports include TASK-121 schema/status/NEXT_ACTION.",
+      "evidence": []
+    }
+  ],
+  "NEXT_ACTION": "Fix report metadata before final certification."
+}
