@@ -364,7 +364,9 @@ nonisolated final class LocalPendingChangeAccumulator {
             logicalKey: key,
             changedFields: changedFields,
             baselineFingerprintHash: nil,
-            intendedFingerprintHash: HistorySessionPayloadCodec.fingerprintHash(for: entry),
+            intendedFingerprintHash: HistorySessionPayloadCodec.fingerprintHash(
+                for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
+            ),
             entityRemoteID: remoteID
         )
     }

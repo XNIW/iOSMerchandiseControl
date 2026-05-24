@@ -73,7 +73,8 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
 
         for entry in uploadEntries {
             do {
-                let row = try HistorySessionPayloadCodec.upsertRow(for: entry, ownerUserID: ownerUserID)
+                let snapshot = HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: true)
+                let row = try HistorySessionPayloadCodec.upsertRow(for: snapshot, ownerUserID: ownerUserID)
                 uploadPairs.append((entry, row, entry.localChangeRevision))
             } catch HistorySessionSyncError.overlayTooLarge {
                 result.skippedOversizedCount += 1

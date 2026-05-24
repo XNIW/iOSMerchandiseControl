@@ -1,0 +1,118 @@
+{
+  "NEXT_ACTION": "Use this report in TASK-121 evidence matrix.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T182000Z-scan-evidence-metadata-task-TASK-121-strict-p87490.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T182000Z-scan-evidence-metadata-task-TASK-121-strict-p87490.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T182000Z-scan-evidence-metadata-task-TASK-121-strict-p87490.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-121-24",
+    "CA-121-25",
+    "CA-121-48",
+    "CA-121-51",
+    "CA-121-52"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan evidence-metadata --task TASK-121 --strict",
+  "command_slug": "scan-evidence-metadata-task-TASK-121-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 203,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-121",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK121_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-121"
+  },
+  "exit_code": 0,
+  "git_sha": "a08e7e1",
+  "next_action_recommended": "Use this report in TASK-121 evidence matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Fix report metadata before final certification.",
+    "checks": [
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-help-json.json",
+        "id": "exists:docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-help-json.json",
+        "reason": "Discovery evidence file exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-commands-json.json",
+        "id": "exists:docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-commands-json.json",
+        "reason": "Discovery evidence file exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-discovery-summary.md",
+        "id": "exists:docs/TASKS/EVIDENCE/TASK-121/agent-runs/00-discovery-summary.md",
+        "reason": "Discovery evidence file exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "id": "agent_run_json_metadata",
+        "reason": "Agent-run JSON reports include TASK-121 schema/status/NEXT_ACTION.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-24T18:20:00+00:00",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "PASS",
+    "safety_level": "read_only_static_scan",
+    "scan": "evidence-metadata",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.evidence-metadata",
+    "started_at": "2026-05-24T18:20:00+00:00",
+    "status": "PASS",
+    "summary": "evidence-metadata: PASS (4 checks)",
+    "taskId": "TASK-121",
+    "task_id": "TASK-121"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T182000Z-scan-evidence-metadata-task-TASK-121-strict-p87490",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-121",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T18:20:00Z",
+  "timestamp_start": "2026-05-24T18:20:00Z",
+  "warnings": []
+}

@@ -1,0 +1,131 @@
+=== mc-agent scan duplicate-symbols --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.duplicate-symbols",
+  "scan": "duplicate-symbols",
+  "status": "FAIL",
+  "result_status": "FAIL",
+  "summary": "duplicate-symbols: FAIL (1 checks)",
+  "started_at": "2026-05-24T17:35:06+00:00",
+  "completed_at": "2026-05-24T17:35:06+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "no_duplicate_type_symbols",
+      "status": "FAIL",
+      "reason": "No duplicate type/protocol declarations.",
+      "evidence": {
+        "Coordinator": [
+          "iOSMerchandiseControl/BarcodeScannerView.swift",
+          "iOSMerchandiseControl/GeneratedView.swift"
+        ],
+        "Field": [
+          "iOSMerchandiseControl/EntryInfoEditor.swift",
+          "iOSMerchandiseControl/GeneratedView.swift"
+        ],
+        "InlineSuggestionsBox": [
+          "iOSMerchandiseControl/EntryInfoEditor.swift",
+          "iOSMerchandiseControl/PreGenerateView.swift"
+        ],
+        "NamePickerSheet": [
+          "iOSMerchandiseControl/EntryInfoEditor.swift",
+          "iOSMerchandiseControl/PreGenerateView.swift"
+        ],
+        "ShareItem": [
+          "iOSMerchandiseControl/GeneratedView.swift",
+          "iOSMerchandiseControl/HistoryView.swift",
+          "iOSMerchandiseControl/ImportAnalysisView.swift"
+        ],
+        "Mode": [
+          "iOSMerchandiseControl/GeneratedView.swift",
+          "iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift"
+        ],
+        "State": [
+          "iOSMerchandiseControl/SupabaseAuthViewModel.swift",
+          "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift"
+        ],
+        "CodingKeys": [
+          "iOSMerchandiseControl/SupabaseInventoryDTOs.swift",
+          "iOSMerchandiseControl/SupabaseInventoryDTOs.swift",
+          "iOSMerchandiseControl/SupabaseInventoryDTOs.swift",
+          "iOSMerchandiseControl/SupabaseInventoryDTOs.swift",
+          "iOSMerchandiseControl/SupabaseSyncEventDTOs.swift",
+          "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+          "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+          "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+          "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+          "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+          "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+          "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+          "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+          "iOSMerchandiseControl/SyncEventRPCRequestMapper.swift"
+        ],
+        "Stage": [
+          "iOSMerchandiseControl/SupabaseProductPriceApplyService.swift",
+          "iOSMerchandiseControl/SupabasePullApplyService.swift",
+          "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift"
+        ],
+        "ViewState": [
+          "iOSMerchandiseControl/SupabasePushPreflightViewModel.swift",
+          "iOSMerchandiseControl/SupabaseSyncEventDebugViewModel.swift",
+          "iOSMerchandiseControl/SyncEventOutboxDrainDebugViewModel.swift"
+        ],
+        "Kind": [
+          "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+          "iOSMerchandiseControl/SyncEventRecording.swift"
+        ],
+        "Fixture": [
+          "iOSMerchandiseControl/SyncEventRecording.swift",
+          "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+          "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift"
+        ],
+        "Call": [
+          "iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests.swift",
+          "iOSMerchandiseControlTests/SupabaseProductPricePushDryRunServiceTests.swift",
+          "iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift"
+        ],
+        "Response": [
+          "iOSMerchandiseControlTests/SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift",
+          "iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift",
+          "iOSMerchandiseControlTests/SyncEventOutboxDrainServiceTests.swift"
+        ],
+        "SupabaseManualSyncReleaseCard": [
+          "iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift",
+          "iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift",
+          "iOSMerchandiseControlTests/SupabaseManualSyncRemotePreviewTests.swift"
+        ],
+        "ClientEventIDShape": [
+          "iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift",
+          "iOSMerchandiseControlTests/SyncEventRecordingTests.swift"
+        ],
+        "TestError": [
+          "iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift",
+          "iOSMerchandiseControlTests/SyncEventOutboxDrainServiceTests.swift",
+          "iOSMerchandiseControlTests/SyncEventOutboxEnqueueServiceTests.swift"
+        ],
+        "Runtime": [
+          "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+          "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift"
+        ],
+        "RemoteSnapshot": [
+          "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+          "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift"
+        ],
+        "ExpectedPoint": [
+          "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+          "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift"
+        ]
+      }
+    }
+  ],
+  "NEXT_ACTION": "Rename/delete duplicate declarations."
+}

@@ -392,7 +392,7 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         let transport = try productionSource(named: "SupabaseSyncEventRPCTransport.swift")
         let validator = try productionSource(named: "SyncEventRecording.swift")
         let outbox = try productionSource(named: "SyncEventOutboxEntry.swift")
-        let enqueue = try productionSource(named: "SyncEventOutboxEnqueueService.swift")
+        let enqueue = try productionSource(relativePath: "Sync/Outbox/SyncEventOutboxEnqueueService.swift")
         let testSource = try testSource(named: "SyncEventLiveRecorderTests.swift")
 
         XCTAssertFalse(containsSupabaseImport(mapper))
@@ -523,14 +523,18 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         """
     }
 
-    private func productionSource(named fileName: String) throws -> String {
+    private func productionSource(relativePath: String) throws -> String {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let url = testsDirectory
             .appendingPathComponent("iOSMerchandiseControl")
-            .appendingPathComponent(fileName)
+            .appendingPathComponent(relativePath)
         return try String(contentsOf: url, encoding: .utf8)
+    }
+
+    private func productionSource(named fileName: String) throws -> String {
+        try productionSource(relativePath: fileName)
     }
 
     private func testSource(named fileName: String) throws -> String {

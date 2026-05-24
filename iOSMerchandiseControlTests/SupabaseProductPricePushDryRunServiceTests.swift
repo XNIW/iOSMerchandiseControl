@@ -186,7 +186,7 @@ final class SupabaseProductPricePushDryRunServiceTests: XCTestCase {
     }
 
     func testSourceContainsNoRemoteWriteOrRandomCandidateID() throws {
-        let sourceText = try source(named: "SupabaseProductPricePushDryRunService.swift")
+        let sourceText = try source(relativePath: "Sync/Manual/SupabaseProductPricePushDryRunService.swift")
 
         XCTAssertNil(sourceText.range(of: #"UUID\(\)"#, options: String.CompareOptions.regularExpression))
         XCTAssertNil(sourceText.range(
@@ -470,13 +470,13 @@ final class SupabaseProductPricePushDryRunServiceTests: XCTestCase {
         UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", value))")!
     }
 
-    private func source(named filename: String) throws -> String {
+    private func source(relativePath: String) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let root = testFile
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         return try String(
-            contentsOf: root.appendingPathComponent("iOSMerchandiseControl").appendingPathComponent(filename),
+            contentsOf: root.appendingPathComponent("iOSMerchandiseControl").appendingPathComponent(relativePath),
             encoding: .utf8
         )
     }

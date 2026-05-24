@@ -260,16 +260,6 @@ final class SyncOrchestrator: ObservableObject {
             stateStore.recordRunResult(result)
             foregroundTask = nil
             objectWillChange.send()
-            if forceIncremental,
-               result.status == .busy,
-               currentScenePhase != .background,
-               !activityCenter.isBusy,
-               !hasDeferredForegroundCheck {
-                recordRuntimeDiagnostic("foreground.outcome", "retry_after_sync_busy")
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                submitForegroundTrigger(source: source, forceIncremental: true)
-                return
-            }
             runDeferredForegroundCheckIfNeeded()
         }
     }

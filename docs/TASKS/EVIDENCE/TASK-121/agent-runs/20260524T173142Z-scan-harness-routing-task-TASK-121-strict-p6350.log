@@ -1,0 +1,44 @@
+=== mc-agent scan harness-routing --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.harness-routing",
+  "scan": "harness-routing",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "harness-routing: PASS (3 checks)",
+  "started_at": "2026-05-24T17:31:42+00:00",
+  "completed_at": "2026-05-24T17:31:42+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "help_json_parseable",
+      "status": "PASS",
+      "reason": "help-json parses.",
+      "evidence": {
+        "command_count": 140
+      }
+    },
+    {
+      "id": "task121_matrix_discoverable",
+      "status": "PASS",
+      "reason": "Every TASK-121 command is discoverable.",
+      "evidence": {
+        "missing": []
+      }
+    },
+    {
+      "id": "task121_routes_present",
+      "status": "PASS",
+      "reason": "mc-agent.sh routes TASK-121 scanner names.",
+      "file": "tools/agent/mc-agent.sh",
+      "evidence": {
+        "missing": []
+      }
+    }
+  ],
+  "NEXT_ACTION": "Add TASK-121 routes/help-json entries before using scanners."
+}

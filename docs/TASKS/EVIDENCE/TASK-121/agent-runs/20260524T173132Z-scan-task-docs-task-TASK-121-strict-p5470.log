@@ -1,0 +1,66 @@
+=== mc-agent scan task-docs --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.task-docs",
+  "scan": "task-docs",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "task-docs: PASS (7 checks)",
+  "started_at": "2026-05-24T17:31:32+00:00",
+  "completed_at": "2026-05-24T17:31:32+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "exists:docs/TASKS/TASK-121-ios-sync-architecture-full-purification.md",
+      "status": "PASS",
+      "reason": "Required TASK-121 document exists.",
+      "file": "docs/TASKS/TASK-121-ios-sync-architecture-full-purification.md"
+    },
+    {
+      "id": "exists:docs/TASKS/EVIDENCE/TASK-121/README.md",
+      "status": "PASS",
+      "reason": "Required TASK-121 document exists.",
+      "file": "docs/TASKS/EVIDENCE/TASK-121/README.md"
+    },
+    {
+      "id": "exists:docs/MASTER-PLAN.md",
+      "status": "PASS",
+      "reason": "Required TASK-121 document exists.",
+      "file": "docs/MASTER-PLAN.md"
+    },
+    {
+      "id": "evidence_readme_aligned",
+      "status": "PASS",
+      "reason": "Evidence README contains TASK-121 schema/status/redaction contract.",
+      "file": "docs/TASKS/EVIDENCE/TASK-121/README.md",
+      "evidence": {
+        "missing": []
+      }
+    },
+    {
+      "id": "required_sentence",
+      "status": "PASS",
+      "reason": "Required TASK-121 completion wording is present."
+    },
+    {
+      "id": "ca_121_01_56_present",
+      "status": "PASS",
+      "reason": "CA-121-01...56 are materialized.",
+      "file": "docs/TASKS/TASK-121-ios-sync-architecture-full-purification.md",
+      "evidence": {
+        "missing": []
+      }
+    },
+    {
+      "id": "master_points_task121",
+      "status": "PASS",
+      "reason": "MASTER-PLAN current task points to TASK-121.",
+      "file": "docs/MASTER-PLAN.md"
+    }
+  ],
+  "NEXT_ACTION": "Fix TASK-121 docs/evidence alignment before execution."
+}

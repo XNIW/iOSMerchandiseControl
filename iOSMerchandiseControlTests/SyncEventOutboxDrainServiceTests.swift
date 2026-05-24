@@ -649,7 +649,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
     }
 
     func testProductionSourceKeepsDrainBoundaries() throws {
-        let source = try productionSource(named: "SyncEventOutboxDrainService.swift")
+        let source = try productionSource(relativePath: "Sync/Outbox/SyncEventOutboxDrainService.swift")
         let forbiddenTokens: [String] = [
             joined("Supabase", "Client"),
             joined(".", "rpc", "("),
@@ -761,13 +761,13 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
         return try JSONDecoder().decode(RemoteSyncEventRow.self, from: Data(json.utf8))
     }
 
-    private func productionSource(named fileName: String) throws -> String {
+    private func productionSource(relativePath: String) throws -> String {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let url = testsDirectory
             .appendingPathComponent("iOSMerchandiseControl")
-            .appendingPathComponent(fileName)
+            .appendingPathComponent(relativePath)
         return try String(contentsOf: url, encoding: .utf8)
     }
 

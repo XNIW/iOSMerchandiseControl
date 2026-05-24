@@ -1,0 +1,51 @@
+=== mc-agent scan retry-ownership --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.retry-ownership",
+  "scan": "retry-ownership",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "retry-ownership: PASS (5 checks)",
+  "started_at": "2026-05-24T17:47:34+00:00",
+  "completed_at": "2026-05-24T17:47:34+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "retry_policy_file_exists",
+      "status": "PASS",
+      "reason": "AutomaticSyncRetryPolicy.swift exists.",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift"
+    },
+    {
+      "id": "engine_uses_retry_policy",
+      "status": "PASS",
+      "reason": "AutomaticSyncEngine uses retry policy.",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift"
+    },
+    {
+      "id": "retry_has_injectable_clock_or_sleeper",
+      "status": "PASS",
+      "reason": "Retry policy exposes injectable clock/sleeper for deterministic tests.",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift"
+    },
+    {
+      "id": "orchestrator_no_retry_after_busy",
+      "status": "PASS",
+      "reason": "SyncOrchestrator has no retry_after_sync_busy.",
+      "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+      "evidence": []
+    },
+    {
+      "id": "orchestrator_no_retry_sleep",
+      "status": "PASS",
+      "reason": "SyncOrchestrator has no retry Task.sleep.",
+      "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+      "evidence": []
+    }
+  ],
+  "NEXT_ACTION": "Move busy/cancel/retry ownership fully into Automatic/Core."
+}

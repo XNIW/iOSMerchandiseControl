@@ -366,7 +366,7 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
     }
 
     private func extractReleaseCardSource(from source: String) throws -> String {
-        let start = try XCTUnwrap(source.range(of: "private struct SupabaseManualSyncReleaseCard"))
+        let start = try XCTUnwrap(source.range(of: "private struct SupabaseAutomaticSyncStatusCard"))
         let end = try XCTUnwrap(source.range(of: "// MARK: - Header di sezione"))
         XCTAssertLessThan(start.lowerBound, end.lowerBound)
         return String(source[start.lowerBound..<end.lowerBound])

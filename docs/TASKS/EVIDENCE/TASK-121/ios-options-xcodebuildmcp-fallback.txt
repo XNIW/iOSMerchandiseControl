@@ -1,0 +1,8 @@
+screen=Opzioni
+automatic_sync_visible=true
+sync_badge=Accesso richiesto
+pending_local_changes=0
+manual_sync_cta_visible=false
+screenshot=docs/TASKS/EVIDENCE/TASK-121/ios-options-xcodebuildmcp-fallback.jpg
+evidence_source=XcodeBuildMCP snapshot_ui and screenshot
+simulator=iPhone 17 Pro iOS 26.5

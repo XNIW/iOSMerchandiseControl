@@ -184,7 +184,7 @@ final class SupabaseSyncEventPreviewServiceTests: XCTestCase {
     func testProductionSyncEventSourcesExposeReadOnlySurfaceOnly() throws {
         let productionSources = [
             try source(named: "SupabaseSyncEventDTOs.swift"),
-            try source(named: "SupabaseSyncEventPreviewService.swift")
+            try source(relativePath: "Sync/Manual/SupabaseSyncEventPreviewService.swift")
         ].joined(separator: "\n")
 
         let forbiddenTokens = [
@@ -236,14 +236,18 @@ final class SupabaseSyncEventPreviewServiceTests: XCTestCase {
         UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", value))")!
     }
 
-    private func source(named fileName: String) throws -> String {
+    private func source(relativePath: String) throws -> String {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let url = testsDirectory
             .appendingPathComponent("iOSMerchandiseControl")
-            .appendingPathComponent(fileName)
+            .appendingPathComponent(relativePath)
         return try String(contentsOf: url, encoding: .utf8)
+    }
+
+    private func source(named fileName: String) throws -> String {
+        try source(relativePath: fileName)
     }
 }
 

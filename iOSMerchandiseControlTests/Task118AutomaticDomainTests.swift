@@ -95,7 +95,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
             "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
             "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
             "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
-            "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+            "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
             "iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift",
             "iOSMerchandiseControl/OptionsView.swift"
         ].map(readSource).joined(separator: "\n")

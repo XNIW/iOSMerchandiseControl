@@ -1,0 +1,95 @@
+=== mc-agent scan root-residue --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.root-residue",
+  "scan": "root-residue",
+  "status": "PASS_WITH_NOTES",
+  "result_status": "PASS_WITH_NOTES",
+  "summary": "root-residue: PASS_WITH_NOTES (2 checks)",
+  "started_at": "2026-05-24T17:59:10+00:00",
+  "completed_at": "2026-05-24T17:59:10+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "root_sync_residue_classified",
+      "status": "PASS",
+      "reason": "Root sync/Supabase residues have a move/split/delete/exception decision.",
+      "evidence": {
+        "unclassified": [],
+        "classified_residue_count": 10
+      }
+    },
+    {
+      "id": "root_sync_residue_remaining_notes",
+      "status": "PASS_WITH_NOTES",
+      "reason": "Classified root residues remain and must be moved/split before final target certification.",
+      "evidence": [
+        {
+          "path": "iOSMerchandiseControl/InventorySyncService.swift",
+          "category": "EXCEPTION_REQUIRES_APPROVAL",
+          "owner": "Sync",
+          "action": "Legacy/root sync service requires explicit exception or move/delete."
+        },
+        {
+          "path": "iOSMerchandiseControl/SupabaseProductPricePreviewService.swift",
+          "category": "MOVE_TO_MANUAL",
+          "owner": "Manual",
+          "action": "Manual/debug boundary."
+        },
+        {
+          "path": "iOSMerchandiseControl/SupabaseProductPricePushDryRunService.swift",
+          "category": "MOVE_TO_MANUAL",
+          "owner": "Manual",
+          "action": "Manual/debug boundary."
+        },
+        {
+          "path": "iOSMerchandiseControl/SupabasePullApplyService.swift",
+          "category": "MOVE_TO_RECOVERY",
+          "owner": "Recovery",
+          "action": "Recovery/pull/apply boundary."
+        },
+        {
+          "path": "iOSMerchandiseControl/SupabasePullPreviewModels.swift",
+          "category": "MOVE_TO_MANUAL",
+          "owner": "Manual",
+          "action": "Manual/debug boundary."
+        },
+        {
+          "path": "iOSMerchandiseControl/SupabasePullPreviewService.swift",
+          "category": "MOVE_TO_MANUAL",
+          "owner": "Manual",
+          "action": "Manual/debug boundary."
+        },
+        {
+          "path": "iOSMerchandiseControl/SupabasePushPreflightViewModel.swift",
+          "category": "MOVE_TO_REMOTE",
+          "owner": "Remote",
+          "action": "Remote adapter/DTO/protocol classification."
+        },
+        {
+          "path": "iOSMerchandiseControl/SupabaseSyncEventPreviewService.swift",
+          "category": "MOVE_TO_MANUAL",
+          "owner": "Manual",
+          "action": "Manual/debug boundary."
+        },
+        {
+          "path": "iOSMerchandiseControl/SyncEventOutboxDrainService.swift",
+          "category": "MOVE_TO_REMOTE",
+          "owner": "Remote",
+          "action": "Remote adapter/DTO/protocol classification."
+        },
+        {
+          "path": "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+          "category": "MOVE_TO_REMOTE",
+          "owner": "Remote",
+          "action": "Remote adapter/DTO/protocol classification."
+        }
+      ]
+    }
+  ],
+  "NEXT_ACTION": "Move/split classified root Supabase and sync residues before claiming final architecture target."
+}

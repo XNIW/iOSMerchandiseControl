@@ -1,0 +1,36 @@
+=== mc-agent scan shared-purity --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.shared-purity",
+  "scan": "shared-purity",
+  "status": "FAIL",
+  "result_status": "FAIL",
+  "summary": "shared-purity: FAIL (1 checks)",
+  "started_at": "2026-05-24T17:35:06+00:00",
+  "completed_at": "2026-05-24T17:35:06+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "shared_value_only",
+      "status": "FAIL",
+      "reason": "Sync/Shared contains only pure value/DTO/helper code.",
+      "evidence": [
+        {
+          "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+          "line": 95,
+          "snippet": "for entry: HistoryEntry,"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+          "line": 124,
+          "snippet": "static func fingerprintHash(for entry: HistoryEntry) -> String {"
+        }
+      ]
+    }
+  ],
+  "NEXT_ACTION": "Move SwiftData/network/manual side effects out of Sync/Shared."
+}

@@ -61,14 +61,26 @@ main() {
           local scan_task_id
           scan_task_id="$(mc_parse_opt --task "${args[@]:2}" 2>/dev/null || true)"
           scan_task_id="${scan_task_id:-${MC_TASK_ID:-}}"
-          if [[ "$scan_task_id" == "TASK-120" ]]; then
+          if [[ "$scan_task_id" == "TASK-121" ]]; then
+            handler=(mc_cmd_scan_task121_static "${args[1]}" "${args[@]:2}")
+          elif [[ "$scan_task_id" == "TASK-120" ]]; then
             handler=(mc_cmd_scan_task120_static "${args[1]}" "${args[@]:2}")
           else
             handler=(mc_cmd_scan_task119_static "${args[1]}" "${args[@]:2}")
           fi
           ;;
+        sync-inventory|retry-ownership|root-residue|shared-purity)
+          handler=(mc_cmd_scan_task121_static "${args[1]}" "${args[@]:2}")
+          ;;
         task-docs|harness-routing|harness-health|source-format|duplicate-symbols|automatic-legacy-monolith|mainactor-boundary|swiftdata-context-boundary|manual-root-residue|master-plan-consistency|mcp-wrapper|scanner-self-tests|status-taxonomy|evidence-metadata)
-          handler=(mc_cmd_scan_task120_static "${args[1]}" "${args[@]:2}")
+          local scan_task_id
+          scan_task_id="$(mc_parse_opt --task "${args[@]:2}" 2>/dev/null || true)"
+          scan_task_id="${scan_task_id:-${MC_TASK_ID:-}}"
+          if [[ "$scan_task_id" == "TASK-121" ]]; then
+            handler=(mc_cmd_scan_task121_static "${args[1]}" "${args[@]:2}")
+          else
+            handler=(mc_cmd_scan_task120_static "${args[1]}" "${args[@]:2}")
+          fi
           ;;
         no-legacy-runtime-path) handler=(mc_cmd_scan_no_legacy_runtime_path "${args[@]:2}") ;;
         automatic-contracts-clean) handler=(mc_cmd_scan_task117_static automatic-contracts-clean "${args[@]:2}") ;;
@@ -88,7 +100,7 @@ main() {
             handler=(mc_cmd_scan_task117_static no-full-pull-normal-path "${args[@]:2}")
           fi
           ;;
-        *) echo "Usage: scan sensitive|evidence|repo-diff|release-cta|task-docs|harness-routing|harness-health|source-format|duplicate-symbols|automatic-legacy-monolith|mainactor-boundary|swiftdata-context-boundary|manual-root-residue|master-plan-consistency|mcp-wrapper|scanner-self-tests|status-taxonomy|evidence-metadata|sync-architecture|manual-boundary|dead-code|xcode-membership|no-legacy-runtime-path|no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys" >&2; exit "$MC_EXIT_MISCONFIGURED" ;;
+        *) echo "Usage: scan sensitive|evidence|repo-diff|release-cta|task-docs|harness-routing|harness-health|source-format|duplicate-symbols|automatic-legacy-monolith|mainactor-boundary|swiftdata-context-boundary|manual-root-residue|master-plan-consistency|mcp-wrapper|scanner-self-tests|status-taxonomy|evidence-metadata|sync-inventory|retry-ownership|root-residue|shared-purity|sync-architecture|manual-boundary|dead-code|xcode-membership|no-legacy-runtime-path|no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys" >&2; exit "$MC_EXIT_MISCONFIGURED" ;;
       esac
       ;;
     evidence) handler=(mc_cmd_evidence "${args[@]:1}") ;;

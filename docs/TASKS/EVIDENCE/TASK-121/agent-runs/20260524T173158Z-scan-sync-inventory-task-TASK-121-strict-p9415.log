@@ -1,0 +1,79 @@
+=== mc-agent scan sync-inventory --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.sync-inventory",
+  "scan": "sync-inventory",
+  "status": "FAIL",
+  "result_status": "FAIL",
+  "summary": "sync-inventory: FAIL (3 checks)",
+  "started_at": "2026-05-24T17:31:59+00:00",
+  "completed_at": "2026-05-24T17:31:59+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "inventory_non_empty",
+      "status": "PASS",
+      "reason": "Sync/root inventory has relevant files.",
+      "evidence": {
+        "count": 122
+      }
+    },
+    {
+      "id": "no_uncategorized",
+      "status": "FAIL",
+      "reason": "No relevant file is UNCATEGORIZED.",
+      "evidence": [
+        {
+          "path": "iOSMerchandiseControl/CloudSyncOverviewState.swift",
+          "category": "UNCATEGORIZED",
+          "owner": "Unknown",
+          "action": "No TASK-121 category rule matched.",
+          "current_folder": "iOSMerchandiseControl",
+          "proposed_folder": "Unknown",
+          "reference_count": 2,
+          "xcode_membership": "synchronized_or_unlisted",
+          "risk": "high",
+          "tests_needed": "architecture/build/regression",
+          "exception_id": ""
+        },
+        {
+          "path": "iOSMerchandiseControl/InventorySyncService.swift",
+          "category": "UNCATEGORIZED",
+          "owner": "Unknown",
+          "action": "No TASK-121 category rule matched.",
+          "current_folder": "iOSMerchandiseControl",
+          "proposed_folder": "Unknown",
+          "reference_count": 3,
+          "xcode_membership": "synchronized_or_unlisted",
+          "risk": "high",
+          "tests_needed": "architecture/build/regression",
+          "exception_id": ""
+        },
+        {
+          "path": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+          "category": "UNCATEGORIZED",
+          "owner": "Unknown",
+          "action": "No TASK-121 category rule matched.",
+          "current_folder": "iOSMerchandiseControl/Sync",
+          "proposed_folder": "Unknown",
+          "reference_count": 1,
+          "xcode_membership": "synchronized_or_unlisted",
+          "risk": "high",
+          "tests_needed": "architecture/build/regression",
+          "exception_id": ""
+        }
+      ]
+    },
+    {
+      "id": "outbox_not_keep_shared_pure",
+      "status": "PASS",
+      "reason": "Sync/Outbox is not globally treated as KEEP_SHARED_PURE.",
+      "evidence": []
+    }
+  ],
+  "NEXT_ACTION": "Resolve UNCATEGORIZED files and review generated sync-inventory.csv/json."
+}

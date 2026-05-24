@@ -303,7 +303,7 @@ final class SupabaseProductPricePreviewServiceTests: XCTestCase {
     }
 
     func testPreviewSourceHasNoSyncEventOrProductPriceWritePath() throws {
-        let previewSource = try source(named: "SupabaseProductPricePreviewService.swift")
+        let previewSource = try source(relativePath: "Sync/Manual/SupabaseProductPricePreviewService.swift")
         let optionsSource = try source(named: "OptionsView.swift")
         let inventorySource = try source(named: "SupabaseInventoryService.swift")
 
@@ -358,14 +358,18 @@ final class SupabaseProductPricePreviewServiceTests: XCTestCase {
         UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", value))")!
     }
 
-    private func source(named fileName: String) throws -> String {
+    private func source(relativePath: String) throws -> String {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let url = testsDirectory
             .appendingPathComponent("iOSMerchandiseControl")
-            .appendingPathComponent(fileName)
+            .appendingPathComponent(relativePath)
         return try String(contentsOf: url, encoding: .utf8)
+    }
+
+    private func source(named fileName: String) throws -> String {
+        try source(relativePath: fileName)
     }
 }
 

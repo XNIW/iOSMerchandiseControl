@@ -32,7 +32,7 @@ enum SyncAutomaticRuntimeFactory {
             modelContainer: modelContainer,
             recorder: activityRecorder
         )
-        return SyncAutomaticRuntime(
+        return AutomaticSyncRuntimeFacade(
             authViewModel: authViewModel,
             catalogPushProvider: catalogPushProvider,
             productPriceProvider: productPriceProvider,

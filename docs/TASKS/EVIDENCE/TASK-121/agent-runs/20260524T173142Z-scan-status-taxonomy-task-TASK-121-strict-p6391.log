@@ -1,0 +1,45 @@
+=== mc-agent scan status-taxonomy --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.status-taxonomy",
+  "scan": "status-taxonomy",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "status-taxonomy: PASS (2 checks)",
+  "started_at": "2026-05-24T17:31:42+00:00",
+  "completed_at": "2026-05-24T17:31:42+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "canonical_exit_codes",
+      "status": "PASS",
+      "reason": "help-json exposes canonical exit-code taxonomy.",
+      "evidence": {
+        "actual": {
+          "0": "PASS",
+          "1": "FAIL",
+          "2": "BLOCKED_EXTERNAL",
+          "3": "MISCONFIGURED",
+          "4": "UNSAFE_OPERATION_REFUSED"
+        },
+        "expected": {
+          "0": "PASS",
+          "1": "FAIL",
+          "2": "BLOCKED_EXTERNAL",
+          "3": "MISCONFIGURED",
+          "4": "UNSAFE_OPERATION_REFUSED"
+        }
+      }
+    },
+    {
+      "id": "not_run_not_pass_rule_documented",
+      "status": "PASS",
+      "reason": "NOT_RUN is documented as not PASS."
+    }
+  ],
+  "NEXT_ACTION": "Keep JSON statuses canonical."
+}

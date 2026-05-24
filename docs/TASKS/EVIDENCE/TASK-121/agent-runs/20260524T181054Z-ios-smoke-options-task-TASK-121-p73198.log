@@ -1,0 +1,5 @@
+=== mc-agent ios smoke options --task TASK-121 ===
+legacy sim_ui/JXA options smoke returned 2; evaluating XcodeBuildMCP fallback evidence.
+[sim_ui] OK: App com.niwcyber.iOSMerchandiseControl lanciata
+[sim_ui] AX_ERROR: impossibile leggere AX tree: Impossibile ottenere l’oggetto.
+[sim_ui] ERROR: AX non disponibile — impossibile cercare 'Opzioni'

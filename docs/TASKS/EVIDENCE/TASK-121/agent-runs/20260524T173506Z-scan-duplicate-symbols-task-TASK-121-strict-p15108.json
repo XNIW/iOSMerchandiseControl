@@ -1,0 +1,202 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun duplicate-symbols.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T173506Z-scan-duplicate-symbols-task-TASK-121-strict-p15108.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T173506Z-scan-duplicate-symbols-task-TASK-121-strict-p15108.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T173506Z-scan-duplicate-symbols-task-TASK-121-strict-p15108.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-121-38"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan duplicate-symbols --task TASK-121 --strict",
+  "command_slug": "scan-duplicate-symbols-task-TASK-121-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 334,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-121",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK121_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-121"
+  },
+  "exit_code": 1,
+  "git_sha": "a08e7e1",
+  "next_action_recommended": "Fix failing checks and rerun duplicate-symbols.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Rename/delete duplicate declarations.",
+    "checks": [
+      {
+        "evidence": {
+          "Call": [
+            "iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests.swift",
+            "iOSMerchandiseControlTests/SupabaseProductPricePushDryRunServiceTests.swift",
+            "iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift"
+          ],
+          "ClientEventIDShape": [
+            "iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift",
+            "iOSMerchandiseControlTests/SyncEventRecordingTests.swift"
+          ],
+          "CodingKeys": [
+            "iOSMerchandiseControl/SupabaseInventoryDTOs.swift",
+            "iOSMerchandiseControl/SupabaseInventoryDTOs.swift",
+            "iOSMerchandiseControl/SupabaseInventoryDTOs.swift",
+            "iOSMerchandiseControl/SupabaseInventoryDTOs.swift",
+            "iOSMerchandiseControl/SupabaseSyncEventDTOs.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+            "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+            "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+            "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+            "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+            "iOSMerchandiseControl/SyncEventRPCRequestMapper.swift"
+          ],
+          "Coordinator": [
+            "iOSMerchandiseControl/BarcodeScannerView.swift",
+            "iOSMerchandiseControl/GeneratedView.swift"
+          ],
+          "ExpectedPoint": [
+            "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+            "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift"
+          ],
+          "Field": [
+            "iOSMerchandiseControl/EntryInfoEditor.swift",
+            "iOSMerchandiseControl/GeneratedView.swift"
+          ],
+          "Fixture": [
+            "iOSMerchandiseControl/SyncEventRecording.swift",
+            "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+            "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift"
+          ],
+          "InlineSuggestionsBox": [
+            "iOSMerchandiseControl/EntryInfoEditor.swift",
+            "iOSMerchandiseControl/PreGenerateView.swift"
+          ],
+          "Kind": [
+            "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+            "iOSMerchandiseControl/SyncEventRecording.swift"
+          ],
+          "Mode": [
+            "iOSMerchandiseControl/GeneratedView.swift",
+            "iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift"
+          ],
+          "NamePickerSheet": [
+            "iOSMerchandiseControl/EntryInfoEditor.swift",
+            "iOSMerchandiseControl/PreGenerateView.swift"
+          ],
+          "RemoteSnapshot": [
+            "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+            "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift"
+          ],
+          "Response": [
+            "iOSMerchandiseControlTests/SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift",
+            "iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift",
+            "iOSMerchandiseControlTests/SyncEventOutboxDrainServiceTests.swift"
+          ],
+          "Runtime": [
+            "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+            "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift"
+          ],
+          "ShareItem": [
+            "iOSMerchandiseControl/GeneratedView.swift",
+            "iOSMerchandiseControl/HistoryView.swift",
+            "iOSMerchandiseControl/ImportAnalysisView.swift"
+          ],
+          "Stage": [
+            "iOSMerchandiseControl/SupabaseProductPriceApplyService.swift",
+            "iOSMerchandiseControl/SupabasePullApplyService.swift",
+            "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift"
+          ],
+          "State": [
+            "iOSMerchandiseControl/SupabaseAuthViewModel.swift",
+            "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift"
+          ],
+          "SupabaseManualSyncReleaseCard": [
+            "iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift",
+            "iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift",
+            "iOSMerchandiseControlTests/SupabaseManualSyncRemotePreviewTests.swift"
+          ],
+          "TestError": [
+            "iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift",
+            "iOSMerchandiseControlTests/SyncEventOutboxDrainServiceTests.swift",
+            "iOSMerchandiseControlTests/SyncEventOutboxEnqueueServiceTests.swift"
+          ],
+          "ViewState": [
+            "iOSMerchandiseControl/SupabasePushPreflightViewModel.swift",
+            "iOSMerchandiseControl/SupabaseSyncEventDebugViewModel.swift",
+            "iOSMerchandiseControl/SyncEventOutboxDrainDebugViewModel.swift"
+          ]
+        },
+        "id": "no_duplicate_type_symbols",
+        "reason": "No duplicate type/protocol declarations.",
+        "status": "FAIL"
+      }
+    ],
+    "completed_at": "2026-05-24T17:35:06+00:00",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "FAIL",
+    "safety_level": "read_only_static_scan",
+    "scan": "duplicate-symbols",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.duplicate-symbols",
+    "started_at": "2026-05-24T17:35:06+00:00",
+    "status": "FAIL",
+    "summary": "duplicate-symbols: FAIL (1 checks)",
+    "taskId": "TASK-121",
+    "task_id": "TASK-121"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T173506Z-scan-duplicate-symbols-task-TASK-121-strict-p15108",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-121",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T17:35:06Z",
+  "timestamp_start": "2026-05-24T17:35:06Z",
+  "warnings": []
+}

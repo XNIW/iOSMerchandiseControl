@@ -660,7 +660,7 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
     }
 
     func testProductionSourceHasNoLiveNetworkOrDrainTokens() throws {
-        let source = try productionSource(named: "SyncEventOutboxEnqueueService.swift")
+        let source = try productionSource(relativePath: "Sync/Outbox/SyncEventOutboxEnqueueService.swift")
         let forbiddenTokens: [String] = [
             joined("Supabase", "Client"),
             joined(".", "rpc", "("),
@@ -782,13 +782,13 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         return try XCTUnwrap(entries.first)
     }
 
-    private func productionSource(named fileName: String) throws -> String {
+    private func productionSource(relativePath: String) throws -> String {
         let testsDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let url = testsDirectory
             .appendingPathComponent("iOSMerchandiseControl")
-            .appendingPathComponent(fileName)
+            .appendingPathComponent(relativePath)
         return try String(contentsOf: url, encoding: .utf8)
     }
 

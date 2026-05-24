@@ -1003,6 +1003,16 @@ mc_ios_test() {
         -only-testing:iOSMerchandiseControlTests/Task119AutomaticArchitectureTests
       )
       ;;
+    manual-sync-regression)
+      MC_CA_REFS="CA-121-21,CA-121-53"
+      tests=(
+        -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncLifecycleRunGateTests
+        -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncRemotePreviewTests
+        -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests
+        -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests
+        -only-testing:iOSMerchandiseControlTests/HistorySessionSyncServiceTests
+      )
+      ;;
     lifecycle)
       tests=(
         -only-testing:iOSMerchandiseControlTests/SupabaseManualSyncLifecycleRunGateTests

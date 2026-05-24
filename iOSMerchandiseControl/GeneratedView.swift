@@ -2200,7 +2200,9 @@ struct GeneratedView: View {
 
         isSaving = true
         saveError = nil
-        let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: entry)
+        let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
+            for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
+        )
 
         let mergedSnapshot = mergedGridSnapshot(
             dataGrid: data,
@@ -2214,7 +2216,9 @@ struct GeneratedView: View {
         entry.editable = editable
         entry.complete = complete
         applyRuntimeSummary(mergedSnapshot.runtimeSummary)
-        let nextHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: entry)
+        let nextHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
+            for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
+        )
         if nextHistoryFingerprint != previousHistoryFingerprint {
             recordHistorySessionPending(changedFields: ["data", "editable", "complete"])
         }
@@ -2272,9 +2276,13 @@ struct GeneratedView: View {
         // 2) Esegui la sincronizzazione vera e propria
         do {
             let service = InventorySyncService(context: context)
-            let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: entry)
+            let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
+                for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
+            )
             let result = try service.sync(entry: entry, ownerUserID: currentPendingOwnerUserID)
-            if HistorySessionPayloadCodec.fingerprintHash(for: entry) != previousHistoryFingerprint {
+            if HistorySessionPayloadCodec.fingerprintHash(
+                for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
+            ) != previousHistoryFingerprint {
                 recordHistorySessionPending(changedFields: ["data", "syncStatus"])
                 try context.save()
             }
@@ -2332,12 +2340,16 @@ struct GeneratedView: View {
                 }
             }
 
-            let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: entry)
+            let previousHistoryFingerprint = HistorySessionPayloadCodec.fingerprintHash(
+                for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
+            )
             let inventoryResult = try InventorySyncService(context: context).sync(
                 entry: entry,
                 ownerUserID: currentPendingOwnerUserID
             )
-            if HistorySessionPayloadCodec.fingerprintHash(for: entry) != previousHistoryFingerprint {
+            if HistorySessionPayloadCodec.fingerprintHash(
+                for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
+            ) != previousHistoryFingerprint {
                 recordHistorySessionPending(changedFields: ["data", "syncStatus"])
                 try context.save()
             }

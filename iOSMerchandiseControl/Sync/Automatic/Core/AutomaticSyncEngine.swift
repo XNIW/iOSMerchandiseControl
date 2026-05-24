@@ -9,6 +9,7 @@ actor AutomaticSyncEngine {
     private let defaults: UserDefaults
     private let singleFlight: AutomaticSyncSingleFlight
     private let cancellationPolicy: AutomaticSyncCancellationPolicy
+    private let retryPolicy: AutomaticSyncRetryPolicy
 
     init(
         catalogPushProvider: (any SyncCatalogPushProviding)?,
@@ -18,7 +19,8 @@ actor AutomaticSyncEngine {
         activityRegistrationProvider: (any SyncActivityRegistrationProviding)?,
         defaults: UserDefaults = .standard,
         singleFlight: AutomaticSyncSingleFlight = AutomaticSyncSingleFlight(),
-        cancellationPolicy: AutomaticSyncCancellationPolicy = AutomaticSyncCancellationPolicy()
+        cancellationPolicy: AutomaticSyncCancellationPolicy = AutomaticSyncCancellationPolicy(),
+        retryPolicy: AutomaticSyncRetryPolicy = AutomaticSyncRetryPolicy()
     ) {
         self.catalogPushProvider = catalogPushProvider
         self.productPriceProvider = productPriceProvider
@@ -28,6 +30,7 @@ actor AutomaticSyncEngine {
         self.defaults = defaults
         self.singleFlight = singleFlight
         self.cancellationPolicy = cancellationPolicy
+        self.retryPolicy = retryPolicy
     }
 
     func isRunning() async -> Bool {
@@ -67,8 +70,15 @@ actor AutomaticSyncEngine {
                     recordDiagnostic("lastOutcome", "blocked_full_pull_requires_explicit_context")
                     return await complete(.blocked(.accountDecisionRequired))
                 case .retryAfterBusy:
-                    recordDiagnostic("lastOutcome", "scheduled_retry")
-                    return await complete(.scheduledRetry(after: 2))
+                    let decision = retryPolicy.decisionForBusy(attempt: 0, isBackground: false)
+                    switch decision.action {
+                    case .none:
+                        recordDiagnostic("lastOutcome", "retry_suppressed_\(decision.reason)")
+                        return await complete(.busy())
+                    case .retryAfter(let delay):
+                        recordDiagnostic("lastOutcome", "scheduled_retry")
+                        return await complete(.scheduledRetry(after: delay))
+                    }
                 case .noOp, .sequence:
                     break
                 }

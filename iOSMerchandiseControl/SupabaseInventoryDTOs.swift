@@ -64,6 +64,13 @@ nonisolated struct RemoteInventoryProductRow: Codable, Sendable, Identifiable {
     }
 }
 
+nonisolated struct SupabaseTask088RemoteSeed: Sendable {
+    let ownerUserID: UUID
+    let supplier: RemoteInventorySupplierRow
+    let category: RemoteInventoryCategoryRow
+    let product: RemoteInventoryProductRow
+}
+
 nonisolated struct RemoteInventoryProductPriceRow: Codable, Sendable, Identifiable {
     let id: UUID
     let ownerUserID: UUID

@@ -1,0 +1,38 @@
+=== mc-agent scan mcp-wrapper --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.mcp-wrapper",
+  "scan": "mcp-wrapper",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "mcp-wrapper: PASS (3 checks)",
+  "started_at": "2026-05-24T17:58:57+00:00",
+  "completed_at": "2026-05-24T17:58:57+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "mcp_task121_allowlist_present",
+      "status": "PASS",
+      "reason": "MCP wrapper allowlists TASK-121 safe scanner commands.",
+      "file": "tools/agent/mcp/server.mjs",
+      "evidence": {
+        "missing": []
+      }
+    },
+    {
+      "id": "mcp_argv_not_shell",
+      "status": "PASS",
+      "reason": "MCP wrapper uses argv spawn and no arbitrary shell."
+    },
+    {
+      "id": "mcp_no_allow_mutation",
+      "status": "PASS",
+      "reason": "MCP wrapper does not set live/cleanup allow env."
+    }
+  ],
+  "NEXT_ACTION": "Update MCP allowlist for TASK-121 safe commands."
+}

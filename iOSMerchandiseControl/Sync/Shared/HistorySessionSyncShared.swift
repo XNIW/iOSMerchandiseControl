@@ -56,6 +56,21 @@ nonisolated struct SharedSheetSessionUpsertRow: Encodable, Equatable, Sendable {
     }
 }
 
+nonisolated struct HistorySessionLocalPayloadSnapshot: Equatable, Sendable {
+    let remoteID: UUID
+    let localID: UUID
+    let payloadVersion: Int
+    let displayName: String
+    let timestamp: Date
+    let supplier: String
+    let category: String
+    let isManualEntry: Bool
+    let data: [[String]]
+    let editable: [[String]]
+    let complete: [Bool]
+    let deletedAt: Date?
+}
+
 nonisolated struct RemoteSharedSheetSessionRow: Decodable, Equatable, Sendable {
     let remoteID: UUID
     let payloadVersion: Int
@@ -92,14 +107,13 @@ nonisolated enum HistorySessionPayloadCodec {
     static let maxOverlayBytes = 512 * 1_024
 
     static func upsertRow(
-        for entry: HistoryEntry,
+        for snapshot: HistorySessionLocalPayloadSnapshot,
         ownerUserID: UUID
     ) throws -> SharedSheetSessionUpsertRow {
-        let remoteID = entry.ensureHistorySessionRemoteID()
         let overlay = HistorySessionOverlayPayload(
             overlaySchema: overlaySchema,
-            editable: entry.editable,
-            complete: entry.complete
+            editable: snapshot.editable,
+            complete: snapshot.complete
         )
         let overlayData = try JSONEncoder().encode(overlay)
         guard overlayData.count <= maxOverlayBytes else {
@@ -107,32 +121,33 @@ nonisolated enum HistorySessionPayloadCodec {
         }
 
         return SharedSheetSessionUpsertRow(
-            remoteID: remoteID,
+            remoteID: snapshot.remoteID,
             payloadVersion: payloadVersion,
-            displayName: entry.title,
-            timestamp: formatTimestamp(entry.timestamp),
-            supplier: entry.supplier,
-            category: entry.category,
-            isManualEntry: entry.isManualEntry,
-            data: entry.data,
+            displayName: snapshot.displayName,
+            timestamp: formatTimestamp(snapshot.timestamp),
+            supplier: snapshot.supplier,
+            category: snapshot.category,
+            isManualEntry: snapshot.isManualEntry,
+            data: snapshot.data,
             sessionOverlay: overlay,
             ownerUserID: ownerUserID,
-            deletedAt: entry.remoteDeletedAt.map(formatTimestamp)
+            deletedAt: snapshot.deletedAt.map(formatTimestamp)
         )
     }
 
-    static func fingerprintHash(for entry: HistoryEntry) -> String {
+    static func fingerprintHash(for snapshot: HistorySessionLocalPayloadSnapshot) -> String {
         let canonical = [
-            entry.remoteID?.uuidString.lowercased() ?? entry.uid.uuidString.lowercased(),
-            "\(payloadVersion)",
-            normalize(entry.title),
-            formatTimestamp(entry.timestamp),
-            normalize(entry.supplier),
-            normalize(entry.category),
-            entry.isManualEntry ? "1" : "0",
-            canonicalJSONString(entry.data),
-            canonicalJSONString(entry.editable),
-            canonicalJSONString(entry.complete)
+            snapshot.remoteID.uuidString.lowercased(),
+            "\(snapshot.payloadVersion)",
+            normalize(snapshot.displayName),
+            formatTimestamp(snapshot.timestamp),
+            normalize(snapshot.supplier),
+            normalize(snapshot.category),
+            snapshot.isManualEntry ? "1" : "0",
+            canonicalJSONString(snapshot.data),
+            canonicalJSONString(snapshot.editable),
+            canonicalJSONString(snapshot.complete),
+            snapshot.deletedAt.map(formatTimestamp) ?? ""
         ].joined(separator: "|")
         let digest = SHA256.hash(data: Data(canonical.utf8))
         return digest.map { String(format: "%02x", $0) }.joined()

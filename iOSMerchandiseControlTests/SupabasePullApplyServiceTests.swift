@@ -362,7 +362,7 @@ final class SupabasePullApplyServiceTests: XCTestCase {
     }
 
     func testSaveFailurePathRollsBackBeforeSurfacingError() throws {
-        let source = try readSource("iOSMerchandiseControl/SupabasePullApplyService.swift")
+        let source = try readSource("iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift")
         let saveRange = try XCTUnwrap(source.range(of: "try context.save()"))
         let rollbackRange = try XCTUnwrap(source.range(of: "context.rollback()", range: saveRange.upperBound..<source.endIndex))
         let saveFailedRange = try XCTUnwrap(source.range(of: "SupabasePullApplyError.saveFailed", range: rollbackRange.upperBound..<source.endIndex))

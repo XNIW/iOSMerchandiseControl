@@ -1,0 +1,27 @@
+=== mc-agent scan xcode-membership --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.xcode-membership",
+  "scan": "xcode-membership",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "xcode-membership: PASS (1 checks)",
+  "started_at": "2026-05-24T17:47:46+00:00",
+  "completed_at": "2026-05-24T17:47:46+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "project_swift_refs_exist",
+      "status": "PASS",
+      "reason": "Xcode Swift references exist.",
+      "evidence": {
+        "missing": []
+      }
+    }
+  ],
+  "NEXT_ACTION": "Update Xcode membership after move/delete."
+}
