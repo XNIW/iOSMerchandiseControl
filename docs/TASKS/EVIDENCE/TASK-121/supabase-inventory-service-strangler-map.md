@@ -5,9 +5,9 @@ Generated during the final anti-false-positive review/fix pass on 2026-05-24.
 ## Status
 
 - Local root file eliminated: `iOSMerchandiseControl/SupabaseInventoryService.swift` no longer exists in local `git ls-files` after the anti-false-positive fix.
-- Canonical GitHub blocker: GitHub `main` at the checked SHA still contains that root path because no push was allowed.
+- Canonical GitHub aligned: GitHub `main` no longer contains that root path after the authorized push; raw status is `404`.
 - Remote transport host: `iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift`.
-- Compatibility type name retained: `SupabaseInventoryService` remains the internal actor name to avoid broad API churn, but its file and ownership moved to `Sync/Remote`.
+- Transport type renamed: the internal actor is now `SupabaseTransportClient`; production code no longer uses the legacy `SupabaseInventoryService` symbol.
 - Automatic adapters added:
   - `iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift`
   - `iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift`
@@ -18,7 +18,8 @@ Generated during the final anti-false-positive review/fix pass on 2026-05-24.
 
 - `AutomaticSyncRuntimeFactory` now wraps the remote transport in Remote adapters before passing dependencies into automatic services.
 - `ContentView`, manual history sync, and manual incremental pull use Remote adapters instead of passing the concrete transport directly into automatic/recovery protocols.
-- Existing manual-only protocols remain in `Sync/Manual`; concrete Supabase transport is physically under `Sync/Remote`.
+- Existing manual-only protocols remain in `Sync/Manual`; concrete Supabase transport is physically and semantically under `Sync/Remote`.
+- Manual/Recovery/Presentation call sites use protocol-backed dependencies or Remote adapters; concrete `SupabaseTransportClient` is allowed only in `Sync/Remote` and `Sync/Automatic/Composition`.
 
 ## Debug-only task hooks
 
@@ -26,7 +27,7 @@ TASK087/TASK088 support remains guarded by `#if DEBUG` in the Remote transport h
 
 ## Evidence
 
-- Read-only schema contract: `20260524T190040Z-supabase-contract-sync-schema-task-TASK-121-read-only-p43917`
-- Root residue PASS: `20260524T184456Z-scan-root-residue-task-TASK-121-strict-p21697`
-- Debug build PASS: `20260524T184725Z-ios-build-debug-task-TASK-121-p26069`
-- Release build PASS: `20260524T184825Z-ios-build-release-task-TASK-121-p26986`
+- Read-only schema contract: `20260524T193832Z-supabase-contract-sync-schema-task-TASK-121-read-only-p45438`
+- Root residue PASS: `20260524T194147Z-scan-root-residue-task-TASK-121-strict-p65460`
+- Debug build PASS: `20260524T193224Z-ios-build-debug-task-TASK-121-p31097`
+- Release build PASS: `20260524T193330Z-ios-build-release-task-TASK-121-p41091`

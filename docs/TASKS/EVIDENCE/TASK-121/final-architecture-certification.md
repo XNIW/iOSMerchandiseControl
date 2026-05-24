@@ -1,8 +1,25 @@
 # TASK-121 final architecture certification
 
-Verdict: `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`.
+Verdict: `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`.
 
-This continuation pass physically eradicated the remaining root residues in the local working tree/index and reran the TASK-121 scanner/build/test/safety matrix. It does not mark TASK-121 DONE. The stricter canonical GitHub gate is still blocked because no push was allowed and GitHub `main` still contains the pre-fix root residue.
+This canonical alignment pass physically eradicated the remaining local root residues, removed the legacy `SupabaseInventoryService` production symbol, committed the TASK-121 fix set, pushed it to GitHub `main`, and verified canonical GitHub after the push. It does not mark TASK-121 DONE.
+
+## Canonical GitHub alignment certification
+
+- local HEAD at architecture push: `2ac8cb02587657307a0ec136e8153f6ee29808a2`
+- origin/main at architecture push: `2ac8cb02587657307a0ec136e8153f6ee29808a2`
+- GitHub main at architecture push: `2ac8cb02587657307a0ec136e8153f6ee29808a2`
+- pushed: yes, fast-forward `3709b26..2ac8cb0`
+- root forbidden files local: 0
+- root forbidden files GitHub: 0
+- SupabaseInventoryService root status: absent; GitHub raw status `404`
+- Sync/Remote transport/adapters status: present; GitHub raw status `200` for transport and all four adapters
+- scanner anti-false-positive status: PASS after an observed RED (`20260524T192703Z-scan-root-residue-task-TASK-121-strict-p25792`) and post-push PASS (`20260524T194147Z-scan-root-residue-task-TASK-121-strict-p65460`)
+- local build/test/scanner status: PASS
+- GitHub canonical verification status: PASS by `git rev-parse`, `git ls-remote`, `git ls-tree`, and GitHub raw checks
+- Options smoke status: PASS_WITH_NOTES, non-blocking accepted XcodeBuildMCP fallback
+- live/cleanup status: NOT_RUN, not counted as PASS
+- final verdict: `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`
 
 ## Supported local PASS evidence
 
@@ -15,12 +32,12 @@ This continuation pass physically eradicated the remaining root residues in the 
 - Sensitive/evidence/report validation: PASS.
 - Root residue reconciliation: PASS locally with `classified_residue_count=0`.
 
-## Canonical GitHub blocker
+## Canonical GitHub blocker resolution
 
-- `HEAD`, `origin/main`, and GitHub canonical `main` were aligned before semantic fixes at `74cbe9fc41067e64bd11fd6e62307b4451233866`.
-- GitHub canonical `main` at that SHA still lists `iOSMerchandiseControl/SupabaseInventoryService.swift` in the root.
-- The local index/worktree no longer lists that root file, but those changes are not on GitHub because push is explicitly forbidden.
-- Therefore `ARCHITECTURE_TARGET_MET` is not declared in this anti-false-positive pass.
+- Before this pass, GitHub canonical `main` still listed the pre-fix root service.
+- After the authorized push, canonical `main` no longer lists `iOSMerchandiseControl/SupabaseInventoryService.swift`.
+- `Sync/Remote/SupabaseTransportClient.swift` and the four Remote adapter files are present on canonical GitHub `main`.
+- `ARCHITECTURE_TARGET_MET` is declared only for TASK-121 review handoff; DONE still requires review/user acceptance.
 
 ## Root residue resolution pass
 
@@ -77,15 +94,15 @@ Claude review should verify the root-residue move ledger, the scanner reports, a
 
 ## Final anti-false-positive architecture certification
 
-- GitHub/local SHA checked: `74cbe9fc41067e64bd11fd6e62307b4451233866` matched local `HEAD`, `origin/main`, and GitHub canonical `main` before semantic fixes.
+- Canonical architecture commit checked and pushed: `2ac8cb02587657307a0ec136e8153f6ee29808a2` matched local `HEAD`, `origin/main`, and GitHub canonical `main` immediately after the authorized architecture push.
 - local git ls-files root sync-related count: 0 non-allowlisted files after the anti-false-positive pass.
-- GitHub canonical main root sync-related count: 1 blocking file, `iOSMerchandiseControl/SupabaseInventoryService.swift`.
+- GitHub canonical main root sync-related count: 0 forbidden root sync files; old root `iOSMerchandiseControl/SupabaseInventoryService.swift` returns raw `404`.
 - root residues before/after: original blocking set 10 -> 0; additional anti-false-positive root rehomes completed; final scanner residue count 0.
 - duplicate root+moved path count: 0.
-- SupabaseInventoryService status: root path removed; transport moved to `Sync/Remote/SupabaseTransportClient.swift`; automatic/history/incremental callers wrapped with Remote adapters.
+- SupabaseInventoryService status: root path removed and production symbol eliminated; transport renamed to `SupabaseTransportClient` in `Sync/Remote/SupabaseTransportClient.swift`; automatic/history/incremental callers use Remote adapters or protocols.
 - source-format status: PASS.
-- scanner false-positive fixes: root-residue checks tracked root files via `git ls-files` and duplicate root+moved paths; Supabase contract TASK-121 routes to TASK-121 scanner and requires reconciliation PASS.
+- scanner false-positive fixes: root-residue checks tracked root files via `git ls-files`, duplicate root+moved paths, and legacy production symbol use; Supabase contract TASK-121 routes to TASK-121 scanner and requires reconciliation PASS.
 - CA-121-01...56 final ledger: build/test/scanner refs in `agent-runs/index.md`; live/cleanup gates remain NOT_RUN and are not counted as PASS.
 - PASS_WITH_NOTES: `ios smoke options` only, via accepted fallback.
 - NOT_RUN: live reconcile, live sync matrix, cleanup.
-- reviewer next action: do not approve `ARCHITECTURE_TARGET_MET` until canonical GitHub alignment is authorized and verified.
+- reviewer next action: review `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`; TASK-121 remains not DONE until review/user acceptance.

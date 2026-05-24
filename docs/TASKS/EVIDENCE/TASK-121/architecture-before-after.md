@@ -47,23 +47,24 @@ Build/test evidence:
 - `20260524T181041Z-ios-test-manual-sync-regression-task-TASK-121-p72598`: PASS.
 - `20260524T181548Z-ios-smoke-options-task-TASK-121-p75878`: PASS_WITH_NOTES via accepted XcodeBuildMCP fallback evidence.
 
-No local root-residue blocker remains after this pass. Canonical GitHub `main` is still blocked because no push was allowed and the remote tree at the checked SHA still contains `iOSMerchandiseControl/SupabaseInventoryService.swift`.
+No local root-residue blocker remains after this pass. Canonical GitHub `main` was later aligned by the authorized TASK-121 push; the remote tree no longer contains `iOSMerchandiseControl/SupabaseInventoryService.swift`.
 
 ## Final anti-false-positive pass
 
 The earlier `10 -> 0` root-residue claim was not sufficient: independent `git ls-files` root-only review found `iOSMerchandiseControl/SupabaseInventoryService.swift` still tracked in root, and the root-residue scanner was not failing it.
 
-Final local physical changes:
+Final physical and canonical changes:
 - `SupabaseInventoryService.swift` root path removed and rehomed as `Sync/Remote/SupabaseTransportClient.swift`.
+- Legacy production symbol `SupabaseInventoryService` renamed to `SupabaseTransportClient`; manual/recovery/presentation boundaries use protocols or Remote adapters instead of concrete mega-service references.
 - Remote adapter wrappers added for catalog, product price, history session, and sync-event incremental access.
 - Additional root sync-related files were moved to `Sync/Manual`, `Sync/Recovery`, `Sync/Outbox`, `Sync/Remote`, or `Sync/Automatic/Presentation` according to ownership.
 - Root now keeps only non-domain Supabase allowlist files: auth service/view model and config/client provider.
 
 Final scanner state:
 - root-residue PASS with `residue_count=0` and duplicate root+moved count 0.
-- `git ls-files` root-only check is now part of the scanner.
+- `git ls-files` root-only check and production legacy-symbol detection are now part of the scanner.
 - Supabase contract TASK-121 no longer routes through TASK-120; reconciliation is PASS.
-- GitHub canonical `main` root check remains blocking until an explicit publish/realignment step is authorized.
+- GitHub canonical `main` root check is PASS after authorized push: old root raw URL returns `404`, while `Sync/Remote/SupabaseTransportClient.swift` and the four Remote adapter raw URLs return `200`.
 
 Evidence:
 - `docs/TASKS/EVIDENCE/TASK-121/supabase-inventory-service-strangler-map.md`

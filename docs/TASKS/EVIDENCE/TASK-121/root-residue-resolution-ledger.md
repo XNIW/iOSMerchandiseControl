@@ -10,6 +10,7 @@ Generated for the continuation fix pass on 2026-05-24.
 - Xcode membership model: synchronized groups / no explicit `project.pbxproj` hits for these file names before the move
 - final anti-false-positive pass: additional root sync-related files moved/re-homed, including `SupabaseInventoryService.swift` -> `Sync/Remote/SupabaseTransportClient.swift`
 - final root allowlist: `SupabaseAuthService.swift`, `SupabaseAuthViewModel.swift`, `SupabaseClientProvider.swift`, `SupabaseConfig.swift`
+- canonical GitHub alignment: old root `iOSMerchandiseControl/SupabaseInventoryService.swift` absent on GitHub after authorized push; raw status `404`; forbidden root count 0.
 
 ## Entries
 
@@ -36,12 +37,12 @@ evidence report: `docs/TASKS/EVIDENCE/TASK-121/agent-runs/`
 
 old_path: `iOSMerchandiseControl/SupabaseInventoryService.swift`
 new_path: `iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift`
-action: move
+action: move + rename
 owner: Remote
 reason: root mega-service residue remained after the earlier `10 -> 0` claim; concrete Supabase transport belongs in `Sync/Remote`.
-symbols/types affected: `SupabaseInventoryService`, `SupabaseInventoryServiceError`, `SupabaseInventoryDiagnosticResult`, remote catalog/product-price/history/sync-event methods
+symbols/types affected: `SupabaseInventoryService` -> `SupabaseTransportClient`, `SupabaseInventoryServiceError` -> `SupabaseTransportClientError`, `SupabaseInventoryDiagnosticResult` -> `SupabaseTransportDiagnosticResult`, remote catalog/product-price/history/sync-event methods
 callers before: `ContentView`, automatic runtime factory, manual sync release factory, recovery/product-price services, acceptance tests
-callers after: automatic/history/incremental callers use Remote adapters; manual product-price protocols remain manual-only
+callers after: automatic/history/incremental callers use Remote adapters; manual product-price protocols remain manual-only; production code no longer references legacy `SupabaseInventoryService`
 Xcode membership before: synchronized_or_unlisted
 Xcode membership after: synchronized_or_unlisted; verified by `scan xcode-membership`
 tests required: source-format, root-residue, sync-inventory, manual-boundary, duplicate-symbols, debug/release build, automatic tests, sync tests, manual regression

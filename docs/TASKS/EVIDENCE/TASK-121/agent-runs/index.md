@@ -2,7 +2,7 @@
 
 Generated during the post-TASK-121 architecture review/fix pass on 2026-05-24.
 
-Updated during the continuation root-residue eradication pass on 2026-05-24.
+Updated during the continuation root-residue eradication and canonical GitHub alignment pass on 2026-05-24.
 
 ## Discovery and preflight
 
@@ -42,7 +42,7 @@ Discovery evidence:
 - PASS: `scan duplicate-symbols --task TASK-121 --strict`
 - PASS: `scan root-residue --task TASK-121 --strict`
 
-Root residue reconciliation is full PASS for the local index/worktree: classified residue count is 0 and no blocker-class `PASS_WITH_NOTES` remains. Canonical GitHub `main` is tracked separately below because push was explicitly forbidden.
+Root residue reconciliation is full PASS for the local index/worktree and canonical GitHub `main`: classified residue count is 0, no blocker-class `PASS_WITH_NOTES` remains, and the post-push remote tree has no forbidden root sync files.
 
 ## Root residue resolution pass
 
@@ -93,46 +93,66 @@ Live and cleanup gates were NOT_RUN by design and are not counted as PASS.
 
 ## Final anti-false-positive architecture certification
 
-- GitHub/local SHA checked: `74cbe9fc41067e64bd11fd6e62307b4451233866` for local `HEAD`, `origin/main`, and GitHub canonical `main`.
+- Canonical architecture commit checked and pushed: `2ac8cb02587657307a0ec136e8153f6ee29808a2` for local `HEAD`, `origin/main`, and GitHub canonical `main` immediately after the architecture push.
 - local git ls-files root sync-related count: 0 non-allowlisted root sync/Supabase files.
-- GitHub canonical main root sync-related count: 1 blocking file, `iOSMerchandiseControl/SupabaseInventoryService.swift`.
+- GitHub canonical main root sync-related count: 0 forbidden root sync files; old root `iOSMerchandiseControl/SupabaseInventoryService.swift` returns GitHub raw `404`.
 - root residues before/after: original blocking set 10 -> 0; anti-false-positive root allowlist pass found and moved additional root sync files including `SupabaseInventoryService.swift`.
 - duplicate root+moved path count: 0.
-- SupabaseInventoryService status: root path eliminated; moved/renamed to `Sync/Remote/SupabaseTransportClient.swift`; Remote adapters added for catalog, product price, history, and sync-event incremental access.
-- source-format status: PASS, `20260524T184456Z-scan-source-format-task-TASK-121-strict-p21711`.
-- scanner false-positive fixes: root-residue now checks `git ls-files` root-only and duplicate root+moved paths; Supabase contract TASK-121 now routes to `task121_scans.py` and requires reconciliation PASS.
+- SupabaseInventoryService status: root path eliminated and production symbol removed; transport renamed to `SupabaseTransportClient` in `Sync/Remote/SupabaseTransportClient.swift`; Remote adapters added for catalog, product price, history, and sync-event incremental access.
+- source-format status: PASS, `20260524T193322Z-scan-source-format-task-TASK-121-strict-p38688`.
+- scanner false-positive fixes: root-residue now checks `git ls-files` root-only, duplicate root+moved paths, and legacy production `SupabaseInventoryService` symbol use; Supabase contract TASK-121 routes to `task121_scans.py` and requires reconciliation PASS.
 - CA-121-01...56 final ledger: scanner/build/test/smoke refs below; live/cleanup gates remain NOT_RUN and are not counted as PASS.
 - PASS_WITH_NOTES: only `ios smoke options`, accepted fallback evidence from wrapper.
 - NOT_RUN: live reconcile, live sync matrix, cleanup.
-- reviewer next action: do not approve `ARCHITECTURE_TARGET_MET` until canonical GitHub alignment is authorized and verified.
+- reviewer next action: review `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`; TASK-121 remains not DONE until review/user acceptance.
+
+## Canonical GitHub alignment certification
+
+- local HEAD at architecture push: `2ac8cb02587657307a0ec136e8153f6ee29808a2`
+- origin/main at architecture push: `2ac8cb02587657307a0ec136e8153f6ee29808a2`
+- GitHub main at architecture push: `2ac8cb02587657307a0ec136e8153f6ee29808a2`
+- pushed: yes, `git push origin main` fast-forward `3709b26..2ac8cb0`
+- root forbidden files local: 0
+- root forbidden files GitHub: 0 by `git ls-tree origin/main` and GitHub raw checks
+- SupabaseInventoryService root status: absent; GitHub raw status `404`
+- Sync/Remote transport/adapters status: present; GitHub raw status `200` for transport and all four adapters
+- scanner anti-false-positive status: PASS after RED observation (`20260524T192703Z-scan-root-residue-task-TASK-121-strict-p25792`) and post-push PASS (`20260524T194147Z-scan-root-residue-task-TASK-121-strict-p65460`)
+- local build/test/scanner status: PASS
+- GitHub canonical verification status: PASS by `git rev-parse`, `git ls-remote`, `git ls-tree`, and GitHub raw status checks
+- Options smoke status: PASS_WITH_NOTES, non-blocking accepted XcodeBuildMCP fallback
+- live/cleanup status: NOT_RUN, not counted as PASS
+- final verdict: `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`
 
 Latest final refs:
-- root-residue: `20260524T184456Z-scan-root-residue-task-TASK-121-strict-p21697`
-- sync-inventory: `20260524T184455Z-scan-sync-inventory-task-TASK-121-strict-p21649`
-- sync-architecture: `20260524T184427Z-scan-sync-architecture-task-TASK-121-strict-p19019`
-- manual-boundary: `20260524T184455Z-scan-manual-boundary-task-TASK-121-strict-p21648`
-- duplicate-symbols: `20260524T184456Z-scan-duplicate-symbols-task-TASK-121-strict-p21700`
-- debug build: `20260524T184725Z-ios-build-debug-task-TASK-121-p26069`
-- release build: `20260524T184825Z-ios-build-release-task-TASK-121-p26986`
-- automatic architecture: `20260524T185030Z-ios-test-automatic-architecture-task-TASK-121-p28971`
-- automatic domain: `20260524T185045Z-ios-test-automatic-domain-task-TASK-121-p29633`
-- sync tests: `20260524T185057Z-ios-test-sync-task-TASK-121-p30253`
-- manual sync regression: `20260524T185328Z-ios-test-manual-sync-regression-task-TASK-121-p31082`
-- options smoke: `20260524T185344Z-ios-smoke-options-task-TASK-121-p31687`
-- Supabase contract read-only: `20260524T185625Z-supabase-contract-sync-schema-task-TASK-121-read-only-p33721`
+- root-residue: `20260524T194147Z-scan-root-residue-task-TASK-121-strict-p65460`
+- sync-inventory: `20260524T193309Z-scan-sync-inventory-task-TASK-121-strict-p36429`
+- sync-architecture: `20260524T193309Z-scan-sync-architecture-task-TASK-121-strict-p36430`
+- manual-boundary: `20260524T193322Z-scan-manual-boundary-task-TASK-121-strict-p38691`
+- duplicate-symbols: `20260524T193322Z-scan-duplicate-symbols-task-TASK-121-strict-p38748`
+- scanner-self-tests: `20260524T193322Z-scan-scanner-self-tests-task-TASK-121-strict-p38751`
+- debug build: `20260524T193224Z-ios-build-debug-task-TASK-121-p31097`
+- release build: `20260524T193330Z-ios-build-release-task-TASK-121-p41091`
+- automatic architecture: `20260524T193439Z-ios-test-automatic-architecture-task-TASK-121-p41890`
+- automatic domain: `20260524T193512Z-ios-test-automatic-domain-task-TASK-121-p42632`
+- sync tests: `20260524T193522Z-ios-test-sync-task-TASK-121-p43231`
+- manual sync regression: `20260524T193753Z-ios-test-manual-sync-regression-task-TASK-121-p44142`
+- options smoke: `20260524T193809Z-ios-smoke-options-task-TASK-121-p44742`
+- Supabase contract read-only: `20260524T193832Z-supabase-contract-sync-schema-task-TASK-121-read-only-p45438`
+- post-push head-consistency: `20260524T194147Z-git-head-consistency-task-TASK-121-p65438`
+- post-push preflight: `20260524T194147Z-preflight-require-head-consistency-task-TASK-121-p65461`
 
 Final post-documentation rerun refs:
-- task-docs: `20260524T190006Z-scan-task-docs-task-TASK-121-strict-p36651`
-- master-plan-consistency: `20260524T190006Z-scan-master-plan-consistency-task-TASK-121-strict-p36650`
+- task-docs: `20260524T194921Z-scan-task-docs-task-TASK-121-strict-p69545`
+- master-plan-consistency: `20260524T194921Z-scan-master-plan-consistency-task-TASK-121-strict-p69546`
 - harness-health: `20260524T190151Z-scan-harness-health-task-TASK-121-strict-p57748`
-- evidence-metadata: `20260524T190017Z-scan-evidence-metadata-task-TASK-121-strict-p39095`
+- evidence-metadata: `20260524T194921Z-scan-evidence-metadata-task-TASK-121-strict-p69589`
 - sync-inventory: `20260524T190151Z-scan-sync-inventory-task-TASK-121-strict-p57747`
-- root-residue: `20260524T190017Z-scan-root-residue-task-TASK-121-strict-p39138`
+- root-residue: `20260524T194921Z-scan-root-residue-task-TASK-121-strict-p69594`
 - source-format: `20260524T190032Z-scan-source-format-task-TASK-121-strict-p41571`
 - scanner-self-tests: `20260524T190032Z-scan-scanner-self-tests-task-TASK-121-strict-p41575`
 - Supabase status-redacted: `20260524T190040Z-supabase-status-redacted-task-TASK-121-p43916`
 - Supabase contract read-only: `20260524T190040Z-supabase-contract-sync-schema-task-TASK-121-read-only-p43917`
 - sensitive: `20260524T190040Z-scan-sensitive-task-TASK-121-p43965`
-- evidence: `20260524T190326Z-scan-evidence-task-TASK-121-p73652`
-- report validate-json: `20260524T190326Z-report-validate-json-task-TASK-121-path-docs-TASKS-EVIDENCE-TASK-121-agent-runs-p73653`
+- evidence: `20260524T194930Z-scan-evidence-task-TASK-121-p71177`
+- report validate-json: `20260524T195004Z-report-validate-json-task-TASK-121-path-docs-TASKS-EVIDENCE-TASK-121-agent-runs-p88706`
 - `git diff --check`: PASS, no output on final rerun.

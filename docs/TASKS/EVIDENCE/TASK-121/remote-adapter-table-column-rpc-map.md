@@ -2,7 +2,7 @@
 
 Generated during the final anti-false-positive review/fix pass on 2026-05-24.
 
-Read-only contract evidence: `20260524T190040Z-supabase-contract-sync-schema-task-TASK-121-read-only-p43917`.
+Read-only contract evidence: `20260524T193832Z-supabase-contract-sync-schema-task-TASK-121-read-only-p45438`.
 
 No schema, RLS, grant, RPC, migration, or live cleanup change was made.
 
