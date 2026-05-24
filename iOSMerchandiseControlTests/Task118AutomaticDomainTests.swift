@@ -114,8 +114,14 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
     func testOptionsAndProvidersUseObserverOnlyContracts() throws {
         let options = try readSource("iOSMerchandiseControl/OptionsView.swift")
-        let provider = try readSource("iOSMerchandiseControl/Sync/Presentation/OptionsSyncSummaryProvider.swift")
-        let contracts = try readSource("iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift")
+        let provider = try readSource("iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift")
+        let contracts = try [
+            "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+            "iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+            "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift"
+        ].map(readSource).joined(separator: "\n")
 
         XCTAssertFalse(options.contains("CloudSyncProgressState.idle()"))
         XCTAssertTrue(options.contains("OptionsSyncSummaryProvider"))

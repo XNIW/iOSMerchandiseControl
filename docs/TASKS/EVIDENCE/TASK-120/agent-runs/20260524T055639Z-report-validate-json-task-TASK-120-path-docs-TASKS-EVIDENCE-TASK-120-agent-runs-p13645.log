@@ -1,0 +1,2 @@
+=== mc-agent report validate-json --task TASK-120 --path docs/TASKS/EVIDENCE/TASK-120/agent-runs ===
+VALID 118 JSON report(s)

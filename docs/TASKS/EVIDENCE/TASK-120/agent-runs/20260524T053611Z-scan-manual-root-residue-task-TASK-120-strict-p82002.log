@@ -1,0 +1,59 @@
+=== mc-agent scan manual-root-residue --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Move root-level manual residues or document reviewer-approved exceptions.",
+  "checks": [
+    {
+      "evidence": {
+        "root_level_manual_files": []
+      },
+      "fix_hint": "Move SupabaseManual*/ManualPush/manual DTO/factory/view model files to iOSMerchandiseControl/Sync/Manual.",
+      "id": "manual_files_not_root_level",
+      "reason": "Manual sync source files are physically isolated below Sync/Manual.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "files": [
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+          "iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift",
+          "iOSMerchandiseControl/Sync/Manual/ManualSyncBoundary.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncBaselineCommitter.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift",
+          "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventIncrementalApplyService.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncOutboxProducerConversions.swift",
+          "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift"
+        ]
+      },
+      "file": "iOSMerchandiseControl/Sync/Manual",
+      "id": "manual_boundary_has_real_files",
+      "reason": "Sync/Manual contains real manual implementation files, not only the marker boundary.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:36:11+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "manual-root-residue",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.manual-root-residue",
+  "started_at": "2026-05-24T05:36:11+00:00",
+  "status": "PASS",
+  "summary": "manual-root-residue: PASS (2 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

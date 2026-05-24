@@ -1,0 +1,218 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun swiftdata-context-boundary.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045121Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p96602.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045121Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p96602.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045121Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p96602.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-120-06",
+    "CA-120-35"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan swiftdata-context-boundary --task TASK-120 --strict",
+  "command_slug": "scan-swiftdata-context-boundary-task-TASK-120-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 254,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-120",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK120_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-120"
+  },
+  "exit_code": 1,
+  "git_sha": "b6953a5",
+  "next_action_recommended": "Fix failing checks and rerun swiftdata-context-boundary.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Fix ModelContext boundary leaks before Swift moves continue.",
+    "checks": [
+      {
+        "evidence": [
+          {
+            "line": 78,
+            "snippet": "context: ModelContext,"
+          },
+          {
+            "line": 83,
+            "snippet": "let modelContainer = context.container"
+          }
+        ],
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "fix_hint": "Move concrete factory to a composition file that takes ModelContainer directly.",
+        "id": "runtime_facade_no_ui_modelcontext",
+        "reason": "SyncAutomaticRuntime facade does not accept/pass UI ModelContext.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": {
+          "context_parameters": [
+            {
+              "line": 66,
+              "snippet": "context: ModelContext,"
+            },
+            {
+              "line": 93,
+              "snippet": "context: ModelContext,"
+            },
+            {
+              "line": 197,
+              "snippet": "context: ModelContext,"
+            },
+            {
+              "line": 227,
+              "snippet": "nonisolated private static func findSupplier(for change: LocalPendingChange, context: ModelContext) throws -> Supplier? {"
+            },
+            {
+              "line": 236,
+              "snippet": "nonisolated private static func findCategory(for change: LocalPendingChange, context: ModelContext) throws -> ProductCategory? {"
+            },
+            {
+              "line": 245,
+              "snippet": "nonisolated private static func findProduct(for change: LocalPendingChange, context: ModelContext) throws -> Product? {"
+            }
+          ],
+          "has_fresh_model_context": true
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+        "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+        "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+        "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "context_parameters": [],
+          "has_fresh_model_context": true
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+        "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+        "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+        "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "context_parameters": [
+            {
+              "line": 22,
+              "snippet": "context: ModelContext,"
+            },
+            {
+              "line": 70,
+              "snippet": "context: ModelContext,"
+            }
+          ],
+          "has_fresh_model_context": false
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+        "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+        "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+        "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": {
+          "context_parameters": [],
+          "has_fresh_model_context": true
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+        "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+        "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+        "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "context_parameters": [
+            {
+              "line": 69,
+              "snippet": "context: ModelContext,"
+            },
+            {
+              "line": 86,
+              "snippet": "context: ModelContext,"
+            },
+            {
+              "line": 114,
+              "snippet": "context: ModelContext,"
+            },
+            {
+              "line": 154,
+              "snippet": "context: ModelContext,"
+            },
+            {
+              "line": 179,
+              "snippet": "nonisolated private static func findPrice(for change: LocalPendingChange, context: ModelContext) throws -> ProductPrice? {"
+            }
+          ],
+          "has_fresh_model_context": true
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+        "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+        "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+        "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-24T04:51:22+00:00",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "FAIL",
+    "safety_level": "read_only_static_scan",
+    "scan": "swiftdata-context-boundary",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.swiftdata-context-boundary",
+    "started_at": "2026-05-24T04:51:22+00:00",
+    "status": "FAIL",
+    "summary": "swiftdata-context-boundary: FAIL (6 checks)",
+    "taskId": "TASK-120",
+    "task_id": "TASK-120"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T045121Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p96602",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-120",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T04:51:22Z",
+  "timestamp_start": "2026-05-24T04:51:21Z",
+  "warnings": []
+}

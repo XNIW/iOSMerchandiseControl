@@ -355,8 +355,8 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
     func testTask067ManualSyncReleaseSourcesAvoidForbiddenScope() throws {
         let optionsViewSource = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: optionsViewSource)
-        let factorySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift")
-        let viewModelSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift")
+        let factorySource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift")
+        let viewModelSource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift")
         let combined = [releaseCardSource, factorySource, viewModelSource].joined(separator: "\n")
 
         for forbidden in ["BGTask", "Timer", "Realtime", "worker", "polling", ".channel", "SupabaseClient", ".rpc", ".from", ".upsert", "TASK-068"] {
@@ -418,7 +418,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
     func testTask074SummaryIsNotPersistedByReleaseSurface() throws {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: source)
-        let viewModelSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift")
+        let viewModelSource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift")
         let combined = [releaseCardSource, viewModelSource].joined(separator: "\n")
 
         for forbidden in ["UserDefaults", "AppStorage", "FileManager", ".write(", "@Model"] {
@@ -435,7 +435,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
     }
 
     func testTask073ReleaseFactoryBuildsReadOnlyRemotePreviewProvider() throws {
-        let factorySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift")
+        let factorySource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift")
 
         XCTAssertTrue(factorySource.contains("pullPreviewService: SupabasePullPreviewService? = nil"))
         XCTAssertTrue(factorySource.contains("manualPushService: SupabaseManualPushService? = nil"))
@@ -459,9 +459,9 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
     func testTask081ActivityRegistrationDrainIsAdapterOwned() throws {
         let optionsViewSource = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: optionsViewSource)
-        let factorySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift")
-        let viewModelSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift")
-        let adapterSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift")
+        let factorySource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift")
+        let viewModelSource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift")
+        let adapterSource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift")
 
         XCTAssertTrue(adapterSource.contains("SyncEventOutboxDrainService"))
         XCTAssertTrue(adapterSource.contains("drainOnce"))
@@ -475,7 +475,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
     }
 
     func testTask069ReleaseFactoryUsesLocalPendingSnapshotProvider() throws {
-        let factorySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift")
+        let factorySource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift")
 
         XCTAssertTrue(factorySource.contains("SupabaseManualSyncLocalPendingSnapshotProvider"))
         XCTAssertTrue(factorySource.contains("SupabaseManualSyncCatalogPendingAdapter"))
@@ -487,10 +487,10 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         let optionsViewSource = try readSource("iOSMerchandiseControl/OptionsView.swift")
         let releaseCardSource = try extractReleaseCardSource(from: optionsViewSource)
         let paths = [
-            "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
-            "iOSMerchandiseControl/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
-            "iOSMerchandiseControl/SupabaseManualSyncCoordinator.swift",
-            "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
         ]
         let combined = try ([releaseCardSource] + paths.map(readSource))
             .joined(separator: "\n")
@@ -585,8 +585,8 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
 
     func testTask092RootForegroundSourcesAvoidForbiddenAutomationScope() throws {
         let contentSource = try extractRootForegroundHostSource(from: readSource("iOSMerchandiseControl/ContentView.swift"))
-        let policySource = try readSource("iOSMerchandiseControl/SupabaseManualSyncSemiAutomaticPolicy.swift")
-        let viewModelSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift")
+        let policySource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift")
+        let viewModelSource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift")
         let combined = [contentSource, policySource, viewModelSource].joined(separator: "\n")
 
         for forbidden in ["BGTaskScheduler", "Timer", "Realtime", "polling", ".channel", "SupabaseClient", ".rpc", ".from", ".upsert"] {
@@ -601,7 +601,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
         let swiftSources = try [
             "iOSMerchandiseControl/ContentView.swift",
             "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
-            "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
         ].map(readSource).joined(separator: "\n")
 
         XCTAssertTrue(swiftSources.contains("options.supabase.automaticSync.root.checking.title"))
@@ -627,7 +627,7 @@ final class SupabaseManualSyncReleaseUITests: XCTestCase {
 
     func testTask110OptionsCheckCloudRunsHistorySyncPath() throws {
         let source = try readSource("iOSMerchandiseControl/OptionsView.swift")
-        let viewModelSource = try readSource("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift")
+        let viewModelSource = try readSource("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift")
 
         XCTAssertTrue(source.contains("actionID == .checkCloud || actionID == .downloadCloudDatabase"))
         XCTAssertTrue(source.contains("syncHistoryAfterRun: directSync"))

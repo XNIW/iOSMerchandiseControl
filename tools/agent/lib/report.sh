@@ -28,12 +28,12 @@ mc_report_map_result() {
     return 0
   fi
   case "$code" in
-    0) printf 'pass' ;;
-    1) printf 'fail' ;;
-    2) printf 'blocked' ;;
-    3) printf 'misconfigured' ;;
-    4) printf 'refused' ;;
-    *) printf 'fail' ;;
+    0) printf 'PASS' ;;
+    1) printf 'FAIL' ;;
+    2) printf 'BLOCKED_EXTERNAL' ;;
+    3) printf 'MISCONFIGURED' ;;
+    4) printf 'UNSAFE_OPERATION_REFUSED' ;;
+    *) printf 'FAIL' ;;
   esac
 }
 
@@ -167,6 +167,7 @@ payload = {
     "test_prefix": os.environ["MC_REPORT_TEST_PREFIX"] or None,
     "cleanup_plan_id": os.environ["MC_REPORT_CLEANUP_PLAN_ID"] or None,
     "result": os.environ["MC_REPORT_RESULT"],
+    "status": os.environ["MC_REPORT_RESULT"],
     "exit_code": int(os.environ["MC_REPORT_EXIT_CODE"]),
     "rows_created": int(os.environ["MC_REPORT_ROWS_CREATED"]),
     "rows_deleted": int(os.environ["MC_REPORT_ROWS_DELETED"]),
@@ -181,6 +182,12 @@ payload = {
     },
     "ca_refs": json.loads(os.environ["MC_REPORT_CA_JSON"]),
     "warnings": json.loads(os.environ["MC_REPORT_WARNINGS_JSON"]),
+    "redaction_summary": {
+        "raw_log_redacted": True,
+        "paths_redacted": os.environ.get("MC_REDACT_PATHS", "1") == "1",
+        "emails_redacted": os.environ.get("MC_REDACT_EMAILS", "1") == "1"
+    },
+    "NEXT_ACTION": os.environ["MC_REPORT_NEXT_ACTION"],
     "next_action_recommended": os.environ["MC_REPORT_NEXT_ACTION"],
 }
 detail = os.environ.get("MC_REPORT_RECONCILIATION_JSON", "").strip()

@@ -35,5 +35,9 @@ if (self.code !== 0) {
 const help = await run("bash", [agent, "help-json"], { MC_TASK_ID: "TASK-115", MC_EVIDENCE_DIR: "docs/TASKS/EVIDENCE/TASK-115" });
 const hasTask114Sync = help.out.includes('"name":"sync counts"') && help.out.includes('"name":"live reconcile-counts"');
 console.log("task115 sync command contract:", hasTask114Sync ? "OK" : "FAIL");
+const hasTask120Scans = help.out.includes('"name":"scan task-docs task120"') &&
+  help.out.includes('"name":"scan scanner-self-tests task120"') &&
+  help.out.includes('"name":"scan sync-architecture task120"');
+console.log("task120 scanner command contract:", hasTask120Scans ? "OK" : "FAIL");
 
-process.exit((preflight.code === 3 || report.code === 3 || self.code !== 0 || !hasTask114Sync) ? 1 : 0);
+process.exit((preflight.code === 3 || report.code === 3 || self.code !== 0 || !hasTask114Sync || !hasTask120Scans) ? 1 : 0);

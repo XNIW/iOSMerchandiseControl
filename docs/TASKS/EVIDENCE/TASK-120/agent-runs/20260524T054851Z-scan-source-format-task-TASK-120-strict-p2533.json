@@ -1,0 +1,3004 @@
+{
+  "NEXT_ACTION": "Use this report in TASK-120 evidence matrix.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054851Z-scan-source-format-task-TASK-120-strict-p2533.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054851Z-scan-source-format-task-TASK-120-strict-p2533.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054851Z-scan-source-format-task-TASK-120-strict-p2533.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-120-41",
+    "CA-120-60",
+    "CA-120-66"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan source-format --task TASK-120 --strict",
+  "command_slug": "scan-source-format-task-TASK-120-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 475,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-120",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK120_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-120"
+  },
+  "exit_code": 0,
+  "git_sha": "b6953a5",
+  "next_action_recommended": "Use this report in TASK-120 evidence matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Fix source-format failures before Swift move/split/delete work.",
+    "checks": [
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/AppNavigationNotifications.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/AppNavigationNotifications.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/BarcodeScannerView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/BarcodeScannerView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/CloudSyncOverviewState.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/CloudSyncOverviewState.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/ContentView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/ContentView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/DatabaseView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/DatabaseView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/EditProductView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/EditProductView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/EntryInfoEditor.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/EntryInfoEditor.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/ExcelSessionViewModel.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/ExcelSessionViewModel.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/GeneratedView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/GeneratedView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/HistoryEntry.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/HistoryEntry.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/HistoryEntryRuntimeSummary.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/HistoryEntryRuntimeSummary.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/HistoryImportedGridSupport.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/HistoryImportedGridSupport.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/HistoryView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/HistoryView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/ImportAnalysisView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/ImportAnalysisView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/InventoryHomeView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/InventoryHomeView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/InventorySyncService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/InventorySyncService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/InventoryXLSXExporter.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/InventoryXLSXExporter.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/LocalPendingAggregatedPushPlanner.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/LocalPendingAggregatedPushPlanner.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/LocalPendingChange.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/LocalPendingChange.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/LocalizationManager.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/LocalizationManager.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Models.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Models.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/OptionsView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/OptionsView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/PreGenerateView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/PreGenerateView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/PriceFormatting.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/PriceFormatting.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/ProductImportCore.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/ProductImportCore.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/ProductImportViewModel.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/ProductImportViewModel.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/ProductPriceHistoryView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/ProductPriceHistoryView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/ShareSheet.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/ShareSheet.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseAuthService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseAuthService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseAuthViewModel.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseAuthViewModel.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseCatalogBaselineModels.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseCatalogBaselineModels.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseCatalogBaselineReader.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseCatalogBaselineReader.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseCatalogBaselineWriter.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseCatalogBaselineWriter.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseCatalogFingerprintNormalizer.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseCatalogFingerprintNormalizer.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseClientProvider.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseClientProvider.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseConfig.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseConfig.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseInventoryDTOs.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseInventoryDTOs.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseInventoryService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseInventoryService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseProductPriceApplyService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseProductPriceApplyService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseProductPricePreviewService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseProductPricePreviewService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseProductPricePushDryRunService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseProductPricePushDryRunService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabasePullApplyService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabasePullApplyService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabasePullPreviewModels.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabasePullPreviewModels.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabasePullPreviewService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabasePullPreviewService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabasePushPreflightViewModel.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabasePushPreflightViewModel.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseSyncEventDTOs.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseSyncEventDTOs.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseSyncEventDebugFormatting.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseSyncEventDebugFormatting.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseSyncEventDebugViewModel.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseSyncEventDebugViewModel.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseSyncEventLiveRecorder.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseSyncEventLiveRecorder.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseSyncEventPreviewService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseSyncEventPreviewService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseSyncEventRPCTransport.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseSyncEventRPCTransport.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseSyncEventRealtimeWatcher.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseSyncEventRealtimeWatcher.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseSyncPlanContract.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseSyncPlanContract.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseTask087SandboxSmokeService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseTask087SandboxSmokeService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SupabaseTask088ProductPriceSmokeService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SupabaseTask088ProductPriceSmokeService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SwiftDataInventorySnapshotService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SwiftDataInventorySnapshotService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Account/AccountBindingStore.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Account/AccountBindingStore.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Account/AccountSwitchPolicy.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Account/AccountSwitchPolicy.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecisionView.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Account/AccountSyncDecisionView.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncAutomaticTriggerSource.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Decision/SyncAutomaticTriggerSource.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncTrigger.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Decision/SyncTrigger.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticPresentationBoundary.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticPresentationBoundary.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStatusPresenter.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStatusPresenter.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplyService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplyService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplySummary.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplySummary.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplySummary.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplySummary.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplySummary.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplySummary.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalContracts.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalContracts.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalPullService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalPullService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/ManualSyncBoundary.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/ManualSyncBoundary.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncBaselineCommitter.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncBaselineCommitter.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncOutboxProducerConversions.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncOutboxProducerConversions.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0031545741324921135,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventIncrementalApplyService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventIncrementalApplyService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Recovery/BootstrapPullService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Recovery/BootstrapPullService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Recovery/DriftReconciliationService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Recovery/DriftReconciliationService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Recovery/FullRecoveryService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Recovery/FullRecoveryService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Shared/AutomaticSharedBoundary.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Shared/AutomaticSharedBoundary.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/Shared/SyncStringCollectionHelpers.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/Shared/SyncStringCollectionHelpers.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SyncCountReconciliation.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SyncCountReconciliation.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SyncEventOutboxDrainDebugViewModel.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SyncEventOutboxDrainDebugViewModel.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SyncEventOutboxDrainService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SyncEventOutboxDrainService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SyncEventOutboxEnqueueService.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SyncEventOutboxEntry.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SyncEventOutboxEntry.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SyncEventOutboxState.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SyncEventOutboxState.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SyncEventRPCRequestMapper.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SyncEventRPCRequestMapper.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/SyncEventRecording.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/SyncEventRecording.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/Task089SyntheticBenchmarkHarness.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/Task089SyntheticBenchmarkHarness.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/AccountSyncPolicyTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/AccountSyncPolicyTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/AutomaticSyncReconnectSchedulerTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/AutomaticSyncReconnectSchedulerTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/CloudSyncOverviewStateTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/CloudSyncOverviewStateTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/ExcelAnalyzerHTMLParsingTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/ExcelAnalyzerHTMLParsingTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/HistorySessionSyncServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/HistorySessionSyncServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/HistoryViewStateTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/HistoryViewStateTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/InventorySyncServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/InventorySyncServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/LocalPendingChangeAccumulatorTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/LocalPendingChangeAccumulatorTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/LocalizationCoverageTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/LocalizationCoverageTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0051813471502590676,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/ManualPushFingerprintNormalizerTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/ManualPushFingerprintNormalizerTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/OrderQuantitySummaryTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/OrderQuantitySummaryTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/PendingChangeCoalescerTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/PendingChangeCoalescerTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/RemoteIdentityMetadataSwiftDataTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/RemoteIdentityMetadataSwiftDataTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseCatalogBaselinePreflightIntegrationTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseCatalogBaselinePreflightIntegrationTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseCatalogBaselineSwiftDataTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseCatalogBaselineSwiftDataTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseCatalogBaselineWriterReaderTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseCatalogBaselineWriterReaderTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseConfigSecurityTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseConfigSecurityTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseManualPushPreflightTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseManualPushPreflightTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseManualPushServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseManualPushServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseManualSyncLifecycleRunGateTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseManualSyncLifecycleRunGateTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseManualSyncLocalPendingSnapshotProviderTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseManualSyncLocalPendingSnapshotProviderTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseManualSyncRemotePreviewTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseManualSyncRemotePreviewTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseProductPriceApplyServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseProductPriceApplyServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseProductPriceManualPushServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseProductPriceManualPushServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseProductPricePreviewServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseProductPricePreviewServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseProductPricePushDryRunServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseProductPricePushDryRunServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabasePullApplyServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabasePullApplyServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabasePullPreviewDiffEngineTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabasePullPreviewDiffEngineTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabasePullPreviewPaginationTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabasePullPreviewPaginationTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabasePushPreflightViewModelTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabasePushPreflightViewModelTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseSyncEventDebugViewModelTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseSyncEventDebugViewModelTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseSyncEventPreviewServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseSyncEventPreviewServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SupabaseSyncPlanContractTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SupabaseSyncPlanContractTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncCountReconciliationTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncCountReconciliationTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncDecisionEngineTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncDecisionEngineTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncEventOutboxDrainServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncEventOutboxDrainServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0012531328320802004,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncEventOutboxEnqueueServiceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncEventOutboxEnqueueServiceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncEventOutboxLocalStoreTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncEventOutboxLocalStoreTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncEventOutboxStateTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncEventOutboxStateTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncEventRecordingTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncEventRecordingTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/SyncStatusPresenterTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/SyncStatusPresenterTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/Task089LargeDatasetBenchmarkTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/Task089LargeDatasetBenchmarkTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/Task105RealOpsClosureTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/Task105RealOpsClosureTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/Task111ExcelImportParityTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/Task111ExcelImportParityTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/Task115RealRootLifecycleTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/Task115RealRootLifecycleTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "iOSMerchandiseControlTests/WatermarkStoreTests.swift",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:iOSMerchandiseControlTests/WatermarkStoreTests.swift",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/android.sh",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/android.sh",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0005701254275940707,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/common.sh",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/common.sh",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/ios.sh",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/ios.sh",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/redact.sh",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/redact.sh",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/report.sh",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/report.sh",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/supabase.sh",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/supabase.sh",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/sync.sh",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/sync.sh",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/sync_architecture_scans.py",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/sync_architecture_scans.py",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/task117_scans.py",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/task117_scans.py",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/task119_scans.py",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/task119_scans.py",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.0,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/lib/task120_scans.py",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/lib/task120_scans.py",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "lines_over_1000": [],
+          "minified_script": false,
+          "over_300_ratio": 0.008695652173913044,
+          "packed_declarations": []
+        },
+        "file": "tools/agent/mc-agent.sh",
+        "fix_hint": "Split long lines or packed declarations before architecture moves.",
+        "id": "source_format:tools/agent/mc-agent.sh",
+        "reason": "File respects TASK-120 line/readability thresholds.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-24T05:48:52+00:00",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "PASS",
+    "safety_level": "read_only_static_scan",
+    "scan": "source-format",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.source-format",
+    "started_at": "2026-05-24T05:48:52+00:00",
+    "status": "PASS",
+    "summary": "source-format: PASS (224 checks)",
+    "taskId": "TASK-120",
+    "task_id": "TASK-120"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T054851Z-scan-source-format-task-TASK-120-strict-p2533",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-120",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T05:48:52Z",
+  "timestamp_start": "2026-05-24T05:48:51Z",
+  "warnings": []
+}

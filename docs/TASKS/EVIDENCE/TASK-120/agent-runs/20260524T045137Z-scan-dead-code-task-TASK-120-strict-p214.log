@@ -1,0 +1,202 @@
+=== mc-agent scan dead-code --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Use inventory plus xcode-membership/build evidence before deletion.",
+  "checks": [
+    {
+      "evidence": {
+        "candidates": [
+          {
+            "file": "iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+            "reference_count_excluding_self": 10,
+            "samples": [
+              {
+                "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+                "line": 180,
+                "snippet": "- `SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`: mapping esplicito tra DTO manuali e DTO automatici puliti."
+              },
+              {
+                "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+                "line": 237,
+                "snippet": "- `SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`"
+              },
+              {
+                "file": "docs/TASKS/TASK-118-ios-sync-automatic-domain-split-finalization.md",
+                "line": 65,
+                "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`"
+              },
+              {
+                "file": "docs/TASKS/TASK-115-ios-sync-architecture-refactor.md",
+                "line": 458,
+                "snippet": "- iOS runtime: `ContentView.swift`, `OptionsView.swift`, `SupabaseManualSyncReleaseFactory.swift`, `SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`, `SupabaseSyncEventI"
+              },
+              {
+                "file": "docs/TASKS/TASK-116-ios-sync-architecture-completion.md",
+                "line": 320,
+                "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`"
+              },
+              {
+                "file": "docs/TASKS/TASK-081-supabase-sync-events-outbox-drain-release-ios.md",
+                "line": 278,
+                "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`"
+              },
+              {
+                "file": "docs/TASKS/TASK-081-supabase-sync-events-outbox-drain-release-ios.md",
+                "line": 314,
+                "snippet": "- Architettura: `OptionsView` resta solo presentation/wiring; nessun riferimento diretto a `SyncEventOutboxDrainService` o `drainOnce` nella card Release. Il drain reale \u00e8 confinat"
+              },
+              {
+                "file": "docs/TASKS/TASK-081-supabase-sync-events-outbox-drain-release-ios.md",
+                "line": 319,
+                "snippet": "- Duplicati: verificato che `SupabaseManualSyncReleaseActivityRegistrationAdapter.swift` e `SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift` esistono una sola volta"
+              },
+              {
+                "file": "docs/TASKS/EVIDENCE/TASK-118/01-execution-audit.md",
+                "line": 69,
+                "snippet": "- `iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift`"
+              },
+              {
+                "file": "iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift",
+                "line": 464,
+                "snippet": "let adapterSource = try readSource(\"iOSMerchandiseControl/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift\")"
+              }
+            ],
+            "symbol": "SupabaseManualSyncReleaseActivityRegistrationAdapter",
+            "xcode_membership_detected": false
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+            "reference_count_excluding_self": 33,
+            "samples": [
+              {
+                "file": "tools/agent/lib/task120_scans.py",
+                "line": 522,
+                "snippet": "rel_file = \"iOSMerchandiseControl/Sync/AutomaticPushServices.swift\""
+              },
+              {
+                "file": "tools/agent/lib/task120_scans.py",
+                "line": 532,
+                "snippet": "\"AutomaticPushServices.swift has no concrete domain services.\","
+              },
+              {
+                "file": "tools/agent/lib/task120_scans.py",
+                "line": 540,
+                "snippet": "\"AutomaticPushServices.swift is absent or zero-behavior stub.\","
+              },
+              {
+                "file": "tools/agent/lib/task120_scans.py",
+                "line": 996,
+                "snippet": "if any(token in name for token in [\"Compatibility\", \"Adapter\", \"AutomaticPushServices\", \"RuntimeProviders\"]):"
+              },
+              {
+                "file": "tools/agent/lib/sync_architecture_scans.py",
+                "line": 174,
+                "snippet": "\"iOSMerchandiseControl/Sync/AutomaticPushServices.swift\","
+              },
+              {
+                "file": "tools/agent/lib/sync_architecture_scans.py",
+                "line": 284,
+                "snippet": "\"iOSMerchandiseControl/Sync/AutomaticPushServices.swift\","
+              },
+              {
+                "file": "tools/agent/lib/sync_architecture_scans.py",
+                "line": 466,
+                "snippet": "stale_exception_hits = _line_hits(project_rel, r\"AutomaticPushServices|SupabaseManual|Compatibility|Adapter|HistorySessionSyncService\")"
+              },
+              {
+                "file": "docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md",
+                "line": 33,
+                "snippet": "- `iOSMerchandiseControl/Sync/AutomaticPushServices.swift` nello snapshot osservato e' uno stub di 1 riga / 84 byte, non il monolite da 986 righe citato nell'audit. Resta comunque "
+              },
+              {
+                "file": "docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md",
+                "line": 118,
+                "snippet": "| `iOSMerchandiseControl/Sync/AutomaticPushServices.swift` | blocker / legacy monolith guard / delete-or-stub candidate | target membership, referenze, duplicati symbol, compile in"
+              },
+              {
+                "file": "docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md",
+                "line": 213,
+                "snippet": "- `automatic-legacy-monolith`: RED se `AutomaticPushServices.swift` contiene `CatalogPushService`, `ProductPricePushService`, `HistorySessionPushService`, `SyncActivityRegistration"
+              }
+            ],
+            "symbol": "AutomaticPushServices",
+            "xcode_membership_detected": false
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+            "reference_count_excluding_self": 37,
+            "samples": [
+              {
+                "file": "tools/agent/lib/task120_scans.py",
+                "line": 927,
+                "snippet": "providers = \"iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift\""
+              },
+              {
+                "file": "tools/agent/lib/task120_scans.py",
+                "line": 934,
+                "snippet": "\"SyncAutomaticRuntimeProviders.swift is removed or transitional zero-behavior stub.\","
+              },
+              {
+                "file": "tools/agent/lib/sync_architecture_scans.py",
+                "line": 283,
+                "snippet": "\"iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift\","
+              },
+              {
+                "file": "tools/agent/lib/task117_scans.py",
+                "line": 192,
+                "snippet": "providers = \"iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift\""
+              },
+              {
+                "file": "tools/agent/lib/task117_scans.py",
+                "line": 335,
+                "snippet": "providers = \"iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift\""
+              },
+              {
+                "file": "tools/agent/lib/task117_scans.py",
+                "line": 604,
+                "snippet": "\"iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift\","
+              },
+              {
+                "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+                "line": 44,
+                "snippet": "- `SyncAutomaticRuntimeProviders.swift` espone ancora contratti automatici con `ManualPushPlan`, `SupabaseManualPushResult`, `ProductPriceManualPushResult`, `SupabaseManualSyncActi"
+              },
+              {
+                "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+                "line": 81,
+                "snippet": "- **CA-117-07**: `SyncAutomaticRuntimeProviders.swift` non espone `ManualPushPlan`, `SupabaseManualPushResult`, `ProductPriceManualPushResult`, `SupabaseManualSyncActivityRegistrat"
+              },
+              {
+                "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+                "line": 164,
+                "snippet": "- `iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift`"
+              },
+              {
+                "file": "docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md",
+                "line": 177,
+                "snippet": "- `SyncAutomaticRuntime.swift` / `SyncAutomaticRuntimeProviders.swift`: contratti automatici convertiti a DTO puliti (`SyncCatalogPushResult`, `SyncProductPricePushResult`, `SyncIn"
+              }
+            ],
+            "symbol": "SyncAutomaticRuntimeProviders",
+            "xcode_membership_detected": false
+          }
+        ]
+      },
+      "id": "dead_code_inventory",
+      "reason": "Read-only stale/adapter candidate inventory collected; no deletion performed.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T04:51:39+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "dead-code",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.dead-code",
+  "started_at": "2026-05-24T04:51:39+00:00",
+  "status": "PASS",
+  "summary": "dead-code: PASS (1 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

@@ -1,0 +1,33 @@
+=== mc-agent scan manual-boundary --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Remove manual leakage from automatic paths.",
+  "checks": [
+    {
+      "evidence": {
+        "root_level_manual_files": []
+      },
+      "id": "manual_root_clean",
+      "reason": "Manual sync files are not root-level.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "automatic_no_manual_references",
+      "reason": "Automatic runtime/domain does not reference manual-only symbols.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:36:20+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "manual-boundary",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.manual-boundary",
+  "started_at": "2026-05-24T05:36:20+00:00",
+  "status": "PASS",
+  "summary": "manual-boundary: PASS (2 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

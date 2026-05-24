@@ -1,0 +1,420 @@
+=== mc-agent ios test automatic-domain --task TASK-120 ===
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5" -resultBundlePath /tmp/mc-agent-ios-test-automatic-domain-20260524T053839Z.xcresult -parallel-testing-enabled NO "-only-testing:iOSMerchandiseControlTests/SyncDecisionEngineTests" "-only-testing:iOSMerchandiseControlTests/AccountSyncPolicyTests" "-only-testing:iOSMerchandiseControlTests/WatermarkStoreTests" "-only-testing:iOSMerchandiseControlTests/PendingChangeCoalescerTests" "-only-testing:iOSMerchandiseControlTests/SyncRecoveryPolicyTests" "-only-testing:iOSMerchandiseControlTests/SyncStatusPresenterTests" "-only-testing:iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests" "-only-testing:iOSMerchandiseControlTests/HistorySessionSyncServiceTests" "-only-testing:iOSMerchandiseControlTests/Task118AutomaticDomainTests"
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  xctest-dynamic-overlay: https://github.com/pointfreeco/xctest-dynamic-overlay @ 1.9.0
+  swift-asn1: https://github.com/apple/swift-asn1.git @ 1.7.0
+  xlsxwriter.swift: https://github.com/damuellen/xlsxwriter.swift @ SPM (f4c0e10)
+  SwiftSoup: https://github.com/scinfu/SwiftSoup @ 2.11.2
+  LRUCache: https://github.com/nicklockwood/LRUCache.git @ 1.2.0
+  swift-atomics: https://github.com/apple/swift-atomics.git @ 1.3.0
+  libxlsxwriter: https://github.com/jmcnamara/libxlsxwriter @ main (f064715)
+  swift-http-types: https://github.com/apple/swift-http-types.git @ 1.5.1
+  ZIPFoundation: https://github.com/weichsel/ZIPFoundation.git @ 0.9.20
+  Supabase: https://github.com/supabase/supabase-swift.git @ 2.46.0
+  swift-crypto: https://github.com/apple/swift-crypto.git @ 4.5.0
+  swift-concurrency-extras: https://github.com/pointfreeco/swift-concurrency-extras @ 1.3.2
+  swift-clocks: https://github.com/pointfreeco/swift-clocks @ 1.0.6
+
+Writing result bundle at path:
+	/tmp/mc-agent-ios-test-automatic-domain-20260524T053839Z.xcresult
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (38 targets)
+    Target 'iOSMerchandiseControlTests' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+    Target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation' (no dependencies)
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target '_AtomicsShims' in project 'swift-atomics' (no dependencies)
+    Target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+    Target 'LRUCache' in project 'LRUCache' (no dependencies)
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter' (no dependencies)
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'swift-crypto_Crypto' in project 'swift-crypto' (no dependencies)
+    Target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay' (no dependencies)
+    Target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+    Target 'HTTPTypes' in project 'swift-http-types' (no dependencies)
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x objective-c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+Build description signature: e65f8ccab6340fc2141ce9123626c146
+Build description path: <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/XCBuildData/e65f8ccab6340fc2141ce9123626c146.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/swift-crypto_Crypto.bundle/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist (in target 'swift-crypto_Crypto' from project 'swift-crypto')
+    cd <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-crypto
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphonesimulator -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/swift-crypto_Crypto.bundle/Info.plist
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.bundle/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist (in target 'ZIPFoundation_ZIPFoundation' from project 'ZIPFoundation')
+    cd <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/ZIPFoundation
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphonesimulator -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.bundle/Info.plist
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Info.plist <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist -producttype com.apple.product-type.application -genpkginfo <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/assetcatalog_generated_info.plist -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/swift-crypto_Crypto.bundle -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Info.plist
+
+CopySwiftLibs <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Frameworks --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/SystemExtensions --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/swift-crypto_Crypto.bundle -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist
+
+CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib: replacing existing signature
+
+CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib: replacing existing signature
+
+CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app: replacing existing signature
+
+Validate <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Test Suite 'Selected tests' started at 2026-05-24 01:38:45.098.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-24 01:38:45.098.
+Test Suite 'AccountSyncPolicyTests' started at 2026-05-24 01:38:45.099.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAccountHashRedactsRawUserID]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAccountHashRedactsRawUserID]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataRemoteEmptyRequiresConfirmedBootstrap]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataRemoteEmptyRequiresConfirmedBootstrap]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataRemoteNonEmptyBlocksSilentMerge]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataRemoteNonEmptyBlocksSilentMerge]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataUnknownRemoteRequiresVerificationBeforeMutation]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousLocalDataUnknownRemoteRequiresVerificationBeforeMutation]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousStoreAfterLogoutNeverUploadsToNewAccountAutomatically]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testAnonymousStoreAfterLogoutNeverUploadsToNewAccountAutomatically]' passed (0.004 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testBindingStorePersistsAccountHashAndStoreIdentity]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testBindingStorePersistsAccountHashAndStoreIdentity]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testClockSkewUsesRemoteOrdering]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testClockSkewUsesRemoteOrdering]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testHistoryDuplicateFingerprintDedupesWithoutUserVisibleDebugEntries]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testHistoryDuplicateFingerprintDedupesWithoutUserVisibleDebugEntries]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testMultiDeviceSameAccountUsesRemoteAsSourceOfTruth]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testMultiDeviceSameAccountUsesRemoteAsSourceOfTruth]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testOnlyBlockingAccountActionsRequireUserDecision]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testOnlyBlockingAccountActionsRequireUserDecision]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testRemoteDeletedWhileLocalEditedOfflineDoesNotResurrectSilently]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testRemoteDeletedWhileLocalEditedOfflineDoesNotResurrectSilently]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testRemoteTombstoneWithNewerLocalPendingBecomesConflict]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testRemoteTombstoneWithNewerLocalPendingBecomesConflict]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSameAccountReconnectPushesPendingDrainsAndLightReconciles]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSameAccountReconnectPushesPendingDrainsAndLightReconciles]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSameBarcodeSameEffectiveAtDifferentPriceIsConflict]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSameBarcodeSameEffectiveAtDifferentPriceIsConflict]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSessionRestoreForSameAccountKeepsOwnerBoundPending]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSessionRestoreForSameAccountKeepsOwnerBoundPending]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSwitchAccountKeepsPendingWithOriginalOwner]' started.
+Test Case '-[iOSMerchandiseControlTests.AccountSyncPolicyTests testSwitchAccountKeepsPendingWithOriginalOwner]' passed (0.000 seconds).
+Test Suite 'AccountSyncPolicyTests' passed at 2026-05-24 01:38:45.123.
+	 Executed 16 tests, with 0 failures (0 unexpected) in 0.013 (0.024) seconds
+Test Suite 'HistorySessionSyncServiceTests' started at 2026-05-24 01:38:45.123.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testFullPullPrunesCleanRemoteLinkedHistorySessionMissingFromRemoteSnapshot]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testFullPullPrunesCleanRemoteLinkedHistorySessionMissingFromRemoteSnapshot]' passed (0.031 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testFullReconciliationPushUploadsCleanHistorySessionWithStableRemoteID]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testFullReconciliationPushUploadsCleanHistorySessionWithStableRemoteID]' passed (0.011 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testHistoryPendingCountsAsQueuedCloudOperationForOptions]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testHistoryPendingCountsAsQueuedCloudOperationForOptions]' passed (0.009 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullAppliesRemoteTombstoneToExistingHistorySession]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullAppliesRemoteTombstoneToExistingHistorySession]' passed (0.010 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullInsertsRemoteHistorySession]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullInsertsRemoteHistorySession]' passed (0.008 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullInsertsRemoteHistorySessionWithEmptyGrid]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullInsertsRemoteHistorySessionWithEmptyGrid]' passed (0.007 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullRejectsOwnerMismatch]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullRejectsOwnerMismatch]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullSkipsDirtyLocalEntryInsteadOfOverwritingIt]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullSkipsDirtyLocalEntryInsteadOfOverwritingIt]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullSkipsRemoteTombstoneWhenLocalEntryHasUnsyncedMutation]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullSkipsRemoteTombstoneWhenLocalEntryHasUnsyncedMutation]' passed (0.006 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullUpdatesChangedRemoteSessionWhenLocalEntryIsClean]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPullUpdatesChangedRemoteSessionWhenLocalEntryIsClean]' passed (0.019 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPushUploadsDeletedHistorySessionTombstone]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPushUploadsDeletedHistorySessionTombstone]' passed (0.015 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPushUploadsDirtyHistorySessionAndAcknowledgesPendingChange]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testPushUploadsDirtyHistorySessionAndAcknowledgesPendingChange]' passed (0.027 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testSecondPullIsNoOpAndDoesNotDuplicateRemoteHistorySession]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testSecondPullIsNoOpAndDoesNotDuplicateRemoteHistorySession]' passed (0.014 seconds).
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testUpsertRowEncodesRemoteIdentifiersLowercase]' started.
+Test Case '-[iOSMerchandiseControlTests.HistorySessionSyncServiceTests testUpsertRowEncodesRemoteIdentifiersLowercase]' passed (0.002 seconds).
+Test Suite 'HistorySessionSyncServiceTests' passed at 2026-05-24 01:38:45.297.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.169 (0.174) seconds
+Test Suite 'OptionsLocalDatabaseSummaryTests' started at 2026-05-24 01:38:45.297.
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testLocalDatabaseSummaryCountsOnlyPricesForActiveProducts]' started.
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testLocalDatabaseSummaryCountsOnlyPricesForActiveProducts]' passed (0.030 seconds).
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testLocalDatabaseSummaryUsesFetchCountForHistorySessions]' started.
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testLocalDatabaseSummaryUsesFetchCountForHistorySessions]' passed (0.008 seconds).
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testSyncCountDriftRefreshUsesFreshRemoteSnapshotWithoutRefetching]' started.
+Test Case '-[iOSMerchandiseControlTests.OptionsLocalDatabaseSummaryTests testSyncCountDriftRefreshUsesFreshRemoteSnapshotWithoutRefetching]' passed (0.046 seconds).
+Test Suite 'OptionsLocalDatabaseSummaryTests' passed at 2026-05-24 01:38:45.383.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.085 (0.086) seconds
+Test Suite 'PendingChangeCoalescerTests' started at 2026-05-24 01:38:45.383.
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testCreateThenUpdateRemainsCreateAndMergesFields]' started.
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testCreateThenUpdateRemainsCreateAndMergesFields]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testLocalCreateThenDeleteWithoutRemoteIDIsSuperseded]' started.
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testLocalCreateThenDeleteWithoutRemoteIDIsSuperseded]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testRemoteBackedUpdateThenDeleteBecomesTombstoneDelete]' started.
+Test Case '-[iOSMerchandiseControlTests.PendingChangeCoalescerTests testRemoteBackedUpdateThenDeleteBecomesTombstoneDelete]' passed (0.000 seconds).
+Test Suite 'PendingChangeCoalescerTests' passed at 2026-05-24 01:38:45.386.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'SyncDecisionEngineTests' started at 2026-05-24 01:38:45.386.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testAccountDecisionBlocksBeforePushOrDrain]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testAccountDecisionBlocksBeforePushOrDrain]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testForegroundRecoveryRequestDoesNotStartFullRecoveryDirectly]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testForegroundRecoveryRequestDoesNotStartFullRecoveryDirectly]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testLocalMutationWithPendingChoosesPushWithoutFullPull]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testLocalMutationWithPendingChoosesPushWithoutFullPull]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testManualRecoveryContextCanChooseFullRecovery]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testManualRecoveryContextCanChooseFullRecovery]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testRemoteSyncEventChoosesIncrementalDrain]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testRemoteSyncEventChoosesIncrementalDrain]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testSameAccountReconnectPushesPendingThenDrainsAndLightReconciles]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testSameAccountReconnectPushesPendingThenDrainsAndLightReconciles]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testSyncBusySchedulesRetry]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testSyncBusySchedulesRetry]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testZeroOfZeroProgressIsHiddenAtStateLevel]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncDecisionEngineTests testZeroOfZeroProgressIsHiddenAtStateLevel]' passed (0.000 seconds).
+Test Suite 'SyncDecisionEngineTests' passed at 2026-05-24 01:38:45.398.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.003 (0.012) seconds
+Test Suite 'SyncRecoveryPolicyTests' started at 2026-05-24 01:38:45.398.
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testBootstrapContextChoosesBootstrapPull]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testBootstrapContextChoosesBootstrapPull]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testNormalForegroundDoesNotAllowFullRecovery]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testNormalForegroundDoesNotAllowFullRecovery]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testRecentRecoveryAttemptBacksOff]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testRecentRecoveryAttemptBacksOff]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testRecoveryContextAllowsFullRecovery]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncRecoveryPolicyTests testRecoveryContextAllowsFullRecovery]' passed (0.000 seconds).
+Test Suite 'SyncRecoveryPolicyTests' passed at 2026-05-24 01:38:45.405.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.002 (0.007) seconds
+Test Suite 'SyncStatusPresenterTests' started at 2026-05-24 01:38:45.405.
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testIndeterminateActiveProgressWithoutZeroTotalStillShowsSpinner]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testIndeterminateActiveProgressWithoutZeroTotalStillShowsSpinner]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testRunningWithoutProgressShowsFallbackSpinner]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testRunningWithoutProgressShowsFallbackSpinner]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testZeroOfZeroActiveProgressIsHidden]' started.
+Test Case '-[iOSMerchandiseControlTests.SyncStatusPresenterTests testZeroOfZeroActiveProgressIsHidden]' passed (0.000 seconds).
+Test Suite 'SyncStatusPresenterTests' passed at 2026-05-24 01:38:45.408.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'Task118AutomaticDomainTests' started at 2026-05-24 01:38:45.409.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testAutomaticRuntimeErrorDiagnosticsUseSharedRedaction]' started.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testAutomaticRuntimeErrorDiagnosticsUseSharedRedaction]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testAutomaticRuntimeSourceDoesNotExposeManualPushBoundary]' started.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testAutomaticRuntimeSourceDoesNotExposeManualPushBoundary]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testAutomaticSourceFilesDoNotReferenceManualDTOs]' started.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testAutomaticSourceFilesDoNotReferenceManualDTOs]' passed (0.012 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testCatalogPushServiceWritesAndAcknowledgesRequestedOwnerChanges]' started.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testCatalogPushServiceWritesAndAcknowledgesRequestedOwnerChanges]' passed (0.063 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testDecisionEngineBlocksInsteadOfNoOpWhenStateReadFails]' started.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testDecisionEngineBlocksInsteadOfNoOpWhenStateReadFails]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testOptionsAndProvidersUseObserverOnlyContracts]' started.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testOptionsAndProvidersUseObserverOnlyContracts]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testOptionsStatusCardReadsAutomaticRunOutcome]' started.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testOptionsStatusCardReadsAutomaticRunOutcome]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testProductPricePushServiceWritesLinksAndAcknowledgesPendingPrice]' started.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testProductPricePushServiceWritesLinksAndAcknowledgesPendingPrice]' passed (0.017 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testRunResultOutcomesAreExplicitAndDistinct]' started.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testRunResultOutcomesAreExplicitAndDistinct]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testStateStoreRecordsEveryAutomaticRunOutcome]' started.
+Test Case '-[iOSMerchandiseControlTests.Task118AutomaticDomainTests testStateStoreRecordsEveryAutomaticRunOutcome]' passed (0.006 seconds).
+Test Suite 'Task118AutomaticDomainTests' passed at 2026-05-24 01:38:45.521.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.110 (0.112) seconds
+Test Suite 'WatermarkStoreTests' started at 2026-05-24 01:38:45.521.
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testLegacyAccountWatermarkCanBeReadDuringMigration]' started.
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testLegacyAccountWatermarkCanBeReadDuringMigration]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testLegacyOwnerWatermarkCanBeReadDuringMigration]' started.
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testLegacyOwnerWatermarkCanBeReadDuringMigration]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testWatermarkDoesNotMoveBackwards]' started.
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testWatermarkDoesNotMoveBackwards]' passed (0.002 seconds).
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testWatermarkIsAccountAndStoreBound]' started.
+Test Case '-[iOSMerchandiseControlTests.WatermarkStoreTests testWatermarkIsAccountAndStoreBound]' passed (0.002 seconds).
+Test Suite 'WatermarkStoreTests' passed at 2026-05-24 01:38:45.531.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.008 (0.009) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-24 01:38:45.531.
+	 Executed 65 tests, with 0 failures (0 unexpected) in 0.393 (0.432) seconds
+Test Suite 'Selected tests' passed at 2026-05-24 01:38:45.531.
+	 Executed 65 tests, with 0 failures (0 unexpected) in 0.393 (0.433) seconds
+2026-05-24 01:38:45.835 xcodebuild[89137:18007699] [MT] IDETestOperationsObserverDebug: 2.724 elapsed -- Testing started completed.
+2026-05-24 01:38:45.835 xcodebuild[89137:18007699] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-24 01:38:45.835 xcodebuild[89137:18007699] [MT] IDETestOperationsObserverDebug: 2.724 sec, +2.724 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-test-automatic-domain-20260524T053839Z.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started

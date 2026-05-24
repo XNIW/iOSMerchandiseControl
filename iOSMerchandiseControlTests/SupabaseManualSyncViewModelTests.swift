@@ -3734,9 +3734,9 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
     func testViewModelSourcesAvoidForbiddenScopeTerms() throws {
         let root = repoRootURL()
         let urls = [
-            root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift"),
-            root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncLifecycleRunGate.swift"),
-            root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift"),
+            root.appendingPathComponent("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift"),
+            root.appendingPathComponent("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift"),
+            root.appendingPathComponent("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift"),
         ]
         for url in urls {
             let text = try String(contentsOf: url, encoding: .utf8).lowercased()

@@ -1,0 +1,45 @@
+=== mc-agent scan harness-routing --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Fix missing routes before scanner self-tests or architecture scans.",
+  "checks": [
+    {
+      "evidence": {
+        "command_count": 116
+      },
+      "id": "help_json_parseable",
+      "reason": "mc-agent help-json is parseable.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "missing": []
+      },
+      "fix_hint": "Add a safe mc-agent route and help-json entry before using an undocumented command.",
+      "id": "task120_matrix_commands_discoverable",
+      "reason": "Every TASK-120 test matrix command is discoverable via help-json/list commands-json.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "missing": []
+      },
+      "file": "tools/agent/mc-agent.sh",
+      "id": "task120_scan_routes_present",
+      "reason": "TASK-120 scanner names are routed by mc-agent.sh.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T04:50:53+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "harness-routing",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.harness-routing",
+  "started_at": "2026-05-24T04:50:53+00:00",
+  "status": "PASS",
+  "summary": "harness-routing: PASS (3 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

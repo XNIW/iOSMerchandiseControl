@@ -18,8 +18,7 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
 
     func syncHistorySessions(
         ownerUserID: UUID,
-        mode: SyncHistorySessionMode,
-        onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
+        mode: SyncHistorySessionMode
     ) async throws -> SyncHistorySessionSummary {
         guard mode == .incremental else {
             return SyncHistorySessionSummary()
@@ -34,13 +33,11 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                     sortBy: [SortDescriptor(\HistoryEntry.timestamp, order: .reverse)]
                 )
             )
-            let service = HistorySessionSyncService(remote: remote)
-            let push = try await service.pushPendingHistorySessions(
+            let push = try await Self.pushPendingHistorySessions(
                 entries: entries,
+                remote: remote,
                 ownerUserID: ownerUserID,
-                context: context,
-                includeSynced: false,
-                onProgress: onProgress
+                context: context
             )
             try context.save()
             if push.uploadedCount > 0,
@@ -57,6 +54,72 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
                 skippedOversized: push.skippedOversizedCount
             )
         }.value
+    }
+
+    private static func pushPendingHistorySessions(
+        entries: [HistoryEntry],
+        remote: any HistorySessionRemoteWriting,
+        ownerUserID: UUID,
+        context: ModelContext
+    ) async throws -> HistorySessionAutomaticPushResult {
+        var result = HistorySessionAutomaticPushResult()
+        let uploadEntries = entries.filter(\.isHistorySessionDirtyForCloud)
+        result.skippedCleanCount = max(0, entries.count - uploadEntries.count)
+        guard !uploadEntries.isEmpty else { return result }
+
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
+        var uploadPairs: [(entry: HistoryEntry, row: SharedSheetSessionUpsertRow, revision: Int)] = []
+        uploadPairs.reserveCapacity(uploadEntries.count)
+
+        for entry in uploadEntries {
+            do {
+                let row = try HistorySessionPayloadCodec.upsertRow(for: entry, ownerUserID: ownerUserID)
+                uploadPairs.append((entry, row, entry.localChangeRevision))
+            } catch HistorySessionSyncError.overlayTooLarge {
+                result.skippedOversizedCount += 1
+                entry.syncStatus = .attemptedWithErrors
+                _ = try accumulator.recordHistorySessionChange(
+                    entry: entry,
+                    operation: .upsert,
+                    changedFields: ["overlay"]
+                )
+            }
+        }
+
+        guard !uploadPairs.isEmpty else { return result }
+
+        let readBackRows = try await remote.upsertSharedSheetSessions(
+            uploadPairs.map(\.row),
+            ownerUserID: ownerUserID
+        )
+        try Task.checkCancellation()
+        let readBackByRemoteID = Dictionary(uniqueKeysWithValues: readBackRows.map { ($0.remoteID, $0) })
+
+        for pair in uploadPairs {
+            try Task.checkCancellation()
+            guard let readBack = readBackByRemoteID[pair.row.remoteID],
+                  readBack.ownerUserID == ownerUserID else {
+                throw HistorySessionSyncError.readBackMismatch
+            }
+            let expectedFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: pair.row)
+            let fingerprint = HistorySessionPayloadCodec.fingerprintHash(for: readBack)
+            guard fingerprint == expectedFingerprint else {
+                throw HistorySessionSyncError.readBackMismatch
+            }
+            pair.entry.markHistorySessionRemoteApplied(
+                remoteID: readBack.remoteID,
+                remoteUpdatedAt: HistorySessionPayloadCodec.parseUpdatedAt(readBack.updatedAt),
+                remoteDeletedAt: HistorySessionPayloadCodec.parseUpdatedAt(readBack.deletedAt),
+                fingerprint: fingerprint,
+                syncedRevision: pair.revision
+            )
+            pair.entry.syncStatus = .syncedSuccessfully
+            try accumulator.acknowledgeHistorySessionChange(entry: pair.entry)
+            result.uploadedCount += 1
+            result.pushedRemoteIDs.insert(readBack.remoteID)
+        }
+
+        return result
     }
 
     private static func recordHistorySyncEvent(
@@ -84,4 +147,11 @@ final class HistorySessionPushService: SyncHistorySessionPushProviding {
         )
         _ = try await recorder.record(request)
     }
+}
+
+private struct HistorySessionAutomaticPushResult {
+    var uploadedCount = 0
+    var pushedRemoteIDs = Set<UUID>()
+    var skippedCleanCount = 0
+    var skippedOversizedCount = 0
 }

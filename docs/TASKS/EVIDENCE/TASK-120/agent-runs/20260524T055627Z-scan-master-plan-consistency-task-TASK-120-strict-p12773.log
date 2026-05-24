@@ -1,0 +1,40 @@
+=== mc-agent scan master-plan-consistency --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Update only current TASK-120 tracking; do not alter backlog/priorities.",
+  "checks": [
+    {
+      "file": "docs/MASTER-PLAN.md",
+      "id": "master_current_objective_task120",
+      "reason": "MASTER current objective is TASK-120.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "task119_current_in_objective": false
+      },
+      "file": "docs/MASTER-PLAN.md",
+      "id": "master_no_task119_active_conflict_in_current_objective",
+      "reason": "MASTER current objective does not keep TASK-119 as a competing active current task.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/MASTER-PLAN.md",
+      "id": "master_task120_not_done",
+      "reason": "MASTER does not mark TASK-120 DONE.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:56:27+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "master-plan-consistency",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.master-plan-consistency",
+  "started_at": "2026-05-24T05:56:27+00:00",
+  "status": "PASS",
+  "summary": "master-plan-consistency: PASS (3 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

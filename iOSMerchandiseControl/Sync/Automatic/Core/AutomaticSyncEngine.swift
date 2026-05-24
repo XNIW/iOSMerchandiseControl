@@ -117,8 +117,7 @@ actor AutomaticSyncEngine {
         if let historySessionProvider {
             let summary = try await historySessionProvider.syncHistorySessions(
                 ownerUserID: ownerUserID,
-                mode: .incremental,
-                onProgress: { _ in }
+                mode: .incremental
             )
             try await cancellationPolicy.checkCancellation(token: cancellationToken)
             didWork = didWork || summary.totalChanged > 0

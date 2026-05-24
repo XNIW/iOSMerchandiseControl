@@ -1,0 +1,42 @@
+=== mc-agent scan xcode-membership --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Rerun after every move/delete.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl.xcodeproj/project.pbxproj",
+      "id": "project_exists",
+      "reason": "Xcode project exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl.xcodeproj/project.pbxproj",
+      "id": "filesystem_synchronized_groups",
+      "reason": "Project uses file-system synchronized groups.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "missing_refs": [
+          "//github.com/damuellen/xlsxwriter.swift"
+        ]
+      },
+      "file": "iOSMerchandiseControl.xcodeproj/project.pbxproj",
+      "id": "explicit_swift_refs_exist",
+      "reason": "Explicit Swift references in project.pbxproj exist.",
+      "status": "FAIL"
+    }
+  ],
+  "completed_at": "2026-05-24T04:51:37+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "xcode-membership",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.xcode-membership",
+  "started_at": "2026-05-24T04:51:37+00:00",
+  "status": "FAIL",
+  "summary": "xcode-membership: FAIL (3 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

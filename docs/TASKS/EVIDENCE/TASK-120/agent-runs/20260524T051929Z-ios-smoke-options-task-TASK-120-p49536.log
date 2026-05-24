@@ -1,0 +1,4 @@
+=== mc-agent ios smoke options --task TASK-120 ===
+[sim_ui] OK: App com.niwcyber.iOSMerchandiseControl lanciata
+FOUND
+[sim_ui] OK: Elemento 'Opzioni' trovato

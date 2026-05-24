@@ -1,0 +1,47 @@
+=== mc-agent scan status-taxonomy --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Fix taxonomy before final JSON validation.",
+  "checks": [
+    {
+      "evidence": {
+        "actual": {
+          "0": "PASS",
+          "1": "FAIL",
+          "2": "BLOCKED_EXTERNAL",
+          "3": "MISCONFIGURED",
+          "4": "UNSAFE_OPERATION_REFUSED"
+        },
+        "expected": {
+          "0": "PASS",
+          "1": "FAIL",
+          "2": "BLOCKED_EXTERNAL",
+          "3": "MISCONFIGURED",
+          "4": "UNSAFE_OPERATION_REFUSED"
+        }
+      },
+      "fix_hint": "Use BLOCKED_EXTERNAL and UNSAFE_OPERATION_REFUSED in JSON; keep BLOCKED/REFUSED only as human aliases.",
+      "id": "exit_code_statuses_canonical",
+      "reason": "help-json exposes canonical TASK-120 status taxonomy.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/lib/report.sh",
+      "id": "report_map_uses_canonical_status",
+      "reason": "mc-agent reports include canonical status values.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:36:20+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "status-taxonomy",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.status-taxonomy",
+  "started_at": "2026-05-24T05:36:20+00:00",
+  "status": "PASS",
+  "summary": "status-taxonomy: PASS (2 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

@@ -4,9 +4,11 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
-**ACTIVE — TASK-119 REVIEW_PASS_WITH_NOTES / iOS Sync Automatic Architecture Purification and Dead-Code Cleanup** *(2026-05-24: Codex review severa eseguita con fix locali, non DONE. Fix applicati: single-flight cancellation non riapre piu' il flight prima di `finish`, `SyncAutomaticRuntime.cancel()` non anticipa lo stato idle, history automatic usa `HistorySessionRemoteWriting` invece del concreto `SupabaseInventoryService`, helper shared `SyncStringCollectionHelpers`, scanner/head-consistency TASK-119 corretti, Options smoke fallback XcodeBuildMCP accetta stato observer reale signed-out `Accesso richiesto`. Gate post-review: HEAD/preflight/config PASS, strict scans PASS, Debug/Release PASS, `ios test automatic-domain` PASS, `ios test sync` PASS, `ios test automatic-architecture` PASS, Options smoke PASS_WITH_NOTES via fallback per timeout JXA/AX, Supabase status-redacted PASS, sensitive/evidence/JSON PASS, `git diff --check` PASS. Live/manual E2E NOT_RUN e cleanup not required. File **`docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-119/`**.)*
+**ACTIVE — TASK-120 FIX / iOS Sync Final Architecture Purification** *(2026-05-24: Codex review severa post-execution completata con verdict `CHANGES_REQUIRED`, non DONE. Build/test/smoke locali PASS e warning Swift release corretto, ma review ha rilevato CA-120-03 non soddisfatta: retry ownership non e' ancora tutta in `AutomaticSyncEngine`/`Automatic/Core` perche' `SyncOrchestrator.swift` contiene ancora retry post-busy con `retry_after_sync_busy` + `Task.sleep`. Scanner `sync-architecture` rafforzato con fixture RED/GREEN e ora FAIL correttamente; `evidence-metadata` rafforzato e segnala tre report storici iniziali senza `NEXT_ACTION`/`redaction_summary`. File **`docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-120/agent-runs/`**. Vietati e non eseguiti: live Supabase, cleanup, migration/RLS/grant/RPC, push GitHub.)*
 
-**TASK-119 — ACTIVE / REVIEW_PASS_WITH_NOTES / iOS Sync Automatic Architecture Purification and Dead-Code Cleanup:** file **`docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-119/`**; responsabile **CLAUDE / Reviewer**. Scope corrente: Claude review dei fix locali Codex; non DONE finche' review approval e decisione esplicita su live/manual/device NOT_RUN.
+**TASK-120 — ACTIVE / FIX / iOS Sync Final Architecture Purification:** file **`docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-120/`**; responsabile **CODEX / Fixer**. Handoff corrente: `TASK-120 ACTIVE / FIX — CHANGES_REQUIRED`; non DONE.
+
+**TASK-119 — REVIEW_PASS_WITH_NOTES storico / iOS Sync Automatic Architecture Purification and Dead-Code Cleanup:** file **`docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-119/`**; responsabile **CLAUDE / Reviewer**. Scope corrente storico: review dei fix locali Codex; non DONE finche' review approval e decisione esplicita su live/manual/device NOT_RUN.
 
 **ACTIVE — TASK-118 REVIEW / iOS Sync Automatic Domain Split Finalization** *(2026-05-24: Codex review/fix severa completata con verdict `REVIEW_PASS_WITH_NOTES`, non DONE. Finding principale corretto: i servizi automatici catalog/product-price erano plan-only/cosmetici; ora scrivono via domain protocols, aggiornano remote ID, ackano pending changes reali e creano eventi outbox automatici. Fix aggiunti: ProductPrice upsert idempotente, `SyncDecisionInputProvider` blocca su state-read failure invece di falso no-work, redazione errori runtime via sanitizer condiviso, Options microcopy `lastOutcome` EN/IT/ES/ZH. Gate post-fix PASS: HEAD/preflight/config, strict scans CA-118, Debug/Release build, `ios test automatic-domain`, `ios test sync`, sensitive/evidence scan, JSON validation, Supabase status redacted. Harness primario `ios smoke options` resta BLOCKED da Accessibility/JXA ma fallback XcodeBuildMCP PASS documentato. Live matrix refused senza `MC_ALLOW_LIVE=1`; serve live approval/acceptance per DONE. File **`docs/TASKS/TASK-118-ios-sync-automatic-domain-split-finalization.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-118/`**.)*
 
@@ -87,7 +89,9 @@ iOSMerchandiseControl — app iOS per controllo merce e inventario
 **Precedente completato:** **TASK-099 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-099-conflict-recovery-hardening-ios.md`). **TASK-098** resta **DONE / Chiusura — REVIEW PASS**; evidence pack in `docs/TASKS/EVIDENCE/TASK-098/`. **TASK-097 DONE / Chiusura — REVIEW PASS** (`docs/TASKS/TASK-097-runtime-sandbox-smoke-ios-supabase.md`) — runtime sandbox smoke iOS ↔ Supabase. **TASK-096** resta **DONE / Chiusura — REVIEW PASS**; **TASK-095** resta **DONE / Chiusura — REVIEW PASS**; **TASK-094** resta **DONE / Chiusura — REVIEW PASS**; **TASK-093** resta **DONE / Chiusura — REVIEW PASS**; **TASK-092** resta **DONE / Chiusura — REVIEW PASS**; **TASK-091** resta **DONE / Chiusura — REVIEW PASS**; **TASK-090** riallineato a **DONE / Chiusura — REVIEW PASS AFTER LATER ACCEPTANCE** tramite evidenze TASK-097/098/100/103.
 
 ## Stato globale
-**ACTIVE** — task corrente **`TASK-119`** **ACTIVE / EXECUTION-AUDIT — HARNESS_BASELINE_COMPLETE / iOS Sync Automatic Architecture Purification and Dead-Code Cleanup** *(2026-05-24: HEAD/preflight/config TASK-119 PASS via harness; TASK-119 scans/test harness aggiunti; `scan dead-code`, `scan xcode-membership`, `ios test automatic-architecture`, JSON validation PASS; `scan sync-architecture` e `scan manual-boundary` FAIL baseline come debito reale pre-refactor. Refactor Swift bloccato da `BLOCKED_HEAD_OR_TRACKING_MISMATCH` perche' i file TASK-119 sono local-only e non presenti su `origin/main` / GitHub rendered main. Non REVIEW, non DONE.)*. File **`docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-119/`**.
+**ACTIVE** — task corrente **`TASK-120`** **ACTIVE / FIX — CHANGES_REQUIRED / iOS Sync Final Architecture Purification** *(2026-05-24: review severa Codex completata, non DONE. Build/test/smoke locali PASS, ma CA-120-03 resta FAIL per retry ownership fuori engine e `scan sync-architecture` rafforzato ora fallisce correttamente. Serve fix mirato prima di nuovo REVIEW.)*. File **`docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-120/`**.
+
+**TASK-119** resta **`ACTIVE / REVIEW_PASS_WITH_NOTES`**, **not DONE**. File **`docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-119/`**. I precedenti blocchi EXECUTION-AUDIT TASK-119 sono cronologia storica, non stato corrente.
 
 **TASK-118** resta **`ACTIVE / REVIEW`**, **not DONE**. File **`docs/TASKS/TASK-118-ios-sync-automatic-domain-split-finalization.md`**; evidence **`docs/TASKS/EVIDENCE/TASK-118/`**.
 
@@ -931,12 +935,12 @@ Il perimetro **TASK‑110** ha coperto audit/implementazione **Android + iOS + S
 > **2026-05-05 (review/close/user override):** **TASK-040** review tecnica completa eseguita da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**: fix diretto limitato a conflitti `remoteID` per duplicati locali e supplier/category omonimi con UUID remoto diverso, piu' hardening apply anti-merge silenzioso. Build Debug PASS, build Release PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-scope PASS. Nessuna scrittura Supabase, nessun push, nessun `record_sync_event`, nessun outbox/dirty, nessun ProductPrice apply remoto, nessun SQL/migration. **TASK-039 resta DONE**. Follow-up futuri registrati ma non attivati.
 
 ## Workflow task attivo
-- **Task attivo:** **TASK-119 — iOS Sync Automatic Architecture Purification and Dead-Code Cleanup**
-- **File task attivo:** `docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`
+- **Task attivo:** **TASK-120 — iOS Sync Final Architecture Purification**
+- **File task attivo:** `docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md`
 - **Stato globale progetto:** **ACTIVE**
-- **Stato TASK-119:** **ACTIVE / EXECUTION-AUDIT**
-- **Responsabile attuale:** **CODEX / Executor**
-- **Ultimo aggiornamento task attivo:** 2026-05-24 — execution-audit avviata con HEAD/preflight/config via harness; refactor Swift bloccato da `BLOCKED_HEAD_OR_TRACKING_MISMATCH` per TASK-119 local-only vs `origin/main` / GitHub rendered main; consentiti solo harness/audit locali finche' il mismatch non e' risolto o accettato.
+- **Stato TASK-120:** **ACTIVE / FIX — CHANGES_REQUIRED**
+- **Responsabile attuale:** **CODEX / Fixer**
+- **Ultimo aggiornamento task attivo:** 2026-05-24 — review severa Codex post-execution: warning Swift release corretto, scanner `sync-architecture`/`evidence-metadata` rafforzati, verdict `CHANGES_REQUIRED` per retry ownership fuori engine e tre report storici senza metadata rafforzati. Non DONE.
 - **Ultimo completato:** **TASK-114 DONE / Chiusura — FINAL CROSS-PLATFORM SYNC RECONCILIATION PASS** *(cronologia storica; TASK-118/117/116 restano non DONE come sopra)*
 - **File task ultimo completato:** `docs/TASKS/TASK-114-cross-platform-sync-reconciliation.md`
 - **File task completato precedente:** `docs/TASKS/TASK-102-release-polish-ux-ios.md`
@@ -1023,12 +1027,12 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** **TASK-119 — iOS Sync Automatic Architecture Purification and Dead-Code Cleanup**
-- **File task attivo:** `docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`
+- **Task attivo corrente:** **TASK-120 — iOS Sync Final Architecture Purification**
+- **File task attivo:** `docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md`
 - **Stato task:** **ACTIVE**
-- **Fase attuale:** **EXECUTION-AUDIT — BLOCKED_HEAD_OR_TRACKING_MISMATCH_FOR_SWIFT_REFACTOR**
-- **Responsabile attuale:** **CODEX / Executor**
-- **Ultimo aggiornamento:** 2026-05-24 — execution-audit TASK-119 avviata; HEAD/preflight/config harness PASS con dirty state, ma TASK-119 tracking files risultano local-only rispetto a `origin/main` / GitHub rendered main. No Swift refactor fino a riallineamento/accettazione local-only.
+- **Fase attuale:** **FIX — CHANGES_REQUIRED**
+- **Responsabile attuale:** **CODEX / Fixer**
+- **Ultimo aggiornamento:** 2026-05-24 — TASK-120 review severa Codex completata con handoff `TASK-120 ACTIVE / FIX — CHANGES_REQUIRED`; prossimo fix: spostare retry policy da `SyncOrchestrator` a `AutomaticSyncEngine`/`Automatic/Core`, poi rieseguire gate.
 - **Nota:** **TASK-104 non** è real user data acceptance, **non** production-ready globale, **non** production no-notes, **non** 100% globale. **TASK-103** non riaperto; verdict P0 invariato.
 - **Ultimo completato:** **TASK-114** (`docs/TASKS/TASK-114-cross-platform-sync-reconciliation.md`) — **DONE / Chiusura — FINAL CROSS-PLATFORM SYNC RECONCILIATION PASS** (matrix live 12/12, reconcile drift `{}`, cleanup scoped, build/test/scans/report/diff check PASS; evidence `docs/TASKS/EVIDENCE/TASK-114/`).
 - **Precedente completato:** **TASK-113** (`docs/TASKS/TASK-113-agent-friendly-cli-automation-harness.md`) — **DONE / Chiusura — FINAL CLI HARNESS ACCEPTANCE PASS** (CLI harness, report schema 1.1, MCP wrapper, Android L1/L2, iOS Options fallback, Supabase linked checks; evidence `EVIDENCE/TASK-113/13-final-done-closure.md`).

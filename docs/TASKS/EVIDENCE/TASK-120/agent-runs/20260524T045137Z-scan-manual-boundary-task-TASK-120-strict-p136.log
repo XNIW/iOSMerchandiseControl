@@ -1,0 +1,52 @@
+=== mc-agent scan manual-boundary --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Remove manual leakage from automatic paths.",
+  "checks": [
+    {
+      "evidence": {
+        "root_level_manual_files": [
+          "ProductPriceManualPushDebugViewModel.swift",
+          "SupabaseManualPushPreflightModels.swift",
+          "SupabaseManualPushPreflightService.swift",
+          "SupabaseManualPushService.swift",
+          "SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+          "SupabaseManualSyncBaselineCommitter.swift",
+          "SupabaseManualSyncCoordinating.swift",
+          "SupabaseManualSyncCoordinator.swift",
+          "SupabaseManualSyncCoordinatorModels.swift",
+          "SupabaseManualSyncLifecycleRunGate.swift",
+          "SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+          "SupabaseManualSyncOutboxProducerConversions.swift",
+          "SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+          "SupabaseManualSyncReleaseFactory.swift",
+          "SupabaseManualSyncRemotePreview.swift",
+          "SupabaseManualSyncSemiAutomaticPolicy.swift",
+          "SupabaseManualSyncViewModel.swift",
+          "SupabaseProductPriceManualPushService.swift"
+        ]
+      },
+      "id": "manual_root_clean",
+      "reason": "Manual sync files are not root-level.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [],
+      "id": "automatic_no_manual_references",
+      "reason": "Automatic runtime/domain does not reference manual-only symbols.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T04:51:37+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "manual-boundary",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.manual-boundary",
+  "started_at": "2026-05-24T04:51:37+00:00",
+  "status": "FAIL",
+  "summary": "manual-boundary: FAIL (2 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

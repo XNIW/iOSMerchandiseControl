@@ -1856,6 +1856,3 @@ actor SupabaseInventoryService {
         }
     }
 }
-
-extension SupabaseInventoryService: HistorySessionRemoteSyncing {}
-extension SupabaseInventoryService: SupabaseSyncEventIncrementalFetching {}

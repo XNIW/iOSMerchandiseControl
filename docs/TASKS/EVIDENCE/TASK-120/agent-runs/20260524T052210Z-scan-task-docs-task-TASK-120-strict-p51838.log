@@ -1,0 +1,73 @@
+=== mc-agent scan task-docs --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Continue with harness-routing only after task docs are coherent.",
+  "checks": [
+    {
+      "file": "docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md",
+      "id": "task_doc_exists",
+      "reason": "TASK-120 task doc exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/TASKS/EVIDENCE/TASK-120/README.md",
+      "id": "evidence_readme_exists",
+      "reason": "TASK-120 evidence README exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/MASTER-PLAN.md",
+      "id": "master_mentions_task120_current",
+      "reason": "MASTER-PLAN points at the TASK-120 task file.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/MASTER-PLAN.md",
+      "id": "task119_review_pass_with_notes",
+      "reason": "TASK-119 remains REVIEW_PASS_WITH_NOTES in tracking.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md",
+      "id": "task120_not_done",
+      "reason": "TASK-120 is not marked DONE in task metadata.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "missing": []
+      },
+      "file": "docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md",
+      "id": "ca_120_01_68_present",
+      "reason": "CA-120-01...68 are materialized.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "missing": []
+      },
+      "file": "docs/TASKS/TASK-120-ios-sync-final-architecture-purification.md",
+      "id": "test_matrix_commands_present",
+      "reason": "Task test matrix lists required commands.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs",
+      "id": "agent_runs_root_exists",
+      "reason": "Evidence root is docs/TASKS/EVIDENCE/TASK-120/agent-runs.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:22:10+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "task-docs",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.task-docs",
+  "started_at": "2026-05-24T05:22:10+00:00",
+  "status": "PASS",
+  "summary": "task-docs: PASS (8 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

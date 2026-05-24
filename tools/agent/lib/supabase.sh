@@ -412,6 +412,50 @@ mc_cmd_supabase() {
       prefix="$(mc_parse_opt --prefix "$@")" || { mc_missing_prefix; return "$MC_EXIT_REFUSED"; }
       mc_supabase_residue_check "$prefix" "$profile"
       ;;
+    contract)
+      local contract_name task_id
+      contract_name="${1:-}"
+      shift || true
+      task_id="$(mc_parse_opt --task "$@" || true)"
+      task_id="${task_id:-$MC_TASK_ID}"
+      if [[ "$contract_name" != "sync-schema" ]]; then
+        MC_SUMMARY="Unknown Supabase contract: ${contract_name}"
+        MC_NEXT_ACTION="Use supabase contract sync-schema --task TASK-120 --read-only."
+        return "$MC_EXIT_MISCONFIGURED"
+      fi
+      if ! mc_parse_flag --read-only "$@"; then
+        MC_SUMMARY="Supabase contract sync-schema refused: --read-only is required."
+        MC_NEXT_ACTION="Rerun with --read-only; TASK-120 forbids live writes and schema mutations."
+        return "$MC_EXIT_REFUSED"
+      fi
+      MC_PLATFORM="supabase"
+      MC_SAFETY_LEVEL="safe-readonly"
+      MC_REQUIRES_LIVE="false"
+      MC_CA_REFS="CA-120-26,CA-120-59"
+      TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 "$MC_AGENT_ROOT/lib/task120_scans.py" supabase-contract-sync-schema > /tmp/mc-agent-task120-supabase-contract.$$.json
+      local scan_code
+      scan_code=$?
+      MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task120-supabase-contract.$$.json)"
+      rm -f /tmp/mc-agent-task120-supabase-contract.$$.json
+      mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+      case "$scan_code" in
+        0)
+          MC_SUMMARY="Supabase sync-schema contract PASS for ${task_id}; static read-only gate, no live DB query."
+          MC_NEXT_ACTION="Continue TASK-120 non-live validation."
+          return "$MC_EXIT_PASS"
+          ;;
+        1)
+          MC_SUMMARY="Supabase sync-schema contract FAIL for ${task_id}."
+          MC_NEXT_ACTION="Fix schema contract/source mutation findings without migration/RLS/grant/RPC changes."
+          return "$MC_EXIT_FAIL"
+          ;;
+        *)
+          MC_SUMMARY="Supabase sync-schema contract MISCONFIGURED for ${task_id}."
+          MC_NEXT_ACTION="Fix TASK-120 contract scanner."
+          return "$MC_EXIT_MISCONFIGURED"
+          ;;
+      esac
+      ;;
     pooler-cooldown-check)
       MC_PLATFORM="supabase"
       MC_SAFETY_LEVEL="safe-readonly"

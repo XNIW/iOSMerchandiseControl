@@ -1,0 +1,317 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun sync-architecture.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045137Z-scan-sync-architecture-task-TASK-120-strict-p135.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045137Z-scan-sync-architecture-task-TASK-120-strict-p135.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045137Z-scan-sync-architecture-task-TASK-120-strict-p135.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-120-03",
+    "CA-120-04",
+    "CA-120-09",
+    "CA-120-10",
+    "CA-120-11",
+    "CA-120-12",
+    "CA-120-24",
+    "CA-120-38",
+    "CA-120-46",
+    "CA-120-47",
+    "CA-120-53"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan sync-architecture --task TASK-120 --strict",
+  "command_slug": "scan-sync-architecture-task-TASK-120-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 265,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-120",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK120_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-120"
+  },
+  "exit_code": 1,
+  "git_sha": "b6953a5",
+  "next_action_recommended": "Fix failing checks and rerun sync-architecture.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Resolve architecture FAIL rows before REVIEW.",
+    "checks": [
+      {
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core",
+        "id": "dir:iOSMerchandiseControl/Sync/Automatic/Core",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision",
+        "id": "dir:iOSMerchandiseControl/Sync/Automatic/Decision",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Automatic/Catalog",
+        "id": "dir:iOSMerchandiseControl/Sync/Automatic/Catalog",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice",
+        "id": "dir:iOSMerchandiseControl/Sync/Automatic/ProductPrice",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Automatic/History",
+        "id": "dir:iOSMerchandiseControl/Sync/Automatic/History",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Automatic/Outbox",
+        "id": "dir:iOSMerchandiseControl/Sync/Automatic/Outbox",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull",
+        "id": "dir:iOSMerchandiseControl/Sync/Automatic/Pull",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Automatic/Presentation",
+        "id": "dir:iOSMerchandiseControl/Sync/Automatic/Presentation",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Manual",
+        "id": "dir:iOSMerchandiseControl/Sync/Manual",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Shared",
+        "id": "dir:iOSMerchandiseControl/Sync/Shared",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Recovery",
+        "id": "dir:iOSMerchandiseControl/Sync/Recovery",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Account",
+        "id": "dir:iOSMerchandiseControl/Sync/Account",
+        "reason": "Target architecture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "old_dirs": [
+            "iOSMerchandiseControl/Sync/Incremental",
+            "iOSMerchandiseControl/Sync/Presentation"
+          ],
+          "root_files": [
+            "iOSMerchandiseControl/Sync/SyncDecisionEngine.swift",
+            "iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
+            "iOSMerchandiseControl/Sync/SyncTrigger.swift",
+            "iOSMerchandiseControl/Sync/SyncState.swift",
+            "iOSMerchandiseControl/Sync/SyncStateStore.swift"
+          ]
+        },
+        "id": "root_domain_residue_absent",
+        "reason": "Decision/Pull/Presentation automatic files are physically under Automatic/*.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": {
+          "declarations": [
+            {
+              "line": 3,
+              "snippet": "nonisolated enum SyncAutomaticTriggerSource: String, Sendable, Equatable {"
+            },
+            {
+              "line": 11,
+              "snippet": "nonisolated enum SyncHistorySessionMode: Sendable, Equatable {"
+            },
+            {
+              "line": 16,
+              "snippet": "nonisolated enum SyncActivityRegistrationStatus: Equatable, Sendable {"
+            },
+            {
+              "line": 26,
+              "snippet": "nonisolated struct SyncActivityRegistrationSnapshot: Equatable, Sendable {"
+            },
+            {
+              "line": 42,
+              "snippet": "nonisolated struct SyncActivityRegistrationSummary: Equatable, Sendable {"
+            },
+            {
+              "line": 54,
+              "snippet": "nonisolated struct SyncActivityRegistrationResult: Equatable, Sendable {"
+            },
+            {
+              "line": 64,
+              "snippet": "nonisolated struct SyncCatalogPushPlan: Equatable, Sendable {"
+            },
+            {
+              "line": 90,
+              "snippet": "nonisolated struct SyncHistorySessionSummary: Equatable, Sendable {"
+            },
+            {
+              "line": 107,
+              "snippet": "nonisolated struct SyncHistorySessionPushPlan: Equatable, Sendable {"
+            },
+            {
+              "line": 126,
+              "snippet": "nonisolated struct SyncHistorySessionPushResult: Equatable, Sendable {"
+            },
+            {
+              "line": 140,
+              "snippet": "nonisolated struct SyncCatalogPushResult: Equatable, Sendable {"
+            },
+            {
+              "line": 159,
+              "snippet": "nonisolated struct SyncProductPricePushPlan: Equatable, Sendable {"
+            },
+            {
+              "line": 185,
+              "snippet": "nonisolated struct SyncProductPricePushResult: Equatable, Sendable {"
+            },
+            {
+              "line": 192,
+              "snippet": "nonisolated enum SyncAutomaticRunStatus: String, CaseIterable, Equatable, Sendable, Hashable {"
+            },
+            {
+              "line": 202,
+              "snippet": "nonisolated struct SyncAutomaticRunResult: Equatable, Sendable {"
+            },
+            {
+              "line": 252,
+              "snippet": "nonisolated struct SyncIncrementalPullSummary: Sendable, Equatable {"
+            },
+            {
+              "line": 315,
+              "snippet": "protocol SyncCatalogPushProviding: AnyObject {"
+            },
+            {
+              "line": 319,
+              "snippet": "protocol SyncProductPriceSyncProviding: AnyObject {"
+            },
+            {
+              "line": 323,
+              "snippet": "protocol SyncActivityRegistrationProviding: AnyObject {"
+            },
+            {
+              "line": 328,
+              "snippet": "protocol SyncHistorySessionPushProviding: AnyObject {"
+            }
+          ],
+          "line_count": 338
+        },
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+        "id": "providers_monolith_removed",
+        "reason": "SyncAutomaticRuntimeProviders.swift is removed or transitional zero-behavior stub.",
+        "status": "FAIL"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "id": "runtime_facade_no_factory_or_modelcontext",
+        "reason": "SyncAutomaticRuntime is facade/auth/state only; concrete factory moved out.",
+        "status": "FAIL"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFactory.swift",
+        "id": "composition_factory_dedicated",
+        "reason": "Concrete automatic service creation lives in a dedicated composition factory.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": [
+          {
+            "line": 37,
+            "snippet": "let service = HistorySessionSyncService(remote: remote)"
+          }
+        ],
+        "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+        "id": "automatic_history_no_concrete_shared_service",
+        "reason": "Automatic history push does not instantiate concrete mixed HistorySessionSyncService.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": [],
+        "id": "automatic_domain_no_concrete_supabase_inventory_dependency",
+        "reason": "Automatic domain depends on remote-writing protocols, not concrete SupabaseInventoryService.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+        "id": "engine_owns_singleflight_cancel",
+        "reason": "AutomaticSyncEngine owns single-flight/cancellation policy.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-24T04:51:37+00:00",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "FAIL",
+    "safety_level": "read_only_static_scan",
+    "scan": "sync-architecture",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.sync-architecture",
+    "started_at": "2026-05-24T04:51:37+00:00",
+    "status": "FAIL",
+    "summary": "sync-architecture: FAIL (19 checks)",
+    "taskId": "TASK-120",
+    "task_id": "TASK-120"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T045137Z-scan-sync-architecture-task-TASK-120-strict-p135",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-120",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T04:51:37Z",
+  "timestamp_start": "2026-05-24T04:51:37Z",
+  "warnings": []
+}

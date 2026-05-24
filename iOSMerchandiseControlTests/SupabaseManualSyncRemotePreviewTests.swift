@@ -254,12 +254,12 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
     func testTask071ProductionSourcesAvoidForbiddenWriteAndAutomationScope() throws {
         let root = repoRootURL()
         let paths = [
-            "iOSMerchandiseControl/SupabaseManualSyncRemotePreview.swift",
-            "iOSMerchandiseControl/SupabaseManualSyncCoordinator.swift",
-            "iOSMerchandiseControl/SupabaseManualSyncCoordinatorModels.swift",
-            "iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift",
-            "iOSMerchandiseControl/SupabaseManualSyncReleaseFactory.swift",
-            "iOSMerchandiseControl/SupabaseManualSyncViewModel.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
         ]
         let combined = try paths
             .map { try String(contentsOf: root.appendingPathComponent($0), encoding: .utf8) }
@@ -295,7 +295,7 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
         )
         let releaseCardSource = try extractReleaseCardSource(from: optionsSource)
         let viewModelSource = try String(
-            contentsOf: root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncViewModel.swift"),
+            contentsOf: root.appendingPathComponent("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift"),
             encoding: .utf8
         )
         let combined = [releaseCardSource, viewModelSource].joined(separator: "\n")

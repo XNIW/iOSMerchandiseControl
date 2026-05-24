@@ -1,0 +1,52 @@
+=== mc-agent scan mcp-wrapper --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Harden MCP wrapper before exposing TASK-120 commands through MCP.",
+  "checks": [
+    {
+      "evidence": {
+        "missing": []
+      },
+      "file": "tools/agent/mcp/server.mjs",
+      "id": "mcp_task120_allowlist_present",
+      "reason": "MCP wrapper allowlists safe TASK-120 scanner commands.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/mcp/server.mjs",
+      "id": "mcp_no_shell_string",
+      "reason": "MCP wrapper uses argv-based spawn, not arbitrary shell execution.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/mcp/server.mjs",
+      "id": "mcp_fixed_cwd",
+      "reason": "MCP wrapper fixes cwd to the iOS repo.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/mcp/server.mjs",
+      "id": "mcp_no_allow_mutation",
+      "reason": "MCP wrapper does not mutate MC_ALLOW_LIVE or MC_ALLOW_CLEANUP.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/mcp/server.mjs",
+      "id": "mcp_timeout_bound",
+      "reason": "MCP wrapper bounds command runtime with a timeout.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:36:11+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "mcp-wrapper",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.mcp-wrapper",
+  "started_at": "2026-05-24T05:36:11+00:00",
+  "status": "PASS",
+  "summary": "mcp-wrapper: PASS (5 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

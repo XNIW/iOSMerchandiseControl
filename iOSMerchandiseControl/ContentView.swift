@@ -247,7 +247,7 @@ private struct AppSyncRootHost<Content: View>: View {
         _syncOrchestrator = StateObject(
             wrappedValue: SyncOrchestrator(
                 automaticRuntime: SyncAutomaticRuntimeFactory.make(
-                    context: context,
+                    modelContainer: context.container,
                     authViewModel: authViewModel,
                     inventoryService: inventoryService,
                     activityRecorder: activityRecorder

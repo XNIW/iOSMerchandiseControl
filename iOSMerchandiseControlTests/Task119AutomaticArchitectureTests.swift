@@ -19,8 +19,15 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
             "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
             "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
             "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
-            "iOSMerchandiseControl/Sync/SyncDecisionEngine.swift",
-            "iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Decision/SyncTrigger.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+            "iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+            "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalContracts.swift",
         ]
         let forbiddenPatterns = [
             "SupabaseManual",

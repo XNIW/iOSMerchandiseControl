@@ -1,0 +1,58 @@
+=== mc-agent scan manual-root-residue --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Move root-level manual residues or document reviewer-approved exceptions.",
+  "checks": [
+    {
+      "evidence": {
+        "root_level_manual_files": [
+          "ProductPriceManualPushDebugViewModel.swift",
+          "SupabaseManualPushPreflightModels.swift",
+          "SupabaseManualPushPreflightService.swift",
+          "SupabaseManualPushService.swift",
+          "SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+          "SupabaseManualSyncBaselineCommitter.swift",
+          "SupabaseManualSyncCoordinating.swift",
+          "SupabaseManualSyncCoordinator.swift",
+          "SupabaseManualSyncCoordinatorModels.swift",
+          "SupabaseManualSyncLifecycleRunGate.swift",
+          "SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+          "SupabaseManualSyncOutboxProducerConversions.swift",
+          "SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+          "SupabaseManualSyncReleaseFactory.swift",
+          "SupabaseManualSyncRemotePreview.swift",
+          "SupabaseManualSyncSemiAutomaticPolicy.swift",
+          "SupabaseManualSyncViewModel.swift",
+          "SupabaseProductPriceManualPushService.swift"
+        ]
+      },
+      "fix_hint": "Move SupabaseManual*/ManualPush/manual DTO/factory/view model files to iOSMerchandiseControl/Sync/Manual.",
+      "id": "manual_files_not_root_level",
+      "reason": "Manual sync source files are physically isolated below Sync/Manual.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "files": [
+          "iOSMerchandiseControl/Sync/Manual/ManualSyncBoundary.swift"
+        ]
+      },
+      "file": "iOSMerchandiseControl/Sync/Manual",
+      "id": "manual_boundary_has_real_files",
+      "reason": "Sync/Manual contains real manual implementation files, not only the marker boundary.",
+      "status": "FAIL"
+    }
+  ],
+  "completed_at": "2026-05-24T04:51:30+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "manual-root-residue",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.manual-root-residue",
+  "started_at": "2026-05-24T04:51:30+00:00",
+  "status": "FAIL",
+  "summary": "manual-root-residue: FAIL (2 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

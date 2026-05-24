@@ -569,9 +569,9 @@ final class SupabaseManualSyncCoordinatorTests: XCTestCase {
     func testCoordinatorSwiftSourcesAvoidDirectSupabaseClientAndRpc() throws {
         let root = repoRootURL()
         let paths = [
-            root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncCoordinator.swift"),
-            root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncCoordinatorModels.swift"),
-            root.appendingPathComponent("iOSMerchandiseControl/SupabaseManualSyncCoordinating.swift"),
+            root.appendingPathComponent("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift"),
+            root.appendingPathComponent("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift"),
+            root.appendingPathComponent("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift"),
         ]
         for url in paths {
             let text = try String(contentsOf: url, encoding: .utf8)

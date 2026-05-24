@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 MC_AGENT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MC_AGENT_VERSION="0.4.0-task118"
+MC_AGENT_VERSION="0.4.0-task120"
 MC_SCHEMA_VERSION="1.1"
 
 MC_IOS_REPO="${MC_IOS_REPO:-/Users/minxiang/Desktop/iOSMerchandiseControl}"
@@ -344,7 +344,7 @@ mc_require_cleanup_execute() {
 }
 
 mc_set_pass_with_notes() {
-  MC_RESULT_OVERRIDE="pass_with_notes"
+  MC_RESULT_OVERRIDE="PASS_WITH_NOTES"
 }
 
 mc_task118_evidence_context_mismatch() {
@@ -425,6 +425,8 @@ Usage:
   ./tools/agent/mc-agent.sh scan sync-boundaries --task TASK-118 --strict
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path --task TASK-118 --strict
   ./tools/agent/mc-agent.sh scan sync-architecture|manual-boundary|dead-code|xcode-membership|no-full-pull-normal-path --task TASK-119 --strict
+  ./tools/agent/mc-agent.sh scan task-docs|harness-routing|harness-health|source-format|duplicate-symbols|automatic-legacy-monolith|mainactor-boundary|swiftdata-context-boundary|manual-root-residue|master-plan-consistency|mcp-wrapper|scanner-self-tests|status-taxonomy|evidence-metadata --task TASK-120 --strict
+  ./tools/agent/mc-agent.sh scan sync-architecture|manual-boundary|dead-code|xcode-membership --task TASK-120 --strict
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys --task TASK-117
   ./tools/agent/mc-agent.sh evidence hygiene|bundle --task TASK-117
   ./tools/agent/mc-agent.sh account fixture prepare|cleanup --task TASK-116 --prefix TASK116_ACCOUNT_ [--dry-run]
@@ -437,9 +439,10 @@ Usage:
   ./tools/agent/mc-agent.sh android offline-write|reconnect-drain --tier L1|L2|L3 --prefix TASK115_OFFLINE_*
   ./tools/agent/mc-agent.sh sync counts --task TASK-115 --source supabase|android|ios [--profile linked]
   ./tools/agent/mc-agent.sh supabase status-redacted|verify-schema|verify-rls|verify-grants|residue-check --profile local|linked|dry-run-no-db
+  ./tools/agent/mc-agent.sh supabase contract sync-schema --task TASK-120 --read-only
   ./tools/agent/mc-agent.sh live sync-matrix|runtime-parity|physical-runtime-parity|mutation-near-realtime|offline-reconnect-sync|account-merge-policy-matrix|sync-performance-budget|offline-matrix|reconcile-counts|cleanup-and-verify --task TASK-115 --prefix TASK115_*
 
-Exit codes: 0=PASS 1=FAIL 2=BLOCKED 3=MISCONFIGURED 4=UNSAFE_OPERATION_REFUSED
+Exit codes: 0=PASS 1=FAIL 2=BLOCKED_EXTERNAL 3=MISCONFIGURED 4=UNSAFE_OPERATION_REFUSED
 Reports: docs/TASKS/EVIDENCE/<task>/agent-runs/<timestamp>-<command>.{log,md,json}
 HELP
 }
@@ -449,11 +452,11 @@ mc_help_json() {
 {
   "schema_version": "1.1",
   "name": "mc-agent",
-  "version": "0.4.0-task118",
+  "version": "0.4.0-task120",
   "exit_codes": {
     "0": "PASS",
     "1": "FAIL",
-    "2": "BLOCKED",
+    "2": "BLOCKED_EXTERNAL",
     "3": "MISCONFIGURED",
     "4": "UNSAFE_OPERATION_REFUSED"
   },
@@ -474,6 +477,7 @@ mc_help_json() {
     {"name":"report --latest","argv":["report","--latest"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"report validate-json","argv":["report","validate-json","--path","<file>"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"report validate-json task118","argv":["report","validate-json","--task","TASK-118","--path","docs/TASKS/EVIDENCE/TASK-118/agent-runs"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"report validate-json task120","argv":["report","validate-json","--task","TASK-120","--path","docs/TASKS/EVIDENCE/TASK-120/agent-runs"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan sensitive","argv":["scan","sensitive"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan evidence","argv":["scan","evidence","--task","TASK-115"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan repo-diff","argv":["scan","repo-diff"],"platform":"general","safety_level":"safe-readonly"},
@@ -485,6 +489,24 @@ mc_help_json() {
     {"name":"scan dead-code task119","argv":["scan","dead-code","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan xcode-membership task119","argv":["scan","xcode-membership","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-full-pull-normal-path task119","argv":["scan","no-full-pull-normal-path","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan task-docs task120","argv":["scan","task-docs","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan harness-routing task120","argv":["scan","harness-routing","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan harness-health task120","argv":["scan","harness-health","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan source-format task120","argv":["scan","source-format","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan duplicate-symbols task120","argv":["scan","duplicate-symbols","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan automatic-legacy-monolith task120","argv":["scan","automatic-legacy-monolith","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan mainactor-boundary task120","argv":["scan","mainactor-boundary","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan swiftdata-context-boundary task120","argv":["scan","swiftdata-context-boundary","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan manual-root-residue task120","argv":["scan","manual-root-residue","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan master-plan-consistency task120","argv":["scan","master-plan-consistency","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan mcp-wrapper task120","argv":["scan","mcp-wrapper","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan scanner-self-tests task120","argv":["scan","scanner-self-tests","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan status-taxonomy task120","argv":["scan","status-taxonomy","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan evidence-metadata task120","argv":["scan","evidence-metadata","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan sync-architecture task120","argv":["scan","sync-architecture","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan manual-boundary task120","argv":["scan","manual-boundary","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan dead-code task120","argv":["scan","dead-code","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan xcode-membership task120","argv":["scan","xcode-membership","--task","TASK-120","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-legacy-runtime-path","argv":["scan","no-legacy-runtime-path","--task","TASK-116"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-full-pull-normal-path","argv":["scan","no-full-pull-normal-path","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan automatic-contracts-clean","argv":["scan","automatic-contracts-clean","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
@@ -505,6 +527,8 @@ mc_help_json() {
     {"name":"ios test sync","argv":["ios","test","sync"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test automatic-domain","argv":["ios","test","automatic-domain","--task","TASK-118"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test automatic-architecture","argv":["ios","test","automatic-architecture","--task","TASK-119"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test automatic-domain task120","argv":["ios","test","automatic-domain","--task","TASK-120"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test automatic-architecture task120","argv":["ios","test","automatic-architecture","--task","TASK-120"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test lifecycle","argv":["ios","test","lifecycle"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test offline","argv":["ios","test","offline"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios smoke simulator","argv":["ios","smoke","simulator"],"platform":"ios","safety_level":"safe-readonly"},
@@ -534,6 +558,7 @@ mc_help_json() {
     {"name":"sync counts","argv":["sync","counts","--task","TASK-115","--source","supabase","--profile","linked"],"platform":"sync","safety_level":"safe-readonly"},
     {"name":"supabase start","argv":["supabase","start"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase status-redacted","argv":["supabase","status-redacted"],"platform":"supabase","safety_level":"safe-readonly"},
+    {"name":"supabase contract sync-schema task120","argv":["supabase","contract","sync-schema","--task","TASK-120","--read-only"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-schema","argv":["supabase","verify-schema"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-rls","argv":["supabase","verify-rls"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-grants","argv":["supabase","verify-grants"],"platform":"supabase","safety_level":"safe-readonly"},
@@ -1354,6 +1379,71 @@ mc_cmd_scan_task119_static() {
     *)
       MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
       MC_NEXT_ACTION="Fix TASK-119 scanner command/configuration."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+mc_cmd_scan_task120_static() {
+  local scan_name="$1"
+  shift || true
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-120}}"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  case "$scan_name" in
+    task-docs) MC_CA_REFS="CA-120-40,CA-120-49,CA-120-65,CA-120-68" ;;
+    harness-routing) MC_CA_REFS="CA-120-42,CA-120-43,CA-120-62" ;;
+    harness-health) MC_CA_REFS="CA-120-44" ;;
+    source-format) MC_CA_REFS="CA-120-41,CA-120-60,CA-120-66" ;;
+    duplicate-symbols) MC_CA_REFS="CA-120-02,CA-120-32" ;;
+    automatic-legacy-monolith) MC_CA_REFS="CA-120-01,CA-120-33" ;;
+    mainactor-boundary) MC_CA_REFS="CA-120-05,CA-120-34" ;;
+    swiftdata-context-boundary) MC_CA_REFS="CA-120-06,CA-120-35" ;;
+    manual-root-residue) MC_CA_REFS="CA-120-07,CA-120-45" ;;
+    master-plan-consistency) MC_CA_REFS="CA-120-48" ;;
+    mcp-wrapper) MC_CA_REFS="CA-120-55" ;;
+    scanner-self-tests) MC_CA_REFS="CA-120-15,CA-120-31,CA-120-54,CA-120-61,CA-120-67" ;;
+    status-taxonomy) MC_CA_REFS="CA-120-50,CA-120-56,CA-120-63" ;;
+    evidence-metadata) MC_CA_REFS="CA-120-28,CA-120-49,CA-120-58" ;;
+    sync-architecture) MC_CA_REFS="CA-120-03,CA-120-04,CA-120-09,CA-120-10,CA-120-11,CA-120-12,CA-120-24,CA-120-38,CA-120-46,CA-120-47,CA-120-53" ;;
+    manual-boundary) MC_CA_REFS="CA-120-07,CA-120-08,CA-120-21,CA-120-37,CA-120-45" ;;
+    dead-code) MC_CA_REFS="CA-120-25" ;;
+    xcode-membership) MC_CA_REFS="CA-120-16,CA-120-36" ;;
+    *) MC_CA_REFS="CA-120-15" ;;
+  esac
+
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 "$MC_AGENT_ROOT/lib/task120_scans.py" "$scan_name" > /tmp/mc-agent-task120-static.$$.json
+  local scan_code=$?
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task120-static.$$.json)"
+  rm -f /tmp/mc-agent-task120-static.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  case "$scan_code" in
+    0)
+      MC_SUMMARY="${scan_name} scan PASS for ${task_id}."
+      MC_NEXT_ACTION="Use this report in ${task_id} evidence matrix."
+      return "$MC_EXIT_PASS"
+      ;;
+    1)
+      MC_SUMMARY="${scan_name} scan FAIL for ${task_id}: TASK-120 gate found required work."
+      MC_NEXT_ACTION="Fix failing checks and rerun ${scan_name}."
+      return "$MC_EXIT_FAIL"
+      ;;
+    2)
+      MC_SUMMARY="${scan_name} scan BLOCKED_EXTERNAL for ${task_id}."
+      MC_NEXT_ACTION="Resolve the listed external prerequisite and rerun ${scan_name}."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    4)
+      MC_SUMMARY="${scan_name} scan UNSAFE_OPERATION_REFUSED for ${task_id}."
+      MC_NEXT_ACTION="Keep safety gate refused unless this was an expected refusal test."
+      return "$MC_EXIT_REFUSED"
+      ;;
+    *)
+      MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
+      MC_NEXT_ACTION="Fix TASK-120 scanner command/configuration."
       return "$MC_EXIT_MISCONFIGURED"
       ;;
   esac

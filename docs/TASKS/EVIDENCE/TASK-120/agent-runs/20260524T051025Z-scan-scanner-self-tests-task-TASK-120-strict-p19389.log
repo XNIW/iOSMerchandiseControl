@@ -1,0 +1,129 @@
+=== mc-agent scan scanner-self-tests --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Fix scanner fixtures before trusting TASK-120 gates.",
+  "checks": [
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/automatic_legacy_monolith",
+      "id": "red_green:automatic-legacy-monolith",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/manual_root_residue",
+      "id": "red_green:manual-root-residue",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/duplicate_symbols",
+      "id": "red_green:duplicate-symbols",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/mainactor_boundary",
+      "id": "red_green:mainactor-boundary",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/swiftdata_context_boundary",
+      "id": "red_green:swiftdata-context-boundary",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/source_format",
+      "id": "red_green:source-format",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/master_plan_consistency",
+      "id": "red_green:master-plan-consistency",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/harness_routing",
+      "id": "red_green:harness-routing",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/status_taxonomy",
+      "id": "red_green:status-taxonomy",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/evidence_metadata",
+      "id": "red_green:evidence-metadata",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "green_status": "PASS",
+        "red_status": "FAIL"
+      },
+      "file": "tools/agent/fixtures/task120_scanners/mcp_wrapper",
+      "id": "red_green:mcp-wrapper",
+      "reason": "Scanner fixture returns RED failure and GREEN pass.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:10:25+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "scanner-self-tests",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.scanner-self-tests",
+  "started_at": "2026-05-24T05:10:25+00:00",
+  "status": "PASS",
+  "summary": "scanner-self-tests: PASS (11 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

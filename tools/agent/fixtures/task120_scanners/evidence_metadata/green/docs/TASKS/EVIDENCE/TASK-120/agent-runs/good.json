@@ -1,0 +1,25 @@
+{
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/good.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/good.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/good.md"
+  },
+  "command": "scan source-format --task TASK-120 --strict",
+  "command_slug": "scan-source-format-task-TASK-120-strict",
+  "dirty_state": "dirty",
+  "exit_code": 0,
+  "git_sha": "1234567",
+  "NEXT_ACTION": "Continue.",
+  "next_action_recommended": "Continue.",
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-120",
+  "timestamp_end": "2026-05-24T00:00:01Z",
+  "timestamp_start": "2026-05-24T00:00:00Z"
+}

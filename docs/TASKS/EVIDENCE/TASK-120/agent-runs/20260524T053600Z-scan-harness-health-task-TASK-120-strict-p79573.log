@@ -1,0 +1,167 @@
+=== mc-agent scan harness-health --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Resolve parser/compile failures before trusting scanner output.",
+  "checks": [
+    {
+      "evidence": "",
+      "file": "tools/agent/fixtures/task120_scanners/harness_routing/green/tools/agent/mc-agent.sh",
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/harness_routing/green/tools/agent/mc-agent.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/fixtures/task120_scanners/harness_routing/red/tools/agent/mc-agent.sh",
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/harness_routing/red/tools/agent/mc-agent.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/fixtures/task120_scanners/status_taxonomy/green/tools/agent/lib/report.sh",
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/status_taxonomy/green/tools/agent/lib/report.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/fixtures/task120_scanners/status_taxonomy/green/tools/agent/mc-agent.sh",
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/status_taxonomy/green/tools/agent/mc-agent.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/fixtures/task120_scanners/status_taxonomy/red/tools/agent/lib/report.sh",
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/status_taxonomy/red/tools/agent/lib/report.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/fixtures/task120_scanners/status_taxonomy/red/tools/agent/mc-agent.sh",
+      "id": "bash_n:tools/agent/fixtures/task120_scanners/status_taxonomy/red/tools/agent/mc-agent.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/android.sh",
+      "id": "bash_n:tools/agent/lib/android.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/common.sh",
+      "id": "bash_n:tools/agent/lib/common.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/ios.sh",
+      "id": "bash_n:tools/agent/lib/ios.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/redact.sh",
+      "id": "bash_n:tools/agent/lib/redact.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/report.sh",
+      "id": "bash_n:tools/agent/lib/report.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/supabase.sh",
+      "id": "bash_n:tools/agent/lib/supabase.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/sync.sh",
+      "id": "bash_n:tools/agent/lib/sync.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/mc-agent.sh",
+      "id": "bash_n:tools/agent/mc-agent.sh",
+      "reason": "Shell script parses with bash -n.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/sync_architecture_scans.py",
+      "id": "py_compile:tools/agent/lib/sync_architecture_scans.py",
+      "reason": "Python scanner compiles.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/task117_scans.py",
+      "id": "py_compile:tools/agent/lib/task117_scans.py",
+      "reason": "Python scanner compiles.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/task119_scans.py",
+      "id": "py_compile:tools/agent/lib/task119_scans.py",
+      "reason": "Python scanner compiles.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/lib/task120_scans.py",
+      "id": "py_compile:tools/agent/lib/task120_scans.py",
+      "reason": "Python scanner compiles.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/mcp/server.mjs",
+      "id": "node_check:tools/agent/mcp/server.mjs",
+      "reason": "MCP JavaScript parses.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "file": "tools/agent/mcp/test-wrapper.mjs",
+      "id": "node_check:tools/agent/mcp/test-wrapper.mjs",
+      "reason": "MCP JavaScript parses.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "schema_version": "1.1"
+      },
+      "id": "help_json_schema",
+      "reason": "help-json exposes schema 1.1.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:36:01+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "harness-health",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.harness-health",
+  "started_at": "2026-05-24T05:36:01+00:00",
+  "status": "PASS",
+  "summary": "harness-health: PASS (21 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

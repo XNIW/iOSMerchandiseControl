@@ -1,0 +1,141 @@
+=== mc-agent scan sync-architecture --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Resolve architecture FAIL rows before REVIEW.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core",
+      "id": "dir:iOSMerchandiseControl/Sync/Automatic/Core",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision",
+      "id": "dir:iOSMerchandiseControl/Sync/Automatic/Decision",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog",
+      "id": "dir:iOSMerchandiseControl/Sync/Automatic/Catalog",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice",
+      "id": "dir:iOSMerchandiseControl/Sync/Automatic/ProductPrice",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/History",
+      "id": "dir:iOSMerchandiseControl/Sync/Automatic/History",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox",
+      "id": "dir:iOSMerchandiseControl/Sync/Automatic/Outbox",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull",
+      "id": "dir:iOSMerchandiseControl/Sync/Automatic/Pull",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation",
+      "id": "dir:iOSMerchandiseControl/Sync/Automatic/Presentation",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual",
+      "id": "dir:iOSMerchandiseControl/Sync/Manual",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Shared",
+      "id": "dir:iOSMerchandiseControl/Sync/Shared",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery",
+      "id": "dir:iOSMerchandiseControl/Sync/Recovery",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Account",
+      "id": "dir:iOSMerchandiseControl/Sync/Account",
+      "reason": "Target architecture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "old_dirs": [],
+        "root_files": []
+      },
+      "id": "root_domain_residue_absent",
+      "reason": "Decision/Pull/Presentation automatic files are physically under Automatic/*.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "declarations": [],
+        "line_count": 2
+      },
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+      "id": "providers_monolith_removed",
+      "reason": "SyncAutomaticRuntimeProviders.swift is removed or transitional zero-behavior stub.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "id": "runtime_facade_no_factory_or_modelcontext",
+      "reason": "SyncAutomaticRuntime is facade/auth/state only; concrete factory moved out.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
+      "id": "composition_factory_dedicated",
+      "reason": "Concrete automatic service creation lives in a dedicated composition factory.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "id": "automatic_history_no_concrete_shared_service",
+      "reason": "Automatic history push does not instantiate concrete mixed HistorySessionSyncService.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "automatic_domain_no_concrete_supabase_inventory_dependency",
+      "reason": "Automatic domain depends on remote-writing protocols, not concrete SupabaseInventoryService.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+      "id": "engine_owns_singleflight_cancel",
+      "reason": "AutomaticSyncEngine owns single-flight/cancellation policy.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:10:14+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "sync-architecture",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.sync-architecture",
+  "started_at": "2026-05-24T05:10:14+00:00",
+  "status": "PASS",
+  "summary": "sync-architecture: PASS (19 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

@@ -1,5 +1,10 @@
 import Foundation
 
-protocol HistorySessionRemoteWriting: HistorySessionRemoteSyncing {}
+protocol HistorySessionRemoteWriting: HistorySessionRemoteSyncing {
+    func fetchSharedSheetSessionsByIDs(
+        ownerUserID: UUID,
+        sessionIDs: Set<UUID>
+    ) async throws -> [RemoteSharedSheetSessionRow]
+}
 
 extension SupabaseInventoryService: HistorySessionRemoteWriting {}

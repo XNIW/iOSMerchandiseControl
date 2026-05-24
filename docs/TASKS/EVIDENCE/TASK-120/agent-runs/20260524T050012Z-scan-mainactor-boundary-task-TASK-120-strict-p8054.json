@@ -1,0 +1,400 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun mainactor-boundary.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050012Z-scan-mainactor-boundary-task-TASK-120-strict-p8054.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050012Z-scan-mainactor-boundary-task-TASK-120-strict-p8054.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050012Z-scan-mainactor-boundary-task-TASK-120-strict-p8054.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-120-05",
+    "CA-120-34"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan mainactor-boundary --task TASK-120 --strict",
+  "command_slug": "scan-mainactor-boundary-task-TASK-120-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 271,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-120",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK120_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-120"
+  },
+  "exit_code": 1,
+  "git_sha": "b6953a5",
+  "next_action_recommended": "Fix failing checks and rerun mainactor-boundary.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Remove @MainActor from automatic core/domain before REVIEW.",
+    "checks": [
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 4,
+            "snippet": "@MainActor"
+          }
+        ],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncAutomaticTriggerSource.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Decision/SyncAutomaticTriggerSource.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncTrigger.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Decision/SyncTrigger.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplyService.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplyService.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplySummary.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplySummary.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplySummary.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplySummary.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplySummary.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplySummary.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalContracts.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalContracts.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalPullService.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalPullService.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift",
+        "fix_hint": "Move UI/progress MainActor bridging to Presentation/facade, not domain/core services.",
+        "id": "mainactor_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift",
+        "reason": "Automatic core/domain file has no @MainActor marker.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-24T05:00:12+00:00",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "FAIL",
+    "safety_level": "read_only_static_scan",
+    "scan": "mainactor-boundary",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.mainactor-boundary",
+    "started_at": "2026-05-24T05:00:12+00:00",
+    "status": "FAIL",
+    "summary": "mainactor-boundary: FAIL (38 checks)",
+    "taskId": "TASK-120",
+    "task_id": "TASK-120"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T050012Z-scan-mainactor-boundary-task-TASK-120-strict-p8054",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-120",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T05:00:12Z",
+  "timestamp_start": "2026-05-24T05:00:12Z",
+  "warnings": []
+}

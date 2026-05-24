@@ -1,0 +1,171 @@
+=== mc-agent scan swiftdata-context-boundary --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Fix ModelContext boundary leaks before Swift moves continue.",
+  "checks": [
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "fix_hint": "Move concrete factory to a composition file that takes ModelContainer directly.",
+      "id": "runtime_facade_no_ui_modelcontext",
+      "reason": "SyncAutomaticRuntime facade does not accept/pass UI ModelContext.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "context_parameters": [
+          {
+            "line": 66,
+            "snippet": "context: ModelContext,"
+          },
+          {
+            "line": 93,
+            "snippet": "context: ModelContext,"
+          },
+          {
+            "line": 197,
+            "snippet": "context: ModelContext,"
+          },
+          {
+            "line": 227,
+            "snippet": "nonisolated private static func findSupplier(for change: LocalPendingChange, context: ModelContext) throws -> Supplier? {"
+          },
+          {
+            "line": 236,
+            "snippet": "nonisolated private static func findCategory(for change: LocalPendingChange, context: ModelContext) throws -> ProductCategory? {"
+          },
+          {
+            "line": 245,
+            "snippet": "nonisolated private static func findProduct(for change: LocalPendingChange, context: ModelContext) throws -> Product? {"
+          }
+        ],
+        "has_fresh_model_context": true
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+      "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "context_parameters": [
+          {
+            "line": 63,
+            "snippet": "context: ModelContext"
+          }
+        ],
+        "has_fresh_model_context": true
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+      "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "context_parameters": [],
+        "has_fresh_model_context": true
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+      "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "context_parameters": [
+          {
+            "line": 69,
+            "snippet": "context: ModelContext,"
+          },
+          {
+            "line": 86,
+            "snippet": "context: ModelContext,"
+          },
+          {
+            "line": 114,
+            "snippet": "context: ModelContext,"
+          },
+          {
+            "line": 154,
+            "snippet": "context: ModelContext,"
+          },
+          {
+            "line": 179,
+            "snippet": "nonisolated private static func findPrice(for change: LocalPendingChange, context: ModelContext) throws -> ProductPrice? {"
+          }
+        ],
+        "has_fresh_model_context": true
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+      "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "context_parameters": [],
+        "has_fresh_model_context": true
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplyService.swift",
+      "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+      "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplyService.swift",
+      "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "context_parameters": [
+          {
+            "line": 94,
+            "snippet": "context: ModelContext"
+          }
+        ],
+        "has_fresh_model_context": true
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+      "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+      "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+      "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "context_parameters": [],
+        "has_fresh_model_context": true
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+      "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+      "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+      "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "context_parameters": [],
+        "has_fresh_model_context": true
+      },
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+      "fix_hint": "Automatic/background work must own fresh contexts, not UI contexts.",
+      "id": "automatic_fresh_context:iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+      "reason": "Automatic SwiftData path creates fresh ModelContext from ModelContainer.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:36:11+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "swiftdata-context-boundary",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.swiftdata-context-boundary",
+  "started_at": "2026-05-24T05:36:11+00:00",
+  "status": "PASS",
+  "summary": "swiftdata-context-boundary: PASS (9 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

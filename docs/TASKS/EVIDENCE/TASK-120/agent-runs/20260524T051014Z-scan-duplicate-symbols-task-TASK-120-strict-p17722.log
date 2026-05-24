@@ -1,0 +1,26 @@
+=== mc-agent scan duplicate-symbols --task TASK-120 --strict ===
+{
+  "NEXT_ACTION": "Resolve duplicate declarations before Swift compilation.",
+  "checks": [
+    {
+      "evidence": {},
+      "fix_hint": "Delete stale copies or rename/split ownership before build.",
+      "id": "duplicate_top_level_class_protocol_struct_symbols",
+      "reason": "No duplicate top-level Swift declarations across app sources.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T05:10:14+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "duplicate-symbols",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.duplicate-symbols",
+  "started_at": "2026-05-24T05:10:14+00:00",
+  "status": "PASS",
+  "summary": "duplicate-symbols: PASS (1 checks)",
+  "taskId": "TASK-120",
+  "task_id": "TASK-120"
+}

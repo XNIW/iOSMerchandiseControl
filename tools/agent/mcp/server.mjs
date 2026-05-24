@@ -28,6 +28,17 @@ const TOOLS = [
   { name: "mc_task119_scan_xcode_membership", args: ["scan", "xcode-membership", "--task"], taskArg: true, defaultTask: "TASK-119", suffixArgs: ["--strict"], live: false, cleanup: false },
   { name: "mc_task119_ios_test_automatic_architecture", args: ["ios", "test", "automatic-architecture", "--task"], taskArg: true, defaultTask: "TASK-119", live: false, cleanup: false },
   { name: "mc_task119_report_validate_json", args: ["report", "validate-json", "--task"], taskArg: true, defaultTask: "TASK-119", suffixArgs: ["--path"], reportPathArg: true, defaultPath: "docs/TASKS/EVIDENCE/TASK-119/agent-runs", live: false, cleanup: false },
+  { name: "mc_task120_head_consistency", args: ["git", "head-consistency", "--task"], taskArg: true, defaultTask: "TASK-120", live: false, cleanup: false },
+  { name: "mc_task120_preflight_head_consistency", args: ["preflight", "--require-head-consistency", "--task"], taskArg: true, defaultTask: "TASK-120", live: false, cleanup: false },
+  { name: "mc_task120_scan_task_docs", args: ["scan", "task-docs", "--task"], taskArg: true, defaultTask: "TASK-120", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task120_scan_harness_routing", args: ["scan", "harness-routing", "--task"], taskArg: true, defaultTask: "TASK-120", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task120_scan_harness_health", args: ["scan", "harness-health", "--task"], taskArg: true, defaultTask: "TASK-120", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task120_scan_source_format", args: ["scan", "source-format", "--task"], taskArg: true, defaultTask: "TASK-120", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task120_scan_scanner_self_tests", args: ["scan", "scanner-self-tests", "--task"], taskArg: true, defaultTask: "TASK-120", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task120_scan_sync_architecture", args: ["scan", "sync-architecture", "--task"], taskArg: true, defaultTask: "TASK-120", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task120_scan_manual_boundary", args: ["scan", "manual-boundary", "--task"], taskArg: true, defaultTask: "TASK-120", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task120_scan_xcode_membership", args: ["scan", "xcode-membership", "--task"], taskArg: true, defaultTask: "TASK-120", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task120_report_validate_json", args: ["report", "validate-json", "--task"], taskArg: true, defaultTask: "TASK-120", suffixArgs: ["--path"], reportPathArg: true, defaultPath: "docs/TASKS/EVIDENCE/TASK-120/agent-runs", live: false, cleanup: false },
   { name: "mc_report", args: ["report", "--task", "TASK-115"], live: false, cleanup: false },
   { name: "mc_report_task115", args: ["report", "--task", "TASK-115"], live: false, cleanup: false },
   { name: "mc_ios_build_debug", args: ["ios", "build", "debug"], live: false, cleanup: false },
@@ -159,6 +170,11 @@ async function selfTest() {
       !names.has("mc_task119_scan_sync_architecture") ||
       !names.has("mc_task119_scan_manual_boundary") ||
       !names.has("mc_task119_ios_test_automatic_architecture") ||
+      !names.has("mc_task120_scan_task_docs") ||
+      !names.has("mc_task120_scan_harness_routing") ||
+      !names.has("mc_task120_scan_source_format") ||
+      !names.has("mc_task120_scan_scanner_self_tests") ||
+      !names.has("mc_task120_scan_sync_architecture") ||
       !names.has("mc_android_test_offline") ||
       !names.has("mc_sync_counts_supabase_task115") ||
       !names.has("mc_live_sync_matrix_task115")) {
@@ -187,7 +203,7 @@ const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/
 const { CallToolRequestSchema, ListToolsRequestSchema } = await import("@modelcontextprotocol/sdk/types.js");
 
 const server = new Server(
-  { name: "mc-agent-mcp", version: "0.4.0-task119" },
+  { name: "mc-agent-mcp", version: "0.4.0-task120" },
   { capabilities: { tools: {} } }
 );
 
