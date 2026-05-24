@@ -3913,7 +3913,7 @@ final class SupabaseManualSyncViewModel: ObservableObject {
         if error is CancellationError {
             return "cancelled"
         }
-        return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(String(describing: error)) ?? "redacted-error"
+        return SupabaseTransportClientError.sanitizedDiagnosticDetail(String(describing: error)) ?? "redacted-error"
     }
 
     private func summarySummarySubtitle(from summary: SupabaseManualSyncRunSummary) -> String? {

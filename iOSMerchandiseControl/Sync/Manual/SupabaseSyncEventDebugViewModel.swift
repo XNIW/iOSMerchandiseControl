@@ -81,7 +81,7 @@ final class SupabaseSyncEventDebugViewModel: ObservableObject {
             clearDisplayBuffer()
             state = .idle
             currentTask = nil
-        } catch let error as SupabaseInventoryServiceError {
+        } catch let error as SupabaseTransportClientError {
             guard activeRequestID == requestID else { return }
             clearDisplayBuffer()
             currentTask = nil
@@ -125,7 +125,7 @@ final class SupabaseSyncEventDebugViewModel: ObservableObject {
         summary = nil
     }
 
-    private func sanitizedMessage(for error: SupabaseInventoryServiceError) -> String {
+    private func sanitizedMessage(for error: SupabaseTransportClientError) -> String {
         let baseMessage: String
 
         switch error {

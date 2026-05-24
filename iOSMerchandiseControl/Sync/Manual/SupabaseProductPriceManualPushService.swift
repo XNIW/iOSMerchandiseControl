@@ -13,8 +13,6 @@ protocol SupabaseProductPriceManualPushRemoteAccessing: Sendable {
     func updateProduct(id: UUID, payload: SupabaseManualPushProductUpdatePayload) async throws -> RemoteInventoryProductRow
 }
 
-extension SupabaseInventoryService: SupabaseProductPriceManualPushRemoteAccessing {}
-
 nonisolated struct ProductPriceManualPushPayload: Encodable, Sendable, Equatable, Identifiable {
     let id: UUID
     let ownerUserID: UUID
@@ -447,10 +445,10 @@ struct SupabaseProductPriceManualPushService: Sendable {
     }
 
     private func safeDiagnosticDetail(for error: Error) -> String? {
-        if let serviceError = error as? SupabaseInventoryServiceError {
+        if let serviceError = error as? SupabaseTransportClientError {
             return serviceError.safeDiagnosticDetail
         }
-        return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(String(describing: error))
+        return SupabaseTransportClientError.sanitizedDiagnosticDetail(String(describing: error))
             ?? "inventory_product_prices"
     }
 }
@@ -686,7 +684,7 @@ struct ProductPriceManualPushIdentityReconciler {
             } catch {
                 context.rollback()
                 throw ProductPriceManualPushError.network(
-                    message: SupabaseInventoryServiceError.sanitizedDiagnosticDetail(String(describing: error))
+                    message: SupabaseTransportClientError.sanitizedDiagnosticDetail(String(describing: error))
                         ?? "product price identity"
                 )
             }

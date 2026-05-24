@@ -15,7 +15,7 @@ nonisolated enum SupabaseAuthServiceError: Error, Equatable, Sendable {
         case .configMissing, .invalidConfig, .oauthCancelled, .sessionMissing:
             return nil
         case .callbackFailed(let message), .unknown(let message):
-            return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(message)
+            return SupabaseTransportClientError.sanitizedDiagnosticDetail(message)
         }
     }
 }

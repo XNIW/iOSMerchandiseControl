@@ -174,15 +174,14 @@ nonisolated struct SupabaseSyncEventIncrementalApplyService {
 
     init(
         eventFetcher: any SupabaseSyncEventIncrementalFetching,
-        inventoryService: SupabaseInventoryService,
+        remote: any SyncAutomaticIncrementalRemote,
         defaults: UserDefaults = .standard,
         watermarkStore: WatermarkStore? = nil,
         limit: Int = 50
     ) {
-        let remoteAdapter = SyncEventRemoteSupabaseAdapter(remote: inventoryService)
         self.domainService = SyncEventIncrementalDomainApplyService(
             eventFetcher: eventFetcher,
-            remote: remoteAdapter,
+            remote: remote,
             defaults: defaults,
             watermarkStore: watermarkStore,
             limit: limit

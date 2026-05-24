@@ -297,7 +297,7 @@ final class SupabaseProductPricePreviewServiceTests: XCTestCase {
 
     func testPreviewFetchOrderContractIsStableForPagedPrices() {
         XCTAssertEqual(
-            SupabaseInventoryService.productPriceStablePageOrderColumns,
+            SupabaseTransportClient.productPriceStablePageOrderColumns,
             ["id"]
         )
     }
@@ -400,7 +400,7 @@ private actor MockProductPricePreviewFetching: SupabaseProductPricePreviewFetchi
             throw CancellationError()
         }
         if errorCall == callCount {
-            throw SupabaseInventoryServiceError.networkError(statusCode: nil, message: "offline")
+            throw SupabaseTransportClientError.networkError(statusCode: nil, message: "offline")
         }
         if ignoresRequestedRange {
             return rows

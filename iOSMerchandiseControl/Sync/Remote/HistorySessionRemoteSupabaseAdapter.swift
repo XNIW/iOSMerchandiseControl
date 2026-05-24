@@ -1,7 +1,7 @@
 import Foundation
 
 struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
-    let remote: SupabaseInventoryService
+    let remote: SupabaseTransportClient
 
     func upsertSharedSheetSessions(
         _ rows: [SharedSheetSessionUpsertRow],

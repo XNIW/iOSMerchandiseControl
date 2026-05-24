@@ -1480,10 +1480,10 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
     }
 
     private func safeDiagnosticDetail(for error: Error) -> String? {
-        if let serviceError = error as? SupabaseInventoryServiceError {
+        if let serviceError = error as? SupabaseTransportClientError {
             return serviceError.safeDiagnosticDetail ?? "inventory_product_prices"
         }
-        return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(String(describing: error))
+        return SupabaseTransportClientError.sanitizedDiagnosticDetail(String(describing: error))
             ?? "inventory_product_prices"
     }
 

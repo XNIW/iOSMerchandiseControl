@@ -1,7 +1,7 @@
 import Foundation
 import Supabase
 
-nonisolated enum SupabaseInventoryServiceError: Error, Sendable {
+nonisolated enum SupabaseTransportClientError: Error, Sendable {
     case configMissing
     case invalidConfig
     case sessionMissing
@@ -54,7 +54,15 @@ nonisolated enum SupabaseInventoryServiceError: Error, Sendable {
     }
 }
 
-nonisolated enum SupabaseInventoryDiagnosticResult: Sendable {
+extension SupabaseTransportClient: OptionsSyncRemoteCountFetching {}
+extension SupabaseTransportClient: SupabaseInventoryFetching {}
+extension SupabaseTransportClient: SupabaseProductPriceKeysetFetching {}
+extension SupabaseTransportClient: SupabaseProductPriceDeletedProductFetching {}
+extension SupabaseTransportClient: SupabaseProductPriceManualPushRemoteAccessing {}
+extension SupabaseTransportClient: SupabaseProductPricePushDryRunRemoteFetching {}
+extension SupabaseTransportClient: SyncAutomaticIncrementalRemote {}
+
+nonisolated enum SupabaseTransportDiagnosticResult: Sendable {
     case catalogProbeSucceeded(rowCount: Int)
 }
 
@@ -81,7 +89,7 @@ nonisolated struct SupabaseTask087RemoteCatalogSnapshot: Sendable {
 }
 #endif
 
-actor SupabaseInventoryService {
+actor SupabaseTransportClient {
     nonisolated static let stablePageOrderColumn = "id"
     nonisolated static let productPriceStablePageOrderColumns = ["id"]
     nonisolated static let productColumns = "id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at"
@@ -108,7 +116,7 @@ actor SupabaseInventoryService {
         self.clientProvider = clientProvider
     }
 
-    func testConnection() async throws -> SupabaseInventoryDiagnosticResult {
+    func testConnection() async throws -> SupabaseTransportDiagnosticResult {
         try await requireAuthenticatedSession()
         let products = try await fetchProducts(limit: 1)
         return .catalogProbeSucceeded(rowCount: products.count)
@@ -132,7 +140,7 @@ actor SupabaseInventoryService {
                       && $0.barcode.hasPrefix(Self.task087Prefix)
                       && Self.task087ProductBarcodes.contains($0.barcode)
               }) else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "TASK087 owner or prefix mismatch"
@@ -156,7 +164,7 @@ actor SupabaseInventoryService {
                 && Self.task087SupplierNames.contains($0.name)
                 && $0.deletedAt == nil
         }) else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK087 supplier collision.")
+            throw SupabaseTransportClientError.schemaDrift(message: "TASK087 supplier collision.")
         }
         let supplier: RemoteInventorySupplierRow
         if let existingSupplier = existingSuppliers.first {
@@ -171,7 +179,7 @@ actor SupabaseInventoryService {
                 && Self.task087CategoryNames.contains($0.name)
                 && $0.deletedAt == nil
         }) else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK087 category collision.")
+            throw SupabaseTransportClientError.schemaDrift(message: "TASK087 category collision.")
         }
         let category: RemoteInventoryCategoryRow
         if let existingCategory = existingCategories.first {
@@ -186,13 +194,13 @@ actor SupabaseInventoryService {
                 && Self.task087ProductBarcodes.contains($0.barcode)
                 && $0.deletedAt == nil
         }) else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK087 product collision.")
+            throw SupabaseTransportClientError.schemaDrift(message: "TASK087 product collision.")
         }
 
         var productsByBarcode: [String: RemoteInventoryProductRow] = [:]
         for product in existingProducts {
             guard productsByBarcode[product.barcode] == nil else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "TASK087 duplicate product collision.")
+                throw SupabaseTransportClientError.schemaDrift(message: "TASK087 duplicate product collision.")
             }
             productsByBarcode[product.barcode] = product
         }
@@ -220,7 +228,7 @@ actor SupabaseInventoryService {
         let expectedBarcodes = Set(missingPayloads.map(\.barcode))
         guard Set(createdProducts.map(\.barcode)) == expectedBarcodes,
               createdProducts.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK087 product seed read-back mismatch.")
+            throw SupabaseTransportClientError.schemaDrift(message: "TASK087 product seed read-back mismatch.")
         }
     }
 
@@ -232,13 +240,13 @@ actor SupabaseInventoryService {
         guard barcode.hasPrefix(Self.task087Prefix),
               Self.task087ProductBarcodes.contains(barcode),
               newProductName.hasPrefix(Self.task087Prefix) else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK087 scoped update rejected.")
+            throw SupabaseTransportClientError.schemaDrift(message: "TASK087 scoped update rejected.")
         }
 
         let product = try await fetchTask087Product(ownerUserID: ownerUserID, barcode: barcode)
         guard product.ownerUserID == ownerUserID,
               product.barcode == barcode else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "TASK087 owner or barcode mismatch"
@@ -270,22 +278,22 @@ actor SupabaseInventoryService {
             guard updated.ownerUserID == ownerUserID,
                   updated.barcode == barcode,
                   updated.productName == newProductName else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "TASK087 product read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "TASK087 product read-back mismatch.")
             }
             return updated
-        } catch let error as SupabaseInventoryServiceError {
+        } catch let error as SupabaseTransportClientError {
             throw error
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -298,7 +306,7 @@ actor SupabaseInventoryService {
                 && $0.name == Self.task088SupplierName
                 && $0.deletedAt == nil
         }), existingSuppliers.count <= 1 else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 supplier collision.")
+            throw SupabaseTransportClientError.schemaDrift(message: "TASK088 supplier collision.")
         }
         let supplier: RemoteInventorySupplierRow
         if let existingSupplier = existingSuppliers.first {
@@ -313,7 +321,7 @@ actor SupabaseInventoryService {
                 && $0.name == Self.task088CategoryName
                 && $0.deletedAt == nil
         }), existingCategories.count <= 1 else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 category collision.")
+            throw SupabaseTransportClientError.schemaDrift(message: "TASK088 category collision.")
         }
         let category: RemoteInventoryCategoryRow
         if let existingCategory = existingCategories.first {
@@ -328,7 +336,7 @@ actor SupabaseInventoryService {
                 && $0.barcode == Self.task088ProductBarcode
                 && $0.deletedAt == nil
         }), existingProducts.count <= 1 else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 product collision.")
+            throw SupabaseTransportClientError.schemaDrift(message: "TASK088 product collision.")
         }
         let product: RemoteInventoryProductRow
         if let existingProduct = existingProducts.first {
@@ -344,7 +352,7 @@ actor SupabaseInventoryService {
         guard product.ownerUserID == ownerUserID,
               product.barcode == Self.task088ProductBarcode,
               product.deletedAt == nil else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 product seed read-back mismatch.")
+            throw SupabaseTransportClientError.schemaDrift(message: "TASK088 product seed read-back mismatch.")
         }
 
         return SupabaseTask088RemoteSeed(
@@ -361,7 +369,7 @@ actor SupabaseInventoryService {
     ) async throws -> [RemoteInventoryProductPriceRow] {
         let authenticatedUserID = try await requireAuthenticatedSession()
         guard authenticatedUserID == ownerUserID else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "TASK088 owner mismatch"
@@ -385,12 +393,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -431,29 +439,29 @@ actor SupabaseInventoryService {
                 .value
             guard row.id == id,
                   row.ownerUserID == ownerUserID else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Product update read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Product update read-back mismatch.")
             }
             return row
-        } catch let error as SupabaseInventoryServiceError {
+        } catch let error as SupabaseTransportClientError {
             throw error
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
     func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
         let ownerUserID = try await requireAuthenticatedSession()
         guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
         }
         return try await insertAutomaticRows(
             payloads,
@@ -474,7 +482,7 @@ actor SupabaseInventoryService {
     func createCategories(_ payloads: [SyncAutomaticCategoryCreatePayload]) async throws -> [RemoteInventoryCategoryRow] {
         let ownerUserID = try await requireAuthenticatedSession()
         guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
         }
         return try await insertAutomaticRows(
             payloads,
@@ -495,7 +503,7 @@ actor SupabaseInventoryService {
     func createProducts(_ payloads: [SyncAutomaticProductCreatePayload]) async throws -> [RemoteInventoryProductRow] {
         let ownerUserID = try await requireAuthenticatedSession()
         guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
         }
         return try await insertAutomaticRows(
             payloads,
@@ -516,7 +524,7 @@ actor SupabaseInventoryService {
     func insertProductPrices(_ payloads: [SyncAutomaticProductPricePayload]) async throws -> [RemoteInventoryProductPriceRow] {
         let ownerUserID = try await requireAuthenticatedSession()
         guard payloads.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(statusCode: nil, code: nil, message: "Owner mismatch.")
         }
         do {
             return try await clientProvider.client
@@ -530,12 +538,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -547,7 +555,7 @@ actor SupabaseInventoryService {
         let authenticatedUserID = try await requireAuthenticatedSession()
         guard authenticatedUserID == ownerUserID,
               rows.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "History/session owner mismatch"
@@ -563,22 +571,22 @@ actor SupabaseInventoryService {
                 .value
             guard readBack.count == rows.count,
                   readBack.allSatisfy({ $0.ownerUserID == ownerUserID }) else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "History/session read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "History/session read-back mismatch.")
             }
             return readBack
-        } catch let error as SupabaseInventoryServiceError {
+        } catch let error as SupabaseTransportClientError {
             throw error
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -589,7 +597,7 @@ actor SupabaseInventoryService {
     ) async throws -> [RemoteSharedSheetSessionRow] {
         let authenticatedUserID = try await requireAuthenticatedSession()
         guard authenticatedUserID == ownerUserID else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "History/session owner mismatch"
@@ -610,12 +618,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -626,7 +634,7 @@ actor SupabaseInventoryService {
         guard !sessionIDs.isEmpty else { return [] }
         let authenticatedUserID = try await requireAuthenticatedSession()
         guard authenticatedUserID == ownerUserID else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "History/session owner mismatch"
@@ -664,12 +672,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -774,7 +782,7 @@ actor SupabaseInventoryService {
         guard !priceIDs.isEmpty else { return [] }
         let authenticatedUserID = try await requireAuthenticatedSession()
         guard authenticatedUserID == ownerUserID else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "ProductPrice owner mismatch"
@@ -799,7 +807,7 @@ actor SupabaseInventoryService {
     func fetchSyncEventsAfter(ownerUserID: UUID, afterID: Int64, limit: Int) async throws -> [RemoteSyncEventRow] {
         let authenticatedUserID = try await requireAuthenticatedSession()
         guard authenticatedUserID == ownerUserID else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "sync event owner mismatch"
@@ -822,12 +830,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -852,12 +860,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -893,12 +901,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -966,12 +974,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -990,12 +998,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1007,7 +1015,7 @@ actor SupabaseInventoryService {
     ) async throws -> [RemoteInventoryProductPriceRow] {
         let authenticatedUserID = try await requireAuthenticatedSession()
         guard ownerUserID == authenticatedUserID else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "owner mismatch"
@@ -1043,12 +1051,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1074,12 +1082,12 @@ actor SupabaseInventoryService {
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1123,12 +1131,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1156,12 +1164,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1191,12 +1199,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1221,12 +1229,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1247,12 +1255,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1278,12 +1286,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1304,12 +1312,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1325,22 +1333,22 @@ actor SupabaseInventoryService {
                   row.ownerUserID == ownerUserID,
                   row.name == "TASK087_SUP",
                   row.deletedAt == nil else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "TASK087 supplier seed read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "TASK087 supplier seed read-back mismatch.")
             }
             return row
-        } catch let error as SupabaseInventoryServiceError {
+        } catch let error as SupabaseTransportClientError {
             throw error
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1360,12 +1368,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1381,22 +1389,22 @@ actor SupabaseInventoryService {
                   row.ownerUserID == ownerUserID,
                   row.name == "TASK087_CAT",
                   row.deletedAt == nil else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "TASK087 category seed read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "TASK087 category seed read-back mismatch.")
             }
             return row
-        } catch let error as SupabaseInventoryServiceError {
+        } catch let error as SupabaseTransportClientError {
             throw error
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1416,12 +1424,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1440,12 +1448,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1466,12 +1474,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1494,12 +1502,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1520,12 +1528,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1541,22 +1549,22 @@ actor SupabaseInventoryService {
                   row.ownerUserID == ownerUserID,
                   row.name == Self.task088SupplierName,
                   row.deletedAt == nil else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 supplier seed read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "TASK088 supplier seed read-back mismatch.")
             }
             return row
-        } catch let error as SupabaseInventoryServiceError {
+        } catch let error as SupabaseTransportClientError {
             throw error
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1577,12 +1585,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1598,22 +1606,22 @@ actor SupabaseInventoryService {
                   row.ownerUserID == ownerUserID,
                   row.name == Self.task088CategoryName,
                   row.deletedAt == nil else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 category seed read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "TASK088 category seed read-back mismatch.")
             }
             return row
-        } catch let error as SupabaseInventoryServiceError {
+        } catch let error as SupabaseTransportClientError {
             throw error
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1634,12 +1642,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1673,22 +1681,22 @@ actor SupabaseInventoryService {
                   row.barcode == Self.task088ProductBarcode,
                   row.productName == Self.task088ProductName,
                   row.deletedAt == nil else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "TASK088 product seed read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "TASK088 product seed read-back mismatch.")
             }
             return row
-        } catch let error as SupabaseInventoryServiceError {
+        } catch let error as SupabaseTransportClientError {
             throw error
         } catch let error as DecodingError {
             throw mapDecodingError(error)
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1709,12 +1717,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1735,12 +1743,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -1771,12 +1779,12 @@ actor SupabaseInventoryService {
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 #endif
@@ -1787,11 +1795,11 @@ actor SupabaseInventoryService {
             let session = try await clientProvider.client.auth.session
             return session.user.id
         } catch {
-            throw SupabaseInventoryServiceError.sessionMissing
+            throw SupabaseTransportClientError.sessionMissing
         }
     }
 
-    private func mapPostgrestError(_ error: PostgrestError) -> SupabaseInventoryServiceError {
+    private func mapPostgrestError(_ error: PostgrestError) -> SupabaseTransportClientError {
         let code = error.code
         let message = error.message
         let normalized = [code, message, error.detail, error.hint]
@@ -1825,7 +1833,7 @@ actor SupabaseInventoryService {
             || normalized.contains("duplicate key")
             || normalized.contains("unique constraint") {
             return ProductPriceManualPushError.uniqueConflict(
-                message: SupabaseInventoryServiceError.sanitizedDiagnosticDetail(message)
+                message: SupabaseTransportClientError.sanitizedDiagnosticDetail(message)
             )
         }
 
@@ -1835,17 +1843,17 @@ actor SupabaseInventoryService {
             || normalized.contains("unauthorized")
             || normalized.contains("authenticated")
             || code == "42501" {
-            return SupabaseInventoryServiceError.permissionDeniedOrRLS(statusCode: nil, code: code, message: message)
+            return SupabaseTransportClientError.permissionDeniedOrRLS(statusCode: nil, code: code, message: message)
         }
 
         if code == "42P01" || code == "42703" || code == "PGRST204" {
-            return SupabaseInventoryServiceError.schemaDrift(message: message)
+            return SupabaseTransportClientError.schemaDrift(message: message)
         }
 
-        return SupabaseInventoryServiceError.unknown(message: message)
+        return SupabaseTransportClientError.unknown(message: message)
     }
 
-    private func mapDecodingError(_ error: DecodingError) -> SupabaseInventoryServiceError {
+    private func mapDecodingError(_ error: DecodingError) -> SupabaseTransportClientError {
         switch error {
         case .keyNotFound(let key, _):
             return .schemaDrift(message: "Missing key \(key.stringValue).")

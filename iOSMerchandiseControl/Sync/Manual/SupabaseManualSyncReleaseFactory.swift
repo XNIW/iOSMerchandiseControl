@@ -1,12 +1,20 @@
 import Foundation
 import SwiftData
 
+typealias ProductPriceReleaseRemote =
+    any SupabaseProductPriceKeysetFetching
+    & SupabaseProductPriceDeletedProductFetching
+    & SupabaseProductPriceManualPushRemoteAccessing
+    & SupabaseProductPricePushDryRunRemoteFetching
+
 @MainActor
 enum SupabaseManualSyncReleaseFactory {
     static func makeViewModel(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
-        inventoryService: SupabaseInventoryService? = nil,
+        productPriceRemote: ProductPriceReleaseRemote? = nil,
+        historyRemote: (any HistorySessionRemoteSyncing)? = nil,
+        incrementalRemote: (any SyncAutomaticIncrementalRemote)? = nil,
         pullPreviewService: SupabasePullPreviewService? = nil,
         manualPushService: SupabaseManualPushService? = nil,
         activityRecorder: (any SyncEventRecording)? = nil
@@ -22,7 +30,7 @@ enum SupabaseManualSyncReleaseFactory {
                 manualPushService: $0
             )
         }
-        let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = inventoryService.map {
+        let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = productPriceRemote.map {
             SyncProductPriceAdapter(
                 modelContainer: modelContainer,
                 remote: $0
@@ -31,18 +39,18 @@ enum SupabaseManualSyncReleaseFactory {
         let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = activityRecorder.map {
             SyncActivityRegistrationAdapter(context: context, recorder: $0)
         }
-        let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = inventoryService.map {
+        let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = historyRemote.map {
             SyncHistorySessionPushAdapter(
                 modelContainer: modelContainer,
-                remote: HistorySessionRemoteSupabaseAdapter(remote: $0),
+                remote: $0,
                 recorder: activityRecorder
             )
         }
-        let incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)? = inventoryService.map {
+        let incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)? = incrementalRemote.map {
             ManualSyncIncrementalPullAdapter(
                 service: SyncEventIncrementalPullService(
                     modelContainer: modelContainer,
-                    remote: SyncEventRemoteSupabaseAdapter(remote: $0)
+                    remote: $0
                 )
             )
         }
@@ -280,12 +288,12 @@ private extension SyncHistorySessionMode {
 @MainActor
 final class SyncProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding {
     private let modelContainer: ModelContainer
-    private let remote: SupabaseInventoryService
+    private let remote: ProductPriceReleaseRemote
     private var stagedPendingBatchesByFingerprint: [String: LocalPendingAggregatedProductPriceBatch] = [:]
 
     init(
         modelContainer: ModelContainer,
-        remote: SupabaseInventoryService
+        remote: ProductPriceReleaseRemote
     ) {
         self.modelContainer = modelContainer
         self.remote = remote

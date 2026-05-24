@@ -1250,7 +1250,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         return Task100LiveRuntime(
             config: config,
             provider: provider,
-            inventory: SupabaseInventoryService(clientProvider: provider),
+            inventory: SupabaseTransportClient(clientProvider: provider),
             session: Task100LiveSession(userID: session.user.id, isExpired: session.isExpired)
         )
     }
@@ -1479,7 +1479,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
             .select("id,owner_user_id,name,updated_at,deleted_at")
             .eq("owner_user_id", value: runtime.session.userID.uuidString)
             .like("name", pattern: "\(prefix)%")
-            .order(SupabaseInventoryService.stablePageOrderColumn, ascending: true)
+            .order(SupabaseTransportClient.stablePageOrderColumn, ascending: true)
             .limit(1_000)
             .execute()
             .value
@@ -1494,7 +1494,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
             .select("id,owner_user_id,name,updated_at,deleted_at")
             .eq("owner_user_id", value: runtime.session.userID.uuidString)
             .like("name", pattern: "\(prefix)%")
-            .order(SupabaseInventoryService.stablePageOrderColumn, ascending: true)
+            .order(SupabaseTransportClient.stablePageOrderColumn, ascending: true)
             .limit(1_000)
             .execute()
             .value
@@ -1516,7 +1516,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
     }
 
     private func fetchLivePrices(
-        inventory: SupabaseInventoryService,
+        inventory: SupabaseTransportClient,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {
@@ -2284,7 +2284,7 @@ private func joinedRawValues(_ values: [LocalPendingAggregatedPushBlocker]) -> S
 private struct Task100LiveRuntime {
     let config: SupabaseConfig
     let provider: SupabaseClientProvider
-    let inventory: SupabaseInventoryService
+    let inventory: SupabaseTransportClient
     let session: Task100LiveSession
 }
 

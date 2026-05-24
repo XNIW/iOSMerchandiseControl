@@ -10,8 +10,6 @@ protocol SupabaseProductPricePushDryRunRemoteFetching: Sendable {
     ) async throws -> [RemoteInventoryProductPriceRow]
 }
 
-extension SupabaseInventoryService: SupabaseProductPricePushDryRunRemoteFetching {}
-
 nonisolated struct ProductPricePushDryRunSessionSnapshot: Sendable, Equatable {
     let userID: UUID?
     let lastLinkedUserID: UUID?

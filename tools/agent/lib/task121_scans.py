@@ -523,11 +523,25 @@ def scan_sync_architecture() -> dict[str, object]:
     provider = path("iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift")
     runtime_text = read("iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift")
     provider_text = read("iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift")
+    concrete_transport_hits = []
+    for candidate in swift_files("iOSMerchandiseControl/Sync"):
+        rel_path = rel(candidate)
+        if "/Sync/Remote/" in rel_path or "/Sync/Automatic/Composition/" in rel_path:
+            continue
+        for hit in line_hits(rel_path, r"\bSupabaseTransportClient\b"):
+            concrete_transport_hits.append({"file": rel_path, **hit})
     check(checks, "retry_policy_exists", "PASS" if retry_exists else "FAIL", "AutomaticSyncRetryPolicy exists.", file="iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift")
     check(checks, "facade_not_typealias", "PASS" if "typealias AutomaticSyncRuntimeFacade = SyncAutomaticRuntime" not in facade else "FAIL", "Runtime facade is not a fake typealias.")
     check(checks, "root_runtime_no_behavior", "PASS" if not root_runtime.exists() or len(runtime_text.strip().splitlines()) <= 20 else "FAIL", "Root SyncAutomaticRuntime is deleted or zero-behavior shim.", file=rel(root_runtime))
     concrete_provider = bool(re.search(r"\b(class|struct|actor|protocol)\s+\w+", provider_text)) and len(provider_text.strip().splitlines()) > 20
     check(checks, "root_providers_no_behavior", "PASS" if not provider.exists() or not concrete_provider else "FAIL", "Root providers deleted or zero-behavior marker.", file=rel(provider))
+    check(
+        checks,
+        "domain_no_concrete_supabase_transport",
+        "PASS" if not concrete_transport_hits else "FAIL",
+        "Automatic/Manual/Recovery/Shared domain files depend on protocols/adapters, not the concrete Supabase transport client.",
+        evidence={"hit_count": len(concrete_transport_hits), "hits": concrete_transport_hits[:80]},
+    )
     return report("sync-architecture", checks, "Move/delete root runtime/provider legacy and implement retry ownership.")
 
 
@@ -641,6 +655,12 @@ def scan_root_residue() -> dict[str, object]:
         ):
             duplicate_root_moved.append({"name": name, "paths": sorted(paths_for_name)})
 
+    legacy_symbol_hits = []
+    for candidate in swift_files("iOSMerchandiseControl"):
+        rel_path = rel(candidate)
+        for hit in line_hits(rel_path, r"\bSupabaseInventoryService\b"):
+            legacy_symbol_hits.append({"file": rel_path, **hit})
+
     check(
         checks,
         "root_sync_residue_git_ls_files",
@@ -654,6 +674,14 @@ def scan_root_residue() -> dict[str, object]:
         "PASS" if not duplicate_root_moved else "FAIL",
         "No sync/Supabase file exists both at root and under Sync.",
         evidence={"duplicate_count": len(duplicate_root_moved), "duplicates": duplicate_root_moved[:80]},
+    )
+    check(
+        checks,
+        "legacy_supabase_inventory_service_symbol_absent",
+        "PASS" if not legacy_symbol_hits else "FAIL",
+        "Production Swift no longer references the legacy SupabaseInventoryService mega-service symbol.",
+        evidence={"hit_count": len(legacy_symbol_hits), "hits": legacy_symbol_hits[:120]},
+        fix_hint="Rename the concrete transport to SupabaseTransportClient and keep domain dependencies behind adapters/protocols.",
     )
     return report("root-residue", checks, "Move/split classified root Supabase and sync residues before claiming final architecture target.")
 
@@ -744,26 +772,69 @@ def scan_duplicate_symbols() -> dict[str, object]:
 
 def scan_scanner_self_tests() -> dict[str, object]:
     checks: list[dict[str, object]] = []
-    groups = ["sync-inventory", "sync-architecture", "retry-ownership", "manual-boundary", "root-residue", "shared-purity", "dead-code", "xcode-membership", "source-format", "evidence-metadata", "status-taxonomy", "mcp-wrapper"]
+    groups = [
+        "sync-inventory",
+        "sync-architecture",
+        "retry-ownership",
+        "manual-boundary",
+        "root-residue",
+        "supabase-contract",
+        "shared-purity",
+        "dead-code",
+        "xcode-membership",
+        "source-format",
+        "evidence-metadata",
+        "status-taxonomy",
+        "mcp-wrapper",
+    ]
     base = path("tools/agent/fixtures/task121_scanners")
     for group in groups:
         group_dir = base / group
         red = group_dir / "red"
         green = group_dir / "green"
         manifest = group_dir / "README.md"
-        ok = red.exists() and green.exists() and manifest.exists() and "expected" in manifest.read_text(encoding="utf-8", errors="replace").lower()
+        ok = (
+            (red.exists() or any(group_dir.glob("red-*")))
+            and (green.exists() or any(group_dir.glob("green-*")))
+            and manifest.exists()
+            and "expected" in manifest.read_text(encoding="utf-8", errors="replace").lower()
+        )
         if group == "root-residue" and ok:
             fixture_text = "\n".join(
                 candidate.read_text(encoding="utf-8", errors="replace")
                 for candidate in sorted(group_dir.rglob("*.txt"))
             )
-            ok = "SupabaseInventoryService.swift" in fixture_text and "duplicate root+moved" in fixture_text
+            ok = (
+                "SupabaseInventoryService.swift" in fixture_text
+                and "duplicate root+moved" in fixture_text
+                and "SupabaseInventoryService" in fixture_text
+                and (group_dir / "red-root-supabase-inventory-service").exists()
+                and (group_dir / "red-duplicate-root-and-moved").exists()
+                and (group_dir / "green-root-clean").exists()
+            )
+        if group == "supabase-contract" and ok:
+            fixture_text = "\n".join(
+                candidate.read_text(encoding="utf-8", errors="replace")
+                for candidate in sorted(group_dir.rglob("*.txt"))
+            )
+            ok = (
+                "TASK-120 fallback" in fixture_text
+                and "TASK-121 reconciliation PASS" in fixture_text
+                and (group_dir / "red-task120-fallback").exists()
+                and (group_dir / "green-task121-reconciliation-pass").exists()
+            )
         check(checks, f"fixture:{group}", "PASS" if ok else "FAIL", "TASK-121 scanner fixture group has RED/GREEN and manifest.", file=rel(group_dir))
     return report("scanner-self-tests", checks, "Add RED/GREEN fixture groups under tools/agent/fixtures/task121_scanners.")
 
 
 def scan_supabase_contract() -> dict[str, object]:
     checks: list[dict[str, object]] = []
+    supabase_wrapper = read("tools/agent/lib/supabase.sh")
+    uses_task121_scanner = (
+        '[[ "$task_id" == "TASK-121" ]]' in supabase_wrapper
+        and "task121_scans.py" in supabase_wrapper
+        and "task120_scans.py" in supabase_wrapper
+    )
     table_hits = []
     for candidate in relevant_sync_files():
         text = candidate.read_text(encoding="utf-8", errors="replace")
@@ -782,6 +853,13 @@ def scan_supabase_contract() -> dict[str, object]:
                 mutation_hits.append({"file": rel(candidate), "line": idx, "snippet": line.strip()[:180]})
     check(checks, "sync_tables_mapped", "PASS" if table_hits else "PASS_WITH_NOTES", "Static adapter table map collected.", evidence=table_hits[:120])
     check(checks, "no_schema_mutation_in_sources", "PASS" if not mutation_hits else "FAIL", "No schema/RLS/grant mutation tokens in sync sources.", evidence=mutation_hits[:80])
+    check(
+        checks,
+        "task121_contract_uses_task121_scanner",
+        "PASS" if uses_task121_scanner else "FAIL",
+        "TASK-121 sync-schema contract routes to task121_scans.py and does not rely on TASK-120 fallback.",
+        file="tools/agent/lib/supabase.sh",
+    )
     return report("supabase-contract-sync-schema", checks, "Use read-only schema evidence before SupabaseInventoryService split.")
 
 

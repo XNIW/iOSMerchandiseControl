@@ -6,7 +6,7 @@ enum SyncAutomaticRuntimeFactory {
     static func make(
         modelContainer: ModelContainer,
         authViewModel: SupabaseAuthViewModel,
-        inventoryService: SupabaseInventoryService?,
+        inventoryService: SupabaseTransportClient?,
         activityRecorder: (any SyncEventRecording)?
     ) -> any SyncAutomaticRuntimeProviding {
         let catalogPushProvider: (any SyncCatalogPushProviding)? = inventoryService.map {

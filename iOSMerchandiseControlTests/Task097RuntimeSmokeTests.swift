@@ -12,7 +12,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
         }
 
         let config = try SupabaseConfig.load()
-        let inventory = SupabaseInventoryService(
+        let inventory = SupabaseTransportClient(
             clientProvider: SupabaseClientProvider(config: config)
         )
 
@@ -96,7 +96,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
         )
     }
 
-    private func fetchAllSuppliers(_ inventory: SupabaseInventoryService) async throws -> [RemoteInventorySupplierRow] {
+    private func fetchAllSuppliers(_ inventory: SupabaseTransportClient) async throws -> [RemoteInventorySupplierRow] {
         var rows: [RemoteInventorySupplierRow] = []
         for page in 0..<25 {
             let pageRows = try await inventory.fetchSuppliersPage(from: page * 1_000, to: page * 1_000 + 999)
@@ -106,7 +106,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
         return rows
     }
 
-    private func fetchAllCategories(_ inventory: SupabaseInventoryService) async throws -> [RemoteInventoryCategoryRow] {
+    private func fetchAllCategories(_ inventory: SupabaseTransportClient) async throws -> [RemoteInventoryCategoryRow] {
         var rows: [RemoteInventoryCategoryRow] = []
         for page in 0..<25 {
             let pageRows = try await inventory.fetchCategoriesPage(from: page * 1_000, to: page * 1_000 + 999)
@@ -116,7 +116,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
         return rows
     }
 
-    private func fetchAllProducts(_ inventory: SupabaseInventoryService) async throws -> [RemoteInventoryProductRow] {
+    private func fetchAllProducts(_ inventory: SupabaseTransportClient) async throws -> [RemoteInventoryProductRow] {
         var rows: [RemoteInventoryProductRow] = []
         for page in 0..<25 {
             let pageRows = try await inventory.fetchProductsPage(from: page * 1_000, to: page * 1_000 + 999)
@@ -127,7 +127,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
     }
 
     private func fetchAllPrices(
-        _ inventory: SupabaseInventoryService,
+        _ inventory: SupabaseTransportClient,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {

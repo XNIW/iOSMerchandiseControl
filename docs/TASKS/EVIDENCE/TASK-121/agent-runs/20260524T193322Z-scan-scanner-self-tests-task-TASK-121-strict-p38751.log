@@ -1,0 +1,97 @@
+=== mc-agent scan scanner-self-tests --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.scanner-self-tests",
+  "scan": "scanner-self-tests",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "scanner-self-tests: PASS (13 checks)",
+  "started_at": "2026-05-24T19:33:22+00:00",
+  "completed_at": "2026-05-24T19:33:22+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "fixture:sync-inventory",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/sync-inventory"
+    },
+    {
+      "id": "fixture:sync-architecture",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/sync-architecture"
+    },
+    {
+      "id": "fixture:retry-ownership",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/retry-ownership"
+    },
+    {
+      "id": "fixture:manual-boundary",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/manual-boundary"
+    },
+    {
+      "id": "fixture:root-residue",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/root-residue"
+    },
+    {
+      "id": "fixture:supabase-contract",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/supabase-contract"
+    },
+    {
+      "id": "fixture:shared-purity",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/shared-purity"
+    },
+    {
+      "id": "fixture:dead-code",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/dead-code"
+    },
+    {
+      "id": "fixture:xcode-membership",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/xcode-membership"
+    },
+    {
+      "id": "fixture:source-format",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/source-format"
+    },
+    {
+      "id": "fixture:evidence-metadata",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/evidence-metadata"
+    },
+    {
+      "id": "fixture:status-taxonomy",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/status-taxonomy"
+    },
+    {
+      "id": "fixture:mcp-wrapper",
+      "status": "PASS",
+      "reason": "TASK-121 scanner fixture group has RED/GREEN and manifest.",
+      "file": "tools/agent/fixtures/task121_scanners/mcp-wrapper"
+    }
+  ],
+  "NEXT_ACTION": "Add RED/GREEN fixture groups under tools/agent/fixtures/task121_scanners."
+}

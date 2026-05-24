@@ -1,7 +1,7 @@
 import Foundation
 
 struct CatalogRemoteSupabaseAdapter: SyncAutomaticCatalogRemoteWriting {
-    let remote: SupabaseInventoryService
+    let remote: SupabaseTransportClient
 
     func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
         try await remote.createSuppliers(payloads)

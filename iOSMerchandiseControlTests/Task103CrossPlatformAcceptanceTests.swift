@@ -1946,7 +1946,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         return Runtime(
             config: config,
             provider: provider,
-            inventory: SupabaseInventoryService(clientProvider: provider),
+            inventory: SupabaseTransportClient(clientProvider: provider),
             session: SupabaseAuthService.sessionInfoForTask103(session)
         )
     }
@@ -2045,7 +2045,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             .select("id,owner_user_id,name,updated_at,deleted_at")
             .eq("owner_user_id", value: ownerUserID.uuidString)
             .in("name", values: fixture.allSupplierNames)
-            .order(SupabaseInventoryService.stablePageOrderColumn, ascending: true)
+            .order(SupabaseTransportClient.stablePageOrderColumn, ascending: true)
             .limit(20)
             .execute()
             .value
@@ -2061,7 +2061,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             .select("id,owner_user_id,name,updated_at,deleted_at")
             .eq("owner_user_id", value: ownerUserID.uuidString)
             .in("name", values: fixture.allCategoryNames)
-            .order(SupabaseInventoryService.stablePageOrderColumn, ascending: true)
+            .order(SupabaseTransportClient.stablePageOrderColumn, ascending: true)
             .limit(20)
             .execute()
             .value
@@ -2077,14 +2077,14 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             .select("id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at")
             .eq("owner_user_id", value: ownerUserID.uuidString)
             .in("barcode", values: fixture.allBarcodes)
-            .order(SupabaseInventoryService.stablePageOrderColumn, ascending: true)
+            .order(SupabaseTransportClient.stablePageOrderColumn, ascending: true)
             .limit(100)
             .execute()
             .value
     }
 
     private func fetchFixturePrices(
-        _ inventory: SupabaseInventoryService,
+        _ inventory: SupabaseTransportClient,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {
@@ -2639,7 +2639,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
     private struct Runtime {
         let config: SupabaseConfig
         let provider: SupabaseClientProvider
-        let inventory: SupabaseInventoryService
+        let inventory: SupabaseTransportClient
         let session: SupabaseAuthSessionInfo
     }
 
@@ -2716,7 +2716,7 @@ private final class Task103NetworkDownManualPushRemoteGateway: SupabaseManualPus
         throw offline()
     }
 
-    private func offline() -> SupabaseInventoryServiceError {
+    private func offline() -> SupabaseTransportClientError {
         .networkError(statusCode: nil, message: "TASK103 simulated Supabase unreachable")
     }
 }

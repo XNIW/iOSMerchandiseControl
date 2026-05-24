@@ -54,7 +54,7 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
     }
 
     func testSchemaAndDecodingErrorsUseSanitizedErrorState() async throws {
-        let errors: [SupabaseInventoryServiceError] = [
+        let errors: [SupabaseTransportClientError] = [
             .schemaDrift(message: "Missing key metadata."),
             .decodingError(message: "Bearer token should not be shown")
         ]
@@ -76,7 +76,7 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
     }
 
     func testInventoryServiceDiagnosticRedactsURLBusinessIDsAndEmail() {
-        let detail = SupabaseInventoryServiceError.sanitizedDiagnosticDetail(
+        let detail = SupabaseTransportClientError.sanitizedDiagnosticDetail(
             "GET https://example.supabase.co/rest/v1/inventory_products?select=*&barcode=1234567890123 owner=00000000-0000-0000-0000-000000000001 email=user@example.test"
         )
 
@@ -285,7 +285,7 @@ final class SupabaseSyncEventDebugViewModelTests: XCTestCase {
 
 private enum ImmediateSyncEventOutcome: Sendable {
     case rows([RemoteSyncEventRow])
-    case serviceError(SupabaseInventoryServiceError)
+    case serviceError(SupabaseTransportClientError)
 }
 
 private actor ImmediateSyncEventPreviewFetching: SupabaseSyncEventPreviewFetching {

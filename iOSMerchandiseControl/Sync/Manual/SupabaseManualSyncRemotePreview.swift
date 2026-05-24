@@ -211,7 +211,7 @@ nonisolated enum SupabaseManualSyncRemotePreviewOutcomeMapper {
     }
 
     private static func failureCategory(
-        for error: SupabaseInventoryServiceError
+        for error: SupabaseTransportClientError
     ) -> SupabaseManualSyncRemotePreviewFailureCategory {
         switch error {
         case .networkError:

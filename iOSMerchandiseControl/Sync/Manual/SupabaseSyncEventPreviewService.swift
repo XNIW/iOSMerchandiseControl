@@ -91,19 +91,19 @@ actor SupabaseSyncEventRemoteReader: SupabaseSyncEventPreviewFetching, SupabaseS
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
     func fetchSyncEventsAfter(ownerUserID: UUID, afterID: Int64, limit: Int) async throws -> [RemoteSyncEventRow] {
         let authenticatedUserID = try await requireAuthenticatedSession()
         guard authenticatedUserID == ownerUserID else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "sync event owner mismatch"
@@ -127,12 +127,12 @@ actor SupabaseSyncEventRemoteReader: SupabaseSyncEventPreviewFetching, SupabaseS
         } catch let error as PostgrestError {
             throw mapPostgrestError(error)
         } catch let error as URLError {
-            throw SupabaseInventoryServiceError.networkError(
+            throw SupabaseTransportClientError.networkError(
                 statusCode: nil,
                 message: error.localizedDescription
             )
         } catch {
-            throw SupabaseInventoryServiceError.unknown(message: String(describing: error))
+            throw SupabaseTransportClientError.unknown(message: String(describing: error))
         }
     }
 
@@ -142,11 +142,11 @@ actor SupabaseSyncEventRemoteReader: SupabaseSyncEventPreviewFetching, SupabaseS
             let session = try await clientProvider.client.auth.session
             return session.user.id
         } catch {
-            throw SupabaseInventoryServiceError.sessionMissing
+            throw SupabaseTransportClientError.sessionMissing
         }
     }
 
-    private func mapPostgrestError(_ error: PostgrestError) -> SupabaseInventoryServiceError {
+    private func mapPostgrestError(_ error: PostgrestError) -> SupabaseTransportClientError {
         let code = error.code
         let message = error.message
         let normalized = [code, message, error.detail, error.hint]
@@ -169,7 +169,7 @@ actor SupabaseSyncEventRemoteReader: SupabaseSyncEventPreviewFetching, SupabaseS
         return .unknown(message: message)
     }
 
-    private func mapDecodingError(_ error: DecodingError) -> SupabaseInventoryServiceError {
+    private func mapDecodingError(_ error: DecodingError) -> SupabaseTransportClientError {
         switch error {
         case .keyNotFound(let key, _):
             return .schemaDrift(message: "Missing key \(key.stringValue).")

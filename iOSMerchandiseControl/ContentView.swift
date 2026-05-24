@@ -98,7 +98,7 @@ extension View {
 }
 
 struct ContentView: View {
-    private let supabaseInventoryService: SupabaseInventoryService?
+    private let supabaseInventoryService: SupabaseTransportClient?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
@@ -114,7 +114,7 @@ struct ContentView: View {
     @State private var selectedTab = 0
 
     init(
-        supabaseInventoryService: SupabaseInventoryService? = nil,
+        supabaseInventoryService: SupabaseTransportClient? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher? = nil
@@ -208,7 +208,7 @@ struct ContentView: View {
             // TAB 4: Opzioni
             NavigationStack {
                 OptionsView(
-                    supabaseInventoryService: supabaseInventoryService,
+                    remoteCountFetcher: supabaseInventoryService,
                     supabasePullPreviewService: supabasePullPreviewService,
                     syncStateStore: syncStateStore,
                     syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder
@@ -236,7 +236,7 @@ private struct AppSyncRootHost<Content: View>: View {
     init(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
-        inventoryService: SupabaseInventoryService?,
+        inventoryService: SupabaseTransportClient?,
         activityRecorder: (any SyncEventRecording)?,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?,
         syncStateStore: SyncStateStore,

@@ -1,0 +1,7 @@
+RED: TASK-120 fallback
+contract: supabase contract sync-schema --task TASK-121 --read-only
+scanner: tools/agent/lib/task120_scans.py
+external_report: PASS
+internal_reconciliation: FAIL
+
+Expected: supabase contract sync-schema --task TASK-121 --read-only returns FAIL.

@@ -11,8 +11,6 @@ protocol OptionsSyncRemoteCountFetching: Sendable {
     func fetchReconciliationRemoteCounts() async throws -> SyncInventoryCountSnapshot
 }
 
-extension SupabaseInventoryService: OptionsSyncRemoteCountFetching {}
-
 @MainActor
 final class OptionsSyncSummaryProvider: ObservableObject {
     @Published private(set) var supabaseBaselineSummary: SupabaseCatalogBaselineDebugSummary = .absent
@@ -55,7 +53,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
     func refreshAll(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
-        inventoryService: SupabaseInventoryService?,
+        remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?,
         pendingChanges: [LocalPendingChange]
     ) {
         refreshAll(
@@ -64,7 +62,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
                 isSignedIn: authViewModel.isSignedIn,
                 userID: authViewModel.sessionInfo?.userID
             ),
-            remoteCountFetcher: inventoryService,
+            remoteCountFetcher: remoteCountFetcher,
             pendingChanges: pendingChanges
         )
     }
@@ -86,13 +84,13 @@ final class OptionsSyncSummaryProvider: ObservableObject {
     func handleAuthChanged(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
-        inventoryService: SupabaseInventoryService?,
+        remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?,
         pendingChanges: [LocalPendingChange]
     ) {
         refreshAll(
             context: context,
             authViewModel: authViewModel,
-            inventoryService: inventoryService,
+            remoteCountFetcher: remoteCountFetcher,
             pendingChanges: pendingChanges
         )
     }
@@ -100,13 +98,13 @@ final class OptionsSyncSummaryProvider: ObservableObject {
     func handleLocalDataChanged(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
-        inventoryService: SupabaseInventoryService?,
+        remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?,
         pendingChanges: [LocalPendingChange]
     ) {
         refreshAll(
             context: context,
             authViewModel: authViewModel,
-            inventoryService: inventoryService,
+            remoteCountFetcher: remoteCountFetcher,
             pendingChanges: pendingChanges
         )
     }

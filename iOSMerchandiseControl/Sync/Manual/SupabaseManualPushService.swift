@@ -259,7 +259,7 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
     func verifySupplier(id: UUID, normalizedName: String) async throws -> RemoteInventorySupplierRow {
         let row: RemoteInventorySupplierRow = try await fetchByID(table: Table.suppliers, columns: Table.supplierColumns, id: id)
         guard SupabasePullPreviewNormalizer.normalizedLookupName(row.name) == normalizedName else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "Supplier natural key mismatch.")
+            throw SupabaseTransportClientError.schemaDrift(message: "Supplier natural key mismatch.")
         }
         return row
     }
@@ -277,7 +277,7 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
     func verifyCategory(id: UUID, normalizedName: String) async throws -> RemoteInventoryCategoryRow {
         let row: RemoteInventoryCategoryRow = try await fetchByID(table: Table.categories, columns: Table.categoryColumns, id: id)
         guard SupabasePullPreviewNormalizer.normalizedLookupName(row.name) == normalizedName else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "Category natural key mismatch.")
+            throw SupabaseTransportClientError.schemaDrift(message: "Category natural key mismatch.")
         }
         return row
     }
@@ -295,7 +295,7 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
     func verifyProduct(id: UUID, normalizedBarcode: String) async throws -> RemoteInventoryProductRow {
         let row: RemoteInventoryProductRow = try await fetchByID(table: Table.products, columns: Table.productColumns, id: id)
         guard ManualPushFingerprintNormalizer.semanticString(row.barcode) == normalizedBarcode else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "Product natural key mismatch.")
+            throw SupabaseTransportClientError.schemaDrift(message: "Product natural key mismatch.")
         }
         return row
     }
@@ -309,11 +309,11 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
                 ids: touchedIDs.suppliers
             )
             guard Set(rows.map(\.id)) == touchedIDs.suppliers else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Supplier read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Supplier read-back mismatch.")
             }
             for row in rows {
                 guard expectation.supplierFingerprintsByID[row.id] == remoteFingerprint(row) else {
-                    throw SupabaseInventoryServiceError.schemaDrift(message: "Supplier read-back fingerprint mismatch.")
+                    throw SupabaseTransportClientError.schemaDrift(message: "Supplier read-back fingerprint mismatch.")
                 }
             }
         }
@@ -324,11 +324,11 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
                 ids: touchedIDs.categories
             )
             guard Set(rows.map(\.id)) == touchedIDs.categories else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Category read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Category read-back mismatch.")
             }
             for row in rows {
                 guard expectation.categoryFingerprintsByID[row.id] == remoteFingerprint(row) else {
-                    throw SupabaseInventoryServiceError.schemaDrift(message: "Category read-back fingerprint mismatch.")
+                    throw SupabaseTransportClientError.schemaDrift(message: "Category read-back fingerprint mismatch.")
                 }
             }
         }
@@ -339,11 +339,11 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
                 ids: touchedIDs.products
             )
             guard Set(rows.map(\.id)) == touchedIDs.products else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Product read-back mismatch.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Product read-back mismatch.")
             }
             for row in rows {
                 guard expectation.productFingerprintsByID[row.id] == remoteFingerprint(row) else {
-                    throw SupabaseInventoryServiceError.schemaDrift(message: "Product read-back fingerprint mismatch.")
+                    throw SupabaseTransportClientError.schemaDrift(message: "Product read-back fingerprint mismatch.")
                 }
             }
         }
@@ -390,7 +390,7 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
 
     private func validateCreatePayloadOwners(_ payloadOwnerIDs: [UUID], ownerUserID: UUID) throws {
         guard payloadOwnerIDs.allSatisfy({ $0 == ownerUserID }) else {
-            throw SupabaseInventoryServiceError.permissionDeniedOrRLS(
+            throw SupabaseTransportClientError.permissionDeniedOrRLS(
                 statusCode: nil,
                 code: nil,
                 message: "Owner mismatch."
@@ -465,7 +465,7 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
             let session = try await clientProvider.client.auth.session
             return session.user.id
         } catch {
-            throw SupabaseInventoryServiceError.sessionMissing
+            throw SupabaseTransportClientError.sessionMissing
         }
     }
 
@@ -480,22 +480,22 @@ actor SupabaseManualPushRemoteClient: SupabaseManualPushRemoteGateway {
                 || normalized.contains("unauthorized")
                 || normalized.contains("authenticated")
                 || error.code == "42501" {
-                return SupabaseInventoryServiceError.permissionDeniedOrRLS(
+                return SupabaseTransportClientError.permissionDeniedOrRLS(
                     statusCode: nil,
                     code: error.code,
                     message: error.message
                 )
             }
             if error.code == "42P01" || error.code == "42703" || error.code == "PGRST204" {
-                return SupabaseInventoryServiceError.schemaDrift(message: error.message)
+                return SupabaseTransportClientError.schemaDrift(message: error.message)
             }
-            return SupabaseInventoryServiceError.unknown(message: error.message)
+            return SupabaseTransportClientError.unknown(message: error.message)
         }
         if let error = error as? DecodingError {
-            return SupabaseInventoryServiceError.decodingError(message: String(describing: error))
+            return SupabaseTransportClientError.decodingError(message: String(describing: error))
         }
         if let error = error as? URLError {
-            return SupabaseInventoryServiceError.networkError(statusCode: nil, message: error.localizedDescription)
+            return SupabaseTransportClientError.networkError(statusCode: nil, message: error.localizedDescription)
         }
         return error
     }
@@ -624,7 +624,7 @@ final class SupabaseManualPushService {
             return
         }
         guard !plan.scopeSummary.hasScopedBlocker else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "Scoped TASK045 plan is blocked before remote write.")
+            throw SupabaseTransportClientError.schemaDrift(message: "Scoped TASK045 plan is blocked before remote write.")
         }
 
         let suppliersByName = try fetchSuppliersByName(context: context)
@@ -636,21 +636,21 @@ final class SupabaseManualPushService {
             case .supplier:
                 guard let supplier = suppliersByName[candidate.localID],
                       ManualPushTask045Scope.contains(supplier) else {
-                    throw SupabaseInventoryServiceError.schemaDrift(message: "Scoped TASK045 supplier payload contains an outside-scope record.")
+                    throw SupabaseTransportClientError.schemaDrift(message: "Scoped TASK045 supplier payload contains an outside-scope record.")
                 }
             case .productCategory:
                 guard let category = categoriesByName[candidate.localID],
                       ManualPushTask045Scope.contains(category) else {
-                    throw SupabaseInventoryServiceError.schemaDrift(message: "Scoped TASK045 category payload contains an outside-scope record.")
+                    throw SupabaseTransportClientError.schemaDrift(message: "Scoped TASK045 category payload contains an outside-scope record.")
                 }
             case .product:
                 guard let product = productsByBarcode[candidate.localID],
                       ManualPushTask045Scope.contains(product),
                       scopedProductDependenciesAreRemoteSafe(product) else {
-                    throw SupabaseInventoryServiceError.schemaDrift(message: "Scoped TASK045 product payload contains an outside-scope record or dependency.")
+                    throw SupabaseTransportClientError.schemaDrift(message: "Scoped TASK045 product payload contains an outside-scope record or dependency.")
                 }
             case .productPrice:
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Scoped TASK045 payload cannot contain ProductPrice.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Scoped TASK045 payload cannot contain ProductPrice.")
             }
         }
     }
@@ -692,11 +692,11 @@ final class SupabaseManualPushService {
             didConfirmAnyRemoteWrite = true
         }
         guard createRows.count == createSuppliers.count else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "Supplier create response count mismatch.")
+            throw SupabaseTransportClientError.schemaDrift(message: "Supplier create response count mismatch.")
         }
         for row in createRows {
             guard let supplier = suppliersByName[row.name] else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Supplier create response did not match a local record.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Supplier create response did not match a local record.")
             }
             apply(row: row, to: supplier)
             try save(context)
@@ -710,7 +710,7 @@ final class SupabaseManualPushService {
             guard let supplier = suppliersByName[candidate.localID],
                   let remoteID = candidate.remoteID,
                   let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(supplier.name) else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Missing supplier link target.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Missing supplier link target.")
             }
             let row = try await remote.verifySupplier(id: remoteID, normalizedName: normalizedName)
             apply(row: row, to: supplier)
@@ -724,7 +724,7 @@ final class SupabaseManualPushService {
         for candidate in candidates where candidate.action == .dryRunUpdateCandidate {
             guard let supplier = suppliersByName[candidate.localID],
                   let remoteID = supplier.remoteID else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Missing supplier update target.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Missing supplier update target.")
             }
             let row = try await remote.updateSupplier(
                 id: remoteID,
@@ -763,11 +763,11 @@ final class SupabaseManualPushService {
             didConfirmAnyRemoteWrite = true
         }
         guard createRows.count == createCategories.count else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "Category create response count mismatch.")
+            throw SupabaseTransportClientError.schemaDrift(message: "Category create response count mismatch.")
         }
         for row in createRows {
             guard let category = categoriesByName[row.name] else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Category create response did not match a local record.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Category create response did not match a local record.")
             }
             apply(row: row, to: category)
             try save(context)
@@ -781,7 +781,7 @@ final class SupabaseManualPushService {
             guard let category = categoriesByName[candidate.localID],
                   let remoteID = candidate.remoteID,
                   let normalizedName = SupabasePullPreviewNormalizer.normalizedLookupName(category.name) else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Missing category link target.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Missing category link target.")
             }
             let row = try await remote.verifyCategory(id: remoteID, normalizedName: normalizedName)
             apply(row: row, to: category)
@@ -795,7 +795,7 @@ final class SupabaseManualPushService {
         for candidate in candidates where candidate.action == .dryRunUpdateCandidate {
             guard let category = categoriesByName[candidate.localID],
                   let remoteID = category.remoteID else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Missing category update target.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Missing category update target.")
             }
             let row = try await remote.updateCategory(
                 id: remoteID,
@@ -830,7 +830,7 @@ final class SupabaseManualPushService {
             .filter { $0.action == .dryRunCreateCandidate }
             .map { candidate -> Product in
                 guard let product = productsByBarcode[candidate.localID] else {
-                    throw SupabaseInventoryServiceError.schemaDrift(message: "Missing product create target.")
+                    throw SupabaseTransportClientError.schemaDrift(message: "Missing product create target.")
                 }
                 return product
             }
@@ -839,11 +839,11 @@ final class SupabaseManualPushService {
             didConfirmAnyRemoteWrite = true
         }
         guard createRows.count == createProducts.count else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "Product create response count mismatch.")
+            throw SupabaseTransportClientError.schemaDrift(message: "Product create response count mismatch.")
         }
         for row in createRows {
             guard let product = productsByBarcode[row.barcode] else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Product create response did not match a local record.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Product create response did not match a local record.")
             }
             apply(row: row, to: product)
             try save(context)
@@ -857,7 +857,7 @@ final class SupabaseManualPushService {
             guard let product = productsByBarcode[candidate.localID],
                   let remoteID = candidate.remoteID,
                   let normalizedBarcode = ManualPushFingerprintNormalizer.semanticString(product.barcode) else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Missing product link target.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Missing product link target.")
             }
             let row = try await remote.verifyProduct(id: remoteID, normalizedBarcode: normalizedBarcode)
             apply(row: row, to: product)
@@ -870,14 +870,14 @@ final class SupabaseManualPushService {
 
         for candidate in candidates where candidate.action == .dryRunTombstoneCandidate {
             guard let remoteID = candidate.remoteID else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Missing product tombstone target.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Missing product tombstone target.")
             }
             let row = try await remote.updateProduct(
                 id: remoteID,
                 payload: makeProductTombstonePayload()
             )
             guard SupabasePullPreviewNormalizer.semanticString(row.deletedAt) != nil else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Product tombstone response did not include deleted_at.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Product tombstone response did not include deleted_at.")
             }
             didConfirmAnyRemoteWrite = true
             counters.productUpdates += 1
@@ -888,7 +888,7 @@ final class SupabaseManualPushService {
         for candidate in candidates where candidate.action == .dryRunUpdateCandidate {
             guard let product = productsByBarcode[candidate.localID],
                   let remoteID = product.remoteID else {
-                throw SupabaseInventoryServiceError.schemaDrift(message: "Missing product update target.")
+                throw SupabaseTransportClientError.schemaDrift(message: "Missing product update target.")
             }
             let row = try await remote.updateProduct(
                 id: remoteID,
@@ -1092,7 +1092,7 @@ final class SupabaseManualPushService {
         }
 
         guard expectation.touchedIDs == touchedIDs else {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "Local read-back expectation mismatch.")
+            throw SupabaseTransportClientError.schemaDrift(message: "Local read-back expectation mismatch.")
         }
         return expectation
     }
@@ -1122,11 +1122,11 @@ final class SupabaseManualPushService {
     }
 
     private func sanitized(_ error: Error) -> String? {
-        if let serviceError = error as? SupabaseInventoryServiceError {
+        if let serviceError = error as? SupabaseTransportClientError {
             return serviceError.safeDiagnosticDetail ?? String(describing: serviceError)
         }
         let detail = String(describing: error)
-        return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(detail) ?? "Unknown error"
+        return SupabaseTransportClientError.sanitizedDiagnosticDetail(detail) ?? "Unknown error"
     }
 
     private struct Counters {

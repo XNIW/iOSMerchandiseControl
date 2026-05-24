@@ -1,0 +1,8 @@
+GREEN: root-clean tracked Swift shape
+iOSMerchandiseControl/SupabaseAuthService.swift
+iOSMerchandiseControl/SupabaseAuthViewModel.swift
+iOSMerchandiseControl/SupabaseClientProvider.swift
+iOSMerchandiseControl/SupabaseConfig.swift
+iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift
+
+Expected: scan root-residue --task TASK-121 --strict returns PASS and no production Swift uses SupabaseInventoryService.

@@ -543,7 +543,7 @@ nonisolated struct PriceHistoryLogicalKey: Hashable, Sendable {
 }
 
 nonisolated enum SupabasePullPreviewError: Error, Sendable {
-    case service(SupabaseInventoryServiceError)
+    case service(SupabaseTransportClientError)
     case localSnapshot(message: String?)
     case unknown(message: String?)
 
@@ -552,7 +552,7 @@ nonisolated enum SupabasePullPreviewError: Error, Sendable {
         case .service(let error):
             return error.safeDiagnosticDetail
         case .localSnapshot(let message), .unknown(let message):
-            return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(message)
+            return SupabaseTransportClientError.sanitizedDiagnosticDetail(message)
         }
     }
 }

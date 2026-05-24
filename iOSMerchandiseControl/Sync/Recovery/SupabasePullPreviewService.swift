@@ -8,8 +8,6 @@ protocol SupabaseInventoryFetching: Sendable {
     func fetchProductPricesPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow]
 }
 
-extension SupabaseInventoryService: SupabaseInventoryFetching {}
-
 nonisolated struct SupabasePullPreviewService: Sendable {
     private let inventoryService: any SupabaseInventoryFetching
     private let pageSize: Int
@@ -37,7 +35,7 @@ nonisolated struct SupabasePullPreviewService: Sendable {
         let remoteOutcome: RemoteFetchOutcome
         do {
             remoteOutcome = try await fetchRemoteSnapshot()
-        } catch let error as SupabaseInventoryServiceError {
+        } catch let error as SupabaseTransportClientError {
             return .failed(.service(error))
         } catch {
             return .failed(.unknown(message: String(describing: error)))
@@ -270,7 +268,7 @@ nonisolated enum SupabaseRemoteDateParser {
 extension SupabasePullPreviewService {
     nonisolated private func sourceErrorWarning(for table: String, error: Error) -> SyncPreviewWarning {
         let detail: String?
-        if let serviceError = error as? SupabaseInventoryServiceError,
+        if let serviceError = error as? SupabaseTransportClientError,
            let safeDetail = serviceError.safeDiagnosticDetail {
             detail = "\(table): \(safeDetail)"
         } else {

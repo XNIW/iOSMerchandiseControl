@@ -4,7 +4,7 @@ import SwiftData
 @main
 struct iOSMerchandiseControlApp: App {
     @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
-    private let supabaseInventoryService: SupabaseInventoryService?
+    private let supabaseInventoryService: SupabaseTransportClient?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
@@ -70,7 +70,7 @@ struct iOSMerchandiseControlApp: App {
             let config = try SupabaseConfig.load()
             let provider = SupabaseClientProvider(config: config)
             let authService = SupabaseAuthService(provider: provider)
-            let inventoryService = SupabaseInventoryService(clientProvider: provider)
+            let inventoryService = SupabaseTransportClient(clientProvider: provider)
             let previewService = SupabasePullPreviewService(
                 inventoryService: inventoryService,
                 pageSize: 1_000,
@@ -127,7 +127,7 @@ private struct HostedXCTestRootView: View {
 
 private struct SupabaseAppDependencies {
     let authViewModel: SupabaseAuthViewModel
-    let inventoryService: SupabaseInventoryService?
+    let inventoryService: SupabaseTransportClient?
     let pullPreviewService: SupabasePullPreviewService?
     let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?

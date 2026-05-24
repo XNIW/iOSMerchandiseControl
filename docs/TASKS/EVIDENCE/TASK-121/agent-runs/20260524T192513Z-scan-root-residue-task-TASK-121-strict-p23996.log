@@ -1,0 +1,37 @@
+=== mc-agent scan root-residue --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.root-residue",
+  "scan": "root-residue",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "root-residue: PASS (2 checks)",
+  "started_at": "2026-05-24T19:25:13+00:00",
+  "completed_at": "2026-05-24T19:25:13+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "root_sync_residue_git_ls_files",
+      "status": "PASS",
+      "reason": "git ls-files root contains no non-allowlisted sync/Supabase residues.",
+      "evidence": {
+        "residue_count": 0,
+        "residue": []
+      }
+    },
+    {
+      "id": "no_duplicate_root_and_moved_paths",
+      "status": "PASS",
+      "reason": "No sync/Supabase file exists both at root and under Sync.",
+      "evidence": {
+        "duplicate_count": 0,
+        "duplicates": []
+      }
+    }
+  ],
+  "NEXT_ACTION": "Move/split classified root Supabase and sync residues before claiming final architecture target."
+}

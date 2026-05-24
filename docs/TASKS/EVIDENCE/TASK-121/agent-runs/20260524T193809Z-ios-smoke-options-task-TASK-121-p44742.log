@@ -1,0 +1,5 @@
+=== mc-agent ios smoke options --task TASK-121 ===
+legacy sim_ui/JXA options smoke returned 1; evaluating XcodeBuildMCP fallback evidence.
+XcodeBuildMCP fallback evidence accepted: docs/TASKS/EVIDENCE/TASK-121/ios-options-xcodebuildmcp-fallback.txt
+[sim_ui] OK: App com.niwcyber.iOSMerchandiseControl lanciata
+/tmp/sim_ui_jxa_jXml96: execution error: Error: Error: [sim_ui] Finestra Simulator non trovata (-2700)

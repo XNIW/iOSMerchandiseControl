@@ -18,7 +18,7 @@ struct LanguageOption: Identifiable {
 // MARK: - View principale
 
 struct OptionsView: View {
-    private let supabaseInventoryService: SupabaseInventoryService?
+    private let remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
 
@@ -33,12 +33,12 @@ struct OptionsView: View {
 
     @MainActor
     init(
-        supabaseInventoryService: SupabaseInventoryService? = nil,
+        remoteCountFetcher: (any OptionsSyncRemoteCountFetching)? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         syncStateStore: SyncStateStore,
         syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil
     ) {
-        self.supabaseInventoryService = supabaseInventoryService
+        self.remoteCountFetcher = remoteCountFetcher
         self.supabasePullPreviewService = supabasePullPreviewService
         _syncStateStore = ObservedObject(wrappedValue: syncStateStore)
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
@@ -532,7 +532,7 @@ struct OptionsView: View {
         syncSummaryProvider.refreshAll(
             context: modelContext,
             authViewModel: supabaseAuthViewModel,
-            inventoryService: supabaseInventoryService,
+            remoteCountFetcher: remoteCountFetcher,
             pendingChanges: localPendingChanges
         )
         if syncSummaryProvider.accountSyncDecision == nil {

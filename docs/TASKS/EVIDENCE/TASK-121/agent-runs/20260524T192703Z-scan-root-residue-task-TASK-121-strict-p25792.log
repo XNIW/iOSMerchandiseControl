@@ -1,0 +1,183 @@
+=== mc-agent scan root-residue --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.root-residue",
+  "scan": "root-residue",
+  "status": "FAIL",
+  "result_status": "FAIL",
+  "summary": "root-residue: FAIL (3 checks)",
+  "started_at": "2026-05-24T19:27:03+00:00",
+  "completed_at": "2026-05-24T19:27:03+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "root_sync_residue_git_ls_files",
+      "status": "PASS",
+      "reason": "git ls-files root contains no non-allowlisted sync/Supabase residues.",
+      "evidence": {
+        "residue_count": 0,
+        "residue": []
+      }
+    },
+    {
+      "id": "no_duplicate_root_and_moved_paths",
+      "status": "PASS",
+      "reason": "No sync/Supabase file exists both at root and under Sync.",
+      "evidence": {
+        "duplicate_count": 0,
+        "duplicates": []
+      }
+    },
+    {
+      "id": "legacy_supabase_inventory_service_symbol_absent",
+      "status": "FAIL",
+      "reason": "Production Swift no longer references the legacy SupabaseInventoryService mega-service symbol.",
+      "evidence": {
+        "hit_count": 27,
+        "hits": [
+          {
+            "file": "iOSMerchandiseControl/ContentView.swift",
+            "line": 101,
+            "snippet": "private let supabaseInventoryService: SupabaseInventoryService?"
+          },
+          {
+            "file": "iOSMerchandiseControl/ContentView.swift",
+            "line": 117,
+            "snippet": "supabaseInventoryService: SupabaseInventoryService? = nil,"
+          },
+          {
+            "file": "iOSMerchandiseControl/ContentView.swift",
+            "line": 239,
+            "snippet": "inventoryService: SupabaseInventoryService?,"
+          },
+          {
+            "file": "iOSMerchandiseControl/OptionsView.swift",
+            "line": 21,
+            "snippet": "private let supabaseInventoryService: SupabaseInventoryService?"
+          },
+          {
+            "file": "iOSMerchandiseControl/OptionsView.swift",
+            "line": 36,
+            "snippet": "supabaseInventoryService: SupabaseInventoryService? = nil,"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
+            "line": 9,
+            "snippet": "inventoryService: SupabaseInventoryService?,"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+            "line": 14,
+            "snippet": "extension SupabaseInventoryService: OptionsSyncRemoteCountFetching {}"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+            "line": 58,
+            "snippet": "inventoryService: SupabaseInventoryService?,"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+            "line": 89,
+            "snippet": "inventoryService: SupabaseInventoryService?,"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+            "line": 103,
+            "snippet": "inventoryService: SupabaseInventoryService?,"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+            "line": 9,
+            "snippet": "inventoryService: SupabaseInventoryService? = nil,"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+            "line": 283,
+            "snippet": "private let remote: SupabaseInventoryService"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+            "line": 288,
+            "snippet": "remote: SupabaseInventoryService"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+            "line": 16,
+            "snippet": "extension SupabaseInventoryService: SupabaseProductPriceManualPushRemoteAccessing {}"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+            "line": 23,
+            "snippet": "extension SupabaseInventoryService: SupabaseProductPriceKeysetFetching {}"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+            "line": 24,
+            "snippet": "extension SupabaseInventoryService: SupabaseProductPriceDeletedProductFetching {}"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+            "line": 13,
+            "snippet": "extension SupabaseInventoryService: SupabaseProductPricePushDryRunRemoteFetching {}"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventIncrementalApplyService.swift",
+            "line": 177,
+            "snippet": "inventoryService: SupabaseInventoryService,"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+            "line": 11,
+            "snippet": "extension SupabaseInventoryService: SupabaseInventoryFetching {}"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+            "line": 4,
+            "snippet": "let remote: SupabaseInventoryService"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+            "line": 4,
+            "snippet": "let remote: SupabaseInventoryService"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+            "line": 4,
+            "snippet": "let remote: SupabaseInventoryService"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+            "line": 84,
+            "snippet": "actor SupabaseInventoryService {"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+            "line": 4,
+            "snippet": "let remote: SupabaseInventoryService"
+          },
+          {
+            "file": "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+            "line": 7,
+            "snippet": "private let supabaseInventoryService: SupabaseInventoryService?"
+          },
+          {
+            "file": "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+            "line": 73,
+            "snippet": "let inventoryService = SupabaseInventoryService(clientProvider: provider)"
+          },
+          {
+            "file": "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+            "line": 130,
+            "snippet": "let inventoryService: SupabaseInventoryService?"
+          }
+        ]
+      },
+      "fix_hint": "Rename the concrete transport to SupabaseTransportClient and keep domain dependencies behind adapters/protocols."
+    }
+  ],
+  "NEXT_ACTION": "Move/split classified root Supabase and sync residues before claiming final architecture target."
+}

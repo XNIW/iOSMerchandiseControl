@@ -1,0 +1,25 @@
+=== mc-agent scan dead-code --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.dead-code",
+  "scan": "dead-code",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "dead-code: PASS (1 checks)",
+  "started_at": "2026-05-24T19:33:22+00:00",
+  "completed_at": "2026-05-24T19:33:22+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "legacy_task_helpers_removed",
+      "status": "PASS",
+      "reason": "Legacy task smoke helpers are removed or test-only approved.",
+      "evidence": []
+    }
+  ],
+  "NEXT_ACTION": "Delete stale task-specific sync helpers or document test-only exceptions."
+}

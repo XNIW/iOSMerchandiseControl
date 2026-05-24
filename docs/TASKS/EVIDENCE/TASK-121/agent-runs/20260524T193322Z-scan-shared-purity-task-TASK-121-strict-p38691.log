@@ -1,0 +1,25 @@
+=== mc-agent scan shared-purity --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.shared-purity",
+  "scan": "shared-purity",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "shared-purity: PASS (1 checks)",
+  "started_at": "2026-05-24T19:33:22+00:00",
+  "completed_at": "2026-05-24T19:33:22+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "shared_value_only",
+      "status": "PASS",
+      "reason": "Sync/Shared contains only pure value/DTO/helper code.",
+      "evidence": []
+    }
+  ],
+  "NEXT_ACTION": "Move SwiftData/network/manual side effects out of Sync/Shared."
+}

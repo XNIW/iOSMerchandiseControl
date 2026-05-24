@@ -20,9 +20,6 @@ extension SupabaseProductPricePreviewFetching {
     }
 }
 
-extension SupabaseInventoryService: SupabaseProductPriceKeysetFetching {}
-extension SupabaseInventoryService: SupabaseProductPriceDeletedProductFetching {}
-
 nonisolated struct ProductPricePreviewOptions: Sendable, Equatable {
     static let defaultPageSize = 200
     static let defaultMaxRows = 1_000
@@ -112,7 +109,7 @@ nonisolated enum ProductPricePreviewViewState: Sendable {
     case idle
     case loading
     case loaded(ProductPricePreviewSummary)
-    case failed(SupabaseInventoryServiceError)
+    case failed(SupabaseTransportClientError)
 }
 
 nonisolated struct ProductPricePreviewLocalProduct: Sendable, Equatable {
@@ -245,18 +242,18 @@ nonisolated struct SupabaseProductPricePreviewService: Sendable {
         }
     }
 
-    private static func previewError(from error: Error) -> SupabaseInventoryServiceError {
-        if let serviceError = error as? SupabaseInventoryServiceError {
+    private static func previewError(from error: Error) -> SupabaseTransportClientError {
+        if let serviceError = error as? SupabaseTransportClientError {
             return serviceError
         }
         return .unknown(message: String(describing: error))
     }
 
     private static func safeDiagnosticDetail(for error: Error) -> String? {
-        if let serviceError = error as? SupabaseInventoryServiceError {
+        if let serviceError = error as? SupabaseTransportClientError {
             return serviceError.safeDiagnosticDetail
         }
-        return SupabaseInventoryServiceError.sanitizedDiagnosticDetail(String(describing: error))
+        return SupabaseTransportClientError.sanitizedDiagnosticDetail(String(describing: error))
     }
 }
 

@@ -1,7 +1,7 @@
 import Foundation
 
 struct SyncEventRemoteSupabaseAdapter: SyncAutomaticIncrementalRemote {
-    let remote: SupabaseInventoryService
+    let remote: SupabaseTransportClient
 
     func fetchSyncEventsAfter(ownerUserID: UUID, afterID: Int64, limit: Int) async throws -> [RemoteSyncEventRow] {
         try await remote.fetchSyncEventsAfter(ownerUserID: ownerUserID, afterID: afterID, limit: limit)

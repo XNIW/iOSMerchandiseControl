@@ -147,7 +147,7 @@ final class SupabaseProductPriceManualPushServiceTests: XCTestCase {
         let snapshot = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: makePlan())
         let remote = MockProductPriceManualPushRemote(
             readBackRows: [],
-            readBackError: SupabaseInventoryServiceError.networkError(statusCode: nil, message: "timeout")
+            readBackError: SupabaseTransportClientError.networkError(statusCode: nil, message: "timeout")
         )
         let service = SupabaseProductPriceManualPushService(remote: remote)
 

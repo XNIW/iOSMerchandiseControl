@@ -71,7 +71,7 @@ final class SupabasePullPreviewPaginationTests: XCTestCase {
         XCTAssertEqual(result.rows, [1, 2, 3])
         XCTAssertFalse(result.isPartial)
         XCTAssertEqual(ranges, ["0...1", "2...3"])
-        XCTAssertEqual(SupabaseInventoryService.stablePageOrderColumn, "id")
+        XCTAssertEqual(SupabaseTransportClient.stablePageOrderColumn, "id")
     }
 
     func testLargeProductPriceHistorySampleDoesNotMakePreviewPartialOrSourceError() async throws {

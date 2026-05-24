@@ -454,7 +454,7 @@ private final class FakeManualPushRemoteGateway: SupabaseManualPushRemoteGateway
     func createSuppliers(_ payloads: [SupabaseManualPushSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
         supplierCreateBatchSizes.append(payloads.count)
         if failSupplierBatchLargerThanOne && payloads.count > 1 {
-            throw SupabaseInventoryServiceError.networkError(statusCode: nil, message: "batch fail")
+            throw SupabaseTransportClientError.networkError(statusCode: nil, message: "batch fail")
         }
         supplierCreatePayloads += payloads
         return payloads.map { payload in
@@ -478,7 +478,7 @@ private final class FakeManualPushRemoteGateway: SupabaseManualPushRemoteGateway
 
     func verifySupplier(id: UUID, normalizedName: String) async throws -> RemoteInventorySupplierRow {
         if failVerifySupplier {
-            throw SupabaseInventoryServiceError.schemaDrift(message: "missing supplier")
+            throw SupabaseTransportClientError.schemaDrift(message: "missing supplier")
         }
         if let row = suppliersByID[id] {
             return row
@@ -514,7 +514,7 @@ private final class FakeManualPushRemoteGateway: SupabaseManualPushRemoteGateway
 
     func createProducts(_ payloads: [SupabaseManualPushProductCreatePayload]) async throws -> [RemoteInventoryProductRow] {
         if failProductCreate {
-            throw SupabaseInventoryServiceError.networkError(statusCode: nil, message: "product fail")
+            throw SupabaseTransportClientError.networkError(statusCode: nil, message: "product fail")
         }
         productCreatePayloads += payloads
         return payloads.map { payload in
@@ -584,7 +584,7 @@ private final class FakeManualPushRemoteGateway: SupabaseManualPushRemoteGateway
 
     func verifyReadBack(expectation: SupabaseManualPushReadBackExpectation) async throws {
         if failReadBack {
-            throw SupabaseInventoryServiceError.networkError(statusCode: nil, message: "readback fail")
+            throw SupabaseTransportClientError.networkError(statusCode: nil, message: "readback fail")
         }
         let touchedIDs = expectation.touchedIDs
         XCTAssertEqual(Set(suppliersByID.keys).intersection(touchedIDs.suppliers), touchedIDs.suppliers)
