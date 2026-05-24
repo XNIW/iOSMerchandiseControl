@@ -183,7 +183,7 @@ final class SupabaseSyncEventPreviewServiceTests: XCTestCase {
 
     func testProductionSyncEventSourcesExposeReadOnlySurfaceOnly() throws {
         let productionSources = [
-            try source(named: "SupabaseSyncEventDTOs.swift"),
+            try source(relativePath: "Sync/Remote/SupabaseSyncEventDTOs.swift"),
             try source(relativePath: "Sync/Manual/SupabaseSyncEventPreviewService.swift")
         ].joined(separator: "\n")
 

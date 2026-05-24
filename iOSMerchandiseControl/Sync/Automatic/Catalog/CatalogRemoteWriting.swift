@@ -8,5 +8,3 @@ protocol SyncAutomaticCatalogRemoteWriting: Sendable {
     func createProducts(_ payloads: [SyncAutomaticProductCreatePayload]) async throws -> [RemoteInventoryProductRow]
     func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow
 }
-
-extension SupabaseInventoryService: SyncAutomaticCatalogRemoteWriting {}

@@ -1,0 +1,155 @@
+=== mc-agent supabase contract sync-schema --task TASK-121 --read-only ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.supabase-contract-sync-schema",
+  "scan": "supabase-contract-sync-schema",
+  "status": "FAIL",
+  "result_status": "FAIL",
+  "summary": "supabase-contract-sync-schema: FAIL (2 checks)",
+  "started_at": "2026-05-24T18:55:41+00:00",
+  "completed_at": "2026-05-24T18:55:41+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "sync_tables_mapped",
+      "status": "PASS",
+      "reason": "Static adapter table map collected.",
+      "evidence": [
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "table": "inventory_products"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "table": "inventory_suppliers"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "table": "inventory_categories"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+          "table": "inventory_product_prices"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+          "table": "inventory_product_prices"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+          "table": "sync_events"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+          "table": "inventory_product_prices"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+          "table": "inventory_products"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+          "table": "inventory_suppliers"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+          "table": "inventory_categories"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+          "table": "inventory_product_prices"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRealtimeWatcher.swift",
+          "table": "sync_events"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+          "table": "inventory_products"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+          "table": "inventory_suppliers"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+          "table": "inventory_categories"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+          "table": "inventory_product_prices"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+          "table": "shared_sheet_sessions"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+          "table": "sync_events"
+        }
+      ]
+    },
+    {
+      "id": "no_schema_mutation_in_sources",
+      "status": "FAIL",
+      "reason": "No schema/RLS/grant mutation tokens in sync sources.",
+      "evidence": [
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 695,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Supplier create response count mismatch.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 699,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Supplier create response did not match a local record.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 766,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Category create response count mismatch.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 770,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Category create response did not match a local record.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 833,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Missing product create target.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 842,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Product create response count mismatch.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 846,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Product create response did not match a local record.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+          "line": 34,
+          "snippet": "if current.operation == .create, incoming == .delete, current.entityRemoteID == nil {"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+          "line": 39,
+          "snippet": "} else if current.operation == .create, incoming == .update {"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+          "line": 40,
+          "snippet": "result.operation = .create"
+        }
+      ]
+    }
+  ],
+  "NEXT_ACTION": "Use read-only schema evidence before SupabaseInventoryService split."
+}

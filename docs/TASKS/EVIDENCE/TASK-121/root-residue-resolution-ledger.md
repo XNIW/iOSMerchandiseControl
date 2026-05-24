@@ -8,6 +8,8 @@ Generated for the continuation fix pass on 2026-05-24.
 - target after: 0 root residues
 - action model: physical moves only, no root compatibility shims
 - Xcode membership model: synchronized groups / no explicit `project.pbxproj` hits for these file names before the move
+- final anti-false-positive pass: additional root sync-related files moved/re-homed, including `SupabaseInventoryService.swift` -> `Sync/Remote/SupabaseTransportClient.swift`
+- final root allowlist: `SupabaseAuthService.swift`, `SupabaseAuthViewModel.swift`, `SupabaseClientProvider.swift`, `SupabaseConfig.swift`
 
 ## Entries
 
@@ -27,6 +29,65 @@ tests required: source-format, xcode-membership, duplicate-symbols, dead-code, r
 rollback command: `git mv iOSMerchandiseControl/Sync/Recovery/InventorySyncService.swift iOSMerchandiseControl/InventorySyncService.swift`
 scanner checks: `scan root-residue`, `scan sync-inventory`, `scan xcode-membership`
 evidence report: `docs/TASKS/EVIDENCE/TASK-121/agent-runs/`
+
+## Final anti-false-positive additional moves
+
+### SupabaseInventoryService.swift
+
+old_path: `iOSMerchandiseControl/SupabaseInventoryService.swift`
+new_path: `iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift`
+action: move
+owner: Remote
+reason: root mega-service residue remained after the earlier `10 -> 0` claim; concrete Supabase transport belongs in `Sync/Remote`.
+symbols/types affected: `SupabaseInventoryService`, `SupabaseInventoryServiceError`, `SupabaseInventoryDiagnosticResult`, remote catalog/product-price/history/sync-event methods
+callers before: `ContentView`, automatic runtime factory, manual sync release factory, recovery/product-price services, acceptance tests
+callers after: automatic/history/incremental callers use Remote adapters; manual product-price protocols remain manual-only
+Xcode membership before: synchronized_or_unlisted
+Xcode membership after: synchronized_or_unlisted; verified by `scan xcode-membership`
+tests required: source-format, root-residue, sync-inventory, manual-boundary, duplicate-symbols, debug/release build, automatic tests, sync tests, manual regression
+rollback command: `git mv iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift iOSMerchandiseControl/SupabaseInventoryService.swift`
+scanner checks: `scan root-residue`, `scan sync-inventory`, `scan xcode-membership`, `scan duplicate-symbols`
+evidence report: `docs/TASKS/EVIDENCE/TASK-121/agent-runs/`
+
+### Additional categorized root sync files
+
+old_path: `iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift`
+new_path: `iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift`
+action: move
+owner: Automatic Presentation
+reason: reconnect presentation scheduler is sync-related and cannot remain root.
+symbols/types affected: `AutomaticSyncReconnectScheduler`
+callers before: automatic/domain tests and app wiring
+callers after: unchanged symbol callers; path-sensitive tests updated
+Xcode membership before: synchronized_or_unlisted
+Xcode membership after: synchronized_or_unlisted
+tests required: automatic-domain, automatic-architecture, debug/release build
+rollback command: `git mv iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift`
+scanner checks: `scan root-residue`, `scan manual-boundary`, `scan xcode-membership`
+evidence report: `docs/TASKS/EVIDENCE/TASK-121/agent-runs/`
+
+old_path: `iOSMerchandiseControl/CloudSyncOverviewState.swift`
+new_path: `iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift`
+action: move
+owner: Manual
+reason: release/manual overview state references manual preview categories; automatic boundary scanner rejected automatic placement.
+symbols/types affected: `CloudSync*`
+callers before: options/manual UI
+callers after: unchanged symbol callers
+Xcode membership before: synchronized_or_unlisted
+Xcode membership after: synchronized_or_unlisted
+tests required: manual-boundary, manual sync regression, debug/release build
+rollback command: `git mv iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift iOSMerchandiseControl/CloudSyncOverviewState.swift`
+scanner checks: `scan manual-boundary`, `scan root-residue`
+evidence report: `docs/TASKS/EVIDENCE/TASK-121/agent-runs/`
+
+Batch moves:
+- Manual: `LocalPendingAggregatedPushPlanner.swift`, `SupabaseCatalogBaselineModels.swift`, `SupabaseCatalogBaselineReader.swift`, `SupabaseCatalogBaselineWriter.swift`, `SupabaseCatalogFingerprintNormalizer.swift`, `SupabaseSyncEventDebugFormatting.swift`, `SupabaseSyncEventDebugViewModel.swift`, `SupabaseSyncPlanContract.swift`, `SyncEventOutboxDrainDebugViewModel.swift`
+- Recovery: `SupabaseProductPriceApplyService.swift`, `SwiftDataInventorySnapshotService.swift`, `SyncCountReconciliation.swift`
+- Remote: `SupabaseInventoryDTOs.swift`, `SupabaseSyncEventDTOs.swift`, `SupabaseSyncEventLiveRecorder.swift`, `SupabaseSyncEventRPCTransport.swift`, `SupabaseSyncEventRealtimeWatcher.swift`, `SyncEventRPCRequestMapper.swift`, `SyncEventRecording.swift`
+- Outbox: `SyncEventOutboxEntry.swift`, `SyncEventOutboxState.swift`
+
+Each batch move uses the same rollback pattern: `git mv <new_path> <old_path>`. Callers remain symbol-based in the same Swift module; path-sensitive tests were updated where present.
 
 ### SupabaseProductPricePreviewService.swift
 

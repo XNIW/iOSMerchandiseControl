@@ -311,7 +311,7 @@ def scan_manual_boundary() -> dict[str, object]:
             fix_hint="Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
         )
 
-    shared_remote = "iOSMerchandiseControl/SupabaseInventoryService.swift"
+    shared_remote = "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift"
     shared_hits = _line_hits(shared_remote, forbidden)
     remote_contract_protocols = all(
         _path(rel).exists()

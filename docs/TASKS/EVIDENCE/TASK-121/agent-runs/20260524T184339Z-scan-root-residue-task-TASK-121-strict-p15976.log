@@ -1,0 +1,200 @@
+=== mc-agent scan root-residue --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.root-residue",
+  "scan": "root-residue",
+  "status": "FAIL",
+  "result_status": "FAIL",
+  "summary": "root-residue: FAIL (2 checks)",
+  "started_at": "2026-05-24T18:43:39+00:00",
+  "completed_at": "2026-05-24T18:43:39+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "root_sync_residue_git_ls_files",
+      "status": "FAIL",
+      "reason": "git ls-files root contains no non-allowlisted sync/Supabase residues.",
+      "evidence": {
+        "residue_count": 27,
+        "residue": [
+          {
+            "path": "iOSMerchandiseControl/AppNavigationNotifications.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/BarcodeScannerView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/ContentView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/DatabaseView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/EditProductView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/EntryInfoEditor.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/ExcelSessionViewModel.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/GeneratedView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/HistoryEntry.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/HistoryEntryRuntimeSummary.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/HistoryImportedGridSupport.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/HistoryView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/ImportAnalysisView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/InventoryHomeView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/InventoryXLSXExporter.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/LocalPendingChange.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/LocalizationManager.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/Models.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/OptionsView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/PreGenerateView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/PriceFormatting.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/ProductImportCore.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/ProductImportViewModel.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/ProductPriceHistoryView.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/ShareSheet.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/Task089SyntheticBenchmarkHarness.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          },
+          {
+            "path": "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+            "category": "UNCATEGORIZED",
+            "owner": "Unknown",
+            "action": "No TASK-121 category rule matched."
+          }
+        ]
+      }
+    },
+    {
+      "id": "no_duplicate_root_and_moved_paths",
+      "status": "PASS",
+      "reason": "No sync/Supabase file exists both at root and under Sync.",
+      "evidence": {
+        "duplicate_count": 0,
+        "duplicates": []
+      }
+    }
+  ],
+  "NEXT_ACTION": "Move/split classified root Supabase and sync residues before claiming final architecture target."
+}

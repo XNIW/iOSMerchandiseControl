@@ -1,1 +1,4 @@
-red fixture placeholder for root-residue
+RED: forbidden root service still tracked by git ls-files
+iOSMerchandiseControl/SupabaseInventoryService.swift
+
+Expected: scan root-residue --task TASK-121 --strict returns FAIL.

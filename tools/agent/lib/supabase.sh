@@ -431,17 +431,26 @@ mc_cmd_supabase() {
       MC_PLATFORM="supabase"
       MC_SAFETY_LEVEL="safe-readonly"
       MC_REQUIRES_LIVE="false"
-      MC_CA_REFS="CA-120-26,CA-120-59"
-      TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 "$MC_AGENT_ROOT/lib/task120_scans.py" supabase-contract-sync-schema > /tmp/mc-agent-task120-supabase-contract.$$.json
+      local contract_scanner contract_tmp
+      if [[ "$task_id" == "TASK-121" ]]; then
+        MC_CA_REFS="CA-121-26,CA-121-55"
+        contract_scanner="$MC_AGENT_ROOT/lib/task121_scans.py"
+        contract_tmp="/tmp/mc-agent-task121-supabase-contract.$$.json"
+      else
+        MC_CA_REFS="CA-120-26,CA-120-59"
+        contract_scanner="$MC_AGENT_ROOT/lib/task120_scans.py"
+        contract_tmp="/tmp/mc-agent-task120-supabase-contract.$$.json"
+      fi
+      TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 "$contract_scanner" supabase-contract-sync-schema > "$contract_tmp"
       local scan_code
       scan_code=$?
-      MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task120-supabase-contract.$$.json)"
-      rm -f /tmp/mc-agent-task120-supabase-contract.$$.json
+      MC_SYNC_JSON_RESULT="$(cat "$contract_tmp")"
+      rm -f "$contract_tmp"
       mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
       case "$scan_code" in
         0)
           MC_SUMMARY="Supabase sync-schema contract PASS for ${task_id}; static read-only gate, no live DB query."
-          MC_NEXT_ACTION="Continue TASK-120 non-live validation."
+          MC_NEXT_ACTION="Continue ${task_id} non-live validation."
           return "$MC_EXIT_PASS"
           ;;
         1)
@@ -451,7 +460,7 @@ mc_cmd_supabase() {
           ;;
         *)
           MC_SUMMARY="Supabase sync-schema contract MISCONFIGURED for ${task_id}."
-          MC_NEXT_ACTION="Fix TASK-120 contract scanner."
+          MC_NEXT_ACTION="Fix ${task_id} contract scanner."
           return "$MC_EXIT_MISCONFIGURED"
           ;;
       esac

@@ -661,7 +661,7 @@ mc_cmd_list() {
   case "$sub" in
     commands)
       mc_help_json | python3 -c '
-import json, sys
+import json, os, sys
 data = json.load(sys.stdin)
 for c in data["commands"]:
     print(c["name"])
@@ -1074,7 +1074,7 @@ mc_cmd_report_validate_json() {
     fi
   done
   python3 - "${expanded[@]}" <<'PY'
-import json, sys
+import json, os, sys
 required = [
     "schema_version", "run_id", "task_id", "command", "command_slug",
     "platform", "safety_level", "requires_live", "requires_cleanup",
@@ -1089,7 +1089,10 @@ if len(sys.argv) == 1:
     print("INVALID no JSON files")
     sys.exit(1)
 invalid = []
+validated = 0
 for path in sys.argv[1:]:
+    if os.path.basename(path) in {"00-help-json.json", "00-commands-json.json"}:
+        continue
     try:
         with open(path, "r", encoding="utf-8") as fh:
             payload = json.load(fh)
@@ -1105,12 +1108,17 @@ for path in sys.argv[1:]:
             missing.append(f"artifact_paths.{k}")
     if missing:
         invalid.append(f"{path}: {', '.join(missing)}")
+    else:
+        validated += 1
 if invalid:
     print("INVALID")
     for item in invalid:
         print(item)
     sys.exit(1)
-print(f"VALID {len(sys.argv) - 1} JSON report(s)")
+if validated == 0:
+    print("INVALID no JSON reports")
+    sys.exit(1)
+print(f"VALID {validated} JSON report(s)")
 PY
   local code=$?
   if [[ "$code" -eq 0 ]]; then

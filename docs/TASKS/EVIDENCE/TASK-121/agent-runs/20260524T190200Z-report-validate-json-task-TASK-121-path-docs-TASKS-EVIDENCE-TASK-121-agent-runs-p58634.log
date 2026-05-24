@@ -1,0 +1,4 @@
+=== mc-agent report validate-json --task TASK-121 --path docs/TASKS/EVIDENCE/TASK-121/agent-runs ===
+Traceback (most recent call last):
+  File "<stdin>", line 18, in <module>
+NameError: name 'os' is not defined

@@ -1,0 +1,176 @@
+{
+  "NEXT_ACTION": "Continue TASK-121 non-live validation.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T190040Z-supabase-contract-sync-schema-task-TASK-121-read-only-p43917.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T190040Z-supabase-contract-sync-schema-task-TASK-121-read-only-p43917.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T190040Z-supabase-contract-sync-schema-task-TASK-121-read-only-p43917.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-121-26",
+    "CA-121-55"
+  ],
+  "cleanup_plan_id": null,
+  "command": "supabase contract sync-schema --task TASK-121 --read-only",
+  "command_slug": "supabase-contract-sync-schema-task-TASK-121-read-only",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 290,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-121",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK121_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-121"
+  },
+  "exit_code": 0,
+  "git_sha": "74cbe9f",
+  "next_action_recommended": "Continue TASK-121 non-live validation.",
+  "platform": "supabase",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Use read-only schema evidence before SupabaseInventoryService split.",
+    "checks": [
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "table": "inventory_products"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "table": "inventory_suppliers"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "table": "inventory_categories"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+            "table": "inventory_product_prices"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+            "table": "inventory_product_prices"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+            "table": "sync_events"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+            "table": "inventory_product_prices"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+            "table": "inventory_products"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+            "table": "inventory_suppliers"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+            "table": "inventory_categories"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+            "table": "inventory_product_prices"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRealtimeWatcher.swift",
+            "table": "sync_events"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+            "table": "inventory_products"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+            "table": "inventory_suppliers"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+            "table": "inventory_categories"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+            "table": "inventory_product_prices"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+            "table": "shared_sheet_sessions"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+            "table": "sync_events"
+          }
+        ],
+        "id": "sync_tables_mapped",
+        "reason": "Static adapter table map collected.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "id": "no_schema_mutation_in_sources",
+        "reason": "No schema/RLS/grant mutation tokens in sync sources.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-24T19:00:40+00:00",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "PASS",
+    "safety_level": "read_only_static_scan",
+    "scan": "supabase-contract-sync-schema",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.supabase-contract-sync-schema",
+    "started_at": "2026-05-24T19:00:40+00:00",
+    "status": "PASS",
+    "summary": "supabase-contract-sync-schema: PASS (2 checks)",
+    "taskId": "TASK-121",
+    "task_id": "TASK-121"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T190040Z-supabase-contract-sync-schema-task-TASK-121-read-only-p43917",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-121",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T19:00:40Z",
+  "timestamp_start": "2026-05-24T19:00:40Z",
+  "warnings": []
+}

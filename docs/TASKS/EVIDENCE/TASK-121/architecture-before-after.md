@@ -47,4 +47,25 @@ Build/test evidence:
 - `20260524T181041Z-ios-test-manual-sync-regression-task-TASK-121-p72598`: PASS.
 - `20260524T181548Z-ios-smoke-options-task-TASK-121-p75878`: PASS_WITH_NOTES via accepted XcodeBuildMCP fallback evidence.
 
-No root-residue blocker remains after this pass.
+No local root-residue blocker remains after this pass. Canonical GitHub `main` is still blocked because no push was allowed and the remote tree at the checked SHA still contains `iOSMerchandiseControl/SupabaseInventoryService.swift`.
+
+## Final anti-false-positive pass
+
+The earlier `10 -> 0` root-residue claim was not sufficient: independent `git ls-files` root-only review found `iOSMerchandiseControl/SupabaseInventoryService.swift` still tracked in root, and the root-residue scanner was not failing it.
+
+Final local physical changes:
+- `SupabaseInventoryService.swift` root path removed and rehomed as `Sync/Remote/SupabaseTransportClient.swift`.
+- Remote adapter wrappers added for catalog, product price, history session, and sync-event incremental access.
+- Additional root sync-related files were moved to `Sync/Manual`, `Sync/Recovery`, `Sync/Outbox`, `Sync/Remote`, or `Sync/Automatic/Presentation` according to ownership.
+- Root now keeps only non-domain Supabase allowlist files: auth service/view model and config/client provider.
+
+Final scanner state:
+- root-residue PASS with `residue_count=0` and duplicate root+moved count 0.
+- `git ls-files` root-only check is now part of the scanner.
+- Supabase contract TASK-121 no longer routes through TASK-120; reconciliation is PASS.
+- GitHub canonical `main` root check remains blocking until an explicit publish/realignment step is authorized.
+
+Evidence:
+- `docs/TASKS/EVIDENCE/TASK-121/supabase-inventory-service-strangler-map.md`
+- `docs/TASKS/EVIDENCE/TASK-121/remote-adapter-table-column-rpc-map.md`
+- `docs/TASKS/EVIDENCE/TASK-121/mega-service-elimination-ledger.md`

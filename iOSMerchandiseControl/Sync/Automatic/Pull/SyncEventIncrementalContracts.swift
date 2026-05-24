@@ -46,5 +46,3 @@ protocol SyncAutomaticIncrementalRemote:
     HistorySessionRemoteWriting,
     SyncAutomaticReconciliationReading
 {}
-
-extension SupabaseInventoryService: SyncAutomaticIncrementalRemote {}

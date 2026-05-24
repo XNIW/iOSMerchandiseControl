@@ -124,7 +124,7 @@ struct ContentView: View {
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.historySessionSyncService = supabaseInventoryService.map {
-            HistorySessionSyncService(remote: $0)
+            HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: $0))
         }
     }
 

@@ -363,7 +363,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         } else {
             result = SupabasePullApplyResult(inserted: 0, updated: 0, suppliersCreated: 0, categoriesCreated: 0)
         }
-        let historyResult = try await HistorySessionSyncService(remote: runtime.inventory)
+        let historyResult = try await HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: runtime.inventory))
             .pullHistorySessionsFromCloud(ownerUserID: runtime.session.userID, context: context)
         let priceService = SupabaseProductPriceApplyService(fetcher: runtime.inventory)
         let priceSession = ProductPriceApplySessionSnapshot(userID: runtime.session.userID)
@@ -436,7 +436,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         XCTAssertNotNil(localTombstoneProduct.remoteDeletedAt)
 
         let sessions = try await fetchFixtureSessions(runtime, fixture: fixture)
-        let historyService = HistorySessionSyncService(remote: runtime.inventory)
+        let historyService = HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: runtime.inventory))
 
         let historyCreate = try XCTUnwrap(session(in: sessions, displayName: fixture.matrixHistoryAndroidCreate))
         let historyCreateApply = try historyService.applyRemoteSharedSheetSessions([historyCreate], ownerUserID: runtime.session.userID, context: context)
@@ -1430,7 +1430,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         context: ModelContext,
         runtime: Runtime
     ) async throws -> HistorySessionPushResult {
-        let result = try await HistorySessionSyncService(remote: runtime.inventory).pushPendingHistorySessions(
+        let result = try await HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: runtime.inventory)).pushPendingHistorySessions(
             entries: entries,
             ownerUserID: runtime.session.userID,
             context: context

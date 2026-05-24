@@ -1,0 +1,109 @@
+=== mc-agent supabase contract sync-schema --task TASK-121 --read-only ===
+{
+  "NEXT_ACTION": "Use this static read-only gate unless live DB read-only approval is granted.",
+  "checks": [
+    {
+      "evidence": {
+        "sample": [
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "table": "inventory_products"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "table": "inventory_suppliers"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "table": "inventory_categories"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+            "table": "inventory_product_prices"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+            "table": "inventory_product_prices"
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+            "table": "sync_events"
+          }
+        ]
+      },
+      "id": "known_sync_tables_referenced_static",
+      "reason": "Static contract references known sync tables/protocol surfaces without live DB query.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 695,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Supplier create response count mismatch.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 699,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Supplier create response did not match a local record.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 766,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Category create response count mismatch.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 770,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Category create response did not match a local record.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 833,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Missing product create target.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 842,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Product create response count mismatch.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+          "line": 846,
+          "snippet": "throw SupabaseInventoryServiceError.schemaDrift(message: \"Product create response did not match a local record.\")"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+          "line": 168,
+          "snippet": "policy: SupabaseManualSyncSemiAutomaticPolicy,"
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+          "line": 179,
+          "snippet": "policy.foregroundCheckDecision("
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+          "line": 1008,
+          "snippet": "policy: semiAutomaticPolicy,"
+        }
+      ],
+      "id": "no_schema_mutation_tokens_in_sync_sources",
+      "reason": "TASK-120 sync sources do not contain migration/RLS/grant/RPC mutation tokens.",
+      "status": "FAIL"
+    }
+  ],
+  "completed_at": "2026-05-24T18:36:31+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "supabase-contract-sync-schema",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.supabase-contract-sync-schema",
+  "started_at": "2026-05-24T18:36:31+00:00",
+  "status": "FAIL",
+  "summary": "supabase-contract-sync-schema: FAIL (2 checks)",
+  "taskId": "TASK-121",
+  "task_id": "TASK-121"
+}

@@ -1,0 +1,5 @@
+RED: duplicate root+moved path
+iOSMerchandiseControl/SupabasePullPreviewService.swift
+iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift
+
+Expected: scan root-residue --task TASK-121 --strict returns FAIL.

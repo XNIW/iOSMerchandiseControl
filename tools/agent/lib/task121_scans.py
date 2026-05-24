@@ -151,6 +151,21 @@ def swift_files(*roots: str) -> list[Path]:
     return sorted(set(files))
 
 
+def git_tracked_files_under(root: str) -> list[str]:
+    code, out = run_cmd(["git", "ls-files", root])
+    if code != 0:
+        return []
+    return [line.strip() for line in out.splitlines() if line.strip()]
+
+
+def root_tracked_swift_files() -> list[str]:
+    return sorted(
+        rel_path
+        for rel_path in git_tracked_files_under("iOSMerchandiseControl")
+        if rel_path.endswith(".swift") and len(Path(rel_path).parts) == 2
+    )
+
+
 def line_hits(rel_path: str, pattern: str, flags: int = 0) -> list[dict[str, object]]:
     text = read(rel_path)
     rx = re.compile(pattern, flags)
@@ -266,6 +281,8 @@ def categorize(rel_path: str) -> tuple[str, str, str]:
         return "KEEP_RECOVERY", "Recovery", "Keep recovery boundary."
     if "/Sync/Account/" in rel_path:
         return "KEEP_ACCOUNT", "Account", "Keep account boundary."
+    if "/Sync/Remote/" in rel_path:
+        return "KEEP_REMOTE_ADAPTER", "Remote", "Keep concrete Supabase transport/adapter code in Remote."
     if "/Sync/Outbox/" in rel_path:
         return "SPLIT_REQUIRED", "Outbox", "Classify outbox file-by-file; do not assume Shared purity."
     if name == "AutomaticPushServices.swift":
@@ -339,7 +356,7 @@ def write_inventory_artifacts(entries: list[dict[str, object]]) -> None:
     )
     with (EVIDENCE_DIR / "sync-inventory.csv").open("w", encoding="utf-8", newline="") as handle:
         fields = ["path", "category", "owner", "action", "current_folder", "proposed_folder", "reference_count", "xcode_membership", "risk", "tests_needed", "exception_id"]
-        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for entry in entries:
             writer.writerow({field: entry.get(field, "") for field in fields})
@@ -533,16 +550,111 @@ def scan_retry_ownership() -> dict[str, object]:
 
 def scan_root_residue() -> dict[str, object]:
     checks: list[dict[str, object]] = []
-    root = path("iOSMerchandiseControl")
+    allowed_root = {
+        "SupabaseAuthService.swift",
+        "SupabaseAuthViewModel.swift",
+        "SupabaseClientProvider.swift",
+        "SupabaseConfig.swift",
+    }
+    exact_forbidden = {
+        "InventorySyncService.swift",
+        "SupabaseInventoryService.swift",
+        "SupabaseProductPricePreviewService.swift",
+        "SupabaseProductPricePushDryRunService.swift",
+        "SupabasePullApplyService.swift",
+        "SupabasePullPreviewModels.swift",
+        "SupabasePullPreviewService.swift",
+        "SupabasePushPreflightViewModel.swift",
+        "SupabaseSyncEventPreviewService.swift",
+        "SyncEventOutboxDrainService.swift",
+        "SyncEventOutboxEnqueueService.swift",
+    }
+    forbidden_patterns = [
+        re.compile(pattern)
+        for pattern in [
+            r"^SupabaseTask087.*\.swift$",
+            r"^SupabaseTask088.*\.swift$",
+            r"^Supabase.*Pull.*\.swift$",
+            r"^Supabase.*Preview.*\.swift$",
+            r"^Supabase.*Push.*\.swift$",
+            r"^Supabase.*Manual.*\.swift$",
+            r"^Supabase.*Apply.*Service\.swift$",
+            r"^Supabase.*Inventory.*Service\.swift$",
+            r"^.*Sync.*Service\.swift$",
+            r"^SyncEvent.*\.swift$",
+            r"^SyncCount.*\.swift$",
+            r"^AutomaticSync.*\.swift$",
+            r"^CloudSync.*\.swift$",
+        ]
+    ]
+    blocking_categories = {
+        "UNCATEGORIZED",
+        "EXCEPTION_REQUIRES_APPROVAL",
+        "SPLIT_REQUIRED",
+        "DELETE_STUB",
+        "DELETE_LEGACY",
+        "MOVE_TO_AUTOMATIC",
+        "MOVE_TO_MANUAL",
+        "MOVE_TO_RECOVERY",
+        "MOVE_TO_REMOTE",
+    }
     residue = []
-    for candidate in sorted(root.glob("*.swift")):
-        if re.search(r"Supabase.*(Manual|Push|Pull|Preview)|.*Sync.*Service|InventorySyncService", candidate.name):
-            category, owner, action = categorize(rel(candidate))
-            if category in {"UNCATEGORIZED", "EXCEPTION_REQUIRES_APPROVAL", "SPLIT_REQUIRED", "MOVE_TO_MANUAL", "MOVE_TO_RECOVERY", "MOVE_TO_REMOTE"}:
-                residue.append({"path": rel(candidate), "category": category, "owner": owner, "action": action})
-    unclassified = [entry for entry in residue if entry["category"] == "UNCATEGORIZED"]
-    check(checks, "root_sync_residue_classified", "PASS" if not unclassified else "FAIL", "Root sync/Supabase residues have a move/split/delete/exception decision.", evidence={"unclassified": unclassified[:80], "classified_residue_count": len(residue)})
-    check(checks, "root_sync_residue_remaining_notes", "PASS_WITH_NOTES" if residue and not unclassified else "PASS", "Classified root residues remain and must be moved/split before final target certification.", evidence=residue[:80])
+    for rel_path in root_tracked_swift_files():
+        name = Path(rel_path).name
+        if name in allowed_root:
+            continue
+        category, owner, action = categorize(rel_path)
+        relevant_root_name = (
+            name.startswith("Supabase")
+            or name.startswith("Sync")
+            or name.startswith("SyncEvent")
+            or name.startswith("AutomaticSync")
+            or name.startswith("CloudSync")
+            or name.endswith("SnapshotService.swift")
+            or name.endswith("PushPlanner.swift")
+        )
+        forbidden = (
+            name in exact_forbidden
+            or any(pattern.search(name) for pattern in forbidden_patterns)
+            or (relevant_root_name and category in blocking_categories)
+        )
+        if forbidden:
+            residue.append({"path": rel_path, "category": category, "owner": owner, "action": action})
+
+    all_tracked = [
+        rel_path
+        for rel_path in git_tracked_files_under("iOSMerchandiseControl")
+        if rel_path.endswith(".swift")
+    ]
+    by_name: dict[str, list[str]] = {}
+    for rel_path in all_tracked:
+        by_name.setdefault(Path(rel_path).name, []).append(rel_path)
+    duplicate_root_moved = []
+    for name, paths_for_name in sorted(by_name.items()):
+        has_root = any(len(Path(item).parts) == 2 for item in paths_for_name)
+        has_sync = any("/Sync/" in item for item in paths_for_name)
+        if has_root and has_sync and (
+            name in exact_forbidden
+            or any(pattern.search(name) for pattern in forbidden_patterns)
+            or name.startswith("Supabase")
+            or name.startswith("SyncEvent")
+        ):
+            duplicate_root_moved.append({"name": name, "paths": sorted(paths_for_name)})
+
+    check(
+        checks,
+        "root_sync_residue_git_ls_files",
+        "PASS" if not residue else "FAIL",
+        "git ls-files root contains no non-allowlisted sync/Supabase residues.",
+        evidence={"residue_count": len(residue), "residue": residue[:120]},
+    )
+    check(
+        checks,
+        "no_duplicate_root_and_moved_paths",
+        "PASS" if not duplicate_root_moved else "FAIL",
+        "No sync/Supabase file exists both at root and under Sync.",
+        evidence={"duplicate_count": len(duplicate_root_moved), "duplicates": duplicate_root_moved[:80]},
+    )
     return report("root-residue", checks, "Move/split classified root Supabase and sync residues before claiming final architecture target.")
 
 
@@ -640,6 +752,12 @@ def scan_scanner_self_tests() -> dict[str, object]:
         green = group_dir / "green"
         manifest = group_dir / "README.md"
         ok = red.exists() and green.exists() and manifest.exists() and "expected" in manifest.read_text(encoding="utf-8", errors="replace").lower()
+        if group == "root-residue" and ok:
+            fixture_text = "\n".join(
+                candidate.read_text(encoding="utf-8", errors="replace")
+                for candidate in sorted(group_dir.rglob("*.txt"))
+            )
+            ok = "SupabaseInventoryService.swift" in fixture_text and "duplicate root+moved" in fixture_text
         check(checks, f"fixture:{group}", "PASS" if ok else "FAIL", "TASK-121 scanner fixture group has RED/GREEN and manifest.", file=rel(group_dir))
     return report("scanner-self-tests", checks, "Add RED/GREEN fixture groups under tools/agent/fixtures/task121_scanners.")
 
@@ -653,9 +771,14 @@ def scan_supabase_contract() -> dict[str, object]:
             if table in text:
                 table_hits.append({"file": rel(candidate), "table": table})
     mutation_hits = []
+    mutation_rx = re.compile(
+        r"\b(?:CREATE|ALTER|DROP)\s+(?:TABLE|POLICY|FUNCTION|TRIGGER|VIEW|INDEX|SCHEMA|EXTENSION)\b"
+        r"|\b(?:GRANT|REVOKE)\s+",
+        re.I,
+    )
     for candidate in relevant_sync_files():
         for idx, line in enumerate(candidate.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-            if re.search(r"\b(CREATE|ALTER|DROP|GRANT|REVOKE|CREATE POLICY|ALTER POLICY|DROP POLICY)\b", line, re.I):
+            if mutation_rx.search(line):
                 mutation_hits.append({"file": rel(candidate), "line": idx, "snippet": line.strip()[:180]})
     check(checks, "sync_tables_mapped", "PASS" if table_hits else "PASS_WITH_NOTES", "Static adapter table map collected.", evidence=table_hits[:120])
     check(checks, "no_schema_mutation_in_sources", "PASS" if not mutation_hits else "FAIL", "No schema/RLS/grant mutation tokens in sync sources.", evidence=mutation_hits[:80])

@@ -1,0 +1,25 @@
+=== mc-agent scan duplicate-symbols --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.duplicate-symbols",
+  "scan": "duplicate-symbols",
+  "status": "PASS",
+  "result_status": "PASS",
+  "summary": "duplicate-symbols: PASS (1 checks)",
+  "started_at": "2026-05-24T19:00:32+00:00",
+  "completed_at": "2026-05-24T19:00:32+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "no_duplicate_type_symbols",
+      "status": "PASS",
+      "reason": "No duplicate type/protocol declarations.",
+      "evidence": {}
+    }
+  ],
+  "NEXT_ACTION": "Rename/delete duplicate declarations."
+}

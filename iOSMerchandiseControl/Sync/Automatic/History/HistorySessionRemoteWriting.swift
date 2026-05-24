@@ -6,5 +6,3 @@ protocol HistorySessionRemoteWriting: HistorySessionRemoteSyncing {
         sessionIDs: Set<UUID>
     ) async throws -> [RemoteSharedSheetSessionRow]
 }
-
-extension SupabaseInventoryService: HistorySessionRemoteWriting {}

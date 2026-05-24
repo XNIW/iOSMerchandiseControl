@@ -1,0 +1,35 @@
+=== mc-agent scan manual-boundary --task TASK-121 --strict ===
+{
+  "schema_version": "1.1",
+  "schemaVersion": "1.1",
+  "task_id": "TASK-121",
+  "taskId": "TASK-121",
+  "source": "scan.manual-boundary",
+  "scan": "manual-boundary",
+  "status": "FAIL",
+  "result_status": "FAIL",
+  "summary": "manual-boundary: FAIL (2 checks)",
+  "started_at": "2026-05-24T18:44:28+00:00",
+  "completed_at": "2026-05-24T18:44:28+00:00",
+  "safety_level": "read_only_static_scan",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "checks": [
+    {
+      "id": "automatic_no_manual_refs",
+      "status": "FAIL",
+      "reason": "Automatic path does not reference manual services/DTOs.",
+      "evidence": [
+        {
+          "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/CloudSyncOverviewState.swift"
+        }
+      ]
+    },
+    {
+      "id": "manual_not_root",
+      "status": "PASS",
+      "reason": "Manual files are not root-level.",
+      "evidence": []
+    }
+  ],
+  "NEXT_ACTION": "Isolate manual sync under Sync/Manual."
+}

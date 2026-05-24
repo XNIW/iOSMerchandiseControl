@@ -305,7 +305,7 @@ final class SupabaseProductPricePreviewServiceTests: XCTestCase {
     func testPreviewSourceHasNoSyncEventOrProductPriceWritePath() throws {
         let previewSource = try source(relativePath: "Sync/Manual/SupabaseProductPricePreviewService.swift")
         let optionsSource = try source(named: "OptionsView.swift")
-        let inventorySource = try source(named: "SupabaseInventoryService.swift")
+        let inventorySource = try source(relativePath: "Sync/Remote/SupabaseTransportClient.swift")
 
         let remoteEventFunctionName = ["record", "sync", "event"].joined(separator: "_")
         let remoteEventTableName = ["sync", "events"].joined(separator: "_")

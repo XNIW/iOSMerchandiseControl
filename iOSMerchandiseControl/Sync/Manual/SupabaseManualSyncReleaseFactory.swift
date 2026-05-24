@@ -34,7 +34,7 @@ enum SupabaseManualSyncReleaseFactory {
         let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = inventoryService.map {
             SyncHistorySessionPushAdapter(
                 modelContainer: modelContainer,
-                remote: $0,
+                remote: HistorySessionRemoteSupabaseAdapter(remote: $0),
                 recorder: activityRecorder
             )
         }
@@ -42,7 +42,7 @@ enum SupabaseManualSyncReleaseFactory {
             ManualSyncIncrementalPullAdapter(
                 service: SyncEventIncrementalPullService(
                     modelContainer: modelContainer,
-                    remote: $0
+                    remote: SyncEventRemoteSupabaseAdapter(remote: $0)
                 )
             )
         }
@@ -106,12 +106,12 @@ enum SupabaseManualSyncReleaseFactory {
 @MainActor
 final class SyncHistorySessionPushAdapter: SupabaseManualSyncHistorySessionSyncProviding {
     private let modelContainer: ModelContainer
-    private let remote: SupabaseInventoryService
+    private let remote: any HistorySessionRemoteSyncing
     private let recorder: (any SyncEventRecording)?
 
     init(
         modelContainer: ModelContainer,
-        remote: SupabaseInventoryService,
+        remote: any HistorySessionRemoteSyncing,
         recorder: (any SyncEventRecording)?
     ) {
         self.modelContainer = modelContainer

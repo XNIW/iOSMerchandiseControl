@@ -90,9 +90,9 @@ def task118_automatic_source_files():
         "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
         "iOSMerchandiseControl/ContentView.swift",
         "iOSMerchandiseControl/OptionsView.swift",
-        "iOSMerchandiseControl/AutomaticSyncReconnectScheduler.swift",
-        "iOSMerchandiseControl/HistorySessionSyncService.swift",
-        "iOSMerchandiseControl/SupabaseInventoryService.swift",
+        "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift",
+        "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+        "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
     }
     for rel in all_swift_sources():
         name = pathlib.Path(rel).name

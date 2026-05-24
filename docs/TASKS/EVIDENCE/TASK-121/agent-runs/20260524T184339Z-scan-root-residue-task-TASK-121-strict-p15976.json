@@ -1,0 +1,272 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun root-residue.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T184339Z-scan-root-residue-task-TASK-121-strict-p15976.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T184339Z-scan-root-residue-task-TASK-121-strict-p15976.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-121/agent-runs/20260524T184339Z-scan-root-residue-task-TASK-121-strict-p15976.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-121-07",
+    "CA-121-30"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan root-residue --task TASK-121 --strict",
+  "command_slug": "scan-root-residue-task-TASK-121-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 329,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-121",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK121_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-121"
+  },
+  "exit_code": 1,
+  "git_sha": "74cbe9f",
+  "next_action_recommended": "Fix failing checks and rerun root-residue.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Move/split classified root Supabase and sync residues before claiming final architecture target.",
+    "checks": [
+      {
+        "evidence": {
+          "residue": [
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/AppNavigationNotifications.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/BarcodeScannerView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/ContentView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/DatabaseView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/EditProductView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/EntryInfoEditor.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/ExcelSessionViewModel.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/GeneratedView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/HistoryEntry.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/HistoryEntryRuntimeSummary.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/HistoryImportedGridSupport.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/HistoryView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/ImportAnalysisView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/InventoryHomeView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/InventoryXLSXExporter.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/LocalPendingChange.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/LocalizationManager.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/Models.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/OptionsView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/PreGenerateView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/PriceFormatting.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/ProductImportCore.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/ProductImportViewModel.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/ProductPriceHistoryView.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/ShareSheet.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/Task089SyntheticBenchmarkHarness.swift"
+            },
+            {
+              "action": "No TASK-121 category rule matched.",
+              "category": "UNCATEGORIZED",
+              "owner": "Unknown",
+              "path": "iOSMerchandiseControl/iOSMerchandiseControlApp.swift"
+            }
+          ],
+          "residue_count": 27
+        },
+        "id": "root_sync_residue_git_ls_files",
+        "reason": "git ls-files root contains no non-allowlisted sync/Supabase residues.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": {
+          "duplicate_count": 0,
+          "duplicates": []
+        },
+        "id": "no_duplicate_root_and_moved_paths",
+        "reason": "No sync/Supabase file exists both at root and under Sync.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-24T18:43:39+00:00",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "FAIL",
+    "safety_level": "read_only_static_scan",
+    "scan": "root-residue",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.root-residue",
+    "started_at": "2026-05-24T18:43:39+00:00",
+    "status": "FAIL",
+    "summary": "root-residue: FAIL (2 checks)",
+    "taskId": "TASK-121",
+    "task_id": "TASK-121"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T184339Z-scan-root-residue-task-TASK-121-strict-p15976",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-121",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T18:43:39Z",
+  "timestamp_start": "2026-05-24T18:43:39Z",
+  "warnings": []
+}

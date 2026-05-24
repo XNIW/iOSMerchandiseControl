@@ -6,12 +6,12 @@
 - **File task**: `docs/TASKS/TASK-121-ios-sync-architecture-full-purification.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-121/`
 - **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE / Reviewer
+- **Fase attuale**: FIX
+- **Responsabile attuale**: USER / Canonical GitHub alignment decision
 - **Data creazione**: 2026-05-24
 - **Ultimo aggiornamento**: 2026-05-24
 - **Ultimo agente che ha operato**: CODEX / Fixer
-- **Readiness**: ARCHITECTURE_TARGET_MET. Handoff `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`. Non DONE.
+- **Readiness**: CHANGES_REQUIRED. Handoff `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`. Non DONE. Local working-tree gates pass, but canonical GitHub `main` still contains the pre-fix root residue because push is explicitly forbidden.
 - **Tipo task**: planning/refactor governance architetturale iOS; nessuna nuova feature utente.
 - **User override registrato**: l'utente ha prima chiesto a Codex di creare il planning TASK-121 e poi ha autorizzato review/fix e continuation FIX per risolvere i root residues. Nessun push GitHub, Supabase live, cleanup, migration/RLS/grant/RPC/schema change eseguito.
 
@@ -968,8 +968,8 @@ Non usare DONE. Non usare `ARCHITECTURE_TARGET_MET` finche' il root-residue ledg
 
 ## Continuation root-residue FIX — 2026-05-24
 
-Stato: `TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`.
-Responsabile attuale: `CLAUDE / Reviewer`.
+Stato: `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`.
+Responsabile attuale: `USER / Canonical GitHub alignment decision`.
 Ultimo agente: `Codex / Fixer`.
 
 User override: l'utente ha chiesto di continuare TASK-121 da `ACTIVE / FIX — CHANGES_REQUIRED` e completare solo la root-residue eradication rimasta dopo la review/fix post-TASK-121. Non sono stati creati TASK-122 o altri task. Nessun push GitHub, nessun Supabase live, cleanup, migration, RLS, grant, RPC o schema change.
@@ -1017,6 +1017,67 @@ Rischi rimasti:
 - `Sync/Outbox/*` resta infrastruttura condivisa con side effect locali, classificata file-by-file come outbox infrastructure e non come `KEEP_SHARED_PURE`.
 
 Handoff post-fix:
-`TASK-121 ACTIVE / REVIEW — ARCHITECTURE_TARGET_MET`.
+`TASK-121 ACTIVE / FIX — CHANGES_REQUIRED` after the later anti-false-positive canonical GitHub audit.
 
 Non DONE. Claude deve verificare ledger, evidence e PASS_WITH_NOTES non bloccante prima di qualunque accettazione finale.
+
+## Final anti-false-positive review/fix — 2026-05-24
+
+Stato: `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`.
+Responsabile attuale: `USER / Canonical GitHub alignment decision`.
+Ultimo agente: `Codex / Fixer`.
+
+User override: l'utente ha richiesto una review severa anti-falso-positive confrontando evidence, `git ls-files`, Xcode membership, filesystem locale e GitHub canonical `main`. Nessun TASK-122 creato. Nessun push GitHub, Supabase live, cleanup, migration, RLS, grant, RPC o schema change.
+
+Grounding GitHub/local:
+- `HEAD`, `origin/main` e GitHub canonical `main` allineati su `74cbe9fc41067e64bd11fd6e62307b4451233866` prima dei fix semantici.
+- GitHub canonical `main` a quello SHA contiene ancora `iOSMerchandiseControl/SupabaseInventoryService.swift`; quindi il verdetto canonical `ARCHITECTURE_TARGET_MET` non e' dichiarabile senza push/realignment esplicito.
+- `git ls-files` root-only ha mostrato il residuo P0 reale `iOSMerchandiseControl/SupabaseInventoryService.swift`.
+- `scan root-residue --task TASK-121 --strict` precedente dava PASS: falso positivo confermato e corretto.
+
+Fix applicati:
+- eliminato il path root `iOSMerchandiseControl/SupabaseInventoryService.swift`, spostando il transport in `iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift`;
+- aggiunti adapter Remote: `CatalogRemoteSupabaseAdapter`, `ProductPriceRemoteSupabaseAdapter`, `HistorySessionRemoteSupabaseAdapter`, `SyncEventRemoteSupabaseAdapter`;
+- aggiornati `ContentView`, `AutomaticSyncRuntimeFactory`, `SupabaseManualSyncReleaseFactory`, `SupabaseSyncEventIncrementalApplyService` e test che passavano direttamente il concrete transport dove ora serve un protocol adapter;
+- spostati ulteriori root sync-related files in `Sync/Manual`, `Sync/Recovery`, `Sync/Outbox`, `Sync/Remote` e `Sync/Automatic/Presentation`;
+- rafforzato `scan root-residue` per usare `git ls-files` root-only, fallire su `SupabaseInventoryService.swift`, pattern root vietati e duplicati root+moved;
+- aggiunte fixture RED/GREEN root-residue per servizio root vietato e duplicato root+moved;
+- corretto `supabase contract sync-schema --task TASK-121 --read-only` per usare `task121_scans.py`, non il fallback TASK-120, e richiedere reconciliation PASS reale;
+- aggiunta evidence: `supabase-inventory-service-strangler-map.md`, `remote-adapter-table-column-rpc-map.md`, `mega-service-elimination-ledger.md`.
+
+Final anti-false-positive architecture certification:
+- GitHub/local SHA checked: `74cbe9fc41067e64bd11fd6e62307b4451233866`.
+- local git ls-files root sync-related count: 0 non-allowlisted files after local index/worktree fixes.
+- GitHub canonical main root sync-related count: 1 blocking file, `iOSMerchandiseControl/SupabaseInventoryService.swift`.
+- root residues before/after: original 10 -> 0; additional anti-false-positive root rehomes completed.
+- duplicate root+moved path count: 0.
+- SupabaseInventoryService status: root eliminated; transport under `Sync/Remote`; automatic/history/incremental callers use Remote adapters.
+- source-format status: PASS.
+- scanner false-positive fixes: root-residue and Supabase contract wrapper fixed.
+- CA-121-01...56 final ledger: see `docs/TASKS/EVIDENCE/TASK-121/agent-runs/index.md`.
+- PASS_WITH_NOTES: only Options smoke fallback accepted by wrapper.
+- NOT_RUN: live reconcile, live sync matrix and cleanup; not counted as PASS.
+- reviewer next action: do not approve `ARCHITECTURE_TARGET_MET` until canonical GitHub alignment is authorized and verified.
+
+Check eseguiti:
+- ✅ ESEGUITO — HEAD/preflight/config/discovery: PASS.
+- ✅ ESEGUITO — root-residue independent `git ls-files` audit: root non-allowlisted count 0 after fix; duplicate root+moved count 0.
+- ✅ ESEGUITO — source-format, root-residue, scanner-self-tests, sync-inventory, sync-architecture, retry-ownership, manual-boundary, shared-purity, dead-code, xcode-membership, duplicate-symbols: PASS.
+- ✅ ESEGUITO — Debug build: PASS (`20260524T184725Z-ios-build-debug-task-TASK-121-p26069`).
+- ✅ ESEGUITO — Release build: PASS (`20260524T184825Z-ios-build-release-task-TASK-121-p26986`).
+- ✅ ESEGUITO — automatic-architecture: PASS (`20260524T185030Z-ios-test-automatic-architecture-task-TASK-121-p28971`).
+- ✅ ESEGUITO — automatic-domain: PASS (`20260524T185045Z-ios-test-automatic-domain-task-TASK-121-p29633`).
+- ✅ ESEGUITO — sync tests: PASS (`20260524T185057Z-ios-test-sync-task-TASK-121-p30253`).
+- ✅ ESEGUITO — manual-sync-regression: PASS (`20260524T185328Z-ios-test-manual-sync-regression-task-TASK-121-p31082`).
+- ✅ ESEGUITO — Options smoke: PASS_WITH_NOTES via accepted fallback (`20260524T185344Z-ios-smoke-options-task-TASK-121-p31687`).
+- ✅ ESEGUITO — Supabase contract read-only TASK-121 reconciliation: PASS (`20260524T185625Z-supabase-contract-sync-schema-task-TASK-121-read-only-p33721`).
+
+Rischi rimasti:
+- Options smoke primario JXA/Accessibility resta tooling-blocked; fallback XcodeBuildMCP e' accettato dal wrapper.
+- Build Debug emette warning Swift preesistenti su `HistorySessionPayloadSnapshotFactory.snapshot` actor isolation e warning AppIntents metadata; non bloccano build ma non sono contati come "nessun warning nuovo" senza baseline dedicata.
+- Live e cleanup restano NOT_RUN by design e non sono contati come PASS.
+
+Handoff post-fix:
+`TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`.
+
+Non DONE. Non dichiarare produzione globale. The local fix set is ready for review, but canonical GitHub `main` is intentionally not updated because no push was allowed.
