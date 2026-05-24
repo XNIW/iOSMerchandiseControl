@@ -66,7 +66,6 @@ final class SyncAutomaticRuntime: SyncAutomaticRuntimeProviding {
     }
 
     func cancel() {
-        facadeIsRunning = false
         Task {
             await engine.cancel()
         }

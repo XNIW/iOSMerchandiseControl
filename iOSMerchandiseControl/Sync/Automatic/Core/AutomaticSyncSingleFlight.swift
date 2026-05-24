@@ -18,6 +18,7 @@ actor AutomaticSyncSingleFlight {
     }
 
     func cancel() {
-        running = false
+        // Cancellation is cooperative: keep the flight closed until the
+        // running operation observes cancellation and finishes.
     }
 }

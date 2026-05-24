@@ -30,7 +30,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 ownerUserID: ownerUserID,
                 pendingChangeCount: snapshot.pendingCatalogChangeCount,
                 idempotencyKey: "catalog:\(ownerUserID.uuidString.lowercased()):\(snapshot.pendingCatalogChangeCount)",
-                blockers: Array(Set(blockers)).sorted()
+                blockers: SyncStringCollectionHelpers.uniquedSorted(blockers)
             )
             var result = SyncCatalogPushResult()
             result.plan = plan

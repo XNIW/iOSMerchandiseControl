@@ -1,0 +1,176 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T032348Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p36407.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T032348Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p36407.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-119/agent-runs/20260524T032348Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p36407.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-119-08",
+    "CA-119-37"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan no-full-pull-normal-path --task TASK-119 --strict",
+  "command_slug": "scan-no-full-pull-normal-path-task-TASK-119-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 218,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-119",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK119_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-119"
+  },
+  "exit_code": 0,
+  "git_sha": "79ddce5",
+  "next_action_recommended": "Use this report in TASK-119 evidence matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Keep normal automatic sync incremental/request-recovery only; explicit full recovery requires a separate account/recovery context.",
+    "checks": [
+      {
+        "evidence": [
+          {
+            "line": 66,
+            "snippet": "case .bootstrap, .fullRecovery:"
+          }
+        ],
+        "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+        "fix_hint": "Keep full pull/recovery behind explicit account/recovery context; normal automatic run must return a blocked result.",
+        "id": "engine_blocks_bootstrap_and_full_recovery",
+        "reason": "Automatic engine refuses bootstrap/fullRecovery in the normal automatic run path.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "full_pull_hits": [],
+          "references_engine": true
+        },
+        "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+        "fix_hint": "Keep UI/auth facade separate from non-UI automatic engine and do not start bootstrap/fullRecovery services here.",
+        "id": "runtime_facade_delegates_without_full_pull_services",
+        "reason": "Runtime facade delegates to AutomaticSyncEngine and does not instantiate full-pull services.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 244,
+            "snippet": "case .fullRecovery, .bootstrap:"
+          }
+        ],
+        "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+        "fix_hint": "The normal foreground path must request explicit account/recovery context instead of starting full pull.",
+        "id": "orchestrator_blocks_full_recovery_before_runtime",
+        "reason": "SyncOrchestrator blocks bootstrap/fullRecovery decisions before invoking the automatic runtime.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "normal_foreground_context": true,
+          "uses_state_helpers": true
+        },
+        "file": "iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
+        "fix_hint": "Do not hardcode bootstrap/fullRecovery false; read state, then force normal foreground into requestRecovery/block semantics.",
+        "id": "decision_input_uses_state_and_normal_context",
+        "reason": "Decision input reads recovery/bootstrap state and marks normal foreground context explicitly.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "line": 115,
+            "snippet": "if input.requiresFullRecovery {"
+          }
+        ],
+        "file": "iOSMerchandiseControl/Sync/SyncDecisionEngine.swift",
+        "fix_hint": "Keep .fullRecovery only for explicit bootstrap/recovery/manual/harness contexts.",
+        "id": "decision_engine_normal_recovery_becomes_request_recovery",
+        "reason": "Decision engine converts normal foreground full-recovery need into requestRecovery unless context explicitly allows full recovery.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/ContentView.swift",
+        "fix_hint": "Move full pull/recovery work behind explicit account/recovery context, not root/options/foreground normal path.",
+        "id": "no_full_pull_services:iOSMerchandiseControl/ContentView.swift",
+        "reason": "Normal UI/orchestrator path does not reference full-pull service symbols.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/OptionsView.swift",
+        "fix_hint": "Move full pull/recovery work behind explicit account/recovery context, not root/options/foreground normal path.",
+        "id": "no_full_pull_services:iOSMerchandiseControl/OptionsView.swift",
+        "reason": "Normal UI/orchestrator path does not reference full-pull service symbols.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+        "fix_hint": "Move full pull/recovery work behind explicit account/recovery context, not root/options/foreground normal path.",
+        "id": "no_full_pull_services:iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+        "reason": "Normal UI/orchestrator path does not reference full-pull service symbols.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "fix_hint": "Keep automatic pull incremental-only; explicit full recovery belongs outside normal automatic path.",
+        "id": "automatic_domain_no_full_pull_service_instantiation",
+        "reason": "Automatic domain files do not instantiate full-pull services.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-24T03:23:48+00:00",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "PASS",
+    "safety_level": "read_only_static_scan",
+    "scan": "no-full-pull-normal-path",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.no-full-pull-normal-path",
+    "started_at": "2026-05-24T03:23:48+00:00",
+    "status": "PASS",
+    "summary": "no-full-pull-normal-path: PASS (0 failing checks, 9 total checks)",
+    "taskId": "TASK-119",
+    "task_id": "TASK-119"
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "pass",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T032348Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p36407",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "task_id": "TASK-119",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T03:23:48Z",
+  "timestamp_start": "2026-05-24T03:23:48Z",
+  "warnings": []
+}

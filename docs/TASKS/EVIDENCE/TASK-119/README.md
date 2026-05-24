@@ -4,10 +4,10 @@ Evidence directory for TASK-119.
 
 ## Current phase
 - **Task**: TASK-119 - iOS Sync Automatic Architecture Purification and Dead-Code Cleanup
-- **Status**: ACTIVE / REVIEW — EXECUTION_COMPLETE_LOCAL_GATES_PASS / HANDOFF_TO_CLAUDE
-- **Existing evidence**: initial HEAD/preflight/config reports, tracking-mismatch documentation, TASK-119 harness scan reports, baseline architecture audit, RED/PASS automatic-architecture evidence, progressive Swift refactor evidence, final local build/test/smoke/scan evidence and JSON validation under `agent-runs/`.
-- **Runtime verification**: PASS for local non-live gates listed below.
-- **Swift refactor evidence**: PASS for local gates. `AutomaticPushServices.swift` was split into automatic-domain files and automatic core execution moved into `AutomaticSyncEngine`.
+- **Status**: ACTIVE / REVIEW_PASS_WITH_NOTES — CODEX_REVIEW_FIXES_LOCAL
+- **Existing evidence**: initial HEAD/preflight/config reports, tracking-mismatch documentation, TASK-119 harness scan reports, baseline architecture audit, RED/PASS automatic-architecture evidence, progressive Swift refactor evidence, Codex review/fix rerun evidence, final local build/test/smoke/scan evidence and JSON validation under `agent-runs/`.
+- **Runtime verification**: PASS for local non-live gates listed below, with Options smoke `PASS_WITH_NOTES` via XcodeBuildMCP fallback because legacy JXA/AX timed out.
+- **Swift refactor evidence**: PASS for local gates after Codex review fixes. `AutomaticPushServices.swift` was split into automatic-domain files and automatic core execution moved into `AutomaticSyncEngine`.
 - **Build evidence**: PASS for Debug and Release under harness.
 - **Supabase live evidence**: NOT_RUN; no live gate requested or executed with `MC_ALLOW_LIVE=1`.
 - **Cleanup evidence**: NOT_RUN / not required; no live synthetic rows created.
@@ -44,25 +44,25 @@ All artifacts are under `docs/TASKS/EVIDENCE/TASK-119/agent-runs/` and include `
 
 | Gate | Latest status | Latest run |
 | --- | --- | --- |
-| HEAD consistency | PASS | `20260524T022406Z-git-head-consistency-task-TASK-119-p57249` |
-| Preflight require HEAD consistency | PASS | `20260524T022406Z-preflight-require-head-consistency-task-TASK-119-p57248` |
-| Config validate | PASS | `20260524T022406Z-config-validate-task-TASK-119-p57301` |
-| Sync boundaries | PASS | `20260524T025800Z-scan-sync-boundaries-task-TASK-119-strict-p99167` |
-| No full pull normal path | PASS | `20260524T025235Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p93424` |
-| Sync architecture | PASS | `20260524T025235Z-scan-sync-architecture-task-TASK-119-strict-p93354` |
-| Manual boundary | PASS | `20260524T025235Z-scan-manual-boundary-task-TASK-119-strict-p93423` |
-| Dead-code inventory | PASS | `20260524T025800Z-scan-dead-code-task-TASK-119-strict-p99166` |
-| Xcode membership | PASS | `20260524T025235Z-scan-xcode-membership-task-TASK-119-strict-p93425` |
-| iOS Debug build | PASS | `20260524T025239Z-ios-build-debug-task-TASK-119-p94980` |
-| iOS Release build | PASS | `20260524T025251Z-ios-build-release-task-TASK-119-p95591` |
-| iOS automatic-domain tests | PASS | `20260524T025408Z-ios-test-automatic-domain-task-TASK-119-p96385` |
-| iOS sync tests | PASS | `20260524T025433Z-ios-test-sync-task-TASK-119-p97120` |
-| iOS automatic-architecture tests | PASS | `20260524T025706Z-ios-test-automatic-architecture-task-TASK-119-p97953` |
-| iOS Options smoke | PASS | `20260524T025717Z-ios-smoke-options-task-TASK-119-p98542` |
-| Supabase status redacted | PASS | `20260524T025027Z-supabase-status-redacted-task-TASK-119-p87039` |
-| Sensitive scan | PASS | `20260524T030035Z-scan-sensitive-task-TASK-119-p7960` |
-| Evidence scan | PASS | `20260524T030035Z-scan-evidence-task-TASK-119-p7959` |
-| JSON validation | PASS | `20260524T030035Z-report-validate-json-task-TASK-119-path-docs-TASKS-EVIDENCE-TASK-119-agent-runs-p8007` |
+| HEAD consistency | PASS | `20260524T032348Z-git-head-consistency-task-TASK-119-p36368` |
+| Preflight require HEAD consistency | PASS | `20260524T032348Z-preflight-require-head-consistency-task-TASK-119-p36369` |
+| Config validate | PASS | `20260524T032348Z-config-validate-task-TASK-119-p36408` |
+| Sync boundaries | PASS | `20260524T032348Z-scan-sync-boundaries-task-TASK-119-strict-p36406` |
+| No full pull normal path | PASS | `20260524T032348Z-scan-no-full-pull-normal-path-task-TASK-119-strict-p36407` |
+| Sync architecture | PASS | `20260524T033814Z-scan-sync-architecture-task-TASK-119-strict-p67722` |
+| Manual boundary | PASS | `20260524T033814Z-scan-manual-boundary-task-TASK-119-strict-p67721` |
+| Dead-code inventory | PASS | `20260524T032400Z-scan-dead-code-task-TASK-119-strict-p38548` |
+| Xcode membership | PASS | `20260524T032400Z-scan-xcode-membership-task-TASK-119-strict-p38553` |
+| iOS Debug build | PASS | `20260524T032416Z-ios-build-debug-task-TASK-119-p40564` |
+| iOS Release build | PASS | `20260524T032425Z-ios-build-release-task-TASK-119-p41092` |
+| iOS automatic-domain tests | PASS | `20260524T032542Z-ios-test-automatic-domain-task-TASK-119-p41988` |
+| iOS sync tests | PASS | `20260524T032605Z-ios-test-sync-task-TASK-119-p42700` |
+| iOS automatic-architecture tests | PASS | `20260524T032837Z-ios-test-automatic-architecture-task-TASK-119-p43579` |
+| iOS Options smoke | PASS_WITH_NOTES | `20260524T033248Z-ios-smoke-options-task-TASK-119-p46829` |
+| Supabase status redacted | PASS | `20260524T032400Z-supabase-status-redacted-task-TASK-119-p38562` |
+| Sensitive scan | PASS | `20260524T033651Z-scan-sensitive-task-TASK-119-p57999` |
+| Evidence scan | PASS | `20260524T033651Z-scan-evidence-task-TASK-119-p58021` |
+| JSON validation | PASS | `20260524T033833Z-report-validate-json-task-TASK-119-path-docs-TASKS-EVIDENCE-TASK-119-agent-runs-p68842` |
 | `git diff --check` | PASS | Shell check, no artifact generated by harness. |
 
 ## Expected future evidence root
@@ -159,7 +159,7 @@ No report may contain unredacted `config.env`, OAuth callback data, JWT, service
 - Supabase contract validation is read-only for TASK-119; no tables, columns, RLS policies, grants, RPCs, migrations, or schema changes.
 
 ## Options smoke fallback
-- Primary `ios smoke options` PASS is preferred.
-- XcodeBuildMCP fallback may be supporting evidence.
-- Fallback does not transform the primary harness gate into PASS if Accessibility/JXA is unavailable.
-- That case remains `BLOCKED_EXTERNAL` unless explicitly accepted.
+- Primary `ios smoke options` legacy JXA/AX PASS is preferred.
+- If legacy JXA/AX times out, XcodeBuildMCP fallback evidence may produce `PASS_WITH_NOTES`.
+- TASK-119 fallback evidence must prove `screen=Opzioni`, `automatic_sync_visible=true`, `pending_local_changes=0`, `manual_sync_cta_visible=false`, and a supported real observer badge (`Attiva` or `Accesso richiesto`).
+- Current fallback evidence: `ios-options-xcodebuildmcp-fallback.txt` plus `ios-options-xcodebuildmcp-fallback.jpg`; the simulator was signed out, so the real observer badge was `Accesso richiesto`.

@@ -1113,7 +1113,7 @@ mc_ios_smoke() {
 }
 
 mc_ios_options_fallback() {
-  local evidence screenshot_rel
+  local evidence screenshot_rel sync_badge
   evidence="${MC_IOS_OPTIONS_FALLBACK_PATH:-$MC_IOS_REPO/$MC_EVIDENCE_DIR/ios-options-xcodebuildmcp-fallback.txt}"
   if [[ ! -f "$evidence" ]]; then
     MC_SUMMARY="iOS smoke options BLOCKED: legacy JXA/AX failed and no XcodeBuildMCP fallback evidence file was found."
@@ -1122,20 +1122,29 @@ mc_ios_options_fallback() {
   fi
   if ! grep -qx 'screen=Opzioni' "$evidence" ||
      ! grep -qx 'automatic_sync_visible=true' "$evidence" ||
-     ! grep -qx 'sync_badge=Attiva' "$evidence" ||
      ! grep -qx 'pending_local_changes=0' "$evidence" ||
      ! grep -qx 'manual_sync_cta_visible=false' "$evidence"; then
     MC_SUMMARY="iOS smoke options BLOCKED: XcodeBuildMCP fallback evidence is incomplete."
-    MC_NEXT_ACTION="Refresh fallback evidence with Options screen, automatic sync active, pending local changes 0, and manual sync CTA absence."
+    MC_NEXT_ACTION="Refresh fallback evidence with Options screen, automatic sync observer state, pending local changes 0, and manual sync CTA absence."
     return "$MC_EXIT_BLOCKED"
   fi
+  sync_badge="$(awk -F= '$1 == "sync_badge" { print $2; exit }' "$evidence")"
+  case "$sync_badge" in
+    Attiva|Accesso\ richiesto)
+      ;;
+    *)
+      MC_SUMMARY="iOS smoke options BLOCKED: XcodeBuildMCP fallback has unsupported automatic sync badge '${sync_badge}'."
+      MC_NEXT_ACTION="Refresh fallback evidence from the live Options UI; accepted badges are Attiva or Accesso richiesto."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+  esac
   screenshot_rel="$(awk -F= '$1 == "screenshot" { print $2; exit }' "$evidence")"
   if [[ -n "$screenshot_rel" ]]; then
     MC_ARTIFACT_SCREENSHOT="$screenshot_rel"
   fi
   mc_report_log "XcodeBuildMCP fallback evidence accepted: $(mc_relpath "$evidence")"
   mc_set_pass_with_notes
-  MC_SUMMARY="iOS smoke options PASS_WITH_NOTES: legacy JXA/AX smoke is tooling-blocked, while XcodeBuildMCP fallback evidence verifies Options reached, automatic sync active, pending local changes 0, and no public manual sync CTA visible."
+  MC_SUMMARY="iOS smoke options PASS_WITH_NOTES: legacy JXA/AX smoke is tooling-blocked, while XcodeBuildMCP fallback evidence verifies Options reached, automatic sync observer badge '${sync_badge}', pending local changes 0, and no public manual sync CTA visible."
   MC_NEXT_ACTION="Use the fallback artifact as functional Options evidence; repair JXA/Accessibility separately if strict automation is required."
   return "$MC_EXIT_PASS"
 }

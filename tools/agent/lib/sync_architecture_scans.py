@@ -251,6 +251,21 @@ def scan_sync_architecture() -> dict[str, object]:
             fix_hint="Use ModelContainer + fresh ModelContext for automatic/background SwiftData work.",
         )
 
+    shared_helper = "iOSMerchandiseControl/Sync/Shared/SyncStringCollectionHelpers.swift"
+    helper_exists = _path(shared_helper).exists()
+    helper_manual_hits = _line_hits(shared_helper, r"SupabaseManual|ManualPush|Compatibility|Adapter") if helper_exists else []
+    _check(
+        checks,
+        "shared_string_collection_helpers_pure",
+        "PASS" if helper_exists and not helper_manual_hits else "FAIL",
+        "Shared string collection helper exists and does not reference manual-only symbols."
+        if helper_exists and not helper_manual_hits
+        else "Shared string collection helper is missing or leaks manual-only symbols.",
+        file=shared_helper,
+        evidence=helper_manual_hits,
+        fix_hint="Keep common helper code in Sync/Shared pure and free from manual/automatic ownership leakage.",
+    )
+
     return _report(
         "sync-architecture",
         checks,
@@ -303,6 +318,7 @@ def scan_manual_boundary() -> dict[str, object]:
         for rel in [
             "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
             "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+            "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
         ]
     )
     _check(

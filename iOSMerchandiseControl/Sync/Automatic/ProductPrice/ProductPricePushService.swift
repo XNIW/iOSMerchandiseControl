@@ -34,7 +34,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
                 ownerUserID: ownerUserID,
                 pendingChangeCount: snapshot.pendingProductPriceChangeCount,
                 idempotencyKey: "product-price:\(ownerUserID.uuidString.lowercased()):\(snapshot.pendingProductPriceChangeCount):\(tombstoneCount)",
-                blockers: Array(Set(blockers)).sorted()
+                blockers: SyncStringCollectionHelpers.uniquedSorted(blockers)
             )
             var result = SyncProductPricePushResult()
             result.plan = plan

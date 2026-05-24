@@ -6,12 +6,12 @@
 - **File task**: `docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-119/`
 - **Stato**: ACTIVE
-- **Fase attuale**: REVIEW — EXECUTION_COMPLETE_LOCAL_GATES_PASS / HANDOFF_TO_CLAUDE
+- **Fase attuale**: REVIEW — REVIEW_PASS_WITH_NOTES / CODEX_REVIEW_FIXES_LOCAL
 - **Responsabile attuale**: CLAUDE / Reviewer
 - **Data creazione**: 2026-05-24
 - **Ultimo aggiornamento**: 2026-05-24
-- **Ultimo agente che ha operato**: CODEX / Executor
-- **Readiness**: LOCAL_REVIEW_READY. HEAD/tracking mismatch resolved, TASK-119 harness/baseline pushed, progressive Swift refactor completed locally, critical local gates PASS. Not DONE; live gates were not run because no explicit live approval was requested for this refactor.
+- **Ultimo agente che ha operato**: CODEX / Reviewer-Fixer
+- **Readiness**: REVIEW_PASS_WITH_NOTES_LOCAL. Codex review found and fixed concrete issues in cancellation/single-flight ownership, history automatic remote boundary, TASK-119 head-consistency reporting, scanner coverage and Options smoke fallback semantics. Local gates are PASS except Options smoke is PASS_WITH_NOTES via XcodeBuildMCP fallback because legacy JXA/AX timed out. Live/manual end-to-end gates remain NOT_RUN; task is not DONE.
 - **Tipo task**: cleanup/refactor architetturale, non feature task.
 - **User override registrato**: l'utente ha chiesto esplicitamente a Codex di creare tracking PLANNING nonostante `AGENTS.md` definisca Codex come executor/fixer. Override limitato a markdown/tracking/evidence README; nessuna modifica Swift/Kotlin/SQL, nessun build/test runtime, nessun live Supabase, nessun cleanup.
 
@@ -864,6 +864,130 @@ Reviewer focus:
 - Verificare che il routing TASK-119 di `scan no-full-pull-normal-path` non rompa compatibilita' TASK-117/TASK-118.
 - Valutare se il retained shared `HistorySessionSyncService` e `SupabaseInventoryService` richiedano una task successiva o siano accettabili per TASK-119.
 - Non marcare DONE senza review approval e senza decisione esplicita sui live/device blocker NOT_RUN.
+
+## Review
+
+### CODEX REVIEW/FIX — 2026-05-24
+
+#### Obiettivo compreso
+Eseguire review severa e repo-grounded di TASK-119, verificando codice, diff da TASK-118, harness, evidence, scanner e gate canonici. Applicare solo fix diretti se la review trova problemi reali; non marcare DONE.
+
+#### File controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`
+- `docs/TASKS/EVIDENCE/TASK-119/README.md`
+- `docs/TASKS/EVIDENCE/TASK-119/agent-runs/*`
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift`
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift`
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift`
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift`
+- `iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift`
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift`
+- `iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift`
+- `iOSMerchandiseControl/Sync/Automatic/History/*`
+- `iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift`
+- `iOSMerchandiseControl/Sync/Shared/AutomaticSharedBoundary.swift`
+- `iOSMerchandiseControl/Sync/Shared/SyncStringCollectionHelpers.swift`
+- `iOSMerchandiseControl/SupabaseInventoryService.swift`
+- `iOSMerchandiseControl/HistorySessionSyncService.swift`
+- `iOSMerchandiseControl/ContentView.swift`
+- `iOSMerchandiseControl/OptionsView.swift`
+- `iOSMerchandiseControl/Sync/SyncOrchestrator.swift`
+- `iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift`
+- `iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift`
+- `tools/agent/lib/sync_architecture_scans.py`
+- `tools/agent/lib/task119_scans.py`
+- `tools/agent/mc-agent.sh`
+- `tools/agent/lib/common.sh`
+- `tools/agent/lib/ios.sh`
+- `tools/agent/mcp/server.mjs`
+
+#### Piano minimo
+1. Verificare HEAD/origin/GitHub rendered main e evidence esistenti senza fidarsi del report precedente.
+2. Revieware architettura automatica/manuale e distinguere refactor reale da file move.
+3. Eseguire gate canonici TASK-119.
+4. Applicare fix solo per problemi dimostrati.
+5. Rilanciare gate locali e aggiornare tracking/evidence.
+
+#### Findings review
+- `AutomaticSyncSingleFlight.cancel()` liberava `running` prima che il provider corrente tornasse: questo apriva una seconda esecuzione mentre la prima era ancora cooperativamente in cancellazione.
+- `SyncAutomaticRuntime.cancel()` marcava la facade come non-running prima della chiusura effettiva dell'engine, creando stato UI/presentation potenzialmente ottimistico.
+- `HistorySessionAutomaticPushService` dipendeva ancora dal concreto `SupabaseInventoryService`, mentre catalog/product-price erano gia' dietro protocolli automatic-domain.
+- `head-consistency --task TASK-119` produceva ancora `NEXT_ACTION` e `ca_refs` TASK-118-oriented.
+- `task119_scans.py` accettava task id diversi da TASK-119 come no-op invece di fallire misconfigurazione.
+- `scan sync-architecture` non verificava il nuovo helper shared richiesto dalla review.
+- `ios smoke options` legacy JXA/AX e' bloccato localmente da timeout; il fallback XcodeBuildMCP precedente richiedeva solo badge `Attiva`, ma il simulatore corrente e' signed-out e mostra correttamente `Accesso richiesto`.
+
+#### Modifiche fatte
+- Corretto `AutomaticSyncSingleFlight.cancel()` per mantenere chiuso il flight finche' `finish()` non viene chiamato dal run corrente.
+- Corretto `SyncAutomaticRuntime.cancel()` per lasciare `facadeIsRunning` vero finche' il `run` non completa il proprio `defer`.
+- Aggiunto `HistorySessionRemoteWriting` e usato da `HistorySessionAutomaticPushService`, rimuovendo la dipendenza automatica dal concreto `SupabaseInventoryService`.
+- Aggiunto `SyncStringCollectionHelpers.uniquedSorted` nonisolated e usato nei servizi catalog/product-price.
+- Estesi i test `Task119AutomaticArchitectureTests` con prove comportamentali su single-flight, cancellation policy e engine cancel/busy.
+- Corretto `common.sh` per CA/NEXT_ACTION TASK-119 nel gate head consistency.
+- Rafforzati `sync_architecture_scans.py` e `task119_scans.py` per boundary history, helper shared e task-id guard.
+- Aggiornato `ios.sh` per accettare nel fallback Options sia `Attiva` sia `Accesso richiesto` come stati observer reali e tracciabili.
+- Aggiunta evidence XcodeBuildMCP fallback Options: `docs/TASKS/EVIDENCE/TASK-119/ios-options-xcodebuildmcp-fallback.txt` e screenshot `.jpg`.
+
+#### Review answers
+| Domanda | Esito review |
+| --- | --- |
+| Refactor reale o solo move/rename? | Reale: engine actor non-UI, single-flight/cancel policy, domain protocols e scanner dedicati riducono ownership confusion. |
+| `AutomaticPushServices.swift` eliminato senza perdere comportamento? | Si': il file resta solo stub/commento; catalog/product/history/outbox vivono in domini separati e build/test PASS. |
+| `AutomaticSyncEngine` non-UI? | Si': actor senza `@MainActor`; facade UI resta separata. |
+| `SyncAutomaticRuntime` solo facade? | Sostanzialmente si', dopo fix non possiede piu' single-flight reale; resta `@MainActor` per auth/UI/state boundary. |
+| Single-flight/cancel/retry reali e testati? | Si' dopo fix: nuovi test comportamentali coprono cancel non riaprente e busy second-run. Retry resta scheduler/decision-level, non placeholder. |
+| SwiftData automatico con fresh context? | Si' nei servizi automatici reviewati: `ModelContainer` + `ModelContext(modelContainer)`. |
+| Zero riferimenti nominali automatic/manual? | PASS da `scan manual-boundary`; fix aggiunto per history remote concrete dependency. |
+| Manual sync ancora boundary esplicito? | Si', scanner e broad sync tests PASS; manual live E2E non eseguito. |
+| `HistorySessionSyncService` shared valido? | Valido per ora: condiviso da history/manual/incremental, non cancellabile senza task dedicato; rischio residuo P2. |
+| `SupabaseInventoryService` troppo mixed? | Si', ancora mixed; automatic writes sono piu' stretti via protocolli. Rischio residuo P2/follow-up, non blocker TASK-119. |
+| Scanner fragili? | Sono statici/pattern-based, ma ora integrati da behavior tests e task-id guard; residuo accettabile P2. |
+| TASK-119 nascosto in `task117_scans.py`? | No: routing TASK-119 usa `task119_scans.py` / `sync_architecture_scans.py`. |
+| MCP thin/safe? | Si': allowlist argv-based, cwd fixed, timeout, self-test PASS; nessun live/cleanup env mutation. |
+| No full pull normal path reale? | Static scan PASS; verifica che bootstrap/fullRecovery non siano invocati dal path normale. Non e' un proof runtime live. |
+| Options/root observer-only? | Si': smoke fallback mostra stato reale signed-out, pending 0, nessuna CTA manuale pubblica. |
+| Xcode membership/path? | PASS da `scan xcode-membership`. |
+| Warning Swift 6 nuovi? | Build Debug/Release PASS; warning introdotti da helper shared corretti con `nonisolated`. |
+| Segreti/evidence? | `scan sensitive` PASS dopo evidence fallback. |
+| Schema/status evidence? | `scan evidence` e `report validate-json` PASS. |
+| Stato finale? | `REVIEW_PASS_WITH_NOTES`, non DONE: local gates ok, Options via fallback, live/manual E2E NOT_RUN. |
+
+#### Check eseguiti
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh git head-consistency --task TASK-119` PASS: `20260524T032348Z-git-head-consistency-task-TASK-119-p36368`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh preflight --require-head-consistency --task TASK-119` PASS: `20260524T032348Z-preflight-require-head-consistency-task-TASK-119-p36369`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh config validate --task TASK-119` PASS: `20260524T032348Z-config-validate-task-TASK-119-p36408`.
+- ✅ ESEGUITO — strict scans `sync-boundaries`, `no-full-pull-normal-path`, `sync-architecture`, `manual-boundary`, `dead-code`, `xcode-membership` PASS: latest `20260524T032348Z...`, `20260524T033814Z...`, `20260524T032400Z...`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios build debug --task TASK-119` PASS: `20260524T032416Z-ios-build-debug-task-TASK-119-p40564`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios build release --task TASK-119` PASS: `20260524T032425Z-ios-build-release-task-TASK-119-p41092`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios test automatic-domain --task TASK-119` PASS: `20260524T032542Z-ios-test-automatic-domain-task-TASK-119-p41988`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios test sync --task TASK-119` PASS: `20260524T032605Z-ios-test-sync-task-TASK-119-p42700`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios test automatic-architecture --task TASK-119` PASS: `20260524T032837Z-ios-test-automatic-architecture-task-TASK-119-p43579`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh ios smoke options --task TASK-119` PASS_WITH_NOTES: `20260524T033248Z-ios-smoke-options-task-TASK-119-p46829`; legacy JXA/AX timeout, XcodeBuildMCP fallback accepted.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh supabase status-redacted --task TASK-119` PASS read-only: `20260524T032400Z-supabase-status-redacted-task-TASK-119-p38562`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh scan sensitive --task TASK-119` PASS finale: `20260524T033651Z-scan-sensitive-task-TASK-119-p57999`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh scan evidence --task TASK-119` PASS finale: `20260524T033651Z-scan-evidence-task-TASK-119-p58021`.
+- ✅ ESEGUITO — `./tools/agent/mc-agent.sh report validate-json --task TASK-119 --path docs/TASKS/EVIDENCE/TASK-119/agent-runs` PASS finale: `20260524T033833Z-report-validate-json-task-TASK-119-path-docs-TASKS-EVIDENCE-TASK-119-agent-runs-p68842`.
+- ✅ ESEGUITO — `git diff --check` PASS.
+- ✅ ESEGUITO — `python3 -m py_compile tools/agent/lib/sync_architecture_scans.py tools/agent/lib/task119_scans.py` PASS.
+- ✅ ESEGUITO — `bash -n tools/agent/mc-agent.sh tools/agent/lib/common.sh tools/agent/lib/ios.sh` PASS.
+- ✅ ESEGUITO — `node --check tools/agent/mcp/server.mjs` PASS.
+- ✅ ESEGUITO — `node tools/agent/mcp/server.mjs --self-test` PASS.
+- ❌ NON ESEGUITO — live matrix/reconcile; manca autorizzazione esplicita `MC_ALLOW_LIVE=1`.
+- ❌ NON ESEGUITO — cleanup/residue; nessuna riga live sintetica creata, quindi cleanup non richiesto.
+- ❌ NON ESEGUITO — manual sync live end-to-end; non richiesto da gate locale e non usato come PASS.
+
+#### Rischi rimasti
+- Options smoke primario legacy resta dipendente da Accessibility/JXA e in questo ambiente passa solo via fallback XcodeBuildMCP `PASS_WITH_NOTES`.
+- Live matrix/reconcile e manual end-to-end live sono NOT_RUN; non contano come PASS.
+- `SupabaseInventoryService.swift` resta un service grande e mixed: rischio P2/follow-up per split piu' profondo dei remote contracts.
+- `HistorySessionSyncService` resta shared per motivo valido, ma resta P2 se si vuole separare history automatic/manual in modo piu' netto.
+- Gli scanner restano statici/pattern-based; i behavior tests riducono il rischio ma non sono proof semantica runtime live.
+
+#### Handoff post-review verso Claude
+Verdict Codex: `ACTIVE / REVIEW_PASS_WITH_NOTES`, non DONE.
+
+Prossimo passo concreto: Claude deve revieware i fix locali e decidere se accettare `REVIEW_PASS_WITH_NOTES` oppure richiedere ulteriori change. DONE richiede review approval e decisione esplicita dell'utente sui gate live/manual/device non eseguiti.
 
 ## Prompt future EXECUTION-AUDIT
 Usare questo prompt solo dopo review/approvazione planning:

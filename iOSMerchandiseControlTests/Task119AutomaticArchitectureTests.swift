@@ -1,4 +1,5 @@
 import XCTest
+@testable import iOSMerchandiseControl
 
 final class Task119AutomaticArchitectureTests: XCTestCase {
     private var repositoryRoot: URL {
@@ -78,5 +79,137 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertFalse(runtime.contains("activeTask"), "SyncAutomaticRuntime facade must not own placeholder single-flight state")
         XCTAssertTrue(engine.contains("AutomaticSyncSingleFlight"))
         XCTAssertTrue(engine.contains("AutomaticSyncCancellationPolicy"))
+    }
+
+    func testSingleFlightStaysClosedDuringCooperativeCancellation() async {
+        let singleFlight = AutomaticSyncSingleFlight()
+
+        let didBeginFirstRun = await singleFlight.begin()
+        XCTAssertTrue(didBeginFirstRun)
+        await singleFlight.cancel()
+        let isRunningAfterCancel = await singleFlight.isRunning
+        XCTAssertTrue(isRunningAfterCancel)
+        let didBeginSecondRunDuringCancel = await singleFlight.begin()
+        XCTAssertFalse(didBeginSecondRunDuringCancel)
+
+        await singleFlight.finish()
+        let isRunningAfterFinish = await singleFlight.isRunning
+        XCTAssertFalse(isRunningAfterFinish)
+        let didBeginAfterFinish = await singleFlight.begin()
+        XCTAssertTrue(didBeginAfterFinish)
+        await singleFlight.finish()
+    }
+
+    func testCancellationPolicyInvalidatesExistingToken() async throws {
+        let policy = AutomaticSyncCancellationPolicy()
+        let token = await policy.makeToken()
+
+        do {
+            try await policy.checkCancellation(token: token)
+        } catch {
+            XCTFail("Unexpected cancellation before token invalidation: \(error)")
+        }
+        await policy.requestCancellation()
+
+        do {
+            try await policy.checkCancellation(token: token)
+            XCTFail("Expected cancellation after token invalidation")
+        } catch is CancellationError {
+            // Expected.
+        }
+    }
+
+    func testAutomaticEngineCancelDoesNotOpenSecondFlightBeforeFirstSettles() async {
+        let provider = Task119BlockingCatalogProvider()
+        let engine = AutomaticSyncEngine(
+            catalogPushProvider: provider,
+            productPriceProvider: nil,
+            historySessionProvider: nil,
+            incrementalPullProvider: nil,
+            activityRegistrationProvider: nil,
+            defaults: UserDefaults(suiteName: "Task119-\(UUID().uuidString)")!
+        )
+        let owner = UUID()
+
+        let firstRun = Task {
+            await engine.run(action: .pushPending, source: .localMutation, ownerUserID: owner)
+        }
+        await provider.waitUntilFirstRunStarted()
+
+        await engine.cancel()
+        let secondRun = await engine.run(action: .pushPending, source: .localMutation, ownerUserID: owner)
+        XCTAssertEqual(secondRun.status, .busy)
+        let providerCallCount = await provider.callCount()
+        XCTAssertEqual(providerCallCount, 1)
+
+        await provider.releaseFirstRun()
+        let firstResult = await firstRun.value
+        XCTAssertEqual(firstResult.status, .cancelled)
+        let engineIsRunning = await engine.isRunning()
+        XCTAssertFalse(engineIsRunning)
+    }
+}
+
+private final class Task119BlockingCatalogProvider: SyncCatalogPushProviding {
+    private let started = Task119AsyncGate()
+    private let release = Task119AsyncGate()
+    private let counter = Task119AsyncCounter()
+
+    func pushPendingCatalog(ownerUserID: UUID) async throws -> SyncCatalogPushResult {
+        let call = await counter.increment()
+        if call == 1 {
+            await started.open()
+            await release.wait()
+        }
+        var result = SyncCatalogPushResult()
+        result.productCreates = 1
+        return result
+    }
+
+    func waitUntilFirstRunStarted() async {
+        await started.wait()
+    }
+
+    func releaseFirstRun() async {
+        await release.open()
+    }
+
+    func callCount() async -> Int {
+        await counter.value
+    }
+}
+
+private actor Task119AsyncGate {
+    private var isOpen = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func open() {
+        guard !isOpen else { return }
+        isOpen = true
+        let pending = waiters
+        waiters.removeAll()
+        for waiter in pending {
+            waiter.resume()
+        }
+    }
+
+    func wait() async {
+        guard !isOpen else { return }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+}
+
+private actor Task119AsyncCounter {
+    private var count = 0
+
+    var value: Int {
+        count
+    }
+
+    func increment() -> Int {
+        count += 1
+        return count
     }
 }

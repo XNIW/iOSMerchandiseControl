@@ -3,12 +3,12 @@ import SwiftData
 
 final class HistorySessionPushService: SyncHistorySessionPushProviding {
     private let modelContainer: ModelContainer
-    private let remote: SupabaseInventoryService
+    private let remote: any HistorySessionRemoteWriting
     private let recorder: (any SyncEventRecording)?
 
     init(
         modelContainer: ModelContainer,
-        remote: SupabaseInventoryService,
+        remote: any HistorySessionRemoteWriting,
         recorder: (any SyncEventRecording)?
     ) {
         self.modelContainer = modelContainer

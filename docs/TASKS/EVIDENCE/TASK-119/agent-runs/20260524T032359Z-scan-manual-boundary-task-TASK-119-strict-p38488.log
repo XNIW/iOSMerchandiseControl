@@ -1,0 +1,339 @@
+=== mc-agent scan manual-boundary --task TASK-119 --strict ===
+{
+  "NEXT_ACTION": "Fix FAIL rows by isolating manual sync as an explicit boundary before automatic runtime REVIEW.",
+  "checks": [
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/ContentView.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/ContentView.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/OptionsView.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticPresentationBoundary.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticPresentationBoundary.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Presentation/OptionsSyncSummaryProvider.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Presentation/OptionsSyncSummaryProvider.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Presentation/SyncStatusPresenter.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/Presentation/SyncStatusPresenter.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/SyncDecisionEngine.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/SyncDecisionEngine.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/SyncDecisionInputProvider.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/SyncState.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/SyncState.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/SyncStateStore.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/Sync/SyncStateStore.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+      "fix_hint": "Move the dependency behind Sync/Manual or a pure Sync/Shared value type; automatic runtime must not import manual DTO/result/adapter/factory types.",
+      "id": "manual_boundary:iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+      "reason": "No manual-only or compatibility symbols found in automatic source.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "automatic_remote_protocols_present": true,
+        "manual_symbol_hits_sample": [
+          {
+            "line": 202,
+            "snippet": "].compactMap { barcode, productName -> SupabaseManualPushProductCreatePayload? in"
+          },
+          {
+            "line": 204,
+            "snippet": "return SupabaseManualPushProductCreatePayload("
+          },
+          {
+            "line": 248,
+            "snippet": "let payload = SupabaseManualPushProductUpdatePayload("
+          },
+          {
+            "line": 420,
+            "snippet": "func updateProduct(id: UUID, payload: SupabaseManualPushProductUpdatePayload) async throws -> RemoteInventoryProductRow {"
+          },
+          {
+            "line": 1055,
+            "snippet": "func insertProductPriceManualPushPayloads(_ payloads: [ProductPriceManualPushPayload]) async throws -> [RemoteInventoryProductPriceRow] {"
+          },
+          {
+            "line": 1061,
+            "snippet": "throw ProductPriceManualPushError.invalidPayload"
+          },
+          {
+            "line": 1073,
+            "snippet": "throw mapProductPriceManualPushPostgrestError(error)"
+          },
+          {
+            "line": 1086,
+            "snippet": "func fetchProductPricesForManualPushVerificationPage("
+          },
+          {
+            "line": 1094,
+            "snippet": "throw ProductPriceManualPushError.invalidPayload"
+          },
+          {
+            "line": 1320,
+            "snippet": ".insert([SupabaseManualPushSupplierCreatePayload(ownerUserID: ownerUserID, name: \"TASK087_SUP\")])"
+          },
+          {
+            "line": 1376,
+            "snippet": ".insert([SupabaseManualPushCategoryCreatePayload(ownerUserID: ownerUserID, name: \"TASK087_CAT\")])"
+          },
+          {
+            "line": 1429,
+            "snippet": "_ payloads: [SupabaseManualPushProductCreatePayload]"
+          },
+          {
+            "line": 1536,
+            "snippet": ".insert([SupabaseManualPushSupplierCreatePayload(ownerUserID: ownerUserID, name: Self.task088SupplierName)])"
+          },
+          {
+            "line": 1593,
+            "snippet": ".insert([SupabaseManualPushCategoryCreatePayload(ownerUserID: ownerUserID, name: Self.task088CategoryName)])"
+          },
+          {
+            "line": 1651,
+            "snippet": "let payload = SupabaseManualPushProductCreatePayload("
+          },
+          {
+            "line": 1817,
+            "snippet": "private func mapProductPriceManualPushPostgrestError(_ error: PostgrestError) -> Error {"
+          },
+          {
+            "line": 1827,
+            "snippet": "return ProductPriceManualPushError.uniqueConflict("
+          }
+        ]
+      },
+      "file": "iOSMerchandiseControl/SupabaseInventoryService.swift",
+      "fix_hint": "If manual sync remains supported, keep it in Sync/Manual and prevent automatic runtime imports.",
+      "id": "manual_boundary:shared_remote_contract_visibility",
+      "reason": "Shared remote service still contains manual-only symbols, but automatic writes are narrowed through automatic remote-writing protocols.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T03:24:00+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "manual-boundary",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.manual-boundary",
+  "started_at": "2026-05-24T03:24:00+00:00",
+  "status": "PASS",
+  "summary": "manual-boundary: PASS (0 failing checks, 31 total checks)",
+  "taskId": "TASK-119",
+  "task_id": "TASK-119"
+}

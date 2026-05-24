@@ -664,7 +664,11 @@ mc_git_head_consistency() {
   MC_PLATFORM="general"
   MC_SAFETY_LEVEL="safe-readonly"
   MC_REQUIRES_LIVE="false"
-  MC_CA_REFS="CA-118-25"
+  case "$task_id" in
+    TASK-119) MC_CA_REFS="CA-119-21" ;;
+    TASK-118) MC_CA_REFS="CA-118-25" ;;
+    *) MC_CA_REFS="HEAD-CONSISTENCY" ;;
+  esac
 
   local_head="$(git -C "$repo" rev-parse HEAD 2>/dev/null || true)"
   origin_main="$(git -C "$repo" rev-parse origin/main 2>/dev/null || true)"
@@ -753,7 +757,7 @@ print(json.dumps({
     "status": status,
     "remoteUrlRedacted": os.environ.get("REMOTE_URL", ""),
     "checks": checks,
-    "NEXT_ACTION": "Proceed with TASK-118 gates." if status == "PASS" else "Stop TASK-118 and resolve HEAD mismatch or GitHub rendered-main access.",
+    "NEXT_ACTION": f"Proceed with {os.environ.get('TASK_ID', 'TASK')} gates." if status == "PASS" else f"Stop {os.environ.get('TASK_ID', 'TASK')} and resolve HEAD mismatch or GitHub rendered-main access.",
 }, sort_keys=True))
 PY
   )"
@@ -763,7 +767,7 @@ PY
   case "$status" in
     PASS)
       MC_SUMMARY="HEAD consistency PASS for ${task_id}: local HEAD, origin/main, remote main and GitHub rendered main agree."
-      MC_NEXT_ACTION="Continue TASK-118 preflight/scans."
+      MC_NEXT_ACTION="Continue ${task_id} preflight/scans."
       return "$MC_EXIT_PASS"
       ;;
     BLOCKED)
@@ -786,7 +790,7 @@ mc_cmd_git() {
     head-consistency) mc_git_head_consistency "$@" ;;
     *)
       MC_SUMMARY="Unknown git subcommand: ${sub}"
-      MC_NEXT_ACTION="Use git head-consistency --task TASK-118."
+      MC_NEXT_ACTION="Use git head-consistency --task <TASK-ID>."
       return "$MC_EXIT_MISCONFIGURED"
       ;;
   esac
