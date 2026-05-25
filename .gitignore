@@ -11,3 +11,4 @@ tools/agent/**/*.tmp
 # TASK-115 raw harness transcripts are archived outside git; keep the curated summary in docs.
 docs/TASKS/EVIDENCE/TASK-115/agent-runs/
 docs/TASKS/EVIDENCE/TASK-116/agent-runs/
+build/
