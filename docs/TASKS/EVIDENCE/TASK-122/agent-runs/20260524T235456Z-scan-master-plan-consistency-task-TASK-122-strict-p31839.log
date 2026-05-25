@@ -1,0 +1,55 @@
+=== mc-agent scan master-plan-consistency --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Keep exactly one operative current task: TASK-122.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "file": "docs/MASTER-PLAN.md",
+      "id": "workflow_task122",
+      "reason": "Workflow task is TASK-122 ACTIVE / EXECUTION under local canonical override.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/MASTER-PLAN.md",
+      "id": "no_stale_task121_current",
+      "reason": "MASTER-PLAN has no TASK-121 operative-current wording.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "matches": 3
+      },
+      "file": "docs/MASTER-PLAN.md",
+      "id": "task122_current_present",
+      "reason": "MASTER-PLAN has TASK-122 current wording.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T23:54:58+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-24T23:54:58+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localCanonicalOverride": true,
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Keep exactly one operative current task: TASK-122.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "master-plan-consistency",
+  "scannerName": "master-plan-consistency",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.master-plan-consistency",
+  "startedAt": "2026-05-24T23:54:58+00:00",
+  "started_at": "2026-05-24T23:54:58+00:00",
+  "status": "PASS",
+  "summary": "master-plan-consistency: PASS (3 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

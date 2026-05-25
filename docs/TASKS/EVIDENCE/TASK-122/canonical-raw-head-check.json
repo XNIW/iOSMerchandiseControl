@@ -1,0 +1,48 @@
+{
+  "exitCode": 2,
+  "finishedAt": "2026-05-24T23:46:57.438376+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Publish/align TASK-122 planning docs to GitHub canonical main, then rerun canonical raw/head checks before Swift moves/splits/deletes.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "raw": {
+    "agent_readme": {
+      "bytes": 8141,
+      "mentions_TASK_121": false,
+      "mentions_TASK_122": false,
+      "status": 200
+    },
+    "common": {
+      "bytes": 87495,
+      "mentions_TASK_121": true,
+      "mentions_TASK_122": false,
+      "status": 200
+    },
+    "master": {
+      "bytes": 468106,
+      "mentions_TASK_121": true,
+      "mentions_TASK_122": false,
+      "status": 200
+    },
+    "task122": {
+      "bytes": 0,
+      "mentions_TASK_121": false,
+      "mentions_TASK_122": false,
+      "status": 404
+    },
+    "transport": {
+      "bytes": 77538,
+      "mentions_TASK_121": false,
+      "mentions_TASK_122": false,
+      "status": 200
+    }
+  },
+  "redactionSummary": {
+    "paths_redacted": true,
+    "secrets_included": false
+  },
+  "scannerName": "canonical-raw-check",
+  "startedAt": "2026-05-24T23:46:57.438354+00:00",
+  "status": "BLOCKED_EXTERNAL_HEAD_MISMATCH",
+  "taskId": "TASK-122"
+}

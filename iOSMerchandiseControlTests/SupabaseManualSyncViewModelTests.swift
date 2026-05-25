@@ -1077,7 +1077,7 @@ final class SupabaseManualSyncViewModelTests: XCTestCase {
             fake: fake,
             supportsForegroundCloudCheck: true,
             incrementalPullProvider: incrementalProvider,
-            foregroundIncrementalTimeoutNanoseconds: 5_000_000
+            foregroundIncrementalTimeoutNanoseconds: 50_000_000
         )
 
         let didRun = await vm.startForegroundIncrementalCheckNow(

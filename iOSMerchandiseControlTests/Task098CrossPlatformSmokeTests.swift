@@ -187,7 +187,7 @@ final class Task098CrossPlatformSmokeTests: XCTestCase {
 
         let priceAggregated = try await LocalPendingAggregatedPushPlanner(
             context: context,
-            priceRemoteFetcher: runtime.inventory,
+            priceRemoteFetcher: runtime.productPriceRemote,
             includesCatalog: false,
             includesProductPrice: true
         ).makePlan(ownerUserID: runtime.session.userID)
@@ -201,7 +201,7 @@ final class Task098CrossPlatformSmokeTests: XCTestCase {
             planFingerprint: priceFingerprint
         )
         let snapshotForPush = try ProductPriceManualPushSnapshotFactory.makeSnapshot(from: priceBatch.plan)
-        let pricePush = try await SupabaseProductPriceManualPushService(remote: runtime.inventory).push(snapshot: snapshotForPush)
+        let pricePush = try await SupabaseProductPriceManualPushService(remote: runtime.productPriceRemote).push(snapshot: snapshotForPush)
         XCTAssertTrue(pricePush.isVerifiedSuccess)
         XCTAssertEqual(
             try ProductPriceManualPushIdentityReconciler().linkVerifiedPayloads(
@@ -264,7 +264,7 @@ final class Task098CrossPlatformSmokeTests: XCTestCase {
             barcodes: [Fixture.barcodeA, Fixture.barcodeB]
         ).map(\.id)
         let prices = try await fetchFixturePrices(
-            runtime.inventory,
+            runtime.productPriceRemote,
             ownerUserID: runtime.session.userID,
             productIDs: fixtureProductIDs
         )
@@ -322,7 +322,7 @@ final class Task098CrossPlatformSmokeTests: XCTestCase {
     }
 
     private func fetchFixturePrices(
-        _ inventory: SupabaseTransportClient,
+        _ inventory: ProductPriceRemoteSupabaseAdapter,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {
@@ -607,6 +607,10 @@ final class Task098CrossPlatformSmokeTests: XCTestCase {
         let provider: SupabaseClientProvider
         let inventory: SupabaseTransportClient
         let session: SupabaseAuthSessionInfo
+
+        var productPriceRemote: ProductPriceRemoteSupabaseAdapter {
+            ProductPriceRemoteSupabaseAdapter(remote: inventory)
+        }
     }
 
     private struct RemoteSnapshot {

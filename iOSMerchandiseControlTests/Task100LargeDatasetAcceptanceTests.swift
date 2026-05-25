@@ -844,14 +844,14 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
             var duplicateRecovery = "not_run"
             let priceOptions = ProductPriceManualPushOptions(readBackPageSize: 50, readBackMaxPages: 20)
             let pricePushService = SupabaseProductPriceManualPushService(
-                remote: runtime.inventory,
+                remote: runtime.productPriceRemote,
                 options: priceOptions
             )
 
             while pushedPriceRows < expectedPriceRows {
                 let aggregated = try await LocalPendingAggregatedPushPlanner(
                     context: context,
-                    priceRemoteFetcher: runtime.inventory,
+                    priceRemoteFetcher: runtime.productPriceRemote,
                     softBatchLimit: 250,
                     priceFetchOptions: ProductPricePushDryRunFetchOptions(
                         batchSize: 60,
@@ -956,7 +956,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
                 )
             }
             let remotePrices = try await fetchLivePrices(
-                inventory: runtime.inventory,
+                inventory: runtime.productPriceRemote,
                 ownerUserID: runtime.session.userID,
                 productIDs: remoteProducts.map(\.id)
             )
@@ -1135,7 +1135,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         let remoteCategories = try await fetchLiveCategories(runtime: runtime, prefix: prefix)
         let remoteProducts = try await fetchLiveProducts(runtime: runtime, prefix: prefix)
         let remotePrices = try await fetchLivePrices(
-            inventory: runtime.inventory,
+            inventory: runtime.productPriceRemote,
             ownerUserID: runtime.session.userID,
             productIDs: remoteProducts.map(\.id)
         )
@@ -1458,7 +1458,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         async let products = fetchLiveProducts(runtime: runtime, prefix: prefix)
         let resolvedProducts = try await products
         let prices = try await fetchLivePrices(
-            inventory: runtime.inventory,
+            inventory: runtime.productPriceRemote,
             ownerUserID: runtime.session.userID,
             productIDs: resolvedProducts.map(\.id)
         )
@@ -1516,7 +1516,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
     }
 
     private func fetchLivePrices(
-        inventory: SupabaseTransportClient,
+        inventory: ProductPriceRemoteSupabaseAdapter,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {
@@ -1546,7 +1546,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
         let products = try await fetchLiveProducts(runtime: runtime, prefix: prefix)
         let productIDs = products.map(\.id)
         let prices = try await fetchLivePrices(
-            inventory: runtime.inventory,
+            inventory: runtime.productPriceRemote,
             ownerUserID: runtime.session.userID,
             productIDs: productIDs
         )
@@ -2286,6 +2286,10 @@ private struct Task100LiveRuntime {
     let provider: SupabaseClientProvider
     let inventory: SupabaseTransportClient
     let session: Task100LiveSession
+
+    var productPriceRemote: ProductPriceRemoteSupabaseAdapter {
+        ProductPriceRemoteSupabaseAdapter(remote: inventory)
+    }
 }
 
 private struct Task100LiveSession {

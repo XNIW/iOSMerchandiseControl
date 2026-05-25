@@ -1,0 +1,55 @@
+=== mc-agent scan harness-routing --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Add TASK-122 CLI routing and discovery before trusting scanners.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "evidence": {
+        "command_count": 179
+      },
+      "id": "help_json_parseable",
+      "reason": "help-json parses.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "missing": [],
+        "missing_count": 0
+      },
+      "id": "task122_commands_discoverable",
+      "reason": "Every TASK-122 command is discoverable.",
+      "status": "PASS"
+    },
+    {
+      "id": "task122_scanner_module_routed",
+      "reason": "mc-agent routes TASK-122 scanners to task122_scans.py.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T23:46:21+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-24T23:46:21+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Add TASK-122 CLI routing and discovery before trusting scanners.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "harness-routing",
+  "scannerName": "harness-routing",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.harness-routing",
+  "startedAt": "2026-05-24T23:46:21+00:00",
+  "started_at": "2026-05-24T23:46:21+00:00",
+  "status": "PASS",
+  "summary": "harness-routing: PASS (3 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

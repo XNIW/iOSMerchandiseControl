@@ -1,0 +1,65 @@
+=== mc-agent scan adapter-delegation-depth --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Move query/mapping/domain behavior into adapters.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+          "function_count": 6,
+          "query_hits": 0,
+          "remote_calls": 6
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+          "function_count": 1,
+          "query_hits": 0,
+          "remote_calls": 1
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+          "function_count": 3,
+          "query_hits": 0,
+          "remote_calls": 3
+        },
+        {
+          "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+          "function_count": 7,
+          "query_hits": 0,
+          "remote_calls": 7
+        }
+      ],
+      "id": "adapters_not_pure_passthrough",
+      "reason": "Remote adapters own behavior instead of pure delegation.",
+      "status": "FAIL"
+    }
+  ],
+  "completed_at": "2026-05-24T23:55:36+00:00",
+  "exitCode": 1,
+  "finishedAt": "2026-05-24T23:55:36+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localCanonicalOverride": true,
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Move query/mapping/domain behavior into adapters.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "adapter-delegation-depth",
+  "scannerName": "adapter-delegation-depth",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.adapter-delegation-depth",
+  "startedAt": "2026-05-24T23:55:36+00:00",
+  "started_at": "2026-05-24T23:55:36+00:00",
+  "status": "FAIL",
+  "summary": "adapter-delegation-depth: FAIL (1 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

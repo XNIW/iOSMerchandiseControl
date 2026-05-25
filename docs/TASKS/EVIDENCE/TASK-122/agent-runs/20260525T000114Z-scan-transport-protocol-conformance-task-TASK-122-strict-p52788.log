@@ -1,0 +1,43 @@
+=== mc-agent scan transport-protocol-conformance --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Move domain protocol conformance to adapters/services.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "evidence": {
+        "conformances": []
+      },
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "id": "transport_no_domain_conformance",
+      "reason": "Transport does not conform to domain protocols.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T00:01:15+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T00:01:15+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localCanonicalOverride": true,
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Move domain protocol conformance to adapters/services.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "transport-protocol-conformance",
+  "scannerName": "transport-protocol-conformance",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.transport-protocol-conformance",
+  "startedAt": "2026-05-25T00:01:15+00:00",
+  "started_at": "2026-05-25T00:01:15+00:00",
+  "status": "PASS",
+  "summary": "transport-protocol-conformance: PASS (1 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

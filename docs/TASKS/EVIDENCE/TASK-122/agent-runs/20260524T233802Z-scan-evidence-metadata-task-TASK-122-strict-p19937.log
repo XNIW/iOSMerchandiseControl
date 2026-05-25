@@ -1,0 +1,1641 @@
+=== mc-agent scan evidence-metadata --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Regenerate non-compliant reports with the hardened mc-agent wrapper.",
+  "checks": [
+    {
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs",
+      "id": "agent_runs_exists",
+      "reason": "TASK-120 agent-runs directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [
+          "redaction_summary",
+          "NEXT_ACTION"
+        ],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T043758Z-config-validate-task-TASK-120-p85045.json",
+      "id": "evidence_metadata:20260524T043758Z-config-validate-task-TASK-120-p85045.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [
+          "redaction_summary",
+          "NEXT_ACTION"
+        ],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T043758Z-git-head-consistency-task-TASK-120-p85021.json",
+      "id": "evidence_metadata:20260524T043758Z-git-head-consistency-task-TASK-120-p85021.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [
+          "redaction_summary",
+          "NEXT_ACTION"
+        ],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T043804Z-preflight-require-head-consistency-task-TASK-120-p85898.json",
+      "id": "evidence_metadata:20260524T043804Z-preflight-require-head-consistency-task-TASK-120-p85898.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045045Z-scan-task-docs-task-TASK-120-strict-p94091.json",
+      "id": "evidence_metadata:20260524T045045Z-scan-task-docs-task-TASK-120-strict-p94091.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045053Z-scan-harness-routing-task-TASK-120-strict-p94575.json",
+      "id": "evidence_metadata:20260524T045053Z-scan-harness-routing-task-TASK-120-strict-p94575.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045056Z-scan-harness-health-task-TASK-120-strict-p95066.json",
+      "id": "evidence_metadata:20260524T045056Z-scan-harness-health-task-TASK-120-strict-p95066.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045102Z-scan-scanner-self-tests-task-TASK-120-strict-p95566.json",
+      "id": "evidence_metadata:20260524T045102Z-scan-scanner-self-tests-task-TASK-120-strict-p95566.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045107Z-scan-source-format-task-TASK-120-strict-p96049.json",
+      "id": "evidence_metadata:20260524T045107Z-scan-source-format-task-TASK-120-strict-p96049.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045121Z-scan-automatic-legacy-monolith-task-TASK-120-strict-p96553.json",
+      "id": "evidence_metadata:20260524T045121Z-scan-automatic-legacy-monolith-task-TASK-120-strict-p96553.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045121Z-scan-duplicate-symbols-task-TASK-120-strict-p96554.json",
+      "id": "evidence_metadata:20260524T045121Z-scan-duplicate-symbols-task-TASK-120-strict-p96554.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045121Z-scan-mainactor-boundary-task-TASK-120-strict-p96601.json",
+      "id": "evidence_metadata:20260524T045121Z-scan-mainactor-boundary-task-TASK-120-strict-p96601.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045121Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p96602.json",
+      "id": "evidence_metadata:20260524T045121Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p96602.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045130Z-scan-manual-root-residue-task-TASK-120-strict-p98404.json",
+      "id": "evidence_metadata:20260524T045130Z-scan-manual-root-residue-task-TASK-120-strict-p98404.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045130Z-scan-master-plan-consistency-task-TASK-120-strict-p98405.json",
+      "id": "evidence_metadata:20260524T045130Z-scan-master-plan-consistency-task-TASK-120-strict-p98405.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045130Z-scan-mcp-wrapper-task-TASK-120-strict-p98406.json",
+      "id": "evidence_metadata:20260524T045130Z-scan-mcp-wrapper-task-TASK-120-strict-p98406.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045130Z-scan-status-taxonomy-task-TASK-120-strict-p98475.json",
+      "id": "evidence_metadata:20260524T045130Z-scan-status-taxonomy-task-TASK-120-strict-p98475.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045137Z-scan-dead-code-task-TASK-120-strict-p214.json",
+      "id": "evidence_metadata:20260524T045137Z-scan-dead-code-task-TASK-120-strict-p214.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045137Z-scan-manual-boundary-task-TASK-120-strict-p136.json",
+      "id": "evidence_metadata:20260524T045137Z-scan-manual-boundary-task-TASK-120-strict-p136.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045137Z-scan-sync-architecture-task-TASK-120-strict-p135.json",
+      "id": "evidence_metadata:20260524T045137Z-scan-sync-architecture-task-TASK-120-strict-p135.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T045137Z-scan-xcode-membership-task-TASK-120-strict-p227.json",
+      "id": "evidence_metadata:20260524T045137Z-scan-xcode-membership-task-TASK-120-strict-p227.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050012Z-scan-duplicate-symbols-task-TASK-120-strict-p8118.json",
+      "id": "evidence_metadata:20260524T050012Z-scan-duplicate-symbols-task-TASK-120-strict-p8118.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050012Z-scan-mainactor-boundary-task-TASK-120-strict-p8054.json",
+      "id": "evidence_metadata:20260524T050012Z-scan-mainactor-boundary-task-TASK-120-strict-p8054.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050012Z-scan-manual-root-residue-task-TASK-120-strict-p8053.json",
+      "id": "evidence_metadata:20260524T050012Z-scan-manual-root-residue-task-TASK-120-strict-p8053.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050046Z-scan-mainactor-boundary-task-TASK-120-strict-p9702.json",
+      "id": "evidence_metadata:20260524T050046Z-scan-mainactor-boundary-task-TASK-120-strict-p9702.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050046Z-scan-manual-boundary-task-TASK-120-strict-p9704.json",
+      "id": "evidence_metadata:20260524T050046Z-scan-manual-boundary-task-TASK-120-strict-p9704.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050046Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p9703.json",
+      "id": "evidence_metadata:20260524T050046Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p9703.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050046Z-scan-sync-architecture-task-TASK-120-strict-p9705.json",
+      "id": "evidence_metadata:20260524T050046Z-scan-sync-architecture-task-TASK-120-strict-p9705.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050105Z-scan-source-format-task-TASK-120-strict-p11596.json",
+      "id": "evidence_metadata:20260524T050105Z-scan-source-format-task-TASK-120-strict-p11596.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050105Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p11562.json",
+      "id": "evidence_metadata:20260524T050105Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p11562.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050105Z-scan-xcode-membership-task-TASK-120-strict-p11583.json",
+      "id": "evidence_metadata:20260524T050105Z-scan-xcode-membership-task-TASK-120-strict-p11583.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050110Z-scan-scanner-self-tests-task-TASK-120-strict-p12795.json",
+      "id": "evidence_metadata:20260524T050110Z-scan-scanner-self-tests-task-TASK-120-strict-p12795.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050152Z-ios-build-debug-task-TASK-120-p13420.json",
+      "id": "evidence_metadata:20260524T050152Z-ios-build-debug-task-TASK-120-p13420.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050233Z-ios-build-release-task-TASK-120-p14261.json",
+      "id": "evidence_metadata:20260524T050233Z-ios-build-release-task-TASK-120-p14261.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050353Z-ios-test-automatic-architecture-task-TASK-120-p15048.json",
+      "id": "evidence_metadata:20260524T050353Z-ios-test-automatic-architecture-task-TASK-120-p15048.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T050457Z-ios-test-automatic-architecture-task-TASK-120-p16140.json",
+      "id": "evidence_metadata:20260524T050457Z-ios-test-automatic-architecture-task-TASK-120-p16140.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051014Z-scan-duplicate-symbols-task-TASK-120-strict-p17722.json",
+      "id": "evidence_metadata:20260524T051014Z-scan-duplicate-symbols-task-TASK-120-strict-p17722.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051014Z-scan-manual-boundary-task-TASK-120-strict-p17724.json",
+      "id": "evidence_metadata:20260524T051014Z-scan-manual-boundary-task-TASK-120-strict-p17724.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051014Z-scan-source-format-task-TASK-120-strict-p17697.json",
+      "id": "evidence_metadata:20260524T051014Z-scan-source-format-task-TASK-120-strict-p17697.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051014Z-scan-sync-architecture-task-TASK-120-strict-p17721.json",
+      "id": "evidence_metadata:20260524T051014Z-scan-sync-architecture-task-TASK-120-strict-p17721.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051025Z-scan-mainactor-boundary-task-TASK-120-strict-p19365.json",
+      "id": "evidence_metadata:20260524T051025Z-scan-mainactor-boundary-task-TASK-120-strict-p19365.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051025Z-scan-scanner-self-tests-task-TASK-120-strict-p19389.json",
+      "id": "evidence_metadata:20260524T051025Z-scan-scanner-self-tests-task-TASK-120-strict-p19389.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051025Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p19395.json",
+      "id": "evidence_metadata:20260524T051025Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p19395.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051025Z-scan-xcode-membership-task-TASK-120-strict-p19390.json",
+      "id": "evidence_metadata:20260524T051025Z-scan-xcode-membership-task-TASK-120-strict-p19390.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051031Z-ios-test-automatic-architecture-task-TASK-120-p20988.json",
+      "id": "evidence_metadata:20260524T051031Z-ios-test-automatic-architecture-task-TASK-120-p20988.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051052Z-ios-build-debug-task-TASK-120-p21665.json",
+      "id": "evidence_metadata:20260524T051052Z-ios-build-debug-task-TASK-120-p21665.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051103Z-ios-build-release-task-TASK-120-p22263.json",
+      "id": "evidence_metadata:20260524T051103Z-ios-build-release-task-TASK-120-p22263.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051216Z-ios-test-automatic-domain-task-TASK-120-p23042.json",
+      "id": "evidence_metadata:20260524T051216Z-ios-test-automatic-domain-task-TASK-120-p23042.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051239Z-ios-test-sync-task-TASK-120-p23701.json",
+      "id": "evidence_metadata:20260524T051239Z-ios-test-sync-task-TASK-120-p23701.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051643Z-scan-source-format-task-TASK-120-strict-p25096.json",
+      "id": "evidence_metadata:20260524T051643Z-scan-source-format-task-TASK-120-strict-p25096.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051648Z-ios-test-sync-task-TASK-120-p25562.json",
+      "id": "evidence_metadata:20260524T051648Z-ios-test-sync-task-TASK-120-p25562.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051929Z-ios-smoke-options-task-TASK-120-p49536.json",
+      "id": "evidence_metadata:20260524T051929Z-ios-smoke-options-task-TASK-120-p49536.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051951Z-supabase-contract-sync-schema-task-TASK-120-read-only-p50126.json",
+      "id": "evidence_metadata:20260524T051951Z-supabase-contract-sync-schema-task-TASK-120-read-only-p50126.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T051951Z-supabase-status-redacted-task-TASK-120-p50127.json",
+      "id": "evidence_metadata:20260524T051951Z-supabase-status-redacted-task-TASK-120-p50127.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T052210Z-scan-evidence-metadata-task-TASK-120-strict-p51863.json",
+      "id": "evidence_metadata:20260524T052210Z-scan-evidence-metadata-task-TASK-120-strict-p51863.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T052210Z-scan-master-plan-consistency-task-TASK-120-strict-p51860.json",
+      "id": "evidence_metadata:20260524T052210Z-scan-master-plan-consistency-task-TASK-120-strict-p51860.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T052210Z-scan-task-docs-task-TASK-120-strict-p51838.json",
+      "id": "evidence_metadata:20260524T052210Z-scan-task-docs-task-TASK-120-strict-p51838.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T052220Z-scan-evidence-task-TASK-120-p53087.json",
+      "id": "evidence_metadata:20260524T052220Z-scan-evidence-task-TASK-120-p53087.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T052220Z-scan-sensitive-task-TASK-120-p53086.json",
+      "id": "evidence_metadata:20260524T052220Z-scan-sensitive-task-TASK-120-p53086.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T052228Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p57574.json",
+      "id": "evidence_metadata:20260524T052228Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p57574.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T052249Z-scan-master-plan-consistency-task-TASK-120-strict-p58252.json",
+      "id": "evidence_metadata:20260524T052249Z-scan-master-plan-consistency-task-TASK-120-strict-p58252.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T052249Z-scan-task-docs-task-TASK-120-strict-p58251.json",
+      "id": "evidence_metadata:20260524T052249Z-scan-task-docs-task-TASK-120-strict-p58251.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T052254Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p59102.json",
+      "id": "evidence_metadata:20260524T052254Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p59102.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053129Z-git-head-consistency-task-TASK-120-p77299.json",
+      "id": "evidence_metadata:20260524T053129Z-git-head-consistency-task-TASK-120-p77299.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053135Z-preflight-require-head-consistency-task-TASK-120-p77870.json",
+      "id": "evidence_metadata:20260524T053135Z-preflight-require-head-consistency-task-TASK-120-p77870.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053144Z-config-validate-task-TASK-120-p78569.json",
+      "id": "evidence_metadata:20260524T053144Z-config-validate-task-TASK-120-p78569.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053600Z-scan-automatic-legacy-monolith-task-TASK-120-strict-p79582.json",
+      "id": "evidence_metadata:20260524T053600Z-scan-automatic-legacy-monolith-task-TASK-120-strict-p79582.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053600Z-scan-duplicate-symbols-task-TASK-120-strict-p79574.json",
+      "id": "evidence_metadata:20260524T053600Z-scan-duplicate-symbols-task-TASK-120-strict-p79574.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053600Z-scan-harness-health-task-TASK-120-strict-p79573.json",
+      "id": "evidence_metadata:20260524T053600Z-scan-harness-health-task-TASK-120-strict-p79573.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053600Z-scan-harness-routing-task-TASK-120-strict-p79529.json",
+      "id": "evidence_metadata:20260524T053600Z-scan-harness-routing-task-TASK-120-strict-p79529.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053600Z-scan-source-format-task-TASK-120-strict-p79567.json",
+      "id": "evidence_metadata:20260524T053600Z-scan-source-format-task-TASK-120-strict-p79567.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053600Z-scan-task-docs-task-TASK-120-strict-p79528.json",
+      "id": "evidence_metadata:20260524T053600Z-scan-task-docs-task-TASK-120-strict-p79528.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053611Z-scan-mainactor-boundary-task-TASK-120-strict-p81967.json",
+      "id": "evidence_metadata:20260524T053611Z-scan-mainactor-boundary-task-TASK-120-strict-p81967.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053611Z-scan-manual-root-residue-task-TASK-120-strict-p82002.json",
+      "id": "evidence_metadata:20260524T053611Z-scan-manual-root-residue-task-TASK-120-strict-p82002.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053611Z-scan-master-plan-consistency-task-TASK-120-strict-p82007.json",
+      "id": "evidence_metadata:20260524T053611Z-scan-master-plan-consistency-task-TASK-120-strict-p82007.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053611Z-scan-mcp-wrapper-task-TASK-120-strict-p81991.json",
+      "id": "evidence_metadata:20260524T053611Z-scan-mcp-wrapper-task-TASK-120-strict-p81991.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053611Z-scan-scanner-self-tests-task-TASK-120-strict-p82009.json",
+      "id": "evidence_metadata:20260524T053611Z-scan-scanner-self-tests-task-TASK-120-strict-p82009.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053611Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p81968.json",
+      "id": "evidence_metadata:20260524T053611Z-scan-swiftdata-context-boundary-task-TASK-120-strict-p81968.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053620Z-scan-dead-code-task-TASK-120-strict-p84422.json",
+      "id": "evidence_metadata:20260524T053620Z-scan-dead-code-task-TASK-120-strict-p84422.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053620Z-scan-evidence-metadata-task-TASK-120-strict-p84372.json",
+      "id": "evidence_metadata:20260524T053620Z-scan-evidence-metadata-task-TASK-120-strict-p84372.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053620Z-scan-manual-boundary-task-TASK-120-strict-p84419.json",
+      "id": "evidence_metadata:20260524T053620Z-scan-manual-boundary-task-TASK-120-strict-p84419.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053620Z-scan-status-taxonomy-task-TASK-120-strict-p84371.json",
+      "id": "evidence_metadata:20260524T053620Z-scan-status-taxonomy-task-TASK-120-strict-p84371.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053620Z-scan-sync-architecture-task-TASK-120-strict-p84433.json",
+      "id": "evidence_metadata:20260524T053620Z-scan-sync-architecture-task-TASK-120-strict-p84433.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053620Z-scan-xcode-membership-task-TASK-120-strict-p84434.json",
+      "id": "evidence_metadata:20260524T053620Z-scan-xcode-membership-task-TASK-120-strict-p84434.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053649Z-ios-build-debug-task-TASK-120-p86812.json",
+      "id": "evidence_metadata:20260524T053649Z-ios-build-debug-task-TASK-120-p86812.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053703Z-ios-build-release-task-TASK-120-p87531.json",
+      "id": "evidence_metadata:20260524T053703Z-ios-build-release-task-TASK-120-p87531.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053815Z-ios-test-automatic-architecture-task-TASK-120-p88312.json",
+      "id": "evidence_metadata:20260524T053815Z-ios-test-automatic-architecture-task-TASK-120-p88312.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053839Z-ios-test-automatic-domain-task-TASK-120-p89056.json",
+      "id": "evidence_metadata:20260524T053839Z-ios-test-automatic-domain-task-TASK-120-p89056.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T053850Z-ios-test-sync-task-TASK-120-p89651.json",
+      "id": "evidence_metadata:20260524T053850Z-ios-test-sync-task-TASK-120-p89651.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054122Z-ios-smoke-options-task-TASK-120-p90511.json",
+      "id": "evidence_metadata:20260524T054122Z-ios-smoke-options-task-TASK-120-p90511.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054145Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p91101.json",
+      "id": "evidence_metadata:20260524T054145Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p91101.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054145Z-scan-evidence-task-TASK-120-p91103.json",
+      "id": "evidence_metadata:20260524T054145Z-scan-evidence-task-TASK-120-p91103.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054145Z-scan-sensitive-task-TASK-120-p91095.json",
+      "id": "evidence_metadata:20260524T054145Z-scan-sensitive-task-TASK-120-p91095.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054145Z-supabase-contract-sync-schema-task-TASK-120-read-only-p91106.json",
+      "id": "evidence_metadata:20260524T054145Z-supabase-contract-sync-schema-task-TASK-120-read-only-p91106.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054145Z-supabase-status-redacted-task-TASK-120-p91094.json",
+      "id": "evidence_metadata:20260524T054145Z-supabase-status-redacted-task-TASK-120-p91094.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054728Z-ios-build-release-task-TASK-120-p291.json",
+      "id": "evidence_metadata:20260524T054728Z-ios-build-release-task-TASK-120-p291.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054728Z-scan-evidence-metadata-task-TASK-120-strict-p293.json",
+      "id": "evidence_metadata:20260524T054728Z-scan-evidence-metadata-task-TASK-120-strict-p293.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054728Z-scan-scanner-self-tests-task-TASK-120-strict-p268.json",
+      "id": "evidence_metadata:20260524T054728Z-scan-scanner-self-tests-task-TASK-120-strict-p268.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054728Z-scan-sync-architecture-task-TASK-120-strict-p292.json",
+      "id": "evidence_metadata:20260524T054728Z-scan-sync-architecture-task-TASK-120-strict-p292.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054851Z-ios-build-debug-task-TASK-120-p2534.json",
+      "id": "evidence_metadata:20260524T054851Z-ios-build-debug-task-TASK-120-p2534.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054851Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p2535.json",
+      "id": "evidence_metadata:20260524T054851Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p2535.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054851Z-scan-source-format-task-TASK-120-strict-p2533.json",
+      "id": "evidence_metadata:20260524T054851Z-scan-source-format-task-TASK-120-strict-p2533.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054919Z-ios-test-automatic-architecture-task-TASK-120-p4010.json",
+      "id": "evidence_metadata:20260524T054919Z-ios-test-automatic-architecture-task-TASK-120-p4010.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "BLOCKED_EXTERNAL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054919Z-ios-test-automatic-domain-task-TASK-120-p4040.json",
+      "id": "evidence_metadata:20260524T054919Z-ios-test-automatic-domain-task-TASK-120-p4040.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "BLOCKED_EXTERNAL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054919Z-ios-test-sync-task-TASK-120-p4041.json",
+      "id": "evidence_metadata:20260524T054919Z-ios-test-sync-task-TASK-120-p4041.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054933Z-ios-test-automatic-domain-task-TASK-120-p5316.json",
+      "id": "evidence_metadata:20260524T054933Z-ios-test-automatic-domain-task-TASK-120-p5316.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T054945Z-ios-test-sync-task-TASK-120-p5900.json",
+      "id": "evidence_metadata:20260524T054945Z-ios-test-sync-task-TASK-120-p5900.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055220Z-ios-smoke-options-task-TASK-120-p6759.json",
+      "id": "evidence_metadata:20260524T055220Z-ios-smoke-options-task-TASK-120-p6759.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055248Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p7358.json",
+      "id": "evidence_metadata:20260524T055248Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p7358.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055450Z-scan-master-plan-consistency-task-TASK-120-strict-p8829.json",
+      "id": "evidence_metadata:20260524T055450Z-scan-master-plan-consistency-task-TASK-120-strict-p8829.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055450Z-scan-task-docs-task-TASK-120-strict-p8830.json",
+      "id": "evidence_metadata:20260524T055450Z-scan-task-docs-task-TASK-120-strict-p8830.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055457Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p9696.json",
+      "id": "evidence_metadata:20260524T055457Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p9696.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055457Z-scan-evidence-metadata-task-TASK-120-strict-p9695.json",
+      "id": "evidence_metadata:20260524T055457Z-scan-evidence-metadata-task-TASK-120-strict-p9695.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055543Z-scan-master-plan-consistency-task-TASK-120-strict-p10828.json",
+      "id": "evidence_metadata:20260524T055543Z-scan-master-plan-consistency-task-TASK-120-strict-p10828.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055543Z-scan-task-docs-task-TASK-120-strict-p10809.json",
+      "id": "evidence_metadata:20260524T055543Z-scan-task-docs-task-TASK-120-strict-p10809.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055552Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p11681.json",
+      "id": "evidence_metadata:20260524T055552Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p11681.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055552Z-scan-evidence-metadata-task-TASK-120-strict-p11680.json",
+      "id": "evidence_metadata:20260524T055552Z-scan-evidence-metadata-task-TASK-120-strict-p11680.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055627Z-scan-master-plan-consistency-task-TASK-120-strict-p12773.json",
+      "id": "evidence_metadata:20260524T055627Z-scan-master-plan-consistency-task-TASK-120-strict-p12773.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055627Z-scan-task-docs-task-TASK-120-strict-p12772.json",
+      "id": "evidence_metadata:20260524T055627Z-scan-task-docs-task-TASK-120-strict-p12772.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055639Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p13645.json",
+      "id": "evidence_metadata:20260524T055639Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p13645.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "FAIL",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055639Z-scan-evidence-metadata-task-TASK-120-strict-p13644.json",
+      "id": "evidence_metadata:20260524T055639Z-scan-evidence-metadata-task-TASK-120-strict-p13644.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055700Z-scan-master-plan-consistency-task-TASK-120-strict-p14707.json",
+      "id": "evidence_metadata:20260524T055700Z-scan-master-plan-consistency-task-TASK-120-strict-p14707.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055700Z-scan-task-docs-task-TASK-120-strict-p14706.json",
+      "id": "evidence_metadata:20260524T055700Z-scan-task-docs-task-TASK-120-strict-p14706.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "artifact_missing": [],
+        "canonical_status": "PASS",
+        "missing": [],
+        "schema_version": "1.1",
+        "task_id": "TASK-120"
+      },
+      "file": "docs/TASKS/EVIDENCE/TASK-120/agent-runs/20260524T055706Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p15584.json",
+      "id": "evidence_metadata:20260524T055706Z-report-validate-json-task-TASK-120-path-docs-TASKS-EVIDENCE-TASK-120-agent-runs-p15584.json",
+      "reason": "JSON report has TASK-120 metadata, canonical status, artifacts and NEXT_ACTION.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "outside_agent_runs": []
+      },
+      "id": "no_report_json_outside_agent_runs",
+      "reason": "TASK-120 report JSON files live under agent-runs.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T23:38:02+00:00",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "evidence-metadata",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.evidence-metadata",
+  "started_at": "2026-05-24T23:38:02+00:00",
+  "status": "FAIL",
+  "summary": "evidence-metadata: FAIL (125 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

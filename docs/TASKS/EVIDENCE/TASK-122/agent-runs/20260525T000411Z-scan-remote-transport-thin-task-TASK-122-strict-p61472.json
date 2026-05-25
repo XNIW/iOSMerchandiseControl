@@ -1,0 +1,139 @@
+{
+  "NEXT_ACTION": "Use this report in TASK-122 evidence matrix.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T000411Z-scan-remote-transport-thin-task-TASK-122-strict-p61472.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T000411Z-scan-remote-transport-thin-task-TASK-122-strict-p61472.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T000411Z-scan-remote-transport-thin-task-TASK-122-strict-p61472.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-122-11",
+    "CA-122-12",
+    "CA-122-26",
+    "CA-122-68"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan remote-transport-thin --task TASK-122 --strict",
+  "command_slug": "scan-remote-transport-thin-task-TASK-122-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 849,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-122",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK122_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-122"
+  },
+  "exit_code": 0,
+  "git_sha": "6cc042c",
+  "next_action_recommended": "Use this report in TASK-122 evidence matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Move domain behavior out of SupabaseTransportClient.",
+    "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+    "checks": [
+      {
+        "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+        "id": "transport_exists",
+        "reason": "SupabaseTransportClient exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "loc": 135
+        },
+        "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+        "id": "transport_loc_under_hard_limit",
+        "reason": "Transport hard limit is 500 LOC.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "loc": 135
+        },
+        "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+        "id": "transport_loc_prefer_under_300",
+        "reason": "Preferred transport size is <300 LOC.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+        "id": "transport_no_domain_methods",
+        "reason": "Transport has no domain-specific methods.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-25T00:04:12+00:00",
+    "exitCode": 0,
+    "finishedAt": "2026-05-25T00:04:12+00:00",
+    "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+    "localCanonicalOverride": true,
+    "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+    "nextAction": "Move domain behavior out of SupabaseTransportClient.",
+    "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+    "redactionSummary": {
+      "emails_redacted_by_wrapper": true,
+      "paths_redacted_by_wrapper": true,
+      "scanner_outputs_do_not_include_secret_values": true
+    },
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "PASS",
+    "safety_level": "read_only_static_scan",
+    "scan": "remote-transport-thin",
+    "scannerName": "remote-transport-thin",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.remote-transport-thin",
+    "startedAt": "2026-05-25T00:04:12+00:00",
+    "started_at": "2026-05-25T00:04:12+00:00",
+    "status": "PASS",
+    "summary": "remote-transport-thin: PASS (4 checks)",
+    "taskId": "TASK-122",
+    "task_id": "TASK-122"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T000411Z-scan-remote-transport-thin-task-TASK-122-strict-p61472",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-122",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-25T00:04:12Z",
+  "timestamp_start": "2026-05-25T00:04:11Z",
+  "warnings": []
+}

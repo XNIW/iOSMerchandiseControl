@@ -1,0 +1,35 @@
+{
+  "ledger": [
+    {
+      "androidRepoAvailable": true,
+      "status": "PENDING_EXECUTION_AUDIT",
+      "topic": "ProductPrice paging/keyset"
+    },
+    {
+      "androidRepoAvailable": true,
+      "status": "PENDING_EXECUTION_AUDIT",
+      "topic": "catalog push/pull"
+    },
+    {
+      "androidRepoAvailable": true,
+      "status": "PENDING_EXECUTION_AUDIT",
+      "topic": "history/session"
+    },
+    {
+      "androidRepoAvailable": true,
+      "status": "PENDING_EXECUTION_AUDIT",
+      "topic": "sync_events/outbox"
+    },
+    {
+      "androidRepoAvailable": true,
+      "status": "PENDING_EXECUTION_AUDIT",
+      "topic": "manual sync"
+    },
+    {
+      "androidRepoAvailable": true,
+      "status": "PENDING_EXECUTION_AUDIT",
+      "topic": "import/export side effects"
+    }
+  ],
+  "taskId": "TASK-122"
+}

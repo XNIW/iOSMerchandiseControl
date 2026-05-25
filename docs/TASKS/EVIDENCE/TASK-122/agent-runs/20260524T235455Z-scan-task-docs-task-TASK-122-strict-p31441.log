@@ -1,0 +1,70 @@
+=== mc-agent scan task-docs --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Fix TASK-122 tracking docs before execution.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "file": "docs/TASKS/TASK-122-ios-sync-remote-domain-strangler.md",
+      "id": "task_file_exists",
+      "reason": "TASK-122 file exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/TASKS/EVIDENCE/TASK-122/README.md",
+      "id": "evidence_readme_exists",
+      "reason": "TASK-122 evidence README exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/TASKS/TASK-122-ios-sync-remote-domain-strangler.md",
+      "id": "task_active_state",
+      "reason": "TASK-122 is ACTIVE / EXECUTION under LOCAL_CANONICAL_EXECUTION_OVERRIDE.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/TASKS/TASK-122-ios-sync-remote-domain-strangler.md",
+      "id": "local_canonical_override_recorded",
+      "reason": "Local canonical override is documented when used.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/MASTER-PLAN.md",
+      "id": "master_points_task122",
+      "reason": "MASTER-PLAN references TASK-122 current task.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/MASTER-PLAN.md",
+      "id": "task121_not_done_superseded",
+      "reason": "TASK-121 remains non-DONE and superseded only for remote blocker.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T23:54:56+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-24T23:54:56+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localCanonicalOverride": true,
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Fix TASK-122 tracking docs before execution.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "task-docs",
+  "scannerName": "task-docs",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.task-docs",
+  "startedAt": "2026-05-24T23:54:56+00:00",
+  "started_at": "2026-05-24T23:54:56+00:00",
+  "status": "PASS",
+  "summary": "task-docs: PASS (6 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

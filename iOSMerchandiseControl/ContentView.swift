@@ -103,6 +103,7 @@ struct ContentView: View {
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
     private let historySessionSyncService: HistorySessionSyncService?
+    private let remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?
 
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
@@ -125,6 +126,11 @@ struct ContentView: View {
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.historySessionSyncService = supabaseInventoryService.map {
             HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: $0))
+        }
+        if let supabaseInventoryService {
+            self.remoteCountFetcher = SyncEventRemoteSupabaseAdapter(remote: supabaseInventoryService)
+        } else {
+            self.remoteCountFetcher = nil
         }
     }
 
@@ -208,7 +214,7 @@ struct ContentView: View {
             // TAB 4: Opzioni
             NavigationStack {
                 OptionsView(
-                    remoteCountFetcher: supabaseInventoryService,
+                    remoteCountFetcher: remoteCountFetcher,
                     supabasePullPreviewService: supabasePullPreviewService,
                     syncStateStore: syncStateStore,
                     syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder

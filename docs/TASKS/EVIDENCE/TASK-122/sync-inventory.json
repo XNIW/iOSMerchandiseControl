@@ -1,0 +1,940 @@
+{
+  "files": [
+    {
+      "category": "Shared",
+      "file": "iOSMerchandiseControl/Sync/Account/AccountBindingStore.swift",
+      "loc": 52
+    },
+    {
+      "category": "Shared",
+      "file": "iOSMerchandiseControl/Sync/Account/AccountSwitchPolicy.swift",
+      "loc": 166
+    },
+    {
+      "category": "Shared",
+      "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift",
+      "loc": 140
+    },
+    {
+      "category": "Shared",
+      "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecisionView.swift",
+      "loc": 162
+    },
+    {
+      "category": "Shared",
+      "file": "iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+      "loc": 31
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "loc": 81
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "loc": 338
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+      "loc": 10
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+      "loc": 50
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
+      "loc": 50
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+      "loc": 19
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+      "loc": 225
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift",
+      "loc": 55
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+      "loc": 77
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+      "loc": 24
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+      "loc": 61
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+      "loc": 4
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncAutomaticTriggerSource.swift",
+      "loc": 9
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
+      "loc": 139
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+      "loc": 254
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncTrigger.swift",
+      "loc": 13
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "loc": 158
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
+      "loc": 8
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+      "loc": 63
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+      "loc": 88
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+      "loc": 54
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "loc": 98
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticPresentationBoundary.swift",
+      "loc": 4
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift",
+      "loc": 118
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+      "loc": 330
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift",
+      "loc": 54
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift",
+      "loc": 136
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStatusPresenter.swift",
+      "loc": 48
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+      "loc": 25
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "loc": 267
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+      "loc": 5
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+      "loc": 38
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+      "loc": 4
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplyService.swift",
+      "loc": 209
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplySummary.swift",
+      "loc": 35
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+      "loc": 244
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplySummary.swift",
+      "loc": 24
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+      "loc": 175
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplySummary.swift",
+      "loc": 25
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "loc": 421
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalContracts.swift",
+      "loc": 48
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+      "loc": 267
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalPullService.swift",
+      "loc": 41
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift",
+      "loc": 68
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift",
+      "loc": 98
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "loc": 1
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift",
+      "loc": 337
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/HistorySessionPayloadSnapshotFactory.swift",
+      "loc": 26
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+      "loc": 400
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "loc": 1222
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/ManualSyncBoundary.swift",
+      "loc": 4
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift",
+      "loc": 381
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineModels.swift",
+      "loc": 134
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "loc": 331
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift",
+      "loc": 296
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogFingerprintNormalizer.swift",
+      "loc": 79
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+      "loc": 537
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+      "loc": 872
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "loc": 1149
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+      "loc": 15
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncBaselineCommitter.swift",
+      "loc": 77
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift",
+      "loc": 9
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift",
+      "loc": 650
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
+      "loc": 106
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift",
+      "loc": 303
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "loc": 314
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncOutboxProducerConversions.swift",
+      "loc": 77
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+      "loc": 147
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+      "loc": 846
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+      "loc": 317
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift",
+      "loc": 86
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "loc": 6550
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+      "loc": 746
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+      "loc": 361
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "loc": 882
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift",
+      "loc": 441
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugFormatting.swift",
+      "loc": 206
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugViewModel.swift",
+      "loc": 171
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventIncrementalApplyService.swift",
+      "loc": 219
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+      "loc": 183
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift",
+      "loc": 203
+    },
+    {
+      "category": "Manual",
+      "file": "iOSMerchandiseControl/Sync/Manual/SyncEventOutboxDrainDebugViewModel.swift",
+      "loc": 343
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+      "loc": 34
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+      "loc": 59
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift",
+      "loc": 471
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+      "loc": 29
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
+      "loc": 517
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift",
+      "loc": 546
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+      "loc": 15
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift",
+      "loc": 523
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/BootstrapPullService.swift",
+      "loc": 20
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/DriftReconciliationService.swift",
+      "loc": 21
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/FullRecoveryService.swift",
+      "loc": 20
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/InventorySyncService.swift",
+      "loc": 287
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/RecoveryRemoteSupabaseAdapter.swift",
+      "loc": 27
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "loc": 1783
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "loc": 1752
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "loc": 627
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+      "loc": 1018
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/SwiftDataInventorySnapshotService.swift",
+      "loc": 341
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+      "loc": 226
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+      "loc": 158
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+      "loc": 130
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "loc": 265
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift",
+      "loc": 96
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift",
+      "loc": 183
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventDTOs.swift",
+      "loc": 238
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift",
+      "loc": 293
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRPCTransport.swift",
+      "loc": 44
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRealtimeWatcher.swift",
+      "loc": 72
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "loc": 136
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRPCRequestMapper.swift",
+      "loc": 221
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift",
+      "loc": 633
+    },
+    {
+      "category": "Remote",
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+      "loc": 137
+    },
+    {
+      "category": "Shared",
+      "file": "iOSMerchandiseControl/Sync/Shared/AutomaticSharedBoundary.swift",
+      "loc": 4
+    },
+    {
+      "category": "Shared",
+      "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+      "loc": 297
+    },
+    {
+      "category": "Shared",
+      "file": "iOSMerchandiseControl/Sync/Shared/SyncStringCollectionHelpers.swift",
+      "loc": 7
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+      "loc": 3
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+      "loc": 2
+    },
+    {
+      "category": "Automatic",
+      "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+      "loc": 472
+    },
+    {
+      "category": "Recovery",
+      "file": "iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift",
+      "loc": 68
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/AccountSyncPolicyTests.swift",
+      "loc": 253
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/AutomaticSyncReconnectSchedulerTests.swift",
+      "loc": 52
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/CloudSyncOverviewStateTests.swift",
+      "loc": 95
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/ExcelAnalyzerHTMLParsingTests.swift",
+      "loc": 351
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/HistorySessionSyncServiceTests.swift",
+      "loc": 554
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/HistoryViewStateTests.swift",
+      "loc": 22
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/InventorySyncServiceTests.swift",
+      "loc": 78
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests.swift",
+      "loc": 500
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/LocalPendingChangeAccumulatorTests.swift",
+      "loc": 454
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/LocalizationCoverageTests.swift",
+      "loc": 331
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/ManualPushFingerprintNormalizerTests.swift",
+      "loc": 193
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests.swift",
+      "loc": 152
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/OrderQuantitySummaryTests.swift",
+      "loc": 73
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/PendingChangeCoalescerTests.swift",
+      "loc": 43
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/RemoteIdentityMetadataSwiftDataTests.swift",
+      "loc": 159
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseCatalogBaselinePreflightIntegrationTests.swift",
+      "loc": 413
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseCatalogBaselineSwiftDataTests.swift",
+      "loc": 118
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseCatalogBaselineWriterReaderTests.swift",
+      "loc": 293
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseConfigSecurityTests.swift",
+      "loc": 128
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseManualPushPreflightTests.swift",
+      "loc": 649
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseManualPushServiceTests.swift",
+      "loc": 594
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests.swift",
+      "loc": 772
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseManualSyncLifecycleRunGateTests.swift",
+      "loc": 177
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseManualSyncLocalPendingSnapshotProviderTests.swift",
+      "loc": 487
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift",
+      "loc": 233
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift",
+      "loc": 729
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseManualSyncRemotePreviewTests.swift",
+      "loc": 432
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift",
+      "loc": 4187
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseProductPriceApplyServiceTests.swift",
+      "loc": 994
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseProductPriceManualPushServiceTests.swift",
+      "loc": 861
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseProductPricePreviewServiceTests.swift",
+      "loc": 417
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseProductPricePushDryRunServiceTests.swift",
+      "loc": 517
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabasePullApplyServiceTests.swift",
+      "loc": 962
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabasePullPreviewDiffEngineTests.swift",
+      "loc": 604
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabasePullPreviewPaginationTests.swift",
+      "loc": 212
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabasePushPreflightViewModelTests.swift",
+      "loc": 509
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseSyncEventDebugViewModelTests.swift",
+      "loc": 334
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseSyncEventPreviewServiceTests.swift",
+      "loc": 270
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SupabaseSyncPlanContractTests.swift",
+      "loc": 156
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncCountReconciliationTests.swift",
+      "loc": 89
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncDecisionEngineTests.swift",
+      "loc": 114
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift",
+      "loc": 619
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift",
+      "loc": 430
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncEventOutboxDrainServiceTests.swift",
+      "loc": 861
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncEventOutboxEnqueueServiceTests.swift",
+      "loc": 798
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncEventOutboxLocalStoreTests.swift",
+      "loc": 420
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncEventOutboxStateTests.swift",
+      "loc": 319
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncEventRecordingTests.swift",
+      "loc": 609
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift",
+      "loc": 56
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/SyncStatusPresenterTests.swift",
+      "loc": 34
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/Task089LargeDatasetBenchmarkTests.swift",
+      "loc": 537
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift",
+      "loc": 214
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+      "loc": 639
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests.swift",
+      "loc": 2373
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+      "loc": 2741
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/Task105RealOpsClosureTests.swift",
+      "loc": 294
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/Task111ExcelImportParityTests.swift",
+      "loc": 456
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/Task115RealRootLifecycleTests.swift",
+      "loc": 50
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift",
+      "loc": 434
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+      "loc": 222
+    },
+    {
+      "category": "Tests",
+      "file": "iOSMerchandiseControlTests/WatermarkStoreTests.swift",
+      "loc": 61
+    }
+  ],
+  "taskId": "TASK-122"
+}

@@ -1,0 +1,49 @@
+=== mc-agent scan mcp-wrapper --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Update MCP allowlist for TASK-122 safe commands.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "evidence": {
+        "missing": []
+      },
+      "file": "tools/agent/mcp/server.mjs",
+      "id": "mcp_task122_allowlist_present",
+      "reason": "MCP allowlists safe TASK-122 commands.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/mcp/server.mjs",
+      "id": "mcp_no_auto_live_cleanup",
+      "reason": "MCP does not auto-enable live/cleanup gates.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T23:55:15+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-24T23:55:15+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localCanonicalOverride": true,
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Update MCP allowlist for TASK-122 safe commands.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "mcp-wrapper",
+  "scannerName": "mcp-wrapper",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.mcp-wrapper",
+  "startedAt": "2026-05-24T23:55:15+00:00",
+  "started_at": "2026-05-24T23:55:15+00:00",
+  "status": "PASS",
+  "summary": "mcp-wrapper: PASS (2 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

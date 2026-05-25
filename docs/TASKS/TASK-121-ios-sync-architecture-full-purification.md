@@ -12,6 +12,7 @@
 - **Ultimo aggiornamento**: 2026-05-24 17:21 -0400
 - **Ultimo agente che ha operato**: CODEX / Reviewer
 - **Readiness**: CHANGES_REQUIRED. Handoff `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`. Non DONE. Local `HEAD`, `origin/main` and GitHub canonical `main` are aligned on `a7564857128d08d4e15eaf0977617fbd8a91806a`; `2ac8cb02587657307a0ec136e8153f6ee29808a2` remains the historical architecture commit referenced by earlier evidence. Root sync-related forbidden files are absent, but `Sync/Remote/SupabaseTransportClient.swift` is still a multi-domain Remote mega-service, so `ARCHITECTURE_TARGET_MET` is not approved.
+- **Supersede parziale**: TASK-122 supersede TASK-121 solo per il blocker finale `Remote mega-service strangler`. TASK-121 resta NON DONE, baseline storica/tecnica, e non deve essere dichiarato completo.
 - **Tipo task**: planning/refactor governance architetturale iOS; nessuna nuova feature utente.
 - **User override registrato**: l'utente ha prima chiesto a Codex di creare il planning TASK-121, poi ha autorizzato review/fix, continuation FIX e commit/push su GitHub `main` per chiudere il blocker canonical alignment; infine ha richiesto a Codex una review severa indipendente nonostante il workflow standard assegni la review a Claude. Nessun Supabase live, cleanup, migration/RLS/grant/RPC/schema change eseguito.
 

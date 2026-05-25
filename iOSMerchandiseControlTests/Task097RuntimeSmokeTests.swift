@@ -15,10 +15,12 @@ final class Task097RuntimeSmokeTests: XCTestCase {
         let inventory = SupabaseTransportClient(
             clientProvider: SupabaseClientProvider(config: config)
         )
+        let catalogRemote = CatalogRemoteSupabaseAdapter(remote: inventory)
+        let productPriceRemote = ProductPriceRemoteSupabaseAdapter(remote: inventory)
 
-        let suppliers = try await fetchAllSuppliers(inventory)
-        let categories = try await fetchAllCategories(inventory)
-        let products = try await fetchAllProducts(inventory)
+        let suppliers = try await fetchAllSuppliers(catalogRemote)
+        let categories = try await fetchAllCategories(catalogRemote)
+        let products = try await fetchAllProducts(catalogRemote)
 
         let supplierName = "TASK097_SUPPLIER_RUNTIME_SANDBOX_\(suffix)"
         let categoryName = "TASK097_CATEGORY_RUNTIME_SANDBOX_\(suffix)"
@@ -54,7 +56,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
         XCTAssertPrice(productB.purchasePrice, equals: 35.55, label: "Product B catalog purchase")
         XCTAssertPrice(productB.retailPrice, equals: 70.70, label: "Product B catalog retail")
 
-        let prices = try await fetchAllPrices(inventory, ownerUserID: supplier.ownerUserID, productIDs: [productA.id, productB.id])
+        let prices = try await fetchAllPrices(productPriceRemote, ownerUserID: supplier.ownerUserID, productIDs: [productA.id, productB.id])
         XCTAssertEqual(prices.count, 8)
         XCTAssertTrue(prices.allSatisfy { $0.ownerUserID == supplier.ownerUserID })
 
@@ -96,7 +98,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
         )
     }
 
-    private func fetchAllSuppliers(_ inventory: SupabaseTransportClient) async throws -> [RemoteInventorySupplierRow] {
+    private func fetchAllSuppliers(_ inventory: CatalogRemoteSupabaseAdapter) async throws -> [RemoteInventorySupplierRow] {
         var rows: [RemoteInventorySupplierRow] = []
         for page in 0..<25 {
             let pageRows = try await inventory.fetchSuppliersPage(from: page * 1_000, to: page * 1_000 + 999)
@@ -106,7 +108,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
         return rows
     }
 
-    private func fetchAllCategories(_ inventory: SupabaseTransportClient) async throws -> [RemoteInventoryCategoryRow] {
+    private func fetchAllCategories(_ inventory: CatalogRemoteSupabaseAdapter) async throws -> [RemoteInventoryCategoryRow] {
         var rows: [RemoteInventoryCategoryRow] = []
         for page in 0..<25 {
             let pageRows = try await inventory.fetchCategoriesPage(from: page * 1_000, to: page * 1_000 + 999)
@@ -116,7 +118,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
         return rows
     }
 
-    private func fetchAllProducts(_ inventory: SupabaseTransportClient) async throws -> [RemoteInventoryProductRow] {
+    private func fetchAllProducts(_ inventory: CatalogRemoteSupabaseAdapter) async throws -> [RemoteInventoryProductRow] {
         var rows: [RemoteInventoryProductRow] = []
         for page in 0..<25 {
             let pageRows = try await inventory.fetchProductsPage(from: page * 1_000, to: page * 1_000 + 999)
@@ -127,7 +129,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
     }
 
     private func fetchAllPrices(
-        _ inventory: SupabaseTransportClient,
+        _ inventory: ProductPriceRemoteSupabaseAdapter,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {

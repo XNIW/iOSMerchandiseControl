@@ -1,0 +1,10 @@
+{
+  "taskId": "TASK-122",
+  "localCanonicalOverride": true,
+  "status": "PASS_WITH_NOTES_LOCAL_CANONICAL_OVERRIDE",
+  "transportLocAfter": 136,
+  "debugBuildRunId": "20260525T002109Z-ios-build-debug-task-TASK-122-p89855",
+  "releaseBuildRunId": "20260525T000555Z-ios-build-release-task-TASK-122-p79346",
+  "broadSyncRunId": "20260525T001759Z-ios-test-sync-task-TASK-122-p88346",
+  "finalJsonValidationRunId": "20260525T002203Z-report-validate-json-task-TASK-122-path-docs-TASKS-EVIDENCE-TASK-122-agent-runs-p89854"
+}

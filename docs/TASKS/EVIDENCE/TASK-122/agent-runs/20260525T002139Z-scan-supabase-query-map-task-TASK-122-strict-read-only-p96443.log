@@ -1,0 +1,42 @@
+=== mc-agent scan supabase-query-map --task TASK-122 --strict --read-only ===
+{
+  "NEXT_ACTION": "Use read-only query map before changing schema-facing code.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "evidence": {
+        "count": 117
+      },
+      "id": "supabase_query_map_written",
+      "reason": "Supabase query usage map written.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T00:21:40+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T00:21:40+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localCanonicalOverride": true,
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Use read-only query map before changing schema-facing code.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "supabase-query-map",
+  "scannerName": "supabase-query-map",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.supabase-query-map",
+  "startedAt": "2026-05-25T00:21:40+00:00",
+  "started_at": "2026-05-25T00:21:40+00:00",
+  "status": "PASS",
+  "summary": "supabase-query-map: PASS (1 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

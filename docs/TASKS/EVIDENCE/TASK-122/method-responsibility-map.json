@@ -1,0 +1,50 @@
+{
+  "methods": [
+    {
+      "category": "unknown",
+      "line": 26,
+      "name": "sanitizedDiagnosticDetail"
+    },
+    {
+      "category": "unknown",
+      "line": 30,
+      "name": "detail"
+    },
+    {
+      "category": "unknown",
+      "line": 40,
+      "name": "sanitized"
+    },
+    {
+      "category": "transport",
+      "line": 73,
+      "name": "client"
+    },
+    {
+      "category": "transport",
+      "line": 79,
+      "name": "authenticatedUserID"
+    },
+    {
+      "category": "unknown",
+      "line": 87,
+      "name": "testConnection"
+    },
+    {
+      "category": "transport",
+      "line": 98,
+      "name": "mapPostgrestError"
+    },
+    {
+      "category": "transport",
+      "line": 121,
+      "name": "mapDecodingError"
+    },
+    {
+      "category": "transport",
+      "line": 132,
+      "name": "networkError"
+    }
+  ],
+  "taskId": "TASK-122"
+}

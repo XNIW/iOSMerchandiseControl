@@ -1,0 +1,273 @@
+# Protocol Conformance Map
+
+- `iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift` `AccountSyncPolicyInput`: Equatable
+- `iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift` `AccountSyncDecision`: Equatable
+- `iOSMerchandiseControl/Sync/Account/AccountSyncDecisionView.swift` `AccountSyncDecisionView`: View
+- `iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift` `LocalStoreIdentity`: RawRepresentable, Codable, Equatable, Hashable, Sendable
+- `iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift` `AccountBinding`: Codable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift` `SyncAutomaticSupplierCreatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift` `SyncAutomaticSupplierUpdatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift` `SyncAutomaticCategoryCreatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift` `SyncAutomaticCategoryUpdatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift` `SyncAutomaticProductCreatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift` `SyncAutomaticProductUpdatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift` `CatalogPushService`: SyncCatalogPushProviding
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift` `CatalogPushOutcome`: Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift` `SyncCatalogPushPlan`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift` `SyncCatalogPushResult`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift` `AutomaticSyncRetryDecision`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift` `AutomaticSyncRetryPolicy`: Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift` `SyncNoopAutomaticRuntime`: SyncAutomaticRuntimeProviding
+- `iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift` `AutomaticSyncRuntimeFacade`: SyncAutomaticRuntimeProviding
+- `iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift` `SyncAutomaticRunResult`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift` `SyncDecisionInput`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift` `SyncDecisionInputSnapshot`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift` `SyncDecisionInputProvider`: SyncDecisionInputProviding
+- `iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift` `HistorySessionPushService`: SyncHistorySessionPushProviding
+- `iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift` `SyncHistorySessionSummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift` `SyncHistorySessionPushPlan`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift` `SyncHistorySessionPushResult`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift` `SyncActivityRegistrationSnapshot`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift` `SyncActivityRegistrationSummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift` `SyncActivityRegistrationResult`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift` `SyncActivityRegistrationService`: SyncActivityRegistrationProviding
+- `iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift` `AutomaticSyncReconnectScheduler`: @unchecked Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift` `OptionsSyncAuthSnapshot`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift` `OptionsSyncSummaryProvider`: ObservableObject
+- `iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift` `SyncProgress`: Equatable
+- `iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift` `SyncState`: Equatable
+- `iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift` `SyncStateStore`: ObservableObject
+- `iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift` `SyncAutomaticProductPricePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift` `ProductPricePushService`: SyncProductPriceSyncProviding
+- `iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift` `ProductPricePushOutcome`: Sendable
+- `iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift` `SyncProductPricePushPlan`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift` `SyncProductPricePushResult`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplySummary.swift` `CatalogIncrementalApplySummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplySummary.swift` `HistoryIncrementalApplySummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplySummary.swift` `ProductPriceIncrementalApplySummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift` `IncrementalApplyProtectedRemoteIDs`: Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift` `TargetedCatalogApplyResult`: Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift` `TargetedProductPriceLogicalKey`: Hashable
+- `iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift` `SyncEventEntityIDSet`: Sendable
+- `iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalPullService.swift` `SyncEventIncrementalPullService`: SyncIncrementalPullProviding
+- `iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift` `SyncIncrementalPullSummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift` `Scope`: Equatable, Hashable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift` `CloudSyncOverviewInput`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift` `CloudSyncOverviewState`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift` `CloudSyncProgressState`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift` `LocalPendingAggregatedPushRetryInfo`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift` `LocalPendingAggregatedPushCounts`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift` `LocalPendingAggregatedPushSummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift` `LocalPendingAggregatedCatalogBatch`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift` `LocalPendingAggregatedProductPriceBatch`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift` `LocalPendingAggregatedPushPlan`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift` `ProductPriceManualPushDebugViewModel`: ObservableObject
+- `iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift` `SupabaseCatalogManualPushBaseline`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift` `SupabaseCatalogBaselineDebugSummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift` `SupabaseCatalogBaselineCommitResult`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift` `ManualPushFingerprint`: Sendable, Equatable, Hashable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift` `ManualPushFingerprintField`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift` `ManualPushScopeSummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift` `PushCandidate`: Identifiable, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift` `ManualPushPlan`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift` `ManualPushPreview`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift` `ManualPushPullState`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift` `ManualPushAccountState`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift` `ManualPushBaseline`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift` `ManualPushLookupState`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift` `ManualPushProductState`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift` `ManualPushPreflightInput`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift` `SupabaseManualPushPreflightService`: Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift` `SupabaseManualPushTouchedIDs`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift` `SupabaseManualPushReadBackExpectation`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift` `SupabaseManualPushResult`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift` `SupabaseManualPushSupplierCreatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift` `SupabaseManualPushSupplierUpdatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift` `SupabaseManualPushCategoryCreatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift` `SupabaseManualPushCategoryUpdatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift` `SupabaseManualPushProductCreatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift` `SupabaseManualPushProductUpdatePayload`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift` `SupabaseManualPushRemoteClient`: SupabaseManualPushRemoteGateway
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncBaselineCommitter.swift` `SupabaseManualSyncLocalApplyBaselineCommitter`: SupabaseManualSyncLocalApplyBaselineCommitting, @unchecked Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift` `SupabaseManualSyncCoordinator`: SupabaseManualSyncCoordinating
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift` `SupabaseManualSyncPrivacyCounts`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift` `SupabaseManualSyncRunSummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift` `SupabaseManualSyncLifecycleRunSnapshot`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift` `SupabaseManualSyncLifecyclePreflight`: SupabaseManualSyncLifecyclePreflightProviding
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift` `SupabaseAuthViewModel`: SupabaseManualSyncLocalPendingSessionProviding
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift` `SupabaseManualSyncLocalPendingSnapshotProvider`: SupabaseManualSyncLocalPendingProviding
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift` `SupabaseManualSyncSwiftDataBaselineReader`: SupabaseManualSyncBaselineReading
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift` `SupabaseManualSyncCatalogSnapshot`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift` `SupabaseManualSyncCatalogPendingAdapter`: SupabaseManualSyncCatalogPendingCounting
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift` `SupabaseManualSyncSwiftDataCatalogSnapshotLoader`: SupabaseManualSyncCatalogSnapshotLoading
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift` `SupabaseManualSyncOutboxPendingAdapter`: SupabaseManualSyncOutboxPendingCounting
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift` `SyncActivityRegistrationAdapter`: SupabaseManualSyncActivityRegistrationProviding
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift` `SyncHistorySessionPushAdapter`: SupabaseManualSyncHistorySessionSyncProviding
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift` `ManualSyncIncrementalPullAdapter`: SupabaseManualSyncIncrementalPullProviding
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift` `SyncProductPriceAdapter`: SupabaseManualSyncProductPriceSyncProviding
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift` `SyncCatalogPushAdapter`: SupabaseManualSyncCatalogPushProviding
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift` `SupabaseManualSyncReleaseAuthGate`: SupabaseManualSyncAuthGateProviding
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift` `SupabaseManualSyncReleaseBaselineGate`: SupabaseManualSyncBaselineGateProviding
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift` `SupabaseManualSyncReleaseDryRunPhaseSimulator`: SupabaseManualSyncDryRunPhaseSimulating
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift` `SupabaseManualSyncRemotePreviewAggregateCounts`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift` `SupabaseManualSyncRemotePreviewSummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift` `SupabaseManualSyncPullPreviewAdapter`: SupabaseManualSyncRemotePreviewProviding, SupabaseManualSyncRemotePreviewStaging
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift` `SupabaseManualSyncSemiAutomaticPolicy`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncCapabilitySet`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncRootPresentationState`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncAuthPresentationContext`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncPresentationAction`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncUserFacingSummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncLocalApplySummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncReviewSectionState`: Equatable, Identifiable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncReviewSheetState`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncPresentationState`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncCatalogPushSummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncProductPriceSummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncActivityRegistrationSnapshot`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncActivityRegistrationSummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncActivityRegistrationResult`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncHistorySessionSummary`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift` `SupabaseManualSyncViewModel`: ObservableObject
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift` `ProductPriceManualPushPayload`: Encodable, Sendable, Equatable, Identifiable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift` `ProductPriceManualPushSnapshot`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift` `ProductPriceManualPushResult`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift` `ProductPriceManualPushMismatch`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift` `ProductPriceManualPushOptions`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift` `SupabaseProductPriceManualPushService`: Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift` `PayloadKey`: Hashable, Comparable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift` `ProductPricePreviewOptions`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift` `ProductPricePreviewSampleRow`: Identifiable, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift` `ProductPricePreviewSummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift` `ProductPricePreviewLocalProduct`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift` `SupabaseProductPricePreviewService`: Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift` `ProductPricePreviewDedupeKey`: Hashable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunSessionSnapshot`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunLocalSnapshot`: Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunLocalProduct`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunLocalPrice`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunInput`: Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunFetchOptions`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunLogicalKey`: Sendable, Hashable, Comparable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunCandidatePayload`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunLine`: Identifiable, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunSummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunPlan`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushDryRunLocalStage`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `ProductPricePushGlobalBlockSummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift` `SupabaseProductPricePushDryRunEngine`: Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift` `SupabasePushPreflightViewModel`: ObservableObject
+- `iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift` `Summary`: Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift` `CategoryGroup`: Identifiable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift` `ExecutionSummary`: Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugFormatting.swift` `SyncEventDebugValueSummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugFormatting.swift` `SyncEventDebugDisplaySummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugFormatting.swift` `SyncEventDebugDisplayRow`: Identifiable, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugViewModel.swift` `SupabaseSyncEventDebugViewModel`: ObservableObject
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventIncrementalApplyService.swift` `SupabaseSyncEventIncrementalApplySummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift` `SyncEventPreviewOptions`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift` `SyncEventPreviewSummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift` `SupabaseSyncEventPreviewService`: Sendable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift` `SupabaseSyncEventRemoteReader`: SupabaseSyncEventPreviewFetching, SupabaseSyncEventIncrementalFetching
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift` `SupabaseSyncPlanCounters`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift` `SupabaseSyncPlanSection`: Sendable, Equatable, Identifiable
+- `iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift` `SupabaseSyncPlan`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Manual/SyncEventOutboxDrainDebugViewModel.swift` `SyncEventOutboxDrainDebugViewModel`: ObservableObject
+- `iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift` `State`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift` `SyncEventOutboxDrainOutcome`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift` `SyncEventOutboxProducerResult`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift` `CatalogManualPush`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift` `ProductPriceManualPush`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift` `MappedEvent`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift` `SyncEventOutboxCounts`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift` `SyncEventOutboxStoredPayloadJSON`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift` `SyncEventOutboxFailure`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift` `SyncEventOutboxSendingRecoveryResult`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift` `SyncEventOutboxState`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/RecoveryRemoteSupabaseAdapter.swift` `RecoveryRemoteSupabaseAdapter`: SupabaseInventoryFetching
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplySessionSnapshot`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplySourceState`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyLocalSnapshot`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyLocalProduct`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyLocalPrice`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyIssue`: Identifiable, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplySummary`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyLine`: Identifiable, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyIdentityLink`: Identifiable, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyPlan`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyResult`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPricePagedApplyProgress`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyFetchOptions`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceCanonicalAmount`: Sendable, Hashable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `SupabaseProductPriceApplyService`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyLogicalKey`: Hashable
+- `iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift` `ProductPriceApplyLocalPriceInfo`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyOptions`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyResult`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyProgress`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyPlan`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyExpectedProductState`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyLookup`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyProductInsert`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyProductUpdate`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyProductTombstone`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyProductPrune`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyProductFingerprint`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyAccountGuard`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift` `SupabasePullApplyService`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `SyncPreview`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `SyncPreviewLookupSummary`: Identifiable, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `SyncPreviewMetric`: Identifiable, Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `SyncPreviewConflict`: Identifiable, Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `SyncPreviewFieldChange`: Identifiable, Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `SyncPreviewWarning`: Identifiable, Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `SyncPreviewProductSummary`: Identifiable, Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `SyncPreviewProductApplyPayload`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `RemoteInventorySnapshotCounts`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `LocalInventorySnapshotCounts`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `RemoteInventorySnapshot`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `LocalInventorySnapshot`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `LocalProductSnapshot`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `LocalLookupSnapshot`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `LocalPriceSnapshot`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift` `PriceHistoryLogicalKey`: Hashable, Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift` `SupabasePullPreviewService`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift` `RemoteFetchOutcome`: Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift` `SyncInventoryCountSnapshot`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift` `SyncCountDriftReport`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift` `CatalogRemoteSupabaseAdapter`: SyncAutomaticCatalogRemoteWriting
+- `iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift` `CatalogRemoteSupabaseAdapter`: SyncAutomaticCatalogIncrementalReading
+- `iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift` `HistorySessionRemoteSupabaseAdapter`: HistorySessionRemoteWriting
+- `iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift` `ProductPriceRemoteSupabaseAdapter`: SyncAutomaticProductPriceRemoteWriting
+- `iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift` `ProductPriceRemoteSupabaseAdapter`: SyncAutomaticProductPriceIncrementalReading, 
+- `iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift` `RemoteInventorySupplierRow`: Codable, Sendable, Identifiable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift` `RemoteInventoryCategoryRow`: Codable, Sendable, Identifiable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift` `RemoteInventoryProductRow`: Codable, Sendable, Identifiable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift` `SupabaseTask088RemoteSeed`: Sendable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift` `RemoteInventoryProductPriceRow`: Codable, Sendable, Identifiable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift` `SupabaseRemoteQueryExecutor`: Sendable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventDTOs.swift` `RemoteSyncEventRow`: Decodable, Sendable, Identifiable, Equatable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventDTOs.swift` `SyncEventRowsResponse`: Decodable, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift` `SyncEventLiveRecorderConfiguration`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift` `SupabaseSyncEventLiveRecorderConfigurationProvider`: SyncEventLiveRecorderConfigurationProviding
+- `iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift` `SyncEventLiveRecorderSession`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift` `SupabaseSyncEventLiveRecorder`: SyncEventRecording, Sendable
+- `iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift` `SupabaseAuthService`: SyncEventLiveRecorderSessionProviding
+- `iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRPCTransport.swift` `SupabaseSyncEventRPCTransport`: SyncEventRPCTransport
+- `iOSMerchandiseControl/Sync/Remote/SyncEventRPCRequestMapper.swift` `SyncEventRPCRequestParameters`: Encodable, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift` `SyncEventRecordRequest`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift` `SyncEventRecordFailure`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift` `SyncEventRecordValidationPolicy`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift` `SyncEventRecordValidator`: Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift` `SyncEventRecordDryRunRecorder`: SyncEventRecording, Sendable, Equatable
+- `iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift` `SyncEventRemoteSupabaseAdapter`: SyncAutomaticIncrementalRemote, OptionsSyncRemoteCountFetching
+- `iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift` `HistorySessionOverlayPayload`: Codable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift` `SharedSheetSessionUpsertRow`: Encodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift` `HistorySessionLocalPayloadSnapshot`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift` `RemoteSharedSheetSessionRow`: Decodable, Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift` `HistorySessionPushResult`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift` `HistorySessionPullResult`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift` `HistorySessionSyncProgress`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/SyncOrchestrator.swift` `SyncRootPresentationState`: Equatable, Sendable
+- `iOSMerchandiseControl/Sync/SyncOrchestrator.swift` `SyncOrchestrator`: ObservableObject
+- `iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift` `Input`: Equatable, Sendable

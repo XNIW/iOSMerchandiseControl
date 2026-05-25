@@ -72,7 +72,7 @@ struct iOSMerchandiseControlApp: App {
             let authService = SupabaseAuthService(provider: provider)
             let inventoryService = SupabaseTransportClient(clientProvider: provider)
             let previewService = SupabasePullPreviewService(
-                inventoryService: inventoryService,
+                inventoryService: RecoveryRemoteSupabaseAdapter(remote: inventoryService),
                 pageSize: 1_000,
                 catalogRowBudget: nil,
                 productPricePreviewSampleLimit: 1_000

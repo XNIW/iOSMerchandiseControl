@@ -227,7 +227,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
 
         let noOp = try await LocalPendingAggregatedPushPlanner(
             context: context,
-            priceRemoteFetcher: runtime.inventory,
+            priceRemoteFetcher: runtime.productPriceRemote,
             includesCatalog: true,
             includesProductPrice: true
         ).makePlan(ownerUserID: runtime.session.userID)
@@ -316,7 +316,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let context = try makePersistentAppContext()
         let before = try task114LocalCounts(context: context)
         let service = SupabasePullPreviewService(
-            inventoryService: runtime.inventory,
+            inventoryService: runtime.recoveryRemote,
             pageSize: 1_000,
             catalogRowBudget: nil,
             productPricePreviewSampleLimit: 1_000
@@ -365,7 +365,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         }
         let historyResult = try await HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: runtime.inventory))
             .pullHistorySessionsFromCloud(ownerUserID: runtime.session.userID, context: context)
-        let priceService = SupabaseProductPriceApplyService(fetcher: runtime.inventory)
+        let priceService = SupabaseProductPriceApplyService(fetcher: runtime.productPriceRemote)
         let priceSession = ProductPriceApplySessionSnapshot(userID: runtime.session.userID)
         let pricePlan = try await priceService.loadBootstrapPreviewSample(
             context: context,
@@ -1025,7 +1025,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         ).recordProductPriceChange(price: conflictingPrice, origin: .productPriceSave)
         try priceConflictContext.save()
 
-        let priceConflictPlan = try await SupabaseProductPricePushDryRunService(fetcher: runtime.inventory).loadDryRun(
+        let priceConflictPlan = try await SupabaseProductPricePushDryRunService(fetcher: runtime.productPriceRemote).loadDryRun(
             context: priceConflictContext,
             sessionSnapshot: ProductPricePushDryRunSessionSnapshot(
                 userID: runtime.session.userID,
@@ -1139,7 +1139,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
 
         let noOp = try await LocalPendingAggregatedPushPlanner(
             context: context,
-            priceRemoteFetcher: runtime.inventory,
+            priceRemoteFetcher: runtime.productPriceRemote,
             includesCatalog: true,
             includesProductPrice: true
         ).makePlan(ownerUserID: runtime.session.userID)
@@ -1352,7 +1352,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
     ) async throws -> ProductPriceManualPushResult {
         let aggregated = try await LocalPendingAggregatedPushPlanner(
             context: context,
-            priceRemoteFetcher: runtime.inventory,
+            priceRemoteFetcher: runtime.productPriceRemote,
             includesCatalog: false,
             includesProductPrice: true
         ).makePlan(ownerUserID: runtime.session.userID)
@@ -1364,7 +1364,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             ownerUserID: runtime.session.userID,
             planFingerprint: productPricePushFingerprint(batch.plan)
         )
-        let push = try await SupabaseProductPriceManualPushService(remote: runtime.inventory).push(snapshot: snapshot)
+        let push = try await SupabaseProductPriceManualPushService(remote: runtime.productPriceRemote).push(snapshot: snapshot)
         guard push.isVerifiedSuccess else {
             throw HarnessError.unverifiedPricePush
         }
@@ -1661,7 +1661,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         for _ in 0..<5 {
             let aggregated = try await LocalPendingAggregatedPushPlanner(
                 context: context,
-                priceRemoteFetcher: runtime.inventory,
+                priceRemoteFetcher: runtime.productPriceRemote,
                 includesCatalog: false,
                 includesProductPrice: true
             ).makePlan(ownerUserID: runtime.session.userID)
@@ -1675,7 +1675,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 ownerUserID: runtime.session.userID,
                 planFingerprint: productPricePushFingerprint(batch.plan)
             )
-            let push = try await SupabaseProductPriceManualPushService(remote: runtime.inventory).push(snapshot: snapshot)
+            let push = try await SupabaseProductPriceManualPushService(remote: runtime.productPriceRemote).push(snapshot: snapshot)
             guard push.isVerifiedSuccess else {
                 throw HarnessError.unverifiedPricePush
             }
@@ -2013,7 +2013,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         async let categories = fetchFixtureCategories(runtime.provider, ownerUserID: runtime.session.userID, fixture: fixture)
         let products = try await fetchFixtureProducts(runtime.provider, ownerUserID: runtime.session.userID, fixture: fixture)
         let prices = try await fetchFixturePrices(
-            runtime.inventory,
+            runtime.productPriceRemote,
             ownerUserID: runtime.session.userID,
             productIDs: products.map(\.id)
         )
@@ -2084,7 +2084,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
     }
 
     private func fetchFixturePrices(
-        _ inventory: SupabaseTransportClient,
+        _ inventory: ProductPriceRemoteSupabaseAdapter,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {
@@ -2641,6 +2641,14 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let provider: SupabaseClientProvider
         let inventory: SupabaseTransportClient
         let session: SupabaseAuthSessionInfo
+
+        var productPriceRemote: ProductPriceRemoteSupabaseAdapter {
+            ProductPriceRemoteSupabaseAdapter(remote: inventory)
+        }
+
+        var recoveryRemote: RecoveryRemoteSupabaseAdapter {
+            RecoveryRemoteSupabaseAdapter(remote: inventory)
+        }
     }
 
     private struct RemoteSnapshot {

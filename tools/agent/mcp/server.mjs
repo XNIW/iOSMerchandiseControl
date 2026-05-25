@@ -60,6 +60,36 @@ const TOOLS = [
   { name: "mc_task121_scan_xcode_membership", args: ["scan", "xcode-membership", "--task"], taskArg: true, defaultTask: "TASK-121", suffixArgs: ["--strict"], live: false, cleanup: false },
   { name: "mc_task121_scan_duplicate_symbols", args: ["scan", "duplicate-symbols", "--task"], taskArg: true, defaultTask: "TASK-121", suffixArgs: ["--strict"], live: false, cleanup: false },
   { name: "mc_task121_report_validate_json", args: ["report", "validate-json", "--task"], taskArg: true, defaultTask: "TASK-121", suffixArgs: ["--path"], reportPathArg: true, defaultPath: "docs/TASKS/EVIDENCE/TASK-121/agent-runs", live: false, cleanup: false },
+  { name: "mc_task122_head_consistency", args: ["git", "head-consistency", "--task"], taskArg: true, defaultTask: "TASK-122", live: false, cleanup: false },
+  { name: "mc_task122_preflight_head_consistency", args: ["preflight", "--require-head-consistency", "--task"], taskArg: true, defaultTask: "TASK-122", live: false, cleanup: false },
+  { name: "mc_task122_scan_task_docs", args: ["scan", "task-docs", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_master_plan_consistency", args: ["scan", "master-plan-consistency", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_evidence_metadata", args: ["scan", "evidence-metadata", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_harness_routing", args: ["scan", "harness-routing", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_harness_health", args: ["scan", "harness-health", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_mcp_wrapper", args: ["scan", "mcp-wrapper", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_source_format", args: ["scan", "source-format", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_swift_source_shape", args: ["scan", "swift-source-shape", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_sync_inventory", args: ["scan", "sync-inventory", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_sync_architecture", args: ["scan", "sync-architecture", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_remote_transport_thin", args: ["scan", "remote-transport-thin", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_adapter_delegation_depth", args: ["scan", "adapter-delegation-depth", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_domain_method_ownership", args: ["scan", "domain-method-ownership", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_manual_debug_boundary", args: ["scan", "manual-debug-boundary", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_transport_protocol_conformance", args: ["scan", "transport-protocol-conformance", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_composition_import_boundary", args: ["scan", "composition-import-boundary", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_remote_query_ownership", args: ["scan", "remote-query-ownership", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_debug_seed_boundary", args: ["scan", "debug-seed-boundary", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_dto_mapper_duplication", args: ["scan", "dto-mapper-duplication", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_supabase_query_map", args: ["scan", "supabase-query-map", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict", "--read-only"], live: false, cleanup: false },
+  { name: "mc_task122_scan_transport_callsite_map", args: ["scan", "transport-callsite-map", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_protocol_conformance_map", args: ["scan", "protocol-conformance-map", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_supabase_contract_map", args: ["scan", "supabase-contract-map", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict", "--read-only"], live: false, cleanup: false },
+  { name: "mc_task122_scan_android_parity_ledger", args: ["scan", "android-parity-ledger", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_xcode_membership", args: ["scan", "xcode-membership", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_dead_code", args: ["scan", "dead-code", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_sync_efficiency_acceptance", args: ["scan", "sync-efficiency-acceptance", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_report_validate_json", args: ["report", "validate-json", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--path"], reportPathArg: true, defaultPath: "docs/TASKS/EVIDENCE/TASK-122/agent-runs", live: false, cleanup: false },
   { name: "mc_report", args: ["report", "--task", "TASK-115"], live: false, cleanup: false },
   { name: "mc_report_task115", args: ["report", "--task", "TASK-115"], live: false, cleanup: false },
   { name: "mc_ios_build_debug", args: ["ios", "build", "debug"], live: false, cleanup: false },
@@ -201,6 +231,10 @@ async function selfTest() {
       !names.has("mc_task121_scan_retry_ownership") ||
       !names.has("mc_task121_scan_shared_purity") ||
       !names.has("mc_task121_scan_root_residue") ||
+      !names.has("mc_task122_scan_task_docs") ||
+      !names.has("mc_task122_scan_remote_transport_thin") ||
+      !names.has("mc_task122_scan_adapter_delegation_depth") ||
+      !names.has("mc_task122_scan_sync_efficiency_acceptance") ||
       !names.has("mc_android_test_offline") ||
       !names.has("mc_sync_counts_supabase_task115") ||
       !names.has("mc_live_sync_matrix_task115")) {
@@ -229,7 +263,7 @@ const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/
 const { CallToolRequestSchema, ListToolsRequestSchema } = await import("@modelcontextprotocol/sdk/types.js");
 
 const server = new Server(
-  { name: "mc-agent-mcp", version: "0.4.0-task120" },
+  { name: "mc-agent-mcp", version: "0.5.0-task122" },
   { capabilities: { tools: {} } }
 );
 

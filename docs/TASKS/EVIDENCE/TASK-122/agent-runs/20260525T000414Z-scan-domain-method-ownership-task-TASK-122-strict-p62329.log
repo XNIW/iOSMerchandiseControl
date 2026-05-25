@@ -1,0 +1,41 @@
+=== mc-agent scan domain-method-ownership --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Move listed domain methods to the correct adapter/service.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "id": "transport_domain_methods_removed",
+      "reason": "Transport owns no domain methods.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T00:04:15+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T00:04:15+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localCanonicalOverride": true,
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Move listed domain methods to the correct adapter/service.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "domain-method-ownership",
+  "scannerName": "domain-method-ownership",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.domain-method-ownership",
+  "startedAt": "2026-05-25T00:04:15+00:00",
+  "started_at": "2026-05-25T00:04:15+00:00",
+  "status": "PASS",
+  "summary": "domain-method-ownership: PASS (1 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

@@ -1,0 +1,106 @@
+=== mc-agent scan scanner-self-tests --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Add TASK-122 RED/GREEN fixtures before trusting scanners.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "file": "tools/agent/fixtures/task122_scanners/transport-mega-service-renamed",
+      "id": "fixture:transport-mega-service-renamed",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/transport-over-500-loc",
+      "id": "fixture:transport-over-500-loc",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/adapter-pass-through",
+      "id": "fixture:adapter-pass-through",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/domain-method-in-transport",
+      "id": "fixture:domain-method-in-transport",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/manual-debug-in-automatic",
+      "id": "fixture:manual-debug-in-automatic",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/uncategorized-sync-file",
+      "id": "fixture:uncategorized-sync-file",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/concrete-transport-outside-composition",
+      "id": "fixture:concrete-transport-outside-composition",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/sensitive-report-unredacted",
+      "id": "fixture:sensitive-report-unredacted",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/swift-source-flattened",
+      "id": "fixture:swift-source-flattened",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/transport-domain-conformance",
+      "id": "fixture:transport-domain-conformance",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/adapter-without-query-ownership",
+      "id": "fixture:adapter-without-query-ownership",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task122_scanners/unauthorized-efficiency-claim",
+      "id": "fixture:unauthorized-efficiency-claim",
+      "reason": "TASK-122 fixture has RED/GREEN and expected manifest.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T23:55:17+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-24T23:55:17+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localCanonicalOverride": true,
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Add TASK-122 RED/GREEN fixtures before trusting scanners.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "scanner-self-tests",
+  "scannerName": "scanner-self-tests",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.scanner-self-tests",
+  "startedAt": "2026-05-24T23:55:17+00:00",
+  "started_at": "2026-05-24T23:55:17+00:00",
+  "status": "PASS",
+  "summary": "scanner-self-tests: PASS (12 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

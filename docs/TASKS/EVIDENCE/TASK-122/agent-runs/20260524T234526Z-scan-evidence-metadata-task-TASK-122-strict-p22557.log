@@ -1,0 +1,57 @@
+=== mc-agent scan evidence-metadata --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Regenerate non-compliant TASK-122 reports with mc-agent.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "file": "docs/TASKS/EVIDENCE/TASK-122/agent-runs",
+      "id": "agent_runs_exists",
+      "reason": "TASK-122 agent-runs directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/00-help-json.json",
+      "id": "discovery:00-help-json.json",
+      "reason": "Discovery JSON exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/00-commands-json.json",
+      "id": "discovery:00-commands-json.json",
+      "reason": "Discovery JSON exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "task122_reports_metadata",
+      "reason": "TASK-122 JSON reports have task/status/artifacts/redaction/NEXT_ACTION.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-24T23:45:27+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-24T23:45:27+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Regenerate non-compliant TASK-122 reports with mc-agent.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "evidence-metadata",
+  "scannerName": "evidence-metadata",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.evidence-metadata",
+  "startedAt": "2026-05-24T23:45:27+00:00",
+  "started_at": "2026-05-24T23:45:27+00:00",
+  "status": "PASS",
+  "summary": "evidence-metadata: PASS (4 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

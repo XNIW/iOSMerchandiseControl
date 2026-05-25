@@ -1,0 +1,362 @@
+=== mc-agent scan debug-seed-boundary --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Move debug/test seed behavior out of thin transport.",
+  "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "line": 69,
+          "snippet": "#if DEBUG"
+        },
+        {
+          "line": 70,
+          "snippet": "nonisolated struct SupabaseTask045RemoteCollisionSummary: Sendable, Equatable {"
+        },
+        {
+          "line": 84,
+          "snippet": "nonisolated struct SupabaseTask087RemoteCatalogSnapshot: Sendable {"
+        },
+        {
+          "line": 99,
+          "snippet": "#if DEBUG"
+        },
+        {
+          "line": 100,
+          "snippet": "private static let task045Prefix = \"TASK045_\""
+        },
+        {
+          "line": 101,
+          "snippet": "private static let task045UpperBound = \"TASK045`\""
+        },
+        {
+          "line": 102,
+          "snippet": "nonisolated static let task087Prefix = \"TASK087_\""
+        },
+        {
+          "line": 103,
+          "snippet": "private static let task087UpperBound = \"TASK087`\""
+        },
+        {
+          "line": 104,
+          "snippet": "private static let task087SupplierNames = [\"TASK087_SUP\", \"TASK087_SUPPLIER\"]"
+        },
+        {
+          "line": 105,
+          "snippet": "private static let task087CategoryNames = [\"TASK087_CAT\", \"TASK087_CATEGORY\"]"
+        },
+        {
+          "line": 106,
+          "snippet": "private static let task087ProductBarcodes = [\"TASK087_BAR_A\", \"TASK087_BAR_I\"]"
+        },
+        {
+          "line": 107,
+          "snippet": "nonisolated static let task088Prefix = \"TASK088_\""
+        },
+        {
+          "line": 108,
+          "snippet": "private static let task088UpperBound = \"TASK088`\""
+        },
+        {
+          "line": 109,
+          "snippet": "private static let task088SupplierName = \"TASK088_SUPPLIER\""
+        },
+        {
+          "line": 110,
+          "snippet": "private static let task088CategoryName = \"TASK088_CATEGORY\""
+        },
+        {
+          "line": 111,
+          "snippet": "private static let task088ProductBarcode = \"TASK088_BAR_PRICE\""
+        },
+        {
+          "line": 112,
+          "snippet": "private static let task088ProductName = \"TASK088_PRODUCT\""
+        },
+        {
+          "line": 125,
+          "snippet": "#if DEBUG"
+        },
+        {
+          "line": 126,
+          "snippet": "func authenticatedTask087OwnerUserID() async throws -> UUID {"
+        },
+        {
+          "line": 130,
+          "snippet": "func fetchTask087RemoteCatalogSnapshot() async throws -> SupabaseTask087RemoteCatalogSnapshot {"
+        },
+        {
+          "line": 132,
+          "snippet": "let suppliers = try await fetchTask087Suppliers(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 133,
+          "snippet": "let categories = try await fetchTask087Categories(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 134,
+          "snippet": "let products = try await fetchTask087Products(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 136,
+          "snippet": "guard suppliers.allSatisfy({ $0.ownerUserID == ownerUserID && $0.name.hasPrefix(Self.task087Prefix) }),"
+        },
+        {
+          "line": 137,
+          "snippet": "categories.allSatisfy({ $0.ownerUserID == ownerUserID && $0.name.hasPrefix(Self.task087Prefix) }),"
+        },
+        {
+          "line": 140,
+          "snippet": "&& $0.barcode.hasPrefix(Self.task087Prefix)"
+        },
+        {
+          "line": 141,
+          "snippet": "&& Self.task087ProductBarcodes.contains($0.barcode)"
+        },
+        {
+          "line": 146,
+          "snippet": "message: \"TASK087 owner or prefix mismatch\""
+        },
+        {
+          "line": 150,
+          "snippet": "return SupabaseTask087RemoteCatalogSnapshot("
+        },
+        {
+          "line": 158,
+          "snippet": "func ensureTask087RemoteSeed() async throws {"
+        },
+        {
+          "line": 161,
+          "snippet": "let existingSuppliers = try await fetchTask087Suppliers(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 164,
+          "snippet": "&& Self.task087SupplierNames.contains($0.name)"
+        },
+        {
+          "line": 167,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 supplier collision.\")"
+        },
+        {
+          "line": 173,
+          "snippet": "supplier = try await createTask087Supplier(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 176,
+          "snippet": "let existingCategories = try await fetchTask087Categories(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 179,
+          "snippet": "&& Self.task087CategoryNames.contains($0.name)"
+        },
+        {
+          "line": 182,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 category collision.\")"
+        },
+        {
+          "line": 188,
+          "snippet": "category = try await createTask087Category(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 191,
+          "snippet": "let existingProducts = try await fetchTask087ProductsByPrefix(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 194,
+          "snippet": "&& Self.task087ProductBarcodes.contains($0.barcode)"
+        },
+        {
+          "line": 197,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 product collision.\")"
+        },
+        {
+          "line": 203,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 duplicate product collision.\")"
+        },
+        {
+          "line": 208,
+          "snippet": "(\"TASK087_BAR_A\", \"TASK087_PRD_A\"),"
+        },
+        {
+          "line": 209,
+          "snippet": "(\"TASK087_BAR_I\", \"TASK087_PRD_I\")"
+        },
+        {
+          "line": 227,
+          "snippet": "let createdProducts = try await createTask087Products(missingPayloads)"
+        },
+        {
+          "line": 231,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 product seed read-back mismatch.\")"
+        },
+        {
+          "line": 235,
+          "snippet": "func updateTask087ProductName("
+        },
+        {
+          "line": 240,
+          "snippet": "guard barcode.hasPrefix(Self.task087Prefix),"
+        },
+        {
+          "line": 241,
+          "snippet": "Self.task087ProductBarcodes.contains(barcode),"
+        },
+        {
+          "line": 242,
+          "snippet": "newProductName.hasPrefix(Self.task087Prefix) else {"
+        },
+        {
+          "line": 243,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 scoped update rejected.\")"
+        },
+        {
+          "line": 246,
+          "snippet": "let product = try await fetchTask087Product(ownerUserID: ownerUserID, barcode: barcode)"
+        },
+        {
+          "line": 252,
+          "snippet": "message: \"TASK087 owner or barcode mismatch\""
+        },
+        {
+          "line": 281,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK087 product read-back mismatch.\")"
+        },
+        {
+          "line": 300,
+          "snippet": "func ensureTask088RemoteSeed() async throws -> SupabaseTask088RemoteSeed {"
+        },
+        {
+          "line": 303,
+          "snippet": "let existingSuppliers = try await fetchTask088SuppliersByPrefix(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 306,
+          "snippet": "&& $0.name == Self.task088SupplierName"
+        },
+        {
+          "line": 309,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK088 supplier collision.\")"
+        },
+        {
+          "line": 315,
+          "snippet": "supplier = try await createTask088Supplier(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 318,
+          "snippet": "let existingCategories = try await fetchTask088CategoriesByPrefix(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 321,
+          "snippet": "&& $0.name == Self.task088CategoryName"
+        },
+        {
+          "line": 324,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK088 category collision.\")"
+        },
+        {
+          "line": 330,
+          "snippet": "category = try await createTask088Category(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 333,
+          "snippet": "let existingProducts = try await fetchTask088ProductsByPrefix(ownerUserID: ownerUserID)"
+        },
+        {
+          "line": 336,
+          "snippet": "&& $0.barcode == Self.task088ProductBarcode"
+        },
+        {
+          "line": 339,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK088 product collision.\")"
+        },
+        {
+          "line": 345,
+          "snippet": "product = try await createTask088Product("
+        },
+        {
+          "line": 353,
+          "snippet": "product.barcode == Self.task088ProductBarcode,"
+        },
+        {
+          "line": 355,
+          "snippet": "throw SupabaseTransportClientError.schemaDrift(message: \"TASK088 product seed read-back mismatch.\")"
+        },
+        {
+          "line": 358,
+          "snippet": "return SupabaseTask088RemoteSeed("
+        },
+        {
+          "line": 366,
+          "snippet": "func fetchTask088ProductPriceRows("
+        },
+        {
+          "line": 375,
+          "snippet": "message: \"TASK088 owner mismatch\""
+        },
+        {
+          "line": 405,
+          "snippet": "func fetchTask045RemoteCollisionSummary(limit: Int = 50) async throws -> SupabaseTask045RemoteCollisionSummary {"
+        },
+        {
+          "line": 408,
+          "snippet": "let suppliers = try await fetchTask045Suppliers(ownerUserID: ownerUserID, limit: clampedLimit)"
+        },
+        {
+          "line": 409,
+          "snippet": "let categories = try await fetchTask045Categories(ownerUserID: ownerUserID, limit: clampedLimit)"
+        },
+        {
+          "line": 410,
+          "snippet": "let products = try await fetchTask045Products(ownerUserID: ownerUserID, limit: clampedLimit)"
+        },
+        {
+          "line": 412,
+          "snippet": "return SupabaseTask045RemoteCollisionSummary("
+        },
+        {
+          "line": 1298,
+          "snippet": "#if DEBUG"
+        },
+        {
+          "line": 1299,
+          "snippet": "private func fetchTask087Suppliers(ownerUserID: UUID) async throws -> [RemoteInventorySupplierRow] {"
+        },
+        {
+          "line": 1305,
+          "snippet": ".in(\"name\", values: Self.task087SupplierNames)"
+        }
+      ],
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "id": "transport_no_debug_seed",
+      "reason": "Transport contains no DEBUG/TASK seed/collision/probe behavior.",
+      "status": "FAIL"
+    }
+  ],
+  "completed_at": "2026-05-24T23:55:44+00:00",
+  "exitCode": 1,
+  "finishedAt": "2026-05-24T23:55:44+00:00",
+  "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "localCanonicalOverride": true,
+  "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "nextAction": "Move debug/test seed behavior out of thin transport.",
+  "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "debug-seed-boundary",
+  "scannerName": "debug-seed-boundary",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.debug-seed-boundary",
+  "startedAt": "2026-05-24T23:55:44+00:00",
+  "started_at": "2026-05-24T23:55:44+00:00",
+  "status": "FAIL",
+  "summary": "debug-seed-boundary: FAIL (1 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

@@ -1,0 +1,590 @@
+{
+  "queries": [
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "line": 120,
+      "snippet": "result.pushedRemoteIDs.insert(readBack.remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+      "line": 146,
+      "snippet": "context.insert(inserted)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+      "line": 125,
+      "snippet": "guard seenRemoteIDs.insert(row.id).inserted else {"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+      "line": 166,
+      "snippet": "context.delete(price)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "line": 58,
+      "snippet": "protected.suppliers.insert(remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "line": 60,
+      "snippet": "protected.categories.insert(remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "line": 62,
+      "snippet": "protected.products.insert(remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "line": 64,
+      "snippet": "protected.prices.insert(remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "line": 66,
+      "snippet": "protected.history.insert(remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "line": 98,
+      "snippet": "context.insert(supplier)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "line": 120,
+      "snippet": "context.insert(category)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "line": 162,
+      "snippet": "context.insert(Product("
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "line": 253,
+      "snippet": "context.insert(newPrice)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+      "line": 78,
+      "snippet": "result.pushedRemoteIDs.insert(readBack.remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+      "line": 184,
+      "snippet": "context.insert(inserted)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+      "line": 252,
+      "snippet": "context.insert(inserted)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+      "line": 298,
+      "snippet": "context.delete(entry)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 265,
+      "snippet": "blockers.insert(.cappedPendingStore)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 268,
+      "snippet": "blockers.insert(.blockedLocalChanges)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 271,
+      "snippet": "blockers.insert(.staleBaselineLocalChanges)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 276,
+      "snippet": "blockers.insert(.hardCapExceeded)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 282,
+      "snippet": "warnings.insert(.sentChangesOnCooldown)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 283,
+      "snippet": "blockers.insert(.sentChangesWaitingForRetry)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 286,
+      "snippet": "warnings.insert(.retryableSentChangesAvailable)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 287,
+      "snippet": "blockers.insert(.sentChangesWaitingForRetry)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 296,
+      "snippet": "warnings.insert(.terminalChangesIgnored)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 319,
+      "snippet": "warnings.insert(.softBatchLimitApplied)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 351,
+      "snippet": "warnings.insert(.productPriceBatchLimitedByAdapter)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 495,
+      "snippet": "blockers.insert(.unsupportedDelete)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 499,
+      "snippet": "supplierKeys.insert(change.logicalKey)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 503,
+      "snippet": "blockers.insert(.unsupportedDelete)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 507,
+      "snippet": "categoryKeys.insert(change.logicalKey)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 521,
+      "snippet": "blockers.insert(.unsupportedDelete)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 526,
+      "snippet": "productKeys.insert(change.logicalKey)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 529,
+      "snippet": "blockers.insert(.unsupportedImportBatch)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 542,
+      "snippet": "blockers.insert(.localSnapshotExceeded)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 563,
+      "snippet": "blockers.insert(.missingLiveModel)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 596,
+      "snippet": "blockers.insert(.unsafeCatalogPlan)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 625,
+      "snippet": "blockers.insert(.localSnapshotExceeded)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 634,
+      "snippet": "blockers.insert(.missingLiveModel)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 640,
+      "snippet": "blockers.insert(.unsafeProductPricePlan)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 675,
+      "snippet": "blockers.insert(.unsafeProductPricePlan)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 907,
+      "snippet": "guard seen.insert(\"supplier:\\(key)\").inserted else { return }"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 913,
+      "snippet": "guard seen.insert(\"category:\\(key)\").inserted else { return }"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "line": 919,
+      "snippet": "guard seen.insert(\"product:\\(key)\").inserted else { return }"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift",
+      "line": 250,
+      "snippet": "let insertedCount = try await service.insert(snapshot: snapshot)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "line": 164,
+      "snippet": "supplierIDsByNameAccumulator[lookupName, default: []].insert(record.remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "line": 179,
+      "snippet": "categoryIDsByNameAccumulator[lookupName, default: []].insert(record.remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "line": 194,
+      "snippet": "productIDsByBarcodeAccumulator[barcode, default: []].insert(record.remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "line": 211,
+      "snippet": "remoteSupplierAmbiguousNames.insert(name)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "line": 219,
+      "snippet": "remoteCategoryAmbiguousNames.insert(name)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "line": 227,
+      "snippet": "remoteProductAmbiguousBarcodes.insert(barcode)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift",
+      "line": 80,
+      "snippet": "context.insert(run)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift",
+      "line": 104,
+      "snippet": "context.insert(seed.makeRecord())"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift",
+      "line": 254,
+      "snippet": "guard logicalKeys.insert(logicalKey).inserted else {"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 382,
+      "snippet": ".insert(payloads)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 411,
+      "snippet": ".update(payload)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 704,
+      "snippet": "touchedIDs.suppliers.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 705,
+      "snippet": "readBackIDs.suppliers.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 719,
+      "snippet": "touchedIDs.suppliers.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 720,
+      "snippet": "readBackIDs.suppliers.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 737,
+      "snippet": "touchedIDs.suppliers.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 738,
+      "snippet": "readBackIDs.suppliers.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 775,
+      "snippet": "touchedIDs.categories.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 776,
+      "snippet": "readBackIDs.categories.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 790,
+      "snippet": "touchedIDs.categories.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 791,
+      "snippet": "readBackIDs.categories.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 808,
+      "snippet": "touchedIDs.categories.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 809,
+      "snippet": "readBackIDs.categories.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 851,
+      "snippet": "touchedIDs.products.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 852,
+      "snippet": "readBackIDs.products.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 866,
+      "snippet": "touchedIDs.products.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 867,
+      "snippet": "readBackIDs.products.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 884,
+      "snippet": "touchedIDs.products.insert(remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 901,
+      "snippet": "touchedIDs.products.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "line": 902,
+      "snippet": "readBackIDs.products.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+      "line": 81,
+      "snippet": ".from(\"sync_events\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+      "line": 116,
+      "snippet": ".from(\"sync_events\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift",
+      "line": 191,
+      "snippet": "guard seen.insert(section).inserted else { return }"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift",
+      "line": 464,
+      "snippet": "activeOwnerUserIDs.insert(ownerUserID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift",
+      "line": 418,
+      "snippet": "context.insert(entry)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/InventorySyncService.swift",
+      "line": 203,
+      "snippet": "context.insert(pricePoint)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "line": 700,
+      "snippet": "context.insert(newPrice)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "line": 898,
+      "snippet": "completeRemotePriceIDs.insert(row.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "line": 1033,
+      "snippet": "context.delete(price)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "line": 1056,
+      "snippet": "remoteIDs.insert(remoteID)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "line": 1058,
+      "snippet": "logicalKeys.insert(change.logicalKey)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "line": 1154,
+      "snippet": "guard seenRemoteIDs.insert(row.id).inserted else {"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "line": 1400,
+      "snippet": "guard seenRemoteIDs.insert(row.id).inserted else {"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "line": 1472,
+      "snippet": "context.insert(newPrice)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "line": 598,
+      "snippet": "context.insert(product)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "line": 640,
+      "snippet": "context.delete(product)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "line": 896,
+      "snippet": "context.insert(product)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "line": 962,
+      "snippet": "context.delete(product)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "line": 1330,
+      "snippet": "context.insert(supplier)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "line": 1399,
+      "snippet": "context.insert(category)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "line": 1505,
+      "snippet": "context.delete(supplier)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "line": 1510,
+      "snippet": "context.delete(category)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+      "line": 124,
+      "snippet": "deletedProductIDs.insert(product.id)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+      "line": 29,
+      "snippet": ".from(\"shared_sheet_sessions\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+      "line": 30,
+      "snippet": ".upsert(rows, onConflict: \"remote_id\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+      "line": 68,
+      "snippet": ".from(\"shared_sheet_sessions\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+      "line": 104,
+      "snippet": ".from(\"shared_sheet_sessions\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+      "line": 113,
+      "snippet": ".from(\"shared_sheet_sessions\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "line": 19,
+      "snippet": ".from(\"inventory_product_prices\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "line": 20,
+      "snippet": ".upsert(payloads, onConflict: \"id\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "line": 90,
+      "snippet": ".from(\"inventory_product_prices\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "line": 138,
+      "snippet": ".from(\"inventory_product_prices\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "line": 139,
+      "snippet": ".insert(payloads)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "line": 159,
+      "snippet": ".from(\"inventory_products\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "line": 160,
+      "snippet": ".update(payload)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "line": 213,
+      "snippet": ".from(\"inventory_product_prices\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift",
+      "line": 112,
+      "snippet": ".insert(payloads)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift",
+      "line": 138,
+      "snippet": ".update(payload)"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "line": 91,
+      "snippet": ".from(\"inventory_products\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+      "line": 37,
+      "snippet": ".from(\"sync_events\")"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+      "line": 121,
+      "snippet": ".from(\"inventory_product_prices\")"
+    }
+  ],
+  "taskId": "TASK-122"
+}

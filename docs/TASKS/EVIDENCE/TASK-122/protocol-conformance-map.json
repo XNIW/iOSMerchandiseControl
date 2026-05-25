@@ -1,0 +1,2136 @@
+{
+  "conformances": [
+    {
+      "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift",
+      "protocols": [
+        "Equatable"
+      ],
+      "type": "AccountSyncPolicyInput"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift",
+      "protocols": [
+        "Equatable"
+      ],
+      "type": "AccountSyncDecision"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecisionView.swift",
+      "protocols": [
+        "View"
+      ],
+      "type": "AccountSyncDecisionView"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+      "protocols": [
+        "RawRepresentable",
+        "Codable",
+        "Equatable",
+        "Hashable",
+        "Sendable"
+      ],
+      "type": "LocalStoreIdentity"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+      "protocols": [
+        "Codable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "AccountBinding"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncAutomaticSupplierCreatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncAutomaticSupplierUpdatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncAutomaticCategoryCreatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncAutomaticCategoryUpdatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncAutomaticProductCreatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncAutomaticProductUpdatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "protocols": [
+        "SyncCatalogPushProviding"
+      ],
+      "type": "CatalogPushService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "CatalogPushOutcome"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncCatalogPushPlan"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncCatalogPushResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "AutomaticSyncRetryDecision"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "AutomaticSyncRetryPolicy"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+      "protocols": [
+        "SyncAutomaticRuntimeProviding"
+      ],
+      "type": "SyncNoopAutomaticRuntime"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+      "protocols": [
+        "SyncAutomaticRuntimeProviding"
+      ],
+      "type": "AutomaticSyncRuntimeFacade"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncAutomaticRunResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncDecisionInput"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncDecisionInputSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+      "protocols": [
+        "SyncDecisionInputProviding"
+      ],
+      "type": "SyncDecisionInputProvider"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "protocols": [
+        "SyncHistorySessionPushProviding"
+      ],
+      "type": "HistorySessionPushService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncHistorySessionSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncHistorySessionPushPlan"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncHistorySessionPushResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncActivityRegistrationSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncActivityRegistrationSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncActivityRegistrationResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "protocols": [
+        "SyncActivityRegistrationProviding"
+      ],
+      "type": "SyncActivityRegistrationService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift",
+      "protocols": [
+        "@unchecked Sendable"
+      ],
+      "type": "AutomaticSyncReconnectScheduler"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "OptionsSyncAuthSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+      "protocols": [
+        "ObservableObject"
+      ],
+      "type": "OptionsSyncSummaryProvider"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift",
+      "protocols": [
+        "Equatable"
+      ],
+      "type": "SyncProgress"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift",
+      "protocols": [
+        "Equatable"
+      ],
+      "type": "SyncState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift",
+      "protocols": [
+        "ObservableObject"
+      ],
+      "type": "SyncStateStore"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncAutomaticProductPricePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "protocols": [
+        "SyncProductPriceSyncProviding"
+      ],
+      "type": "ProductPricePushService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "ProductPricePushOutcome"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncProductPricePushPlan"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncProductPricePushResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplySummary.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "CatalogIncrementalApplySummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplySummary.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "HistoryIncrementalApplySummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplySummary.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "ProductPriceIncrementalApplySummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "IncrementalApplyProtectedRemoteIDs"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "TargetedCatalogApplyResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "protocols": [
+        "Hashable"
+      ],
+      "type": "TargetedProductPriceLogicalKey"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SyncEventEntityIDSet"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalPullService.swift",
+      "protocols": [
+        "SyncIncrementalPullProviding"
+      ],
+      "type": "SyncEventIncrementalPullService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncIncrementalPullSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift",
+      "protocols": [
+        "Equatable",
+        "Hashable",
+        "Sendable"
+      ],
+      "type": "Scope"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "CloudSyncOverviewInput"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "CloudSyncOverviewState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "CloudSyncProgressState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "LocalPendingAggregatedPushRetryInfo"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "LocalPendingAggregatedPushCounts"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "LocalPendingAggregatedPushSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "LocalPendingAggregatedCatalogBatch"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "LocalPendingAggregatedProductPriceBatch"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "LocalPendingAggregatedPushPlan"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift",
+      "protocols": [
+        "ObservableObject"
+      ],
+      "type": "ProductPriceManualPushDebugViewModel"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseCatalogManualPushBaseline"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseCatalogBaselineDebugSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseCatalogBaselineCommitResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable",
+        "Hashable"
+      ],
+      "type": "ManualPushFingerprint"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ManualPushFingerprintField"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ManualPushScopeSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "PushCandidate"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ManualPushPlan"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ManualPushPreview"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ManualPushPullState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ManualPushAccountState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ManualPushBaseline"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ManualPushLookupState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ManualPushProductState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ManualPushPreflightInput"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SupabaseManualPushPreflightService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseManualPushTouchedIDs"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseManualPushReadBackExpectation"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseManualPushResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualPushSupplierCreatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualPushSupplierUpdatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualPushCategoryCreatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualPushCategoryUpdatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualPushProductCreatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualPushProductUpdatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "protocols": [
+        "SupabaseManualPushRemoteGateway"
+      ],
+      "type": "SupabaseManualPushRemoteClient"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncBaselineCommitter.swift",
+      "protocols": [
+        "SupabaseManualSyncLocalApplyBaselineCommitting",
+        "@unchecked Sendable"
+      ],
+      "type": "SupabaseManualSyncLocalApplyBaselineCommitter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift",
+      "protocols": [
+        "SupabaseManualSyncCoordinating"
+      ],
+      "type": "SupabaseManualSyncCoordinator"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncPrivacyCounts"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncRunSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncLifecycleRunSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift",
+      "protocols": [
+        "SupabaseManualSyncLifecyclePreflightProviding"
+      ],
+      "type": "SupabaseManualSyncLifecyclePreflight"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "protocols": [
+        "SupabaseManualSyncLocalPendingSessionProviding"
+      ],
+      "type": "SupabaseAuthViewModel"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "protocols": [
+        "SupabaseManualSyncLocalPendingProviding"
+      ],
+      "type": "SupabaseManualSyncLocalPendingSnapshotProvider"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "protocols": [
+        "SupabaseManualSyncBaselineReading"
+      ],
+      "type": "SupabaseManualSyncSwiftDataBaselineReader"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncCatalogSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "protocols": [
+        "SupabaseManualSyncCatalogPendingCounting"
+      ],
+      "type": "SupabaseManualSyncCatalogPendingAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "protocols": [
+        "SupabaseManualSyncCatalogSnapshotLoading"
+      ],
+      "type": "SupabaseManualSyncSwiftDataCatalogSnapshotLoader"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "protocols": [
+        "SupabaseManualSyncOutboxPendingCounting"
+      ],
+      "type": "SupabaseManualSyncOutboxPendingAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+      "protocols": [
+        "SupabaseManualSyncActivityRegistrationProviding"
+      ],
+      "type": "SyncActivityRegistrationAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+      "protocols": [
+        "SupabaseManualSyncHistorySessionSyncProviding"
+      ],
+      "type": "SyncHistorySessionPushAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+      "protocols": [
+        "SupabaseManualSyncIncrementalPullProviding"
+      ],
+      "type": "ManualSyncIncrementalPullAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+      "protocols": [
+        "SupabaseManualSyncProductPriceSyncProviding"
+      ],
+      "type": "SyncProductPriceAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+      "protocols": [
+        "SupabaseManualSyncCatalogPushProviding"
+      ],
+      "type": "SyncCatalogPushAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+      "protocols": [
+        "SupabaseManualSyncAuthGateProviding"
+      ],
+      "type": "SupabaseManualSyncReleaseAuthGate"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+      "protocols": [
+        "SupabaseManualSyncBaselineGateProviding"
+      ],
+      "type": "SupabaseManualSyncReleaseBaselineGate"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+      "protocols": [
+        "SupabaseManualSyncDryRunPhaseSimulating"
+      ],
+      "type": "SupabaseManualSyncReleaseDryRunPhaseSimulator"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseManualSyncRemotePreviewAggregateCounts"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseManualSyncRemotePreviewSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+      "protocols": [
+        "SupabaseManualSyncRemotePreviewProviding",
+        "SupabaseManualSyncRemotePreviewStaging"
+      ],
+      "type": "SupabaseManualSyncPullPreviewAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncSemiAutomaticPolicy"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncCapabilitySet"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncRootPresentationState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncAuthPresentationContext"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncPresentationAction"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncUserFacingSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncLocalApplySummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Identifiable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncReviewSectionState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncReviewSheetState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncPresentationState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncCatalogPushSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncProductPriceSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncActivityRegistrationSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncActivityRegistrationSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncActivityRegistrationResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SupabaseManualSyncHistorySessionSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "protocols": [
+        "ObservableObject"
+      ],
+      "type": "SupabaseManualSyncViewModel"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+      "protocols": [
+        "Encodable",
+        "Sendable",
+        "Equatable",
+        "Identifiable"
+      ],
+      "type": "ProductPriceManualPushPayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceManualPushSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceManualPushResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceManualPushMismatch"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceManualPushOptions"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SupabaseProductPriceManualPushService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+      "protocols": [
+        "Hashable",
+        "Comparable"
+      ],
+      "type": "PayloadKey"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePreviewOptions"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePreviewSampleRow"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePreviewSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePreviewLocalProduct"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SupabaseProductPricePreviewService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+      "protocols": [
+        "Hashable"
+      ],
+      "type": "ProductPricePreviewDedupeKey"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePushDryRunSessionSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "ProductPricePushDryRunLocalSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePushDryRunLocalProduct"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePushDryRunLocalPrice"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "ProductPricePushDryRunInput"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePushDryRunFetchOptions"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable",
+        "Hashable",
+        "Comparable"
+      ],
+      "type": "ProductPricePushDryRunLogicalKey"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePushDryRunCandidatePayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePushDryRunLine"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePushDryRunSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePushDryRunPlan"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePushDryRunLocalStage"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePushGlobalBlockSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SupabaseProductPricePushDryRunEngine"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift",
+      "protocols": [
+        "ObservableObject"
+      ],
+      "type": "SupabasePushPreflightViewModel"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift",
+      "protocols": [
+        "Equatable"
+      ],
+      "type": "Summary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift",
+      "protocols": [
+        "Identifiable",
+        "Equatable"
+      ],
+      "type": "CategoryGroup"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift",
+      "protocols": [
+        "Equatable"
+      ],
+      "type": "ExecutionSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugFormatting.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventDebugValueSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugFormatting.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventDebugDisplaySummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugFormatting.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventDebugDisplayRow"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugViewModel.swift",
+      "protocols": [
+        "ObservableObject"
+      ],
+      "type": "SupabaseSyncEventDebugViewModel"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventIncrementalApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseSyncEventIncrementalApplySummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventPreviewOptions"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventPreviewSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SupabaseSyncEventPreviewService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+      "protocols": [
+        "SupabaseSyncEventPreviewFetching",
+        "SupabaseSyncEventIncrementalFetching"
+      ],
+      "type": "SupabaseSyncEventRemoteReader"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseSyncPlanCounters"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable",
+        "Identifiable"
+      ],
+      "type": "SupabaseSyncPlanSection"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabaseSyncPlan"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Manual/SyncEventOutboxDrainDebugViewModel.swift",
+      "protocols": [
+        "ObservableObject"
+      ],
+      "type": "SyncEventOutboxDrainDebugViewModel"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "State"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventOutboxDrainOutcome"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventOutboxProducerResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "CatalogManualPush"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceManualPush"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "MappedEvent"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventOutboxCounts"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventOutboxStoredPayloadJSON"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventOutboxFailure"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventOutboxSendingRecoveryResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventOutboxState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/RecoveryRemoteSupabaseAdapter.swift",
+      "protocols": [
+        "SupabaseInventoryFetching"
+      ],
+      "type": "RecoveryRemoteSupabaseAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplySessionSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplySourceState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "ProductPriceApplyLocalSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplyLocalProduct"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplyLocalPrice"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplyIssue"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplySummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplyLine"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplyIdentityLink"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "ProductPriceApplyPlan"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplyResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPricePagedApplyProgress"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplyFetchOptions"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Hashable"
+      ],
+      "type": "ProductPriceCanonicalAmount"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SupabaseProductPriceApplyService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Hashable"
+      ],
+      "type": "ProductPriceApplyLogicalKey"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "ProductPriceApplyLocalPriceInfo"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyOptions"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyProgress"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyPlan"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyExpectedProductState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyLookup"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyProductInsert"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyProductUpdate"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyProductTombstone"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyProductPrune"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyProductFingerprint"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SupabasePullApplyAccountGuard"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SupabasePullApplyService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SyncPreview"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncPreviewLookupSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable"
+      ],
+      "type": "SyncPreviewMetric"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable"
+      ],
+      "type": "SyncPreviewConflict"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable"
+      ],
+      "type": "SyncPreviewFieldChange"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable"
+      ],
+      "type": "SyncPreviewWarning"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Identifiable",
+        "Sendable"
+      ],
+      "type": "SyncPreviewProductSummary"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncPreviewProductApplyPayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "RemoteInventorySnapshotCounts"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "LocalInventorySnapshotCounts"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "RemoteInventorySnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "LocalInventorySnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "LocalProductSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "LocalLookupSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "LocalPriceSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "protocols": [
+        "Hashable",
+        "Sendable"
+      ],
+      "type": "PriceHistoryLogicalKey"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SupabasePullPreviewService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "RemoteFetchOutcome"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncInventoryCountSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncCountDriftReport"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+      "protocols": [
+        "SyncAutomaticCatalogRemoteWriting"
+      ],
+      "type": "CatalogRemoteSupabaseAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+      "protocols": [
+        "SyncAutomaticCatalogIncrementalReading"
+      ],
+      "type": "CatalogRemoteSupabaseAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+      "protocols": [
+        "HistorySessionRemoteWriting"
+      ],
+      "type": "HistorySessionRemoteSupabaseAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "protocols": [
+        "SyncAutomaticProductPriceRemoteWriting"
+      ],
+      "type": "ProductPriceRemoteSupabaseAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "protocols": [
+        "SyncAutomaticProductPriceIncrementalReading",
+        ""
+      ],
+      "type": "ProductPriceRemoteSupabaseAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift",
+      "protocols": [
+        "Codable",
+        "Sendable",
+        "Identifiable"
+      ],
+      "type": "RemoteInventorySupplierRow"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift",
+      "protocols": [
+        "Codable",
+        "Sendable",
+        "Identifiable"
+      ],
+      "type": "RemoteInventoryCategoryRow"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift",
+      "protocols": [
+        "Codable",
+        "Sendable",
+        "Identifiable"
+      ],
+      "type": "RemoteInventoryProductRow"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SupabaseTask088RemoteSeed"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift",
+      "protocols": [
+        "Codable",
+        "Sendable",
+        "Identifiable"
+      ],
+      "type": "RemoteInventoryProductPriceRow"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift",
+      "protocols": [
+        "Sendable"
+      ],
+      "type": "SupabaseRemoteQueryExecutor"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventDTOs.swift",
+      "protocols": [
+        "Decodable",
+        "Sendable",
+        "Identifiable",
+        "Equatable"
+      ],
+      "type": "RemoteSyncEventRow"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventDTOs.swift",
+      "protocols": [
+        "Decodable",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventRowsResponse"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventLiveRecorderConfiguration"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift",
+      "protocols": [
+        "SyncEventLiveRecorderConfigurationProviding"
+      ],
+      "type": "SupabaseSyncEventLiveRecorderConfigurationProvider"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventLiveRecorderSession"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift",
+      "protocols": [
+        "SyncEventRecording",
+        "Sendable"
+      ],
+      "type": "SupabaseSyncEventLiveRecorder"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift",
+      "protocols": [
+        "SyncEventLiveRecorderSessionProviding"
+      ],
+      "type": "SupabaseAuthService"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRPCTransport.swift",
+      "protocols": [
+        "SyncEventRPCTransport"
+      ],
+      "type": "SupabaseSyncEventRPCTransport"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRPCRequestMapper.swift",
+      "protocols": [
+        "Encodable",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventRPCRequestParameters"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventRecordRequest"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventRecordFailure"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventRecordValidationPolicy"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift",
+      "protocols": [
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventRecordValidator"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift",
+      "protocols": [
+        "SyncEventRecording",
+        "Sendable",
+        "Equatable"
+      ],
+      "type": "SyncEventRecordDryRunRecorder"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+      "protocols": [
+        "SyncAutomaticIncrementalRemote",
+        "OptionsSyncRemoteCountFetching"
+      ],
+      "type": "SyncEventRemoteSupabaseAdapter"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+      "protocols": [
+        "Codable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "HistorySessionOverlayPayload"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+      "protocols": [
+        "Encodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SharedSheetSessionUpsertRow"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "HistorySessionLocalPayloadSnapshot"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+      "protocols": [
+        "Decodable",
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "RemoteSharedSheetSessionRow"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "HistorySessionPushResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "HistorySessionPullResult"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "HistorySessionSyncProgress"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "SyncRootPresentationState"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+      "protocols": [
+        "ObservableObject"
+      ],
+      "type": "SyncOrchestrator"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift",
+      "protocols": [
+        "Equatable",
+        "Sendable"
+      ],
+      "type": "Input"
+    }
+  ],
+  "taskId": "TASK-122"
+}

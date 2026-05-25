@@ -1,0 +1,210 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun sync-inventory.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260524T235528Z-scan-sync-inventory-task-TASK-122-strict-p35719.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260524T235528Z-scan-sync-inventory-task-TASK-122-strict-p35719.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260524T235528Z-scan-sync-inventory-task-TASK-122-strict-p35719.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-122-05"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan sync-inventory --task TASK-122 --strict",
+  "command_slug": "scan-sync-inventory-task-TASK-122-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 926,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-122",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK122_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-122"
+  },
+  "exit_code": 1,
+  "git_sha": "6cc042c",
+  "next_action_recommended": "Fix failing checks and rerun sync-inventory.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Classify every Sync file before refactor.",
+    "canonicalHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+    "checks": [
+      {
+        "evidence": {
+          "file_count": 185
+        },
+        "id": "sync_inventory_written",
+        "reason": "Sync inventory Markdown/JSON/CSV written.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Account/AccountBindingStore.swift",
+            "loc": 52
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Account/AccountSwitchPolicy.swift",
+            "loc": 166
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift",
+            "loc": 140
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Account/AccountSyncDecisionView.swift",
+            "loc": 162
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+            "loc": 31
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+            "loc": 1
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+            "loc": 34
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+            "loc": 59
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift",
+            "loc": 471
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+            "loc": 29
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
+            "loc": 517
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift",
+            "loc": 546
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+            "loc": 15
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift",
+            "loc": 523
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+            "loc": 3
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+            "loc": 2
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+            "loc": 472
+          },
+          {
+            "category": "Uncategorized",
+            "file": "iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift",
+            "loc": 68
+          }
+        ],
+        "id": "no_uncategorized_sync_files",
+        "reason": "No Sync file remains Uncategorized.",
+        "status": "FAIL"
+      }
+    ],
+    "completed_at": "2026-05-24T23:55:28+00:00",
+    "exitCode": 1,
+    "finishedAt": "2026-05-24T23:55:28+00:00",
+    "githubHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+    "localCanonicalOverride": true,
+    "localHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+    "nextAction": "Classify every Sync file before refactor.",
+    "originHead": "6cc042c5dede5b492734cc5a36c2c05a96e61b50",
+    "redactionSummary": {
+      "emails_redacted_by_wrapper": true,
+      "paths_redacted_by_wrapper": true,
+      "scanner_outputs_do_not_include_secret_values": true
+    },
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "FAIL",
+    "safety_level": "read_only_static_scan",
+    "scan": "sync-inventory",
+    "scannerName": "sync-inventory",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.sync-inventory",
+    "startedAt": "2026-05-24T23:55:28+00:00",
+    "started_at": "2026-05-24T23:55:28+00:00",
+    "status": "FAIL",
+    "summary": "sync-inventory: FAIL (2 checks)",
+    "taskId": "TASK-122",
+    "task_id": "TASK-122"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260524T235528Z-scan-sync-inventory-task-TASK-122-strict-p35719",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-122",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-24T23:55:28Z",
+  "timestamp_start": "2026-05-24T23:55:27Z",
+  "warnings": []
+}
