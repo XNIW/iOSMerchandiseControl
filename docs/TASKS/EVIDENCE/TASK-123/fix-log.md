@@ -7,3 +7,5 @@
 - Fixed Android foreground launch before iOS->Android receive.
 - Fixed burst duplicate detection to use scoped remote prefix counts.
 - Executed scoped Supabase, Android local, and iOS local cleanup.
+- Review fix: added TASK-123 live commands to `help-json` / `commands-json` discoverability.
+- Review tracking fix: marked superseded historical TASK-123 handoffs in the task file and closed the task only for the simulator same-account autosync speed scope.

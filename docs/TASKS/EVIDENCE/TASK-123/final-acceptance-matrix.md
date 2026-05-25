@@ -14,6 +14,8 @@
 - Cleanup/residue: PASS/0
 - Runtime efficiency: PASS
 - Strict TASK-123 speed acceptance: ELIGIBLE
-- 100% simulator same-account autosync speed scope: ELIGIBLE
+- Simulator same-account autosync speed scope: PASS
 
 Final checks: iOS Debug build PASS, iOS Release build PASS, iOS sync tests PASS, Android assembleDebug/debugAndroidTest PASS, Android sync/debounce unit tests PASS, JSON validation PASS, git diff --check PASS.
+
+Not claimed: production-global 100%, real device, long background/locked-screen, long offline, complex conflict policy, or multi-user/account policy.

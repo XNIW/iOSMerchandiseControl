@@ -4,6 +4,8 @@ Timestamp: 2026-05-25T03:22Z.
 
 RESULT `PARTIAL_PASS_WITH_NOTES / MATRIX_NOT_COMPLETE`
 
+Superseded note: this early smoke summary was later superseded by the final TASK-123 strict acceptance evidence (`autosync-20x20-warm-matrix`, cold/no-op/burst matrices, cleanup residue, and final acceptance matrix). The verdict below is historical for this smoke run only, not the final task verdict.
+
 Auth/session and the iOS Review gate are no longer blocking. After the targeted fixes, 5 live post-tuning same-account simulator/emulator mutation-near-realtime runs completed with `RESULT PASS` at the harness receiver budget.
 
 Post-tuning runs:
@@ -34,4 +36,4 @@ Interpretation:
 
 Verdict:
 - Receiver autosync smoke: PASS.
-- Full TASK-123 speed acceptance: NOT_ELIGIBLE yet.
+- Full TASK-123 speed acceptance for this early smoke run: not assessed yet; superseded by final strict acceptance evidence.

@@ -5,13 +5,13 @@
 - **Titolo**: iOS/Android Simulator AutoSync Speed Acceptance
 - **File task**: `docs/TASKS/TASK-123-ios-android-simulator-autosync-speed-acceptance.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-123/`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE / Reviewer
+- **Stato**: DONE
+- **Fase attuale**: REVIEW PASS — STRICT SPEED ACCEPTANCE PASSED
+- **Responsabile attuale**: USER / Accepted review closure
 - **Data creazione**: 2026-05-24
-- **Ultimo aggiornamento**: 2026-05-25 02:50 -0400
-- **Ultimo agente che ha operato**: CODEX / Executor
-- **Readiness**: STRICT_ACCEPTANCE_ELIGIBLE_FOR_REVIEW. User provided an authenticated iOS 26.4 simulator and Codex completed the required live/dev same-account autosync gates: 20+20 warm matrix PASS, cold-ish restart PASS, no-op PASS, burst-10 PASS, batch multi-write PASS as separate batch scenario, cleanup/residue `TASK123_*` PASS/0, final build/test checks PASS. TASK-123 is not marked DONE; it is handed to Claude/User review.
+- **Ultimo aggiornamento**: 2026-05-25 09:35 -0400
+- **Ultimo agente che ha operato**: CODEX / Reviewer
+- **Readiness**: REVIEW_PASS_STRICT_ACCEPTANCE_PASSED. User requested final review/closure; Codex verified canonical heads, evidence coherence, harness routing, code scope, cleanup/privacy constraints and final gates in the requested simulator same-account live/dev scope. TASK-123 is closed only for simulator iOS 26.4 <-> Android Emulator <-> Supabase live/dev same-account autosync speed. No production-global claim.
 - **Tipo task**: runtime/performance acceptance cross-platform simulator; fix mirati solo se emergono bug reali.
 - **User override registrato**: l'utente ha richiesto l'avvio diretto di TASK-123 in EXECUTION e ha autorizzato live testing scoped su Supabase live/dev, senza cleanup globale, senza service_role client, senza bypass RLS e senza dati reali non prefissati. Alle 2026-05-24 21:52 -0400 l'utente ha autorizzato anche write/delete sul database Supabase remoto per i test; Codex limita comunque l'uso a righe `TASK123_*`, con dry-run prima del cleanup.
 
@@ -255,6 +255,13 @@ Solo fix mirati se i test runtime/performance rivelano bug reali:
 - Android androidTest import fix: aggiunto import `CatalogAutoSyncCoordinator` richiesto dal nuovo timing single.
 
 ## Handoff post-execution
+### FINAL REVIEW CLOSURE — 2026-05-25 09:35 -0400
+Final review found no runtime correctness, security, RLS, cleanup or performance blocker in the TASK-123 acceptance scope. A small tracking/harness documentation fix was applied: TASK-123 live commands are now discoverable in `help-json` / `commands-json`, and historical handoffs below are explicitly marked as superseded.
+
+Verdict: DONE / REVIEW PASS — STRICT SPEED ACCEPTANCE PASSED, limited to simulator iOS 26.4 <-> Android Emulator <-> Supabase live/dev, same account, autosync speed.
+
+Not claimed: production-global 100%, real device, long background/locked screen, long offline, complex conflict policy, multi-user/account policy.
+
 ### READY_FOR_REVIEW_STRICT_ACCEPTANCE — 2026-05-25 02:50 -0400
 TASK-123 execution completed in the requested simulator same-account autosync speed scope. The task is handed to Claude/User review, not marked DONE.
 
@@ -290,7 +297,9 @@ Final checks:
 NEXT_ACTION:
 - Claude/User review TASK-123 evidence and decide closure. Codex must not mark DONE directly.
 
-### BLOCKED_EXTERNAL_AUTH_SESSION — 2026-05-25 00:27 -0400
+### SUPERSEDED_HISTORY — BLOCKED_EXTERNAL_AUTH_SESSION — 2026-05-25 00:27 -0400
+Superseded by `READY_FOR_REVIEW_STRICT_ACCEPTANCE` and final review closure above; kept as historical execution record only.
+
 TASK-123 cannot proceed to 20+20 warm matrix, cold-ish restart, no-op or burst-10 while the iOS Simulator app-auth session is absent.
 
 Evidence:
@@ -303,7 +312,9 @@ NEXT_ACTION:
 2. Codex reruns `MC_ALLOW_LIVE=1 MC_ANDROID_DEVICE_SERIAL=emulator-5554 MC_TASK123_SINGLE_ITERATIONS=1 ./tools/agent/mc-agent.sh live task123-single-propagation --task TASK-123 --prefix TASK123_SINGLE_`.
 3. If the reduced run PASSes, Codex reruns with default 20 iterations and continues cold-ish, no-op, burst-10, batch, cleanup and final acceptance. If a measured iteration fails, Codex follows MEASURE -> IDENTIFY BOTTLENECK -> FIX MINIMO -> TEST -> RERUN MATRIX.
 
-### ACTIVE_EXECUTION_PARTIAL — 2026-05-24 23:22 -0400
+### SUPERSEDED_HISTORY — ACTIVE_EXECUTION_PARTIAL — 2026-05-24 23:22 -0400
+Superseded by `READY_FOR_REVIEW_STRICT_ACCEPTANCE` and final review closure above; kept as historical execution record only.
+
 TASK-123 is no longer blocked by auth/session. The same-account simulator/emulator autosync path works and cleanup is clean, but strict speed acceptance is not complete.
 
 Evidence:
@@ -312,7 +323,7 @@ Evidence:
 - `docs/TASKS/EVIDENCE/TASK-123/autosync-speed-summary.md/json`: 5 post-tuning live smoke PASS with receiver p95 <= 1.015s iOS->Android and <= 0.444s Android->iOS.
 - `docs/TASKS/EVIDENCE/TASK-123/fix-log.md`: complete fix list.
 - `docs/TASKS/EVIDENCE/TASK-123/cleanup-residue.md/json`: final scoped residue 0.
-- `docs/TASKS/EVIDENCE/TASK-123/final-acceptance-matrix.md/json`: current verdict NOT_FINAL_ACCEPTANCE / 100% NOT_ELIGIBLE.
+- Historical note: at this point `final-acceptance-matrix.md/json` still said not final acceptance; this was later superseded by the 02:50 strict acceptance evidence and final review closure above.
 
 NEXT_ACTION:
 - Add or run a dedicated in-process TASK-123 warm latency harness and complete 20 isolated warm iterations per direction, cold-ish restart checks, no-op checks, burst-10 changes and final drift check before moving to REVIEW or claiming 100% PASS.

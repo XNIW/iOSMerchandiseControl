@@ -441,6 +441,7 @@ Usage:
   ./tools/agent/mc-agent.sh supabase status-redacted|verify-schema|verify-rls|verify-grants|residue-check --profile local|linked|dry-run-no-db
   ./tools/agent/mc-agent.sh supabase contract sync-schema --task TASK-120 --read-only
   ./tools/agent/mc-agent.sh live sync-matrix|runtime-parity|physical-runtime-parity|mutation-near-realtime|offline-reconnect-sync|account-merge-policy-matrix|sync-performance-budget|offline-matrix|reconcile-counts|cleanup-and-verify --task TASK-115 --prefix TASK115_*
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live task123-single-propagation|task123-cold-restart|task123-noop|task123-burst-10 --task TASK-123 --prefix TASK123_REVIEW_*
 
 Exit codes: 0=PASS 1=FAIL 2=BLOCKED_EXTERNAL 3=MISCONFIGURED 4=UNSAFE_OPERATION_REFUSED
 Reports: docs/TASKS/EVIDENCE/<task>/agent-runs/<timestamp>-<command>.{log,md,json}
@@ -641,7 +642,11 @@ mc_help_json() {
     {"name":"live account-merge-policy-matrix","argv":["live","account-merge-policy-matrix","--task","TASK-115","--prefix","TASK115_ACCOUNT_*"],"platform":"live","safety_level":"live-readonly","requires_live":true},
     {"name":"live sync-performance-budget","argv":["live","sync-performance-budget","--task","TASK-115","--prefix","TASK115_PERF_*"],"platform":"live","safety_level":"live-readonly","requires_live":true},
     {"name":"live offline-matrix","argv":["live","offline-matrix","--task","TASK-115","--prefix","TASK115_OFFLINE_*"],"platform":"live","safety_level":"live-write","requires_live":true},
-    {"name":"live cleanup-and-verify","argv":["live","cleanup-and-verify","--task","TASK-115","--prefix","TASK115_*"],"platform":"live","safety_level":"cleanup-execute","requires_cleanup":true}
+    {"name":"live cleanup-and-verify","argv":["live","cleanup-and-verify","--task","TASK-115","--prefix","TASK115_*"],"platform":"live","safety_level":"cleanup-execute","requires_cleanup":true},
+    {"name":"live task123-single-propagation","argv":["live","task123-single-propagation","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live task123-cold-restart","argv":["live","task123-cold-restart","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live task123-noop","argv":["live","task123-noop","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live task123-burst-10","argv":["live","task123-burst-10","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true}
   ]
 }
 JSON
