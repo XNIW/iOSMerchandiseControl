@@ -1,0 +1,113 @@
+{
+  "NEXT_ACTION": "Run batch multi-write and cleanup/residue.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T213215Z-live-task123-burst-10-task-TASK-124-prefix-TASK124_SPEED_SIM_-p73422.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T213215Z-live-task123-burst-10-task-TASK-124-prefix-TASK124_SPEED_SIM_-p73422.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T213215Z-live-task123-burst-10-task-TASK-124-prefix-TASK124_SPEED_SIM_-p73422.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T213215Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "PR-01",
+    "PR-03",
+    "PR-04",
+    "PR-08"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live task123-burst-10 --task TASK-124 --prefix TASK124_SPEED_SIM_",
+  "command_slug": "live-task123-burst-10-task-TASK-124-prefix-TASK124_SPEED_SIM_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "emulator",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 476279,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-124",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK124_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-124"
+  },
+  "exit_code": 0,
+  "git_sha": "472e1bbb",
+  "next_action_recommended": "Run batch multi-write and cleanup/residue.",
+  "platform": "ios",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "acceptance": {
+      "changesPerDirection": 10,
+      "duplicates": 0,
+      "timeout": false
+    },
+    "bursts": [
+      {
+        "changes": 10,
+        "direction": "iosToAndroid",
+        "duplicate": false,
+        "polls": 1,
+        "productDelta": 10,
+        "scopedRemoteProducts": 10,
+        "sourceBurstMs": 357672,
+        "status": "PASS",
+        "totalPropagationMs": 1180
+      },
+      {
+        "changes": 10,
+        "direction": "androidToIos",
+        "duplicate": false,
+        "polls": 1,
+        "productDelta": 20,
+        "scopedRemoteProducts": 10,
+        "sourceBurstMs": 46101,
+        "status": "PASS",
+        "totalPropagationMs": 590
+      }
+    ],
+    "completedAt": "2026-05-25T21:40:11Z",
+    "prefix": "TASK124_SPEED_SIM_BURST_20260525T213215Z_",
+    "schemaVersion": "1.1",
+    "source": "live.task123-burst-10",
+    "startedAt": "2026-05-25T21:32:15Z",
+    "status": "PASS",
+    "taskId": "TASK-124"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T213215Z-live-task123-burst-10-task-TASK-124-prefix-TASK124_SPEED_SIM_-p73422",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-124",
+  "test_prefix": "TASK124_SPEED_SIM_BURST_20260525T213215Z_IOS_BURST_10_",
+  "timestamp_end": "2026-05-25T21:40:12Z",
+  "timestamp_start": "2026-05-25T21:32:15Z",
+  "warnings": []
+}

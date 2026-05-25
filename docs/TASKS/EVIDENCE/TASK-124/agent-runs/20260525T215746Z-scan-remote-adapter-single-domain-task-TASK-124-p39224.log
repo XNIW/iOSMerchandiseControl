@@ -1,0 +1,33 @@
+=== mc-agent scan remote-adapter-single-domain --task TASK-124 ===
+{
+  "NEXT_ACTION": "Split mixed remote adapter responsibilities or add motivated keep evidence.",
+  "canonicalHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "checks": [
+    {
+      "evidence": [],
+      "fix_hint": "Split preview/manual/options responsibilities out of automatic domain adapters.",
+      "id": "remote-adapter-domain-count",
+      "reason": "Remote adapters must be single-domain or have an explicit split/keep rationale with call-site evidence.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T21:57:47+00:00",
+  "exitCode": 0,
+  "githubHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "localHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "nextAction": "Split mixed remote adapter responsibilities or add motivated keep evidence.",
+  "originHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "remote-adapter-single-domain",
+  "scannerName": "remote-adapter-single-domain",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.remote-adapter-single-domain",
+  "started_at": "2026-05-25T21:57:47+00:00",
+  "status": "PASS",
+  "summary": "remote-adapter-single-domain: PASS (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

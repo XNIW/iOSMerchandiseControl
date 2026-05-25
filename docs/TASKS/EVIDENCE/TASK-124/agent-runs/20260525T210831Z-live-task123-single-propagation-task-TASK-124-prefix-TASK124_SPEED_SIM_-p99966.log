@@ -1,0 +1,211 @@
+TASK-124 single-propagation raw log summarized for evidence hygiene.
+Full machine-readable metrics remain in the sibling JSON report.
+Kept lines: TASK123/TASK124 timing markers, realtime wait markers, XCTest/instrumentation pass summaries.
+
+--- retained evidence lines ---
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+** TEST BUILD SUCCEEDED **
+Test Case '-[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled]' passed (2.055 seconds).
+** TEST EXECUTE SUCCEEDED **
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=1301 syncEventAvailableMs=1301 totalSourceMs=1622 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.627 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1145 polls=1 products=19704->19705 productPrices=41135->41135 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=37 localOutboxEnqueueMs=37 sourceAutoPushStartDelayMs=500 remotePushMs=3164 syncEventAvailableMs=3164 watermarkAfter=2261 totalSourceMs=3207 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=538 polls=1 products=19705->19706 productPrices=41135->41137 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=17 localOutboxEnqueueMs=17 sourceAutoPushStartDelayMs=0 remotePushMs=985 syncEventAvailableMs=985 totalSourceMs=1262 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.268 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1159 polls=1 products=19706->19707 productPrices=41137->41139 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=33 localOutboxEnqueueMs=33 sourceAutoPushStartDelayMs=500 remotePushMs=4857 syncEventAvailableMs=4857 watermarkAfter=2267 totalSourceMs=4896 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=525 polls=1 products=19707->19708 productPrices=41139->41141 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=16 localOutboxEnqueueMs=16 sourceAutoPushStartDelayMs=0 remotePushMs=2741 syncEventAvailableMs=2741 totalSourceMs=3921 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (3.926 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=7632 polls=3 products=19708->19709 productPrices=41141->41143 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=82 localOutboxEnqueueMs=82 sourceAutoPushStartDelayMs=500 remotePushMs=4316 syncEventAvailableMs=4316 watermarkAfter=2273 totalSourceMs=4408 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=522 polls=1 products=19709->19710 productPrices=41143->41145 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=1373 syncEventAvailableMs=1373 totalSourceMs=1679 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.684 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1121 polls=1 products=19710->19711 productPrices=41145->41147 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=45 localOutboxEnqueueMs=45 sourceAutoPushStartDelayMs=500 remotePushMs=4248 syncEventAvailableMs=4248 watermarkAfter=2279 totalSourceMs=4302 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=563 polls=1 products=19711->19712 productPrices=41147->41149 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=984 syncEventAvailableMs=984 totalSourceMs=1228 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.232 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1099 polls=1 products=19712->19713 productPrices=41149->41151 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=42 localOutboxEnqueueMs=42 sourceAutoPushStartDelayMs=500 remotePushMs=3383 syncEventAvailableMs=3383 watermarkAfter=2285 totalSourceMs=3433 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=586 polls=1 products=19713->19714 productPrices=41151->41153 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=1380 syncEventAvailableMs=1380 totalSourceMs=1647 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.651 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1093 polls=1 products=19714->19715 productPrices=41153->41155 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=61 localOutboxEnqueueMs=61 sourceAutoPushStartDelayMs=500 remotePushMs=3220 syncEventAvailableMs=3220 watermarkAfter=2291 totalSourceMs=3285 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=588 polls=1 products=19715->19716 productPrices=41155->41157 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=1294 syncEventAvailableMs=1294 totalSourceMs=2342 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (2.347 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1143 polls=1 products=19716->19717 productPrices=41157->41159 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=49 localOutboxEnqueueMs=49 sourceAutoPushStartDelayMs=500 remotePushMs=4015 syncEventAvailableMs=4015 watermarkAfter=2297 totalSourceMs=4067 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=650 polls=1 products=19717->19718 productPrices=41159->41161 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=1176 syncEventAvailableMs=1176 totalSourceMs=1448 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.452 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1132 polls=1 products=19718->19719 productPrices=41161->41163 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=51 localOutboxEnqueueMs=51 sourceAutoPushStartDelayMs=500 remotePushMs=4411 syncEventAvailableMs=4411 watermarkAfter=2303 totalSourceMs=4468 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=562 polls=1 products=19718->19720 productPrices=41163->41165 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=1101 syncEventAvailableMs=1101 totalSourceMs=1437 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.443 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1132 polls=1 products=19720->19721 productPrices=41165->41167 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=45 localOutboxEnqueueMs=45 sourceAutoPushStartDelayMs=500 remotePushMs=3790 syncEventAvailableMs=3790 watermarkAfter=2309 totalSourceMs=3840 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=532 polls=1 products=19721->19722 productPrices=41167->41169 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=971 syncEventAvailableMs=971 totalSourceMs=1312 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.317 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1105 polls=1 products=19722->19723 productPrices=41169->41171 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=51 localOutboxEnqueueMs=51 sourceAutoPushStartDelayMs=500 remotePushMs=3838 syncEventAvailableMs=3838 watermarkAfter=2314 totalSourceMs=3896 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=531 polls=1 products=19723->19724 productPrices=41171->41173 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=1260 syncEventAvailableMs=1260 totalSourceMs=1548 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.554 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1164 polls=1 products=19724->19725 productPrices=41173->41175 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=40 localOutboxEnqueueMs=40 sourceAutoPushStartDelayMs=500 remotePushMs=4166 syncEventAvailableMs=4166 watermarkAfter=2320 totalSourceMs=4215 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=632 polls=1 products=19725->19726 productPrices=41175->41177 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=1150 syncEventAvailableMs=1150 totalSourceMs=1445 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.451 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1163 polls=1 products=19726->19727 productPrices=41177->41179 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=47 localOutboxEnqueueMs=47 sourceAutoPushStartDelayMs=500 remotePushMs=8452 syncEventAvailableMs=8452 watermarkAfter=2326 totalSourceMs=8506 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=534 polls=1 products=19727->19728 productPrices=41179->41181 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=1063 syncEventAvailableMs=1063 totalSourceMs=1344 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.350 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1058 polls=1 products=19728->19729 productPrices=41181->41183 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=41 localOutboxEnqueueMs=41 sourceAutoPushStartDelayMs=500 remotePushMs=4068 syncEventAvailableMs=4068 watermarkAfter=2332 totalSourceMs=4116 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=521 polls=1 products=19729->19730 productPrices=41183->41185 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=1162 syncEventAvailableMs=1162 totalSourceMs=1430 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.435 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1122 polls=1 products=19730->19731 productPrices=41185->41187 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=42 localOutboxEnqueueMs=42 sourceAutoPushStartDelayMs=500 remotePushMs=4010 syncEventAvailableMs=4010 watermarkAfter=2338 totalSourceMs=4061 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=525 polls=1 products=19731->19732 productPrices=41187->41189 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=16 localOutboxEnqueueMs=16 sourceAutoPushStartDelayMs=0 remotePushMs=1010 syncEventAvailableMs=1010 totalSourceMs=1357 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.363 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1048 polls=1 products=19732->19733 productPrices=41189->41191 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=56 localOutboxEnqueueMs=56 sourceAutoPushStartDelayMs=500 remotePushMs=4722 syncEventAvailableMs=4722 watermarkAfter=2343 totalSourceMs=4787 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=581 polls=1 products=19733->19734 productPrices=41189->41193 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=899 syncEventAvailableMs=899 totalSourceMs=1155 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.160 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1069 polls=1 products=19734->19735 productPrices=41193->41195 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=52 localOutboxEnqueueMs=52 sourceAutoPushStartDelayMs=500 remotePushMs=4093 syncEventAvailableMs=4093 watermarkAfter=2349 totalSourceMs=4151 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=534 polls=1 products=19735->19736 productPrices=41195->41197 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=1260 syncEventAvailableMs=1260 totalSourceMs=1693 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.697 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1110 polls=1 products=19736->19737 productPrices=41197->41199 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=55 localOutboxEnqueueMs=55 sourceAutoPushStartDelayMs=500 remotePushMs=4308 syncEventAvailableMs=4308 watermarkAfter=2355 totalSourceMs=4370 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=522 polls=1 products=19736->19738 productPrices=41199->41201 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=1039 syncEventAvailableMs=1039 totalSourceMs=1350 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.356 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1114 polls=1 products=19738->19739 productPrices=41201->41203 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=47 localOutboxEnqueueMs=47 sourceAutoPushStartDelayMs=500 remotePushMs=3576 syncEventAvailableMs=3576 watermarkAfter=2361 totalSourceMs=3628 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=525 polls=1 products=19739->19740 productPrices=41203->41205 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=1398 syncEventAvailableMs=1398 totalSourceMs=1728 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.734 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1153 polls=1 products=19740->19741 productPrices=41205->41207 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=32 localOutboxEnqueueMs=32 sourceAutoPushStartDelayMs=500 remotePushMs=4033 syncEventAvailableMs=4033 watermarkAfter=2367 totalSourceMs=4071 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=586 polls=1 products=19741->19742 productPrices=41207->41209 historyUserVisible=67->67
+** TEST BUILD SUCCEEDED **
+TASK124_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=1016 syncEventAvailableMs=1016 totalSourceMs=1369 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.373 seconds).
+** TEST EXECUTE SUCCEEDED **
+TASK114_REALTIME_WAIT source=android label=task123_ios_to_android_single elapsedMs=1042 polls=1 products=19742->19743 productPrices=41209->41211 historyUserVisible=67->67
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=54 localOutboxEnqueueMs=54 sourceAutoPushStartDelayMs=500 remotePushMs=4021 syncEventAvailableMs=4021 watermarkAfter=2373 totalSourceMs=4081 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_RESULT: stream=
+OK (1 test)
+INSTRUMENTATION_CODE: -1
+TASK114_REALTIME_WAIT source=ios label=task123_android_to_ios_single elapsedMs=541 polls=1 products=19743->19744 productPrices=41211->41213 historyUserVisible=67->67

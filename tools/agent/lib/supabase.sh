@@ -70,6 +70,26 @@ mc_supabase_residue_count() {
   printf '%s' "$out"
 }
 
+mc_supabase_residue_total_from_output() {
+  RAW_RESIDUE_OUTPUT="$1" python3 - <<'PY'
+import json
+import os
+import re
+
+raw = os.environ.get("RAW_RESIDUE_OUTPUT", "")
+match = re.search(r"\{.*\}", raw, re.S)
+if not match:
+    print(0)
+    raise SystemExit(0)
+try:
+    payload = json.loads(match.group(0))
+    rows = payload.get("rows", []) if isinstance(payload, dict) else []
+    print(sum(int(row.get("n") or 0) for row in rows if isinstance(row, dict)))
+except Exception:
+    print(sum(int(value) for value in re.findall(r'"n"\s*:\s*(\d+)', raw)))
+PY
+}
+
 mc_supabase_cleanup_sql() {
   local like_prefix="$1"
   cat <<SQL
@@ -302,6 +322,7 @@ mc_supabase_cleanup() {
     plan_id="${plan_id:-cleanup-${task_id}-${MC_TIMESTAMP}-$(mc_slugify "$prefix")}"
     MC_CLEANUP_PLAN_ID="$plan_id"
     preview="$(mc_supabase_residue_count "$prefix" "$profile" 2>&1)" || true
+    MC_RESIDUE_COUNT="$(mc_supabase_residue_total_from_output "$preview")"
     mc_report_log "$preview"
     mc_supabase_write_cleanup_plan "$task_id" "$prefix" "$profile" "$plan_id"
     MC_SUMMARY="Cleanup dry-run PASS for ${prefix}; cleanup_plan_id=${plan_id}; profile=${profile}."
@@ -325,6 +346,7 @@ mc_supabase_residue_check() {
   local out code
   out="$(mc_supabase_residue_count "$prefix" "$profile" 2>&1)"
   code=$?
+  MC_RESIDUE_COUNT="$(mc_supabase_residue_total_from_output "$out")"
   mc_report_log "$out"
   if [[ "$code" -ne 0 ]]; then
     MC_SUMMARY="Residue check BLOCKED for profile ${profile}."
@@ -1431,13 +1453,13 @@ mc_live_task123_noop_matrix() {
     sleep 1
     mc_sync_counts_android "$task_id" || return $?
     before="$MC_SYNC_JSON_RESULT"
-    started_ms="$(mc_now_ms)"
     sleep "$settle_seconds"
+    started_ms="$(mc_now_ms)"
     mc_sync_counts_android "$task_id" || return $?
     after="$MC_SYNC_JSON_RESULT"
     elapsed=$(( $(mc_now_ms) - started_ms ))
     events_json="$(mc_live_sync_events_for_prefix_json "$run_prefix")"
-    ITER="$i" DIRECTION="androidNoop" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" EVENTS_JSON="$events_json" python3 - >>"$iter_file" <<'PY'
+    ITER="$i" DIRECTION="androidNoop" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" EVENTS_JSON="$events_json" SETTLE_SECONDS="$settle_seconds" python3 - >>"$iter_file" <<'PY'
 import json, os
 before=json.loads(os.environ["BEFORE"])
 after=json.loads(os.environ["AFTER"])
@@ -1446,18 +1468,18 @@ keys=("products","product_prices","history_entries")
 same=all(before.get("counts",{}).get(k)==after.get("counts",{}).get(k) for k in keys)
 event_count=len(events.get("rows",[]))
 elapsed=int(os.environ["ELAPSED"])
-print(json.dumps({"iteration":int(os.environ["ITER"]),"direction":os.environ["DIRECTION"],"status":"PASS" if same and event_count==0 and elapsed<=2000 else "FAIL","elapsedMs":elapsed,"syncEventsCreated":event_count,"countsUnchanged":same}, sort_keys=True))
+print(json.dumps({"iteration":int(os.environ["ITER"]),"direction":os.environ["DIRECTION"],"status":"PASS" if same and event_count==0 and elapsed<=2000 else "FAIL","elapsedMs":elapsed,"syncEventsCreated":event_count,"countsUnchanged":same,"settleSeconds":float(os.environ["SETTLE_SECONDS"])}, sort_keys=True))
 PY
 
     MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
     before="$MC_SYNC_JSON_RESULT"
-    started_ms="$(mc_now_ms)"
     sleep "$settle_seconds"
+    started_ms="$(mc_now_ms)"
     MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
     after="$MC_SYNC_JSON_RESULT"
     elapsed=$(( $(mc_now_ms) - started_ms ))
     events_json="$(mc_live_sync_events_for_prefix_json "$run_prefix")"
-    ITER="$i" DIRECTION="iosNoop" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" EVENTS_JSON="$events_json" python3 - >>"$iter_file" <<'PY'
+    ITER="$i" DIRECTION="iosNoop" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" EVENTS_JSON="$events_json" SETTLE_SECONDS="$settle_seconds" python3 - >>"$iter_file" <<'PY'
 import json, os
 before=json.loads(os.environ["BEFORE"])
 after=json.loads(os.environ["AFTER"])
@@ -1466,11 +1488,11 @@ keys=("products","product_prices","history_entries")
 same=all(before.get("counts",{}).get(k)==after.get("counts",{}).get(k) for k in keys)
 event_count=len(events.get("rows",[]))
 elapsed=int(os.environ["ELAPSED"])
-print(json.dumps({"iteration":int(os.environ["ITER"]),"direction":os.environ["DIRECTION"],"status":"PASS" if same and event_count==0 and elapsed<=2000 else "FAIL","elapsedMs":elapsed,"syncEventsCreated":event_count,"countsUnchanged":same}, sort_keys=True))
+print(json.dumps({"iteration":int(os.environ["ITER"]),"direction":os.environ["DIRECTION"],"status":"PASS" if same and event_count==0 and elapsed<=2000 else "FAIL","elapsedMs":elapsed,"syncEventsCreated":event_count,"countsUnchanged":same,"settleSeconds":float(os.environ["SETTLE_SECONDS"])}, sort_keys=True))
 PY
   done
   tmp_json="$(mktemp /tmp/mc-agent-task123-noop-summary.XXXXXX.json)"
-  TASK_ID="$task_id" RUN_PREFIX="$run_prefix" STARTED="$started" ITER_FILE="$iter_file" ITERATIONS="$iterations" python3 - >"$tmp_json" <<'PY'
+  TASK_ID="$task_id" RUN_PREFIX="$run_prefix" STARTED="$started" ITER_FILE="$iter_file" ITERATIONS="$iterations" SETTLE_SECONDS="$settle_seconds" python3 - >"$tmp_json" <<'PY'
 import json, os
 from datetime import datetime, timezone
 rows=[json.loads(line) for line in open(os.environ["ITER_FILE"]) if line.strip()]
@@ -1481,7 +1503,7 @@ ios=stats("iosNoop")
 android=stats("androidNoop")
 required=int(os.environ["ITERATIONS"])
 ok=all(r["status"]=="PASS" for r in rows) and ios["count"]==required and android["count"]==required
-print(json.dumps({"schemaVersion":"1.1","taskId":os.environ["TASK_ID"],"source":"live.task123-noop-matrix","prefix":os.environ["RUN_PREFIX"],"startedAt":os.environ["STARTED"],"completedAt":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),"status":"PASS" if ok else "FAIL","iterations":rows,"summary":{"iosNoop":ios,"androidNoop":android},"acceptance":{"maxMeasurableMs":2000,"settleSeconds":os.environ.get("SETTLE_SECONDS")}}, sort_keys=True))
+print(json.dumps({"schemaVersion":"1.1","taskId":os.environ["TASK_ID"],"source":"live.task123-noop-matrix","prefix":os.environ["RUN_PREFIX"],"startedAt":os.environ["STARTED"],"completedAt":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),"status":"PASS" if ok else "FAIL","iterations":rows,"summary":{"iosNoop":ios,"androidNoop":android},"acceptance":{"maxMeasurableMs":2000,"settleSeconds":float(os.environ["SETTLE_SECONDS"]),"elapsedMsExcludesSettle":True}}, sort_keys=True))
 PY
   rm -f "$iter_file"
   MC_SYNC_JSON_RESULT="$(cat "$tmp_json")"

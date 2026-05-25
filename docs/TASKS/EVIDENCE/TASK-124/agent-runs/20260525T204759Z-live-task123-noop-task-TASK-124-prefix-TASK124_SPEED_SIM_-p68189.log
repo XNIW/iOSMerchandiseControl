@@ -1,0 +1,421 @@
+=== mc-agent live task123-noop --task TASK-124 --prefix TASK124_SPEED_SIM_ ===
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103AuthPreflightTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103AuthPreflightTest:
+INSTRUMENTATION_STATUS: test=authSessionOwnerHashWhenEnabled
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103AuthPreflightTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=authSessionOwnerHashWhenEnabled
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 0.009
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-auth-preflight-20260525T204759Z-DerivedData/Build/Products/task114-ios-auth-preflight.xctestrun -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5" -resultBundlePath /tmp/mc-agent-ios-auth-preflight-20260525T204759Z.xcresult "-only-testing:iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testTask103IOSAuthPreflightWhenEnabled"
+
+2026-05-25 16:48:35.246 xcodebuild[69565:1200272] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-auth-preflight-20260525T204759Z.xcresult
+
+2026-05-25 16:48:35.252 xcodebuild[69565:1200272] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 16:48:35.452 xcodebuild[69565:1200272] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 16:48:37.987.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 16:48:37.987.
+Test Suite 'SupabaseConfigSecurityTests' started at 2026-05-25 16:48:37.988.
+Test Case '-[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled]' started.
+objc[69568]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10bd00310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x1077dc398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK112_IOS_AUTH_PREFLIGHT project_hash=42a5d0119a30 owner_hash=ad3d747e936c provider=google signed_in=true
+Test Case '-[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled]' passed (2.090 seconds).
+Test Suite 'SupabaseConfigSecurityTests' passed at 2026-05-25 16:48:40.079.
+	 Executed 1 test, with 0 failures (0 unexpected) in 2.090 (2.091) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 16:48:40.079.
+	 Executed 1 test, with 0 failures (0 unexpected) in 2.090 (2.092) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 16:48:40.079.
+	 Executed 1 test, with 0 failures (0 unexpected) in 2.090 (2.092) seconds
+2026-05-25 16:48:40.370 xcodebuild[69565:1200272] [MT] IDETestOperationsObserverDebug: 4.916 elapsed -- Testing started completed.
+2026-05-25 16:48:40.370 xcodebuild[69565:1200272] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 16:48:40.370 xcodebuild[69565:1200272] [MT] IDETestOperationsObserverDebug: 4.916 sec, +4.916 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-auth-preflight-20260525T204759Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 0}, "remote": null}, "completedAt": "2026-05-25T20:48:46Z", "counts": {"categories": {"active": 107, "all": 107, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 59, "all": 78, "deleted": 19, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 59}, "product_prices": {"active": 41280, "all": 41284, "deleted": 4, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19776, "all": 19788, "deleted": 12, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 138, "all": 138, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}, "deleted": 19, "drift": {}, "inserted": 0, "lastFullReconciliation": "2026-05-22T18:45:57Z", "lastPull": "2026-05-22T18:45:57Z", "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 0, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": {"appliedAt": "2026-05-22T18:45:57Z", "categories": 28, "createdAt": "2026-05-22T18:45:54Z", "products": 19706, "source": "fullPullApply", "status": "valid", "suppliers": 59, "tombstones": 10, "updatedAt": "2026-05-22T18:45:57Z"}, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"present": false}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.lastCompletedAt": 1779740400.308559, "automatic.lastOutcome": "completed", "foreground.forceIncremental": true, "foreground.outcome": "scheduled_light_reconcile_via_sync_runtime", "foreground.requestedAt": 1779742126.1834378, "foreground.source": "rootForeground", "fullRecovery.lastCompletedAt": 1779740431.2661052, "fullRecovery.lastReason": "sync_event_missing_entity_ids", "fullRecovery.lastSource": "remoteSyncEvent", "fullRecovery.lastStartedAt": 1779740431.262979, "fullRecovery.watermarkAfter": 92, "incremental.attemptWindow.count": 1, "incremental.attemptWindow.startAt": 1779742126.194765, "incremental.lastApplied": 0, "incremental.lastAttemptAt": 1779742126.194765, "incremental.lastCatalogApplyMs": 0, "incremental.lastCatalogFetchMs": 0, "incremental.lastCategoriesMissingTombstoned": 0, "incremental.lastCompletedAt": 1779740431.278183, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastError": "failed_cancelled", "incremental.lastEventAppliedAt": 1779740431.262769, "incremental.lastEventPageFetchMs": 0, "incremental.lastEventSyncType": "EVENT_INCREMENTAL", "incremental.lastEventsFetched": 0, "incremental.lastEventsProcessed": 0, "incremental.lastHistoryApplyMs": 0, "incremental.lastHistoryFetchMs": 0, "incremental.lastHistoryMissingTombstoned": 0, "incremental.lastPage.applied": 0, "incremental.lastPage.catalogApplyMs": 0, "incremental.lastPage.catalogFetchMs": 0, "incremental.lastPage.categoriesFetched": 0, "incremental.lastPage.categoriesMissingTombstoned": 0, "incremental.lastPage.eventPageFetchMs": 0, "incremental.lastPage.eventsFetched": 50, "incremental.lastPage.eventsProcessed": 50, "incremental.lastPage.historyApplyMs": 0, "incremental.lastPage.historyFetchMs": 0, "incremental.lastPage.historyFetched": 0, "incremental.lastPage.historyInserted": 0, "incremental.lastPage.historyMissingTombstoned": 0, "incremental.lastPage.historyUpdated": 0, "incremental.lastPage.pricesFetched": 0, "incremental.lastPage.pricesMissingPruned": 0, "incremental.lastPage.productPriceApplyMs": 0, "incremental.lastPage.productPriceFetchMs": 0, "incremental.lastPage.productsFetched": 0, "incremental.lastPage.signature": "EVENT_INCREMENTAL|42|92|50|50|0|0|0|0|sync_event_missing_entity_ids", "incremental.lastPage.suppliersFetched": 0, "incremental.lastPage.suppliersMissingTombstoned": 0, "incremental.lastPage.totalElapsedMs": 2702, "incremental.lastPage.watermarkAfter": 92, "incremental.lastPage.watermarkBefore": 42, "incremental.lastPricesFetched": 0, "incremental.lastPricesInserted": 0, "incremental.lastPricesLinked": 0, "incremental.lastPricesMissingPruned": 0, "incremental.lastProductPriceApplyMs": 0, "incremental.lastProductPriceFetchMs": 0, "incremental.lastRequiresFullRecovery": true, "incremental.lastRequiresFullRecoveryReason": "sync_event_missing_entity_ids", "incremental.lastSource": "rootForeground", "incremental.lastSuppliersMissingTombstoned": 0, "incremental.lastSyncType": "LIGHT_RECONCILE", "incremental.lastTotalElapsedMs": 2702, "incremental.lastWatermarkAfter": 92, "incremental.requiresFullRecovery": true, "incremental.samePageRepeatCount": 0, "orchestrator.lastAction": "lightReconcile", "orchestrator.lastDecisionAt": 1779742126.193746, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779740400.308773, "orchestrator.lastRunDidWork": true, "orchestrator.lastRunStatus": "success", "orchestrator.lastTrigger": "appForeground", "orchestrator.safetyLoopLastTickAt": 1779740397.5694551, "orchestrator.safetyLoopTickCount": 2684, "progress.current": -1, "progress.domain": "", "progress.isActive": false, "progress.phase": "completed", "progress.total": -1, "reconcile.local.categories": 107, "reconcile.local.historySessions": 59, "reconcile.local.productPrices": 41280, "reconcile.local.products": 19776, "reconcile.local.suppliers": 138, "reconcile.mismatches": "products,suppliers,categories,productPrices,historySessions", "reconcile.remote.categories": 28, "reconcile.remote.historySessions": 49, "reconcile.remote.productPrices": 41111, "reconcile.remote.products": 19696, "reconcile.remote.suppliers": 59, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779742125.939773, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779740397.574516, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779740123.379837, "watcher.state": "started", "watcher.updateAt": 1779742126.1830812}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 2221}, {"scopeHash": "5facd3a46317", "source": "legacyAccount", "value": 92}, {"scopeHash": "84f17d749d5b", "source": "legacyAccount", "value": 92}, {"ownerHash": "ad3d747e936c", "source": "legacyOwner", "value": 1484}, {"scopeHash": "1909b4f31854", "source": "sync", "value": 92}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": "2026-05-22T18:45:57Z", "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 1}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 59, "all": 78, "tombstone": 19}], "iosMissingSupplierCategory": [], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-ui-counts", "startedAt": "2026-05-25T20:48:46Z", "status": "PASS", "taskId": "TASK-124", "updated": 0}
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 0}, "remote": null}, "completedAt": "2026-05-25T20:49:00Z", "counts": {"categories": {"active": 107, "all": 107, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 59, "all": 78, "deleted": 19, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 59}, "product_prices": {"active": 41280, "all": 41284, "deleted": 4, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19776, "all": 19788, "deleted": 12, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 138, "all": 138, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}, "deleted": 19, "drift": {}, "inserted": 0, "lastFullReconciliation": "2026-05-22T18:45:57Z", "lastPull": "2026-05-22T18:45:57Z", "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 0, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": {"appliedAt": "2026-05-22T18:45:57Z", "categories": 28, "createdAt": "2026-05-22T18:45:54Z", "products": 19706, "source": "fullPullApply", "status": "valid", "suppliers": 59, "tombstones": 10, "updatedAt": "2026-05-22T18:45:57Z"}, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"present": false}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.lastCompletedAt": 1779742131.594946, "automatic.lastOutcome": "no_work", "foreground.forceIncremental": true, "foreground.outcome": "scheduled_drain_events_via_sync_runtime", "foreground.requestedAt": 1779742131.45243, "foreground.source": "remoteSyncEvent", "fullRecovery.lastCompletedAt": 1779740431.2661052, "fullRecovery.lastReason": "sync_event_missing_entity_ids", "fullRecovery.lastSource": "remoteSyncEvent", "fullRecovery.lastStartedAt": 1779740431.262979, "fullRecovery.watermarkAfter": 92, "incremental.attemptWindow.count": 3, "incremental.attemptWindow.startAt": 1779742126.194765, "incremental.lastApplied": 0, "incremental.lastAttemptAt": 1779742131.4579139, "incremental.lastCatalogApplyMs": 0, "incremental.lastCatalogFetchMs": 0, "incremental.lastCategoriesMissingTombstoned": 0, "incremental.lastCompletedAt": 1779740431.278183, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastError": "failed_cancelled", "incremental.lastEventAppliedAt": 1779740431.262769, "incremental.lastEventPageFetchMs": 0, "incremental.lastEventSyncType": "EVENT_INCREMENTAL", "incremental.lastEventsFetched": 0, "incremental.lastEventsProcessed": 0, "incremental.lastHistoryApplyMs": 0, "incremental.lastHistoryFetchMs": 0, "incremental.lastHistoryMissingTombstoned": 0, "incremental.lastPage.applied": 0, "incremental.lastPage.catalogApplyMs": 0, "incremental.lastPage.catalogFetchMs": 0, "incremental.lastPage.categoriesFetched": 0, "incremental.lastPage.categoriesMissingTombstoned": 0, "incremental.lastPage.eventPageFetchMs": 0, "incremental.lastPage.eventsFetched": 50, "incremental.lastPage.eventsProcessed": 50, "incremental.lastPage.historyApplyMs": 0, "incremental.lastPage.historyFetchMs": 0, "incremental.lastPage.historyFetched": 0, "incremental.lastPage.historyInserted": 0, "incremental.lastPage.historyMissingTombstoned": 0, "incremental.lastPage.historyUpdated": 0, "incremental.lastPage.pricesFetched": 0, "incremental.lastPage.pricesMissingPruned": 0, "incremental.lastPage.productPriceApplyMs": 0, "incremental.lastPage.productPriceFetchMs": 0, "incremental.lastPage.productsFetched": 0, "incremental.lastPage.signature": "EVENT_INCREMENTAL|42|92|50|50|0|0|0|0|sync_event_missing_entity_ids", "incremental.lastPage.suppliersFetched": 0, "incremental.lastPage.suppliersMissingTombstoned": 0, "incremental.lastPage.totalElapsedMs": 126, "incremental.lastPage.watermarkAfter": 92, "incremental.lastPage.watermarkBefore": 42, "incremental.lastPricesFetched": 0, "incremental.lastPricesInserted": 0, "incremental.lastPricesLinked": 0, "incremental.lastPricesMissingPruned": 0, "incremental.lastProductPriceApplyMs": 0, "incremental.lastProductPriceFetchMs": 0, "incremental.lastRequiresFullRecovery": true, "incremental.lastRequiresFullRecoveryReason": "sync_event_missing_entity_ids", "incremental.lastSource": "remoteSyncEvent", "incremental.lastSuppliersMissingTombstoned": 0, "incremental.lastSyncType": "CHECKPOINT_INCREMENTAL", "incremental.lastTotalElapsedMs": 126, "incremental.lastWatermarkAfter": 92, "incremental.requiresFullRecovery": false, "incremental.samePageRepeatCount": 0, "orchestrator.lastAction": "drainEvents", "orchestrator.lastDecisionAt": 1779742131.457233, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779742131.5951738, "orchestrator.lastRunDidWork": false, "orchestrator.lastRunStatus": "noWork", "orchestrator.lastTrigger": "remoteSyncEvent", "orchestrator.safetyLoopLastTickAt": 1779740397.5694551, "orchestrator.safetyLoopTickCount": 2684, "progress.current": -1, "progress.domain": "", "progress.isActive": false, "progress.phase": "completed", "progress.total": -1, "reconcile.local.categories": 107, "reconcile.local.historySessions": 59, "reconcile.local.productPrices": 41280, "reconcile.local.products": 19776, "reconcile.local.suppliers": 138, "reconcile.mismatches": "products,suppliers,categories,productPrices,historySessions", "reconcile.remote.categories": 28, "reconcile.remote.historySessions": 49, "reconcile.remote.productPrices": 41111, "reconcile.remote.products": 19696, "reconcile.remote.suppliers": 59, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779742125.939773, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779740397.574516, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779742131.452008, "watcher.state": "started", "watcher.updateAt": 1779742126.1830812}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 2222}, {"scopeHash": "5facd3a46317", "source": "legacyAccount", "value": 92}, {"scopeHash": "84f17d749d5b", "source": "legacyAccount", "value": 92}, {"ownerHash": "ad3d747e936c", "source": "legacyOwner", "value": 1484}, {"scopeHash": "1909b4f31854", "source": "sync", "value": 92}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": "2026-05-22T18:45:57Z", "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 59, "all": 78, "tombstone": 19}], "iosMissingSupplierCategory": [], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-ui-counts", "startedAt": "2026-05-25T20:49:00Z", "status": "PASS", "taskId": "TASK-124", "updated": 0}
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 0}, "remote": null}, "completedAt": "2026-05-25T20:49:02Z", "counts": {"categories": {"active": 107, "all": 107, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 59, "all": 78, "deleted": 19, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 59}, "product_prices": {"active": 41280, "all": 41284, "deleted": 4, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19776, "all": 19788, "deleted": 12, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 138, "all": 138, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}, "deleted": 19, "drift": {}, "inserted": 0, "lastFullReconciliation": "2026-05-22T18:45:57Z", "lastPull": "2026-05-22T18:45:57Z", "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 0, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": {"appliedAt": "2026-05-22T18:45:57Z", "categories": 28, "createdAt": "2026-05-22T18:45:54Z", "products": 19706, "source": "fullPullApply", "status": "valid", "suppliers": 59, "tombstones": 10, "updatedAt": "2026-05-22T18:45:57Z"}, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"present": false}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.lastCompletedAt": 1779742131.594946, "automatic.lastOutcome": "no_work", "foreground.forceIncremental": true, "foreground.outcome": "scheduled_drain_events_via_sync_runtime", "foreground.requestedAt": 1779742131.45243, "foreground.source": "remoteSyncEvent", "fullRecovery.lastCompletedAt": 1779740431.2661052, "fullRecovery.lastReason": "sync_event_missing_entity_ids", "fullRecovery.lastSource": "remoteSyncEvent", "fullRecovery.lastStartedAt": 1779740431.262979, "fullRecovery.watermarkAfter": 92, "incremental.attemptWindow.count": 3, "incremental.attemptWindow.startAt": 1779742126.194765, "incremental.lastApplied": 0, "incremental.lastAttemptAt": 1779742131.4579139, "incremental.lastCatalogApplyMs": 0, "incremental.lastCatalogFetchMs": 0, "incremental.lastCategoriesMissingTombstoned": 0, "incremental.lastCompletedAt": 1779740431.278183, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastError": "failed_cancelled", "incremental.lastEventAppliedAt": 1779740431.262769, "incremental.lastEventPageFetchMs": 0, "incremental.lastEventSyncType": "EVENT_INCREMENTAL", "incremental.lastEventsFetched": 0, "incremental.lastEventsProcessed": 0, "incremental.lastHistoryApplyMs": 0, "incremental.lastHistoryFetchMs": 0, "incremental.lastHistoryMissingTombstoned": 0, "incremental.lastPage.applied": 0, "incremental.lastPage.catalogApplyMs": 0, "incremental.lastPage.catalogFetchMs": 0, "incremental.lastPage.categoriesFetched": 0, "incremental.lastPage.categoriesMissingTombstoned": 0, "incremental.lastPage.eventPageFetchMs": 0, "incremental.lastPage.eventsFetched": 50, "incremental.lastPage.eventsProcessed": 50, "incremental.lastPage.historyApplyMs": 0, "incremental.lastPage.historyFetchMs": 0, "incremental.lastPage.historyFetched": 0, "incremental.lastPage.historyInserted": 0, "incremental.lastPage.historyMissingTombstoned": 0, "incremental.lastPage.historyUpdated": 0, "incremental.lastPage.pricesFetched": 0, "incremental.lastPage.pricesMissingPruned": 0, "incremental.lastPage.productPriceApplyMs": 0, "incremental.lastPage.productPriceFetchMs": 0, "incremental.lastPage.productsFetched": 0, "incremental.lastPage.signature": "EVENT_INCREMENTAL|42|92|50|50|0|0|0|0|sync_event_missing_entity_ids", "incremental.lastPage.suppliersFetched": 0, "incremental.lastPage.suppliersMissingTombstoned": 0, "incremental.lastPage.totalElapsedMs": 126, "incremental.lastPage.watermarkAfter": 92, "incremental.lastPage.watermarkBefore": 42, "incremental.lastPricesFetched": 0, "incremental.lastPricesInserted": 0, "incremental.lastPricesLinked": 0, "incremental.lastPricesMissingPruned": 0, "incremental.lastProductPriceApplyMs": 0, "incremental.lastProductPriceFetchMs": 0, "incremental.lastRequiresFullRecovery": true, "incremental.lastRequiresFullRecoveryReason": "sync_event_missing_entity_ids", "incremental.lastSource": "remoteSyncEvent", "incremental.lastSuppliersMissingTombstoned": 0, "incremental.lastSyncType": "CHECKPOINT_INCREMENTAL", "incremental.lastTotalElapsedMs": 126, "incremental.lastWatermarkAfter": 92, "incremental.requiresFullRecovery": false, "incremental.samePageRepeatCount": 0, "orchestrator.lastAction": "drainEvents", "orchestrator.lastDecisionAt": 1779742131.457233, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779742131.5951738, "orchestrator.lastRunDidWork": false, "orchestrator.lastRunStatus": "noWork", "orchestrator.lastTrigger": "remoteSyncEvent", "orchestrator.safetyLoopLastTickAt": 1779740397.5694551, "orchestrator.safetyLoopTickCount": 2684, "progress.current": -1, "progress.domain": "", "progress.isActive": false, "progress.phase": "completed", "progress.total": -1, "reconcile.local.categories": 107, "reconcile.local.historySessions": 59, "reconcile.local.productPrices": 41280, "reconcile.local.products": 19776, "reconcile.local.suppliers": 138, "reconcile.mismatches": "products,suppliers,categories,productPrices,historySessions", "reconcile.remote.categories": 28, "reconcile.remote.historySessions": 49, "reconcile.remote.productPrices": 41111, "reconcile.remote.products": 19696, "reconcile.remote.suppliers": 59, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779742125.939773, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779740397.574516, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779742131.452008, "watcher.state": "started", "watcher.updateAt": 1779742126.1830812}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 2222}, {"scopeHash": "5facd3a46317", "source": "legacyAccount", "value": 92}, {"scopeHash": "84f17d749d5b", "source": "legacyAccount", "value": 92}, {"ownerHash": "ad3d747e936c", "source": "legacyOwner", "value": 1484}, {"scopeHash": "1909b4f31854", "source": "sync", "value": 92}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": "2026-05-22T18:45:57Z", "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 59, "all": 78, "tombstone": 19}], "iosMissingSupplierCategory": [], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-ui-counts", "startedAt": "2026-05-25T20:49:01Z", "status": "PASS", "taskId": "TASK-124", "updated": 0}
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 0}, "remote": null}, "completedAt": "2026-05-25T20:49:21Z", "counts": {"categories": {"active": 107, "all": 107, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 59, "all": 78, "deleted": 19, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 59}, "product_prices": {"active": 41280, "all": 41284, "deleted": 4, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19776, "all": 19788, "deleted": 12, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 138, "all": 138, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}, "deleted": 19, "drift": {}, "inserted": 0, "lastFullReconciliation": "2026-05-22T18:45:57Z", "lastPull": "2026-05-22T18:45:57Z", "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 0, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": {"appliedAt": "2026-05-22T18:45:57Z", "categories": 28, "createdAt": "2026-05-22T18:45:54Z", "products": 19706, "source": "fullPullApply", "status": "valid", "suppliers": 59, "tombstones": 10, "updatedAt": "2026-05-22T18:45:57Z"}, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"present": false}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.lastCompletedAt": 1779742131.594946, "automatic.lastOutcome": "no_work", "foreground.forceIncremental": true, "foreground.outcome": "scheduled_drain_events_via_sync_runtime", "foreground.requestedAt": 1779742131.45243, "foreground.source": "remoteSyncEvent", "fullRecovery.lastCompletedAt": 1779740431.2661052, "fullRecovery.lastReason": "sync_event_missing_entity_ids", "fullRecovery.lastSource": "remoteSyncEvent", "fullRecovery.lastStartedAt": 1779740431.262979, "fullRecovery.watermarkAfter": 92, "incremental.attemptWindow.count": 3, "incremental.attemptWindow.startAt": 1779742126.194765, "incremental.lastApplied": 0, "incremental.lastAttemptAt": 1779742131.4579139, "incremental.lastCatalogApplyMs": 0, "incremental.lastCatalogFetchMs": 0, "incremental.lastCategoriesMissingTombstoned": 0, "incremental.lastCompletedAt": 1779740431.278183, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastError": "failed_cancelled", "incremental.lastEventAppliedAt": 1779740431.262769, "incremental.lastEventPageFetchMs": 0, "incremental.lastEventSyncType": "EVENT_INCREMENTAL", "incremental.lastEventsFetched": 0, "incremental.lastEventsProcessed": 0, "incremental.lastHistoryApplyMs": 0, "incremental.lastHistoryFetchMs": 0, "incremental.lastHistoryMissingTombstoned": 0, "incremental.lastPage.applied": 0, "incremental.lastPage.catalogApplyMs": 0, "incremental.lastPage.catalogFetchMs": 0, "incremental.lastPage.categoriesFetched": 0, "incremental.lastPage.categoriesMissingTombstoned": 0, "incremental.lastPage.eventPageFetchMs": 0, "incremental.lastPage.eventsFetched": 50, "incremental.lastPage.eventsProcessed": 50, "incremental.lastPage.historyApplyMs": 0, "incremental.lastPage.historyFetchMs": 0, "incremental.lastPage.historyFetched": 0, "incremental.lastPage.historyInserted": 0, "incremental.lastPage.historyMissingTombstoned": 0, "incremental.lastPage.historyUpdated": 0, "incremental.lastPage.pricesFetched": 0, "incremental.lastPage.pricesMissingPruned": 0, "incremental.lastPage.productPriceApplyMs": 0, "incremental.lastPage.productPriceFetchMs": 0, "incremental.lastPage.productsFetched": 0, "incremental.lastPage.signature": "EVENT_INCREMENTAL|42|92|50|50|0|0|0|0|sync_event_missing_entity_ids", "incremental.lastPage.suppliersFetched": 0, "incremental.lastPage.suppliersMissingTombstoned": 0, "incremental.lastPage.totalElapsedMs": 126, "incremental.lastPage.watermarkAfter": 92, "incremental.lastPage.watermarkBefore": 42, "incremental.lastPricesFetched": 0, "incremental.lastPricesInserted": 0, "incremental.lastPricesLinked": 0, "incremental.lastPricesMissingPruned": 0, "incremental.lastProductPriceApplyMs": 0, "incremental.lastProductPriceFetchMs": 0, "incremental.lastRequiresFullRecovery": true, "incremental.lastRequiresFullRecoveryReason": "sync_event_missing_entity_ids", "incremental.lastSource": "remoteSyncEvent", "incremental.lastSuppliersMissingTombstoned": 0, "incremental.lastSyncType": "CHECKPOINT_INCREMENTAL", "incremental.lastTotalElapsedMs": 126, "incremental.lastWatermarkAfter": 92, "incremental.requiresFullRecovery": false, "incremental.samePageRepeatCount": 0, "orchestrator.lastAction": "drainEvents", "orchestrator.lastDecisionAt": 1779742131.457233, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779742131.5951738, "orchestrator.lastRunDidWork": false, "orchestrator.lastRunStatus": "noWork", "orchestrator.lastTrigger": "remoteSyncEvent", "orchestrator.safetyLoopLastTickAt": 1779740397.5694551, "orchestrator.safetyLoopTickCount": 2685, "progress.current": -1, "progress.domain": "", "progress.isActive": false, "progress.phase": "completed", "progress.total": -1, "reconcile.local.categories": 107, "reconcile.local.historySessions": 59, "reconcile.local.productPrices": 41280, "reconcile.local.products": 19776, "reconcile.local.suppliers": 138, "reconcile.mismatches": "products,suppliers,categories,productPrices,historySessions", "reconcile.remote.categories": 28, "reconcile.remote.historySessions": 49, "reconcile.remote.productPrices": 41111, "reconcile.remote.products": 19696, "reconcile.remote.suppliers": 59, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779742125.939773, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779740397.574516, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779742131.452008, "watcher.state": "started", "watcher.updateAt": 1779742126.1830812}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 2222}, {"scopeHash": "5facd3a46317", "source": "legacyAccount", "value": 92}, {"scopeHash": "84f17d749d5b", "source": "legacyAccount", "value": 92}, {"ownerHash": "ad3d747e936c", "source": "legacyOwner", "value": 1484}, {"scopeHash": "1909b4f31854", "source": "sync", "value": 92}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": "2026-05-22T18:45:57Z", "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 59, "all": 78, "tombstone": 19}], "iosMissingSupplierCategory": [], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-ui-counts", "startedAt": "2026-05-25T20:49:21Z", "status": "PASS", "taskId": "TASK-124", "updated": 0}
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 0}, "remote": null}, "completedAt": "2026-05-25T20:49:22Z", "counts": {"categories": {"active": 107, "all": 107, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 59, "all": 78, "deleted": 19, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 59}, "product_prices": {"active": 41280, "all": 41284, "deleted": 4, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19776, "all": 19788, "deleted": 12, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 138, "all": 138, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}, "deleted": 19, "drift": {}, "inserted": 0, "lastFullReconciliation": "2026-05-22T18:45:57Z", "lastPull": "2026-05-22T18:45:57Z", "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 0, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": {"appliedAt": "2026-05-22T18:45:57Z", "categories": 28, "createdAt": "2026-05-22T18:45:54Z", "products": 19706, "source": "fullPullApply", "status": "valid", "suppliers": 59, "tombstones": 10, "updatedAt": "2026-05-22T18:45:57Z"}, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"present": false}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.lastCompletedAt": 1779742131.594946, "automatic.lastOutcome": "no_work", "foreground.forceIncremental": true, "foreground.outcome": "scheduled_drain_events_via_sync_runtime", "foreground.requestedAt": 1779742131.45243, "foreground.source": "remoteSyncEvent", "fullRecovery.lastCompletedAt": 1779740431.2661052, "fullRecovery.lastReason": "sync_event_missing_entity_ids", "fullRecovery.lastSource": "remoteSyncEvent", "fullRecovery.lastStartedAt": 1779740431.262979, "fullRecovery.watermarkAfter": 92, "incremental.attemptWindow.count": 3, "incremental.attemptWindow.startAt": 1779742126.194765, "incremental.lastApplied": 0, "incremental.lastAttemptAt": 1779742131.4579139, "incremental.lastCatalogApplyMs": 0, "incremental.lastCatalogFetchMs": 0, "incremental.lastCategoriesMissingTombstoned": 0, "incremental.lastCompletedAt": 1779740431.278183, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastError": "failed_cancelled", "incremental.lastEventAppliedAt": 1779740431.262769, "incremental.lastEventPageFetchMs": 0, "incremental.lastEventSyncType": "EVENT_INCREMENTAL", "incremental.lastEventsFetched": 0, "incremental.lastEventsProcessed": 0, "incremental.lastHistoryApplyMs": 0, "incremental.lastHistoryFetchMs": 0, "incremental.lastHistoryMissingTombstoned": 0, "incremental.lastPage.applied": 0, "incremental.lastPage.catalogApplyMs": 0, "incremental.lastPage.catalogFetchMs": 0, "incremental.lastPage.categoriesFetched": 0, "incremental.lastPage.categoriesMissingTombstoned": 0, "incremental.lastPage.eventPageFetchMs": 0, "incremental.lastPage.eventsFetched": 50, "incremental.lastPage.eventsProcessed": 50, "incremental.lastPage.historyApplyMs": 0, "incremental.lastPage.historyFetchMs": 0, "incremental.lastPage.historyFetched": 0, "incremental.lastPage.historyInserted": 0, "incremental.lastPage.historyMissingTombstoned": 0, "incremental.lastPage.historyUpdated": 0, "incremental.lastPage.pricesFetched": 0, "incremental.lastPage.pricesMissingPruned": 0, "incremental.lastPage.productPriceApplyMs": 0, "incremental.lastPage.productPriceFetchMs": 0, "incremental.lastPage.productsFetched": 0, "incremental.lastPage.signature": "EVENT_INCREMENTAL|42|92|50|50|0|0|0|0|sync_event_missing_entity_ids", "incremental.lastPage.suppliersFetched": 0, "incremental.lastPage.suppliersMissingTombstoned": 0, "incremental.lastPage.totalElapsedMs": 126, "incremental.lastPage.watermarkAfter": 92, "incremental.lastPage.watermarkBefore": 42, "incremental.lastPricesFetched": 0, "incremental.lastPricesInserted": 0, "incremental.lastPricesLinked": 0, "incremental.lastPricesMissingPruned": 0, "incremental.lastProductPriceApplyMs": 0, "incremental.lastProductPriceFetchMs": 0, "incremental.lastRequiresFullRecovery": true, "incremental.lastRequiresFullRecoveryReason": "sync_event_missing_entity_ids", "incremental.lastSource": "remoteSyncEvent", "incremental.lastSuppliersMissingTombstoned": 0, "incremental.lastSyncType": "CHECKPOINT_INCREMENTAL", "incremental.lastTotalElapsedMs": 126, "incremental.lastWatermarkAfter": 92, "incremental.requiresFullRecovery": false, "incremental.samePageRepeatCount": 0, "orchestrator.lastAction": "drainEvents", "orchestrator.lastDecisionAt": 1779742131.457233, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779742131.5951738, "orchestrator.lastRunDidWork": false, "orchestrator.lastRunStatus": "noWork", "orchestrator.lastTrigger": "remoteSyncEvent", "orchestrator.safetyLoopLastTickAt": 1779740397.5694551, "orchestrator.safetyLoopTickCount": 2685, "progress.current": -1, "progress.domain": "", "progress.isActive": false, "progress.phase": "completed", "progress.total": -1, "reconcile.local.categories": 107, "reconcile.local.historySessions": 59, "reconcile.local.productPrices": 41280, "reconcile.local.products": 19776, "reconcile.local.suppliers": 138, "reconcile.mismatches": "products,suppliers,categories,productPrices,historySessions", "reconcile.remote.categories": 28, "reconcile.remote.historySessions": 49, "reconcile.remote.productPrices": 41111, "reconcile.remote.products": 19696, "reconcile.remote.suppliers": 59, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779742125.939773, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779740397.574516, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779742131.452008, "watcher.state": "started", "watcher.updateAt": 1779742126.1830812}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 2222}, {"scopeHash": "5facd3a46317", "source": "legacyAccount", "value": 92}, {"scopeHash": "84f17d749d5b", "source": "legacyAccount", "value": 92}, {"ownerHash": "ad3d747e936c", "source": "legacyOwner", "value": 1484}, {"scopeHash": "1909b4f31854", "source": "sync", "value": 92}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": "2026-05-22T18:45:57Z", "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 59, "all": 78, "tombstone": 19}], "iosMissingSupplierCategory": [], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-ui-counts", "startedAt": "2026-05-25T20:49:22Z", "status": "PASS", "taskId": "TASK-124", "updated": 0}
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 0}, "remote": null}, "completedAt": "2026-05-25T20:49:40Z", "counts": {"categories": {"active": 107, "all": 107, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 59, "all": 78, "deleted": 19, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 59}, "product_prices": {"active": 41280, "all": 41284, "deleted": 4, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19776, "all": 19788, "deleted": 12, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 138, "all": 138, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}, "deleted": 19, "drift": {}, "inserted": 0, "lastFullReconciliation": "2026-05-22T18:45:57Z", "lastPull": "2026-05-22T18:45:57Z", "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 0, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": {"appliedAt": "2026-05-22T18:45:57Z", "categories": 28, "createdAt": "2026-05-22T18:45:54Z", "products": 19706, "source": "fullPullApply", "status": "valid", "suppliers": 59, "tombstones": 10, "updatedAt": "2026-05-22T18:45:57Z"}, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"present": false}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.lastCompletedAt": 1779742159.299477, "automatic.lastOutcome": "completed", "foreground.forceIncremental": true, "foreground.outcome": "scheduled_drain_events_via_sync_runtime", "foreground.requestedAt": 1779742156.7150831, "foreground.source": "remoteSyncEvent", "fullRecovery.lastCompletedAt": 1779740431.2661052, "fullRecovery.lastReason": "sync_event_missing_entity_ids", "fullRecovery.lastSource": "remoteSyncEvent", "fullRecovery.lastStartedAt": 1779740431.262979, "fullRecovery.watermarkAfter": 92, "incremental.attemptWindow.count": 4, "incremental.attemptWindow.startAt": 1779742126.194765, "incremental.lastApplied": 0, "incremental.lastAttemptAt": 1779742156.7347012, "incremental.lastCatalogApplyMs": 0, "incremental.lastCatalogFetchMs": 0, "incremental.lastCategoriesMissingTombstoned": 0, "incremental.lastCompletedAt": 1779740431.278183, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastError": "failed_cancelled", "incremental.lastEventAppliedAt": 1779740431.262769, "incremental.lastEventPageFetchMs": 0, "incremental.lastEventSyncType": "EVENT_INCREMENTAL", "incremental.lastEventsFetched": 0, "incremental.lastEventsProcessed": 0, "incremental.lastHistoryApplyMs": 0, "incremental.lastHistoryFetchMs": 0, "incremental.lastHistoryMissingTombstoned": 0, "incremental.lastPage.applied": 0, "incremental.lastPage.catalogApplyMs": 0, "incremental.lastPage.catalogFetchMs": 0, "incremental.lastPage.categoriesFetched": 0, "incremental.lastPage.categoriesMissingTombstoned": 0, "incremental.lastPage.eventPageFetchMs": 0, "incremental.lastPage.eventsFetched": 50, "incremental.lastPage.eventsProcessed": 50, "incremental.lastPage.historyApplyMs": 0, "incremental.lastPage.historyFetchMs": 0, "incremental.lastPage.historyFetched": 0, "incremental.lastPage.historyInserted": 0, "incremental.lastPage.historyMissingTombstoned": 0, "incremental.lastPage.historyUpdated": 0, "incremental.lastPage.pricesFetched": 0, "incremental.lastPage.pricesMissingPruned": 0, "incremental.lastPage.productPriceApplyMs": 0, "incremental.lastPage.productPriceFetchMs": 0, "incremental.lastPage.productsFetched": 0, "incremental.lastPage.signature": "EVENT_INCREMENTAL|42|92|50|50|0|0|0|0|sync_event_missing_entity_ids", "incremental.lastPage.suppliersFetched": 0, "incremental.lastPage.suppliersMissingTombstoned": 0, "incremental.lastPage.totalElapsedMs": 2557, "incremental.lastPage.watermarkAfter": 92, "incremental.lastPage.watermarkBefore": 42, "incremental.lastPricesFetched": 0, "incremental.lastPricesInserted": 0, "incremental.lastPricesLinked": 0, "incremental.lastPricesMissingPruned": 0, "incremental.lastProductPriceApplyMs": 0, "incremental.lastProductPriceFetchMs": 0, "incremental.lastRequiresFullRecovery": true, "incremental.lastRequiresFullRecoveryReason": "sync_event_missing_entity_ids", "incremental.lastSource": "remoteSyncEvent", "incremental.lastSuppliersMissingTombstoned": 0, "incremental.lastSyncType": "LIGHT_RECONCILE", "incremental.lastTotalElapsedMs": 2557, "incremental.lastWatermarkAfter": 92, "incremental.requiresFullRecovery": true, "incremental.samePageRepeatCount": 0, "orchestrator.lastAction": "drainEvents", "orchestrator.lastDecisionAt": 1779742156.7340798, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779742159.299676, "orchestrator.lastRunDidWork": true, "orchestrator.lastRunStatus": "success", "orchestrator.lastTrigger": "remoteSyncEvent", "orchestrator.safetyLoopLastTickAt": 1779742156.7015738, "orchestrator.safetyLoopTickCount": 2685, "progress.current": -1, "progress.domain": "", "progress.isActive": false, "progress.phase": "completed", "progress.total": -1, "reconcile.local.categories": 107, "reconcile.local.historySessions": 59, "reconcile.local.productPrices": 41280, "reconcile.local.products": 19776, "reconcile.local.suppliers": 138, "reconcile.mismatches": "products,suppliers,categories,productPrices", "reconcile.remote.categories": 28, "reconcile.remote.historySessions": 59, "reconcile.remote.productPrices": 41111, "reconcile.remote.products": 19696, "reconcile.remote.suppliers": 59, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779742125.939773, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779742156.7065759, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779742131.452008, "watcher.state": "started", "watcher.updateAt": 1779742156.714357}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 2222}, {"scopeHash": "5facd3a46317", "source": "legacyAccount", "value": 92}, {"scopeHash": "84f17d749d5b", "source": "legacyAccount", "value": 92}, {"ownerHash": "ad3d747e936c", "source": "legacyOwner", "value": 1484}, {"scopeHash": "1909b4f31854", "source": "sync", "value": 92}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": "2026-05-22T18:45:57Z", "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 59, "all": 78, "tombstone": 19}], "iosMissingSupplierCategory": [], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-ui-counts", "startedAt": "2026-05-25T20:49:40Z", "status": "PASS", "taskId": "TASK-124", "updated": 0}
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 0}, "remote": null}, "completedAt": "2026-05-25T20:49:42Z", "counts": {"categories": {"active": 107, "all": 107, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "history_entries": {"active": 59, "all": 78, "deleted": 19, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 59}, "product_prices": {"active": 41280, "all": 41284, "deleted": 4, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "products": {"active": 19776, "all": 19788, "deleted": 12, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 138, "all": 138, "deleted": 0, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}}, "deleted": 19, "drift": {}, "inserted": 0, "lastFullReconciliation": "2026-05-22T18:45:57Z", "lastPull": "2026-05-22T18:45:57Z", "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 0, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": {"appliedAt": "2026-05-22T18:45:57Z", "categories": 28, "createdAt": "2026-05-22T18:45:54Z", "products": 19706, "source": "fullPullApply", "status": "valid", "suppliers": 59, "tombstones": 10, "updatedAt": "2026-05-22T18:45:57Z"}, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"present": false}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.lastCompletedAt": 1779742159.299477, "automatic.lastOutcome": "completed", "foreground.forceIncremental": true, "foreground.outcome": "scheduled_drain_events_via_sync_runtime", "foreground.requestedAt": 1779742156.7150831, "foreground.source": "remoteSyncEvent", "fullRecovery.lastCompletedAt": 1779740431.2661052, "fullRecovery.lastReason": "sync_event_missing_entity_ids", "fullRecovery.lastSource": "remoteSyncEvent", "fullRecovery.lastStartedAt": 1779740431.262979, "fullRecovery.watermarkAfter": 92, "incremental.attemptWindow.count": 4, "incremental.attemptWindow.startAt": 1779742126.194765, "incremental.lastApplied": 0, "incremental.lastAttemptAt": 1779742156.7347012, "incremental.lastCatalogApplyMs": 0, "incremental.lastCatalogFetchMs": 0, "incremental.lastCategoriesMissingTombstoned": 0, "incremental.lastCompletedAt": 1779740431.278183, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastError": "failed_cancelled", "incremental.lastEventAppliedAt": 1779740431.262769, "incremental.lastEventPageFetchMs": 0, "incremental.lastEventSyncType": "EVENT_INCREMENTAL", "incremental.lastEventsFetched": 0, "incremental.lastEventsProcessed": 0, "incremental.lastHistoryApplyMs": 0, "incremental.lastHistoryFetchMs": 0, "incremental.lastHistoryMissingTombstoned": 0, "incremental.lastPage.applied": 0, "incremental.lastPage.catalogApplyMs": 0, "incremental.lastPage.catalogFetchMs": 0, "incremental.lastPage.categoriesFetched": 0, "incremental.lastPage.categoriesMissingTombstoned": 0, "incremental.lastPage.eventPageFetchMs": 0, "incremental.lastPage.eventsFetched": 50, "incremental.lastPage.eventsProcessed": 50, "incremental.lastPage.historyApplyMs": 0, "incremental.lastPage.historyFetchMs": 0, "incremental.lastPage.historyFetched": 0, "incremental.lastPage.historyInserted": 0, "incremental.lastPage.historyMissingTombstoned": 0, "incremental.lastPage.historyUpdated": 0, "incremental.lastPage.pricesFetched": 0, "incremental.lastPage.pricesMissingPruned": 0, "incremental.lastPage.productPriceApplyMs": 0, "incremental.lastPage.productPriceFetchMs": 0, "incremental.lastPage.productsFetched": 0, "incremental.lastPage.signature": "EVENT_INCREMENTAL|42|92|50|50|0|0|0|0|sync_event_missing_entity_ids", "incremental.lastPage.suppliersFetched": 0, "incremental.lastPage.suppliersMissingTombstoned": 0, "incremental.lastPage.totalElapsedMs": 2557, "incremental.lastPage.watermarkAfter": 92, "incremental.lastPage.watermarkBefore": 42, "incremental.lastPricesFetched": 0, "incremental.lastPricesInserted": 0, "incremental.lastPricesLinked": 0, "incremental.lastPricesMissingPruned": 0, "incremental.lastProductPriceApplyMs": 0, "incremental.lastProductPriceFetchMs": 0, "incremental.lastRequiresFullRecovery": true, "incremental.lastRequiresFullRecoveryReason": "sync_event_missing_entity_ids", "incremental.lastSource": "remoteSyncEvent", "incremental.lastSuppliersMissingTombstoned": 0, "incremental.lastSyncType": "LIGHT_RECONCILE", "incremental.lastTotalElapsedMs": 2557, "incremental.lastWatermarkAfter": 92, "incremental.requiresFullRecovery": true, "incremental.samePageRepeatCount": 0, "orchestrator.lastAction": "drainEvents", "orchestrator.lastDecisionAt": 1779742156.7340798, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779742159.299676, "orchestrator.lastRunDidWork": true, "orchestrator.lastRunStatus": "success", "orchestrator.lastTrigger": "remoteSyncEvent", "orchestrator.safetyLoopLastTickAt": 1779742156.7015738, "orchestrator.safetyLoopTickCount": 2685, "progress.current": -1, "progress.domain": "", "progress.isActive": false, "progress.phase": "completed", "progress.total": -1, "reconcile.local.categories": 107, "reconcile.local.historySessions": 59, "reconcile.local.productPrices": 41280, "reconcile.local.products": 19776, "reconcile.local.suppliers": 138, "reconcile.mismatches": "products,suppliers,categories,productPrices", "reconcile.remote.categories": 28, "reconcile.remote.historySessions": 59, "reconcile.remote.productPrices": 41111, "reconcile.remote.products": 19696, "reconcile.remote.suppliers": 59, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779742125.939773, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779742156.7065759, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779742131.452008, "watcher.state": "started", "watcher.updateAt": 1779742156.714357}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 2222}, {"scopeHash": "5facd3a46317", "source": "legacyAccount", "value": 92}, {"scopeHash": "84f17d749d5b", "source": "legacyAccount", "value": 92}, {"ownerHash": "ad3d747e936c", "source": "legacyOwner", "value": 1484}, {"scopeHash": "1909b4f31854", "source": "sync", "value": 92}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": "2026-05-22T18:45:57Z", "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 59, "all": 78, "tombstone": 19}], "iosMissingSupplierCategory": [], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-ui-counts", "startedAt": "2026-05-25T20:49:42Z", "status": "PASS", "taskId": "TASK-124", "updated": 0}
+{"acceptance": {"elapsedMsExcludesSettle": true, "maxMeasurableMs": 2000, "settleSeconds": 0.25}, "completedAt": "2026-05-25T20:49:48Z", "iterations": [{"countsUnchanged": true, "direction": "androidNoop", "elapsedMs": 1152, "iteration": 1, "settleSeconds": 0.25, "status": "PASS", "syncEventsCreated": 0}, {"countsUnchanged": true, "direction": "iosNoop", "elapsedMs": 1042, "iteration": 1, "settleSeconds": 0.25, "status": "PASS", "syncEventsCreated": 0}, {"countsUnchanged": true, "direction": "androidNoop", "elapsedMs": 1006, "iteration": 2, "settleSeconds": 0.25, "status": "PASS", "syncEventsCreated": 0}, {"countsUnchanged": true, "direction": "iosNoop", "elapsedMs": 983, "iteration": 2, "settleSeconds": 0.25, "status": "PASS", "syncEventsCreated": 0}, {"countsUnchanged": true, "direction": "androidNoop", "elapsedMs": 1033, "iteration": 3, "settleSeconds": 0.25, "status": "PASS", "syncEventsCreated": 0}, {"countsUnchanged": true, "direction": "iosNoop", "elapsedMs": 1038, "iteration": 3, "settleSeconds": 0.25, "status": "PASS", "syncEventsCreated": 0}], "prefix": "TASK124_SPEED_SIM_NOOP_20260525T204759Z_", "schemaVersion": "1.1", "source": "live.task123-noop-matrix", "startedAt": "2026-05-25T20:47:59Z", "status": "PASS", "summary": {"androidNoop": {"count": 3, "maxMs": 1152, "passCount": 3}, "iosNoop": {"count": 3, "maxMs": 1042, "passCount": 3}}, "taskId": "TASK-124"}
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+
+> Configure project :app
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: API 'applicationVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling applicationVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: API 'testVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling testVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: API 'unitTestVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling unitTestVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+w: [33m[1m⚠️ Deprecated 'org.jetbrains.kotlin.android' plugin usage[0m[0m
+The 'org.jetbrains.kotlin.android' plugin in project ':app' is no longer required for Kotlin support since AGP 9.0.
+[32m[1mSolution:[0m[0m
+[32m[3mRemove both `android.builtInKotlin=true` and `android.newDsl=false` from `gradle.properties`, then migrate to built-in Kotlin.[0m[0m
+[36mSee [0m[34mhttps://kotl.in/gradle/agp-built-in-kotlin[0m[36m for more details.[0m
+
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:generateDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :app:packageDebug UP-TO-DATE
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :app:processDebugAndroidTestManifest UP-TO-DATE
+> Task :app:generateDebugAndroidTestBuildConfig UP-TO-DATE
+> Task :app:generateDebugAndroidTestResources UP-TO-DATE
+> Task :app:packageDebugAndroidTestResources UP-TO-DATE
+> Task :app:processDebugAndroidTestNavigationResources UP-TO-DATE
+> Task :app:parseDebugAndroidTestLocalResources UP-TO-DATE
+> Task :app:generateDebugAndroidTestRFile UP-TO-DATE
+> Task :app:kspDebugAndroidTestKotlin UP-TO-DATE
+> Task :app:compileDebugAndroidTestKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebugAndroidTest UP-TO-DATE
+> Task :app:compileDebugAndroidTestJavaWithJavac UP-TO-DATE
+> Task :app:generateDebugAndroidTestAssets UP-TO-DATE
+> Task :app:mergeDebugAndroidTestAssets UP-TO-DATE
+> Task :app:compressDebugAndroidTestAssets UP-TO-DATE
+> Task :app:generateDebugAndroidTestGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugAndroidTestJavaRes UP-TO-DATE
+> Task :app:mergeDebugAndroidTestJavaResource UP-TO-DATE
+> Task :app:checkDebugAndroidTestDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugAndroidTestFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebugAndroidTest UP-TO-DATE
+> Task :app:mergeLibDexDebugAndroidTest UP-TO-DATE
+> Task :app:checkDebugAndroidTestAarMetadata UP-TO-DATE
+> Task :app:mapDebugAndroidTestSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugAndroidTestNavigationResources UP-TO-DATE
+> Task :app:mergeDebugAndroidTestResources UP-TO-DATE
+> Task :app:processDebugAndroidTestResources UP-TO-DATE
+> Task :app:dexBuilderDebugAndroidTest UP-TO-DATE
+> Task :app:mergeProjectDexDebugAndroidTest UP-TO-DATE
+> Task :app:mergeDebugAndroidTestJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugAndroidTestNativeLibs NO-SOURCE
+> Task :app:stripDebugAndroidTestDebugSymbols NO-SOURCE
+> Task :app:validateSigningDebugAndroidTest UP-TO-DATE
+> Task :app:writeDebugAndroidTestSigningConfigVersions UP-TO-DATE
+> Task :app:packageDebugAndroidTest UP-TO-DATE
+> Task :app:createDebugAndroidTestApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebugAndroidTest UP-TO-DATE
+
+[Incubating] Problems report is available at: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 703ms
+72 actionable tasks: 72 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.4.1/userguide/configuration_cache_enabling.html
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+
+> Configure project :app
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: API 'applicationVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling applicationVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: API 'testVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling testVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: API 'unitTestVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling unitTestVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+w: [33m[1m⚠️ Deprecated 'org.jetbrains.kotlin.android' plugin usage[0m[0m
+The 'org.jetbrains.kotlin.android' plugin in project ':app' is no longer required for Kotlin support since AGP 9.0.
+[32m[1mSolution:[0m[0m
+[32m[3mRemove both `android.builtInKotlin=true` and `android.newDsl=false` from `gradle.properties`, then migrate to built-in Kotlin.[0m[0m
+[36mSee [0m[34mhttps://kotl.in/gradle/agp-built-in-kotlin[0m[36m for more details.[0m
+
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:generateDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :app:packageDebug UP-TO-DATE
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug UP-TO-DATE
+
+[Incubating] Problems report is available at: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 612ms
+39 actionable tasks: 39 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.4.1/userguide/configuration_cache_enabling.html
+  bash arg: -p
+  bash arg: com.example.merchandisecontrolsplitview
+  bash arg: -c
+  bash arg: android.intent.category.LAUNCHER
+  bash arg: 1
+args: [-p, com.example.merchandisecontrolsplitview, -c, android.intent.category.LAUNCHER, 1]
+ arg: "-p"
+ arg: "com.example.merchandisecontrolsplitview"
+ arg: "-c"
+ arg: "android.intent.category.LAUNCHER"
+ arg: "1"
+data="com.example.merchandisecontrolsplitview"
+data="android.intent.category.LAUNCHER"
+Events injected: 1
+## Network stats: elapsed time=40ms (0ms mobile, 0ms wifi, 40ms not connected)
+Monitoring boot status for iPhone 17 Pro (240F400E-5EFA-486A-9137-FFBBE70F604D).
+Device already booted, nothing to do.
+
+com.niwcyber.iOSMerchandiseControl: 69841
+args: [-p, com.example.merchandisecontrolsplitview, -c, android.intent.category.LAUNCHER, 1]
+ arg: "-p"
+ arg: "com.example.merchandisecontrolsplitview"
+ arg: "-c"
+ arg: "android.intent.category.LAUNCHER"
+ arg: "1"
+data="com.example.merchandisecontrolsplitview"
+data="android.intent.category.LAUNCHER"
+Initialising login role...
+Monitoring boot status for iPhone 17 Pro (240F400E-5EFA-486A-9137-FFBBE70F604D).
+Device already booted, nothing to do.
+
+com.niwcyber.iOSMerchandiseControl: 69841
+Monitoring boot status for iPhone 17 Pro (240F400E-5EFA-486A-9137-FFBBE70F604D).
+Device already booted, nothing to do.
+
+com.niwcyber.iOSMerchandiseControl: 69841
+Initialising login role...
+args: [-p, com.example.merchandisecontrolsplitview, -c, android.intent.category.LAUNCHER, 1]
+ arg: "-p"
+ arg: "com.example.merchandisecontrolsplitview"
+ arg: "-c"
+ arg: "android.intent.category.LAUNCHER"
+ arg: "1"
+data="com.example.merchandisecontrolsplitview"
+data="android.intent.category.LAUNCHER"
+Initialising login role...
+Monitoring boot status for iPhone 17 Pro (240F400E-5EFA-486A-9137-FFBBE70F604D).
+Device already booted, nothing to do.
+
+com.niwcyber.iOSMerchandiseControl: 69841
+Monitoring boot status for iPhone 17 Pro (240F400E-5EFA-486A-9137-FFBBE70F604D).
+Device already booted, nothing to do.
+
+com.niwcyber.iOSMerchandiseControl: 69841
+Initialising login role...
+args: [-p, com.example.merchandisecontrolsplitview, -c, android.intent.category.LAUNCHER, 1]
+ arg: "-p"
+ arg: "com.example.merchandisecontrolsplitview"
+ arg: "-c"
+ arg: "android.intent.category.LAUNCHER"
+ arg: "1"
+data="com.example.merchandisecontrolsplitview"
+data="android.intent.category.LAUNCHER"
+Initialising login role...
+Monitoring boot status for iPhone 17 Pro (240F400E-5EFA-486A-9137-FFBBE70F604D).
+Device already booted, nothing to do.
+
+com.niwcyber.iOSMerchandiseControl: 69841
+Monitoring boot status for iPhone 17 Pro (240F400E-5EFA-486A-9137-FFBBE70F604D).
+Device already booted, nothing to do.
+
+com.niwcyber.iOSMerchandiseControl: 69841
+Initialising login role...

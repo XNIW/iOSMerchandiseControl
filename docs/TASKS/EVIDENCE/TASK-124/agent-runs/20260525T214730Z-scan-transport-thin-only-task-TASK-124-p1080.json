@@ -1,0 +1,115 @@
+{
+  "NEXT_ACTION": "Use this report in TASK-124 evidence matrix.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T214730Z-scan-transport-thin-only-task-TASK-124-p1080.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T214730Z-scan-transport-thin-only-task-TASK-124-p1080.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T214730Z-scan-transport-thin-only-task-TASK-124-p1080.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-124-01",
+    "AC-124-03"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan transport-thin-only --task TASK-124",
+  "command_slug": "scan-transport-thin-only-task-TASK-124",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 813,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-124",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK124_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-124"
+  },
+  "exit_code": 0,
+  "git_sha": "472e1bbb",
+  "next_action_recommended": "Use this report in TASK-124 evidence matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Keep SupabaseTransportClient transport-only.",
+    "canonicalHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+    "checks": [
+      {
+        "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+        "id": "transport-exists",
+        "reason": "SupabaseTransportClient.swift must exist.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "forbidden_hits": [],
+          "loc": 117
+        },
+        "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+        "fix_hint": "Move query/table behavior into query executor or domain adapters.",
+        "id": "transport-has-no-domain-query",
+        "reason": "Transport client must not own table/query/domain behavior.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-25T21:47:31+00:00",
+    "exitCode": 0,
+    "githubHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+    "localHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+    "nextAction": "Keep SupabaseTransportClient transport-only.",
+    "originHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "PASS",
+    "safety_level": "read_only_static_scan",
+    "scan": "transport-thin-only",
+    "scannerName": "transport-thin-only",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.transport-thin-only",
+    "started_at": "2026-05-25T21:47:31+00:00",
+    "status": "PASS",
+    "summary": "transport-thin-only: PASS (2 checks)",
+    "taskId": "TASK-124",
+    "task_id": "TASK-124"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T214730Z-scan-transport-thin-only-task-TASK-124-p1080",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-124",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-25T21:47:31Z",
+  "timestamp_start": "2026-05-25T21:47:30Z",
+  "warnings": []
+}

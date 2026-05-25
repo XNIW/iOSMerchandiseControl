@@ -5,14 +5,14 @@
 - **Titolo**: iOS Sync Final Architecture Purification and Residue Eradication
 - **File task**: `docs/TASKS/TASK-124-ios-sync-final-architecture-purification.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-124/`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW — SIMULATOR_EMULATOR_SCOPE_PASS
-- **Responsabile attuale**: CLAUDE / Reviewer
+- **Stato**: DONE
+- **Fase attuale**: SIMULATOR_EMULATOR_SCOPE_VERIFIED
+- **Responsabile attuale**: USER / Accepted simulator-emulator closure
 - **Data creazione**: 2026-05-25
-- **Ultimo aggiornamento**: 2026-05-25 16:23 -0400 — simulator/emulator live gates completed; physical device scope deferred to TASK-125
-- **Ultimo agente che ha operato**: CODEX / Executor
-- **Tipo task**: architecture purification planning; futura execution Swift/harness solo dopo review/approval.
-- **Readiness**: EXECUTION_AUTHORIZED_BY_USER. Esecuzione end-to-end approvata dall'utente; stato massimo finale ammesso senza review esterna: ACTIVE / REVIEW o ACTIVE / BLOCKED/FIX secondo evidence. TASK-124 non e' DONE, non dichiara architettura 100% completata. Review integration: automation/harness/safety/evidence requirements obbligatori.
+- **Ultimo aggiornamento**: 2026-05-25 17:52 -0400 — review/fix finale completato; simulator/emulator/Supabase scope verified; physical/background/long-offline real-device deferred to TASK-125
+- **Ultimo agente che ha operato**: CODEX / Reviewer+Fixer
+- **Tipo task**: architecture purification execution/review closure; planning storico conservato sotto per tracciabilita'.
+- **Readiness**: DONE_BY_USER_OVERRIDE_FOR_TASK124_SCOPE. Override esplicito utente 2026-05-25: Codex autorizzato a fare review/fix/check iterativi e chiudere TASK-124 a DONE solo nel perimetro iOS Simulator + Android Emulator `emulator-5554` + Supabase linked/local. Il DONE non copre iPhone fisico, Android fisico, locked/background, long-offline real-device o production globale; questi restano deferred TASK-125.
 
 ## Execution
 ### Avvio execution — 2026-05-25 11:12 -0400
@@ -52,6 +52,17 @@
 - Cleanup scoped PASS: dry-run `20260525T201625Z-supabase-cleanup-task-TASK-124-prefix-TASK124_-profile-linked-dry-run-p59913`; execute `20260525T201647Z-supabase-cleanup-task-TASK-124-prefix-TASK124_-profile-linked-execute-cleanup-plan-id-cleanup-TASK-124-20260525T201625Z-TASK124_-p60875`; residue-check PASS `20260525T201658Z-supabase-residue-check-prefix-TASK124_-profile-linked-p61341`.
 - Final verification PASS: all TASK-124 scanners `20260525T201721Z` through `20260525T201735Z`; sensitive `20260525T201736Z`; evidence final `20260525T202253Z`; repo-diff final `20260525T202306Z`; `git diff --check` PASS; iOS Debug `20260525T201834Z`; iOS Release `20260525T201845Z`; iOS sync tests `20260525T202012Z`; Android Debug `20260525T201953Z`; Android sync tests `20260525T202001Z`.
 - Stato finale Codex: `ACTIVE / REVIEW — SIMULATOR_EMULATOR_SCOPE_PASS`. Non `DONE`, non `REVIEW PASS`, nessun claim 100%, production-ready globale o device fisici.
+
+### Review/fix finale — 2026-05-25 17:52 -0400
+- User override applicato: Codex ha eseguito review tecnica/fix/check fino alla chiusura `DONE — SIMULATOR_EMULATOR_SCOPE_VERIFIED`, superando la regola standard che limitava Codex a `ACTIVE / REVIEW`. Impatto: chiusura valida solo nel perimetro TASK-124 simulator/emulator/Supabase; device fisici e scenari real-device restano esplicitamente fuori scope.
+- Preflight finale iniziale PASS: local HEAD/origin/main/ls-remote allineati su `472e1bbb39ed556bfbe5b1536df56d1d1aec35cb`; evidence `20260525T204408Z-preflight-require-head-consistency-task-TASK-124-p66803` e `20260525T204408Z-git-head-consistency-task-TASK-124-p66802`.
+- Finding HIGH corretto: il no-op TASK-123 live harness misurava anche il settle sleep e non esponeva evidence machine-readable sufficiente. Fix in `tools/agent/lib/supabase.sh`: `started_ms` spostato dopo il settle e `settleSeconds`/`elapsedMsExcludesSettle` aggiunti al JSON. Rerun PASS: `20260525T204759Z-live-task123-noop-task-TASK-124-prefix-TASK124_SPEED_SIM_-p68189`.
+- Finding HIGH corretto: cleanup/residue `TASK124_` poteva produrre falso PASS per perdita di `MC_RESIDUE_COUNT` dentro command substitution. Fix in `tools/agent/lib/supabase.sh`: parser JSON `mc_supabase_residue_total_from_output` e valorizzazione esplicita in dry-run/residue-check. Rerun PASS: dry-run `20260525T214252Z-supabase-cleanup-task-TASK-124-prefix-TASK124_-profile-linked-dry-run-p91911`, execute `20260525T214302Z-supabase-cleanup-task-TASK-124-prefix-TASK124_-profile-linked-execute-cleanup-plan-id-cleanup-TASK-124-20260525T214252Z-TASK124_-p92464`, residue `20260525T214312Z-supabase-residue-check-task-TASK-124-prefix-TASK124_-profile-linked-p93000`.
+- Finding MEDIUM risolto: runtime parity era fragile dopo scritture live residue/speed (`20260525T210140Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RUNTIME_SIM_-profile-linked-p92037`). Evidenza di drift raccolta con sync-counts Supabase/iOS/Android; riallineamento eseguito con full-pull setup esplicito iOS `20260525T214326Z-ios-live-full-pull-live-task-TASK-124-p93531` e Android `20260525T214506Z-android-live-full-pull-live-task-TASK-124-p95200`, poi runtime-parity PASS `20260525T214541Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RUNTIME_SIM_-profile-linked-p96011`. Il full pull resta setup parity, non normal path.
+- Finding LOW/MEDIUM risolto: evidence scan ha rilevato log raw eccessivo (`20260525T214751Z-scan-evidence-task-TASK-124-p5313`). Il log PASS oversized e' stato sintetizzato mantenendo JSON/Markdown; evidence scan finale PASS `20260525T214908Z-scan-evidence-task-TASK-124-p19457`.
+- Finding documentale corretto: `offline-reconnect-matrix.md/json` era rimasto su un vecchio `BLOCKED_EXTERNAL` fisico/live; aggiornato al PASS simulator/emulator `20260525T205558Z-live-offline-reconnect-sync-task-TASK-124-prefix-TASK124_OFFLINE_SIM_-p81521` e al deferred TASK-125 per il vecchio scope fisico.
+- Check finali rieseguiti o coperti da evidence canonica: preflight/head `20260525T215657Z-preflight-require-head-consistency-task-TASK-124-p35156` e `20260525T215657Z-git-head-consistency-task-TASK-124-p35155`; iOS Debug `20260525T205052Z-ios-build-debug-task-TASK-124-p72454`; iOS Release `20260525T205103Z-ios-build-release-task-TASK-124-p73070`; iOS sync tests `20260525T205209Z-ios-test-sync-task-TASK-124-p73691`; Android Debug `20260525T205452Z-android-build-debug-task-TASK-124-p76963`; Android sync tests `20260525T205457Z-android-test-sync-task-TASK-124-p78020`; Android offline/emulator `20260525T205504Z-android-test-offline-task-TASK-124-p79163`; iOS auth-preflight live `20260525T205517Z-ios-auth-preflight-live-task-TASK-124-p80081`; offline/reconnect `20260525T205558Z-live-offline-reconnect-sync-task-TASK-124-prefix-TASK124_OFFLINE_SIM_-p81521`; mutation near realtime `20260525T205849Z-live-mutation-near-realtime-task-TASK-124-prefix-TASK124_REALTIME_SIM_-p86887`; TASK-123 speed single/no-op/burst/cold `20260525T210831Z`, `20260525T204759Z`, `20260525T213215Z`, `20260525T212622Z`; TASK-124 scanners `20260525T215724Z` through `20260525T215757Z`; sensitive `20260525T215758Z-scan-sensitive-task-TASK-124-p42892`; evidence `20260525T215758Z-scan-evidence-task-TASK-124-p43198`; repo-diff `20260525T215819Z-scan-repo-diff-task-TASK-124-p57995`; JSON validation `20260525T215820Z-report-validate-json-task-TASK-124-path-docs-TASKS-EVIDENCE-TASK-124-agent-runs-p36282`; `bash -n tools/agent/lib/supabase.sh` PASS; `git diff --check` PASS.
+- Stato finale TASK-124: `DONE — SIMULATOR_EMULATOR_SCOPE_VERIFIED`. Non restano BLOCKER/HIGH dentro il perimetro TASK-124. Non viene dichiarata copertura di iPhone fisico, Android fisico, locked/background, long-offline real-device o production globale.
 
 ## Verifiche canonical iniziali
 - Local iOS repo: `/Users/minxiang/Desktop/iOSMerchandiseControl`.
@@ -549,4 +560,4 @@ Vietati: service_role client, bypass RLS, schema/RLS/grant/RPC changes, cleanup 
 ```
 
 ## Planning note finale
-Questo file e' un piano execution-ready, non una certificazione. I gap sono identificati; la chiusura reale richiede futura EXECUTION con build/test/scanner/runtime evidence.
+Nota storica: le sezioni di planning sopra restano conservate come baseline del lavoro autorizzato. La closure finale e' documentata in `Review/fix finale — 2026-05-25 17:52 -0400` e nelle evidence TASK-124; non estende il DONE a device fisici, background/locked o long-offline real-device.

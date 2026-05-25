@@ -1,0 +1,33 @@
+=== mc-agent scan no-automatic-manual-dependency --task TASK-124 ===
+{
+  "NEXT_ACTION": "Remove manual dependencies from automatic path.",
+  "canonicalHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "checks": [
+    {
+      "evidence": [],
+      "fix_hint": "Route explicit user/recovery flows outside Automatic/ContentView normal runtime path.",
+      "id": "automatic-manual-symbols",
+      "reason": "Normal automatic path must not import or call manual sync symbols.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T21:47:30+00:00",
+  "exitCode": 0,
+  "githubHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "localHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "nextAction": "Remove manual dependencies from automatic path.",
+  "originHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "no-automatic-manual-dependency",
+  "scannerName": "no-automatic-manual-dependency",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.no-automatic-manual-dependency",
+  "started_at": "2026-05-25T21:47:30+00:00",
+  "status": "PASS",
+  "summary": "no-automatic-manual-dependency: PASS (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

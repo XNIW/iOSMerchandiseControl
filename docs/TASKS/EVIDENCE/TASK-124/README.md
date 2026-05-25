@@ -2,7 +2,7 @@
 
 Task: `TASK-124 — iOS Sync Final Architecture Purification and Residue Eradication`
 
-Status: `ACTIVE / REVIEW — SIMULATOR_EMULATOR_SCOPE_PASS`
+Status: `DONE / SIMULATOR_EMULATOR_SCOPE_VERIFIED`
 
 Execution started by user approval on 2026-05-25 11:12 -0400. Initial state:
 - local HEAD / origin/main / ls-remote main: `951547ab1e4ed63a9f6a730c293ee278a67ef17c`;
@@ -25,7 +25,7 @@ Execution evidence must include:
 - TASK-123 speed regression if sync runtime is touched;
 - Android targeted checks only if Android or cross-platform harness is touched;
 - Supabase read-only schema/RLS/grant evidence and scoped dry-run cleanup only if live data is used.
-- final handoff with coherent PASS/FAIL/BLOCKED_EXTERNAL/MISCONFIGURED/UNSAFE_OPERATION_REFUSED/NOT_RUN/PASS_WITH_NOTES taxonomy and no DONE claim.
+- execution-stage handoff with coherent PASS/FAIL/BLOCKED_EXTERNAL/MISCONFIGURED/UNSAFE_OPERATION_REFUSED/NOT_RUN/PASS_WITH_NOTES taxonomy and no DONE claim; final DONE claim allowed only by the later explicit user override documented below.
 
 ## Execution result — 2026-05-25 11:39 -0400
 
@@ -88,3 +88,28 @@ Harness fixes made during resume:
 - iOS and Android live acceptance fixtures now accept `TASK124_` prefixes.
 - TASK-123 no-op live harness now records `settleSeconds` and no longer charges a fixed one-second artificial wait to the measured no-op budget.
 - One oversized raw log from a PASS report was removed after markdown/json evidence remained available; final evidence scan PASS confirms evidence hygiene.
+
+## Final review/fix closure — 2026-05-25 17:52 -0400
+
+User override: TASK-124 was closed to DONE by Codex after review/fix/check loop, despite the earlier execution-only cap, because the user explicitly requested final closure. Scope is still limited to iOS Simulator, Android Emulator `emulator-5554`, and Supabase linked/local.
+
+Final findings fixed:
+- HIGH: TASK-123 no-op live harness measured settle delay and lacked explicit evidence. Fixed in `tools/agent/lib/supabase.sh`; rerun PASS `20260525T204759Z-live-task123-noop-task-TASK-124-prefix-TASK124_SPEED_SIM_-p68189`.
+- HIGH: Supabase cleanup/residue could falsely report zero residue because `MC_RESIDUE_COUNT` was lost across command substitution. Fixed parser/update flow in `tools/agent/lib/supabase.sh`; final dry-run/execute/residue PASS in `20260525T214252Z`, `20260525T214302Z`, `20260525T214312Z`.
+- MEDIUM: runtime parity drift found and corrected by explicit setup full pulls before parity. Final runtime-parity PASS `20260525T214541Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RUNTIME_SIM_-profile-linked-p96011`.
+- LOW/MEDIUM: evidence scan caught an oversized raw log; log was summarized and evidence scan rerun PASS `20260525T214908Z-scan-evidence-task-TASK-124-p19457`.
+- Documental: offline/reconnect matrix was stale on a pre-emulator BLOCKED_EXTERNAL report; it now points to simulator/emulator PASS `20260525T205558Z-live-offline-reconnect-sync-task-TASK-124-prefix-TASK124_OFFLINE_SIM_-p81521`.
+
+Final validation evidence:
+- Preflight/head consistency: PASS `20260525T215657Z-preflight-require-head-consistency-task-TASK-124-p35156`, `20260525T215657Z-git-head-consistency-task-TASK-124-p35155`.
+- iOS: Debug PASS `20260525T205052Z-ios-build-debug-task-TASK-124-p72454`; Release PASS `20260525T205103Z-ios-build-release-task-TASK-124-p73070`; sync tests PASS `20260525T205209Z-ios-test-sync-task-TASK-124-p73691`; auth-preflight live PASS `20260525T205517Z-ios-auth-preflight-live-task-TASK-124-p80081`.
+- Android: Debug PASS `20260525T205452Z-android-build-debug-task-TASK-124-p76963`; sync tests PASS `20260525T205457Z-android-test-sync-task-TASK-124-p78020`; emulator/offline tests PASS `20260525T205504Z-android-test-offline-task-TASK-124-p79163`.
+- Runtime: offline/reconnect PASS `20260525T205558Z-live-offline-reconnect-sync-task-TASK-124-prefix-TASK124_OFFLINE_SIM_-p81521`; mutation near realtime PASS `20260525T205849Z-live-mutation-near-realtime-task-TASK-124-prefix-TASK124_REALTIME_SIM_-p86887`; runtime parity PASS `20260525T214541Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RUNTIME_SIM_-profile-linked-p96011`; TASK-123 speed single/no-op/burst/cold PASS `20260525T210831Z`, `20260525T204759Z`, `20260525T213215Z`, `20260525T212622Z`.
+- Cleanup/scans: cleanup dry-run/execute/residue PASS `20260525T214252Z`, `20260525T214302Z`, `20260525T214312Z`; TASK-124 scanners PASS `20260525T215724Z` through `20260525T215757Z`; sensitive PASS `20260525T215758Z-scan-sensitive-task-TASK-124-p42892`; evidence PASS `20260525T215758Z-scan-evidence-task-TASK-124-p43198`; repo-diff PASS `20260525T215819Z-scan-repo-diff-task-TASK-124-p57995`; JSON validation PASS `20260525T215820Z-report-validate-json-task-TASK-124-path-docs-TASKS-EVIDENCE-TASK-124-agent-runs-p36282`.
+
+Deferred TASK-125, not blocking TASK-124 DONE:
+- physical iPhone;
+- physical Android;
+- locked/background real-device;
+- long-offline real-device;
+- real-device background sync.

@@ -1,0 +1,99 @@
+{
+  "taskId": "TASK-124",
+  "status": "DONE",
+  "phase": "SIMULATOR_EMULATOR_SCOPE_VERIFIED",
+  "generatedAt": "2026-05-25T17:52:00-04:00",
+  "scope": [
+    "iOS Simulator",
+    "Android Emulator emulator-5554",
+    "Supabase linked/local",
+    "TASK124_ scoped cleanup",
+    "existing harness/scanners/smoke"
+  ],
+  "deferredTask125": [
+    "physical iPhone",
+    "physical Android",
+    "locked/background real-device",
+    "long-offline real-device",
+    "real-device background sync"
+  ],
+  "preflight": {
+    "branch": "main",
+    "preReviewHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+    "headConsistencyReports": [
+      "20260525T215657Z-preflight-require-head-consistency-task-TASK-124-p35156",
+      "20260525T215657Z-git-head-consistency-task-TASK-124-p35155"
+    ]
+  },
+  "findings": [
+    {
+      "id": "F-124-R1",
+      "severity": "HIGH",
+      "status": "FIXED",
+      "summary": "TASK-123 no-op harness measured settle delay inside elapsed time.",
+      "fix": "Moved measurement start after settle and recorded settleSeconds/elapsedMsExcludesSettle.",
+      "evidence": "20260525T204759Z-live-task123-noop-task-TASK-124-prefix-TASK124_SPEED_SIM_-p68189"
+    },
+    {
+      "id": "F-124-R2",
+      "severity": "HIGH",
+      "status": "FIXED",
+      "summary": "Supabase cleanup/residue could falsely report zero due to command-substitution variable scope.",
+      "fix": "Added residue JSON total parser and caller-scope MC_RESIDUE_COUNT assignment.",
+      "evidence": [
+        "20260525T214252Z-supabase-cleanup-task-TASK-124-prefix-TASK124_-profile-linked-dry-run-p91911",
+        "20260525T214302Z-supabase-cleanup-task-TASK-124-prefix-TASK124_-profile-linked-execute-cleanup-plan-id-cleanup-TASK-124-20260525T214252Z-TASK124_-p92464",
+        "20260525T214312Z-supabase-residue-check-task-TASK-124-prefix-TASK124_-profile-linked-p93000"
+      ]
+    },
+    {
+      "id": "F-124-R3",
+      "severity": "MEDIUM",
+      "status": "RESOLVED",
+      "summary": "Runtime parity drift after live writes.",
+      "fix": "Captured drift with sync-counts and ran explicit setup full pulls before parity rerun.",
+      "evidence": "20260525T214541Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RUNTIME_SIM_-profile-linked-p96011"
+    },
+    {
+      "id": "F-124-R4",
+      "severity": "LOW_MEDIUM",
+      "status": "FIXED",
+      "summary": "Evidence scan failed on oversized raw PASS log.",
+      "fix": "Summarized raw log while preserving JSON/Markdown evidence.",
+      "evidence": "20260525T214908Z-scan-evidence-task-TASK-124-p19457"
+    },
+    {
+      "id": "F-124-R5",
+      "severity": "LOW",
+      "status": "FIXED",
+      "summary": "Offline/reconnect matrix referenced stale physical/live blocked report.",
+      "fix": "Updated matrix to simulator/emulator PASS and documented physical/live deferred scope.",
+      "evidence": "20260525T205558Z-live-offline-reconnect-sync-task-TASK-124-prefix-TASK124_OFFLINE_SIM_-p81521"
+    }
+  ],
+  "finalEvidence": {
+    "iosDebug": "20260525T205052Z-ios-build-debug-task-TASK-124-p72454",
+    "iosRelease": "20260525T205103Z-ios-build-release-task-TASK-124-p73070",
+    "iosSyncTests": "20260525T205209Z-ios-test-sync-task-TASK-124-p73691",
+    "androidDebug": "20260525T205452Z-android-build-debug-task-TASK-124-p76963",
+    "androidSyncTests": "20260525T205457Z-android-test-sync-task-TASK-124-p78020",
+    "androidEmulatorOffline": "20260525T205504Z-android-test-offline-task-TASK-124-p79163",
+    "iosAuthPreflightLive": "20260525T205517Z-ios-auth-preflight-live-task-TASK-124-p80081",
+    "offlineReconnect": "20260525T205558Z-live-offline-reconnect-sync-task-TASK-124-prefix-TASK124_OFFLINE_SIM_-p81521",
+    "mutationNearRealtime": "20260525T205849Z-live-mutation-near-realtime-task-TASK-124-prefix-TASK124_REALTIME_SIM_-p86887",
+    "runtimeParity": "20260525T214541Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RUNTIME_SIM_-profile-linked-p96011",
+    "task123Noop": "20260525T204759Z-live-task123-noop-task-TASK-124-prefix-TASK124_SPEED_SIM_-p68189",
+    "task123SinglePropagation": "20260525T210831Z-live-task123-single-propagation-task-TASK-124-prefix-TASK124_SPEED_SIM_-p99966",
+    "task123Burst10": "20260525T213215Z-live-task123-burst-10-task-TASK-124-prefix-TASK124_SPEED_SIM_-p73422",
+    "task123ColdRestart": "20260525T212622Z-live-task123-cold-restart-task-TASK-124-prefix-TASK124_SPEED_SIM_-p55682",
+    "cleanupDryRun": "20260525T214252Z-supabase-cleanup-task-TASK-124-prefix-TASK124_-profile-linked-dry-run-p91911",
+    "cleanupExecute": "20260525T214302Z-supabase-cleanup-task-TASK-124-prefix-TASK124_-profile-linked-execute-cleanup-plan-id-cleanup-TASK-124-20260525T214252Z-TASK124_-p92464",
+    "residueCheck": "20260525T214312Z-supabase-residue-check-task-TASK-124-prefix-TASK124_-profile-linked-p93000",
+    "task124Scanners": "20260525T215724Z through 20260525T215757Z",
+    "sensitiveScan": "20260525T215758Z-scan-sensitive-task-TASK-124-p42892",
+    "evidenceScan": "20260525T215758Z-scan-evidence-task-TASK-124-p43198",
+    "repoDiffScan": "20260525T215819Z-scan-repo-diff-task-TASK-124-p57995",
+    "jsonValidation": "20260525T215820Z-report-validate-json-task-TASK-124-path-docs-TASKS-EVIDENCE-TASK-124-agent-runs-p36282"
+  },
+  "doneRationale": "All simulator/emulator/Supabase claims are backed by evidence; BLOCKER/HIGH findings in scope are fixed and rerun; cleanup is scoped and residue is PASS/0; physical/background/long-offline real-device work is deferred to TASK-125 by explicit user instruction."
+}

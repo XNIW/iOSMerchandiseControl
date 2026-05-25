@@ -1,0 +1,34 @@
+=== mc-agent scan harness-routing --task TASK-124 ===
+{
+  "NEXT_ACTION": "Expose missing TASK-124 scanner commands.",
+  "canonicalHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "checks": [
+    {
+      "evidence": {
+        "missing": []
+      },
+      "id": "task124-scan-routing",
+      "reason": "All TASK-124 scanners must be discoverable through mc-agent.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T21:57:26+00:00",
+  "exitCode": 0,
+  "githubHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "localHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "nextAction": "Expose missing TASK-124 scanner commands.",
+  "originHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "harness-routing",
+  "scannerName": "harness-routing",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.harness-routing",
+  "started_at": "2026-05-25T21:57:26+00:00",
+  "status": "PASS",
+  "summary": "harness-routing: PASS (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

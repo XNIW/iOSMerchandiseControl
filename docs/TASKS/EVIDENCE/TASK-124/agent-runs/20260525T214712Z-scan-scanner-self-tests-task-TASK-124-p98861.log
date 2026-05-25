@@ -1,0 +1,362 @@
+=== mc-agent scan scanner-self-tests --task TASK-124 ===
+{
+  "NEXT_ACTION": "Fix fixture or scanner behavior before trusting TASK-124 gates.",
+  "canonicalHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "checks": [
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-root-supabase-legacy/red",
+      "id": "no-root-supabase-legacy-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-root-supabase-legacy/green",
+      "id": "no-root-supabase-legacy-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "no-root-supabase-legacy-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "no-root-supabase-legacy-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-automatic-manual-dependency/red",
+      "id": "no-automatic-manual-dependency-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-automatic-manual-dependency/green",
+      "id": "no-automatic-manual-dependency-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "no-automatic-manual-dependency-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "no-automatic-manual-dependency-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/transport-thin-only/red",
+      "id": "transport-thin-only-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/transport-thin-only/green",
+      "id": "transport-thin-only-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "transport-thin-only-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "transport-thin-only-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/remote-adapter-single-domain/red",
+      "id": "remote-adapter-single-domain-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/remote-adapter-single-domain/green",
+      "id": "remote-adapter-single-domain-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "remote-adapter-single-domain-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "remote-adapter-single-domain-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-full-pull-normal-path/red",
+      "id": "no-full-pull-normal-path-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-full-pull-normal-path/green",
+      "id": "no-full-pull-normal-path-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "no-full-pull-normal-path-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "no-full-pull-normal-path-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-hidden-manual-sync/red",
+      "id": "no-hidden-manual-sync-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-hidden-manual-sync/green",
+      "id": "no-hidden-manual-sync-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "no-hidden-manual-sync-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "no-hidden-manual-sync-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-stale-pbxproj-reference/red",
+      "id": "no-stale-pbxproj-reference-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-stale-pbxproj-reference/green",
+      "id": "no-stale-pbxproj-reference-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "no-stale-pbxproj-reference-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "no-stale-pbxproj-reference-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-mainactor-heavy-sync/red",
+      "id": "no-mainactor-heavy-sync-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-mainactor-heavy-sync/green",
+      "id": "no-mainactor-heavy-sync-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "no-mainactor-heavy-sync-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "no-mainactor-heavy-sync-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-service-role-client/red",
+      "id": "no-service-role-client-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-service-role-client/green",
+      "id": "no-service-role-client-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "no-service-role-client-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "no-service-role-client-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-rls-bypass/red",
+      "id": "no-rls-bypass-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/no-rls-bypass/green",
+      "id": "no-rls-bypass-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "no-rls-bypass-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "no-rls-bypass-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/source-format/red",
+      "id": "source-format-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/source-format/green",
+      "id": "source-format-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "source-format-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "source-format-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/dead-code-residue/red",
+      "id": "dead-code-residue-red-fixture",
+      "reason": "RED fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/fixtures/task124_scanners/dead-code-residue/green",
+      "id": "dead-code-residue-green-fixture",
+      "reason": "GREEN fixture directory exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "FAIL"
+      },
+      "id": "dead-code-residue-red-detects",
+      "reason": "RED fixture must fail the scanner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "observedStatus": "PASS"
+      },
+      "id": "dead-code-residue-green-passes",
+      "reason": "GREEN fixture must pass the scanner.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T21:47:27+00:00",
+  "exitCode": 0,
+  "githubHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "localHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "nextAction": "Fix fixture or scanner behavior before trusting TASK-124 gates.",
+  "originHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "scanner-self-tests",
+  "scannerName": "scanner-self-tests",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.scanner-self-tests",
+  "started_at": "2026-05-25T21:47:27+00:00",
+  "status": "PASS",
+  "summary": "scanner-self-tests: PASS (48 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

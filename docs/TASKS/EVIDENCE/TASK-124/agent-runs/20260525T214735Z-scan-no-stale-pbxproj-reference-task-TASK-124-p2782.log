@@ -1,0 +1,38 @@
+=== mc-agent scan no-stale-pbxproj-reference --task TASK-124 ===
+{
+  "NEXT_ACTION": "Clean stale pbxproj references.",
+  "canonicalHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "pbxproj-stale-swift",
+      "reason": "pbxproj must not reference missing Swift files.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "pbxproj-fixtures",
+      "reason": "Test-only fixtures must not be target-membered in app pbxproj.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T21:47:36+00:00",
+  "exitCode": 0,
+  "githubHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "localHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "nextAction": "Clean stale pbxproj references.",
+  "originHead": "472e1bbb39ed556bfbe5b1536df56d1d1aec35cb",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "no-stale-pbxproj-reference",
+  "scannerName": "no-stale-pbxproj-reference",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.no-stale-pbxproj-reference",
+  "started_at": "2026-05-25T21:47:36+00:00",
+  "status": "PASS",
+  "summary": "no-stale-pbxproj-reference: PASS (2 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}
