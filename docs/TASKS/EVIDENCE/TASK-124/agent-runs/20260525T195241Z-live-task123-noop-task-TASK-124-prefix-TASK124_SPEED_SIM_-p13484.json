@@ -1,0 +1,149 @@
+{
+  "NEXT_ACTION": "Fix no-op trigger/pending behavior and rerun task123-noop.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T195241Z-live-task123-noop-task-TASK-124-prefix-TASK124_SPEED_SIM_-p13484.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T195241Z-live-task123-noop-task-TASK-124-prefix-TASK124_SPEED_SIM_-p13484.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T195241Z-live-task123-noop-task-TASK-124-prefix-TASK124_SPEED_SIM_-p13484.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-auth-preflight-20260525T195241Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "PR-01",
+    "PR-03",
+    "PR-04",
+    "PR-08"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live task123-noop --task TASK-124 --prefix TASK124_SPEED_SIM_",
+  "command_slug": "live-task123-noop-task-TASK-124-prefix-TASK124_SPEED_SIM_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "emulator",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 97548,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-124",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK124_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-124"
+  },
+  "exit_code": 1,
+  "git_sha": "6e8ee53b",
+  "next_action_recommended": "Fix no-op trigger/pending behavior and rerun task123-noop.",
+  "platform": "ios",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "acceptance": {
+      "maxMeasurableMs": 2000
+    },
+    "completedAt": "2026-05-25T19:54:18Z",
+    "iterations": [
+      {
+        "countsUnchanged": true,
+        "direction": "androidNoop",
+        "elapsedMs": 2085,
+        "iteration": 1,
+        "status": "FAIL",
+        "syncEventsCreated": 0
+      },
+      {
+        "countsUnchanged": true,
+        "direction": "iosNoop",
+        "elapsedMs": 2126,
+        "iteration": 1,
+        "status": "FAIL",
+        "syncEventsCreated": 0
+      },
+      {
+        "countsUnchanged": true,
+        "direction": "androidNoop",
+        "elapsedMs": 1974,
+        "iteration": 2,
+        "status": "PASS",
+        "syncEventsCreated": 0
+      },
+      {
+        "countsUnchanged": true,
+        "direction": "iosNoop",
+        "elapsedMs": 2132,
+        "iteration": 2,
+        "status": "FAIL",
+        "syncEventsCreated": 0
+      },
+      {
+        "countsUnchanged": true,
+        "direction": "androidNoop",
+        "elapsedMs": 1917,
+        "iteration": 3,
+        "status": "PASS",
+        "syncEventsCreated": 0
+      },
+      {
+        "countsUnchanged": true,
+        "direction": "iosNoop",
+        "elapsedMs": 2144,
+        "iteration": 3,
+        "status": "FAIL",
+        "syncEventsCreated": 0
+      }
+    ],
+    "prefix": "TASK124_SPEED_SIM_NOOP_20260525T195241Z_",
+    "schemaVersion": "1.1",
+    "source": "live.task123-noop-matrix",
+    "startedAt": "2026-05-25T19:52:41Z",
+    "status": "FAIL",
+    "summary": {
+      "androidNoop": {
+        "count": 3,
+        "maxMs": 2085,
+        "passCount": 2
+      },
+      "iosNoop": {
+        "count": 3,
+        "maxMs": 2144,
+        "passCount": 0
+      }
+    },
+    "taskId": "TASK-124"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T195241Z-live-task123-noop-task-TASK-124-prefix-TASK124_SPEED_SIM_-p13484",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-124",
+  "test_prefix": "TASK124_SPEED_SIM_NOOP_20260525T195241Z_",
+  "timestamp_end": "2026-05-25T19:54:18Z",
+  "timestamp_start": "2026-05-25T19:52:40Z",
+  "warnings": []
+}

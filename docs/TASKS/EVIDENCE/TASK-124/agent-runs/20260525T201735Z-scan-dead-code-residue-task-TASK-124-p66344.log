@@ -1,0 +1,33 @@
+=== mc-agent scan dead-code-residue --task TASK-124 ===
+{
+  "NEXT_ACTION": "Delete, merge, rename, or evidence-classify residue.",
+  "canonicalHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "checks": [
+    {
+      "evidence": [],
+      "fix_hint": "Remove or document with call-site proof in TASK-124 evidence.",
+      "id": "dead-code-candidates",
+      "reason": "Known compatibility, near-empty, or root legacy residues must be eliminated or classified.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T20:17:35+00:00",
+  "exitCode": 0,
+  "githubHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "localHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "nextAction": "Delete, merge, rename, or evidence-classify residue.",
+  "originHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "dead-code-residue",
+  "scannerName": "dead-code-residue",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.dead-code-residue",
+  "started_at": "2026-05-25T20:17:35+00:00",
+  "status": "PASS",
+  "summary": "dead-code-residue: PASS (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

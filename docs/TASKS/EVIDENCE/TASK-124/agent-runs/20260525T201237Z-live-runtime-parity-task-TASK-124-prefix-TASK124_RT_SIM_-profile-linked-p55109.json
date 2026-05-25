@@ -1,0 +1,480 @@
+{
+  "NEXT_ACTION": "Inspect runtime parity drift, repair auto-sync/apply/UI store selection, then rerun.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T201237Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RT_SIM_-profile-linked-p55109.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T201237Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RT_SIM_-profile-linked-p55109.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T201237Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RT_SIM_-profile-linked-p55109.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "PR-01",
+    "PR-03",
+    "PR-04",
+    "PR-08"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live runtime-parity --task TASK-124 --prefix TASK124_RT_SIM_ --profile linked",
+  "command_slug": "live-runtime-parity-task-TASK-124-prefix-TASK124_RT_SIM_-profile-linked",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "emulator",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 60276,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-124",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK124_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-124"
+  },
+  "exit_code": 1,
+  "git_sha": "6e8ee53b",
+  "next_action_recommended": "Inspect runtime parity drift, repair auto-sync/apply/UI store selection, then rerun.",
+  "platform": "ios",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "blockers": {},
+    "checkpoint": {
+      "android": {
+        "local": {
+          "pendingAggregate": 0
+        },
+        "remote": null
+      },
+      "iosRuntime": {
+        "local": {
+          "pendingAggregate": 0
+        },
+        "remote": null
+      },
+      "supabase": {
+        "local": null,
+        "remote": "linked-read"
+      }
+    },
+    "comparison": {
+      "definition": "Runtime parity launches iOS and Android apps, reads Supabase linked counts, then compares app-store counts with TASK-114 canonical fields.",
+      "fields": {
+        "categories": [
+          "active",
+          "pending",
+          "localOnly"
+        ],
+        "history_entries": [
+          "userVisible",
+          "pending",
+          "localOnly"
+        ],
+        "product_prices": [
+          "active",
+          "pending",
+          "localOnly"
+        ],
+        "products": [
+          "active",
+          "pending",
+          "localOnly"
+        ],
+        "suppliers": [
+          "active",
+          "pending",
+          "localOnly"
+        ]
+      }
+    },
+    "completedAt": "2026-05-25T20:13:36Z",
+    "counts": {
+      "android": {
+        "categories": {
+          "active": 80,
+          "all": 80,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 59,
+          "all": 64,
+          "deleted": 5,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 59
+        },
+        "product_prices": {
+          "active": 169,
+          "all": 169,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 80,
+          "all": 80,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 81,
+          "all": 81,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "iosRuntime": {
+        "categories": {
+          "active": 107,
+          "all": 107,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 59,
+          "all": 78,
+          "deleted": 19,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 59
+        },
+        "product_prices": {
+          "active": 41280,
+          "all": 41284,
+          "deleted": 4,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19776,
+          "all": 19788,
+          "deleted": 12,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 138,
+          "all": 138,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "supabase": {
+        "categories": {
+          "active": 107,
+          "all": 107,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 59,
+          "all": 69,
+          "deleted": 10,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 59
+        },
+        "product_prices": {
+          "active": 41280,
+          "all": 41284,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19776,
+          "all": 19781,
+          "deleted": 5,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 138,
+          "all": 138,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      }
+    },
+    "drift": {
+      "categories": {
+        "active": {
+          "android": 80,
+          "iosRuntime": 107,
+          "supabase": 107
+        }
+      },
+      "product_prices": {
+        "active": {
+          "android": 169,
+          "iosRuntime": 41280,
+          "supabase": 41280
+        }
+      },
+      "products": {
+        "active": {
+          "android": 80,
+          "iosRuntime": 19776,
+          "supabase": 19776
+        }
+      },
+      "suppliers": {
+        "active": {
+          "android": 81,
+          "iosRuntime": 138,
+          "supabase": 138
+        }
+      }
+    },
+    "prefix": "TASK124_RT_SIM_",
+    "runtime": {
+      "android": {
+        "launchedApp": true
+      },
+      "ios": {
+        "baseline": {
+          "appliedAt": "2026-05-22T18:45:57Z",
+          "categories": 28,
+          "createdAt": "2026-05-22T18:45:54Z",
+          "products": 19706,
+          "source": "fullPullApply",
+          "status": "valid",
+          "suppliers": 59,
+          "tombstones": 10,
+          "updatedAt": "2026-05-22T18:45:57Z"
+        },
+        "containerKind": "simulator",
+        "containerPathHash": "<REDACTED_HEX>",
+        "diagnostics": {
+          "accountBinding": {
+            "present": false
+          },
+          "plistPresent": true,
+          "runtime": {
+            "auth.canSignIn": false,
+            "auth.isSignedIn": true,
+            "auth.isTransitioning": false,
+            "auth.userIDPresent": true,
+            "automatic.lastCompletedAt": 1779739988.4922671,
+            "automatic.lastOutcome": "no_work",
+            "foreground.forceIncremental": true,
+            "foreground.outcome": "scheduled_light_reconcile_via_sync_runtime",
+            "foreground.requestedAt": 1779739988.288084,
+            "foreground.source": "rootForeground",
+            "fullRecovery.lastCompletedAt": 1779723420.503814,
+            "fullRecovery.lastReason": "sync_event_missing_entity_ids",
+            "fullRecovery.lastSource": "remoteSyncEvent",
+            "fullRecovery.lastStartedAt": 1779723420.498471,
+            "fullRecovery.watermarkAfter": 92,
+            "incremental.attemptWindow.count": 3,
+            "incremental.attemptWindow.startAt": 1779739980.610107,
+            "incremental.lastApplied": 0,
+            "incremental.lastAttemptAt": 1779739988.309904,
+            "incremental.lastCatalogApplyMs": 0,
+            "incremental.lastCatalogFetchMs": 0,
+            "incremental.lastCategoriesMissingTombstoned": 0,
+            "incremental.lastCompletedAt": 1779723420.517075,
+            "incremental.lastCompletedSource": "rootForeground",
+            "incremental.lastError": "failed_cancelled",
+            "incremental.lastEventAppliedAt": 1779723420.498215,
+            "incremental.lastEventPageFetchMs": 0,
+            "incremental.lastEventSyncType": "EVENT_INCREMENTAL",
+            "incremental.lastEventsFetched": 0,
+            "incremental.lastEventsProcessed": 0,
+            "incremental.lastHistoryApplyMs": 0,
+            "incremental.lastHistoryFetchMs": 0,
+            "incremental.lastHistoryMissingTombstoned": 0,
+            "incremental.lastPage.applied": 0,
+            "incremental.lastPage.catalogApplyMs": 0,
+            "incremental.lastPage.catalogFetchMs": 0,
+            "incremental.lastPage.categoriesFetched": 0,
+            "incremental.lastPage.categoriesMissingTombstoned": 0,
+            "incremental.lastPage.eventPageFetchMs": 0,
+            "incremental.lastPage.eventsFetched": 50,
+            "incremental.lastPage.eventsProcessed": 50,
+            "incremental.lastPage.historyApplyMs": 0,
+            "incremental.lastPage.historyFetchMs": 0,
+            "incremental.lastPage.historyFetched": 0,
+            "incremental.lastPage.historyInserted": 0,
+            "incremental.lastPage.historyMissingTombstoned": 0,
+            "incremental.lastPage.historyUpdated": 0,
+            "incremental.lastPage.pricesFetched": 0,
+            "incremental.lastPage.pricesMissingPruned": 0,
+            "incremental.lastPage.productPriceApplyMs": 0,
+            "incremental.lastPage.productPriceFetchMs": 0,
+            "incremental.lastPage.productsFetched": 0,
+            "incremental.lastPage.signature": "EVENT_INCREMENTAL|42|92|50|50|0|0|0|0|sync_event_missing_entity_ids",
+            "incremental.lastPage.suppliersFetched": 0,
+            "incremental.lastPage.suppliersMissingTombstoned": 0,
+            "incremental.lastPage.totalElapsedMs": 170,
+            "incremental.lastPage.watermarkAfter": 92,
+            "incremental.lastPage.watermarkBefore": 42,
+            "incremental.lastPricesFetched": 0,
+            "incremental.lastPricesInserted": 0,
+            "incremental.lastPricesLinked": 0,
+            "incremental.lastPricesMissingPruned": 0,
+            "incremental.lastProductPriceApplyMs": 0,
+            "incremental.lastProductPriceFetchMs": 0,
+            "incremental.lastRequiresFullRecovery": true,
+            "incremental.lastRequiresFullRecoveryReason": "sync_event_missing_entity_ids",
+            "incremental.lastSource": "rootForeground",
+            "incremental.lastSuppliersMissingTombstoned": 0,
+            "incremental.lastSyncType": "CHECKPOINT_INCREMENTAL",
+            "incremental.lastTotalElapsedMs": 170,
+            "incremental.lastWatermarkAfter": 92,
+            "incremental.requiresFullRecovery": false,
+            "incremental.samePageRepeatCount": 0,
+            "orchestrator.lastAction": "lightReconcile",
+            "orchestrator.lastDecisionAt": 1779739988.3094711,
+            "orchestrator.lastRunBlockReason": "authRequired",
+            "orchestrator.lastRunCompletedAt": 1779739988.5056481,
+            "orchestrator.lastRunDidWork": false,
+            "orchestrator.lastRunStatus": "noWork",
+            "orchestrator.lastTrigger": "appForeground",
+            "orchestrator.safetyLoopLastTickAt": 1779739980.586309,
+            "orchestrator.safetyLoopTickCount": 2672,
+            "progress.current": -1,
+            "progress.domain": "",
+            "progress.isActive": false,
+            "progress.phase": "completed",
+            "progress.total": -1,
+            "reconcile.local.categories": 107,
+            "reconcile.local.historySessions": 59,
+            "reconcile.local.productPrices": 41280,
+            "reconcile.local.products": 19776,
+            "reconcile.local.suppliers": 138,
+            "reconcile.mismatches": "",
+            "reconcile.remote.categories": 107,
+            "reconcile.remote.historySessions": 59,
+            "reconcile.remote.productPrices": 41280,
+            "reconcile.remote.products": 19776,
+            "reconcile.remote.suppliers": 138,
+            "rootHost.didReachInteractiveUI": true,
+            "rootHost.taskStartedAt": 1779739987.881198,
+            "timer.didReachInteractiveUI": true,
+            "timer.intervalSeconds": 30,
+            "timer.isSignedIn": true,
+            "timer.lastTickAt": 1779739980.5912662,
+            "timer.sceneActive": true,
+            "timer.sceneBackground": false,
+            "watcher.signalAt": 1779739939.783907,
+            "watcher.state": "started",
+            "watcher.updateAt": 1779739988.09113
+          },
+          "syncEventWatermarks": [
+            {
+              "scopeHash": "094211d5eb6a",
+              "source": "sync",
+              "value": 2219
+            },
+            {
+              "scopeHash": "5facd3a46317",
+              "source": "legacyAccount",
+              "value": 92
+            },
+            {
+              "scopeHash": "84f17d749d5b",
+              "source": "legacyAccount",
+              "value": 92
+            },
+            {
+              "ownerHash": "ad3d747e936c",
+              "source": "legacyOwner",
+              "value": 1484
+            },
+            {
+              "scopeHash": "1909b4f31854",
+              "source": "sync",
+              "value": 92
+            }
+          ]
+        },
+        "isRuntimeAppContainer": true,
+        "lastSuccessfulSync": "2026-05-22T18:45:57Z",
+        "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl",
+        "storeFile": "default.store",
+        "storePathHash": "<REDACTED_HEX>",
+        "waitSecondsAfterLaunch": 20
+      }
+    },
+    "samples": {
+      "androidLocalProductsMissingRemote": [],
+      "iosMissingSupplierCategory": []
+    },
+    "schemaVersion": "1.1",
+    "source": "live.runtime-parity",
+    "startedAt": "2026-05-25T20:12:37Z",
+    "status": "FAIL",
+    "taskId": "TASK-124"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T201237Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RT_SIM_-profile-linked-p55109",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-124",
+  "test_prefix": "TASK124_RT_SIM_",
+  "timestamp_end": "2026-05-25T20:13:37Z",
+  "timestamp_start": "2026-05-25T20:12:37Z",
+  "warnings": []
+}

@@ -1404,6 +1404,7 @@ mc_live_task123_noop_matrix() {
   local task_id="$1"
   local prefix="$2"
   local iterations="${MC_TASK123_NOOP_ITERATIONS:-3}"
+  local settle_seconds="${MC_TASK123_NOOP_SETTLE_SECONDS:-0.25}"
   local started run_prefix iter_file tmp_json status
   MC_PLATFORM="live"
   MC_SAFETY_LEVEL="live-write"
@@ -1431,7 +1432,7 @@ mc_live_task123_noop_matrix() {
     mc_sync_counts_android "$task_id" || return $?
     before="$MC_SYNC_JSON_RESULT"
     started_ms="$(mc_now_ms)"
-    sleep 1
+    sleep "$settle_seconds"
     mc_sync_counts_android "$task_id" || return $?
     after="$MC_SYNC_JSON_RESULT"
     elapsed=$(( $(mc_now_ms) - started_ms ))
@@ -1451,7 +1452,7 @@ PY
     MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
     before="$MC_SYNC_JSON_RESULT"
     started_ms="$(mc_now_ms)"
-    sleep 1
+    sleep "$settle_seconds"
     MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
     after="$MC_SYNC_JSON_RESULT"
     elapsed=$(( $(mc_now_ms) - started_ms ))
@@ -1480,7 +1481,7 @@ ios=stats("iosNoop")
 android=stats("androidNoop")
 required=int(os.environ["ITERATIONS"])
 ok=all(r["status"]=="PASS" for r in rows) and ios["count"]==required and android["count"]==required
-print(json.dumps({"schemaVersion":"1.1","taskId":os.environ["TASK_ID"],"source":"live.task123-noop-matrix","prefix":os.environ["RUN_PREFIX"],"startedAt":os.environ["STARTED"],"completedAt":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),"status":"PASS" if ok else "FAIL","iterations":rows,"summary":{"iosNoop":ios,"androidNoop":android},"acceptance":{"maxMeasurableMs":2000}}, sort_keys=True))
+print(json.dumps({"schemaVersion":"1.1","taskId":os.environ["TASK_ID"],"source":"live.task123-noop-matrix","prefix":os.environ["RUN_PREFIX"],"startedAt":os.environ["STARTED"],"completedAt":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),"status":"PASS" if ok else "FAIL","iterations":rows,"summary":{"iosNoop":ios,"androidNoop":android},"acceptance":{"maxMeasurableMs":2000,"settleSeconds":os.environ.get("SETTLE_SECONDS")}}, sort_keys=True))
 PY
   rm -f "$iter_file"
   MC_SYNC_JSON_RESULT="$(cat "$tmp_json")"

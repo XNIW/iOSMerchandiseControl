@@ -1,0 +1,43 @@
+=== mc-agent scan transport-thin-only --task TASK-124 ===
+{
+  "NEXT_ACTION": "Keep SupabaseTransportClient transport-only.",
+  "canonicalHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "id": "transport-exists",
+      "reason": "SupabaseTransportClient.swift must exist.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "forbidden_hits": [],
+        "loc": 117
+      },
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "fix_hint": "Move query/table behavior into query executor or domain adapters.",
+      "id": "transport-has-no-domain-query",
+      "reason": "Transport client must not own table/query/domain behavior.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T20:17:24+00:00",
+  "exitCode": 0,
+  "githubHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "localHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "nextAction": "Keep SupabaseTransportClient transport-only.",
+  "originHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "transport-thin-only",
+  "scannerName": "transport-thin-only",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.transport-thin-only",
+  "started_at": "2026-05-25T20:17:24+00:00",
+  "status": "PASS",
+  "summary": "transport-thin-only: PASS (2 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

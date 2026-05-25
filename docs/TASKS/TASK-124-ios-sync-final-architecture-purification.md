@@ -5,11 +5,11 @@
 - **Titolo**: iOS Sync Final Architecture Purification and Residue Eradication
 - **File task**: `docs/TASKS/TASK-124-ios-sync-final-architecture-purification.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-124/`
-- **Stato**: BLOCKED
-- **Fase attuale**: BLOCKED_EXTERNAL_LIVE_DEVICE — LOCAL EXECUTION PASS, LIVE DEVICE GATES BLOCKED
-- **Responsabile attuale**: USER / External live-device and local-permission prerequisites
+- **Stato**: ACTIVE
+- **Fase attuale**: REVIEW — SIMULATOR_EMULATOR_SCOPE_PASS
+- **Responsabile attuale**: CLAUDE / Reviewer
 - **Data creazione**: 2026-05-25
-- **Ultimo aggiornamento**: 2026-05-25 11:39 -0400 — local execution pass; live/offline/speed gates blocked by external device/session prerequisites
+- **Ultimo aggiornamento**: 2026-05-25 16:23 -0400 — simulator/emulator live gates completed; physical device scope deferred to TASK-125
 - **Ultimo agente che ha operato**: CODEX / Executor
 - **Tipo task**: architecture purification planning; futura execution Swift/harness solo dopo review/approval.
 - **Readiness**: EXECUTION_AUTHORIZED_BY_USER. Esecuzione end-to-end approvata dall'utente; stato massimo finale ammesso senza review esterna: ACTIVE / REVIEW o ACTIVE / BLOCKED/FIX secondo evidence. TASK-124 non e' DONE, non dichiara architettura 100% completata. Review integration: automation/harness/safety/evidence requirements obbligatori.
@@ -30,6 +30,28 @@
 - BLOCKED_EXTERNAL: offline/reconnect live matrix and TASK-123 speed regression live gates require `MC_ANDROID_DEVICE_SERIAL`; `supabase status-redacted` requires local Supabase CLI/Docker stack; `ios smoke options` requires macOS Accessibility/JXA permission.
 - Stato finale Codex: `BLOCKED / BLOCKED_EXTERNAL_LIVE_DEVICE`. Nessun `DONE`, nessun `REVIEW PASS`, nessun claim 100% o production globale.
 - Evidence finale: `docs/TASKS/EVIDENCE/TASK-124/final-handoff.md`, `offline-reconnect-matrix.md/json`, `automation-discovery.md/json`, `harness-routing.md/json`, `file-inventory.md/json`, `pbxproj-target-membership.md/json`, agent reports in `agent-runs/`.
+
+### Ripresa simulator/emulator scope — 2026-05-25 13:10 -0400
+- Decisione utente recepita: device fisici esclusi da TASK-124; iPhone fisico, Android fisico, locked/background/long-offline real-device rimandati a TASK-125.
+- Preflight TASK-124 PASS: `20260525T170629Z-preflight-task-TASK-124-p28599`.
+- Head consistency PASS: `20260525T170629Z-git-head-consistency-task-TASK-124-p28600`; local HEAD/origin/main/ls-remote allineati su `6e8ee53b89be42be84b9d5645ff19379a5bc137b`.
+- Supabase `status-redacted` PASS: `20260525T170629Z-supabase-status-redacted-p28677`; precedente blocker Docker/local stack risolto.
+- Android Emulator boot fallback documentato: `adb` non era nel PATH shell, usato SDK locale per avviare AVD `Medium_Phone_API_35`; seriale emulator-only selezionato `emulator-5554`; nessun device fisico usato.
+- Android auth-preflight live PASS con `MC_ANDROID_DEVICE_SERIAL=emulator-5554`: `20260525T170833Z-android-auth-preflight-live-p32621`.
+- iOS smoke simulator PASS: `20260525T170848Z-ios-smoke-simulator-p33393`.
+- iOS auth-preflight live resta BLOCKED_EXTERNAL: `20260525T170716Z-ios-auth-preflight-live-task-TASK-124-p30454` e retry `20260525T170916Z-ios-auth-preflight-live-task-TASK-124-p34245` falliscono con sessione iOS non scaduta assente. Next action harness: aprire app, completare login/session restore, poi retry.
+- Gate non eseguiti per assenza sessione iOS Simulator: offline/reconnect simulator/emulator, TASK-123 speed regression simulator/emulator, runtime parity/near realtime. Stato finale ripresa: `ACTIVE / BLOCKED_EXTERNAL_SIMULATOR_ENV`, non `REVIEW`, non `DONE`.
+
+### Handoff post-execution — 2026-05-25 16:23 -0400
+- User override applicato: TASK-124 chiude il perimetro iOS Simulator + Android Emulator `emulator-5554` + Supabase linked/local; device fisici, locked/background/long-offline real-device restano `DEFERRED_TO_TASK-125`.
+- iOS Simulator auth blocker risolto con polling documentato: smoke simulator PASS `20260525T192132Z-ios-smoke-simulator-p46903`; auth-preflight live PASS `20260525T192259Z-ios-auth-preflight-live-task-TASK-124-p48048`.
+- Fix harness mirati applicati: `TASK124_` ammesso nei fixture live iOS/Android di `Task103CrossPlatformAcceptanceTests`; no-op speed harness non include piu' un `sleep 1` artificiale nel budget misurato e registra `settleSeconds`.
+- Offline/reconnect simulator/emulator PASS: `20260525T192951Z-live-offline-reconnect-sync-task-TASK-124-prefix-TASK124_OFFLINE_SIM_-p59570`.
+- TASK-123 speed regression simulator/emulator PASS: single propagation `20260525T193243Z-live-task123-single-propagation-task-TASK-124-prefix-TASK124_SPEED_SIM_-p64766`; no-op `20260525T195458Z-live-task123-noop-task-TASK-124-prefix-TASK124_SPEED_SIM_-p17878`; burst-10 `20260525T195639Z-live-task123-burst-10-task-TASK-124-prefix-TASK124_SPEED_SIM_-p21549`; cold-restart `20260525T200412Z-live-task123-cold-restart-task-TASK-124-prefix-TASK124_SPEED_SIM_-p36557`.
+- Runtime gates PASS: mutation-near-realtime `20260525T200943Z-live-mutation-near-realtime-task-TASK-124-prefix-TASK124_RT_SIM_-p49942`; runtime-parity PASS after explicit Android full-pull setup `20260525T201515Z-live-runtime-parity-task-TASK-124-prefix-TASK124_RT_SIM_-profile-linked-p57963`. The explicit full pull is setup evidence for parity only, not a normal-path workaround.
+- Cleanup scoped PASS: dry-run `20260525T201625Z-supabase-cleanup-task-TASK-124-prefix-TASK124_-profile-linked-dry-run-p59913`; execute `20260525T201647Z-supabase-cleanup-task-TASK-124-prefix-TASK124_-profile-linked-execute-cleanup-plan-id-cleanup-TASK-124-20260525T201625Z-TASK124_-p60875`; residue-check PASS `20260525T201658Z-supabase-residue-check-prefix-TASK124_-profile-linked-p61341`.
+- Final verification PASS: all TASK-124 scanners `20260525T201721Z` through `20260525T201735Z`; sensitive `20260525T201736Z`; evidence final `20260525T202253Z`; repo-diff final `20260525T202306Z`; `git diff --check` PASS; iOS Debug `20260525T201834Z`; iOS Release `20260525T201845Z`; iOS sync tests `20260525T202012Z`; Android Debug `20260525T201953Z`; Android sync tests `20260525T202001Z`.
+- Stato finale Codex: `ACTIVE / REVIEW — SIMULATOR_EMULATOR_SCOPE_PASS`. Non `DONE`, non `REVIEW PASS`, nessun claim 100%, production-ready globale o device fisici.
 
 ## Verifiche canonical iniziali
 - Local iOS repo: `/Users/minxiang/Desktop/iOSMerchandiseControl`.

@@ -1,0 +1,38 @@
+=== mc-agent scan source-format --task TASK-124 ===
+{
+  "NEXT_ACTION": "Fix formatting residue.",
+  "canonicalHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "long-lines",
+      "reason": "Source lines must stay reviewable.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "swift-tabs",
+      "reason": "Swift source should not add tab indentation.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T20:17:34+00:00",
+  "exitCode": 0,
+  "githubHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "localHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "nextAction": "Fix formatting residue.",
+  "originHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "source-format",
+  "scannerName": "source-format",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.source-format",
+  "started_at": "2026-05-25T20:17:34+00:00",
+  "status": "PASS",
+  "summary": "source-format: PASS (2 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

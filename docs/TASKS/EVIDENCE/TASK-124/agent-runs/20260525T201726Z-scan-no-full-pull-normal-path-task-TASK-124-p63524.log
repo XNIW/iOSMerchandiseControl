@@ -1,0 +1,32 @@
+=== mc-agent scan no-full-pull-normal-path --task TASK-124 ===
+{
+  "NEXT_ACTION": "Keep full pull behind explicit recovery/bootstrap context.",
+  "canonicalHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "automatic-full-pull",
+      "reason": "Normal automatic path must not perform full pull for local writes.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T20:17:27+00:00",
+  "exitCode": 0,
+  "githubHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "localHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "nextAction": "Keep full pull behind explicit recovery/bootstrap context.",
+  "originHead": "6e8ee53b89be42be84b9d5645ff19379a5bc137b",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "no-full-pull-normal-path",
+  "scannerName": "no-full-pull-normal-path",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.no-full-pull-normal-path",
+  "started_at": "2026-05-25T20:17:27+00:00",
+  "status": "PASS",
+  "summary": "no-full-pull-normal-path: PASS (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}
