@@ -15,7 +15,7 @@ final class Task115RealRootLifecycleTests: XCTestCase {
         let container = try makeContainer()
         let authViewModel = SupabaseAuthViewModel(authService: nil, initialError: .configMissing)
         let root = ContentView(
-            supabaseInventoryService: nil,
+            supabaseTransportClient: nil,
             supabasePullPreviewService: nil,
             syncEventOutboxDrainRecorder: nil,
             syncEventSignalWatcher: nil

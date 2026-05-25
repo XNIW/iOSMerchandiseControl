@@ -1,0 +1,14 @@
+# TASK-124 pbxproj target membership
+
+```json
+{
+  "fixtureRefs": [],
+  "referencedSwiftFileCount": 1,
+  "stale": [
+    {
+      "file": "Missing.swift",
+      "project": "App.xcodeproj/project.pbxproj"
+    }
+  ]
+}
+```

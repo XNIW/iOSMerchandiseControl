@@ -284,8 +284,28 @@ final class SupabaseManualSyncPullPreviewAdapter: SupabaseManualSyncRemotePrevie
             let summary = SupabaseManualSyncRemotePreviewOutcomeMapper.summary(from: viewState)
 #if DEBUG
             let counts = summary.safeAggregateCounts
+            let previewDiagnostic = [
+                "[PullPreview] summary",
+                "complete=\(summary.isComplete)",
+                "partial=\(summary.isPartial)",
+                "signals=\(summary.hasRemoteSignals)",
+                "failure=\(summary.failureCategory?.rawValue ?? "none")",
+                "remoteProducts=\(counts.remoteProductCount)",
+                "remoteSuppliers=\(counts.remoteSupplierCount)",
+                "remoteCategories=\(counts.remoteCategoryCount)",
+                "remotePrices=\(counts.remoteProductPriceCount)",
+                "new=\(counts.newProductCount)",
+                "updates=\(counts.updateCandidateCount)",
+                "conflicts=\(counts.conflictCount)",
+                "tombstones=\(counts.tombstoneCount)",
+                "warnings=\(counts.warningCount)",
+                "sourceErrors=\(counts.sourceErrorCount)",
+                "supplierDiffs=\(counts.supplierDiffCount)",
+                "categoryDiffs=\(counts.categoryDiffCount)",
+                "priceSignals=\(counts.priceHistorySignalCount)"
+            ].joined(separator: " ")
             debugPrint(
-                "[PullPreview] summary complete=\(summary.isComplete) partial=\(summary.isPartial) signals=\(summary.hasRemoteSignals) failure=\(summary.failureCategory?.rawValue ?? "none") remoteProducts=\(counts.remoteProductCount) remoteSuppliers=\(counts.remoteSupplierCount) remoteCategories=\(counts.remoteCategoryCount) remotePrices=\(counts.remoteProductPriceCount) new=\(counts.newProductCount) updates=\(counts.updateCandidateCount) conflicts=\(counts.conflictCount) tombstones=\(counts.tombstoneCount) warnings=\(counts.warningCount) sourceErrors=\(counts.sourceErrorCount) supplierDiffs=\(counts.supplierDiffCount) categoryDiffs=\(counts.categoryDiffCount) priceSignals=\(counts.priceHistorySignalCount)"
+                previewDiagnostic
             )
 #endif
             return summary

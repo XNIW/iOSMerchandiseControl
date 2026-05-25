@@ -322,7 +322,7 @@ final class Task098CrossPlatformSmokeTests: XCTestCase {
     }
 
     private func fetchFixturePrices(
-        _ inventory: ProductPriceRemoteSupabaseAdapter,
+        _ inventory: ProductPriceReleaseRemoteSupabaseAdapter,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {
@@ -608,8 +608,8 @@ final class Task098CrossPlatformSmokeTests: XCTestCase {
         let inventory: SupabaseTransportClient
         let session: SupabaseAuthSessionInfo
 
-        var productPriceRemote: ProductPriceRemoteSupabaseAdapter {
-            ProductPriceRemoteSupabaseAdapter(remote: inventory)
+        var productPriceRemote: ProductPriceReleaseRemoteSupabaseAdapter {
+            ProductPriceReleaseRemoteSupabaseAdapter(remote: inventory)
         }
     }
 

@@ -1,0 +1,69 @@
+=== mc-agent scan remote-adapter-single-domain --task TASK-124 --strict ===
+{
+  "NEXT_ACTION": "Split mixed remote adapter responsibilities or add motivated keep evidence.",
+  "canonicalHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "allowed_multi": true,
+          "domains": [
+            "catalog"
+          ],
+          "file": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+          "role_tokens": [
+            "Preview"
+          ]
+        },
+        {
+          "allowed_multi": false,
+          "domains": [
+            "catalog",
+            "product_price"
+          ],
+          "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+          "role_tokens": [
+            "ManualPush",
+            "DryRun",
+            "Preview"
+          ]
+        },
+        {
+          "allowed_multi": false,
+          "domains": [
+            "catalog",
+            "product_price",
+            "sync_events"
+          ],
+          "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+          "role_tokens": [
+            "OptionsSyncRemoteCountFetching"
+          ]
+        }
+      ],
+      "fix_hint": "Split preview/manual/options responsibilities out of automatic domain adapters.",
+      "id": "remote-adapter-domain-count",
+      "reason": "Remote adapters must be single-domain or have an explicit split/keep rationale with call-site evidence.",
+      "status": "FAIL"
+    }
+  ],
+  "completed_at": "2026-05-25T15:20:26+00:00",
+  "exitCode": 1,
+  "githubHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "localHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "nextAction": "Split mixed remote adapter responsibilities or add motivated keep evidence.",
+  "originHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "remote-adapter-single-domain",
+  "scannerName": "remote-adapter-single-domain",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.remote-adapter-single-domain",
+  "started_at": "2026-05-25T15:20:26+00:00",
+  "status": "FAIL",
+  "summary": "remote-adapter-single-domain: FAIL (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

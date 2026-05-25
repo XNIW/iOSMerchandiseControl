@@ -1,0 +1,114 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun no-mainactor-heavy-sync.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T152458Z-scan-no-mainactor-heavy-sync-task-TASK-124-strict-p24366.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T152458Z-scan-no-mainactor-heavy-sync-task-TASK-124-strict-p24366.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T152458Z-scan-no-mainactor-heavy-sync-task-TASK-124-strict-p24366.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-124-15",
+    "AC-124-21"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan no-mainactor-heavy-sync --task TASK-124 --strict",
+  "command_slug": "scan-no-mainactor-heavy-sync-task-TASK-124-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 735,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-124",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK124_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-124"
+  },
+  "exit_code": 1,
+  "git_sha": "951547ab",
+  "next_action_recommended": "Fix failing checks and rerun no-mainactor-heavy-sync.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Move heavy sync work off MainActor or prove construction-only.",
+    "canonicalHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+    "checks": [
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+            "hits": [
+              {
+                "line": 313,
+                "snippet": "try? await Task.sleep(nanoseconds: intervalNanoseconds)"
+              }
+            ]
+          }
+        ],
+        "id": "mainactor-heavy-sync",
+        "reason": "Mutative/network sync work must not be MainActor-heavy.",
+        "status": "FAIL"
+      }
+    ],
+    "completed_at": "2026-05-25T15:24:58+00:00",
+    "exitCode": 1,
+    "githubHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+    "localHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+    "nextAction": "Move heavy sync work off MainActor or prove construction-only.",
+    "originHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "FAIL",
+    "safety_level": "read_only_static_scan",
+    "scan": "no-mainactor-heavy-sync",
+    "scannerName": "no-mainactor-heavy-sync",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.no-mainactor-heavy-sync",
+    "started_at": "2026-05-25T15:24:58+00:00",
+    "status": "FAIL",
+    "summary": "no-mainactor-heavy-sync: FAIL (1 checks)",
+    "taskId": "TASK-124",
+    "task_id": "TASK-124"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T152458Z-scan-no-mainactor-heavy-sync-task-TASK-124-strict-p24366",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-124",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-25T15:24:58Z",
+  "timestamp_start": "2026-05-25T15:24:58Z",
+  "warnings": []
+}

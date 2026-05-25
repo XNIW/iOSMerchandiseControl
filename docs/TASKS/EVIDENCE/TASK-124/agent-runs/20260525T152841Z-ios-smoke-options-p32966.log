@@ -1,0 +1,4 @@
+=== mc-agent ios smoke options ===
+legacy sim_ui/JXA options smoke returned 2; evaluating XcodeBuildMCP fallback evidence.
+[sim_ui] ERROR: Nessun Simulator booted trovato (DEVICE_ID=booted)
+[sim_ui] ERROR: Nessun Simulator booted trovato (DEVICE_ID=booted)

@@ -16,7 +16,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
             clientProvider: SupabaseClientProvider(config: config)
         )
         let catalogRemote = CatalogRemoteSupabaseAdapter(remote: inventory)
-        let productPriceRemote = ProductPriceRemoteSupabaseAdapter(remote: inventory)
+        let productPriceRemote = ProductPriceManualPushRemoteSupabaseAdapter(remote: inventory)
 
         let suppliers = try await fetchAllSuppliers(catalogRemote)
         let categories = try await fetchAllCategories(catalogRemote)
@@ -129,7 +129,7 @@ final class Task097RuntimeSmokeTests: XCTestCase {
     }
 
     private func fetchAllPrices(
-        _ inventory: ProductPriceRemoteSupabaseAdapter,
+        _ inventory: ProductPriceManualPushRemoteSupabaseAdapter,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {

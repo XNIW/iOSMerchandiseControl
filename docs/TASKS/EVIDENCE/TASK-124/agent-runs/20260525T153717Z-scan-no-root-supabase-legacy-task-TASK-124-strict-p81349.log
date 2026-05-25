@@ -1,0 +1,40 @@
+=== mc-agent scan no-root-supabase-legacy --task TASK-124 --strict ===
+{
+  "NEXT_ACTION": "Keep root app free of legacy Supabase mega-services.",
+  "canonicalHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "checks": [
+    {
+      "evidence": {
+        "expected_absent": [
+          "InventorySyncService.swift",
+          "SupabaseInventoryService.swift",
+          "SupabaseManualSyncCompatibilityAdapter.swift"
+        ],
+        "found": []
+      },
+      "fix_hint": "Delete, move, or rename root legacy files after call-site proof.",
+      "id": "root-legacy-files",
+      "reason": "Root app legacy Supabase/sync service files must not exist.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T15:37:17+00:00",
+  "exitCode": 0,
+  "githubHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "localHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "nextAction": "Keep root app free of legacy Supabase mega-services.",
+  "originHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "no-root-supabase-legacy",
+  "scannerName": "no-root-supabase-legacy",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.no-root-supabase-legacy",
+  "started_at": "2026-05-25T15:37:17+00:00",
+  "status": "PASS",
+  "summary": "no-root-supabase-legacy: PASS (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

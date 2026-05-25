@@ -411,7 +411,7 @@ final class SyncProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding
             }
             stagedPendingBatchesByFingerprint.removeValue(forKey: batchFingerprint)
         }
-        let telemetryResult = SupabaseManualSyncAggregatedPushOutboxProducer(context: context).produce(
+        let telemetryResult = SyncEventOutboxEnqueueService(context: context).enqueue(
             .productPriceManualPush(
                 result: result,
                 ownerUserID: ownerUserID,
@@ -614,7 +614,7 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
         guard result.confirmedCatalogChangeCount > 0 else {
             return result
         }
-        let telemetry = SupabaseManualSyncAggregatedPushOutboxProducer(context: context).produce(
+        let telemetry = SyncEventOutboxEnqueueService(context: context).enqueue(
             .catalogManualPush(
                 result: result,
                 ownerUserID: ownerUserID,

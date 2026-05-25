@@ -1,0 +1,11 @@
+{
+  "taskId": "TASK-124",
+  "status": "BLOCKED_EXTERNAL",
+  "reason": "Canonical live offline/reconnect harness requires an Android device or emulator serial.",
+  "command": "MC_ALLOW_LIVE=1 MC_TASK_ID=TASK-124 ./tools/agent/mc-agent.sh live offline-reconnect-sync --task TASK-124 --prefix TASK124_OFFLINE_LIVE_",
+  "report": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T153917Z-live-offline-reconnect-sync-task-TASK-124-prefix-TASK124_OFFLINE_LIVE_-p16598.json",
+  "nextAction": "Set MC_ANDROID_DEVICE_SERIAL to the physical device or emulator serial, then rerun.",
+  "scenarios": [
+    {"id": "AC-124-16..22", "status": "BLOCKED_EXTERNAL", "blockedBy": "missing Android device/emulator serial"}
+  ]
+}

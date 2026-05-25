@@ -1,0 +1,28 @@
+{
+  "candidates": [
+    {
+      "callsManual": false,
+      "callsRecovery": false,
+      "classification": "DELETE_OR_MERGE",
+      "conformances": [],
+      "loc": 1,
+      "path": "iOSMerchandiseControl/Sync/Automatic/SyncAutomaticRuntime.swift",
+      "reason": "near-empty compatibility file",
+      "remoteDomains": []
+    }
+  ],
+  "inventory": {
+    "fileCount": 1,
+    "files": [
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 1,
+        "path": "iOSMerchandiseControl/Sync/Automatic/SyncAutomaticRuntime.swift",
+        "remoteDomains": []
+      }
+    ],
+    "generatedAt": "2026-05-25T15:37:44+00:00"
+  }
+}

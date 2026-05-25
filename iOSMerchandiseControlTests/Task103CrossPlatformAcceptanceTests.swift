@@ -1395,7 +1395,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         result: SupabaseManualPushResult,
         planFingerprint: String
     ) async throws {
-        let enqueue = SupabaseManualSyncAggregatedPushOutboxProducer(context: context).produce(
+        let enqueue = SyncEventOutboxEnqueueService(context: context).enqueue(
             .catalogManualPush(
                 result: result,
                 ownerUserID: runtime.session.userID,
@@ -1486,7 +1486,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         runtime: Runtime,
         result: ProductPriceManualPushResult
     ) async throws {
-        let enqueue = SupabaseManualSyncAggregatedPushOutboxProducer(context: context).produce(
+        let enqueue = SyncEventOutboxEnqueueService(context: context).enqueue(
             .productPriceManualPush(
                 result: result,
                 ownerUserID: runtime.session.userID,
@@ -2183,7 +2183,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
     }
 
     private func fetchFixturePrices(
-        _ inventory: ProductPriceRemoteSupabaseAdapter,
+        _ inventory: ProductPriceReleaseRemoteSupabaseAdapter,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {
@@ -2741,8 +2741,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let inventory: SupabaseTransportClient
         let session: SupabaseAuthSessionInfo
 
-        var productPriceRemote: ProductPriceRemoteSupabaseAdapter {
-            ProductPriceRemoteSupabaseAdapter(remote: inventory)
+        var productPriceRemote: ProductPriceReleaseRemoteSupabaseAdapter {
+            ProductPriceReleaseRemoteSupabaseAdapter(remote: inventory)
         }
 
         var recoveryRemote: RecoveryRemoteSupabaseAdapter {

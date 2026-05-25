@@ -1,0 +1,66 @@
+=== mc-agent scan dead-code-residue --task TASK-124 --strict ===
+{
+  "NEXT_ACTION": "Delete, merge, rename, or evidence-classify residue.",
+  "canonicalHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "callsManual": true,
+          "callsRecovery": false,
+          "classification": "SPLIT_OR_DELETE",
+          "conformances": [],
+          "loc": 15,
+          "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+          "reason": "manual/outbox adapter residue requires call-site proof",
+          "remoteDomains": []
+        },
+        {
+          "callsManual": false,
+          "callsRecovery": true,
+          "classification": "DELETE",
+          "conformances": [
+            "String "
+          ],
+          "loc": 287,
+          "path": "iOSMerchandiseControl/Sync/Recovery/InventorySyncService.swift",
+          "reason": "root legacy service name",
+          "remoteDomains": []
+        },
+        {
+          "callsManual": false,
+          "callsRecovery": false,
+          "classification": "DELETE_OR_MERGE",
+          "conformances": [],
+          "loc": 3,
+          "path": "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
+          "reason": "near-empty compatibility file",
+          "remoteDomains": []
+        }
+      ],
+      "fix_hint": "Remove or document with call-site proof in TASK-124 evidence.",
+      "id": "dead-code-candidates",
+      "reason": "Known compatibility, near-empty, or root legacy residues must be eliminated or classified.",
+      "status": "FAIL"
+    }
+  ],
+  "completed_at": "2026-05-25T15:20:35+00:00",
+  "exitCode": 1,
+  "githubHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "localHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "nextAction": "Delete, merge, rename, or evidence-classify residue.",
+  "originHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "dead-code-residue",
+  "scannerName": "dead-code-residue",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.dead-code-residue",
+  "started_at": "2026-05-25T15:20:35+00:00",
+  "status": "FAIL",
+  "summary": "dead-code-residue: FAIL (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

@@ -1,0 +1,1729 @@
+{
+  "candidates": [],
+  "inventory": {
+    "fileCount": 131,
+    "files": [
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "EnvironmentKey ",
+          "Equatable ",
+          "ForegroundCloudWorkflowActivityCenter ",
+          "ObservableObject ",
+          "String, Hashable, Sendable ",
+          "ViewModifier "
+        ],
+        "loc": 435,
+        "path": "iOSMerchandiseControl/ContentView.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          " ",
+          " ",
+          " ",
+          " ",
+          "Identifiable ",
+          "Identifiable ",
+          "View ",
+          "some View "
+        ],
+        "loc": 1049,
+        "path": "iOSMerchandiseControl/OptionsView.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool "
+        ],
+        "loc": 92,
+        "path": "iOSMerchandiseControl/Sync/Account/AccountBindingStore.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 166,
+        "path": "iOSMerchandiseControl/Sync/Account/AccountSwitchPolicy.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Equatable ",
+          "Equatable ",
+          "Equatable ",
+          "Equatable ",
+          "Equatable ",
+          "Equatable ",
+          "Equatable "
+        ],
+        "loc": 140,
+        "path": "iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          " ",
+          " ",
+          " ",
+          " ",
+          "Equatable, Sendable ",
+          "String ",
+          "View ",
+          "some View "
+        ],
+        "loc": 162,
+        "path": "iOSMerchandiseControl/Sync/Account/AccountSyncDecisionView.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Codable, Equatable, Sendable ",
+          "RawRepresentable, Codable, Equatable, Hashable, Sendable "
+        ],
+        "loc": 31,
+        "path": "iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Encodable, Equatable, Sendable ",
+          "Encodable, Equatable, Sendable ",
+          "Encodable, Equatable, Sendable ",
+          "Encodable, Equatable, Sendable ",
+          "Encodable, Equatable, Sendable ",
+          "String, CodingKey ",
+          "String, CodingKey ",
+          "String, CodingKey "
+        ],
+        "loc": 81,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Sendable ",
+          "SyncCatalogPushProviding "
+        ],
+        "loc": 338,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Sendable "
+        ],
+        "loc": 10,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "AnyObject ",
+          "Bool ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Int "
+        ],
+        "loc": 50,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 50,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 19,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [],
+        "loc": 225,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Sendable "
+        ],
+        "loc": 55,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "AnyObject ",
+          "Bool ",
+          "Bool ",
+          "Bool ",
+          "SyncAutomaticRuntimeProviding ",
+          "SyncAutomaticRuntimeProviding "
+        ],
+        "loc": 77,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool "
+        ],
+        "loc": 24,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Equatable, Sendable ",
+          "String, CaseIterable, Equatable, Sendable, Hashable "
+        ],
+        "loc": 61,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 4,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "String, Sendable, Equatable "
+        ],
+        "loc": 9,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncAutomaticTriggerSource.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable, Hashable "
+        ],
+        "loc": 139,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "AnyObject ",
+          "Bool ",
+          "Bool ",
+          "Bool ",
+          "Equatable, Sendable ",
+          "SyncDecisionInput ",
+          "SyncDecisionInputProviding ",
+          "SyncTrigger "
+        ],
+        "loc": 269,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+        "remoteDomains": [
+          "options"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Equatable, Sendable "
+        ],
+        "loc": 13,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncTrigger.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "SyncHistorySessionPushProviding "
+        ],
+        "loc": 158,
+        "path": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "HistorySessionRemoteSyncing "
+        ],
+        "loc": 8,
+        "path": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "AnyObject ",
+          "Bool ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Int ",
+          "Int ",
+          "Sendable, Equatable "
+        ],
+        "loc": 63,
+        "path": "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 88,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "AnyObject ",
+          "Bool ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable "
+        ],
+        "loc": 54,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "SyncActivityRegistrationProviding "
+        ],
+        "loc": 98,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+        "remoteDomains": [
+          "options"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 4,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticPresentationBoundary.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Equatable, Sendable "
+        ],
+        "loc": 118,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "Equatable, Sendable ",
+          "ObservableObject ",
+          "RemoteDatasetState ",
+          "Sendable "
+        ],
+        "loc": 330,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "Equatable ",
+          "Equatable ",
+          "Equatable ",
+          "Equatable "
+        ],
+        "loc": 54,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "ObservableObject ",
+          "String ",
+          "String ",
+          "String "
+        ],
+        "loc": 136,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "CloudSyncProgressPhase "
+        ],
+        "loc": 48,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStatusPresenter.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Encodable, Equatable, Sendable ",
+          "String, CodingKey "
+        ],
+        "loc": 25,
+        "path": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Sendable ",
+          "SyncProductPriceSyncProviding "
+        ],
+        "loc": 267,
+        "path": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Sendable "
+        ],
+        "loc": 5,
+        "path": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "AnyObject ",
+          "Bool ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable "
+        ],
+        "loc": 38,
+        "path": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 4,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 209,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplyService.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "CatalogIncrementalApplySummary ",
+          "Equatable, Sendable "
+        ],
+        "loc": 35,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplySummary.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 244,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Equatable, Sendable ",
+          "HistoryIncrementalApplySummary "
+        ],
+        "loc": 24,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplySummary.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 175,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Equatable, Sendable ",
+          "ProductPriceIncrementalApplySummary "
+        ],
+        "loc": 25,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplySummary.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "Bool ",
+          "Hashable ",
+          "Int ",
+          "Sendable ",
+          "Sendable ",
+          "Sendable "
+        ],
+        "loc": 421,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "Sendable ",
+          "Sendable ",
+          "Sendable ",
+          "Sendable ",
+          "String, Sendable, Equatable "
+        ],
+        "loc": 48,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalContracts.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [],
+        "loc": 268,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "SyncIncrementalPullProviding "
+        ],
+        "loc": 41,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalPullService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "AnyObject ",
+          "Bool ",
+          "Int ",
+          "Sendable, Equatable "
+        ],
+        "loc": 68,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Equatable, Hashable, Sendable "
+        ],
+        "loc": 98,
+        "path": "iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 1,
+        "path": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "String, CaseIterable, Equatable, Sendable ",
+          "String, Equatable, Sendable "
+        ],
+        "loc": 337,
+        "path": "iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 26,
+        "path": "iOSMerchandiseControl/Sync/Manual/HistorySessionPayloadSnapshotFactory.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 400,
+        "path": "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Int ",
+          "Int ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable, Hashable ",
+          "String, Sendable, Equatable, Hashable "
+        ],
+        "loc": 1222,
+        "path": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+        "remoteDomains": [
+          "catalog",
+          "options"
+        ]
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 4,
+        "path": "iOSMerchandiseControl/Sync/Manual/ManualSyncBoundary.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "Bool ",
+          "ObservableObject ",
+          "ProductPriceManualPushStateKind ",
+          "Sendable ",
+          "String, Sendable, Equatable ",
+          "String, Sendable, Equatable "
+        ],
+        "loc": 381,
+        "path": "iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "String, Sendable, Equatable, CaseIterable ",
+          "String, Sendable, Equatable, CaseIterable ",
+          "String, Sendable, Equatable, CaseIterable "
+        ],
+        "loc": 134,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineModels.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable "
+        ],
+        "loc": 331,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Error, Sendable, Equatable ",
+          "Sendable, Equatable "
+        ],
+        "loc": 296,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 79,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogFingerprintNormalizer.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "ManualPushPreflightCategory ",
+          "PushSeverity ",
+          "PushSeverity ",
+          "String, Sendable, Equatable, CaseIterable ",
+          "String, Sendable, Equatable, CaseIterable ",
+          "String, Sendable, Equatable, CaseIterable ",
+          "String, Sendable, Equatable, CaseIterable ",
+          "String, Sendable, Equatable, Hashable, CaseIterable "
+        ],
+        "loc": 537,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+        "remoteDomains": [
+          "options"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "ManualPushFingerprint ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable, Hashable, CaseIterable "
+        ],
+        "loc": 872,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable ",
+          "SupabaseManualPushTouchedIDs ",
+          "SyncEventJSONValue "
+        ],
+        "loc": 1149,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          "AnyObject, Sendable "
+        ],
+        "loc": 77,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncBaselineCommitter.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          "AnyObject ",
+          "SupabaseManualSyncCoordinating "
+        ],
+        "loc": 9,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          "AnyObject ",
+          "AnyObject ",
+          "AnyObject ",
+          "AnyObject ",
+          "if let remotePreviewSummary "
+        ],
+        "loc": 650,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift",
+        "remoteDomains": [
+          "catalog",
+          "options"
+        ]
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Int, CaseIterable, Equatable, Sendable "
+        ],
+        "loc": 106,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
+        "remoteDomains": [
+          "catalog",
+          "options"
+        ]
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "Equatable, Sendable ",
+          "String, Equatable, Sendable ",
+          "String, Equatable, Sendable ",
+          "String, Equatable, Sendable ",
+          "String, Equatable, Sendable ",
+          "String, Equatable, Sendable "
+        ],
+        "loc": 303,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          "AnyObject ",
+          "AnyObject ",
+          "AnyObject ",
+          "AnyObject ",
+          "Bool ",
+          "Bool ",
+          "SupabaseManualSyncLocalPendingProviding ",
+          "SupabaseManualSyncLocalPendingSessionProviding "
+        ],
+        "loc": 314,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+        "remoteDomains": [
+          "catalog",
+          "options"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 77,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncOutboxProducerConversions.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          "SupabaseManualSyncActivityRegistrationProviding "
+        ],
+        "loc": 147,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+        "remoteDomains": [
+          "options"
+        ]
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          " ",
+          " ",
+          " ",
+          " ",
+          " ",
+          " ",
+          " ",
+          "SupabaseManualSyncHistorySessionSyncProviding "
+        ],
+        "loc": 846,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+        "remoteDomains": [
+          "catalog",
+          "options"
+        ]
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          "AnyObject ",
+          "AnyObject ",
+          "Bool ",
+          "Int ",
+          "Int ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable ",
+          "String, Sendable, Equatable "
+        ],
+        "loc": 337,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+        "remoteDomains": [
+          "options"
+        ]
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": false,
+        "conformances": [
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "String, Equatable, Sendable, CaseIterable "
+        ],
+        "loc": 86,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": true,
+        "callsRecovery": true,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "String ",
+          "String, Equatable, Sendable "
+        ],
+        "loc": 6550,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+        "remoteDomains": [
+          "catalog",
+          "options",
+          "product_price"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Encodable, Sendable, Equatable, Identifiable ",
+          "Sendable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String ",
+          "String, CodingKey "
+        ],
+        "loc": 746,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+        "remoteDomains": [
+          "product_price"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Identifiable, Sendable, Equatable ",
+          "Sendable ",
+          "Sendable ",
+          "Sendable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable ",
+          "SupabaseProductPricePreviewFetching "
+        ],
+        "loc": 361,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Sendable ",
+          "Sendable ",
+          "Sendable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable "
+        ],
+        "loc": 882,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Equatable ",
+          "Equatable ",
+          "Equatable ",
+          "Error ",
+          "Identifiable, Equatable ",
+          "ObservableObject ",
+          "String "
+        ],
+        "loc": 441,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Identifiable, Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String ",
+          "String, Sendable, Equatable "
+        ],
+        "loc": 206,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugFormatting.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "Bool ",
+          "Equatable ",
+          "ObservableObject "
+        ],
+        "loc": 171,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugViewModel.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "Bool ",
+          "Int ",
+          "Sendable, Equatable "
+        ],
+        "loc": 219,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventIncrementalApplyService.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Sendable ",
+          "Sendable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "SupabaseSyncEventPreviewFetching, SupabaseSyncEventIncrementalFetching "
+        ],
+        "loc": 183,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+        "remoteDomains": [
+          "sync_events"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable, Identifiable ",
+          "String, Sendable, Equatable, CaseIterable ",
+          "String, Sendable, Equatable, CaseIterable ",
+          "String, Sendable, Equatable, Hashable, CaseIterable ",
+          "String, Sendable, Equatable, Hashable, CaseIterable "
+        ],
+        "loc": 203,
+        "path": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Bool ",
+          "Bool ",
+          "Equatable ",
+          "Equatable ",
+          "Equatable ",
+          "Int ",
+          "ObservableObject "
+        ],
+        "loc": 343,
+        "path": "iOSMerchandiseControl/Sync/Manual/SyncEventOutboxDrainDebugViewModel.swift",
+        "remoteDomains": [
+          "options"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 34,
+        "path": "iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Equatable, Sendable "
+        ],
+        "loc": 59,
+        "path": "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          " ",
+          " ",
+          " ",
+          " ",
+          "Error, Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable "
+        ],
+        "loc": 471,
+        "path": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 29,
+        "path": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable, CaseIterable "
+        ],
+        "loc": 517,
+        "path": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "Error, Sendable, Equatable ",
+          "Error, Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable ",
+          "SyncEventOutboxErrorKind ",
+          "SyncEventOutboxState ",
+          "SyncEventOutboxStatus "
+        ],
+        "loc": 546,
+        "path": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift",
+        "remoteDomains": [
+          "options"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 15,
+        "path": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "Bool ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable, CaseIterable ",
+          "String, Sendable, Equatable, CaseIterable "
+        ],
+        "loc": 523,
+        "path": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [],
+        "loc": 20,
+        "path": "iOSMerchandiseControl/Sync/Recovery/BootstrapPullService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [],
+        "loc": 21,
+        "path": "iOSMerchandiseControl/Sync/Recovery/DriftReconciliationService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [],
+        "loc": 20,
+        "path": "iOSMerchandiseControl/Sync/Recovery/FullRecoveryService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "String "
+        ],
+        "loc": 287,
+        "path": "iOSMerchandiseControl/Sync/Recovery/InventorySyncService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "SupabaseInventoryFetching "
+        ],
+        "loc": 27,
+        "path": "iOSMerchandiseControl/Sync/Recovery/RecoveryRemoteSupabaseAdapter.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Identifiable, Sendable, Equatable ",
+          "Sendable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable ",
+          "String, Sendable, Equatable, CaseIterable "
+        ],
+        "loc": 1783,
+        "path": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+        "remoteDomains": [
+          "options",
+          "product_price"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Error, Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable ",
+          "String, Sendable, Equatable ",
+          "SupabasePullApplyDisabledReason "
+        ],
+        "loc": 1752,
+        "path": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Identifiable, Sendable ",
+          "Identifiable, Sendable, Equatable ",
+          "Sendable ",
+          "String, Sendable ",
+          "String, Sendable ",
+          "String, Sendable ",
+          "String, Sendable ",
+          "String, Sendable "
+        ],
+        "loc": 627,
+        "path": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+        "remoteDomains": [
+          "options"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Sendable ",
+          "Sendable ",
+          "Sendable ",
+          "Sendable "
+        ],
+        "loc": 1018,
+        "path": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+        "remoteDomains": [
+          "catalog",
+          "options",
+          "product_price"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 341,
+        "path": "iOSMerchandiseControl/Sync/Recovery/SwiftDataInventorySnapshotService.swift",
+        "remoteDomains": [
+          "options"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Bool ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "String, Sendable "
+        ],
+        "loc": 226,
+        "path": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "SupabaseRemoteQueryExecutor ",
+          "SyncAutomaticCatalogIncrementalReading ",
+          "SyncAutomaticCatalogRemoteWriting "
+        ],
+        "loc": 159,
+        "path": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "HistorySessionRemoteWriting ",
+          "SupabaseRemoteQueryExecutor "
+        ],
+        "loc": 132,
+        "path": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "OptionsSyncRemoteCountFetching ",
+          "SupabaseRemoteQueryExecutor "
+        ],
+        "loc": 47,
+        "path": "iOSMerchandiseControl/Sync/Remote/OptionsRemoteCountSupabaseAdapter.swift",
+        "remoteDomains": [
+          "catalog",
+          "product_price"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "SupabaseProductPriceManualPushRemoteAccessing ",
+          "SupabaseRemoteQueryExecutor "
+        ],
+        "loc": 106,
+        "path": "iOSMerchandiseControl/Sync/Remote/ProductPriceManualPushRemoteSupabaseAdapter.swift",
+        "remoteDomains": [
+          "catalog",
+          "product_price"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "SupabaseRemoteQueryExecutor "
+        ],
+        "loc": 116,
+        "path": "iOSMerchandiseControl/Sync/Remote/ProductPricePreviewRemoteSupabaseAdapter.swift",
+        "remoteDomains": [
+          "product_price"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 67,
+        "path": "iOSMerchandiseControl/Sync/Remote/ProductPriceReleaseRemoteSupabaseAdapter.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "SupabaseRemoteQueryExecutor ",
+          "SyncAutomaticProductPriceRemoteWriting, SyncAutomaticProductPriceIncrementalReading "
+        ],
+        "loc": 64,
+        "path": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+        "remoteDomains": [
+          "product_price"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Codable, Sendable, Identifiable ",
+          "Codable, Sendable, Identifiable ",
+          "Codable, Sendable, Identifiable ",
+          "Codable, Sendable, Identifiable ",
+          "Sendable ",
+          "String, CodingKey ",
+          "String, CodingKey ",
+          "String, CodingKey "
+        ],
+        "loc": 96,
+        "path": "iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Sendable "
+        ],
+        "loc": 183,
+        "path": "iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Codable, Sendable, Equatable ",
+          "Decodable, Sendable, Equatable ",
+          "Decodable, Sendable, Identifiable, Equatable ",
+          "String, CodingKey "
+        ],
+        "loc": 238,
+        "path": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventDTOs.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Error, Sendable, Equatable ",
+          "Sendable ",
+          "Sendable ",
+          "Sendable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "SyncEventLiveRecorderConfigurationProviding ",
+          "SyncEventRecording, Sendable "
+        ],
+        "loc": 293,
+        "path": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "SyncEventRPCTransport "
+        ],
+        "loc": 44,
+        "path": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRPCTransport.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 72,
+        "path": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRealtimeWatcher.swift",
+        "remoteDomains": [
+          "sync_events"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Error, Sendable "
+        ],
+        "loc": 117,
+        "path": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Encodable, Sendable, Equatable ",
+          "Encodable, Sendable, Equatable ",
+          "String, CodingKey "
+        ],
+        "loc": 221,
+        "path": "iOSMerchandiseControl/Sync/Remote/SyncEventRPCRequestMapper.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Error, Sendable, Equatable ",
+          "RemoteSyncEventRow ",
+          "Sendable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "Sendable, Equatable ",
+          "String, Sendable, Equatable ",
+          "SyncEventOutboxStatus "
+        ],
+        "loc": 633,
+        "path": "iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "CatalogRemoteSupabaseAdapter ",
+          "HistorySessionRemoteSupabaseAdapter ",
+          "ProductPriceRemoteSupabaseAdapter ",
+          "SupabaseRemoteQueryExecutor ",
+          "SyncAutomaticIncrementalRemote "
+        ],
+        "loc": 104,
+        "path": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+        "remoteDomains": [
+          "catalog",
+          "sync_events"
+        ]
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 4,
+        "path": "iOSMerchandiseControl/Sync/Shared/AutomaticSharedBoundary.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [
+          "Codable, Equatable, Sendable ",
+          "Decodable, Equatable, Sendable ",
+          "Encodable, Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Error, Equatable, Sendable ",
+          "String, CodingKey ",
+          "String, CodingKey ",
+          "String, CodingKey "
+        ],
+        "loc": 297,
+        "path": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 7,
+        "path": "iOSMerchandiseControl/Sync/Shared/SyncStringCollectionHelpers.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 2,
+        "path": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          " ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "ObservableObject ",
+          "String ",
+          "String ",
+          "SyncRootPresentationState "
+        ],
+        "loc": 472,
+        "path": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "Equatable, Sendable ",
+          "Equatable, Sendable ",
+          "Equatable, Sendable "
+        ],
+        "loc": 68,
+        "path": "iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift",
+        "remoteDomains": []
+      },
+      {
+        "callsManual": false,
+        "callsRecovery": true,
+        "conformances": [
+          "App ",
+          "Bool ",
+          "View ",
+          "some Scene ",
+          "some View "
+        ],
+        "loc": 134,
+        "path": "iOSMerchandiseControl/iOSMerchandiseControlApp.swift",
+        "remoteDomains": [
+          "catalog"
+        ]
+      }
+    ],
+    "generatedAt": "2026-05-25T15:37:30+00:00"
+  }
+}

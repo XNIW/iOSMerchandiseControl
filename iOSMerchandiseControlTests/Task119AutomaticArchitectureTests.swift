@@ -15,9 +15,8 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
 
     func testAutomaticCoreSourcesDoNotReferenceManualBoundaryTypes() throws {
         let files = [
-            "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
-            "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
-            "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
             "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
             "iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
             "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
@@ -80,7 +79,7 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: cancellationURL.path))
 
         let engine = try String(contentsOf: engineURL, encoding: .utf8)
-        let runtime = try source("iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift")
+        let runtime = try source("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift")
 
         XCTAssertFalse(engine.contains("@MainActor"), "AutomaticSyncEngine must keep non-UI work off MainActor")
         XCTAssertFalse(runtime.contains("activeTask"), "SyncAutomaticRuntime facade must not own placeholder single-flight state")

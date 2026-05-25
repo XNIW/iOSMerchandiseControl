@@ -258,7 +258,6 @@ final class SupabaseManualSyncRemotePreviewTests: XCTestCase {
             "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift",
             "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
             "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift",
-            "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
             "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
         ]
         let combined = try paths

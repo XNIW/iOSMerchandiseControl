@@ -4,7 +4,7 @@ import SwiftData
 @main
 struct iOSMerchandiseControlApp: App {
     @StateObject private var supabaseAuthViewModel: SupabaseAuthViewModel
-    private let supabaseInventoryService: SupabaseTransportClient?
+    private let supabaseTransportClient: SupabaseTransportClient?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
@@ -14,7 +14,7 @@ struct iOSMerchandiseControlApp: App {
             ? Self.makeHostedXCTestDependencies()
             : Self.makeSupabaseDependencies()
         _supabaseAuthViewModel = StateObject(wrappedValue: dependencies.authViewModel)
-        supabaseInventoryService = dependencies.inventoryService
+        supabaseTransportClient = dependencies.supabaseTransportClient
         supabasePullPreviewService = dependencies.pullPreviewService
         syncEventOutboxDrainRecorder = dependencies.syncEventOutboxDrainRecorder
         syncEventSignalWatcher = dependencies.syncEventSignalWatcher
@@ -26,7 +26,7 @@ struct iOSMerchandiseControlApp: App {
                 HostedXCTestRootView()
             } else {
                 ContentView(
-                    supabaseInventoryService: supabaseInventoryService,
+                    supabaseTransportClient: supabaseTransportClient,
                     supabasePullPreviewService: supabasePullPreviewService,
                     syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
                     syncEventSignalWatcher: syncEventSignalWatcher
@@ -58,7 +58,7 @@ struct iOSMerchandiseControlApp: App {
     private static func makeHostedXCTestDependencies() -> SupabaseAppDependencies {
         SupabaseAppDependencies(
             authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .configMissing),
-            inventoryService: nil,
+            supabaseTransportClient: nil,
             pullPreviewService: nil,
             syncEventOutboxDrainRecorder: nil,
             syncEventSignalWatcher: nil
@@ -70,9 +70,9 @@ struct iOSMerchandiseControlApp: App {
             let config = try SupabaseConfig.load()
             let provider = SupabaseClientProvider(config: config)
             let authService = SupabaseAuthService(provider: provider)
-            let inventoryService = SupabaseTransportClient(clientProvider: provider)
+            let supabaseTransportClient = SupabaseTransportClient(clientProvider: provider)
             let previewService = SupabasePullPreviewService(
-                inventoryService: RecoveryRemoteSupabaseAdapter(remote: inventoryService),
+                inventoryService: RecoveryRemoteSupabaseAdapter(remote: supabaseTransportClient),
                 pageSize: 1_000,
                 catalogRowBudget: nil,
                 productPricePreviewSampleLimit: 1_000
@@ -85,7 +85,7 @@ struct iOSMerchandiseControlApp: App {
             let syncEventSignalWatcher = SupabaseSyncEventSignalWatcher(clientProvider: provider)
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(authService: authService),
-                inventoryService: inventoryService,
+                supabaseTransportClient: supabaseTransportClient,
                 pullPreviewService: previewService,
                 syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
                 syncEventSignalWatcher: syncEventSignalWatcher
@@ -93,7 +93,7 @@ struct iOSMerchandiseControlApp: App {
         } catch SupabaseConfigError.configMissing {
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .configMissing),
-                inventoryService: nil,
+                supabaseTransportClient: nil,
                 pullPreviewService: nil,
                 syncEventOutboxDrainRecorder: nil,
                 syncEventSignalWatcher: nil
@@ -101,7 +101,7 @@ struct iOSMerchandiseControlApp: App {
         } catch SupabaseConfigError.invalidConfig {
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .invalidConfig),
-                inventoryService: nil,
+                supabaseTransportClient: nil,
                 pullPreviewService: nil,
                 syncEventOutboxDrainRecorder: nil,
                 syncEventSignalWatcher: nil
@@ -109,7 +109,7 @@ struct iOSMerchandiseControlApp: App {
         } catch {
             return SupabaseAppDependencies(
                 authViewModel: SupabaseAuthViewModel(authService: nil, initialError: .unknown(message: String(describing: error))),
-                inventoryService: nil,
+                supabaseTransportClient: nil,
                 pullPreviewService: nil,
                 syncEventOutboxDrainRecorder: nil,
                 syncEventSignalWatcher: nil
@@ -127,7 +127,7 @@ private struct HostedXCTestRootView: View {
 
 private struct SupabaseAppDependencies {
     let authViewModel: SupabaseAuthViewModel
-    let inventoryService: SupabaseTransportClient?
+    let supabaseTransportClient: SupabaseTransportClient?
     let pullPreviewService: SupabasePullPreviewService?
     let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?

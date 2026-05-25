@@ -2,11 +2,11 @@ import Foundation
 
 struct RecoveryRemoteSupabaseAdapter: SupabaseInventoryFetching {
     let catalog: CatalogRemoteSupabaseAdapter
-    let productPrice: ProductPriceRemoteSupabaseAdapter
+    let productPrice: ProductPricePreviewRemoteSupabaseAdapter
 
     init(remote: SupabaseTransportClient) {
         self.catalog = CatalogRemoteSupabaseAdapter(remote: remote)
-        self.productPrice = ProductPriceRemoteSupabaseAdapter(remote: remote)
+        self.productPrice = ProductPricePreviewRemoteSupabaseAdapter(remote: remote)
     }
 
     func fetchProductsPage(from: Int, to: Int) async throws -> [RemoteInventoryProductRow] {

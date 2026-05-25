@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 MC_AGENT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MC_AGENT_VERSION="0.5.0-task122"
+MC_AGENT_VERSION="0.5.1-task124"
 MC_SCHEMA_VERSION="1.1"
 
 MC_IOS_REPO="${MC_IOS_REPO:-/Users/minxiang/Desktop/iOSMerchandiseControl}"
@@ -427,6 +427,7 @@ Usage:
   ./tools/agent/mc-agent.sh scan sync-architecture|manual-boundary|dead-code|xcode-membership|no-full-pull-normal-path --task TASK-119 --strict
   ./tools/agent/mc-agent.sh scan task-docs|harness-routing|harness-health|source-format|duplicate-symbols|automatic-legacy-monolith|mainactor-boundary|swiftdata-context-boundary|manual-root-residue|master-plan-consistency|mcp-wrapper|scanner-self-tests|status-taxonomy|evidence-metadata --task TASK-120 --strict
   ./tools/agent/mc-agent.sh scan sync-architecture|manual-boundary|dead-code|xcode-membership --task TASK-120 --strict
+  ./tools/agent/mc-agent.sh scan no-root-supabase-legacy|no-automatic-manual-dependency|transport-thin-only|remote-adapter-single-domain|no-full-pull-normal-path|no-hidden-manual-sync|no-stale-pbxproj-reference|no-mainactor-heavy-sync|no-service-role-client|no-rls-bypass|source-format|dead-code-residue --task TASK-124 --strict
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys --task TASK-117
   ./tools/agent/mc-agent.sh evidence hygiene|bundle --task TASK-117
   ./tools/agent/mc-agent.sh account fixture prepare|cleanup --task TASK-116 --prefix TASK116_ACCOUNT_ [--dry-run]
@@ -453,7 +454,7 @@ mc_help_json() {
 {
   "schema_version": "1.1",
   "name": "mc-agent",
-  "version": "0.5.0-task122",
+  "version": "0.5.1-task124",
   "exit_codes": {
     "0": "PASS",
     "1": "FAIL",
@@ -568,6 +569,23 @@ mc_help_json() {
     {"name":"scan sync-efficiency-acceptance task122","argv":["scan","sync-efficiency-acceptance","--task","TASK-122","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"ios build debug task122","argv":["ios","build","debug","--task","TASK-122"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios build release task122","argv":["ios","build","release","--task","TASK-122"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"report validate-json task124","argv":["report","validate-json","--task","TASK-124","--path","docs/TASKS/EVIDENCE/TASK-124/agent-runs"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"preflight require head consistency task124","argv":["preflight","--require-head-consistency","--task","TASK-124"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan automation-discovery task124","argv":["scan","automation-discovery","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan harness-routing task124","argv":["scan","harness-routing","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan scanner-self-tests task124","argv":["scan","scanner-self-tests","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-root-supabase-legacy task124","argv":["scan","no-root-supabase-legacy","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-automatic-manual-dependency task124","argv":["scan","no-automatic-manual-dependency","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan transport-thin-only task124","argv":["scan","transport-thin-only","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan remote-adapter-single-domain task124","argv":["scan","remote-adapter-single-domain","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-full-pull-normal-path task124","argv":["scan","no-full-pull-normal-path","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-hidden-manual-sync task124","argv":["scan","no-hidden-manual-sync","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-stale-pbxproj-reference task124","argv":["scan","no-stale-pbxproj-reference","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-mainactor-heavy-sync task124","argv":["scan","no-mainactor-heavy-sync","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-service-role-client task124","argv":["scan","no-service-role-client","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-rls-bypass task124","argv":["scan","no-rls-bypass","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan source-format task124","argv":["scan","source-format","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan dead-code-residue task124","argv":["scan","dead-code-residue","--task","TASK-124","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-legacy-runtime-path","argv":["scan","no-legacy-runtime-path","--task","TASK-116"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-full-pull-normal-path","argv":["scan","no-full-pull-normal-path","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan automatic-contracts-clean","argv":["scan","automatic-contracts-clean","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
@@ -1664,6 +1682,65 @@ mc_cmd_scan_task122_static() {
     *)
       MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
       MC_NEXT_ACTION="Fix TASK-122 scanner command/configuration."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+mc_cmd_scan_task124_static() {
+  local scan_name="$1"
+  shift || true
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-124}}"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  case "$scan_name" in
+    automation-discovery|harness-routing) MC_CA_REFS="AC-124-23,AC-124-24" ;;
+    scanner-self-tests) MC_CA_REFS="AC-124-24" ;;
+    no-root-supabase-legacy) MC_CA_REFS="AC-124-01,AC-124-07" ;;
+    no-automatic-manual-dependency|no-hidden-manual-sync) MC_CA_REFS="AC-124-02,AC-124-10" ;;
+    transport-thin-only) MC_CA_REFS="AC-124-01,AC-124-03" ;;
+    remote-adapter-single-domain) MC_CA_REFS="AC-124-04,AC-124-05" ;;
+    no-full-pull-normal-path) MC_CA_REFS="AC-124-09,AC-124-19" ;;
+    no-stale-pbxproj-reference) MC_CA_REFS="AC-124-08,AC-124-27" ;;
+    no-mainactor-heavy-sync) MC_CA_REFS="AC-124-15,AC-124-21" ;;
+    no-service-role-client|no-rls-bypass) MC_CA_REFS="AC-124-11,AC-124-22" ;;
+    source-format) MC_CA_REFS="AC-124-12,AC-124-28" ;;
+    dead-code-residue) MC_CA_REFS="AC-124-06,AC-124-26" ;;
+    *) MC_CA_REFS="AC-124-24" ;;
+  esac
+
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" python3 "$MC_AGENT_ROOT/lib/task124_scans.py" "$scan_name" > /tmp/mc-agent-task124-static.$$.json
+  local scan_code=$?
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task124-static.$$.json)"
+  rm -f /tmp/mc-agent-task124-static.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  case "$scan_code" in
+    0)
+      MC_SUMMARY="${scan_name} scan PASS for ${task_id}."
+      MC_NEXT_ACTION="Use this report in ${task_id} evidence matrix."
+      return "$MC_EXIT_PASS"
+      ;;
+    1)
+      MC_SUMMARY="${scan_name} scan FAIL for ${task_id}: TASK-124 gate found required work."
+      MC_NEXT_ACTION="Fix failing checks and rerun ${scan_name}."
+      return "$MC_EXIT_FAIL"
+      ;;
+    2)
+      MC_SUMMARY="${scan_name} scan BLOCKED_EXTERNAL for ${task_id}."
+      MC_NEXT_ACTION="Resolve the listed external prerequisite and rerun ${scan_name}."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    4)
+      MC_SUMMARY="${scan_name} scan UNSAFE_OPERATION_REFUSED for ${task_id}."
+      MC_NEXT_ACTION="Keep safety gate refused unless this was an expected refusal test."
+      return "$MC_EXIT_REFUSED"
+      ;;
+    *)
+      MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
+      MC_NEXT_ACTION="Fix TASK-124 scanner command/configuration."
       return "$MC_EXIT_MISCONFIGURED"
       ;;
   esac

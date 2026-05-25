@@ -1,0 +1,50 @@
+=== mc-agent scan automation-discovery --task TASK-124 --strict ===
+{
+  "NEXT_ACTION": "Use discovered canonical commands before fallback.",
+  "canonicalHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "checks": [
+    {
+      "evidence": {
+        "agentVersion": "0.5.1-task124",
+        "commandsJsonCommand": "MC_TASK_ID=TASK-124 ./tools/agent/mc-agent.sh list commands-json",
+        "helpJsonCommand": "MC_TASK_ID=TASK-124 ./tools/agent/mc-agent.sh help-json",
+        "task124Scans": [
+          "no-root-supabase-legacy",
+          "no-automatic-manual-dependency",
+          "transport-thin-only",
+          "remote-adapter-single-domain",
+          "no-full-pull-normal-path",
+          "no-hidden-manual-sync",
+          "no-stale-pbxproj-reference",
+          "no-mainactor-heavy-sync",
+          "no-service-role-client",
+          "no-rls-bypass",
+          "source-format",
+          "dead-code-residue"
+        ]
+      },
+      "id": "automation-discovery-captured",
+      "reason": "Canonical discovery commands are represented in machine-readable evidence.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T15:20:11+00:00",
+  "exitCode": 0,
+  "githubHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "localHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "nextAction": "Use discovered canonical commands before fallback.",
+  "originHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "automation-discovery",
+  "scannerName": "automation-discovery",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.automation-discovery",
+  "started_at": "2026-05-25T15:20:11+00:00",
+  "status": "PASS",
+  "summary": "automation-discovery: PASS (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

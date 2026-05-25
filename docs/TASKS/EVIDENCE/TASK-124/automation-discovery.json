@@ -1,0 +1,19 @@
+{
+  "agentVersion": "0.5.1-task124",
+  "commandsJsonCommand": "MC_TASK_ID=TASK-124 ./tools/agent/mc-agent.sh list commands-json",
+  "helpJsonCommand": "MC_TASK_ID=TASK-124 ./tools/agent/mc-agent.sh help-json",
+  "task124Scans": [
+    "no-root-supabase-legacy",
+    "no-automatic-manual-dependency",
+    "transport-thin-only",
+    "remote-adapter-single-domain",
+    "no-full-pull-normal-path",
+    "no-hidden-manual-sync",
+    "no-stale-pbxproj-reference",
+    "no-mainactor-heavy-sync",
+    "no-service-role-client",
+    "no-rls-bypass",
+    "source-format",
+    "dead-code-residue"
+  ]
+}

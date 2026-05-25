@@ -1,0 +1,17 @@
+{
+  "candidates": [],
+  "inventory": {
+    "fileCount": 1,
+    "files": [
+      {
+        "callsManual": false,
+        "callsRecovery": false,
+        "conformances": [],
+        "loc": 1,
+        "path": "iOSMerchandiseControl/Sync/Automatic/AutomaticSyncRuntimeFacade.swift",
+        "remoteDomains": []
+      }
+    ],
+    "generatedAt": "2026-05-25T15:37:44+00:00"
+  }
+}

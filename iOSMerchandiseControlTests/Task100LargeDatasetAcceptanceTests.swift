@@ -1516,7 +1516,7 @@ final class Task100LargeDatasetAcceptanceTests: XCTestCase {
     }
 
     private func fetchLivePrices(
-        inventory: ProductPriceRemoteSupabaseAdapter,
+        inventory: ProductPriceReleaseRemoteSupabaseAdapter,
         ownerUserID: UUID,
         productIDs: [UUID]
     ) async throws -> [RemoteInventoryProductPriceRow] {
@@ -2287,8 +2287,8 @@ private struct Task100LiveRuntime {
     let inventory: SupabaseTransportClient
     let session: Task100LiveSession
 
-    var productPriceRemote: ProductPriceRemoteSupabaseAdapter {
-        ProductPriceRemoteSupabaseAdapter(remote: inventory)
+    var productPriceRemote: ProductPriceReleaseRemoteSupabaseAdapter {
+        ProductPriceReleaseRemoteSupabaseAdapter(remote: inventory)
     }
 }
 

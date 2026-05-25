@@ -74,7 +74,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     func testAutomaticRuntimeSourceDoesNotExposeManualPushBoundary() throws {
-        let runtime = try readSource("iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift")
+        let runtime = try readSource("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift")
         let contentView = try readSource("iOSMerchandiseControl/ContentView.swift")
         let app = try readSource("iOSMerchandiseControl/iOSMerchandiseControlApp.swift")
 
@@ -92,8 +92,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
     func testAutomaticSourceFilesDoNotReferenceManualDTOs() throws {
         let sources = try [
-            "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift",
-            "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+            "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
             "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
             "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
             "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift",
@@ -246,7 +246,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     func testAutomaticRuntimeErrorDiagnosticsUseSharedRedaction() throws {
-        let runtime = try readSource("iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift")
+        let runtime = try readSource("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift")
         let engine = try readSource("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift")
         let automaticRuntimeSources = runtime + "\n" + engine
 

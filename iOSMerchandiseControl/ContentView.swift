@@ -98,7 +98,7 @@ extension View {
 }
 
 struct ContentView: View {
-    private let supabaseInventoryService: SupabaseTransportClient?
+    private let supabaseTransportClient: SupabaseTransportClient?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
@@ -115,20 +115,20 @@ struct ContentView: View {
     @State private var selectedTab = 0
 
     init(
-        supabaseInventoryService: SupabaseTransportClient? = nil,
+        supabaseTransportClient: SupabaseTransportClient? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher? = nil
     ) {
-        self.supabaseInventoryService = supabaseInventoryService
+        self.supabaseTransportClient = supabaseTransportClient
         self.supabasePullPreviewService = supabasePullPreviewService
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         self.syncEventSignalWatcher = syncEventSignalWatcher
-        self.historySessionSyncService = supabaseInventoryService.map {
+        self.historySessionSyncService = supabaseTransportClient.map {
             HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: $0))
         }
-        if let supabaseInventoryService {
-            self.remoteCountFetcher = SyncEventRemoteSupabaseAdapter(remote: supabaseInventoryService)
+        if let supabaseTransportClient {
+            self.remoteCountFetcher = OptionsRemoteCountSupabaseAdapter(remote: supabaseTransportClient)
         } else {
             self.remoteCountFetcher = nil
         }
@@ -149,7 +149,7 @@ struct ContentView: View {
         AppSyncRootHost(
             context: modelContext,
             authViewModel: supabaseAuthViewModel,
-            inventoryService: supabaseInventoryService,
+            supabaseTransportClient: supabaseTransportClient,
             activityRecorder: syncEventOutboxDrainRecorder,
             syncEventSignalWatcher: syncEventSignalWatcher,
             syncStateStore: syncStateStore,
@@ -242,7 +242,7 @@ private struct AppSyncRootHost<Content: View>: View {
     init(
         context: ModelContext,
         authViewModel: SupabaseAuthViewModel,
-        inventoryService: SupabaseTransportClient?,
+        supabaseTransportClient: SupabaseTransportClient?,
         activityRecorder: (any SyncEventRecording)?,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?,
         syncStateStore: SyncStateStore,
@@ -255,7 +255,7 @@ private struct AppSyncRootHost<Content: View>: View {
                 automaticRuntime: SyncAutomaticRuntimeFactory.make(
                     modelContainer: context.container,
                     authViewModel: authViewModel,
-                    inventoryService: inventoryService,
+                    supabaseTransportClient: supabaseTransportClient,
                     activityRecorder: activityRecorder
                 ),
                 authViewModel: authViewModel,

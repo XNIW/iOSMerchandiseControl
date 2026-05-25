@@ -1,0 +1,32 @@
+=== mc-agent scan no-mainactor-heavy-sync --task TASK-124 --strict ===
+{
+  "NEXT_ACTION": "Move heavy sync work off MainActor or prove construction-only.",
+  "canonicalHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "mainactor-heavy-sync",
+      "reason": "Mutative/network sync work must not be MainActor-heavy.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T15:37:26+00:00",
+  "exitCode": 0,
+  "githubHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "localHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "nextAction": "Move heavy sync work off MainActor or prove construction-only.",
+  "originHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "no-mainactor-heavy-sync",
+  "scannerName": "no-mainactor-heavy-sync",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.no-mainactor-heavy-sync",
+  "started_at": "2026-05-25T15:37:26+00:00",
+  "status": "PASS",
+  "summary": "no-mainactor-heavy-sync: PASS (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}

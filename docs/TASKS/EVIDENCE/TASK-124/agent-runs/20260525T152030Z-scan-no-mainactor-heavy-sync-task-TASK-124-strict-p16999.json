@@ -1,0 +1,696 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun no-mainactor-heavy-sync.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T152030Z-scan-no-mainactor-heavy-sync-task-TASK-124-strict-p16999.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T152030Z-scan-no-mainactor-heavy-sync-task-TASK-124-strict-p16999.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-124/agent-runs/20260525T152030Z-scan-no-mainactor-heavy-sync-task-TASK-124-strict-p16999.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-124-15",
+    "AC-124-21"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan no-mainactor-heavy-sync --task TASK-124 --strict",
+  "command_slug": "scan-no-mainactor-heavy-sync-task-TASK-124-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 762,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-124",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK124_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-124"
+  },
+  "exit_code": 1,
+  "git_sha": "951547ab",
+  "next_action_recommended": "Fix failing checks and rerun no-mainactor-heavy-sync.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Move heavy sync work off MainActor or prove construction-only.",
+    "canonicalHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+    "checks": [
+      {
+        "evidence": [
+          {
+            "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift",
+            "hits": [
+              {
+                "line": 64,
+                "snippet": "try? await Task.sleep(nanoseconds: delay)"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+            "hits": [
+              {
+                "line": 54,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 71,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 85,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 99,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 126,
+                "snippet": "private func refreshSupabaseBaselineSummary(context: ModelContext) {"
+              },
+              {
+                "line": 137,
+                "snippet": "private func refreshLocalDatabaseSummary(context: ModelContext) {"
+              },
+              {
+                "line": 157,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 234,
+                "snippet": "context: ModelContext,"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+            "hits": [
+              {
+                "line": 16,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 78,
+                "snippet": "result.pushedRemoteIDs.insert(readBack.remoteID)"
+              },
+              {
+                "line": 87,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 132,
+                "snippet": "context: ModelContext"
+              },
+              {
+                "line": 184,
+                "snippet": "context.insert(inserted)"
+              },
+              {
+                "line": 197,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 252,
+                "snippet": "context.insert(inserted)"
+              },
+              {
+                "line": 285,
+                "snippet": "context: ModelContext"
+              },
+              {
+                "line": 298,
+                "snippet": "context.delete(entry)"
+              },
+              {
+                "line": 304,
+                "snippet": "private func fetchActiveHistoryPendingKeys(context: ModelContext) throws -> Set<String> {"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+            "hits": [
+              {
+                "line": 117,
+                "snippet": "private let context: ModelContext"
+              },
+              {
+                "line": 120,
+                "snippet": "init(context: ModelContext, now: @escaping () -> Date = Date.init) {"
+              },
+              {
+                "line": 200,
+                "snippet": "private let context: ModelContext"
+              },
+              {
+                "line": 214,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 265,
+                "snippet": "blockers.insert(.cappedPendingStore)"
+              },
+              {
+                "line": 268,
+                "snippet": "blockers.insert(.blockedLocalChanges)"
+              },
+              {
+                "line": 271,
+                "snippet": "blockers.insert(.staleBaselineLocalChanges)"
+              },
+              {
+                "line": 276,
+                "snippet": "blockers.insert(.hardCapExceeded)"
+              },
+              {
+                "line": 282,
+                "snippet": "warnings.insert(.sentChangesOnCooldown)"
+              },
+              {
+                "line": 283,
+                "snippet": "blockers.insert(.sentChangesWaitingForRetry)"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift",
+            "hits": [
+              {
+                "line": 198,
+                "snippet": "func calculatePreview(context: ModelContext, sessionSnapshot: ProductPricePushDryRunSessionSnapshot) {"
+              },
+              {
+                "line": 250,
+                "snippet": "let insertedCount = try await service.insert(snapshot: snapshot)"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+            "hits": [
+              {
+                "line": 381,
+                "snippet": ".from(table)"
+              },
+              {
+                "line": 382,
+                "snippet": ".insert(payloads)"
+              },
+              {
+                "line": 410,
+                "snippet": ".from(table)"
+              },
+              {
+                "line": 411,
+                "snippet": ".update(payload)"
+              },
+              {
+                "line": 431,
+                "snippet": ".from(table)"
+              },
+              {
+                "line": 452,
+                "snippet": ".from(table)"
+              },
+              {
+                "line": 526,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 621,
+                "snippet": "context: ModelContext"
+              },
+              {
+                "line": 674,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 704,
+                "snippet": "touchedIDs.suppliers.insert(row.id)"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncAggregatedPushOutboxProducer.swift",
+            "hits": [
+              {
+                "line": 5,
+                "snippet": "private let context: ModelContext"
+              },
+              {
+                "line": 7,
+                "snippet": "init(context: ModelContext) {"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+            "hits": [
+              {
+                "line": 94,
+                "snippet": "private let context: ModelContext"
+              },
+              {
+                "line": 98,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 132,
+                "snippet": "convenience init(context: ModelContext) {"
+              },
+              {
+                "line": 197,
+                "snippet": "private let context: ModelContext"
+              },
+              {
+                "line": 199,
+                "snippet": "init(context: ModelContext) {"
+              },
+              {
+                "line": 295,
+                "snippet": "private let context: ModelContext"
+              },
+              {
+                "line": 299,
+                "snippet": "context: ModelContext,"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+            "hits": [
+              {
+                "line": 6,
+                "snippet": "private let context: ModelContext"
+              },
+              {
+                "line": 12,
+                "snippet": "context: ModelContext,"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+            "hits": [
+              {
+                "line": 13,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 139,
+                "snippet": "let context = ModelContext(modelContainer)"
+              },
+              {
+                "line": 306,
+                "snippet": "let context = ModelContext(modelContainer)"
+              },
+              {
+                "line": 326,
+                "snippet": "let context = ModelContext(modelContainer)"
+              },
+              {
+                "line": 337,
+                "snippet": "let context = ModelContext(modelContainer)"
+              },
+              {
+                "line": 361,
+                "snippet": "let context = ModelContext(modelContainer)"
+              },
+              {
+                "line": 541,
+                "snippet": "private let context: ModelContext"
+              },
+              {
+                "line": 548,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 799,
+                "snippet": "private let context: ModelContext"
+              },
+              {
+                "line": 802,
+                "snippet": "init(context: ModelContext, authViewModel: SupabaseAuthViewModel) {"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+            "hits": [
+              {
+                "line": 271,
+                "snippet": "context: ModelContext"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+            "hits": [
+              {
+                "line": 608,
+                "snippet": "private let localApplyContext: ModelContext?"
+              },
+              {
+                "line": 684,
+                "snippet": "localApplyContext: ModelContext? = nil,"
+              },
+              {
+                "line": 1228,
+                "snippet": "try? await Task.sleep(nanoseconds: foregroundIncrementalTimeoutNanoseconds)"
+              },
+              {
+                "line": 2184,
+                "snippet": "let context = ModelContext(modelContainer)"
+              },
+              {
+                "line": 2202,
+                "snippet": "let context = ModelContext(modelContainer)"
+              },
+              {
+                "line": 2380,
+                "snippet": "let context = ModelContext(modelContainer)"
+              },
+              {
+                "line": 2409,
+                "snippet": "let context = ModelContext(modelContainer)"
+              },
+              {
+                "line": 2430,
+                "snippet": "let context = ModelContext(modelContainer)"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+            "hits": [
+              {
+                "line": 467,
+                "snippet": "context: ModelContext"
+              },
+              {
+                "line": 520,
+                "snippet": "context: ModelContext"
+              },
+              {
+                "line": 635,
+                "snippet": "context: ModelContext"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+            "hits": [
+              {
+                "line": 688,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 741,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 824,
+                "snippet": "private func makeLocalSnapshot(context: ModelContext) throws -> ProductPricePushDryRunLocalSnapshot {"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift",
+            "hits": [
+              {
+                "line": 96,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 157,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 247,
+                "snippet": "context: ModelContext,"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Manual/SyncEventOutboxDrainDebugViewModel.swift",
+            "hits": [
+              {
+                "line": 76,
+                "snippet": "context: ModelContext,"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+            "hits": [
+              {
+                "line": 12,
+                "snippet": "init(context: ModelContext) {"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift",
+            "hits": [
+              {
+                "line": 80,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 464,
+                "snippet": "activeOwnerUserIDs.insert(ownerUserID)"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+            "hits": [
+              {
+                "line": 9,
+                "snippet": "context: ModelContext,"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
+            "hits": [
+              {
+                "line": 167,
+                "snippet": "context: ModelContext,"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+            "hits": [
+              {
+                "line": 8,
+                "snippet": "init(context: ModelContext) {"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Recovery/InventorySyncService.swift",
+            "hits": [
+              {
+                "line": 8,
+                "snippet": "private let context: ModelContext"
+              },
+              {
+                "line": 10,
+                "snippet": "init(context: ModelContext) {"
+              },
+              {
+                "line": 203,
+                "snippet": "context.insert(pricePoint)"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+            "hits": [
+              {
+                "line": 513,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 530,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 561,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 597,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 700,
+                "snippet": "context.insert(newPrice)"
+              },
+              {
+                "line": 742,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 887,
+                "snippet": "let pageContext = ModelContext(context.container)"
+              },
+              {
+                "line": 898,
+                "snippet": "completeRemotePriceIDs.insert(row.id)"
+              },
+              {
+                "line": 983,
+                "snippet": "let pruneContext = ModelContext(context.container)"
+              },
+              {
+                "line": 1016,
+                "snippet": "context: ModelContext"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+            "hits": [
+              {
+                "line": 272,
+                "snippet": "/// Not re-entrant on the same ModelContext; the DEBUG UI serializes calls with isApplyingLocalPreview."
+              },
+              {
+                "line": 275,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 512,
+                "snippet": "func apply(plan: SupabasePullApplyPlan, context: ModelContext) throws -> SupabasePullApplyResult {"
+              },
+              {
+                "line": 598,
+                "snippet": "context.insert(product)"
+              },
+              {
+                "line": 640,
+                "snippet": "context.delete(product)"
+              },
+              {
+                "line": 701,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 764,
+                "snippet": "context: ModelContext,"
+              },
+              {
+                "line": 896,
+                "snippet": "context.insert(product)"
+              },
+              {
+                "line": 962,
+                "snippet": "context.delete(product)"
+              },
+              {
+                "line": 1127,
+                "snippet": "private func validateNotStale(plan: SupabasePullApplyPlan, context: ModelContext) throws {"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+            "hits": [
+              {
+                "line": 30,
+                "snippet": "func generatePreview(context: ModelContext) async -> SupabasePullPreviewViewState {"
+              },
+              {
+                "line": 47,
+                "snippet": "let context = ModelContext(modelContainer)"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRealtimeWatcher.swift",
+            "hits": [
+              {
+                "line": 67,
+                "snippet": "try? await Task.sleep(nanoseconds: delayNanoseconds)"
+              }
+            ]
+          },
+          {
+            "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+            "hits": [
+              {
+                "line": 313,
+                "snippet": "try? await Task.sleep(nanoseconds: intervalNanoseconds)"
+              }
+            ]
+          }
+        ],
+        "id": "mainactor-heavy-sync",
+        "reason": "Mutative/network sync work must not be MainActor-heavy.",
+        "status": "FAIL"
+      }
+    ],
+    "completed_at": "2026-05-25T15:20:30+00:00",
+    "exitCode": 1,
+    "githubHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+    "localHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+    "nextAction": "Move heavy sync work off MainActor or prove construction-only.",
+    "originHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "FAIL",
+    "safety_level": "read_only_static_scan",
+    "scan": "no-mainactor-heavy-sync",
+    "scannerName": "no-mainactor-heavy-sync",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.no-mainactor-heavy-sync",
+    "started_at": "2026-05-25T15:20:30+00:00",
+    "status": "FAIL",
+    "summary": "no-mainactor-heavy-sync: FAIL (1 checks)",
+    "taskId": "TASK-124",
+    "task_id": "TASK-124"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T152030Z-scan-no-mainactor-heavy-sync-task-TASK-124-strict-p16999",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-124",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-25T15:20:30Z",
+  "timestamp_start": "2026-05-25T15:20:30Z",
+  "warnings": []
+}

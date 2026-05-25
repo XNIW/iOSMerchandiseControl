@@ -1,0 +1,42 @@
+=== mc-agent scan no-mainactor-heavy-sync --task TASK-124 --strict ===
+{
+  "NEXT_ACTION": "Move heavy sync work off MainActor or prove construction-only.",
+  "canonicalHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "file": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+          "hits": [
+            {
+              "line": 313,
+              "snippet": "try? await Task.sleep(nanoseconds: intervalNanoseconds)"
+            }
+          ]
+        }
+      ],
+      "id": "mainactor-heavy-sync",
+      "reason": "Mutative/network sync work must not be MainActor-heavy.",
+      "status": "FAIL"
+    }
+  ],
+  "completed_at": "2026-05-25T15:24:58+00:00",
+  "exitCode": 1,
+  "githubHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "localHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "nextAction": "Move heavy sync work off MainActor or prove construction-only.",
+  "originHead": "951547ab1e4ed63a9f6a730c293ee278a67ef17c",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "scan": "no-mainactor-heavy-sync",
+  "scannerName": "no-mainactor-heavy-sync",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.no-mainactor-heavy-sync",
+  "started_at": "2026-05-25T15:24:58+00:00",
+  "status": "FAIL",
+  "summary": "no-mainactor-heavy-sync: FAIL (1 checks)",
+  "taskId": "TASK-124",
+  "task_id": "TASK-124"
+}
