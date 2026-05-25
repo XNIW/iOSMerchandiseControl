@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-123",
+  "direction": "android_to_ios",
+  "status": "PARTIAL_PASS_WITH_NOTES",
+  "sampleCount": 5,
+  "receiverLatencyMs": {"p50": 409, "p90": 435, "p95": 444, "max": 452, "failureCount": 0, "timeoutCount": 0, "result": "PASS"},
+  "batchTotalLatencyMs": {"p50": 13619, "p90": 16703, "p95": 17714, "max": 18724, "result": "FAIL_STRICT_SINGLE_PROPAGATION_BUDGET", "note": "multi-mutation matrix batch, not isolated single propagation"},
+  "fullAcceptanceEligible": false
+}

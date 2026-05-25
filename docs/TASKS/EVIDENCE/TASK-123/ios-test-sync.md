@@ -1,0 +1,7 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T014455Z-ios-test-sync-task-TASK-123-p53237.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T014455Z-ios-test-sync-task-TASK-123-p53237.json
+NEXT_ACTION Continue next iOS or cross-platform gate.
+
+EXIT_CODE 0

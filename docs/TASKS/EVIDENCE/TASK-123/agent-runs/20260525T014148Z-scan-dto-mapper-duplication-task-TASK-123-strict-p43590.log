@@ -1,0 +1,40 @@
+=== mc-agent scan dto-mapper-duplication --task TASK-123 --strict ===
+{
+  "NEXT_ACTION": "Remove or document DTO/mapper duplication.",
+  "canonicalHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "dto_mapper_no_duplicate_declarations",
+      "reason": "DTO/query mapper declarations are not duplicated across domains.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T01:41:49+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T01:41:49+00:00",
+  "githubHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "localCanonicalOverride": true,
+  "localHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "nextAction": "Remove or document DTO/mapper duplication.",
+  "originHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "dto-mapper-duplication",
+  "scannerName": "dto-mapper-duplication",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.dto-mapper-duplication",
+  "startedAt": "2026-05-25T01:41:49+00:00",
+  "started_at": "2026-05-25T01:41:49+00:00",
+  "status": "PASS",
+  "summary": "dto-mapper-duplication: PASS (1 checks)",
+  "taskId": "TASK-123",
+  "task_id": "TASK-123"
+}

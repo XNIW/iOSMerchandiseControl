@@ -1,0 +1,40 @@
+=== mc-agent scan manual-debug-boundary --task TASK-123 --strict ===
+{
+  "NEXT_ACTION": "Keep manual/debug/dry-run outside Automatic.",
+  "canonicalHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "automatic_no_manual_debug",
+      "reason": "Automatic does not import manual/debug/dry-run behavior.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T01:41:41+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T01:41:41+00:00",
+  "githubHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "localCanonicalOverride": true,
+  "localHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "nextAction": "Keep manual/debug/dry-run outside Automatic.",
+  "originHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "manual-debug-boundary",
+  "scannerName": "manual-debug-boundary",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.manual-debug-boundary",
+  "startedAt": "2026-05-25T01:41:41+00:00",
+  "started_at": "2026-05-25T01:41:41+00:00",
+  "status": "PASS",
+  "summary": "manual-debug-boundary: PASS (1 checks)",
+  "taskId": "TASK-123",
+  "task_id": "TASK-123"
+}

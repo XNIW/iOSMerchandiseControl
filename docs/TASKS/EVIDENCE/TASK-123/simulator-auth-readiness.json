@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-123",
+  "timestamp": "2026-05-25T03:22:00Z",
+  "status": "PASS",
+  "iosSimulatorAuth": {
+    "status": "PASS",
+    "evidence": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T022751Z-ios-auth-preflight-live-task-TASK-123-p77170.json"
+  },
+  "androidEmulatorAuth": {
+    "status": "PASS",
+    "evidence": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T022840Z-android-auth-preflight-live-task-TASK-123-p78981.json"
+  },
+  "sameAccount": "PASS_REDACTED",
+  "sessionRestore": "PASS_WITH_NOTES"
+}

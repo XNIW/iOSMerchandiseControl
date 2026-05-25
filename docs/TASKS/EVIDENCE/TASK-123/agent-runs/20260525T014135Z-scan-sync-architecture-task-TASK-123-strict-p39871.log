@@ -1,0 +1,21 @@
+=== mc-agent scan sync-architecture --task TASK-123 --strict ===
+{
+  "NEXT_ACTION": "Use a task-specific scanner for this task id.",
+  "checks": [
+    {
+      "id": "task119_task_id_guard",
+      "reason": "TASK-119 scanner entrypoint only accepts TASK-119.",
+      "status": "MISCONFIGURED"
+    }
+  ],
+  "result_status": "MISCONFIGURED",
+  "safety_level": "read_only_static_scan",
+  "scan": "sync-architecture",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.task119",
+  "status": "MISCONFIGURED",
+  "summary": "TASK-119 scanner invoked for a non-TASK-119 task id.",
+  "taskId": "TASK-123",
+  "task_id": "TASK-123"
+}

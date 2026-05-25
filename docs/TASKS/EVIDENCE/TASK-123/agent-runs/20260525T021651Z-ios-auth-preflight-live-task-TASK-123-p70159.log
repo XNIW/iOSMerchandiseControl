@@ -1,0 +1,81 @@
+=== mc-agent ios auth-preflight --live --task TASK-123 ===
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-auth-preflight-20260525T021651Z-DerivedData/Build/Products/task114-ios-auth-preflight.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-auth-preflight-20260525T021651Z.xcresult "-only-testing:iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testTask103IOSAuthPreflightWhenEnabled"
+
+2026-05-24 22:17:20.692 xcodebuild[71166:21147331] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-auth-preflight-20260525T021651Z.xcresult
+
+2026-05-24 22:17:20.698 xcodebuild[71166:21147331] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-24 22:17:20.920 xcodebuild[71166:21147331] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-24 22:17:23.657.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-24 22:17:23.657.
+Test Suite 'SupabaseConfigSecurityTests' started at 2026-05-24 22:17:23.657.
+Test Case '-[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled]' started.
+objc[71171]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10834c310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10824c398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK112_IOS_AUTH_PREFLIGHT project_hash=42a5d0119a30 owner_hash=ad3d747e936c provider=google signed_in=true
+Test Case '-[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled]' passed (2.046 seconds).
+Test Suite 'SupabaseConfigSecurityTests' passed at 2026-05-24 22:17:25.705.
+	 Executed 1 test, with 0 failures (0 unexpected) in 2.046 (2.048) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-24 22:17:25.705.
+	 Executed 1 test, with 0 failures (0 unexpected) in 2.046 (2.048) seconds
+Test Suite 'Selected tests' passed at 2026-05-24 22:17:25.705.
+	 Executed 1 test, with 0 failures (0 unexpected) in 2.046 (2.049) seconds
+2026-05-24 22:17:26.005 xcodebuild[71166:21147331] [MT] IDETestOperationsObserverDebug: 5.082 elapsed -- Testing started completed.
+2026-05-24 22:17:26.005 xcodebuild[71166:21147331] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-24 22:17:26.005 xcodebuild[71166:21147331] [MT] IDETestOperationsObserverDebug: 5.082 sec, +5.082 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-auth-preflight-20260525T021651Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

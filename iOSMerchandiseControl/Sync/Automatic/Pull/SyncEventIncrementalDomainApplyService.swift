@@ -75,6 +75,7 @@ nonisolated struct SyncEventIncrementalDomainApplyService {
 
         guard !eventIDs.hasUnrecoverableGap else {
             summary.requiresFullRecoveryReason = "sync_event_missing_entity_ids"
+            watermarkStore.save(summary.watermarkAfter, for: watermarkScope)
             return summary
         }
 

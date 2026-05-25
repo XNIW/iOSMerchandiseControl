@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-123",
+  "status": "PASS_WITH_NOTES",
+  "scope": "TASK123_",
+  "supabaseResidue": 0,
+  "androidLocalResidue": 0,
+  "iosLocalResidue": {
+    "suppliers": 0,
+    "categories": 0,
+    "products": 0,
+    "productPrices": 0,
+    "historyEntries": 0,
+    "pending": 0,
+    "syncEventOutbox": 0
+  },
+  "fullMatrixDriftAcceptanceComplete": false
+}

@@ -14,7 +14,11 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var isTask112: Bool { prefix.hasPrefix("TASK112_") }
         var isTask114: Bool { prefix.hasPrefix("TASK114_") }
         var isTask115: Bool { prefix.hasPrefix("TASK115_") }
+        var isTask123: Bool { prefix.hasPrefix("TASK123_") }
         var logPrefix: String {
+            if isTask123 {
+                return "TASK123"
+            }
             if isTask115 {
                 return "TASK115"
             }
@@ -464,6 +468,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
 
     func test114IOSWriteProductHistoryMatrix() async throws {
         try requireLiveAcceptanceEnabled()
+        let matrixStarted = Date()
         let fixture = try makeFixture()
         let runtime = try await makeRuntime()
         let context = try makeContext()
@@ -472,6 +477,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             ownerUserUUID: runtime.session.userID
         )
 
+        let localCatalogSaveStarted = Date()
         let supplier = Supplier(name: fixture.matrixSupplierIOS)
         let category = ProductCategory(name: fixture.matrixCategoryIOS)
         context.insert(supplier)
@@ -508,12 +514,17 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             )
         }
         try context.save()
+        let localCatalogSaveMs = Int(Date().timeIntervalSince(localCatalogSaveStarted) * 1000)
+        let initialCatalogPushStarted = Date()
         let initialCatalogPush = try await pushPendingCatalog(context: context, runtime: runtime, expectedReadyCandidatesAtLeast: 5)
+        let initialCatalogPushMs = Int(Date().timeIntervalSince(initialCatalogPushStarted) * 1000)
         XCTAssertEqual(initialCatalogPush.status, .completed)
 
         try insertPrices(expectedIOS(), product: createProduct, context: context, ownerUserID: runtime.session.userID)
         try insertPrices(expectedIOS(), product: updateProduct, context: context, ownerUserID: runtime.session.userID)
+        let initialPricePushStarted = Date()
         let initialPricePush = try await pushPendingPrices(context: context, runtime: runtime)
+        let initialPricePushMs = Int(Date().timeIntervalSince(initialPricePushStarted) * 1000)
         XCTAssertTrue(initialPricePush.isVerifiedSuccess)
         XCTAssertEqual(initialPricePush.confirmedRemoteIDs.count, 8)
 
@@ -525,7 +536,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             changedFields: ["productName"]
         )
         try context.save()
+        let updateCatalogPushStarted = Date()
         let updateCatalogPush = try await pushPendingCatalog(context: context, runtime: runtime, expectedReadyCandidatesAtLeast: 1)
+        let updateCatalogPushMs = Int(Date().timeIntervalSince(updateCatalogPushStarted) * 1000)
         XCTAssertEqual(updateCatalogPush.status, .completed)
 
         try insertPrices(
@@ -534,7 +547,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             context: context,
             ownerUserID: runtime.session.userID
         )
+        let correctionPricePushStarted = Date()
         let correctionPricePush = try await pushPendingPrices(context: context, runtime: runtime)
+        let correctionPricePushMs = Int(Date().timeIntervalSince(correctionPricePushStarted) * 1000)
         XCTAssertTrue(correctionPricePush.isVerifiedSuccess)
         XCTAssertEqual(correctionPricePush.confirmedRemoteIDs.count, 1)
 
@@ -548,9 +563,12 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         )
         context.delete(tombstoneProduct)
         try context.save()
+        let tombstoneCatalogPushStarted = Date()
         let tombstoneCatalogPush = try await pushPendingCatalog(context: context, runtime: runtime, expectedReadyCandidatesAtLeast: 1)
+        let tombstoneCatalogPushMs = Int(Date().timeIntervalSince(tombstoneCatalogPushStarted) * 1000)
         XCTAssertEqual(tombstoneCatalogPush.status, .completed)
 
+        let localHistorySaveStarted = Date()
         let historyCreate = matrixHistoryEntry(title: fixture.matrixHistoryIOSCreate, fixture: fixture)
         let historyUpdate = matrixHistoryEntry(title: fixture.matrixHistoryIOSUpdateInitial, fixture: fixture)
         let historyTombstone = matrixHistoryEntry(title: fixture.matrixHistoryIOSTombstone, fixture: fixture)
@@ -560,20 +578,27 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             try accumulator.recordHistorySessionChange(entry: entry, operation: .upsert, changedFields: ["create"])
         }
         try context.save()
+        let localHistorySaveMs = Int(Date().timeIntervalSince(localHistorySaveStarted) * 1000)
+        let initialHistoryPushStarted = Date()
         let initialHistoryPush = try await pushPendingHistory([historyCreate, historyUpdate, historyTombstone], context: context, runtime: runtime)
+        let initialHistoryPushMs = Int(Date().timeIntervalSince(initialHistoryPushStarted) * 1000)
         XCTAssertEqual(initialHistoryPush.uploadedCount, 3)
 
         historyUpdate.title = fixture.matrixHistoryIOSUpdateFinal
         historyUpdate.markHistorySessionLocalMutation()
         try accumulator.recordHistorySessionChange(entry: historyUpdate, operation: .upsert, changedFields: ["displayName"])
         try context.save()
+        let updateHistoryPushStarted = Date()
         let updateHistoryPush = try await pushPendingHistory([historyUpdate], context: context, runtime: runtime)
+        let updateHistoryPushMs = Int(Date().timeIntervalSince(updateHistoryPushStarted) * 1000)
         XCTAssertEqual(updateHistoryPush.uploadedCount, 1)
 
         historyTombstone.markHistorySessionLocalDeletion()
         try accumulator.recordHistorySessionChange(entry: historyTombstone, operation: .delete, changedFields: ["tombstone"])
         try context.save()
+        let tombstoneHistoryPushStarted = Date()
         let tombstoneHistoryPush = try await pushPendingHistory([historyTombstone], context: context, runtime: runtime)
+        let tombstoneHistoryPushMs = Int(Date().timeIntervalSince(tombstoneHistoryPushStarted) * 1000)
         XCTAssertEqual(tombstoneHistoryPush.uploadedCount, 1)
 
         let readBack = try await fetchRemoteSnapshot(runtime, fixture: fixture)
@@ -593,6 +618,16 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             "product_create=pass product_update=pass product_tombstone=pass " +
             "product_price_create=pass product_price_correction=pass product_price_tombstone=not_supported_append_only " +
             "history_create=pass history_update=pass history_tombstone=pass"
+        )
+        print(
+            "\(fixture.logPrefix)_IOS_WRITE_TIMINGS " +
+            "localCatalogSaveMs=\(localCatalogSaveMs) " +
+            "catalogPushAndEventsMs=\(initialCatalogPushMs + updateCatalogPushMs + tombstoneCatalogPushMs) " +
+            "pricePushAndEventsMs=\(initialPricePushMs + correctionPricePushMs) " +
+            "localHistorySaveMs=\(localHistorySaveMs) " +
+            "historyPushAndEventsMs=\(initialHistoryPushMs + updateHistoryPushMs + tombstoneHistoryPushMs) " +
+            "totalMatrixMs=\(Int(Date().timeIntervalSince(matrixStarted) * 1000)) " +
+            "syncType=EVENT_INCREMENTAL fullPull=false"
         )
     }
 
@@ -1999,8 +2034,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 || prefix.hasPrefix("TASK112_")
                 || prefix.hasPrefix("TASK114_")
                 || prefix.hasPrefix("TASK115_")
+                || prefix.hasPrefix("TASK123_")
         ), prefix.hasSuffix("_") else {
-            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._ or TASK115_..._.")
+            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._, TASK115_..._ or TASK123_..._.")
         }
         return Fixture(prefix: prefix)
     }

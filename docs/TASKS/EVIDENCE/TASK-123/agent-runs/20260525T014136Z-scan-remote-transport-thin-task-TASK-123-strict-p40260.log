@@ -1,0 +1,65 @@
+=== mc-agent scan remote-transport-thin --task TASK-123 --strict ===
+{
+  "NEXT_ACTION": "Move domain behavior out of SupabaseTransportClient.",
+  "canonicalHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "id": "transport_exists",
+      "reason": "SupabaseTransportClient exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "loc": 117
+      },
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "id": "transport_loc_under_hard_limit",
+      "reason": "Transport hard limit is 500 LOC.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "loc": 117
+      },
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "id": "transport_loc_prefer_under_300",
+      "reason": "Preferred transport size is <300 LOC.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "id": "transport_no_domain_methods",
+      "reason": "Transport has no domain-specific methods.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T01:41:36+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T01:41:36+00:00",
+  "githubHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "localCanonicalOverride": true,
+  "localHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "nextAction": "Move domain behavior out of SupabaseTransportClient.",
+  "originHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "remote-transport-thin",
+  "scannerName": "remote-transport-thin",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.remote-transport-thin",
+  "startedAt": "2026-05-25T01:41:36+00:00",
+  "started_at": "2026-05-25T01:41:36+00:00",
+  "status": "PASS",
+  "summary": "remote-transport-thin: PASS (4 checks)",
+  "taskId": "TASK-123",
+  "task_id": "TASK-123"
+}

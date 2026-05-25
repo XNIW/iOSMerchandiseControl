@@ -50,3 +50,43 @@ nonisolated final class AccountBindingStore {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 }
+
+nonisolated struct AccountSyncChoiceBindingApplier {
+    private let bindingStore: AccountBindingStore
+    private let storeIdentity: LocalStoreIdentity
+
+    init(
+        bindingStore: AccountBindingStore = AccountBindingStore(),
+        storeIdentity: LocalStoreIdentity = .anonymous
+    ) {
+        self.bindingStore = bindingStore
+        self.storeIdentity = storeIdentity
+    }
+
+    func applyConfirmedRelationship(choice: AccountSyncUserChoice, userID: UUID?) {
+        guard let userID, choice.confirmsAccountRelationship else {
+            return
+        }
+
+        bindingStore.saveBinding(
+            accountHash: AccountBindingStore.accountHash(for: userID),
+            storeIdentity: storeIdentity
+        )
+    }
+}
+
+private extension AccountSyncUserChoice {
+    nonisolated var confirmsAccountRelationship: Bool {
+        switch self {
+        case .merge,
+             .replaceLocalWithCloud,
+             .uploadLocalToCloud,
+             .switchStore,
+             .createStoreAndPull:
+            return true
+        case .cancel,
+             .exportAndCancel:
+            return false
+        }
+    }
+}

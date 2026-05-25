@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-123",
+  "status": "PASS",
+  "scope": "TASK123_*",
+  "supabaseResidue": 0,
+  "androidLocalResidue": 0,
+  "iosLocalResidue": 0,
+  "safety": {
+    "realDataDeleted": false,
+    "authUsersDeleted": false,
+    "globalCleanup": false,
+    "serviceRoleInClient": false
+  },
+  "evidence": {
+    "supabaseDryRun": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T031655Z-supabase-cleanup-task-TASK-123-prefix-TASK123_SPEED_-dry-run-p95865.json",
+    "supabaseExecute": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T031709Z-supabase-cleanup-task-TASK-123-prefix-TASK123_SPEED_-execute-cleanup-plan-id-cleanup-TASK-123-20260525T031655Z-TASK123_SPEED_-p96356.json",
+    "supabaseResidue": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T032055Z-supabase-residue-check-task-TASK-123-prefix-TASK123_-profile-linked-p1546.json",
+    "androidResidue": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T032055Z-android-cleanup-scoped-prefix-TASK123_-dry-run-p1548.log",
+    "iosResidue": "read-only simulator SwiftData TASK123_ scoped query at 2026-05-25T03:20Z"
+  }
+}

@@ -1,0 +1,40 @@
+=== mc-agent scan remote-query-ownership --task TASK-123 --strict ===
+{
+  "NEXT_ACTION": "Move Supabase queries out of the transport.",
+  "canonicalHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "adapters_own_queries",
+      "reason": "Each Remote adapter owns query/RPC behavior.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T01:41:46+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T01:41:46+00:00",
+  "githubHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "localCanonicalOverride": true,
+  "localHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "nextAction": "Move Supabase queries out of the transport.",
+  "originHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "remote-query-ownership",
+  "scannerName": "remote-query-ownership",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.remote-query-ownership",
+  "startedAt": "2026-05-25T01:41:46+00:00",
+  "started_at": "2026-05-25T01:41:46+00:00",
+  "status": "PASS",
+  "summary": "remote-query-ownership: PASS (1 checks)",
+  "taskId": "TASK-123",
+  "task_id": "TASK-123"
+}

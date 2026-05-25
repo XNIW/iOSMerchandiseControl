@@ -21,6 +21,7 @@ struct OptionsView: View {
     private let remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
+    private let accountSyncChoiceBindingApplier: AccountSyncChoiceBindingApplier
 
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
@@ -36,12 +37,14 @@ struct OptionsView: View {
         remoteCountFetcher: (any OptionsSyncRemoteCountFetching)? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         syncStateStore: SyncStateStore,
-        syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil
+        syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil,
+        accountSyncChoiceBindingApplier: AccountSyncChoiceBindingApplier = AccountSyncChoiceBindingApplier()
     ) {
         self.remoteCountFetcher = remoteCountFetcher
         self.supabasePullPreviewService = supabasePullPreviewService
         _syncStateStore = ObservedObject(wrappedValue: syncStateStore)
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
+        self.accountSyncChoiceBindingApplier = accountSyncChoiceBindingApplier
     }
 
     // Opzioni tema (equivalenti alle scelte Android)
@@ -524,7 +527,12 @@ struct OptionsView: View {
              .uploadLocalToCloud,
              .switchStore,
              .createStoreAndPull:
+            accountSyncChoiceBindingApplier.applyConfirmedRelationship(
+                choice: choice,
+                userID: supabaseAuthViewModel.sessionInfo?.userID
+            )
             isAccountDecisionSheetPresented = false
+            refreshOptionsSummaryProvider()
         }
     }
 

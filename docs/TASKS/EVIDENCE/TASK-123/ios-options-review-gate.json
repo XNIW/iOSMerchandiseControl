@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-123",
+  "status": "PASS",
+  "initialGate": "LOCAL_AND_CLOUD_DATA_FOUND_REVIEW_REQUIRED",
+  "resolution": "existing_review_flow_same_account_merge",
+  "realDataDeleted": false,
+  "fixes": [
+    "Persist confirmed same-account Review choice into AccountBindingStore",
+    "Do not force bootstrap/recovery for confirmed same-account binding when baseline is absent"
+  ],
+  "evidence": [
+    "docs/TASKS/EVIDENCE/TASK-123/ios-options-initial.png",
+    "docs/TASKS/EVIDENCE/TASK-123/ios-options-review-gate-resolved.png",
+    "AccountSyncPolicyTests.testConfirmedAccountDecisionChoiceBindsLocalStoreToSignedInAccount",
+    "SyncDecisionEngineTests.testSameAccountBindingDoesNotForceBootstrapWhenBaselineIsAbsent"
+  ]
+}

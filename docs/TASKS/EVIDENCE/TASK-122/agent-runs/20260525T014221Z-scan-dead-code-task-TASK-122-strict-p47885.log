@@ -1,0 +1,40 @@
+=== mc-agent scan dead-code --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Remove stale compatibility/task helper files or document exceptions.",
+  "canonicalHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "legacy_task_or_compat_inventory",
+      "reason": "No legacy compatibility/task helper files remain in Sync.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T01:42:22+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T01:42:22+00:00",
+  "githubHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "localCanonicalOverride": true,
+  "localHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "nextAction": "Remove stale compatibility/task helper files or document exceptions.",
+  "originHead": "8116de9d7900abc9dddb2a7a6c6311b65b772358",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "dead-code",
+  "scannerName": "dead-code",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.dead-code",
+  "startedAt": "2026-05-25T01:42:22+00:00",
+  "started_at": "2026-05-25T01:42:22+00:00",
+  "status": "PASS",
+  "summary": "dead-code: PASS (1 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

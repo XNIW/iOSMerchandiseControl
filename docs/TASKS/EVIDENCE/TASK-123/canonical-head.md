@@ -1,0 +1,7 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T014055Z-git-head-consistency-task-TASK-123-p37188.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T014055Z-git-head-consistency-task-TASK-123-p37188.json
+NEXT_ACTION Continue TASK-123 preflight/scans.
+
+EXIT_CODE 0

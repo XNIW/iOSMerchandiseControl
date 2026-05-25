@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-123",
+  "timestamp": "2026-05-25T03:22:00Z",
+  "status": "PARTIAL_PASS_WITH_NOTES",
+  "fullAcceptanceEligible": false,
+  "reason": "5 post-tuning live smoke runs passed receiver budget, but the required 20 warm iterations per direction, cold-ish matrix, no-op checks, and burst-10 matrix were not completed. Available batch totals are multi-mutation harness timings, not isolated single-propagation samples.",
+  "postTuningRuns": [
+    "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T025854Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p32537.json",
+    "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T030341Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p59653.json",
+    "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T030621Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p80759.json",
+    "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T030859Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p85717.json",
+    "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T031145Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p90552.json"
+  ],
+  "receiverLatencyMs": {
+    "iosToAndroid": {"n": 5, "p50": 962, "p90": 1002, "p95": 1015, "max": 1028, "result": "PASS"},
+    "androidToIos": {"n": 5, "p50": 409, "p90": 435, "p95": 444, "max": 452, "result": "PASS"}
+  },
+  "batchTotalLatencyMs": {
+    "iosToAndroid": {"n": 5, "p50": 4555, "p90": 4878, "p95": 4892, "max": 4907, "result": "FAIL_STRICT_SINGLE_PROPAGATION_BUDGET", "note": "multi-mutation matrix batch"},
+    "androidToIos": {"n": 5, "p50": 13619, "p90": 16703, "p95": 17714, "max": 18724, "result": "FAIL_STRICT_SINGLE_PROPAGATION_BUDGET", "note": "multi-mutation matrix batch"}
+  },
+  "failureCount": 0,
+  "timeoutCount": 0,
+  "duplicateCount": 0,
+  "pendingOutboxStuckCount": 0,
+  "finalDrift": 0,
+  "missingRequiredMatrix": [
+    "20 warm iOS->Android iterations",
+    "20 warm Android->iOS iterations",
+    "5 cold-ish after iOS restart",
+    "5 cold-ish after Android restart",
+    "3 no-op checks per side",
+    "burst 10 products/modifications matrix"
+  ]
+}

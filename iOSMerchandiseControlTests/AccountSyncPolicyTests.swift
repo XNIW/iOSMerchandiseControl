@@ -221,6 +221,31 @@ final class AccountSyncPolicyTests: XCTestCase {
         XCTAssertEqual(store.currentBinding?.storeIdentity, identity)
     }
 
+    func testConfirmedAccountDecisionChoiceBindsLocalStoreToSignedInAccount() {
+        let key = "AccountSyncPolicyTests.\(UUID().uuidString).confirmed-choice"
+        let store = AccountBindingStore(defaults: .standard, key: key)
+        let userID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        let applier = AccountSyncChoiceBindingApplier(bindingStore: store)
+
+        applier.applyConfirmedRelationship(choice: .merge, userID: userID)
+        Self.retainedBindingStores.append(store)
+
+        XCTAssertEqual(store.currentBinding?.accountHash, AccountBindingStore.accountHash(for: userID))
+        XCTAssertEqual(store.currentBinding?.storeIdentity, .anonymous)
+    }
+
+    func testCancelledAccountDecisionChoiceLeavesBindingUnchanged() {
+        let key = "AccountSyncPolicyTests.\(UUID().uuidString).cancelled-choice"
+        let store = AccountBindingStore(defaults: .standard, key: key)
+        let userID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        let applier = AccountSyncChoiceBindingApplier(bindingStore: store)
+
+        applier.applyConfirmedRelationship(choice: .cancel, userID: userID)
+        Self.retainedBindingStores.append(store)
+
+        XCTAssertNil(store.currentBinding)
+    }
+
     func testAccountHashRedactsRawUserID() {
         let userID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
         let hash = AccountBindingStore.accountHash(for: userID)

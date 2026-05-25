@@ -1,0 +1,22 @@
+{
+  "cleanup_plan_id": "cleanup-TASK-123-20260525T030251Z-TASK123_SPEED_",
+  "created_at": "2026-05-25T03:02:57Z",
+  "forbidden": [
+    "auth.users",
+    "truncate",
+    "reset db",
+    "global delete"
+  ],
+  "prefix": "TASK123_SPEED_",
+  "profile": "linked",
+  "schema_version": "1.1",
+  "scope": [
+    "inventory_product_prices",
+    "inventory_products",
+    "inventory_suppliers",
+    "inventory_categories",
+    "shared_sheet_sessions",
+    "sync_events"
+  ],
+  "task_id": "TASK-123"
+}

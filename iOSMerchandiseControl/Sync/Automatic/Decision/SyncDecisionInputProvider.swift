@@ -92,7 +92,7 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
             || outboxCount.failed
             || baselineSummary.failed
             || localCatalogIsEmpty.failed
-        let accountBindingMatches = accountBindingMatches(ownerUserID: ownerUserID)
+        let bindingState = accountBindingState(ownerUserID: ownerUserID)
         let realtimeEvent = pendingRealtimeEvent || triggerSource == .remoteSyncEvent
         if realtimeEvent {
             pendingRealtimeEvent = false
@@ -102,14 +102,15 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
             triggerSource: triggerSource,
             isAuthenticated: isAuthenticated,
             ownerUserID: ownerUserID,
-            accountBindingMatches: accountBindingMatches,
+            accountBindingMatches: bindingState.matches,
             networkStatus: networkStatus,
             pendingLocalChanges: pendingChanges.value,
             pendingOutboxCount: outboxCount.value,
             requiresBootstrap: requiresBootstrap(
                 baselineSummary: baselineSummary.value,
                 localCatalogIsEmpty: localCatalogIsEmpty.value,
-                isAuthenticated: isAuthenticated
+                isAuthenticated: isAuthenticated,
+                hasConfirmedAccountBinding: bindingState.hasConfirmedCurrentAccountBinding
             ),
             requiresFullRecovery: requiresFullRecovery(baselineSummary: baselineSummary.value),
             hasRecoveryDrift: hasRecoveryDrift(baselineSummary: baselineSummary.value),
@@ -186,22 +187,36 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
         }
     }
 
-    private func accountBindingMatches(ownerUserID: UUID?) -> Bool {
+    private struct AccountBindingState {
+        var matches: Bool
+        var hasConfirmedCurrentAccountBinding: Bool
+    }
+
+    private func accountBindingState(ownerUserID: UUID?) -> AccountBindingState {
         guard let ownerUserID,
               let binding = AccountBindingStore().currentBinding else {
-            return true
+            return AccountBindingState(
+                matches: true,
+                hasConfirmedCurrentAccountBinding: false
+            )
         }
-        return binding.accountHash == AccountBindingStore.accountHash(for: ownerUserID)
+        let matchesCurrentAccount = binding.accountHash == AccountBindingStore.accountHash(for: ownerUserID)
+        return AccountBindingState(
+            matches: matchesCurrentAccount,
+            hasConfirmedCurrentAccountBinding: matchesCurrentAccount
+        )
     }
 
     private func requiresBootstrap(
         baselineSummary: SupabaseCatalogBaselineDebugSummary,
         localCatalogIsEmpty: Bool,
-        isAuthenticated: Bool
+        isAuthenticated: Bool,
+        hasConfirmedAccountBinding: Bool
     ) -> Bool {
         isAuthenticated
             && baselineSummary.status == .absent
             && !localCatalogIsEmpty
+            && !hasConfirmedAccountBinding
     }
 
     private func requiresFullRecovery(

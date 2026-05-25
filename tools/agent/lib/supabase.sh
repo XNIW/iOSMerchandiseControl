@@ -736,7 +736,7 @@ mc_live_mutation_near_realtime() {
   local code_ios_write code_android_wait code_android_write code_ios_wait
   local ios_write_started ios_write_finished android_write_started android_write_finished
   local ios_to_android_ms android_to_ios_ms
-  local ios_to_android_polls android_to_ios_polls android_timing_line ios_events_json android_events_json
+  local ios_to_android_polls android_to_ios_polls ios_timing_line android_timing_line ios_events_json android_events_json
   MC_PLATFORM="live"
   MC_SAFETY_LEVEL="live-write"
   MC_REQUIRES_LIVE="true"
@@ -777,6 +777,7 @@ mc_live_mutation_near_realtime() {
     return "$code_android_wait"
   fi
   ios_events_json="$(mc_live_sync_events_for_window_json "$ios_write_started" "$(mc_now_ms)" "ios%")"
+  ios_timing_line="$(grep '_IOS_WRITE_TIMINGS' "$MC_LOG_TMP" 2>/dev/null | tail -n 1 || true)"
 
   MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=2 mc_ios_runtime_ui_counts || return $?
   ios_before="$MC_SYNC_JSON_RESULT"
@@ -804,7 +805,7 @@ mc_live_mutation_near_realtime() {
   ANDROID_BEFORE="$android_before" ANDROID_AFTER_IOS="$android_after_ios" IOS_BEFORE="$ios_before" IOS_AFTER_ANDROID="$ios_after_android" \
   IOS_WRITE_STARTED="$ios_write_started" IOS_WRITE_FINISHED="$ios_write_finished" ANDROID_WRITE_STARTED="$android_write_started" ANDROID_WRITE_FINISHED="$android_write_finished" \
   IOS_TO_ANDROID_MS="$ios_to_android_ms" ANDROID_TO_IOS_MS="$android_to_ios_ms" IOS_TO_ANDROID_POLLS="$ios_to_android_polls" ANDROID_TO_IOS_POLLS="$android_to_ios_polls" \
-  IOS_EVENTS_JSON="$ios_events_json" ANDROID_TIMING_LINE="$android_timing_line" ANDROID_EVENTS_JSON="$android_events_json" python3 - > /tmp/mc-agent-mutation-near-realtime.$$.json <<'PY'
+  IOS_EVENTS_JSON="$ios_events_json" IOS_TIMING_LINE="$ios_timing_line" ANDROID_TIMING_LINE="$android_timing_line" ANDROID_EVENTS_JSON="$android_events_json" python3 - > /tmp/mc-agent-mutation-near-realtime.$$.json <<'PY'
 import json, os
 import re
 from datetime import datetime, timezone
@@ -822,6 +823,9 @@ now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 android_timing = {}
 for key, value in re.findall(r"([A-Za-z0-9]+)=([A-Za-z0-9_-]+)", os.environ.get("ANDROID_TIMING_LINE", "")):
     android_timing[key] = int(value) if value.isdigit() else value
+ios_timing = {}
+for key, value in re.findall(r"([A-Za-z0-9]+)=([A-Za-z0-9_-]+)", os.environ.get("IOS_TIMING_LINE", "")):
+    ios_timing[key] = int(value) if value.isdigit() else value
 
 def parse_iso_ms(value):
     if not value:
@@ -951,6 +955,26 @@ android_to_ios_breakdown = {
     "lastEventAppliedAfterAndroidWrite": last_event_applied_ms is not None and last_event_applied_ms >= android_write_started,
     "fullPullUsed": receiver_sync_type in ("FULL_PULL_BOOTSTRAP", "FULL_PULL_RECOVERY"),
 }
+ios_to_android_breakdown = {
+    "classification": "IDEAL" if ios_to_android_ms <= 5_000 else ("GOOD_ACCEPTABLE" if ios_to_android_ms <= good_ms else ("TEMPORARY_TOLERABLE" if ios_to_android_ms <= tolerable_ms else ("BORDERLINE" if ios_to_android_ms <= timeout_ms else "FAIL"))),
+    "iosLocalCatalogSaveMs": ios_timing.get("localCatalogSaveMs"),
+    "iosLocalHistorySaveMs": ios_timing.get("localHistorySaveMs"),
+    "iosCatalogPushAndEventsMs": ios_timing.get("catalogPushAndEventsMs"),
+    "iosPricePushAndEventsMs": ios_timing.get("pricePushAndEventsMs"),
+    "iosHistoryPushAndEventsMs": ios_timing.get("historyPushAndEventsMs"),
+    "iosRemotePushMs": (
+        (ios_timing.get("catalogPushAndEventsMs") or 0)
+        + (ios_timing.get("pricePushAndEventsMs") or 0)
+        + (ios_timing.get("historyPushAndEventsMs") or 0)
+        if any(key in ios_timing for key in ("catalogPushAndEventsMs", "pricePushAndEventsMs", "historyPushAndEventsMs")) else None
+    ),
+    "iosTotalMatrixMs": ios_timing.get("totalMatrixMs"),
+    "iosWriteBatchMs": ios_write_ms,
+    "polls": int(os.environ["IOS_TO_ANDROID_POLLS"]),
+    "androidSafetyPollDelayMs": ios_to_android_ms,
+    "syncType": "EVENT_INCREMENTAL",
+    "fullPullUsed": False,
+}
 full_pull_used = android_to_ios_breakdown["fullPullUsed"]
 targeted_events_ok = (
     ios_event_targets["missingTargetsForChangedEvents"] == 0 and
@@ -1016,6 +1040,7 @@ print(json.dumps({
         "androidToIosTotalMsFromWriteStart": android_write_ms + android_to_ios_ms,
     },
     "breakdown": {
+        "iosToAndroid": ios_to_android_breakdown,
         "androidToIos": android_to_ios_breakdown,
     },
     "counts": {

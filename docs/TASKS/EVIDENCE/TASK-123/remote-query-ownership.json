@@ -1,0 +1,63 @@
+{
+  "adapters": [
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+      "queries": [
+        "inventory_suppliers",
+        "inventory_suppliers",
+        "inventory_categories",
+        "inventory_categories",
+        "inventory_products",
+        "inventory_products",
+        "inventory_suppliers",
+        "inventory_categories",
+        "inventory_products",
+        "inventory_products",
+        "inventory_products",
+        "inventory_suppliers",
+        "inventory_suppliers",
+        "inventory_categories",
+        "inventory_categories"
+      ],
+      "query_count": 15
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "queries": [
+        "inventory_product_prices",
+        "inventory_product_prices",
+        "inventory_product_prices",
+        "inventory_product_prices",
+        "inventory_product_prices",
+        "inventory_product_prices",
+        "inventory_product_prices",
+        "inventory_products",
+        "inventory_product_prices"
+      ],
+      "query_count": 9
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+      "queries": [
+        "shared_sheet_sessions",
+        "shared_sheet_sessions",
+        "shared_sheet_sessions",
+        "shared_sheet_sessions"
+      ],
+      "query_count": 4
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+      "queries": [
+        "sync_events",
+        "inventory_products",
+        "inventory_suppliers",
+        "inventory_categories",
+        "shared_sheet_sessions",
+        "inventory_product_prices"
+      ],
+      "query_count": 6
+    }
+  ],
+  "taskId": "TASK-123"
+}

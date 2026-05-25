@@ -1,0 +1,28 @@
+ITER 1 START 2026-05-25T03:03:41Z
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T030341Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p59653.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T030341Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p59653.json
+NEXT_ACTION Run cleanup/residue for TASK123_SPEED_, then reconcile/runtime-parity/sync-matrix.
+ITER 1 END rc= 2026-05-25T03:06:19Z
+ITER 2 START 2026-05-25T03:06:21Z
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T030621Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p80759.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T030621Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p80759.json
+NEXT_ACTION Run cleanup/residue for TASK123_SPEED_, then reconcile/runtime-parity/sync-matrix.
+ITER 2 END rc= 2026-05-25T03:08:57Z
+ITER 3 START 2026-05-25T03:08:59Z
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T030859Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p85717.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T030859Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p85717.json
+NEXT_ACTION Run cleanup/residue for TASK123_SPEED_, then reconcile/runtime-parity/sync-matrix.
+ITER 3 END rc= 2026-05-25T03:11:43Z
+ITER 4 START 2026-05-25T03:11:45Z
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T031145Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p90552.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T031145Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p90552.json
+NEXT_ACTION Run cleanup/residue for TASK123_SPEED_, then reconcile/runtime-parity/sync-matrix.
+ITER 4 END rc= 2026-05-25T03:14:21Z

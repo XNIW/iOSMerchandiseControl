@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-123",
+  "status": "PASS_WITH_NOTES",
+  "timestamp": "2026-05-25T03:26:00Z",
+  "source": "mc-agent help-json and list commands-json",
+  "note": "Original capture concatenated multiple JSON payloads; normalized here as a single evidence envelope. Raw command discovery remains available in agent-runs and harness-discovery.md.",
+  "availableLiveCommandsObserved": [
+    "live sync-matrix",
+    "live reconcile-counts",
+    "live runtime-parity",
+    "live mutation-near-realtime",
+    "live offline-reconnect-sync",
+    "live account-merge-policy-matrix",
+    "live sync-performance-budget",
+    "live offline-matrix",
+    "live cleanup-and-verify"
+  ],
+  "cleanupCommandsObserved": [
+    "supabase cleanup dry-run",
+    "supabase cleanup execute",
+    "supabase residue-check",
+    "ios cleanup-scoped",
+    "android cleanup-scoped",
+    "live cleanup-and-verify"
+  ]
+}

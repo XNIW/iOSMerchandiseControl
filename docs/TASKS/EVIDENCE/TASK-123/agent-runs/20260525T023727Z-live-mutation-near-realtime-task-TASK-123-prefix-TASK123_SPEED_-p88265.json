@@ -1,0 +1,245 @@
+{
+  "NEXT_ACTION": "Inspect foreground app auto-sync/realtime logs and rerun after fixing push/pull trigger.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T023727Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p88265.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T023727Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p88265.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T023727Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p88265.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260525T023727Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "PR-01",
+    "PR-03",
+    "PR-04",
+    "PR-08"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live mutation-near-realtime --task TASK-123 --prefix TASK123_SPEED_",
+  "command_slug": "live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "emulator",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": "<REDACTED>"
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 187025,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-123",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<REDACTED>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<REDACTED>",
+    "MC_RUN_PREFIX": "TASK123_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-123"
+  },
+  "exit_code": 1,
+  "git_sha": "b3f65de",
+  "next_action_recommended": "Inspect foreground app auto-sync/realtime logs and rerun after fixing push/pull trigger.",
+  "platform": "ios",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "account": {
+      "state": "redacted"
+    },
+    "checkpoint": {
+      "local": {
+        "pendingAggregate": 4
+      },
+      "remote": null
+    },
+    "completedAt": "2026-05-25T02:40:33Z",
+    "counts": {
+      "categories": {
+        "active": 49,
+        "all": 49,
+        "deleted": 0,
+        "dirty": 1,
+        "localOnly": 2,
+        "pending": 1,
+        "userVisible": null
+      },
+      "history_entries": {
+        "active": 2,
+        "all": 2,
+        "deleted": 0,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": 2
+      },
+      "product_prices": {
+        "active": 15386,
+        "all": 15386,
+        "deleted": 0,
+        "dirty": 2,
+        "localOnly": 0,
+        "pending": 2,
+        "userVisible": null
+      },
+      "products": {
+        "active": 19886,
+        "all": 19886,
+        "deleted": 0,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      },
+      "suppliers": {
+        "active": 81,
+        "all": 81,
+        "deleted": 0,
+        "dirty": 1,
+        "localOnly": 2,
+        "pending": 1,
+        "userVisible": null
+      }
+    },
+    "deleted": 0,
+    "drift": {},
+    "inserted": 0,
+    "lastFullReconciliation": null,
+    "lastPull": null,
+    "lastPush": null,
+    "pruned": {
+      "didPrune": 0,
+      "isCompleteSnapshot": null,
+      "skippedDirty": 4,
+      "skippedLocalOnly": 0,
+      "skippedPendingTombstone": 0,
+      "skippedScopedSnapshot": 0,
+      "wouldPrune": 0
+    },
+    "runtime": {
+      "baseline": null,
+      "containerKind": "simulator",
+      "containerPathHash": "<REDACTED_HEX>",
+      "diagnostics": {
+        "accountBinding": {
+          "decodeError": "redacted",
+          "decoded": false,
+          "present": true
+        },
+        "plistPresent": true,
+        "runtime": {
+          "auth.canSignIn": false,
+          "auth.isSignedIn": true,
+          "auth.isTransitioning": false,
+          "auth.userIDPresent": true,
+          "automatic.catalogPush.lastChanged": 0,
+          "automatic.lastCompletedAt": 1779676816.9357738,
+          "automatic.lastError": "contract(iOSMerchandiseControl.SyncEventRecordFailure(code: Optional(\"entity_ids_key\"), message: \"entity_ids contains an unsupported key.\"))",
+          "automatic.lastOutcome": "completed",
+          "automatic.productPricePush.lastInserted": 0,
+          "foreground.forceIncremental": true,
+          "foreground.outcome": "scheduled_drain_events_via_sync_runtime",
+          "foreground.requestedAt": 1779676816.763546,
+          "foreground.source": "remoteSyncEvent",
+          "incremental.attemptWindow.count": 10,
+          "incremental.attemptWindow.startAt": 1779676786.1613631,
+          "incremental.lastApplied": 0,
+          "incremental.lastAttemptAt": 1779676816.7719631,
+          "incremental.lastCompletedSource": "remoteSyncEvent",
+          "incremental.lastEventsFetched": 50,
+          "incremental.lastEventsProcessed": 50,
+          "incremental.lastPage.totalElapsedMs": 0,
+          "incremental.lastSource": "remoteSyncEvent",
+          "incremental.lastSyncType": "EVENT_INCREMENTAL",
+          "incremental.lastTotalElapsedMs": 0,
+          "incremental.requiresFullRecovery": true,
+          "orchestrator.lastAction": "drainEvents",
+          "orchestrator.lastDecisionAt": 1779676816.770798,
+          "orchestrator.lastRunBlockReason": "accountDecisionRequired",
+          "orchestrator.lastRunCompletedAt": 1779676816.9360662,
+          "orchestrator.lastRunDidWork": true,
+          "orchestrator.lastRunErrorCode": "contract(iOSMerchandiseControl.SyncEventRecordFailure(code: Optional(\"entity_ids_key\"), message: \"entity_ids contains an unsupported key.\"))",
+          "orchestrator.lastRunStatus": "success",
+          "orchestrator.lastTrigger": "remoteSyncEvent",
+          "orchestrator.safetyLoopLastTickAt": 1779676816.2524261,
+          "orchestrator.safetyLoopTickCount": 2924,
+          "rootHost.didReachInteractiveUI": true,
+          "rootHost.taskStartedAt": 1779676785.915862,
+          "timer.didReachInteractiveUI": true,
+          "timer.intervalSeconds": 30,
+          "timer.isSignedIn": true,
+          "timer.lastTickAt": 1779676816.2567701,
+          "timer.sceneActive": true,
+          "timer.sceneBackground": false,
+          "watcher.signalAt": 1779676816.762254,
+          "watcher.state": "started",
+          "watcher.updateAt": 1779676816.263308
+        },
+        "syncEventWatermarks": []
+      },
+      "isRuntimeAppContainer": true,
+      "lastSuccessfulSync": null,
+      "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl",
+      "storeFile": "default.store",
+      "storePathHash": "<REDACTED_HEX>",
+      "waitSecondsAfterLaunch": 0
+    },
+    "samples": {
+      "androidLocalProductsMissingRemote": [],
+      "historySessionActiveAllTombstone": [
+        {
+          "active": 2,
+          "all": 2,
+          "tombstone": 0
+        }
+      ],
+      "iosMissingSupplierCategory": [
+        "dc937b59892604f5",
+        "dc937b59892604f5",
+        "dc937b59892604f5",
+        "dc937b59892604f5"
+      ],
+      "localOnlyNotPrunable": [],
+      "remotePriceHistoryWithoutLocalProduct": []
+    },
+    "schemaVersion": "1.1",
+    "session": {
+      "state": "simulator-local-redacted"
+    },
+    "skipped": 0,
+    "source": "ios.runtime-store-counts",
+    "startedAt": "2026-05-25T02:40:33Z",
+    "status": "PASS",
+    "taskId": "TASK-123",
+    "updated": 0
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T023727Z-live-mutation-near-realtime-task-TASK-123-prefix-TASK123_SPEED_-p88265",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-123",
+  "test_prefix": "TASK123_SPEED_RT_20260525T023727Z_ANDROID_",
+  "timestamp_end": "2026-05-25T02:40:34Z",
+  "timestamp_start": "2026-05-25T02:37:27Z",
+  "warnings": []
+}
