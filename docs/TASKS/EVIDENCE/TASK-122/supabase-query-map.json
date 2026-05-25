@@ -492,32 +492,32 @@
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
-      "line": 124,
+      "line": 125,
       "snippet": "deletedProductIDs.insert(product.id)"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
-      "line": 29,
+      "line": 31,
       "snippet": ".from(\"shared_sheet_sessions\")"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
-      "line": 30,
+      "line": 32,
       "snippet": ".upsert(rows, onConflict: \"remote_id\")"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
-      "line": 68,
+      "line": 70,
       "snippet": ".from(\"shared_sheet_sessions\")"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
-      "line": 104,
+      "line": 106,
       "snippet": ".from(\"shared_sheet_sessions\")"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
-      "line": 113,
+      "line": 115,
       "snippet": ".from(\"shared_sheet_sessions\")"
     },
     {
@@ -532,32 +532,32 @@
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
-      "line": 90,
+      "line": 93,
       "snippet": ".from(\"inventory_product_prices\")"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
-      "line": 138,
+      "line": 141,
       "snippet": ".from(\"inventory_product_prices\")"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
-      "line": 139,
+      "line": 142,
       "snippet": ".insert(payloads)"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
-      "line": 159,
+      "line": 162,
       "snippet": ".from(\"inventory_products\")"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
-      "line": 160,
+      "line": 163,
       "snippet": ".update(payload)"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
-      "line": 213,
+      "line": 216,
       "snippet": ".from(\"inventory_product_prices\")"
     },
     {
@@ -569,11 +569,6 @@
       "file": "iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift",
       "line": 138,
       "snippet": ".update(payload)"
-    },
-    {
-      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
-      "line": 91,
-      "snippet": ".from(\"inventory_products\")"
     },
     {
       "file": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",

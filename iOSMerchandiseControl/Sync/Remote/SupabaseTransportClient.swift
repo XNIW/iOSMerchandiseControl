@@ -54,16 +54,8 @@ nonisolated enum SupabaseTransportClientError: Error, Sendable {
     }
 }
 
-nonisolated enum SupabaseTransportDiagnosticResult: Sendable {
-    case catalogProbeSucceeded(rowCount: Int)
-}
-
 actor SupabaseTransportClient {
     nonisolated static let stablePageOrderColumn = "id"
-    nonisolated static let productPriceStablePageOrderColumns = ["id"]
-    nonisolated static let productColumns = "id,owner_user_id,barcode,item_number,product_name,second_product_name,purchase_price,retail_price,supplier_id,category_id,stock_quantity,updated_at,deleted_at"
-    nonisolated static let productPriceColumns = "id,owner_user_id,product_id,type,price,effective_at,source,note,created_at"
-    nonisolated static let sharedSheetSessionColumns = "remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at,deleted_at"
 
     private let clientProvider: SupabaseClientProvider
 
@@ -83,17 +75,6 @@ actor SupabaseTransportClient {
         } catch {
             throw SupabaseTransportClientError.sessionMissing
         }
-    }
-
-    func testConnection() async throws -> SupabaseTransportDiagnosticResult {
-        let ownerUserID = try await authenticatedUserID()
-        let response = try await clientProvider.client
-            .from("inventory_products")
-            .select("id", head: true, count: .exact)
-            .eq("owner_user_id", value: ownerUserID.uuidString)
-            .limit(1)
-            .execute()
-        return .catalogProbeSucceeded(rowCount: response.count ?? 0)
     }
 
     func mapPostgrestError(_ error: PostgrestError) -> SupabaseTransportClientError {

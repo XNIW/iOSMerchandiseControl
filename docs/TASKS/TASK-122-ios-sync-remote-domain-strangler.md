@@ -9,9 +9,9 @@
 - **Fase attuale**: REVIEW
 - **Responsabile attuale**: CLAUDE / Reviewer
 - **Data creazione**: 2026-05-24
-- **Ultimo aggiornamento**: 2026-05-24 20:22 -0400
+- **Ultimo aggiornamento**: 2026-05-24 20:43 -0400
 - **Ultimo agente che ha operato**: CODEX / Executor
-- **Readiness**: ACTIVE / REVIEW locale. Execution TASK-122 completata localmente con `LOCAL_CANONICAL_EXECUTION_OVERRIDE`: transport thin, adapter ownership, scanner hard, Debug/Release build e test canonici PASS. GitHub raw TASK-122 = `404` e GitHub raw MASTER-PLAN ancora TASK-121-only restano rischio residuo `PASS_WITH_NOTES_LOCAL_CANONICAL_OVERRIDE` da allineare dopo handoff, non blocco locale. Non DONE e nessun claim 100%.
+- **Readiness**: ACTIVE / REVIEW locale. Execution TASK-122 completata localmente con `LOCAL_CANONICAL_EXECUTION_OVERRIDE` e final production acceptance / efficiency hardening: transport thin 117 LOC, adapter ownership, scanner hard, Debug/Release build e test canonici PASS; Architecture efficiency PASS, Runtime efficiency PASS_WITH_NOTES, Production readiness BLOCKED_EXTERNAL per live/device/offline/cross-platform; GitHub raw TASK-122 = `404` e GitHub raw MASTER-PLAN ancora TASK-121-only restano rischio residuo `PASS_WITH_NOTES_LOCAL_CANONICAL_OVERRIDE` da allineare dopo handoff, non blocco locale. Non DONE e nessun claim 100%.
 - **Tipo task**: planning esecutivo architetturale iOS; nessuna nuova feature utente.
 - **User override registrato**: l'utente richiede nuova TASK-122 in PLANNING per supersedere TASK-121 solo sul blocker finale `Remote mega-service strangler`. TASK-121 resta NON DONE e baseline storica/tecnica.
 
@@ -950,3 +950,72 @@ L'utente ha autorizzato esplicitamente `LOCAL_CANONICAL_EXECUTION_OVERRIDE`: la 
 
 ### Handoff post-execution
 `TASK-122 ACTIVE / REVIEW` locale. Responsabile: `CLAUDE / Reviewer`. Non DONE, non `ARCHITECTURE_TARGET_MET`, non 100%.
+
+## Review — Codex 2026-05-24 post-implementation
+### Obiettivo compreso
+Eseguire review completa e repo-grounded dell'implementazione TASK-122 locale, senza dichiarare DONE, senza claim 100%, senza production-ready e senza riaprire refactor cosmetiche. Correggere solo problemi reali supportati da evidence.
+
+### File controllati
+- `docs/MASTER-PLAN.md`
+- `docs/TASKS/TASK-122-ios-sync-remote-domain-strangler.md`
+- `docs/TASKS/EVIDENCE/TASK-122/final-handoff.md`
+- matrix/evidence TASK-122 richieste dal prompt
+- `tools/agent/README.md`
+- `tools/agent/mc-agent.sh`
+- `tools/agent/lib/task122_scans.py`
+- `tools/agent/lib/common.sh`
+- `tools/agent/mcp/server.mjs`
+- `iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift`
+- `iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift`
+- adapter Remote Catalog/ProductPrice/HistorySession/SyncEvent
+- `iOSMerchandiseControl/Sync/Recovery/RecoveryRemoteSupabaseAdapter.swift`
+- Composition/Options/preview/test compatibility call sites rilevanti
+
+### Piano minimo applicato
+1. Leggere tracking, evidence, harness e codice coinvolto.
+2. Audit manuale architettura/efficienza/boundary/security.
+3. Rerun scanner matrix TASK-122 canonica.
+4. Rerun build/test canonici.
+5. Verificare Supabase locale read-only e mantenere live/device/offline/cross-platform come external gate.
+6. Aggiornare tracking/evidence solo con risultati di review.
+
+### Modifiche fatte
+- Nessun fix Swift/Kotlin/SQL necessario: non sono emersi problemi P0/P1/P2 reali da correggere nel codice.
+- Aggiornate evidence/tracking TASK-122 con i run di review piu' recenti.
+- Rigenerati report generati dagli scanner `performance-baseline`, `offline-outbox-conflict`, `sync-efficiency-acceptance` e `report validate-json`.
+- Conservati `Production readiness BLOCKED_EXTERNAL` e `100% production claim NOT_ELIGIBLE`.
+
+### Check eseguiti
+- ✅ ESEGUITO — Review manuale transport: `SupabaseTransportClient.swift` 117 LOC, nessuna `.from(...)`, `.rpc(...)`, `.insert`, `.upsert`, `.update`, `.delete`, nessuna conformance domain, nessun `ModelContext`, nessun UI/MainActor.
+- ✅ ESEGUITO — Review manuale executor/adapter: `SupabaseRemoteQueryExecutor` e' helper generico; query/domain ownership resta negli adapter Remote; ProductPrice keyset/chunking/read-back behavior preservato.
+- ✅ ESEGUITO — Scanner matrix TASK-122: PASS per source-format, swift-source-shape, sync-inventory, sync-architecture, remote-transport-thin, adapter-delegation-depth, domain-method-ownership, manual-debug-boundary, transport-protocol-conformance, composition-import-boundary, remote-query-ownership, debug-seed-boundary, dto-mapper-duplication, supabase-query-map, performance-baseline, sync-efficiency-acceptance, xcode-membership, dead-code, sensitive, evidence, report validate-json. Latest final validation: `20260525T010246Z-report-validate-json-task-TASK-122-path-docs-TASKS-EVIDENCE-TASK-122-agent-runs-p26942`.
+- ✅ ESEGUITO — Debug build: PASS (`20260525T005428Z-ios-build-debug-task-TASK-122-p1984`).
+- ✅ ESEGUITO — Release build: PASS (`20260525T005439Z-ios-build-release-task-TASK-122-p2686`).
+- ✅ ESEGUITO — automatic architecture tests: PASS (`20260525T005550Z-ios-test-automatic-architecture-task-TASK-122-p3472`).
+- ✅ ESEGUITO — automatic domain tests: PASS (`20260525T005611Z-ios-test-automatic-domain-task-TASK-122-p4138`).
+- ✅ ESEGUITO — broad sync tests: PASS (`20260525T005619Z-ios-test-sync-task-TASK-122-p4660`).
+- ✅ ESEGUITO — manual sync regression tests: PASS (`20260525T005858Z-ios-test-manual-sync-regression-task-TASK-122-p5436`).
+- ✅ ESEGUITO — Supabase local read-only status/schema/RLS/grants: PASS (`20260525T005918Z`, `20260525T005920Z`, `20260525T005927Z`, `20260525T005929Z`).
+- ⚠️ NON ESEGUIBILE — offline/outbox/conflict runtime device acceptance: `BLOCKED_EXTERNAL` (`20260525T010014Z-scan-offline-outbox-conflict-task-TASK-122-strict-p8552`); richiede device/account/sessione autenticata e dati `TASK122_*`.
+- ⚠️ NON ESEGUIBILE — cross-platform Android/device live acceptance: `BLOCKED_EXTERNAL`; `adb` non disponibile in questa shell, nessuna modifica Kotlin.
+- ⚠️ NON ESEGUIBILE — live scoped Supabase write/account acceptance: non eseguita per assenza di safety gate/sessione live; nessun dato `TASK122_*` creato.
+
+### Rischi rimasti
+- GitHub raw/canonical alignment resta `PASS_WITH_NOTES_LOCAL_CANONICAL_OVERRIDE` da allineare dopo handoff.
+- Live/device/offline/cross-platform acceptance restano external gate, quindi production readiness resta `BLOCKED_EXTERNAL`.
+- Performance runtime resta `PASS_WITH_NOTES`: baseline corrente misurata, ma nessun before comparabile autorizza claim di miglioramento.
+- `RecoveryRemoteSupabaseAdapter` resta volutamente sottile sopra gli adapter catalog/product-price; gli scanner e la review non hanno trovato regressione concreta, ma la ownership recovery runtime completa resta da validare nei gate live/offline.
+
+### Handoff post-review
+`TASK-122 ACTIVE / REVIEW — REVIEW_CONFIRMED`.
+
+Verdict:
+```text
+Architecture efficiency PASS.
+Runtime efficiency PASS_WITH_NOTES.
+Production readiness BLOCKED_EXTERNAL.
+100% production claim NOT_ELIGIBLE.
+DONE not allowed pending explicit user acceptance and live/offline/cross-platform completion.
+```
+
+NEXT_ACTION: Claude/user review finale; poi allineare GitHub canonical e completare acceptance esterna live/offline/cross-platform con safety gate `MC_ALLOW_LIVE=1`, account autenticato e prefisso `TASK122_*`.

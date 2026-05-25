@@ -533,17 +533,17 @@
     {
       "category": "Remote",
       "file": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
-      "loc": 158
+      "loc": 159
     },
     {
       "category": "Remote",
       "file": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
-      "loc": 130
+      "loc": 132
     },
     {
       "category": "Remote",
       "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
-      "loc": 265
+      "loc": 268
     },
     {
       "category": "Remote",
@@ -578,7 +578,7 @@
     {
       "category": "Remote",
       "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
-      "loc": 136
+      "loc": 117
     },
     {
       "category": "Remote",

@@ -18,7 +18,7 @@ struct ProductPriceRemoteSupabaseAdapter: SyncAutomaticProductPriceRemoteWriting
             return try await client
                 .from("inventory_product_prices")
                 .upsert(payloads, onConflict: "id")
-                .select(SupabaseTransportClient.productPriceColumns)
+                .select(Self.productPriceColumns)
                 .execute()
                 .value
         } catch let error as DecodingError {
@@ -39,10 +39,13 @@ extension ProductPriceRemoteSupabaseAdapter:
     SupabaseProductPriceDeletedProductFetching,
     SupabaseProductPriceManualPushRemoteAccessing,
     SupabaseProductPricePushDryRunRemoteFetching {
+    static let productPriceColumns = "id,owner_user_id,product_id,type,price,effective_at,source,note,created_at"
+    static let stablePageOrderColumns = ["id"]
+
     func fetchProductPrices(limit: Int = 100) async throws -> [RemoteInventoryProductPriceRow] {
         try await query.fetchRows(
             table: "inventory_product_prices",
-            columns: SupabaseTransportClient.productPriceColumns,
+            columns: Self.productPriceColumns,
             limit: limit
         )
     }
@@ -62,7 +65,7 @@ extension ProductPriceRemoteSupabaseAdapter:
         }
         return try await query.fetchRowsByIDs(
             table: "inventory_product_prices",
-            columns: SupabaseTransportClient.productPriceColumns,
+            columns: Self.productPriceColumns,
             ids: priceIDs
         )
     }
@@ -70,7 +73,7 @@ extension ProductPriceRemoteSupabaseAdapter:
     func fetchProductPricesPage(from: Int, to: Int) async throws -> [RemoteInventoryProductPriceRow] {
         try await query.fetchRowsPage(
             table: "inventory_product_prices",
-            columns: SupabaseTransportClient.productPriceColumns,
+            columns: Self.productPriceColumns,
             from: from,
             to: to
         )
@@ -137,7 +140,7 @@ extension ProductPriceRemoteSupabaseAdapter:
             return try await client
                 .from("inventory_product_prices")
                 .insert(payloads)
-                .select(SupabaseTransportClient.productPriceColumns)
+                .select(Self.productPriceColumns)
                 .execute()
                 .value
         } catch let error as PostgrestError {
@@ -160,7 +163,7 @@ extension ProductPriceRemoteSupabaseAdapter:
                 .update(payload)
                 .eq("id", value: id.uuidString)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
-                .select(SupabaseTransportClient.productColumns)
+                .select(CatalogRemoteSupabaseAdapter.productColumns)
                 .single()
                 .execute()
                 .value
@@ -211,7 +214,7 @@ extension ProductPriceRemoteSupabaseAdapter:
         do {
             return try await client
                 .from("inventory_product_prices")
-                .select(SupabaseTransportClient.productPriceColumns)
+                .select(Self.productPriceColumns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .in("product_id", values: sortedProductIDs)
                 .order("product_id", ascending: true)

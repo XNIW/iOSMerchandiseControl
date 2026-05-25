@@ -1,0 +1,74 @@
+=== mc-agent scan performance-baseline --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Use current baseline; do not claim performance improvement without comparable before data.",
+  "canonicalHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "checks": [
+    {
+      "evidence": {
+        "duration_ms": 158758,
+        "report": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T003527Z-ios-test-sync-task-TASK-122-p36155.json"
+      },
+      "id": "broad_sync_duration_measured",
+      "reason": "Latest broad sync test duration is available from harness report.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "id": "product_price_keyset_preserved",
+      "reason": "ProductPrice keyset paging is preserved.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "id": "product_price_chunking_preserved",
+      "reason": "ProductPrice page size/chunking remains bounded.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "task_sleep_hits": 2,
+        "unbounded_sleep_loop": false
+      },
+      "id": "automatic_no_unbounded_ui_retry_sleep",
+      "reason": "Automatic runtime has no unbounded Task.sleep UI retry loop; bounded debounce/retry sleeps are recorded as notes.",
+      "status": "PASS_WITH_NOTES"
+    },
+    {
+      "id": "manual_not_blocking_automatic_static",
+      "reason": "Manual/debug/dry-run does not contaminate Automatic statically.",
+      "status": "PASS"
+    },
+    {
+      "id": "before_baseline_available",
+      "reason": "Comparable pre-refactor performance baseline was not captured; current baseline is recorded.",
+      "status": "PASS_WITH_NOTES"
+    }
+  ],
+  "completed_at": "2026-05-25T00:53:41+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T00:53:41+00:00",
+  "githubHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "localCanonicalOverride": true,
+  "localHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "nextAction": "Use current baseline; do not claim performance improvement without comparable before data.",
+  "originHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS_WITH_NOTES",
+  "safety_level": "read_only_static_scan",
+  "scan": "performance-baseline",
+  "scannerName": "performance-baseline",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.performance-baseline",
+  "startedAt": "2026-05-25T00:53:41+00:00",
+  "started_at": "2026-05-25T00:53:41+00:00",
+  "status": "PASS_WITH_NOTES",
+  "summary": "performance-baseline: PASS_WITH_NOTES (6 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

@@ -1,0 +1,69 @@
+=== mc-agent scan sync-efficiency-acceptance --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Do not claim 100% efficient unless every hard acceptance dimension is PASS.",
+  "canonicalHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "checks": [
+    {
+      "evidence": {
+        "100% user claim": "NOT_ELIGIBLE",
+        "Architecture efficiency": "PASS",
+        "Production readiness": "BLOCKED_EXTERNAL",
+        "Runtime efficiency": "PASS_WITH_NOTES",
+        "crossPlatformAcceptance": "docs/TASKS/EVIDENCE/TASK-122/cross-platform-acceptance.json",
+        "offlineOutboxConflictAcceptance": "docs/TASKS/EVIDENCE/TASK-122/offline-outbox-conflict-acceptance.json",
+        "performanceBaseline": "docs/TASKS/EVIDENCE/TASK-122/performance-baseline-before-after.json",
+        "reason": "100% claim requires live/account/device/cross-platform/offline/performance acceptance, review approval, and explicit user acceptance."
+      },
+      "id": "matrix_written",
+      "reason": "Efficiency acceptance matrix written.",
+      "status": "PASS"
+    },
+    {
+      "id": "architecture_efficiency_pass",
+      "reason": "Architecture efficiency has no adapter pass-through residue.",
+      "status": "PASS"
+    },
+    {
+      "id": "runtime_efficiency_status_recorded",
+      "reason": "Runtime efficiency status is explicit and not promoted to 100%.",
+      "status": "PASS_WITH_NOTES"
+    },
+    {
+      "id": "production_readiness_status_recorded",
+      "reason": "Production readiness live/device limits are explicit.",
+      "status": "PASS_WITH_NOTES"
+    },
+    {
+      "id": "claim_not_eligible_without_acceptance",
+      "reason": "100% efficient claim is not eligible without all hard acceptance evidence.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T00:42:32+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T00:42:32+00:00",
+  "githubHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "localCanonicalOverride": true,
+  "localHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "nextAction": "Do not claim 100% efficient unless every hard acceptance dimension is PASS.",
+  "originHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS_WITH_NOTES",
+  "safety_level": "read_only_static_scan",
+  "scan": "sync-efficiency-acceptance",
+  "scannerName": "sync-efficiency-acceptance",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.sync-efficiency-acceptance",
+  "startedAt": "2026-05-25T00:42:32+00:00",
+  "started_at": "2026-05-25T00:42:32+00:00",
+  "status": "PASS_WITH_NOTES",
+  "summary": "sync-efficiency-acceptance: PASS_WITH_NOTES (5 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

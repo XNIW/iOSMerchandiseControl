@@ -1,0 +1,41 @@
+=== mc-agent scan debug-seed-boundary --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Move debug/test seed behavior out of thin transport.",
+  "canonicalHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "checks": [
+    {
+      "evidence": [],
+      "file": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "id": "transport_no_debug_seed",
+      "reason": "Transport contains no DEBUG/TASK seed/collision/probe behavior.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T00:33:06+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T00:33:06+00:00",
+  "githubHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "localCanonicalOverride": true,
+  "localHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "nextAction": "Move debug/test seed behavior out of thin transport.",
+  "originHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "debug-seed-boundary",
+  "scannerName": "debug-seed-boundary",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.debug-seed-boundary",
+  "startedAt": "2026-05-25T00:33:06+00:00",
+  "started_at": "2026-05-25T00:33:06+00:00",
+  "status": "PASS",
+  "summary": "debug-seed-boundary: PASS (1 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

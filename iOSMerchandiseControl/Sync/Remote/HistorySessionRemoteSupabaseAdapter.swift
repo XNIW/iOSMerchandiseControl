@@ -2,6 +2,8 @@ import Foundation
 import Supabase
 
 struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
+    static let sharedSheetSessionColumns = "remote_id,payload_version,display_name,timestamp,supplier,category,is_manual_entry,data,session_overlay,owner_user_id,updated_at,deleted_at"
+
     let remote: SupabaseTransportClient
 
     private var query: SupabaseRemoteQueryExecutor {
@@ -28,7 +30,7 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
             let readBack: [RemoteSharedSheetSessionRow] = try await client
                 .from("shared_sheet_sessions")
                 .upsert(rows, onConflict: "remote_id")
-                .select(SupabaseTransportClient.sharedSheetSessionColumns)
+                .select(Self.sharedSheetSessionColumns)
                 .execute()
                 .value
             guard readBack.count == rows.count,
@@ -66,7 +68,7 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
         do {
             return try await client
                 .from("shared_sheet_sessions")
-                .select(SupabaseTransportClient.sharedSheetSessionColumns)
+                .select(Self.sharedSheetSessionColumns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .order("remote_id", ascending: true)
                 .range(from: max(0, start), to: max(start, end))
@@ -102,7 +104,7 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
         do {
             let rows: [RemoteSharedSheetSessionRow] = try await client
                 .from("shared_sheet_sessions")
-                .select(SupabaseTransportClient.sharedSheetSessionColumns)
+                .select(Self.sharedSheetSessionColumns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .in("remote_id", values: sortedIDs)
                 .order("remote_id", ascending: true)
@@ -111,7 +113,7 @@ struct HistorySessionRemoteSupabaseAdapter: HistorySessionRemoteWriting {
             if !rows.isEmpty { return rows }
             return try await client
                 .from("shared_sheet_sessions")
-                .select(SupabaseTransportClient.sharedSheetSessionColumns)
+                .select(Self.sharedSheetSessionColumns)
                 .eq("owner_user_id", value: ownerUserID.uuidString)
                 .or(sortedIDs.map { "remote_id.eq.\($0)" }.joined(separator: ","))
                 .order("remote_id", ascending: true)

@@ -1,0 +1,15 @@
+{
+  "androidReferenceHead": "b3f65de",
+  "androidReferenceRepoAvailable": true,
+  "androidReferenceRepoPath": "/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView",
+  "androidSourceModified": false,
+  "androidTooling": {
+    "adb": "BLOCKED_EXTERNAL",
+    "reason": "adb command not found in this shell"
+  },
+  "crossPlatformLiveDataExchange": "BLOCKED_EXTERNAL",
+  "nextAction": "Install/expose Android platform tools or provide an emulator/device, then run scoped TASK122_* iOS/Supabase/Android compatibility acceptance without modifying Android source.",
+  "status": "BLOCKED_EXTERNAL",
+  "supabaseLocalReadOnlyChecks": "PASS",
+  "taskId": "TASK-122"
+}

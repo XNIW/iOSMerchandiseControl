@@ -17,32 +17,27 @@
     },
     {
       "category": "transport",
-      "line": 73,
+      "line": 65,
       "name": "client"
     },
     {
       "category": "transport",
-      "line": 79,
+      "line": 71,
       "name": "authenticatedUserID"
     },
     {
-      "category": "unknown",
-      "line": 87,
-      "name": "testConnection"
-    },
-    {
       "category": "transport",
-      "line": 98,
+      "line": 79,
       "name": "mapPostgrestError"
     },
     {
       "category": "transport",
-      "line": 121,
+      "line": 102,
       "name": "mapDecodingError"
     },
     {
       "category": "transport",
-      "line": 132,
+      "line": 113,
       "name": "networkError"
     }
   ],

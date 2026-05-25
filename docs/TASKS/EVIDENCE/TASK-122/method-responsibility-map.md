@@ -3,9 +3,8 @@
 - `sanitizedDiagnosticDetail` line 26: unknown
 - `detail` line 30: unknown
 - `sanitized` line 40: unknown
-- `client` line 73: transport
-- `authenticatedUserID` line 79: transport
-- `testConnection` line 87: unknown
-- `mapPostgrestError` line 98: transport
-- `mapDecodingError` line 121: transport
-- `networkError` line 132: transport
+- `client` line 65: transport
+- `authenticatedUserID` line 71: transport
+- `mapPostgrestError` line 79: transport
+- `mapDecodingError` line 102: transport
+- `networkError` line 113: transport

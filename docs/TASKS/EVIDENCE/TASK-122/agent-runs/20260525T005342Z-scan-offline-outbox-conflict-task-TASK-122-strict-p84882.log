@@ -1,0 +1,58 @@
+=== mc-agent scan offline-outbox-conflict --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Run device/account offline reconnect acceptance before any 100% production claim.",
+  "canonicalHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "checks": [
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T003527Z-ios-test-sync-task-TASK-122-p36155.json"
+      },
+      "id": "sync_tests_cover_outbox_conflict_units",
+      "reason": "Broad sync tests passed and cover outbox/conflict units.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T003519Z-ios-test-automatic-domain-task-TASK-122-p35631.json"
+      },
+      "id": "automatic_domain_tests_passed",
+      "reason": "Automatic domain tests passed.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "NEXT_ACTION": "Run simulator/device offline reconnect acceptance with TASK122_* data and authenticated Supabase session."
+      },
+      "id": "runtime_offline_device_acceptance",
+      "reason": "Device/account offline reconnect validation was not executed in this local acceptance run.",
+      "status": "BLOCKED_EXTERNAL"
+    }
+  ],
+  "completed_at": "2026-05-25T00:53:43+00:00",
+  "exitCode": 2,
+  "finishedAt": "2026-05-25T00:53:43+00:00",
+  "githubHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "localCanonicalOverride": true,
+  "localHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "nextAction": "Run device/account offline reconnect acceptance before any 100% production claim.",
+  "originHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "BLOCKED_EXTERNAL",
+  "safety_level": "read_only_static_scan",
+  "scan": "offline-outbox-conflict",
+  "scannerName": "offline-outbox-conflict",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.offline-outbox-conflict",
+  "startedAt": "2026-05-25T00:53:43+00:00",
+  "started_at": "2026-05-25T00:53:43+00:00",
+  "status": "BLOCKED_EXTERNAL",
+  "summary": "offline-outbox-conflict: BLOCKED_EXTERNAL (3 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

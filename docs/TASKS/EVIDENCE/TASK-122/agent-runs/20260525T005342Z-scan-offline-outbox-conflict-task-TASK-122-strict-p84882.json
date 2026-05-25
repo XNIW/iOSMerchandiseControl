@@ -1,0 +1,129 @@
+{
+  "NEXT_ACTION": "Resolve the listed external prerequisite and rerun offline-outbox-conflict.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T005342Z-scan-offline-outbox-conflict-task-TASK-122-strict-p84882.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T005342Z-scan-offline-outbox-conflict-task-TASK-122-strict-p84882.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T005342Z-scan-offline-outbox-conflict-task-TASK-122-strict-p84882.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-122-54"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan offline-outbox-conflict --task TASK-122 --strict",
+  "command_slug": "scan-offline-outbox-conflict-task-TASK-122-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 901,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-122",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK122_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-122"
+  },
+  "exit_code": 2,
+  "git_sha": "b33f0f79",
+  "next_action_recommended": "Resolve the listed external prerequisite and rerun offline-outbox-conflict.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Run device/account offline reconnect acceptance before any 100% production claim.",
+    "canonicalHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+    "checks": [
+      {
+        "evidence": {
+          "report": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T003527Z-ios-test-sync-task-TASK-122-p36155.json"
+        },
+        "id": "sync_tests_cover_outbox_conflict_units",
+        "reason": "Broad sync tests passed and cover outbox/conflict units.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "report": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T003519Z-ios-test-automatic-domain-task-TASK-122-p35631.json"
+        },
+        "id": "automatic_domain_tests_passed",
+        "reason": "Automatic domain tests passed.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "NEXT_ACTION": "Run simulator/device offline reconnect acceptance with TASK122_* data and authenticated Supabase session."
+        },
+        "id": "runtime_offline_device_acceptance",
+        "reason": "Device/account offline reconnect validation was not executed in this local acceptance run.",
+        "status": "BLOCKED_EXTERNAL"
+      }
+    ],
+    "completed_at": "2026-05-25T00:53:43+00:00",
+    "exitCode": 2,
+    "finishedAt": "2026-05-25T00:53:43+00:00",
+    "githubHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+    "localCanonicalOverride": true,
+    "localHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+    "nextAction": "Run device/account offline reconnect acceptance before any 100% production claim.",
+    "originHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+    "redactionSummary": {
+      "emails_redacted_by_wrapper": true,
+      "paths_redacted_by_wrapper": true,
+      "scanner_outputs_do_not_include_secret_values": true
+    },
+    "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "result_status": "BLOCKED_EXTERNAL",
+    "safety_level": "read_only_static_scan",
+    "scan": "offline-outbox-conflict",
+    "scannerName": "offline-outbox-conflict",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "scan.offline-outbox-conflict",
+    "startedAt": "2026-05-25T00:53:43+00:00",
+    "started_at": "2026-05-25T00:53:43+00:00",
+    "status": "BLOCKED_EXTERNAL",
+    "summary": "offline-outbox-conflict: BLOCKED_EXTERNAL (3 checks)",
+    "taskId": "TASK-122",
+    "task_id": "TASK-122"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "BLOCKED_EXTERNAL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T005342Z-scan-offline-outbox-conflict-task-TASK-122-strict-p84882",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "BLOCKED_EXTERNAL",
+  "task_id": "TASK-122",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-25T00:53:43Z",
+  "timestamp_start": "2026-05-25T00:53:42Z",
+  "warnings": []
+}

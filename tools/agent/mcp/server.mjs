@@ -86,6 +86,8 @@ const TOOLS = [
   { name: "mc_task122_scan_protocol_conformance_map", args: ["scan", "protocol-conformance-map", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
   { name: "mc_task122_scan_supabase_contract_map", args: ["scan", "supabase-contract-map", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict", "--read-only"], live: false, cleanup: false },
   { name: "mc_task122_scan_android_parity_ledger", args: ["scan", "android-parity-ledger", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_performance_baseline", args: ["scan", "performance-baseline", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task122_scan_offline_outbox_conflict", args: ["scan", "offline-outbox-conflict", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
   { name: "mc_task122_scan_xcode_membership", args: ["scan", "xcode-membership", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
   { name: "mc_task122_scan_dead_code", args: ["scan", "dead-code", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },
   { name: "mc_task122_scan_sync_efficiency_acceptance", args: ["scan", "sync-efficiency-acceptance", "--task"], taskArg: true, defaultTask: "TASK-122", suffixArgs: ["--strict"], live: false, cleanup: false },

@@ -1,0 +1,48 @@
+=== mc-agent scan sync-inventory --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Classify every Sync file before refactor.",
+  "canonicalHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "checks": [
+    {
+      "evidence": {
+        "file_count": 187
+      },
+      "id": "sync_inventory_written",
+      "reason": "Sync inventory Markdown/JSON/CSV written.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "no_uncategorized_sync_files",
+      "reason": "No Sync file remains Uncategorized.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T00:53:20+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T00:53:20+00:00",
+  "githubHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "localCanonicalOverride": true,
+  "localHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "nextAction": "Classify every Sync file before refactor.",
+  "originHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "sync-inventory",
+  "scannerName": "sync-inventory",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.sync-inventory",
+  "startedAt": "2026-05-25T00:53:20+00:00",
+  "started_at": "2026-05-25T00:53:20+00:00",
+  "status": "PASS",
+  "summary": "sync-inventory: PASS (2 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

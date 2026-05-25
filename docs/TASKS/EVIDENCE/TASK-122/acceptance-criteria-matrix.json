@@ -3,6 +3,20 @@
   "localCanonicalOverride": true,
   "status": "ACTIVE_REVIEW",
   "architectureEfficiency": "PASS",
+  "runtimeEfficiency": "PASS_WITH_NOTES",
+  "productionReadiness": "BLOCKED_EXTERNAL",
   "production100PercentClaim": "NOT_ELIGIBLE",
-  "summary": "Hard local architecture/build/test/scanner gates passed. Live/offline/cross-platform/performance acceptance and explicit user approval are still required for DONE or 100% claim."
+  "latestEvidence": {
+    "debugBuild": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T005428Z-ios-build-debug-task-TASK-122-p1984.json",
+    "releaseBuild": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T005439Z-ios-build-release-task-TASK-122-p2686.json",
+    "automaticArchitecture": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T005550Z-ios-test-automatic-architecture-task-TASK-122-p3472.json",
+    "automaticDomain": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T005611Z-ios-test-automatic-domain-task-TASK-122-p4138.json",
+    "broadSyncTests": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T005619Z-ios-test-sync-task-TASK-122-p4660.json",
+    "manualSyncRegression": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T005858Z-ios-test-manual-sync-regression-task-TASK-122-p5436.json",
+    "performanceBaseline": "docs/TASKS/EVIDENCE/TASK-122/performance-baseline-before-after.json",
+    "crossPlatformAcceptance": "docs/TASKS/EVIDENCE/TASK-122/cross-platform-acceptance.json",
+    "offlineOutboxConflictAcceptance": "docs/TASKS/EVIDENCE/TASK-122/offline-outbox-conflict-acceptance.json",
+    "finalJsonValidation": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T010246Z-report-validate-json-task-TASK-122-path-docs-TASKS-EVIDENCE-TASK-122-agent-runs-p26942.json"
+  },
+  "summary": "Hard local architecture/build/test/scanner gates passed. Runtime efficiency is PASS_WITH_NOTES because no comparable before baseline exists. Production readiness remains BLOCKED_EXTERNAL for live/device/offline/cross-platform acceptance. Explicit user approval is still required for DONE or any 100% claim."
 }

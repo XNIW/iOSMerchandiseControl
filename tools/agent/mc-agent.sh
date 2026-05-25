@@ -81,7 +81,7 @@ main() {
             handler=(mc_cmd_scan_task121_static "${args[1]}" "${args[@]:2}")
           fi
           ;;
-        swift-source-shape|remote-transport-thin|adapter-delegation-depth|domain-method-ownership|manual-debug-boundary|transport-protocol-conformance|composition-import-boundary|remote-query-ownership|debug-seed-boundary|dto-mapper-duplication|supabase-query-map|transport-callsite-map|protocol-conformance-map|supabase-contract-map|android-parity-ledger|sync-efficiency-acceptance)
+        swift-source-shape|remote-transport-thin|adapter-delegation-depth|domain-method-ownership|manual-debug-boundary|transport-protocol-conformance|composition-import-boundary|remote-query-ownership|debug-seed-boundary|dto-mapper-duplication|supabase-query-map|transport-callsite-map|protocol-conformance-map|supabase-contract-map|android-parity-ledger|performance-baseline|offline-outbox-conflict|sync-efficiency-acceptance)
           handler=(mc_cmd_scan_task122_static "${args[1]}" "${args[@]:2}")
           ;;
         task-docs|harness-routing|harness-health|source-format|duplicate-symbols|automatic-legacy-monolith|mainactor-boundary|swiftdata-context-boundary|manual-root-residue|master-plan-consistency|mcp-wrapper|scanner-self-tests|status-taxonomy|evidence-metadata)

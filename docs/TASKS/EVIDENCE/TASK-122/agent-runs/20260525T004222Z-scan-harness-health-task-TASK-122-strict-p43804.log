@@ -1,0 +1,70 @@
+=== mc-agent scan harness-health --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Fix harness syntax/module health before execution.",
+  "canonicalHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "checks": [
+    {
+      "file": "tools/agent/mc-agent.sh",
+      "id": "exists:tools/agent/mc-agent.sh",
+      "reason": "Harness file exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/lib/common.sh",
+      "id": "exists:tools/agent/lib/common.sh",
+      "reason": "Harness file exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/lib/task122_scans.py",
+      "id": "exists:tools/agent/lib/task122_scans.py",
+      "reason": "Harness file exists.",
+      "status": "PASS"
+    },
+    {
+      "file": "tools/agent/mcp/server.mjs",
+      "id": "exists:tools/agent/mcp/server.mjs",
+      "reason": "Harness file exists.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "id": "mc_agent_shell_syntax",
+      "reason": "mc-agent.sh shell syntax is valid.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "",
+      "id": "task122_python_syntax",
+      "reason": "task122_scans.py compiles.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T00:42:23+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T00:42:23+00:00",
+  "githubHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "localCanonicalOverride": true,
+  "localHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "nextAction": "Fix harness syntax/module health before execution.",
+  "originHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "harness-health",
+  "scannerName": "harness-health",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.harness-health",
+  "startedAt": "2026-05-25T00:42:23+00:00",
+  "started_at": "2026-05-25T00:42:23+00:00",
+  "status": "PASS",
+  "summary": "harness-health: PASS (6 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

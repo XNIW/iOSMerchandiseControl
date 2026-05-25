@@ -1,0 +1,21 @@
+{
+  "before": {
+    "reason": "No comparable pre-TASK-122 runtime baseline was captured by the harness before the local refactor.",
+    "status": "NOT_RUN"
+  },
+  "claim": "Current runtime invariants are measured/static-verified, but no before/after improvement claim is authorized without a comparable historical baseline.",
+  "current": {
+    "automaticMainActorHeavyWorkHits": 1,
+    "automaticTaskSleepHits": 2,
+    "automaticUnboundedTaskSleepLoop": false,
+    "latestSyncTestDurationMs": 158738,
+    "latestSyncTestReport": "docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T005619Z-ios-test-sync-task-TASK-122-p4660.json",
+    "manualContaminatesAutomatic": false,
+    "manualDryRunServiceBytes": 756337,
+    "productPriceChunkingOrRangePaging": true,
+    "productPriceKeysetPaging": true,
+    "productPricePageLimitClampedTo1000": true
+  },
+  "status": "PASS_WITH_NOTES",
+  "taskId": "TASK-122"
+}

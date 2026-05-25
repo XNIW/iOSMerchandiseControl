@@ -1,0 +1,40 @@
+=== mc-agent scan composition-import-boundary --task TASK-122 --strict ===
+{
+  "NEXT_ACTION": "Route concrete transport through Composition/adapter construction only.",
+  "canonicalHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "concrete_transport_only_remote_or_composition",
+      "reason": "Concrete SupabaseTransportClient is only used in Remote/Composition.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-25T00:33:04+00:00",
+  "exitCode": 0,
+  "finishedAt": "2026-05-25T00:33:04+00:00",
+  "githubHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "localCanonicalOverride": true,
+  "localHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "nextAction": "Route concrete transport through Composition/adapter construction only.",
+  "originHead": "b33f0f791a26fa78c16a31cff19fe6a285977492",
+  "redactionSummary": {
+    "emails_redacted_by_wrapper": true,
+    "paths_redacted_by_wrapper": true,
+    "scanner_outputs_do_not_include_secret_values": true
+  },
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "composition-import-boundary",
+  "scannerName": "composition-import-boundary",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.composition-import-boundary",
+  "startedAt": "2026-05-25T00:33:04+00:00",
+  "started_at": "2026-05-25T00:33:04+00:00",
+  "status": "PASS",
+  "summary": "composition-import-boundary: PASS (1 checks)",
+  "taskId": "TASK-122",
+  "task_id": "TASK-122"
+}

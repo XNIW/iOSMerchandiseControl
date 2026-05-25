@@ -1,0 +1,31 @@
+=== mc-agent scan performance-baseline --task TASK-122 --strict ===
+
+Traceback (most recent call last):
+  File "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/tools/agent/lib/task122_scans.py", line 1048, in <module>
+    raise SystemExit(main(sys.argv))
+  File "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/tools/agent/lib/task122_scans.py", line 1042, in main
+    payload = SCANS[argv[1]]()
+  File "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/tools/agent/lib/task122_scans.py", line 806, in scan_performance_baseline
+    mainactor_heavy_hits = re.findall(r"@MainActor[\s\S]{0,800}(?:\\.from\\(|Task\\.sleep|while true)", automatic)
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/re.py", line 241, in findall
+    return _compile(pattern, flags).findall(string)
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/re.py", line 304, in _compile
+    p = sre_compile.compile(pattern, flags)
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/sre_compile.py", line 764, in compile
+    p = sre_parse.parse(p, flags)
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/sre_parse.py", line 948, in parse
+    p = _parse_sub(source, state, flags & SRE_FLAG_VERBOSE, 0)
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/sre_parse.py", line 443, in _parse_sub
+    itemsappend(_parse(source, state, verbose, nested + 1,
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/sre_parse.py", line 836, in _parse
+    raise source.error("missing ), unterminated subpattern",
+re.error: missing ), unterminated subpattern at position 23
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)

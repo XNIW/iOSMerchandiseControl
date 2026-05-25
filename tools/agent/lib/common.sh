@@ -558,6 +558,8 @@ mc_help_json() {
     {"name":"scan supabase-contract-map task122","argv":["scan","supabase-contract-map","--task","TASK-122","--strict","--read-only"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan supabase-contract-map task122 strict","argv":["scan","supabase-contract-map","--task","TASK-122","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan android-parity-ledger task122","argv":["scan","android-parity-ledger","--task","TASK-122","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan performance-baseline task122","argv":["scan","performance-baseline","--task","TASK-122","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan offline-outbox-conflict task122","argv":["scan","offline-outbox-conflict","--task","TASK-122","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan xcode-membership task122","argv":["scan","xcode-membership","--task","TASK-122","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan dead-code task122","argv":["scan","dead-code","--task","TASK-122","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan sensitive task122","argv":["scan","sensitive","--task","TASK-122","--strict"],"platform":"general","safety_level":"safe-readonly"},
