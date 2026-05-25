@@ -1,0 +1,204 @@
+{
+  "NEXT_ACTION": "Run no-op, burst-10 and cleanup/residue.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T061317Z-live-task123-cold-restart-task-TASK-123-prefix-TASK123_COLD_-p94657.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T061317Z-live-task123-cold-restart-task-TASK-123-prefix-TASK123_COLD_-p94657.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T061317Z-live-task123-cold-restart-task-TASK-123-prefix-TASK123_COLD_-p94657.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T061317Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-114-06",
+    "T-06"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live task123-cold-restart --task TASK-123 --prefix TASK123_COLD_",
+  "command_slug": "live-task123-cold-restart-task-TASK-123-prefix-TASK123_COLD_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "emulator",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": "<REDACTED>"
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 307372,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-123",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<REDACTED>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK123_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-123"
+  },
+  "exit_code": 0,
+  "git_sha": "cd31c09e",
+  "next_action_recommended": "Run no-op, burst-10 and cleanup/residue.",
+  "platform": "ios",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "acceptance": {
+      "maxMs": 15000,
+      "p95Ms": 5000
+    },
+    "completedAt": "2026-05-25T06:18:23Z",
+    "iterations": [
+      {
+        "direction": "androidToIosAfterIosRestart",
+        "iteration": 1,
+        "kind": "catalog_product_create",
+        "polls": 1,
+        "prefix": "TASK123_COLD_COLD_20260525T061317Z_ANDROID_TO_IOS_1_",
+        "remotePushMs": 3853,
+        "status": "PASS",
+        "totalPropagationMs": 402
+      },
+      {
+        "direction": "iosToAndroidAfterAndroidRestart",
+        "iteration": 1,
+        "kind": "catalog_product_create",
+        "polls": 1,
+        "prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_1_",
+        "remotePushMs": 979,
+        "status": "PASS",
+        "totalPropagationMs": 905
+      },
+      {
+        "direction": "androidToIosAfterIosRestart",
+        "iteration": 2,
+        "kind": "catalog_product_create",
+        "polls": 1,
+        "prefix": "TASK123_COLD_COLD_20260525T061317Z_ANDROID_TO_IOS_2_",
+        "remotePushMs": 3526,
+        "status": "PASS",
+        "totalPropagationMs": 398
+      },
+      {
+        "direction": "iosToAndroidAfterAndroidRestart",
+        "iteration": 2,
+        "kind": "catalog_product_create",
+        "polls": 1,
+        "prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_2_",
+        "remotePushMs": 1072,
+        "status": "PASS",
+        "totalPropagationMs": 927
+      },
+      {
+        "direction": "androidToIosAfterIosRestart",
+        "iteration": 3,
+        "kind": "catalog_product_create",
+        "polls": 1,
+        "prefix": "TASK123_COLD_COLD_20260525T061317Z_ANDROID_TO_IOS_3_",
+        "remotePushMs": 3831,
+        "status": "PASS",
+        "totalPropagationMs": 409
+      },
+      {
+        "direction": "iosToAndroidAfterAndroidRestart",
+        "iteration": 3,
+        "kind": "catalog_product_create",
+        "polls": 1,
+        "prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_3_",
+        "remotePushMs": 953,
+        "status": "PASS",
+        "totalPropagationMs": 938
+      },
+      {
+        "direction": "androidToIosAfterIosRestart",
+        "iteration": 4,
+        "kind": "catalog_product_create",
+        "polls": 1,
+        "prefix": "TASK123_COLD_COLD_20260525T061317Z_ANDROID_TO_IOS_4_",
+        "remotePushMs": 3955,
+        "status": "PASS",
+        "totalPropagationMs": 402
+      },
+      {
+        "direction": "iosToAndroidAfterAndroidRestart",
+        "iteration": 4,
+        "kind": "catalog_product_create",
+        "polls": 1,
+        "prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_4_",
+        "remotePushMs": 911,
+        "status": "PASS",
+        "totalPropagationMs": 959
+      },
+      {
+        "direction": "androidToIosAfterIosRestart",
+        "iteration": 5,
+        "kind": "catalog_product_create",
+        "polls": 1,
+        "prefix": "TASK123_COLD_COLD_20260525T061317Z_ANDROID_TO_IOS_5_",
+        "remotePushMs": 4126,
+        "status": "PASS",
+        "totalPropagationMs": 407
+      },
+      {
+        "direction": "iosToAndroidAfterAndroidRestart",
+        "iteration": 5,
+        "kind": "catalog_product_create",
+        "polls": 1,
+        "prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_5_",
+        "remotePushMs": 1066,
+        "status": "PASS",
+        "totalPropagationMs": 905
+      }
+    ],
+    "prefix": "TASK123_COLD_COLD_20260525T061317Z_",
+    "schemaVersion": "1.1",
+    "source": "live.task123-cold-restart",
+    "startedAt": "2026-05-25T06:13:17Z",
+    "status": "PASS",
+    "summary": {
+      "androidRestart": {
+        "count": 5,
+        "maxMs": 959,
+        "p50Ms": 927,
+        "p95Ms": 959,
+        "passCount": 5
+      },
+      "iosRestart": {
+        "count": 5,
+        "maxMs": 409,
+        "p50Ms": 402,
+        "p95Ms": 409,
+        "passCount": 5
+      }
+    },
+    "taskId": "TASK-123"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T061317Z-live-task123-cold-restart-task-TASK-123-prefix-TASK123_COLD_-p94657",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-123",
+  "test_prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_5_",
+  "timestamp_end": "2026-05-25T06:18:25Z",
+  "timestamp_start": "2026-05-25T06:13:17Z",
+  "warnings": []
+}

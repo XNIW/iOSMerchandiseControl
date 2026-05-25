@@ -1,0 +1,149 @@
+{
+  "NEXT_ACTION": "Run burst-10 and cleanup/residue.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T061948Z-live-task123-noop-task-TASK-123-prefix-TASK123_NOOP_-p8636.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T061948Z-live-task123-noop-task-TASK-123-prefix-TASK123_NOOP_-p8636.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T061948Z-live-task123-noop-task-TASK-123-prefix-TASK123_NOOP_-p8636.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-auth-preflight-20260525T061948Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "PR-01",
+    "PR-03",
+    "PR-04",
+    "PR-08"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live task123-noop --task TASK-123 --prefix TASK123_NOOP_",
+  "command_slug": "live-task123-noop-task-TASK-123-prefix-TASK123_NOOP_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "emulator",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": "<REDACTED>"
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 90036,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-123",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<REDACTED>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK123_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-123"
+  },
+  "exit_code": 0,
+  "git_sha": "cd31c09e",
+  "next_action_recommended": "Run burst-10 and cleanup/residue.",
+  "platform": "ios",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "acceptance": {
+      "maxMeasurableMs": 2000
+    },
+    "completedAt": "2026-05-25T06:21:18Z",
+    "iterations": [
+      {
+        "countsUnchanged": true,
+        "direction": "androidNoop",
+        "elapsedMs": 1993,
+        "iteration": 1,
+        "status": "PASS",
+        "syncEventsCreated": 0
+      },
+      {
+        "countsUnchanged": true,
+        "direction": "iosNoop",
+        "elapsedMs": 1659,
+        "iteration": 1,
+        "status": "PASS",
+        "syncEventsCreated": 0
+      },
+      {
+        "countsUnchanged": true,
+        "direction": "androidNoop",
+        "elapsedMs": 1859,
+        "iteration": 2,
+        "status": "PASS",
+        "syncEventsCreated": 0
+      },
+      {
+        "countsUnchanged": true,
+        "direction": "iosNoop",
+        "elapsedMs": 1655,
+        "iteration": 2,
+        "status": "PASS",
+        "syncEventsCreated": 0
+      },
+      {
+        "countsUnchanged": true,
+        "direction": "androidNoop",
+        "elapsedMs": 1900,
+        "iteration": 3,
+        "status": "PASS",
+        "syncEventsCreated": 0
+      },
+      {
+        "countsUnchanged": true,
+        "direction": "iosNoop",
+        "elapsedMs": 1667,
+        "iteration": 3,
+        "status": "PASS",
+        "syncEventsCreated": 0
+      }
+    ],
+    "prefix": "TASK123_NOOP_NOOP_20260525T061948Z_",
+    "schemaVersion": "1.1",
+    "source": "live.task123-noop-matrix",
+    "startedAt": "2026-05-25T06:19:48Z",
+    "status": "PASS",
+    "summary": {
+      "androidNoop": {
+        "count": 3,
+        "maxMs": 1993,
+        "passCount": 3
+      },
+      "iosNoop": {
+        "count": 3,
+        "maxMs": 1667,
+        "passCount": 3
+      }
+    },
+    "taskId": "TASK-123"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260525T061948Z-live-task123-noop-task-TASK-123-prefix-TASK123_NOOP_-p8636",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-123",
+  "test_prefix": "TASK123_NOOP_NOOP_20260525T061948Z_",
+  "timestamp_end": "2026-05-25T06:21:18Z",
+  "timestamp_start": "2026-05-25T06:19:48Z",
+  "warnings": []
+}

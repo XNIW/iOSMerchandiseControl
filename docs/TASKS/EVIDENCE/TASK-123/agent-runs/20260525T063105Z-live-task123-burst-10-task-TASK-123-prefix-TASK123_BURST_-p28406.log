@@ -1,0 +1,1434 @@
+=== mc-agent live task123-burst-10 --task TASK-123 --prefix TASK123_BURST_ ===
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103AuthPreflightTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103AuthPreflightTest:
+INSTRUMENTATION_STATUS: test=authSessionOwnerHashWhenEnabled
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103AuthPreflightTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=authSessionOwnerHashWhenEnabled
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 0.025
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-auth-preflight-20260525T063105Z-DerivedData/Build/Products/task114-ios-auth-preflight.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-auth-preflight-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testTask103IOSAuthPreflightWhenEnabled"
+
+2026-05-25 02:31:35.347 xcodebuild[29811:22485726] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-auth-preflight-20260525T063105Z.xcresult
+
+2026-05-25 02:31:35.352 xcodebuild[29811:22485726] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:31:35.541 xcodebuild[29811:22485726] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:31:37.678.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:31:37.678.
+Test Suite 'SupabaseConfigSecurityTests' started at 2026-05-25 02:31:37.678.
+Test Case '-[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled]' started.
+objc[29814]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10c304310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10bbd0398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK112_IOS_AUTH_PREFLIGHT project_hash=42a5d0119a30 owner_hash=ad3d747e936c provider=google signed_in=true
+Test Case '-[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled]' passed (2.044 seconds).
+Test Suite 'SupabaseConfigSecurityTests' passed at 2026-05-25 02:31:39.723.
+	 Executed 1 test, with 0 failures (0 unexpected) in 2.044 (2.045) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:31:39.723.
+	 Executed 1 test, with 0 failures (0 unexpected) in 2.044 (2.045) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:31:39.723.
+	 Executed 1 test, with 0 failures (0 unexpected) in 2.044 (2.046) seconds
+2026-05-25 02:31:40.007 xcodebuild[29811:22485726] [MT] IDETestOperationsObserverDebug: 4.464 elapsed -- Testing started completed.
+2026-05-25 02:31:40.007 xcodebuild[29811:22485726] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:31:40.007 xcodebuild[29811:22485726] [MT] IDETestOperationsObserverDebug: 4.464 sec, +4.464 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-auth-preflight-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 4}, "remote": null}, "completedAt": "2026-05-25T06:31:45Z", "counts": {"categories": {"active": 152, "all": 152, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}, "history_entries": {"active": 81, "all": 88, "deleted": 7, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 81}, "product_prices": {"active": 15652, "all": 15666, "deleted": 14, "dirty": 2, "localOnly": 0, "pending": 2, "userVisible": null}, "products": {"active": 20005, "all": 20012, "deleted": 7, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 184, "all": 184, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}}, "deleted": 7, "drift": {}, "inserted": 0, "lastFullReconciliation": null, "lastPull": null, "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 4, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": null, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"decodeError": "redacted", "decoded": false, "present": true}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.catalogPush.lastChanged": 0, "automatic.lastCompletedAt": 1779690660.832965, "automatic.lastError": "contract(iOSMerchandiseControl.SyncEventRecordFailure(code: Optional(\"entity_ids_key\"), message: \"entity_ids contains an unsupported key.\"))", "automatic.lastOutcome": "completed", "automatic.productPricePush.lastInserted": 0, "foreground.forceIncremental": true, "foreground.outcome": "scheduled_drain_events_via_sync_runtime", "foreground.requestedAt": 1779690660.1895452, "foreground.source": "remoteSyncEvent", "incremental.attemptWindow.count": 2, "incremental.attemptWindow.startAt": 1779690629.6745648, "incremental.lastApplied": 0, "incremental.lastAttemptAt": 1779690660.206974, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastEventsFetched": 0, "incremental.lastEventsProcessed": 0, "incremental.lastPage.totalElapsedMs": 622, "incremental.lastSource": "remoteSyncEvent", "incremental.lastSyncType": "LIGHT_RECONCILE", "incremental.lastTotalElapsedMs": 622, "incremental.requiresFullRecovery": true, "orchestrator.lastAction": "drainEvents", "orchestrator.lastDecisionAt": 1779690660.206497, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779690660.8332, "orchestrator.lastRunDidWork": true, "orchestrator.lastRunErrorCode": "contract(iOSMerchandiseControl.SyncEventRecordFailure(code: Optional(\"entity_ids_key\"), message: \"entity_ids contains an unsupported key.\"))", "orchestrator.lastRunStatus": "success", "orchestrator.lastTrigger": "remoteSyncEvent", "orchestrator.safetyLoopLastTickAt": 1779690660.1838322, "orchestrator.safetyLoopTickCount": 3059, "reconcile.local.categories": 152, "reconcile.local.historySessions": 81, "reconcile.local.productPrices": 15652, "reconcile.local.products": 20005, "reconcile.local.suppliers": 184, "reconcile.mismatches": "products,suppliers,categories,productPrices,historySessions", "reconcile.remote.categories": 115, "reconcile.remote.historySessions": 49, "reconcile.remote.productPrices": 41265, "reconcile.remote.products": 19783, "reconcile.remote.suppliers": 146, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779690505.188863, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779690660.18624, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779690551.685605, "watcher.state": "started", "watcher.updateAt": 1779690660.189228}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 1923}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": null, "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 1}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 81, "all": 88, "tombstone": 7}], "iosMissingSupplierCategory": ["dc937b59892604f5", "dc937b59892604f5", "dc937b59892604f5", "dc937b59892604f5"], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-ui-counts", "startedAt": "2026-05-25T06:31:45Z", "status": "PASS", "taskId": "TASK-123", "updated": 0}
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/task114-test123IOSSingleCatalogCreatePropagation.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation"
+
+2026-05-25 02:32:13.982 xcodebuild[31289:22492621] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+2026-05-25 02:32:14.088 xcodebuild[31289:22492621] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:32:14.281 xcodebuild[31289:22492621] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:32:14.591 xcodebuild[31289:22492621] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:32:16.451.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:32:16.451.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-25 02:32:16.451.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' started.
+2026-05-25 02:32:16.558958-0400 iOSMerchandiseControl[31294:22492996] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x1051b6c00:socket
+2026-05-25 02:32:16.559273-0400 iOSMerchandiseControl[31294:22492996] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-25 02:32:16.559353-0400 iOSMerchandiseControl[31294:22492996] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[31294]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x106300310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x109af4398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK123_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=980 syncEventAvailableMs=980 totalSourceMs=1230 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.234 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-25 02:32:17.686.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.234 (1.235) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:32:17.686.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.234 (1.235) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:32:17.687.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.234 (1.236) seconds
+2026-05-25 02:32:17.981 xcodebuild[31289:22492621] [MT] IDETestOperationsObserverDebug: 3.685 elapsed -- Testing started completed.
+2026-05-25 02:32:17.981 xcodebuild[31289:22492621] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:32:17.981 xcodebuild[31289:22492621] [MT] IDETestOperationsObserverDebug: 3.685 sec, +3.685 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/task114-test123IOSSingleCatalogCreatePropagation.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation"
+
+2026-05-25 02:32:45.128 xcodebuild[32327:22498236] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+2026-05-25 02:32:45.197 xcodebuild[32327:22498236] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:32:45.392 xcodebuild[32327:22498236] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:32:45.712 xcodebuild[32327:22498236] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:32:47.543.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:32:47.543.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-25 02:32:47.543.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' started.
+2026-05-25 02:32:47.655683-0400 iOSMerchandiseControl[32329:22498608] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x10784fe00:socket
+2026-05-25 02:32:47.655982-0400 iOSMerchandiseControl[32329:22498608] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-25 02:32:47.656073-0400 iOSMerchandiseControl[32329:22498608] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[32329]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x104150310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x1080b0398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK123_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=1072 syncEventAvailableMs=1072 totalSourceMs=1332 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.336 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-25 02:32:48.879.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.336 (1.336) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:32:48.880.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.336 (1.337) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:32:48.880.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.336 (1.337) seconds
+2026-05-25 02:32:49.160 xcodebuild[32327:22498236] [MT] IDETestOperationsObserverDebug: 3.752 elapsed -- Testing started completed.
+2026-05-25 02:32:49.160 xcodebuild[32327:22498236] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:32:49.161 xcodebuild[32327:22498236] [MT] IDETestOperationsObserverDebug: 3.752 sec, +3.752 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/task114-test123IOSSingleCatalogCreatePropagation.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation"
+
+2026-05-25 02:33:16.762 xcodebuild[33351:22503849] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+2026-05-25 02:33:16.830 xcodebuild[33351:22503849] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:33:17.023 xcodebuild[33351:22503849] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:33:17.337 xcodebuild[33351:22503849] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:33:19.127.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:33:19.127.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-25 02:33:19.127.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' started.
+2026-05-25 02:33:19.239957-0400 iOSMerchandiseControl[33353:22504228] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x104db6c00:socket
+2026-05-25 02:33:19.240257-0400 iOSMerchandiseControl[33353:22504228] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-25 02:33:19.240346-0400 iOSMerchandiseControl[33353:22504228] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[33353]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x105d30310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10a044398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK123_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=900 syncEventAvailableMs=900 totalSourceMs=1150 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.155 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-25 02:33:20.283.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.155 (1.156) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:33:20.284.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.155 (1.157) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:33:20.284.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.155 (1.157) seconds
+2026-05-25 02:33:20.571 xcodebuild[33351:22503849] [MT] IDETestOperationsObserverDebug: 3.533 elapsed -- Testing started completed.
+2026-05-25 02:33:20.571 xcodebuild[33351:22503849] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:33:20.571 xcodebuild[33351:22503849] [MT] IDETestOperationsObserverDebug: 3.533 sec, +3.533 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/task114-test123IOSSingleCatalogCreatePropagation.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation"
+
+2026-05-25 02:33:47.736 xcodebuild[34392:22509469] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+2026-05-25 02:33:47.807 xcodebuild[34392:22509469] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:33:47.999 xcodebuild[34392:22509469] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:33:48.313 xcodebuild[34392:22509469] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:33:50.109.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:33:50.110.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-25 02:33:50.110.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' started.
+2026-05-25 02:33:50.235528-0400 iOSMerchandiseControl[34394:22509825] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x1079b4a00:socket
+2026-05-25 02:33:50.235856-0400 iOSMerchandiseControl[34394:22509825] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-25 02:33:50.235978-0400 iOSMerchandiseControl[34394:22509825] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[34394]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10c5b4310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x1109dc398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK123_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=886 syncEventAvailableMs=886 totalSourceMs=1131 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.135 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-25 02:33:51.245.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.135 (1.136) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:33:51.246.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.135 (1.136) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:33:51.246.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.135 (1.137) seconds
+2026-05-25 02:33:51.537 xcodebuild[34392:22509469] [MT] IDETestOperationsObserverDebug: 3.524 elapsed -- Testing started completed.
+2026-05-25 02:33:51.537 xcodebuild[34392:22509469] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:33:51.537 xcodebuild[34392:22509469] [MT] IDETestOperationsObserverDebug: 3.524 sec, +3.524 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/task114-test123IOSSingleCatalogCreatePropagation.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation"
+
+2026-05-25 02:34:18.728 xcodebuild[35432:22515157] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+2026-05-25 02:34:18.735 xcodebuild[35432:22515157] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:34:18.926 xcodebuild[35432:22515157] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:34:19.246 xcodebuild[35432:22515157] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:34:21.066.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:34:21.066.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-25 02:34:21.067.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' started.
+2026-05-25 02:34:21.191306-0400 iOSMerchandiseControl[35434:22515500] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x10b849c00:socket
+2026-05-25 02:34:21.191621-0400 iOSMerchandiseControl[35434:22515500] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-25 02:34:21.191715-0400 iOSMerchandiseControl[35434:22515500] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[35434]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x107dd8310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10b7d8398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK123_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=1035 syncEventAvailableMs=1035 totalSourceMs=1335 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.341 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-25 02:34:22.409.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.341 (1.343) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:34:22.410.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.341 (1.343) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:34:22.410.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.341 (1.344) seconds
+2026-05-25 02:34:22.712 xcodebuild[35432:22515157] [MT] IDETestOperationsObserverDebug: 3.762 elapsed -- Testing started completed.
+2026-05-25 02:34:22.712 xcodebuild[35432:22515157] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:34:22.712 xcodebuild[35432:22515157] [MT] IDETestOperationsObserverDebug: 3.762 sec, +3.762 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/task114-test123IOSSingleCatalogCreatePropagation.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation"
+
+2026-05-25 02:34:50.125 xcodebuild[36470:22520727] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+2026-05-25 02:34:50.131 xcodebuild[36470:22520727] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:34:50.325 xcodebuild[36470:22520727] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:34:52.452.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:34:52.452.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-25 02:34:52.452.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' started.
+2026-05-25 02:34:52.573870-0400 iOSMerchandiseControl[36473:22521111] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x1035b6a00:socket
+2026-05-25 02:34:52.574183-0400 iOSMerchandiseControl[36473:22521111] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-25 02:34:52.574278-0400 iOSMerchandiseControl[36473:22521111] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[36473]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x104638310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x107f24398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK123_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=950 syncEventAvailableMs=950 totalSourceMs=1238 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.243 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-25 02:34:53.696.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.243 (1.244) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:34:53.697.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.243 (1.245) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:34:53.697.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.243 (1.245) seconds
+2026-05-25 02:34:53.998 xcodebuild[36470:22520727] [MT] IDETestOperationsObserverDebug: 3.670 elapsed -- Testing started completed.
+2026-05-25 02:34:53.998 xcodebuild[36470:22520727] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:34:53.998 xcodebuild[36470:22520727] [MT] IDETestOperationsObserverDebug: 3.670 sec, +3.670 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/task114-test123IOSSingleCatalogCreatePropagation.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation"
+
+2026-05-25 02:35:22.934 xcodebuild[37511:22526313] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+2026-05-25 02:35:23.006 xcodebuild[37511:22526313] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:35:23.198 xcodebuild[37511:22526313] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:35:23.509 xcodebuild[37511:22526313] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:35:25.276.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:35:25.277.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-25 02:35:25.277.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' started.
+2026-05-25 02:35:25.445592-0400 iOSMerchandiseControl[37513:22526663] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x103c4b200:socket
+2026-05-25 02:35:25.452550-0400 iOSMerchandiseControl[37513:22526663] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-25 02:35:25.452672-0400 iOSMerchandiseControl[37513:22526663] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[37513]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x104300310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x108410398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK123_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=967 syncEventAvailableMs=967 totalSourceMs=1210 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.214 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-25 02:35:26.491.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.214 (1.215) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:35:26.492.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.214 (1.215) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:35:26.492.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.214 (1.216) seconds
+2026-05-25 02:35:26.780 xcodebuild[37511:22526313] [MT] IDETestOperationsObserverDebug: 3.568 elapsed -- Testing started completed.
+2026-05-25 02:35:26.780 xcodebuild[37511:22526313] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:35:26.780 xcodebuild[37511:22526313] [MT] IDETestOperationsObserverDebug: 3.568 sec, +3.568 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/task114-test123IOSSingleCatalogCreatePropagation.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation"
+
+2026-05-25 02:35:54.043 xcodebuild[38564:22532179] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+2026-05-25 02:35:54.113 xcodebuild[38564:22532179] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:35:54.306 xcodebuild[38564:22532179] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:35:54.618 xcodebuild[38564:22532179] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:35:56.414.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:35:56.414.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-25 02:35:56.414.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' started.
+2026-05-25 02:35:56.546040-0400 iOSMerchandiseControl[38567:22532570] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x1035b6a00:socket
+2026-05-25 02:35:56.553347-0400 iOSMerchandiseControl[38567:22532570] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-25 02:35:56.553484-0400 iOSMerchandiseControl[38567:22532570] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[38567]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10882c310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x108adc398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK123_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=896 syncEventAvailableMs=896 totalSourceMs=1146 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.151 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-25 02:35:57.567.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.151 (1.152) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:35:57.567.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.151 (1.153) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:35:57.568.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.151 (1.153) seconds
+2026-05-25 02:35:57.859 xcodebuild[38564:22532179] [MT] IDETestOperationsObserverDebug: 3.539 elapsed -- Testing started completed.
+2026-05-25 02:35:57.859 xcodebuild[38564:22532179] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:35:57.859 xcodebuild[38564:22532179] [MT] IDETestOperationsObserverDebug: 3.539 sec, +3.539 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/task114-test123IOSSingleCatalogCreatePropagation.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation"
+
+2026-05-25 02:36:24.993 xcodebuild[39593:22537999] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+2026-05-25 02:36:25.060 xcodebuild[39593:22537999] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:36:25.256 xcodebuild[39593:22537999] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:36:25.574 xcodebuild[39593:22537999] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:36:27.322.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:36:27.323.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-25 02:36:27.323.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' started.
+2026-05-25 02:36:27.436749-0400 iOSMerchandiseControl[39597:22538363] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x10b833c00:socket
+2026-05-25 02:36:27.437088-0400 iOSMerchandiseControl[39597:22538363] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-25 02:36:27.437178-0400 iOSMerchandiseControl[39597:22538363] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[39597]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x107eac310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10b3ec398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK123_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=15 localOutboxEnqueueMs=15 sourceAutoPushStartDelayMs=0 remotePushMs=938 syncEventAvailableMs=938 totalSourceMs=1180 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.184 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-25 02:36:28.508.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.184 (1.185) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:36:28.509.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.184 (1.186) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:36:28.509.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.184 (1.187) seconds
+2026-05-25 02:36:28.804 xcodebuild[39593:22537999] [MT] IDETestOperationsObserverDebug: 3.533 elapsed -- Testing started completed.
+2026-05-25 02:36:28.804 xcodebuild[39593:22537999] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:36:28.804 xcodebuild[39593:22537999] [MT] IDETestOperationsObserverDebug: 3.533 sec, +3.533 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z-DerivedData/Build/Products/task114-test123IOSSingleCatalogCreatePropagation.xctestrun -destination "platform=iOS Simulator,id=AC6FBFC3-A97F-412C-BEC0-F88B9956107B" -resultBundlePath /tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test123IOSSingleCatalogCreatePropagation"
+
+2026-05-25 02:36:55.980 xcodebuild[40623:22543645] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+2026-05-25 02:36:56.057 xcodebuild[40623:22543645] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:36:56.252 xcodebuild[40623:22543645] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-25 02:36:56.574 xcodebuild[40623:22543645] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-25 02:36:58.360.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-25 02:36:58.361.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-05-25 02:36:58.361.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' started.
+2026-05-25 02:36:58.514422-0400 iOSMerchandiseControl[40636:22544003] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x10c443c00:socket
+2026-05-25 02:36:58.522104-0400 iOSMerchandiseControl[40636:22544003] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-05-25 02:36:58.522247-0400 iOSMerchandiseControl[40636:22544003] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[40636]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x108a7c310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10cc10398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK123_IOS_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=14 localOutboxEnqueueMs=14 sourceAutoPushStartDelayMs=0 remotePushMs=959 syncEventAvailableMs=959 totalSourceMs=1249 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test123IOSSingleCatalogCreatePropagation]' passed (1.255 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-05-25 02:36:59.618.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.255 (1.257) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-25 02:36:59.618.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.255 (1.258) seconds
+Test Suite 'Selected tests' passed at 2026-05-25 02:36:59.619.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.255 (1.258) seconds
+2026-05-25 02:36:59.917 xcodebuild[40623:22543645] [MT] IDETestOperationsObserverDebug: 3.650 elapsed -- Testing started completed.
+2026-05-25 02:36:59.917 xcodebuild[40623:22543645] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-25 02:36:59.917 xcodebuild[40623:22543645] [MT] IDETestOperationsObserverDebug: 3.650 sec, +3.650 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260525T063105Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+TASK114_REALTIME_WAIT source=android label=task123_burst_ios_to_android elapsedMs=951 polls=1 products=87->97 productPrices=174->174 historyUserVisible=49->49
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 4}, "remote": null}, "completedAt": "2026-05-25T06:37:09Z", "counts": {"categories": {"active": 152, "all": 152, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}, "history_entries": {"active": 81, "all": 88, "deleted": 7, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 81}, "product_prices": {"active": 15672, "all": 15686, "deleted": 14, "dirty": 2, "localOnly": 0, "pending": 2, "userVisible": null}, "products": {"active": 20005, "all": 20012, "deleted": 7, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 184, "all": 184, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}}, "deleted": 7, "drift": {}, "inserted": 0, "lastFullReconciliation": null, "lastPull": null, "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 4, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": null, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"decodeError": "redacted", "decoded": false, "present": true}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.catalogPush.lastChanged": 0, "automatic.lastCompletedAt": 1779690710.423473, "automatic.lastError": "contract(iOSMerchandiseControl.SyncEventRecordFailure(code: Optional(\"entity_ids_key\"), message: \"entity_ids contains an unsupported key.\"))", "automatic.lastOutcome": "completed", "automatic.productPricePush.lastInserted": 0, "foreground.forceIncremental": true, "foreground.outcome": "scheduled_drain_events_via_sync_runtime", "foreground.requestedAt": 1779690709.6345038, "foreground.source": "remoteSyncEvent", "incremental.attemptWindow.count": 3, "incremental.attemptWindow.startAt": 1779690705.3251848, "incremental.lastApplied": 30, "incremental.lastAttemptAt": 1779690709.647717, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastEventsFetched": 2, "incremental.lastEventsProcessed": 2, "incremental.lastPage.totalElapsedMs": 766, "incremental.lastSource": "remoteSyncEvent", "incremental.lastSyncType": "EVENT_INCREMENTAL", "incremental.lastTotalElapsedMs": 766, "incremental.requiresFullRecovery": false, "orchestrator.lastAction": "drainEvents", "orchestrator.lastDecisionAt": 1779690709.646474, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779690710.423734, "orchestrator.lastRunDidWork": true, "orchestrator.lastRunErrorCode": "contract(iOSMerchandiseControl.SyncEventRecordFailure(code: Optional(\"entity_ids_key\"), message: \"entity_ids contains an unsupported key.\"))", "orchestrator.lastRunStatus": "success", "orchestrator.lastTrigger": "remoteSyncEvent", "orchestrator.safetyLoopLastTickAt": 1779690660.1838322, "orchestrator.safetyLoopTickCount": 3059, "reconcile.local.categories": 152, "reconcile.local.historySessions": 81, "reconcile.local.productPrices": 15652, "reconcile.local.products": 20005, "reconcile.local.suppliers": 184, "reconcile.mismatches": "products,suppliers,categories,productPrices,historySessions", "reconcile.remote.categories": 115, "reconcile.remote.historySessions": 49, "reconcile.remote.productPrices": 41265, "reconcile.remote.products": 19783, "reconcile.remote.suppliers": 146, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779690705.0713348, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779690660.18624, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779690709.633487, "watcher.state": "started", "watcher.updateAt": 1779690705.313844}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 1925}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": null, "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 81, "all": 88, "tombstone": 7}], "iosMissingSupplierCategory": ["dc937b59892604f5", "dc937b59892604f5", "dc937b59892604f5", "dc937b59892604f5"], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-ui-counts", "startedAt": "2026-05-25T06:37:09Z", "status": "PASS", "taskId": "TASK-123", "updated": 0}
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=40 localOutboxEnqueueMs=40 sourceAutoPushStartDelayMs=500 remotePushMs=3837 syncEventAvailableMs=3837 watermarkAfter=1938 totalSourceMs=3880 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 3.887
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=41 localOutboxEnqueueMs=41 sourceAutoPushStartDelayMs=500 remotePushMs=2991 syncEventAvailableMs=2991 watermarkAfter=1941 totalSourceMs=3037 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 3.042
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=43 localOutboxEnqueueMs=43 sourceAutoPushStartDelayMs=500 remotePushMs=2922 syncEventAvailableMs=2922 watermarkAfter=1944 totalSourceMs=2972 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 2.976
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=43 localOutboxEnqueueMs=43 sourceAutoPushStartDelayMs=500 remotePushMs=3874 syncEventAvailableMs=3874 watermarkAfter=1947 totalSourceMs=3924 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 3.932
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=30 localOutboxEnqueueMs=30 sourceAutoPushStartDelayMs=500 remotePushMs=2567 syncEventAvailableMs=2567 watermarkAfter=1949 totalSourceMs=2605 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 2.61
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=44 localOutboxEnqueueMs=44 sourceAutoPushStartDelayMs=500 remotePushMs=3737 syncEventAvailableMs=3737 watermarkAfter=1953 totalSourceMs=3789 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 3.792
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=43 localOutboxEnqueueMs=43 sourceAutoPushStartDelayMs=500 remotePushMs=2852 syncEventAvailableMs=2852 watermarkAfter=1956 totalSourceMs=2900 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 2.903
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=39 localOutboxEnqueueMs=39 sourceAutoPushStartDelayMs=500 remotePushMs=3492 syncEventAvailableMs=3492 watermarkAfter=1958 totalSourceMs=3533 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 3.54
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=41 localOutboxEnqueueMs=41 sourceAutoPushStartDelayMs=500 remotePushMs=2708 syncEventAvailableMs=2708 watermarkAfter=1960 totalSourceMs=2758 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 2.766
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=38 localOutboxEnqueueMs=38 sourceAutoPushStartDelayMs=500 remotePushMs=3755 syncEventAvailableMs=3755 watermarkAfter=1964 totalSourceMs=3797 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 3.803
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 4}, "remote": null}, "completedAt": "2026-05-25T06:37:53Z", "counts": {"categories": {"active": 172, "all": 172, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}, "history_entries": {"active": 81, "all": 88, "deleted": 7, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 81}, "product_prices": {"active": 15692, "all": 15706, "deleted": 14, "dirty": 2, "localOnly": 0, "pending": 2, "userVisible": null}, "products": {"active": 20025, "all": 20032, "deleted": 7, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 204, "all": 204, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}}, "deleted": 7, "drift": {}, "inserted": 0, "lastFullReconciliation": null, "lastPull": null, "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 4, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": null, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"decodeError": "redacted", "decoded": false, "present": true}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.catalogPush.lastChanged": 0, "automatic.lastCompletedAt": 1779691064.959213, "automatic.lastError": "contract(iOSMerchandiseControl.SyncEventRecordFailure(code: Optional(\"entity_ids_key\"), message: \"entity_ids contains an unsupported key.\"))", "automatic.lastOutcome": "completed", "automatic.productPricePush.lastInserted": 0, "foreground.forceIncremental": true, "foreground.outcome": "scheduled_drain_events_via_sync_runtime", "foreground.requestedAt": 1779691064.587259, "foreground.source": "remoteSyncEvent", "incremental.attemptWindow.count": 11, "incremental.attemptWindow.startAt": 1779691030.494955, "incremental.lastApplied": 5, "incremental.lastAttemptAt": 1779691064.604858, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastEventsFetched": 2, "incremental.lastEventsProcessed": 2, "incremental.lastPage.totalElapsedMs": 339, "incremental.lastSource": "remoteSyncEvent", "incremental.lastSyncType": "EVENT_INCREMENTAL", "incremental.lastTotalElapsedMs": 339, "incremental.requiresFullRecovery": false, "orchestrator.lastAction": "drainEvents", "orchestrator.lastDecisionAt": 1779691064.604229, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779691064.9594321, "orchestrator.lastRunDidWork": true, "orchestrator.lastRunErrorCode": "contract(iOSMerchandiseControl.SyncEventRecordFailure(code: Optional(\"entity_ids_key\"), message: \"entity_ids contains an unsupported key.\"))", "orchestrator.lastRunStatus": "success", "orchestrator.lastTrigger": "remoteSyncEvent", "orchestrator.safetyLoopLastTickAt": 1779691060.6723251, "orchestrator.safetyLoopTickCount": 3060, "reconcile.local.categories": 169, "reconcile.local.historySessions": 81, "reconcile.local.productPrices": 15686, "reconcile.local.products": 20022, "reconcile.local.suppliers": 201, "reconcile.mismatches": "products,suppliers,categories,productPrices,historySessions", "reconcile.remote.categories": 132, "reconcile.remote.historySessions": 49, "reconcile.remote.productPrices": 41299, "reconcile.remote.products": 19800, "reconcile.remote.suppliers": 163, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779691030.076581, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779691060.678914, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779691064.585235, "watcher.state": "started", "watcher.updateAt": 1779691060.683521}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 1958}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": null, "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 81, "all": 88, "tombstone": 7}], "iosMissingSupplierCategory": ["dc937b59892604f5", "dc937b59892604f5", "dc937b59892604f5", "dc937b59892604f5"], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-ui-counts", "startedAt": "2026-05-25T06:37:53Z", "status": "PASS", "taskId": "TASK-123", "updated": 0}
+{"account": {"state": "redacted"}, "checkpoint": {"local": {"pendingAggregate": 4}, "remote": null}, "completedAt": "2026-05-25T06:37:54Z", "counts": {"categories": {"active": 172, "all": 172, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}, "history_entries": {"active": 81, "all": 88, "deleted": 7, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": 81}, "product_prices": {"active": 15692, "all": 15706, "deleted": 14, "dirty": 2, "localOnly": 0, "pending": 2, "userVisible": null}, "products": {"active": 20025, "all": 20032, "deleted": 7, "dirty": 0, "localOnly": 0, "pending": 0, "userVisible": null}, "suppliers": {"active": 204, "all": 204, "deleted": 0, "dirty": 1, "localOnly": 2, "pending": 1, "userVisible": null}}, "deleted": 7, "drift": {}, "inserted": 0, "lastFullReconciliation": null, "lastPull": null, "lastPush": null, "pruned": {"didPrune": 0, "isCompleteSnapshot": null, "skippedDirty": 4, "skippedLocalOnly": 0, "skippedPendingTombstone": 0, "skippedScopedSnapshot": 0, "wouldPrune": 0}, "runtime": {"baseline": null, "containerKind": "simulator", "containerPathHash": "<REDACTED_HEX>", "diagnostics": {"accountBinding": {"decodeError": "redacted", "decoded": false, "present": true}, "plistPresent": true, "runtime": {"auth.canSignIn": false, "auth.isSignedIn": true, "auth.isTransitioning": false, "auth.userIDPresent": true, "automatic.catalogPush.lastChanged": 0, "automatic.lastCompletedAt": 1779691064.959213, "automatic.lastError": "contract(iOSMerchandiseControl.SyncEventRecordFailure(code: Optional(\"entity_ids_key\"), message: \"entity_ids contains an unsupported key.\"))", "automatic.lastOutcome": "completed", "automatic.productPricePush.lastInserted": 0, "foreground.forceIncremental": true, "foreground.outcome": "scheduled_drain_events_via_sync_runtime", "foreground.requestedAt": 1779691064.587259, "foreground.source": "remoteSyncEvent", "incremental.attemptWindow.count": 11, "incremental.attemptWindow.startAt": 1779691030.494955, "incremental.lastApplied": 5, "incremental.lastAttemptAt": 1779691064.604858, "incremental.lastCompletedSource": "remoteSyncEvent", "incremental.lastEventsFetched": 2, "incremental.lastEventsProcessed": 2, "incremental.lastPage.totalElapsedMs": 339, "incremental.lastSource": "remoteSyncEvent", "incremental.lastSyncType": "EVENT_INCREMENTAL", "incremental.lastTotalElapsedMs": 339, "incremental.requiresFullRecovery": false, "orchestrator.lastAction": "drainEvents", "orchestrator.lastDecisionAt": 1779691064.604229, "orchestrator.lastRunBlockReason": "authRequired", "orchestrator.lastRunCompletedAt": 1779691064.9594321, "orchestrator.lastRunDidWork": true, "orchestrator.lastRunErrorCode": "contract(iOSMerchandiseControl.SyncEventRecordFailure(code: Optional(\"entity_ids_key\"), message: \"entity_ids contains an unsupported key.\"))", "orchestrator.lastRunStatus": "success", "orchestrator.lastTrigger": "remoteSyncEvent", "orchestrator.safetyLoopLastTickAt": 1779691060.6723251, "orchestrator.safetyLoopTickCount": 3060, "reconcile.local.categories": 169, "reconcile.local.historySessions": 81, "reconcile.local.productPrices": 15686, "reconcile.local.products": 20022, "reconcile.local.suppliers": 201, "reconcile.mismatches": "products,suppliers,categories,productPrices,historySessions", "reconcile.remote.categories": 132, "reconcile.remote.historySessions": 49, "reconcile.remote.productPrices": 41299, "reconcile.remote.products": 19800, "reconcile.remote.suppliers": 163, "rootHost.didReachInteractiveUI": true, "rootHost.taskStartedAt": 1779691030.076581, "timer.didReachInteractiveUI": true, "timer.intervalSeconds": 30, "timer.isSignedIn": true, "timer.lastTickAt": 1779691060.678914, "timer.sceneActive": true, "timer.sceneBackground": false, "watcher.signalAt": 1779691064.585235, "watcher.state": "started", "watcher.updateAt": 1779691060.683521}, "syncEventWatermarks": [{"scopeHash": "094211d5eb6a", "source": "sync", "value": 1958}]}, "isRuntimeAppContainer": true, "lastSuccessfulSync": null, "launchedAppBundleID": "com.niwcyber.iOSMerchandiseControl", "storeFile": "default.store", "storePathHash": "<REDACTED_HEX>", "waitSecondsAfterLaunch": 0}, "samples": {"androidLocalProductsMissingRemote": [], "historySessionActiveAllTombstone": [{"active": 81, "all": 88, "tombstone": 7}], "iosMissingSupplierCategory": ["dc937b59892604f5", "dc937b59892604f5", "dc937b59892604f5", "dc937b59892604f5"], "localOnlyNotPrunable": [], "remotePriceHistoryWithoutLocalProduct": []}, "schemaVersion": "1.1", "session": {"state": "simulator-local-redacted"}, "skipped": 0, "source": "ios.runtime-store-counts", "startedAt": "2026-05-25T06:37:54Z", "status": "PASS", "taskId": "TASK-123", "updated": 0}
+TASK114_REALTIME_WAIT source=ios label=task123_burst_android_to_ios elapsedMs=397 polls=1 products=20005->20025 productPrices=15672->15692 historyUserVisible=81->81
+{"acceptance": {"changesPerDirection": 10, "duplicates": 0, "timeout": false}, "bursts": [{"changes": 10, "direction": "iosToAndroid", "duplicate": false, "polls": 1, "productDelta": 10, "scopedRemoteProducts": 10, "sourceBurstMs": 313445, "status": "PASS", "totalPropagationMs": 951}, {"changes": 10, "direction": "androidToIos", "duplicate": false, "polls": 1, "productDelta": 20, "scopedRemoteProducts": 10, "sourceBurstMs": 43409, "status": "PASS", "totalPropagationMs": 397}], "completedAt": "2026-05-25T06:37:59Z", "prefix": "TASK123_BURST_BURST_20260525T063105Z_", "schemaVersion": "1.1", "source": "live.task123-burst-10", "startedAt": "2026-05-25T06:31:05Z", "status": "PASS", "taskId": "TASK-123"}
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+
+> Configure project :app
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: API 'applicationVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling applicationVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: API 'testVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling testVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: API 'unitTestVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling unitTestVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+w: [33m[1m⚠️ Deprecated 'org.jetbrains.kotlin.android' plugin usage[0m[0m
+The 'org.jetbrains.kotlin.android' plugin in project ':app' is no longer required for Kotlin support since AGP 9.0.
+[32m[1mSolution:[0m[0m
+[32m[3mRemove both `android.builtInKotlin=true` and `android.newDsl=false` from `gradle.properties`, then migrate to built-in Kotlin.[0m[0m
+[36mSee [0m[34mhttps://kotl.in/gradle/agp-built-in-kotlin[0m[36m for more details.[0m
+
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:generateDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :app:packageDebug UP-TO-DATE
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :app:processDebugAndroidTestManifest UP-TO-DATE
+> Task :app:generateDebugAndroidTestBuildConfig UP-TO-DATE
+> Task :app:generateDebugAndroidTestResources UP-TO-DATE
+> Task :app:packageDebugAndroidTestResources UP-TO-DATE
+> Task :app:processDebugAndroidTestNavigationResources UP-TO-DATE
+> Task :app:parseDebugAndroidTestLocalResources UP-TO-DATE
+> Task :app:generateDebugAndroidTestRFile UP-TO-DATE
+> Task :app:kspDebugAndroidTestKotlin UP-TO-DATE
+> Task :app:compileDebugAndroidTestKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebugAndroidTest UP-TO-DATE
+> Task :app:compileDebugAndroidTestJavaWithJavac UP-TO-DATE
+> Task :app:generateDebugAndroidTestAssets UP-TO-DATE
+> Task :app:mergeDebugAndroidTestAssets UP-TO-DATE
+> Task :app:compressDebugAndroidTestAssets UP-TO-DATE
+> Task :app:generateDebugAndroidTestGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugAndroidTestJavaRes UP-TO-DATE
+> Task :app:mergeDebugAndroidTestJavaResource UP-TO-DATE
+> Task :app:checkDebugAndroidTestDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugAndroidTestFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebugAndroidTest UP-TO-DATE
+> Task :app:mergeLibDexDebugAndroidTest UP-TO-DATE
+> Task :app:checkDebugAndroidTestAarMetadata UP-TO-DATE
+> Task :app:mapDebugAndroidTestSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugAndroidTestNavigationResources UP-TO-DATE
+> Task :app:mergeDebugAndroidTestResources UP-TO-DATE
+> Task :app:processDebugAndroidTestResources UP-TO-DATE
+> Task :app:dexBuilderDebugAndroidTest UP-TO-DATE
+> Task :app:mergeProjectDexDebugAndroidTest UP-TO-DATE
+> Task :app:mergeDebugAndroidTestJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugAndroidTestNativeLibs NO-SOURCE
+> Task :app:stripDebugAndroidTestDebugSymbols NO-SOURCE
+> Task :app:validateSigningDebugAndroidTest UP-TO-DATE
+> Task :app:writeDebugAndroidTestSigningConfigVersions UP-TO-DATE
+> Task :app:packageDebugAndroidTest UP-TO-DATE
+> Task :app:createDebugAndroidTestApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebugAndroidTest UP-TO-DATE
+
+[Incubating] Problems report is available at: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 739ms
+72 actionable tasks: 72 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.4.1/userguide/configuration_cache_enabling.html
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+
+> Configure project :app
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: API 'applicationVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling applicationVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: API 'testVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling testVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: API 'unitTestVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling unitTestVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+w: [33m[1m⚠️ Deprecated 'org.jetbrains.kotlin.android' plugin usage[0m[0m
+The 'org.jetbrains.kotlin.android' plugin in project ':app' is no longer required for Kotlin support since AGP 9.0.
+[32m[1mSolution:[0m[0m
+[32m[3mRemove both `android.builtInKotlin=true` and `android.newDsl=false` from `gradle.properties`, then migrate to built-in Kotlin.[0m[0m
+[36mSee [0m[34mhttps://kotl.in/gradle/agp-built-in-kotlin[0m[36m for more details.[0m
+
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:generateDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :app:packageDebug UP-TO-DATE
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug UP-TO-DATE
+
+[Incubating] Problems report is available at: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 613ms
+39 actionable tasks: 39 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.4.1/userguide/configuration_cache_enabling.html
+  bash arg: -p
+  bash arg: com.example.merchandisecontrolsplitview
+  bash arg: -c
+  bash arg: android.intent.category.LAUNCHER
+  bash arg: 1
+args: [-p, com.example.merchandisecontrolsplitview, -c, android.intent.category.LAUNCHER, 1]
+ arg: "-p"
+ arg: "com.example.merchandisecontrolsplitview"
+ arg: "-c"
+ arg: "android.intent.category.LAUNCHER"
+ arg: "1"
+data="com.example.merchandisecontrolsplitview"
+data="android.intent.category.LAUNCHER"
+Events injected: 1
+## Network stats: elapsed time=20ms (0ms mobile, 0ms wifi, 20ms not connected)
+Monitoring boot status for iPhone 17 Pro (AC6FBFC3-A97F-412C-BEC0-F88B9956107B).
+Device already booted, nothing to do.
+
+com.niwcyber.iOSMerchandiseControl: 30096
+args: [-p, com.example.merchandisecontrolsplitview, -c, android.intent.category.LAUNCHER, 1]
+ arg: "-p"
+ arg: "com.example.merchandisecontrolsplitview"
+ arg: "-c"
+ arg: "android.intent.category.LAUNCHER"
+ arg: "1"
+data="com.example.merchandisecontrolsplitview"
+data="android.intent.category.LAUNCHER"
+Initialising login role...
+Monitoring boot status for iPhone 17 Pro (AC6FBFC3-A97F-412C-BEC0-F88B9956107B).
+Device already booted, nothing to do.
+
+com.niwcyber.iOSMerchandiseControl: 41054
+Monitoring boot status for iPhone 17 Pro (AC6FBFC3-A97F-412C-BEC0-F88B9956107B).
+Device already booted, nothing to do.
+
+com.niwcyber.iOSMerchandiseControl: 41054
+Initialising login role...

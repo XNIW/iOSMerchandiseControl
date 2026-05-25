@@ -6,12 +6,12 @@
 - **File task**: `docs/TASKS/TASK-123-ios-android-simulator-autosync-speed-acceptance.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-123/`
 - **Stato**: ACTIVE
-- **Fase attuale**: EXECUTION
-- **Responsabile attuale**: CODEX / Executor
+- **Fase attuale**: REVIEW
+- **Responsabile attuale**: CLAUDE / Reviewer
 - **Data creazione**: 2026-05-24
-- **Ultimo aggiornamento**: 2026-05-24 23:22 -0400
+- **Ultimo aggiornamento**: 2026-05-25 02:50 -0400
 - **Ultimo agente che ha operato**: CODEX / Executor
-- **Readiness**: ACTIVE_EXECUTION_PARTIAL. iOS auth/session is now PASS after user login, Android auth/session PASS, Options Review gate PASS, same-account live smoke 5/5 PASS after targeted fixes, cleanup/residue `TASK123_*` PASS/0. Full TASK-123 strict speed acceptance is not yet eligible because the required 20+20 warm matrix, cold-ish restart matrix, no-op checks and burst-10 checks remain incomplete.
+- **Readiness**: STRICT_ACCEPTANCE_ELIGIBLE_FOR_REVIEW. User provided an authenticated iOS 26.4 simulator and Codex completed the required live/dev same-account autosync gates: 20+20 warm matrix PASS, cold-ish restart PASS, no-op PASS, burst-10 PASS, batch multi-write PASS as separate batch scenario, cleanup/residue `TASK123_*` PASS/0, final build/test checks PASS. TASK-123 is not marked DONE; it is handed to Claude/User review.
 - **Tipo task**: runtime/performance acceptance cross-platform simulator; fix mirati solo se emergono bug reali.
 - **User override registrato**: l'utente ha richiesto l'avvio diretto di TASK-123 in EXECUTION e ha autorizzato live testing scoped su Supabase live/dev, senza cleanup globale, senza service_role client, senza bypass RLS e senza dati reali non prefissati. Alle 2026-05-24 21:52 -0400 l'utente ha autorizzato anche write/delete sul database Supabase remoto per i test; Codex limita comunque l'uso a righe `TASK123_*`, con dry-run prima del cleanup.
 
@@ -225,6 +225,22 @@ Solo fix mirati se i test runtime/performance rivelano bug reali:
 - Android local cleanup execute + broad dry-run `TASK123_` PASS/0 dopo fix harness cleanup.
 - iOS runtime store query read-only `TASK123_` PASS/0 per supplier/category/product/product price/history/pending/outbox.
 
+### Continuazione 2026-05-25 00:27 -0400
+- Fase 0 canonical alignment rieseguita: iOS local `main` = `origin/main` = `cd31c09e9b97356f6c8ac9c6fca586dab39fd3d9`; Android local `main` = `origin/main` = `1307d64deee483822494eabec2b221727ccdbd65`.
+- GitHub raw iOS verificato per MASTER-PLAN/TASK-123; GitHub raw Android verificato sui file reali `CatalogAutoSyncCoordinator.kt`, `HistorySessionPushCoordinator.kt` e relativi test: solo `500L`, nessun doppio `2_000L` nei file TASK-123.
+- Fase 1 duplicazioni: controllati `AccountBindingStore`, `SyncDecisionInputProvider`, `SyncEventIncrementalDomainApplyService`, Android debounce/test; nessun doppione operativo trovato. `RealtimeRefreshCoordinator.DEBOUNCE_MS = 2_000L` resta fuori dal fix foreground push TASK-123 e non e' stato modificato senza misura che lo identifichi come collo di bottiglia.
+- Harness dedicato aggiunto:
+  - iOS `test123IOSSingleCatalogCreatePropagation`: singola create catalog, timing `TASK123_IOS_SINGLE_PROPAGATION`.
+  - Android `test123AndroidSingleCatalogCreatePropagation`: singola create catalog foreground auto-push, timing `TASK123_ANDROID_SINGLE_PROPAGATION`.
+  - `mc-agent live task123-single-propagation`: loop warm bidirezionale, JSON per iterazione con campi `localSaveMs`, `localOutboxEnqueueMs`, `sourceAutoPushStartDelayMs`, `remotePushMs`, `syncEventAvailableMs`, `targetRealtimeDetectedMs`, `targetFetchMs`, `targetApplyMs`, `totalPropagationMs`.
+- Check eseguiti:
+  - `bash -n tools/agent/lib/supabase.sh tools/agent/lib/ios.sh tools/agent/lib/android.sh tools/agent/mc-agent.sh`: PASS.
+  - iOS targeted sync tests: PASS, evidence `agent-runs/20260525T042302Z-ios-test-sync-task-TASK-123-p88645.json`.
+  - Android `:app:assembleDebug :app:assembleDebugAndroidTest`: first run FAIL per import mancante nel nuovo androidTest, fix minimo applicato; rerun PASS.
+  - `git diff --check`: PASS su iOS repo e Android repo.
+- Live validation ridotta `MC_TASK123_SINGLE_ITERATIONS=1 live task123-single-propagation --task TASK-123 --prefix TASK123_SINGLE_`: BLOCKED_EXTERNAL prima di creare dati. Root cause: iOS auth preflight fallisce con `AUTH_SESSION_NOT_READY`, fallback `candidateCount=0`, `simulatorFallbackSessionPresent=false`; evidence `agent-runs/20260525T042558Z-live-task123-single-propagation-task-TASK-123-prefix-TASK123_SINGLE_-p90139.json`.
+- Dati creati nel run bloccato: 0. Cleanup non necessario per `TASK123_SINGLE_` da quel run.
+
 ## Fix
 - iOS `OptionsView.swift`: il flow Review confermato applica il binding account locale tramite `AccountSyncChoiceBindingApplier`.
 - iOS `AccountBindingStore.swift`: aggiunto applier dedicato per persistere/cancellare in modo testabile il binding da scelta Review.
@@ -235,8 +251,58 @@ Solo fix mirati se i test runtime/performance rivelano bug reali:
 - `tools/agent/lib/supabase.sh`: parsing timing iOS e breakdown JSON per `mutation-near-realtime`.
 - Android `CatalogAutoSyncCoordinator.kt` e `HistorySessionPushCoordinator.kt`: debounce foreground auto-push ridotto a 500ms.
 - Android test/harness: test debounce TASK-123 e cleanup locale `TASK123_` con evidence instrumentation status.
+- iOS/Android TASK-123 single propagation harness: aggiunti step single catalog create e comando live dedicato `task123-single-propagation`; nessuna nuova dipendenza, nessun cambio schema/RLS/API pubblica.
+- Android androidTest import fix: aggiunto import `CatalogAutoSyncCoordinator` richiesto dal nuovo timing single.
 
 ## Handoff post-execution
+### READY_FOR_REVIEW_STRICT_ACCEPTANCE — 2026-05-25 02:50 -0400
+TASK-123 execution completed in the requested simulator same-account autosync speed scope. The task is handed to Claude/User review, not marked DONE.
+
+Final evidence:
+- `docs/TASKS/EVIDENCE/TASK-123/autosync-20x20-warm-matrix.md/json`: 20+20 warm PASS.
+- `docs/TASKS/EVIDENCE/TASK-123/autosync-single-propagation-ios-to-android.md/json`: iOS->Android 20/20 PASS, p50 911ms, p95 954ms, max 1027ms.
+- `docs/TASKS/EVIDENCE/TASK-123/autosync-single-propagation-android-to-ios.md/json`: Android->iOS 20/20 PASS, p50 408ms, p95 445ms, max 448ms.
+- `docs/TASKS/EVIDENCE/TASK-123/autosync-cold-restart-matrix.md/json`: cold-ish 5+5 PASS.
+- `docs/TASKS/EVIDENCE/TASK-123/autosync-noop-matrix.md/json`: no-op 3+3 PASS, max <= 2s measured.
+- `docs/TASKS/EVIDENCE/TASK-123/autosync-burst-10-matrix.md/json`: burst-10 PASS, scoped duplicates 0.
+- `docs/TASKS/EVIDENCE/TASK-123/autosync-batch-multiwrite-summary.md/json`: legacy batch multi-write PASS, kept separate from single propagation.
+- `docs/TASKS/EVIDENCE/TASK-123/cleanup-residue.md/json`: Supabase, Android local and iOS local scoped residue PASS/0.
+- `docs/TASKS/EVIDENCE/TASK-123/final-acceptance-matrix.md/json`: strict TASK-123 speed acceptance ELIGIBLE.
+
+Fixes applied in this continuation:
+- Android test fixture scope now includes TASK123 single supplier/category/barcodes.
+- iOS matrix runner removes the per-step `.xcresult` before each repeated `test-without-building`, avoiding iteration-2 bundle collisions.
+- Live single harness foregrounds Android before each iOS->Android receive leg after Android instrumentation.
+- Added cold-ish restart, no-op and burst-10 live harness commands.
+- Burst duplicate detection uses scoped remote product count per direction instead of global target product delta.
+- Performed scoped Supabase cleanup dry-run + execute, Android local cleanup execute, and iOS local scoped cleanup.
+
+Final checks:
+- iOS Debug build PASS: `agent-runs/20260525T064501Z-ios-build-debug-task-TASK-123-p52700.json`.
+- iOS Release build PASS: `agent-runs/20260525T064518Z-ios-build-release-task-TASK-123-p53330.json`.
+- iOS targeted sync tests PASS: `agent-runs/20260525T064632Z-ios-test-sync-task-TASK-123-p54319.json`.
+- Android assembleDebug + assembleDebugAndroidTest PASS.
+- Android targeted sync/debounce unit tests PASS.
+- TASK-122 architecture guard `sync-efficiency-acceptance` PASS: `docs/TASKS/EVIDENCE/TASK-122/agent-runs/20260525T064927Z-scan-sync-efficiency-acceptance-task-TASK-122-strict-p55454.json`.
+- JSON validation PASS.
+- `git diff --check` PASS for iOS and Android repos.
+
+NEXT_ACTION:
+- Claude/User review TASK-123 evidence and decide closure. Codex must not mark DONE directly.
+
+### BLOCKED_EXTERNAL_AUTH_SESSION — 2026-05-25 00:27 -0400
+TASK-123 cannot proceed to 20+20 warm matrix, cold-ish restart, no-op or burst-10 while the iOS Simulator app-auth session is absent.
+
+Evidence:
+- `docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T042302Z-ios-test-sync-task-TASK-123-p88645.json`: iOS targeted sync tests PASS after harness changes.
+- Android `:app:assembleDebug :app:assembleDebugAndroidTest`: PASS after import fix.
+- `docs/TASKS/EVIDENCE/TASK-123/agent-runs/20260525T042558Z-live-task123-single-propagation-task-TASK-123-prefix-TASK123_SINGLE_-p90139.json`: reduced live single-propagation validation BLOCKED before writes with `AUTH_SESSION_NOT_READY`, `candidateCount=0`.
+
+NEXT_ACTION:
+1. User signs in again on iOS Simulator `iPhone 17 Pro / iOS 26.5` with the same account used by Android emulator `emulator-5554`.
+2. Codex reruns `MC_ALLOW_LIVE=1 MC_ANDROID_DEVICE_SERIAL=emulator-5554 MC_TASK123_SINGLE_ITERATIONS=1 ./tools/agent/mc-agent.sh live task123-single-propagation --task TASK-123 --prefix TASK123_SINGLE_`.
+3. If the reduced run PASSes, Codex reruns with default 20 iterations and continues cold-ish, no-op, burst-10, batch, cleanup and final acceptance. If a measured iteration fails, Codex follows MEASURE -> IDENTIFY BOTTLENECK -> FIX MINIMO -> TEST -> RERUN MATRIX.
+
 ### ACTIVE_EXECUTION_PARTIAL — 2026-05-24 23:22 -0400
 TASK-123 is no longer blocked by auth/session. The same-account simulator/emulator autosync path works and cleanup is clean, but strict speed acceptance is not complete.
 

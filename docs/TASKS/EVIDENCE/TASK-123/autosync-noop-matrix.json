@@ -1,0 +1,74 @@
+{
+  "acceptance": {
+    "maxMeasurableMs": 2000
+  },
+  "completedAt": "2026-05-25T06:21:18Z",
+  "iterations": [
+    {
+      "countsUnchanged": true,
+      "direction": "androidNoop",
+      "elapsedMs": 1993,
+      "iteration": 1,
+      "status": "PASS",
+      "syncEventsCreated": 0
+    },
+    {
+      "countsUnchanged": true,
+      "direction": "iosNoop",
+      "elapsedMs": 1659,
+      "iteration": 1,
+      "status": "PASS",
+      "syncEventsCreated": 0
+    },
+    {
+      "countsUnchanged": true,
+      "direction": "androidNoop",
+      "elapsedMs": 1859,
+      "iteration": 2,
+      "status": "PASS",
+      "syncEventsCreated": 0
+    },
+    {
+      "countsUnchanged": true,
+      "direction": "iosNoop",
+      "elapsedMs": 1655,
+      "iteration": 2,
+      "status": "PASS",
+      "syncEventsCreated": 0
+    },
+    {
+      "countsUnchanged": true,
+      "direction": "androidNoop",
+      "elapsedMs": 1900,
+      "iteration": 3,
+      "status": "PASS",
+      "syncEventsCreated": 0
+    },
+    {
+      "countsUnchanged": true,
+      "direction": "iosNoop",
+      "elapsedMs": 1667,
+      "iteration": 3,
+      "status": "PASS",
+      "syncEventsCreated": 0
+    }
+  ],
+  "prefix": "TASK123_NOOP_NOOP_20260525T061948Z_",
+  "schemaVersion": "1.1",
+  "source": "live.task123-noop-matrix",
+  "startedAt": "2026-05-25T06:19:48Z",
+  "status": "PASS",
+  "summary": {
+    "androidNoop": {
+      "count": 3,
+      "maxMs": 1993,
+      "passCount": 3
+    },
+    "iosNoop": {
+      "count": 3,
+      "maxMs": 1667,
+      "passCount": 3
+    }
+  },
+  "taskId": "TASK-123"
+}

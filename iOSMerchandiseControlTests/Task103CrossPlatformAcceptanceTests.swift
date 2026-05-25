@@ -66,6 +66,13 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var matrixHistoryAndroidCreate: String { "\(prefix)MATRIX_ANDROID_HISTORY_CREATE" }
         var matrixHistoryAndroidUpdateFinal: String { "\(prefix)MATRIX_ANDROID_HISTORY_UPDATE_FINAL" }
         var matrixHistoryAndroidTombstone: String { "\(prefix)MATRIX_ANDROID_HISTORY_TOMBSTONE" }
+        var singleSupplierIOS: String { "\(prefix)SINGLE_SUP_IOS" }
+        var singleCategoryIOS: String { "\(prefix)SINGLE_CAT_IOS" }
+        var singleBarcodeIOSCreate: String { "\(prefix)SINGLE_IOS_CREATE" }
+        var singleProductIOSCreate: String { "\(prefix)SINGLE_IOS_PRODUCT_CREATE" }
+        var singleSupplierAndroid: String { "\(prefix)SINGLE_SUP_ANDROID" }
+        var singleCategoryAndroid: String { "\(prefix)SINGLE_CAT_ANDROID" }
+        var singleBarcodeAndroidCreate: String { "\(prefix)SINGLE_ANDROID_CREATE" }
 
         var mediumSuppliers: [String] { (1...5).map { "\(prefix)SUP_MEDIUM_\($0.padded3)" } }
         var mediumCategories: [String] { (1...5).map { "\(prefix)CAT_MEDIUM_\($0.padded3)" } }
@@ -102,7 +109,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             [
                 supplierIOS, supplierAndroid, supplierConflictCatalog, supplierConflictPrice, supplierOffline,
                 matrixSupplierIOS, matrixSupplierAndroid,
-                supplierOfflineIOSSeed, supplierOfflineIOSTombstone, supplierOfflineIOS
+                supplierOfflineIOSSeed, supplierOfflineIOSTombstone, supplierOfflineIOS,
+                singleSupplierIOS, singleSupplierAndroid
             ] + mediumSuppliers
         }
 
@@ -110,7 +118,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             [
                 categoryIOS, categoryAndroid, categoryConflictCatalog, categoryConflictPrice, categoryOffline,
                 matrixCategoryIOS, matrixCategoryAndroid,
-                categoryOfflineIOSSeed, categoryOfflineIOSTombstone, categoryOfflineIOS
+                categoryOfflineIOSSeed, categoryOfflineIOSTombstone, categoryOfflineIOS,
+                singleCategoryIOS, singleCategoryAndroid
             ] + mediumCategories
         }
 
@@ -119,7 +128,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 barcodeIOS, barcodeAndroid, barcodeConflictCatalog, barcodeConflictPrice, barcodeOffline,
                 matrixBarcodeIOSCreate, matrixBarcodeIOSUpdate, matrixBarcodeIOSTombstone,
                 matrixBarcodeAndroidCreate, matrixBarcodeAndroidUpdate, matrixBarcodeAndroidTombstone,
-                barcodeOfflineIOSCreate, barcodeOfflineIOSUpdate, barcodeOfflineIOSTombstone
+                barcodeOfflineIOSCreate, barcodeOfflineIOSUpdate, barcodeOfflineIOSTombstone,
+                singleBarcodeIOSCreate, singleBarcodeAndroidCreate
             ] + mediumBarcodes
         }
 
@@ -627,6 +637,59 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             "localHistorySaveMs=\(localHistorySaveMs) " +
             "historyPushAndEventsMs=\(initialHistoryPushMs + updateHistoryPushMs + tombstoneHistoryPushMs) " +
             "totalMatrixMs=\(Int(Date().timeIntervalSince(matrixStarted) * 1000)) " +
+            "syncType=EVENT_INCREMENTAL fullPull=false"
+        )
+    }
+
+    func test123IOSSingleCatalogCreatePropagation() async throws {
+        try requireLiveAcceptanceEnabled()
+        let started = Date()
+        let fixture = try makeFixture()
+        let runtime = try await makeRuntime()
+        let context = try makeContext()
+        _ = try SupabaseCatalogBaselineWriter().commitLatestBaseline(
+            context: context,
+            ownerUserUUID: runtime.session.userID
+        )
+
+        let localSaveStarted = Date()
+        let supplier = Supplier(name: fixture.singleSupplierIOS)
+        let category = ProductCategory(name: fixture.singleCategoryIOS)
+        context.insert(supplier)
+        context.insert(category)
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: runtime.session.userID)
+        try accumulator.recordSupplierChange(supplier: supplier, operation: .create, origin: .manualCatalogSave)
+        try accumulator.recordCategoryChange(category: category, operation: .create, origin: .manualCatalogSave)
+        let product = matrixProduct(
+            barcode: fixture.singleBarcodeIOSCreate,
+            name: fixture.singleProductIOSCreate,
+            supplier: supplier,
+            category: category
+        )
+        context.insert(product)
+        try accumulator.recordProductChange(
+            product: product,
+            operation: .create,
+            origin: .manualCatalogSave,
+            changedFields: ["barcode", "productName", "supplier", "category", "purchasePrice", "retailPrice", "stockQuantity"]
+        )
+        try context.save()
+        let localSaveMs = Int(Date().timeIntervalSince(localSaveStarted) * 1000)
+
+        let pushStarted = Date()
+        let push = try await pushPendingCatalog(context: context, runtime: runtime, expectedReadyCandidatesAtLeast: 3)
+        let remotePushMs = Int(Date().timeIntervalSince(pushStarted) * 1000)
+        XCTAssertEqual(push.status, .completed)
+        let readBack = try await fetchRemoteSnapshot(runtime, fixture: fixture)
+        let remote = try XCTUnwrap(singleActiveProduct(in: readBack, barcode: fixture.singleBarcodeIOSCreate))
+        XCTAssertEqual(remote.productName, fixture.singleProductIOSCreate)
+
+        print(
+            "\(fixture.logPrefix)_IOS_SINGLE_PROPAGATION " +
+            "kind=catalog_product_create owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "localSaveMs=\(localSaveMs) localOutboxEnqueueMs=\(localSaveMs) " +
+            "sourceAutoPushStartDelayMs=0 remotePushMs=\(remotePushMs) " +
+            "syncEventAvailableMs=\(remotePushMs) totalSourceMs=\(Int(Date().timeIntervalSince(started) * 1000)) " +
             "syncType=EVENT_INCREMENTAL fullPull=false"
         )
     }

@@ -1578,10 +1578,11 @@ mc_ios_task114_matrix_step() {
       if [[ "$prefix" == TASK115_* ]]; then
         mc_ios_xctestrun_set_env "$xctestrun" "TASK115_IOS_SIMULATOR_AUTH_FALLBACK" "1" >>"$test_log" 2>&1
         mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK115_IOS_SIMULATOR_AUTH_FALLBACK" "1" >>"$test_log" 2>&1
-      fi
-      (
-        cd "$MC_IOS_REPO" || exit 3
-        xcodebuild test-without-building -xctestrun "$xctestrun" \
+	      fi
+	      rm -rf "$bundle"
+	      (
+	        cd "$MC_IOS_REPO" || exit 3
+	        xcodebuild test-without-building -xctestrun "$xctestrun" \
           -destination "$dest" -resultBundlePath "$bundle" \
           "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/${method}"
       ) >>"$test_log" 2>&1

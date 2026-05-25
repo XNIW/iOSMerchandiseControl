@@ -1,0 +1,131 @@
+{
+  "acceptance": {
+    "maxMs": 15000,
+    "p95Ms": 5000
+  },
+  "completedAt": "2026-05-25T06:18:23Z",
+  "iterations": [
+    {
+      "direction": "androidToIosAfterIosRestart",
+      "iteration": 1,
+      "kind": "catalog_product_create",
+      "polls": 1,
+      "prefix": "TASK123_COLD_COLD_20260525T061317Z_ANDROID_TO_IOS_1_",
+      "remotePushMs": 3853,
+      "status": "PASS",
+      "totalPropagationMs": 402
+    },
+    {
+      "direction": "iosToAndroidAfterAndroidRestart",
+      "iteration": 1,
+      "kind": "catalog_product_create",
+      "polls": 1,
+      "prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_1_",
+      "remotePushMs": 979,
+      "status": "PASS",
+      "totalPropagationMs": 905
+    },
+    {
+      "direction": "androidToIosAfterIosRestart",
+      "iteration": 2,
+      "kind": "catalog_product_create",
+      "polls": 1,
+      "prefix": "TASK123_COLD_COLD_20260525T061317Z_ANDROID_TO_IOS_2_",
+      "remotePushMs": 3526,
+      "status": "PASS",
+      "totalPropagationMs": 398
+    },
+    {
+      "direction": "iosToAndroidAfterAndroidRestart",
+      "iteration": 2,
+      "kind": "catalog_product_create",
+      "polls": 1,
+      "prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_2_",
+      "remotePushMs": 1072,
+      "status": "PASS",
+      "totalPropagationMs": 927
+    },
+    {
+      "direction": "androidToIosAfterIosRestart",
+      "iteration": 3,
+      "kind": "catalog_product_create",
+      "polls": 1,
+      "prefix": "TASK123_COLD_COLD_20260525T061317Z_ANDROID_TO_IOS_3_",
+      "remotePushMs": 3831,
+      "status": "PASS",
+      "totalPropagationMs": 409
+    },
+    {
+      "direction": "iosToAndroidAfterAndroidRestart",
+      "iteration": 3,
+      "kind": "catalog_product_create",
+      "polls": 1,
+      "prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_3_",
+      "remotePushMs": 953,
+      "status": "PASS",
+      "totalPropagationMs": 938
+    },
+    {
+      "direction": "androidToIosAfterIosRestart",
+      "iteration": 4,
+      "kind": "catalog_product_create",
+      "polls": 1,
+      "prefix": "TASK123_COLD_COLD_20260525T061317Z_ANDROID_TO_IOS_4_",
+      "remotePushMs": 3955,
+      "status": "PASS",
+      "totalPropagationMs": 402
+    },
+    {
+      "direction": "iosToAndroidAfterAndroidRestart",
+      "iteration": 4,
+      "kind": "catalog_product_create",
+      "polls": 1,
+      "prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_4_",
+      "remotePushMs": 911,
+      "status": "PASS",
+      "totalPropagationMs": 959
+    },
+    {
+      "direction": "androidToIosAfterIosRestart",
+      "iteration": 5,
+      "kind": "catalog_product_create",
+      "polls": 1,
+      "prefix": "TASK123_COLD_COLD_20260525T061317Z_ANDROID_TO_IOS_5_",
+      "remotePushMs": 4126,
+      "status": "PASS",
+      "totalPropagationMs": 407
+    },
+    {
+      "direction": "iosToAndroidAfterAndroidRestart",
+      "iteration": 5,
+      "kind": "catalog_product_create",
+      "polls": 1,
+      "prefix": "TASK123_COLD_COLD_20260525T061317Z_IOS_TO_ANDROID_5_",
+      "remotePushMs": 1066,
+      "status": "PASS",
+      "totalPropagationMs": 905
+    }
+  ],
+  "prefix": "TASK123_COLD_COLD_20260525T061317Z_",
+  "schemaVersion": "1.1",
+  "source": "live.task123-cold-restart",
+  "startedAt": "2026-05-25T06:13:17Z",
+  "status": "PASS",
+  "summary": {
+    "androidRestart": {
+      "count": 5,
+      "maxMs": 959,
+      "p50Ms": 927,
+      "p95Ms": 959,
+      "passCount": 5
+    },
+    "iosRestart": {
+      "count": 5,
+      "maxMs": 409,
+      "p50Ms": 402,
+      "p95Ms": 409,
+      "passCount": 5
+    }
+  },
+  "taskId": "TASK-123"
+}

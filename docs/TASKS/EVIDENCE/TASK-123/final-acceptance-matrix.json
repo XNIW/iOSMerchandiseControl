@@ -1,39 +1,89 @@
 {
-  "schemaVersion": "1.1",
-  "taskId": "TASK-123",
-  "timestamp": "2026-05-25T03:22:00Z",
-  "status": "NOT_FINAL_ACCEPTANCE",
-  "gates": {
-    "architectureRegression": "PASS",
-    "iosSimulatorAuthSession": "PASS",
-    "androidEmulatorAuthSession": "PASS",
-    "iosOptionsReviewGate": "PASS",
-    "autosyncIosToAndroidReceiver": "PASS",
-    "autosyncAndroidToIosReceiver": "PASS",
-    "autosyncIosToAndroidStrictFullSpeed": "NOT_COMPLETE",
-    "autosyncAndroidToIosStrictFullSpeed": "NOT_COMPLETE",
-    "runtimeEfficiency": "PASS_WITH_NOTES",
-    "productionReadinessSimulatorSameAccountScope": "PASS_WITH_NOTES",
-    "userClaim100Percent": "NOT_ELIGIBLE"
+  "androidAssembleDebug": "PASS",
+  "androidTargetedSyncDebounceTests": "PASS",
+  "architectureRegression": "PASS",
+  "batchMultiwrite": "PASS",
+  "burst10": "PASS",
+  "cleanupResidue": "PASS",
+  "coldRestart": "PASS",
+  "gitDiffCheck": "PASS",
+  "iosDebugBuild": "PASS",
+  "iosReleaseBuild": "PASS",
+  "iosTargetedSyncTests": "PASS",
+  "noop": "PASS",
+  "singlePropagationAndroidToIos": "PASS",
+  "singlePropagationIosToAndroid": "PASS",
+  "status": "PASS",
+  "strictSpeedAcceptance": "ELIGIBLE",
+  "summaries": {
+    "burst": [
+      {
+        "changes": 10,
+        "direction": "iosToAndroid",
+        "duplicate": false,
+        "polls": 1,
+        "productDelta": 10,
+        "scopedRemoteProducts": 10,
+        "sourceBurstMs": 313445,
+        "status": "PASS",
+        "totalPropagationMs": 951
+      },
+      {
+        "changes": 10,
+        "direction": "androidToIos",
+        "duplicate": false,
+        "polls": 1,
+        "productDelta": 20,
+        "scopedRemoteProducts": 10,
+        "sourceBurstMs": 43409,
+        "status": "PASS",
+        "totalPropagationMs": 397
+      }
+    ],
+    "cold": {
+      "androidRestart": {
+        "count": 5,
+        "maxMs": 959,
+        "p50Ms": 927,
+        "p95Ms": 959,
+        "passCount": 5
+      },
+      "iosRestart": {
+        "count": 5,
+        "maxMs": 409,
+        "p50Ms": 402,
+        "p95Ms": 409,
+        "passCount": 5
+      }
+    },
+    "noop": {
+      "androidNoop": {
+        "count": 3,
+        "maxMs": 1993,
+        "passCount": 3
+      },
+      "iosNoop": {
+        "count": 3,
+        "maxMs": 1667,
+        "passCount": 3
+      }
+    },
+    "warm": {
+      "androidToIos": {
+        "count": 20,
+        "maxMs": 448,
+        "p50Ms": 408,
+        "p95Ms": 445,
+        "passCount": 20
+      },
+      "iosToAndroid": {
+        "count": 20,
+        "maxMs": 1027,
+        "p50Ms": 911,
+        "p95Ms": 954,
+        "passCount": 20
+      }
+    }
   },
-  "metrics": {
-    "iosToAndroidReceiverMs": {"n": 5, "p50": 962, "p90": 1002, "p95": 1015, "max": 1028},
-    "androidToIosReceiverMs": {"n": 5, "p50": 409, "p90": 435, "p95": 444, "max": 452},
-    "iosToAndroidBatchTotalMs": {"n": 5, "p50": 4555, "p90": 4878, "p95": 4892, "max": 4907},
-    "androidToIosBatchTotalMs": {"n": 5, "p50": 13619, "p90": 16703, "p95": 17714, "max": 18724}
-  },
-  "failureCount": 0,
-  "timeoutCount": 0,
-  "duplicateCount": 0,
-  "pendingOutboxStuckCount": 0,
-  "taskScopedResidue": 0,
-  "missingRequiredChecks": [
-    "20 warm iOS->Android iterations",
-    "20 warm Android->iOS iterations",
-    "5 cold-ish after iOS restart",
-    "5 cold-ish after Android restart",
-    "3 no-op checks per side",
-    "burst 10 products/modifications matrix"
-  ],
-  "nextAction": "Run dedicated in-process warm latency matrix and remaining cold/no-op/burst checks."
+  "warm20x20": "PASS"
 }

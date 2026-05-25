@@ -1,0 +1,323 @@
+{
+  "breakdown": {
+    "androidToIos": {
+      "androidCatalogPushAndEventsMs": 7662,
+      "androidHistoryPushAndEventsMs": 4762,
+      "androidLocalHistorySaveMs": 12,
+      "androidLocalSaveMs": 71,
+      "androidRemotePushMs": 12424,
+      "androidSyncEventCreateMs": 12424,
+      "androidTotalMatrixMs": 13781,
+      "androidWriteBatchMs": 17842,
+      "classification": "IDEAL",
+      "diagnosticLastSyncType": "EVENT_INCREMENTAL",
+      "fullPullUsed": false,
+      "iosApplyToStoreVisibleMs": null,
+      "iosCatalogApplyMs": null,
+      "iosCatalogFetchMs": null,
+      "iosEventPageFetchMs": null,
+      "iosHistoryApplyMs": null,
+      "iosHistoryFetchMs": null,
+      "iosIncrementalTotalElapsedMs": 224,
+      "iosProductPriceApplyMs": null,
+      "iosProductPriceFetchMs": null,
+      "iosRealtimeCallbackDelayMs": null,
+      "iosRealtimeCallbackUsed": false,
+      "iosSafetyPollDelayMs": 415,
+      "lastEventAppliedAfterAndroidWrite": false,
+      "lastEventSyncType": null,
+      "polls": 1,
+      "supabaseEventsObserved": 9,
+      "supabaseFirstEventVisibleAfterAndroidStartMs": 6460,
+      "supabaseFirstEventVisibleAfterAndroidWriteMs": -11382,
+      "syncType": "EVENT_INCREMENTAL"
+    },
+    "iosToAndroid": {
+      "androidSafetyPollDelayMs": 915,
+      "classification": "IDEAL",
+      "fullPullUsed": false,
+      "iosCatalogPushAndEventsMs": 1502,
+      "iosHistoryPushAndEventsMs": 581,
+      "iosLocalCatalogSaveMs": 15,
+      "iosLocalHistorySaveMs": 28,
+      "iosPricePushAndEventsMs": 879,
+      "iosRemotePushMs": 2962,
+      "iosTotalMatrixMs": 3387,
+      "iosWriteBatchMs": 34029,
+      "polls": 1,
+      "syncType": "EVENT_INCREMENTAL"
+    }
+  },
+  "budget": {
+    "borderlineMs": 30000,
+    "expectedReceiveWindow": "ideal 2-5s; good <=10s; temporary tolerable <=15s; 15-30s is borderline and must be explained/optimized; >30s or FULL_PULL_* in normal mutation is FAIL",
+    "failOverMs": 30000,
+    "goodAcceptableMs": 10000,
+    "idealMs": 5000,
+    "remoteReceiveMs": 30000,
+    "temporaryTolerableMs": 15000
+  },
+  "cleanupRequired": true,
+  "completedAt": "2026-05-25T06:40:38Z",
+  "counts": {
+    "androidAfterIosWrite": {
+      "categories": {
+        "active": 109,
+        "all": 109,
+        "deleted": 0,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      },
+      "history_entries": {
+        "active": 51,
+        "all": 52,
+        "deleted": 1,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": 51
+      },
+      "product_prices": {
+        "active": 223,
+        "all": 223,
+        "deleted": 0,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      },
+      "products": {
+        "active": 109,
+        "all": 109,
+        "deleted": 0,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      },
+      "suppliers": {
+        "active": 110,
+        "all": 110,
+        "deleted": 0,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      }
+    },
+    "androidBeforeIosWrite": {
+      "categories": {
+        "active": 108,
+        "all": 108,
+        "deleted": 0,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      },
+      "history_entries": {
+        "active": 49,
+        "all": 50,
+        "deleted": 1,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": 49
+      },
+      "product_prices": {
+        "active": 214,
+        "all": 214,
+        "deleted": 0,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      },
+      "products": {
+        "active": 107,
+        "all": 107,
+        "deleted": 0,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      },
+      "suppliers": {
+        "active": 109,
+        "all": 109,
+        "deleted": 0,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      }
+    },
+    "iosAfterAndroidWrite": {
+      "categories": {
+        "active": 174,
+        "all": 174,
+        "deleted": 0,
+        "dirty": 1,
+        "localOnly": 2,
+        "pending": 1,
+        "userVisible": null
+      },
+      "history_entries": {
+        "active": 85,
+        "all": 93,
+        "deleted": 8,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": 85
+      },
+      "product_prices": {
+        "active": 15726,
+        "all": 15742,
+        "deleted": 16,
+        "dirty": 2,
+        "localOnly": 0,
+        "pending": 2,
+        "userVisible": null
+      },
+      "products": {
+        "active": 20029,
+        "all": 20037,
+        "deleted": 8,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      },
+      "suppliers": {
+        "active": 206,
+        "all": 206,
+        "deleted": 0,
+        "dirty": 1,
+        "localOnly": 2,
+        "pending": 1,
+        "userVisible": null
+      }
+    },
+    "iosBeforeAndroidWrite": {
+      "categories": {
+        "active": 173,
+        "all": 173,
+        "deleted": 0,
+        "dirty": 1,
+        "localOnly": 2,
+        "pending": 1,
+        "userVisible": null
+      },
+      "history_entries": {
+        "active": 83,
+        "all": 90,
+        "deleted": 7,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": 83
+      },
+      "product_prices": {
+        "active": 15721,
+        "all": 15735,
+        "deleted": 14,
+        "dirty": 2,
+        "localOnly": 0,
+        "pending": 2,
+        "userVisible": null
+      },
+      "products": {
+        "active": 20027,
+        "all": 20034,
+        "deleted": 7,
+        "dirty": 0,
+        "localOnly": 0,
+        "pending": 0,
+        "userVisible": null
+      },
+      "suppliers": {
+        "active": 205,
+        "all": 205,
+        "deleted": 0,
+        "dirty": 1,
+        "localOnly": 2,
+        "pending": 1,
+        "userVisible": null
+      }
+    }
+  },
+  "coverage": [
+    "iOS write product/product-price/history create/update-or-correction/tombstone-or-append-only through live app-auth matrix path",
+    "Android foreground runtime receives iOS write without explicit pull command",
+    "Android write product/product-price/history create/update-or-correction/tombstone-or-append-only through live instrumentation app DB path",
+    "iOS foreground runtime receives Android write without explicit pull command"
+  ],
+  "directionPrefixes": {
+    "androidToIos": "TASK123_BATCH_RT_20260525T063806Z_ANDROID_",
+    "iosToAndroid": "TASK123_BATCH_RT_20260525T063806Z_IOS_"
+  },
+  "fullPullUsed": false,
+  "prefix": "TASK123_BATCH_RT_20260525T063806Z_",
+  "schemaVersion": "1.1",
+  "source": "live.mutation-near-realtime",
+  "startedAt": "2026-05-25T06:38:06Z",
+  "status": "PASS",
+  "syncEventCoverage": {
+    "androidToIos": {
+      "catalogEvents": 3,
+      "historyEvents": 4,
+      "missingTargetsForChangedEvents": 0,
+      "priceEvents": 2,
+      "targetedCategoryIds": 1,
+      "targetedPriceIds": 7,
+      "targetedProductIds": 5,
+      "targetedSessionIds": 56,
+      "targetedSupplierIds": 1
+    },
+    "iosToAndroid": {
+      "catalogEvents": 3,
+      "historyEvents": 3,
+      "missingTargetsForChangedEvents": 0,
+      "priceEvents": 2,
+      "targetedCategoryIds": 1,
+      "targetedPriceIds": 9,
+      "targetedProductIds": 5,
+      "targetedSessionIds": 5,
+      "targetedSupplierIds": 1
+    },
+    "requirement": "changed sync_events must carry targeted entity_ids/session_ids; ProductPrice expects price_ids in both directions.",
+    "targetedEventsOk": true
+  },
+  "syncModes": {
+    "androidLocalSave": "EVENT_INCREMENTAL",
+    "androidPostPushEvent": "EVENT_INCREMENTAL",
+    "androidReceiveApply": "EVENT_INCREMENTAL",
+    "androidRemotePush": "EVENT_INCREMENTAL",
+    "fallbackAllowed": [
+      "CHECKPOINT_INCREMENTAL",
+      "LIGHT_RECONCILE"
+    ],
+    "forbiddenInNormalMutation": [
+      "FULL_PULL_BOOTSTRAP",
+      "FULL_PULL_RECOVERY"
+    ],
+    "iosLocalSave": "EVENT_INCREMENTAL",
+    "iosPostPushEvent": "EVENT_INCREMENTAL",
+    "iosReceiveApply": "EVENT_INCREMENTAL",
+    "iosRemotePush": "EVENT_INCREMENTAL"
+  },
+  "taskId": "TASK-123",
+  "timings": {
+    "androidToIosPolls": 1,
+    "androidToIosReceiveMs": 415,
+    "androidToIosTotalMsFromWriteStart": 18257,
+    "androidWriteBatchMs": 17842,
+    "iosToAndroidPolls": 1,
+    "iosToAndroidReceiveMs": 915,
+    "iosToAndroidTotalMsFromWriteStart": 34944,
+    "iosWriteBatchMs": 34029
+  }
+}

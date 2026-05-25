@@ -574,6 +574,29 @@ except Exception:
 PY
 }
 
+mc_live_product_count_for_prefix() {
+  local prefix="$1"
+  local like_prefix sql out
+  like_prefix="$(mc_prefix_like "$prefix")"
+  sql="SELECT count(*)::int AS count FROM public.inventory_products WHERE barcode LIKE '${like_prefix}' OR product_name LIKE '${like_prefix}';"
+  out="$(
+    cd "$MC_SUPABASE_REPO" || exit 3
+    supabase db query --linked -o json "$sql"
+  )" || {
+    printf '0'
+    return 0
+  }
+  JSON_INPUT="$out" python3 - <<'PY'
+import json, os
+try:
+    payload=json.loads(os.environ.get("JSON_INPUT",""))
+    rows=payload.get("rows", [])
+    print(int(rows[0].get("count", 0)) if rows else 0)
+except Exception:
+    print(0)
+PY
+}
+
 mc_live_sync_events_for_window_json() {
   local start_ms="$1"
   local end_ms="$2"
@@ -1070,6 +1093,515 @@ PY
   fi
   MC_SUMMARY="Live mutation-near-realtime FAIL for ${run_prefix}: one direction exceeded ${timeout_seconds}s receiver budget."
   MC_NEXT_ACTION="Inspect auto-sync/realtime logs, then optimize triggers and rerun."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_live_task123_single_propagation() {
+  local task_id="$1"
+  local prefix="$2"
+  local iterations="${MC_TASK123_SINGLE_ITERATIONS:-20}"
+  local timeout_seconds="${MC_TASK123_SINGLE_TIMEOUT_SECONDS:-15}"
+  local started run_prefix iter_file tmp_json status
+  MC_PLATFORM="live"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="TASK-123-SINGLE"
+  mc_validate_task_prefix "$prefix" || return $?
+  mc_require_live || return $?
+  run_prefix="${prefix//\*/}"
+  run_prefix="${run_prefix%_}_SINGLE_${MC_TIMESTAMP}_"
+  mc_validate_task_prefix "$run_prefix" || return $?
+  MC_TEST_PREFIX="$run_prefix"
+  started="$(mc_now_iso)"
+
+  mc_android_auth_preflight || return $?
+  mc_ios_auth_preflight || return $?
+  mc_android_smoke device || return $?
+  mc_ios_runtime_ui_counts || return $?
+
+  iter_file="$(mktemp /tmp/mc-agent-task123-single.XXXXXX.jsonl)"
+  local i ios_prefix android_prefix before after code elapsed polls line serial instrument_log instrument_timeout
+  for ((i=1; i<=iterations; i++)); do
+    ios_prefix="${run_prefix}IOS_${i}_"
+    mc_validate_task_prefix "$ios_prefix" || return $?
+    mc_android_serial >/dev/null || return $?
+    serial="$MC_ANDROID_SELECTED_SERIAL"
+    mc_android_require_unlocked "$serial" || return $?
+    mc_android_adb_timed 10 -s "$serial" shell monkey -p com.example.merchandisecontrolsplitview -c android.intent.category.LAUNCHER 1 >/dev/null || return "$MC_EXIT_BLOCKED"
+    sleep 1
+    mc_sync_counts_android "$task_id" || return $?
+    before="$MC_SYNC_JSON_RESULT"
+    mc_ios_task114_matrix_step test123IOSSingleCatalogCreatePropagation "$ios_prefix"
+    code=$?
+    if [[ "$code" -ne 0 ]]; then
+      rm -f "$iter_file"
+      return "$code"
+    fi
+    mc_live_wait_counts_delta android "$before" 1 0 0 "$timeout_seconds" "task123_ios_to_android_single"; code=$?
+    after="$MC_LIVE_WAIT_LAST_JSON"
+    elapsed="$MC_LIVE_WAIT_ELAPSED_MS"
+    polls="$MC_LIVE_WAIT_POLL_COUNT"
+    line="$(grep 'TASK123_IOS_SINGLE_PROPAGATION' "$MC_LOG_TMP" 2>/dev/null | tail -n 1 || true)"
+    ITER="$i" DIRECTION="iosToAndroid" PREFIX="$ios_prefix" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" POLLS="$polls" LINE="$line" CODE="$code" python3 - >>"$iter_file" <<'PY'
+import json, os, re
+line = os.environ.get("LINE", "")
+timing = {k: int(v) if v.isdigit() else v for k, v in re.findall(r"([A-Za-z0-9]+)=([A-Za-z0-9_-]+)", line)}
+print(json.dumps({
+  "iteration": int(os.environ["ITER"]),
+  "direction": os.environ["DIRECTION"],
+  "prefix": os.environ["PREFIX"],
+  "status": "PASS" if os.environ["CODE"] == "0" else "FAIL",
+  "kind": timing.get("kind", "catalog_product_create"),
+  "localSaveMs": timing.get("localSaveMs"),
+  "localOutboxEnqueueMs": timing.get("localOutboxEnqueueMs"),
+  "sourceAutoPushStartDelayMs": timing.get("sourceAutoPushStartDelayMs"),
+  "remotePushMs": timing.get("remotePushMs"),
+  "syncEventAvailableMs": timing.get("syncEventAvailableMs"),
+  "targetRealtimeDetectedMs": None,
+  "targetFetchMs": None,
+  "targetApplyMs": None,
+  "totalPropagationMs": int(os.environ["ELAPSED"]),
+  "polls": int(os.environ["POLLS"]),
+}, sort_keys=True))
+PY
+    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$code"; }
+
+    android_prefix="${run_prefix}ANDROID_${i}_"
+    mc_validate_task_prefix "$android_prefix" || return $?
+    MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=1 mc_ios_runtime_ui_counts || return $?
+    before="$MC_SYNC_JSON_RESULT"
+    mc_android_serial >/dev/null || return $?
+    serial="$MC_ANDROID_SELECTED_SERIAL"
+    instrument_timeout="$(mc_android_instrument_timeout_seconds)"
+    instrument_log="$(mktemp /tmp/mc-agent-android-task123-single.XXXXXX.log)"
+    mc_android_adb_timed "$instrument_timeout" -s "$serial" shell am instrument -w -r \
+      -e task114LiveAcceptance true -e task114RunPrefix "$android_prefix" \
+      -e class 'com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#test123AndroidSingleCatalogCreatePropagation' \
+      com.example.merchandisecontrolsplitview.test/androidx.test.runner.AndroidJUnitRunner >"$instrument_log" 2>&1
+    code=$?
+    mc_report_log "$(mc_redact_text "$(tail -n 120 "$instrument_log")")"
+    line="$(grep 'TASK123_ANDROID_SINGLE_PROPAGATION' "$instrument_log" 2>/dev/null | tail -n 1 || true)"
+    rm -f "$instrument_log"
+    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$MC_EXIT_FAIL"; }
+    MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
+    mc_live_wait_counts_delta ios "$before" 1 0 0 "$timeout_seconds" "task123_android_to_ios_single"; code=$?
+    after="$MC_LIVE_WAIT_LAST_JSON"
+    elapsed="$MC_LIVE_WAIT_ELAPSED_MS"
+    polls="$MC_LIVE_WAIT_POLL_COUNT"
+    ITER="$i" DIRECTION="androidToIos" PREFIX="$android_prefix" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" POLLS="$polls" LINE="$line" CODE="$code" python3 - >>"$iter_file" <<'PY'
+import json, os, re
+line = os.environ.get("LINE", "")
+timing = {k: int(v) if v.isdigit() else v for k, v in re.findall(r"([A-Za-z0-9]+)=([A-Za-z0-9_-]+)", line)}
+print(json.dumps({
+  "iteration": int(os.environ["ITER"]),
+  "direction": os.environ["DIRECTION"],
+  "prefix": os.environ["PREFIX"],
+  "status": "PASS" if os.environ["CODE"] == "0" else "FAIL",
+  "kind": timing.get("kind", "catalog_product_create"),
+  "localSaveMs": timing.get("localSaveMs"),
+  "localOutboxEnqueueMs": timing.get("localOutboxEnqueueMs"),
+  "sourceAutoPushStartDelayMs": timing.get("sourceAutoPushStartDelayMs"),
+  "remotePushMs": timing.get("remotePushMs"),
+  "syncEventAvailableMs": timing.get("syncEventAvailableMs"),
+  "targetRealtimeDetectedMs": None,
+  "targetFetchMs": None,
+  "targetApplyMs": None,
+  "totalPropagationMs": int(os.environ["ELAPSED"]),
+  "polls": int(os.environ["POLLS"]),
+}, sort_keys=True))
+PY
+    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$code"; }
+  done
+
+  tmp_json="$(mktemp /tmp/mc-agent-task123-single-summary.XXXXXX.json)"
+  TASK_ID="$task_id" RUN_PREFIX="$run_prefix" STARTED="$started" ITER_FILE="$iter_file" ITERATIONS="$iterations" python3 - >"$tmp_json" <<'PY'
+import json, os, statistics
+from datetime import datetime, timezone
+rows=[json.loads(line) for line in open(os.environ["ITER_FILE"]) if line.strip()]
+def stats(direction):
+    values=sorted(r["totalPropagationMs"] for r in rows if r["direction"]==direction)
+    def pct(p):
+        if not values: return None
+        idx=min(len(values)-1, max(0, int((len(values)*p+0.999999)-1)))
+        return values[idx]
+    return {
+        "count": len(values),
+        "passCount": sum(1 for r in rows if r["direction"]==direction and r["status"]=="PASS"),
+        "p50Ms": pct(0.50),
+        "p95Ms": pct(0.95),
+        "maxMs": max(values) if values else None,
+    }
+ios=stats("iosToAndroid")
+android=stats("androidToIos")
+required = int(os.environ["ITERATIONS"])
+ok = all(r["status"]=="PASS" for r in rows) and ios["count"]==required and android["count"]==required and ios["p50Ms"]<=3000 and android["p50Ms"]<=3000 and ios["p95Ms"]<=5000 and android["p95Ms"]<=5000 and ios["maxMs"]<=15000 and android["maxMs"]<=15000
+print(json.dumps({
+  "schemaVersion":"1.1",
+  "taskId":os.environ["TASK_ID"],
+  "source":"live.task123-single-propagation",
+  "prefix":os.environ["RUN_PREFIX"],
+  "startedAt":os.environ["STARTED"],
+  "completedAt":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+  "status":"PASS" if ok else "FAIL",
+  "iterations":rows,
+  "summary":{"iosToAndroid":ios,"androidToIos":android},
+  "acceptance":{"p50Ms":3000,"p95Ms":5000,"maxMs":15000}
+}, sort_keys=True))
+PY
+  rm -f "$iter_file"
+  MC_SYNC_JSON_RESULT="$(cat "$tmp_json")"
+  rm -f "$tmp_json"
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  if [[ "$status" == "PASS" ]]; then
+    MC_SUMMARY="TASK-123 single propagation PASS: 20/20 warm per direction within p50/p95/max budget."
+    MC_NEXT_ACTION="Run cold-ish, no-op, burst-10 and cleanup/residue."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="TASK-123 single propagation FAIL: inspect per-iteration bottleneck fields."
+  MC_NEXT_ACTION="Fix the measured bottleneck and rerun task123-single-propagation."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_live_task123_cold_restart() {
+  local task_id="$1"
+  local prefix="$2"
+  local iterations="${MC_TASK123_COLD_ITERATIONS:-5}"
+  local timeout_seconds="${MC_TASK123_SINGLE_TIMEOUT_SECONDS:-15}"
+  local started run_prefix iter_file tmp_json status
+  MC_PLATFORM="live"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="TASK-123-COLD"
+  mc_validate_task_prefix "$prefix" || return $?
+  mc_require_live || return $?
+  run_prefix="${prefix//\*/}"
+  run_prefix="${run_prefix%_}_COLD_${MC_TIMESTAMP}_"
+  mc_validate_task_prefix "$run_prefix" || return $?
+  MC_TEST_PREFIX="$run_prefix"
+  started="$(mc_now_iso)"
+
+  mc_android_auth_preflight || return $?
+  mc_ios_auth_preflight || return $?
+  mc_android_smoke device || return $?
+  mc_ios_runtime_ui_counts || return $?
+
+  iter_file="$(mktemp /tmp/mc-agent-task123-cold.XXXXXX.jsonl)"
+  local i ios_prefix android_prefix before after code elapsed polls line serial target bundle_id instrument_log instrument_timeout
+  target="$(mc_ios_simulator_target)" || return $?
+  bundle_id="$(mc_ios_app_bundle_id)"
+  for ((i=1; i<=iterations; i++)); do
+    android_prefix="${run_prefix}ANDROID_TO_IOS_${i}_"
+    mc_validate_task_prefix "$android_prefix" || return $?
+    xcrun simctl terminate "$target" "$bundle_id" >/dev/null 2>&1 || true
+    MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=1 mc_ios_runtime_ui_counts || return $?
+    before="$MC_SYNC_JSON_RESULT"
+    mc_android_serial >/dev/null || return $?
+    serial="$MC_ANDROID_SELECTED_SERIAL"
+    instrument_timeout="$(mc_android_instrument_timeout_seconds)"
+    instrument_log="$(mktemp /tmp/mc-agent-android-task123-cold.XXXXXX.log)"
+    mc_android_adb_timed "$instrument_timeout" -s "$serial" shell am instrument -w -r \
+      -e task114LiveAcceptance true -e task114RunPrefix "$android_prefix" \
+      -e class 'com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#test123AndroidSingleCatalogCreatePropagation' \
+      com.example.merchandisecontrolsplitview.test/androidx.test.runner.AndroidJUnitRunner >"$instrument_log" 2>&1
+    code=$?
+    mc_report_log "$(mc_redact_text "$(tail -n 120 "$instrument_log")")"
+    line="$(grep 'TASK123_ANDROID_SINGLE_PROPAGATION' "$instrument_log" 2>/dev/null | tail -n 1 || true)"
+    rm -f "$instrument_log"
+    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$MC_EXIT_FAIL"; }
+    MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
+    mc_live_wait_counts_delta ios "$before" 1 0 0 "$timeout_seconds" "task123_cold_ios_restart_android_to_ios"; code=$?
+    after="$MC_LIVE_WAIT_LAST_JSON"
+    elapsed="$MC_LIVE_WAIT_ELAPSED_MS"
+    polls="$MC_LIVE_WAIT_POLL_COUNT"
+    ITER="$i" DIRECTION="androidToIosAfterIosRestart" PREFIX="$android_prefix" ELAPSED="$elapsed" POLLS="$polls" LINE="$line" CODE="$code" python3 - >>"$iter_file" <<'PY'
+import json, os, re
+line = os.environ.get("LINE", "")
+timing = {k: int(v) if v.isdigit() else v for k, v in re.findall(r"([A-Za-z0-9]+)=([A-Za-z0-9_-]+)", line)}
+print(json.dumps({
+  "iteration": int(os.environ["ITER"]),
+  "direction": os.environ["DIRECTION"],
+  "prefix": os.environ["PREFIX"],
+  "status": "PASS" if os.environ["CODE"] == "0" else "FAIL",
+  "kind": timing.get("kind", "catalog_product_create"),
+  "remotePushMs": timing.get("remotePushMs"),
+  "totalPropagationMs": int(os.environ["ELAPSED"]),
+  "polls": int(os.environ["POLLS"]),
+}, sort_keys=True))
+PY
+    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$code"; }
+
+    ios_prefix="${run_prefix}IOS_TO_ANDROID_${i}_"
+    mc_validate_task_prefix "$ios_prefix" || return $?
+    mc_android_serial >/dev/null || return $?
+    serial="$MC_ANDROID_SELECTED_SERIAL"
+    mc_android_require_unlocked "$serial" || return $?
+    adb -s "$serial" shell am force-stop com.example.merchandisecontrolsplitview >/dev/null 2>&1 || true
+    mc_android_adb_timed 10 -s "$serial" shell monkey -p com.example.merchandisecontrolsplitview -c android.intent.category.LAUNCHER 1 >/dev/null || return "$MC_EXIT_BLOCKED"
+    sleep 1
+    mc_sync_counts_android "$task_id" || return $?
+    before="$MC_SYNC_JSON_RESULT"
+    mc_ios_task114_matrix_step test123IOSSingleCatalogCreatePropagation "$ios_prefix"
+    code=$?
+    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$code"; }
+    mc_live_wait_counts_delta android "$before" 1 0 0 "$timeout_seconds" "task123_cold_android_restart_ios_to_android"; code=$?
+    after="$MC_LIVE_WAIT_LAST_JSON"
+    elapsed="$MC_LIVE_WAIT_ELAPSED_MS"
+    polls="$MC_LIVE_WAIT_POLL_COUNT"
+    line="$(grep 'TASK123_IOS_SINGLE_PROPAGATION' "$MC_LOG_TMP" 2>/dev/null | tail -n 1 || true)"
+    ITER="$i" DIRECTION="iosToAndroidAfterAndroidRestart" PREFIX="$ios_prefix" ELAPSED="$elapsed" POLLS="$polls" LINE="$line" CODE="$code" python3 - >>"$iter_file" <<'PY'
+import json, os, re
+line = os.environ.get("LINE", "")
+timing = {k: int(v) if v.isdigit() else v for k, v in re.findall(r"([A-Za-z0-9]+)=([A-Za-z0-9_-]+)", line)}
+print(json.dumps({
+  "iteration": int(os.environ["ITER"]),
+  "direction": os.environ["DIRECTION"],
+  "prefix": os.environ["PREFIX"],
+  "status": "PASS" if os.environ["CODE"] == "0" else "FAIL",
+  "kind": timing.get("kind", "catalog_product_create"),
+  "remotePushMs": timing.get("remotePushMs"),
+  "totalPropagationMs": int(os.environ["ELAPSED"]),
+  "polls": int(os.environ["POLLS"]),
+}, sort_keys=True))
+PY
+    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$code"; }
+  done
+
+  tmp_json="$(mktemp /tmp/mc-agent-task123-cold-summary.XXXXXX.json)"
+  TASK_ID="$task_id" RUN_PREFIX="$run_prefix" STARTED="$started" ITER_FILE="$iter_file" ITERATIONS="$iterations" python3 - >"$tmp_json" <<'PY'
+import json, os
+from datetime import datetime, timezone
+rows=[json.loads(line) for line in open(os.environ["ITER_FILE"]) if line.strip()]
+def stats(direction):
+    values=sorted(r["totalPropagationMs"] for r in rows if r["direction"]==direction)
+    def pct(p):
+        if not values: return None
+        idx=min(len(values)-1, max(0, int((len(values)*p+0.999999)-1)))
+        return values[idx]
+    return {"count": len(values), "passCount": sum(1 for r in rows if r["direction"]==direction and r["status"]=="PASS"), "p50Ms": pct(0.50), "p95Ms": pct(0.95), "maxMs": max(values) if values else None}
+ios=stats("androidToIosAfterIosRestart")
+android=stats("iosToAndroidAfterAndroidRestart")
+required=int(os.environ["ITERATIONS"])
+ok=all(r["status"]=="PASS" for r in rows) and ios["count"]==required and android["count"]==required and ios["p95Ms"]<=5000 and android["p95Ms"]<=5000 and ios["maxMs"]<=15000 and android["maxMs"]<=15000
+print(json.dumps({"schemaVersion":"1.1","taskId":os.environ["TASK_ID"],"source":"live.task123-cold-restart","prefix":os.environ["RUN_PREFIX"],"startedAt":os.environ["STARTED"],"completedAt":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),"status":"PASS" if ok else "FAIL","iterations":rows,"summary":{"iosRestart":ios,"androidRestart":android},"acceptance":{"p95Ms":5000,"maxMs":15000}}, sort_keys=True))
+PY
+  rm -f "$iter_file"
+  MC_SYNC_JSON_RESULT="$(cat "$tmp_json")"
+  rm -f "$tmp_json"
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  if [[ "$status" == "PASS" ]]; then
+    MC_SUMMARY="TASK-123 cold-ish restart PASS: ${iterations}/${iterations} per side within budget."
+    MC_NEXT_ACTION="Run no-op, burst-10 and cleanup/residue."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="TASK-123 cold-ish restart FAIL: inspect per-iteration bottleneck fields."
+  MC_NEXT_ACTION="Fix cold restart bottleneck and rerun task123-cold-restart."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_live_task123_noop_matrix() {
+  local task_id="$1"
+  local prefix="$2"
+  local iterations="${MC_TASK123_NOOP_ITERATIONS:-3}"
+  local started run_prefix iter_file tmp_json status
+  MC_PLATFORM="live"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="TASK-123-NOOP"
+  mc_validate_task_prefix "$prefix" || return $?
+  mc_require_live || return $?
+  run_prefix="${prefix//\*/}"
+  run_prefix="${run_prefix%_}_NOOP_${MC_TIMESTAMP}_"
+  mc_validate_task_prefix "$run_prefix" || return $?
+  MC_TEST_PREFIX="$run_prefix"
+  started="$(mc_now_iso)"
+  mc_android_auth_preflight || return $?
+  mc_ios_auth_preflight || return $?
+  mc_android_smoke device || return $?
+  MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=1 mc_ios_runtime_ui_counts || return $?
+
+  iter_file="$(mktemp /tmp/mc-agent-task123-noop.XXXXXX.jsonl)"
+  local i before after elapsed started_ms serial code events_json
+  for ((i=1; i<=iterations; i++)); do
+    mc_android_serial >/dev/null || return $?
+    serial="$MC_ANDROID_SELECTED_SERIAL"
+    mc_android_adb_timed 10 -s "$serial" shell monkey -p com.example.merchandisecontrolsplitview -c android.intent.category.LAUNCHER 1 >/dev/null || return "$MC_EXIT_BLOCKED"
+    sleep 1
+    mc_sync_counts_android "$task_id" || return $?
+    before="$MC_SYNC_JSON_RESULT"
+    started_ms="$(mc_now_ms)"
+    sleep 1
+    mc_sync_counts_android "$task_id" || return $?
+    after="$MC_SYNC_JSON_RESULT"
+    elapsed=$(( $(mc_now_ms) - started_ms ))
+    events_json="$(mc_live_sync_events_for_prefix_json "$run_prefix")"
+    ITER="$i" DIRECTION="androidNoop" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" EVENTS_JSON="$events_json" python3 - >>"$iter_file" <<'PY'
+import json, os
+before=json.loads(os.environ["BEFORE"])
+after=json.loads(os.environ["AFTER"])
+events=json.loads(os.environ["EVENTS_JSON"])
+keys=("products","product_prices","history_entries")
+same=all(before.get("counts",{}).get(k)==after.get("counts",{}).get(k) for k in keys)
+event_count=len(events.get("rows",[]))
+elapsed=int(os.environ["ELAPSED"])
+print(json.dumps({"iteration":int(os.environ["ITER"]),"direction":os.environ["DIRECTION"],"status":"PASS" if same and event_count==0 and elapsed<=2000 else "FAIL","elapsedMs":elapsed,"syncEventsCreated":event_count,"countsUnchanged":same}, sort_keys=True))
+PY
+
+    MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
+    before="$MC_SYNC_JSON_RESULT"
+    started_ms="$(mc_now_ms)"
+    sleep 1
+    MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
+    after="$MC_SYNC_JSON_RESULT"
+    elapsed=$(( $(mc_now_ms) - started_ms ))
+    events_json="$(mc_live_sync_events_for_prefix_json "$run_prefix")"
+    ITER="$i" DIRECTION="iosNoop" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" EVENTS_JSON="$events_json" python3 - >>"$iter_file" <<'PY'
+import json, os
+before=json.loads(os.environ["BEFORE"])
+after=json.loads(os.environ["AFTER"])
+events=json.loads(os.environ["EVENTS_JSON"])
+keys=("products","product_prices","history_entries")
+same=all(before.get("counts",{}).get(k)==after.get("counts",{}).get(k) for k in keys)
+event_count=len(events.get("rows",[]))
+elapsed=int(os.environ["ELAPSED"])
+print(json.dumps({"iteration":int(os.environ["ITER"]),"direction":os.environ["DIRECTION"],"status":"PASS" if same and event_count==0 and elapsed<=2000 else "FAIL","elapsedMs":elapsed,"syncEventsCreated":event_count,"countsUnchanged":same}, sort_keys=True))
+PY
+  done
+  tmp_json="$(mktemp /tmp/mc-agent-task123-noop-summary.XXXXXX.json)"
+  TASK_ID="$task_id" RUN_PREFIX="$run_prefix" STARTED="$started" ITER_FILE="$iter_file" ITERATIONS="$iterations" python3 - >"$tmp_json" <<'PY'
+import json, os
+from datetime import datetime, timezone
+rows=[json.loads(line) for line in open(os.environ["ITER_FILE"]) if line.strip()]
+def stats(direction):
+    values=sorted(r["elapsedMs"] for r in rows if r["direction"]==direction)
+    return {"count":len(values),"passCount":sum(1 for r in rows if r["direction"]==direction and r["status"]=="PASS"),"maxMs":max(values) if values else None}
+ios=stats("iosNoop")
+android=stats("androidNoop")
+required=int(os.environ["ITERATIONS"])
+ok=all(r["status"]=="PASS" for r in rows) and ios["count"]==required and android["count"]==required
+print(json.dumps({"schemaVersion":"1.1","taskId":os.environ["TASK_ID"],"source":"live.task123-noop-matrix","prefix":os.environ["RUN_PREFIX"],"startedAt":os.environ["STARTED"],"completedAt":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),"status":"PASS" if ok else "FAIL","iterations":rows,"summary":{"iosNoop":ios,"androidNoop":android},"acceptance":{"maxMeasurableMs":2000}}, sort_keys=True))
+PY
+  rm -f "$iter_file"
+  MC_SYNC_JSON_RESULT="$(cat "$tmp_json")"
+  rm -f "$tmp_json"
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  if [[ "$status" == "PASS" ]]; then
+    MC_SUMMARY="TASK-123 no-op matrix PASS: ${iterations}/${iterations} per side with no scoped sync_events."
+    MC_NEXT_ACTION="Run burst-10 and cleanup/residue."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="TASK-123 no-op matrix FAIL: inspect counts/events per iteration."
+  MC_NEXT_ACTION="Fix no-op trigger/pending behavior and rerun task123-noop."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_live_task123_burst10() {
+  local task_id="$1"
+  local prefix="$2"
+  local timeout_seconds="${MC_TASK123_BURST_TIMEOUT_SECONDS:-15}"
+  local started run_prefix iter_file tmp_json status
+  MC_PLATFORM="live"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="TASK-123-BURST"
+  mc_validate_task_prefix "$prefix" || return $?
+  mc_require_live || return $?
+  run_prefix="${prefix//\*/}"
+  run_prefix="${run_prefix%_}_BURST_${MC_TIMESTAMP}_"
+  mc_validate_task_prefix "$run_prefix" || return $?
+  MC_TEST_PREFIX="$run_prefix"
+  started="$(mc_now_iso)"
+  mc_android_auth_preflight || return $?
+  mc_ios_auth_preflight || return $?
+  mc_android_smoke device || return $?
+  MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=1 mc_ios_runtime_ui_counts || return $?
+
+  iter_file="$(mktemp /tmp/mc-agent-task123-burst.XXXXXX.jsonl)"
+  local before after code elapsed polls serial i line instrument_log instrument_timeout burst_started_ms source_ms
+
+  mc_android_serial >/dev/null || return $?
+  serial="$MC_ANDROID_SELECTED_SERIAL"
+  mc_android_adb_timed 10 -s "$serial" shell monkey -p com.example.merchandisecontrolsplitview -c android.intent.category.LAUNCHER 1 >/dev/null || return "$MC_EXIT_BLOCKED"
+  sleep 1
+  mc_sync_counts_android "$task_id" || return $?
+  before="$MC_SYNC_JSON_RESULT"
+  burst_started_ms="$(mc_now_ms)"
+  for ((i=1; i<=10; i++)); do
+    mc_ios_task114_matrix_step test123IOSSingleCatalogCreatePropagation "${run_prefix}IOS_BURST_${i}_" || { rm -f "$iter_file"; return "$MC_EXIT_FAIL"; }
+  done
+  source_ms=$(( $(mc_now_ms) - burst_started_ms ))
+  mc_live_wait_counts_delta android "$before" 10 0 0 "$timeout_seconds" "task123_burst_ios_to_android"; code=$?
+  after="$MC_LIVE_WAIT_LAST_JSON"
+  elapsed="$MC_LIVE_WAIT_ELAPSED_MS"
+  polls="$MC_LIVE_WAIT_POLL_COUNT"
+  local scoped_remote_count
+  scoped_remote_count="$(mc_live_product_count_for_prefix "${run_prefix}IOS_BURST_")"
+  DIRECTION="iosToAndroid" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" POLLS="$polls" SOURCE_MS="$source_ms" CODE="$code" SCOPED_REMOTE_COUNT="$scoped_remote_count" python3 - >>"$iter_file" <<'PY'
+import json, os
+b=json.loads(os.environ["BEFORE"]).get("counts",{})
+a=json.loads(os.environ["AFTER"]).get("counts",{})
+delta=a.get("products",{}).get("active",0)-b.get("products",{}).get("active",0)
+scoped=int(os.environ["SCOPED_REMOTE_COUNT"])
+ok=os.environ["CODE"]=="0" and delta>=10 and scoped==10
+print(json.dumps({"direction":os.environ["DIRECTION"],"status":"PASS" if ok else "FAIL","changes":10,"productDelta":delta,"scopedRemoteProducts":scoped,"duplicate":scoped!=10,"sourceBurstMs":int(os.environ["SOURCE_MS"]),"totalPropagationMs":int(os.environ["ELAPSED"]),"polls":int(os.environ["POLLS"])}, sort_keys=True))
+PY
+  [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$code"; }
+
+  MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
+  before="$MC_SYNC_JSON_RESULT"
+  burst_started_ms="$(mc_now_ms)"
+  for ((i=1; i<=10; i++)); do
+    instrument_timeout="$(mc_android_instrument_timeout_seconds)"
+    instrument_log="$(mktemp /tmp/mc-agent-android-task123-burst.XXXXXX.log)"
+    mc_android_adb_timed "$instrument_timeout" -s "$serial" shell am instrument -w -r \
+      -e task114LiveAcceptance true -e task114RunPrefix "${run_prefix}ANDROID_BURST_${i}_" \
+      -e class 'com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#test123AndroidSingleCatalogCreatePropagation' \
+      com.example.merchandisecontrolsplitview.test/androidx.test.runner.AndroidJUnitRunner >"$instrument_log" 2>&1
+    code=$?
+    mc_report_log "$(mc_redact_text "$(tail -n 40 "$instrument_log")")"
+    rm -f "$instrument_log"
+    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$MC_EXIT_FAIL"; }
+  done
+  source_ms=$(( $(mc_now_ms) - burst_started_ms ))
+  MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
+  mc_live_wait_counts_delta ios "$before" 10 0 0 "$timeout_seconds" "task123_burst_android_to_ios"; code=$?
+  after="$MC_LIVE_WAIT_LAST_JSON"
+  elapsed="$MC_LIVE_WAIT_ELAPSED_MS"
+  polls="$MC_LIVE_WAIT_POLL_COUNT"
+  scoped_remote_count="$(mc_live_product_count_for_prefix "${run_prefix}ANDROID_BURST_")"
+  DIRECTION="androidToIos" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" POLLS="$polls" SOURCE_MS="$source_ms" CODE="$code" SCOPED_REMOTE_COUNT="$scoped_remote_count" python3 - >>"$iter_file" <<'PY'
+import json, os
+b=json.loads(os.environ["BEFORE"]).get("counts",{})
+a=json.loads(os.environ["AFTER"]).get("counts",{})
+delta=a.get("products",{}).get("active",0)-b.get("products",{}).get("active",0)
+scoped=int(os.environ["SCOPED_REMOTE_COUNT"])
+ok=os.environ["CODE"]=="0" and delta>=10 and scoped==10
+print(json.dumps({"direction":os.environ["DIRECTION"],"status":"PASS" if ok else "FAIL","changes":10,"productDelta":delta,"scopedRemoteProducts":scoped,"duplicate":scoped!=10,"sourceBurstMs":int(os.environ["SOURCE_MS"]),"totalPropagationMs":int(os.environ["ELAPSED"]),"polls":int(os.environ["POLLS"])}, sort_keys=True))
+PY
+  [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$code"; }
+
+  tmp_json="$(mktemp /tmp/mc-agent-task123-burst-summary.XXXXXX.json)"
+  TASK_ID="$task_id" RUN_PREFIX="$run_prefix" STARTED="$started" ITER_FILE="$iter_file" python3 - >"$tmp_json" <<'PY'
+import json, os
+from datetime import datetime, timezone
+rows=[json.loads(line) for line in open(os.environ["ITER_FILE"]) if line.strip()]
+ok=all(r["status"]=="PASS" and not r["duplicate"] for r in rows) and len(rows)==2
+print(json.dumps({"schemaVersion":"1.1","taskId":os.environ["TASK_ID"],"source":"live.task123-burst-10","prefix":os.environ["RUN_PREFIX"],"startedAt":os.environ["STARTED"],"completedAt":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),"status":"PASS" if ok else "FAIL","bursts":rows,"acceptance":{"changesPerDirection":10,"duplicates":0,"timeout":False}}, sort_keys=True))
+PY
+  rm -f "$iter_file"
+  MC_SYNC_JSON_RESULT="$(cat "$tmp_json")"
+  rm -f "$tmp_json"
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT")"
+  if [[ "$status" == "PASS" ]]; then
+    MC_SUMMARY="TASK-123 burst-10 PASS: 10 changes per direction, no duplicates."
+    MC_NEXT_ACTION="Run batch multi-write and cleanup/residue."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="TASK-123 burst-10 FAIL: inspect burst deltas/duplicates."
+  MC_NEXT_ACTION="Fix burst behavior and rerun task123-burst-10."
   return "$MC_EXIT_FAIL"
 }
 
@@ -1707,6 +2239,18 @@ PY
       ;;
     mutation-near-realtime)
       mc_live_mutation_near_realtime "$task_id" "$prefix"
+      ;;
+    task123-single-propagation)
+      mc_live_task123_single_propagation "$task_id" "$prefix"
+      ;;
+    task123-cold-restart)
+      mc_live_task123_cold_restart "$task_id" "$prefix"
+      ;;
+    task123-noop)
+      mc_live_task123_noop_matrix "$task_id" "$prefix"
+      ;;
+    task123-burst-10)
+      mc_live_task123_burst10 "$task_id" "$prefix"
       ;;
     offline-reconnect-sync)
       mc_live_offline_reconnect_sync "$task_id" "$prefix"
