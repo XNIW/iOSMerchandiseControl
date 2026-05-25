@@ -5,14 +5,14 @@
 - **Titolo**: iOS Sync Architecture Full Purification and Legacy Eradication
 - **File task**: `docs/TASKS/TASK-121-ios-sync-architecture-full-purification.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-121/`
-- **Stato**: ACTIVE
-- **Fase attuale**: FIX
-- **Responsabile attuale**: CODEX / Fixer
+- **Stato**: DONE
+- **Fase attuale**: CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING
+- **Responsabile attuale**: USER / Accepted closure
 - **Data creazione**: 2026-05-24
-- **Ultimo aggiornamento**: 2026-05-24 17:21 -0400
-- **Ultimo agente che ha operato**: CODEX / Reviewer
-- **Readiness**: CHANGES_REQUIRED. Handoff `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`. Non DONE. Local `HEAD`, `origin/main` and GitHub canonical `main` are aligned on `a7564857128d08d4e15eaf0977617fbd8a91806a`; `2ac8cb02587657307a0ec136e8153f6ee29808a2` remains the historical architecture commit referenced by earlier evidence. Root sync-related forbidden files are absent, but `Sync/Remote/SupabaseTransportClient.swift` is still a multi-domain Remote mega-service, so `ARCHITECTURE_TARGET_MET` is not approved.
-- **Supersede parziale**: TASK-122 supersede TASK-121 solo per il blocker finale `Remote mega-service strangler`. TASK-121 resta NON DONE, baseline storica/tecnica, e non deve essere dichiarato completo.
+- **Ultimo aggiornamento**: 2026-05-25 10:11 -0400
+- **Ultimo agente che ha operato**: CODEX / Tracking closure
+- **Readiness**: CLOSED_DONE_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING. Final remote mega-service blocker was superseded and resolved by TASK-122; this historical slice is accepted closed.
+- **Supersede finale**: TASK-122 resolved the final `Remote mega-service strangler` blocker; TASK-121 is now DONE by user closure as historical baseline.
 - **Tipo task**: planning/refactor governance architetturale iOS; nessuna nuova feature utente.
 - **User override registrato**: l'utente ha prima chiesto a Codex di creare il planning TASK-121, poi ha autorizzato review/fix, continuation FIX e commit/push su GitHub `main` per chiudere il blocker canonical alignment; infine ha richiesto a Codex una review severa indipendente nonostante il workflow standard assegni la review a Claude. Nessun Supabase live, cleanup, migration/RLS/grant/RPC/schema change eseguito.
 
@@ -1191,3 +1191,12 @@ Handoff post-review:
 `TASK-121 ACTIVE / FIX — CHANGES_REQUIRED`.
 
 Next action: spostare il comportamento Supabase multi-domain fuori da `SupabaseTransportClient` verso adapter Remote/Manual/Recovery focalizzati, mantenendo il transport come host sottile per client/session/errori condivisi; poi rieseguire `sync-architecture`, scanner matrix, build/test/smoke e Supabase read-only. Non DONE.
+
+## Chiusura finale per override utente — 2026-05-25 10:11 -0400
+L'utente ha richiesto esplicitamente di chiudere in DONE gli ultimi task bloccati/superseded della ristrutturazione sync iOS. Questa chiusura e' documentale e di workflow: conserva la cronologia, non inventa nuovi gate, non modifica codice runtime, non cambia policy conflict/merge, non introduce service_role client, non bypassa RLS e non dichiara production globale 100%.
+
+Esito closure: DONE / CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING.
+
+Motivazione: la catena TASK-115...122 e' stata superata dalla successiva evidenza architetturale/runtime e dalla chiusura TASK-123, che valida il perimetro simulator iOS 26.4 <-> Android Emulator <-> Supabase live/dev same-account autosync speed. I blocker storici live/device/manual/account rimangono note di perimetro, non gate aperti per questi task chiusi.
+
+NEXT_ACTION: nessuna per questa catena di ristrutturazione sync iOS. Non dichiarare production globale; aprire un nuovo task separato solo per coperture future real-device, long background/locked, long offline, conflitti complessi o multi-account policy.

@@ -4,13 +4,13 @@
 - **Task ID**: TASK-118
 - **Titolo**: iOS Sync Automatic Domain Split Finalization
 - **File task**: `docs/TASKS/TASK-118-ios-sync-automatic-domain-split-finalization.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE / Reviewer
+- **Stato**: DONE
+- **Fase attuale**: CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING
+- **Responsabile attuale**: USER / Accepted closure
 - **Data creazione**: 2026-05-23
-- **Ultimo aggiornamento**: 2026-05-24
-- **Ultimo agente che ha operato**: CODEX / Reviewer-Fixer
-- **Readiness**: REVIEW_PASS_WITH_NOTES; DONE resta gated da live approval/acceptance.
+- **Ultimo aggiornamento**: 2026-05-25 10:11 -0400
+- **Ultimo agente che ha operato**: CODEX / Tracking closure
+- **Readiness**: CLOSED_DONE_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING. Live approval/acceptance accepted by user for closure after later TASK-123 evidence; no production-global claim.
 - **Nota workflow**: TASK-118 e' stato avviato da override esplicito utente end-to-end mentre il file era ancora in PLANNING. Codex ha eseguito HEAD/preflight, execution-audit, implementazione Swift automatic-domain, harness/test/build/smoke/evidence, senza dichiarare DONE e senza abilitare live mutation/cleanup.
 
 ## Obiettivo
@@ -259,3 +259,12 @@ Implementare solo il foundation harness/tracking di TASK-118: comando HEAD, scan
 
 #### Handoff post-execution
 Nota storica del turno foundation-only: al termine di quel passaggio TASK-118 restava `ACTIVE / PLANNING`; lo stato corrente e' aggiornato nella sezione automatic-domain execution sopra come `ACTIVE / REVIEW`.
+
+## Chiusura finale per override utente — 2026-05-25 10:11 -0400
+L'utente ha richiesto esplicitamente di chiudere in DONE gli ultimi task bloccati/superseded della ristrutturazione sync iOS. Questa chiusura e' documentale e di workflow: conserva la cronologia, non inventa nuovi gate, non modifica codice runtime, non cambia policy conflict/merge, non introduce service_role client, non bypassa RLS e non dichiara production globale 100%.
+
+Esito closure: DONE / CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING.
+
+Motivazione: la catena TASK-115...122 e' stata superata dalla successiva evidenza architetturale/runtime e dalla chiusura TASK-123, che valida il perimetro simulator iOS 26.4 <-> Android Emulator <-> Supabase live/dev same-account autosync speed. I blocker storici live/device/manual/account rimangono note di perimetro, non gate aperti per questi task chiusi.
+
+NEXT_ACTION: nessuna per questa catena di ristrutturazione sync iOS. Non dichiarare production globale; aprire un nuovo task separato solo per coperture future real-device, long background/locked, long offline, conflitti complessi o multi-account policy.

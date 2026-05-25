@@ -4,13 +4,13 @@
 - **Task ID**: TASK-117
 - **Titolo**: iOS Sync Final Architecture Cleanup - remove legacy automatic runtime and dead code
 - **File task**: `docs/TASKS/TASK-117-ios-sync-final-architecture-cleanup.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: BLOCKED_EXTERNAL_LIVE_GATES
-- **Responsabile attuale**: USER / External live-device prerequisites
+- **Stato**: DONE
+- **Fase attuale**: CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING
+- **Responsabile attuale**: USER / Accepted closure
 - **Data creazione**: 2026-05-23
-- **Ultimo aggiornamento**: 2026-05-23 18:19:39 -0400
-- **Ultimo agente che ha operato**: CODEX / Review+Fix Executor
-- **Readiness**: LOCAL_REVIEW_FIX_PASS_WITH_RESIDUAL_ARCHITECTURE_CAVEAT; external live/device gates blocked.
+- **Ultimo aggiornamento**: 2026-05-25 10:11 -0400
+- **Ultimo agente che ha operato**: CODEX / Tracking closure
+- **Readiness**: CLOSED_DONE_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING. External live/device blockers accepted as non-blocking after later TASK-123 simulator same-account autosync acceptance; no production-global claim.
 - **Motivo transizione**: User override explicit end-to-end execution authorization.
 
 ## Vincoli del turno
@@ -295,3 +295,12 @@ Verificare dal codice corrente, non dal report, che il path automatico iOS sia p
 TASK-117 resta `ACTIVE / BLOCKED_EXTERNAL_LIVE_GATES`, non `DONE` e non `REVIEW`.
 
 Stato consigliato: `BLOCKED_EXTERNAL_LIVE_GATES` finche' CA-117-16 e CA-117-22 non diventano PASS reali o non vengono accettati esplicitamente dall'utente. Prima di un claim architetturale finale "pulita/perfetta", valutare un follow-up di split automatic provider/domain services fuori dai concrete adapter manual-boundary.
+
+## Chiusura finale per override utente — 2026-05-25 10:11 -0400
+L'utente ha richiesto esplicitamente di chiudere in DONE gli ultimi task bloccati/superseded della ristrutturazione sync iOS. Questa chiusura e' documentale e di workflow: conserva la cronologia, non inventa nuovi gate, non modifica codice runtime, non cambia policy conflict/merge, non introduce service_role client, non bypassa RLS e non dichiara production globale 100%.
+
+Esito closure: DONE / CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING.
+
+Motivazione: la catena TASK-115...122 e' stata superata dalla successiva evidenza architetturale/runtime e dalla chiusura TASK-123, che valida il perimetro simulator iOS 26.4 <-> Android Emulator <-> Supabase live/dev same-account autosync speed. I blocker storici live/device/manual/account rimangono note di perimetro, non gate aperti per questi task chiusi.
+
+NEXT_ACTION: nessuna per questa catena di ristrutturazione sync iOS. Non dichiarare production globale; aprire un nuovo task separato solo per coperture future real-device, long background/locked, long offline, conflitti complessi o multi-account policy.

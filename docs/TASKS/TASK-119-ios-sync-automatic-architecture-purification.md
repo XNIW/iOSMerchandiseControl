@@ -5,13 +5,13 @@
 - **Titolo**: iOS Sync Automatic Architecture Purification and Dead-Code Cleanup
 - **File task**: `docs/TASKS/TASK-119-ios-sync-automatic-architecture-purification.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-119/`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW — REVIEW_PASS_WITH_NOTES / CODEX_REVIEW_FIXES_LOCAL
-- **Responsabile attuale**: CLAUDE / Reviewer
+- **Stato**: DONE
+- **Fase attuale**: CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING
+- **Responsabile attuale**: USER / Accepted closure
 - **Data creazione**: 2026-05-24
-- **Ultimo aggiornamento**: 2026-05-24
-- **Ultimo agente che ha operato**: CODEX / Reviewer-Fixer
-- **Readiness**: REVIEW_PASS_WITH_NOTES_LOCAL. Codex review found and fixed concrete issues in cancellation/single-flight ownership, history automatic remote boundary, TASK-119 head-consistency reporting, scanner coverage and Options smoke fallback semantics. Local gates are PASS except Options smoke is PASS_WITH_NOTES via XcodeBuildMCP fallback because legacy JXA/AX timed out. Live/manual end-to-end gates remain NOT_RUN; task is not DONE.
+- **Ultimo aggiornamento**: 2026-05-25 10:11 -0400
+- **Ultimo agente che ha operato**: CODEX / Tracking closure
+- **Readiness**: CLOSED_DONE_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING. Local review fixes and gates accepted; live/manual end-to-end gaps remain non-production notes, not blockers for this closure.
 - **Tipo task**: cleanup/refactor architetturale, non feature task.
 - **User override registrato**: l'utente ha chiesto esplicitamente a Codex di creare tracking PLANNING nonostante `AGENTS.md` definisca Codex come executor/fixer. Override limitato a markdown/tracking/evidence README; nessuna modifica Swift/Kotlin/SQL, nessun build/test runtime, nessun live Supabase, nessun cleanup.
 
@@ -1006,3 +1006,12 @@ Vincoli:
 - produci evidence sotto docs/TASKS/EVIDENCE/TASK-119/agent-runs/ con .md/.json/.log redatti;
 - non dichiarare DONE.
 ```
+
+## Chiusura finale per override utente — 2026-05-25 10:11 -0400
+L'utente ha richiesto esplicitamente di chiudere in DONE gli ultimi task bloccati/superseded della ristrutturazione sync iOS. Questa chiusura e' documentale e di workflow: conserva la cronologia, non inventa nuovi gate, non modifica codice runtime, non cambia policy conflict/merge, non introduce service_role client, non bypassa RLS e non dichiara production globale 100%.
+
+Esito closure: DONE / CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING.
+
+Motivazione: la catena TASK-115...122 e' stata superata dalla successiva evidenza architetturale/runtime e dalla chiusura TASK-123, che valida il perimetro simulator iOS 26.4 <-> Android Emulator <-> Supabase live/dev same-account autosync speed. I blocker storici live/device/manual/account rimangono note di perimetro, non gate aperti per questi task chiusi.
+
+NEXT_ACTION: nessuna per questa catena di ristrutturazione sync iOS. Non dichiarare production globale; aprire un nuovo task separato solo per coperture future real-device, long background/locked, long offline, conflitti complessi o multi-account policy.

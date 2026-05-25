@@ -4,17 +4,17 @@
 - **Task ID**: TASK-116
 - **Titolo**: iOS Sync Architecture Completion
 - **File task**: `docs/TASKS/TASK-116-ios-sync-architecture-completion.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE / Reviewer
+- **Stato**: DONE
+- **Fase attuale**: CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING
+- **Responsabile attuale**: USER / Accepted closure
 - **Data creazione**: 2026-05-23
-- **Ultimo aggiornamento**: 2026-05-23 15:54 -0400
-- **Ultimo agente che ha operato**: CODEX
-- **Readiness**: READY_FOR_REVIEW; not DONE.
+- **Ultimo aggiornamento**: 2026-05-25 10:11 -0400
+- **Ultimo agente che ha operato**: CODEX / Tracking closure
+- **Readiness**: CLOSED_DONE_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING. Historical live/device/account blockers accepted as non-blocking after subsequent TASK-117...123 evidence; no production-global claim.
 
 ## Relazione con TASK-115
 - TASK-116 e' follow-up architetturale di TASK-115. Non cancella e non sostituisce le evidence TASK-115; completa la migrazione lasciata ibrida.
-- TASK-115 resta baseline tecnica/storica, non DONE, e viene marcato come `BLOCKED / SUPERSEDED_BY_TASK-116`.
+- TASK-115 resta baseline tecnica/storica ed e' ora DONE per override utente dopo la closure della catena sync iOS.
 - Obiettivo specifico: eliminare il runtime sync automatico legacy basato su `SupabaseManualSyncViewModel`, `SupabaseManualSyncCompatibilityAdapter` e `SupabaseSyncEventIncrementalApplyService`, sostituendolo con servizi domain reali sotto `iOSMerchandiseControl/Sync`.
 
 ## Obiettivo
@@ -355,3 +355,12 @@ TASK-116 execution plus severe review/fix is complete enough for review. `SyncOr
 - Android physical live gates: BLOCKED because serial `8ac48ff0` was unavailable to the harness (`p71553`, `p72022`).
 - Account matrix A-L strict-live: BLOCKED by live fixture/device availability (`p73594`).
 - Domain services now have physical files and are enforced by the hardened no-legacy scanner; DONE still requires live/device/account acceptance or explicit user acceptance of external blockers.
+
+## Chiusura finale per override utente — 2026-05-25 10:11 -0400
+L'utente ha richiesto esplicitamente di chiudere in DONE gli ultimi task bloccati/superseded della ristrutturazione sync iOS. Questa chiusura e' documentale e di workflow: conserva la cronologia, non inventa nuovi gate, non modifica codice runtime, non cambia policy conflict/merge, non introduce service_role client, non bypassa RLS e non dichiara production globale 100%.
+
+Esito closure: DONE / CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING.
+
+Motivazione: la catena TASK-115...122 e' stata superata dalla successiva evidenza architetturale/runtime e dalla chiusura TASK-123, che valida il perimetro simulator iOS 26.4 <-> Android Emulator <-> Supabase live/dev same-account autosync speed. I blocker storici live/device/manual/account rimangono note di perimetro, non gate aperti per questi task chiusi.
+
+NEXT_ACTION: nessuna per questa catena di ristrutturazione sync iOS. Non dichiarare production globale; aprire un nuovo task separato solo per coperture future real-device, long background/locked, long offline, conflitti complessi o multi-account policy.

@@ -5,15 +5,15 @@
 - **Titolo**: iOS Sync Remote Domain Strangler and Final Architecture Purification
 - **File task**: `docs/TASKS/TASK-122-ios-sync-remote-domain-strangler.md`
 - **Evidence dir**: `docs/TASKS/EVIDENCE/TASK-122/`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE / Reviewer
+- **Stato**: DONE
+- **Fase attuale**: CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING
+- **Responsabile attuale**: USER / Accepted closure
 - **Data creazione**: 2026-05-24
-- **Ultimo aggiornamento**: 2026-05-24 20:43 -0400
-- **Ultimo agente che ha operato**: CODEX / Executor
-- **Readiness**: ACTIVE / REVIEW locale. Execution TASK-122 completata localmente con `LOCAL_CANONICAL_EXECUTION_OVERRIDE` e final production acceptance / efficiency hardening: transport thin 117 LOC, adapter ownership, scanner hard, Debug/Release build e test canonici PASS; Architecture efficiency PASS, Runtime efficiency PASS_WITH_NOTES, Production readiness BLOCKED_EXTERNAL per live/device/offline/cross-platform; GitHub raw TASK-122 = `404` e GitHub raw MASTER-PLAN ancora TASK-121-only restano rischio residuo `PASS_WITH_NOTES_LOCAL_CANONICAL_OVERRIDE` da allineare dopo handoff, non blocco locale. Non DONE e nessun claim 100%.
+- **Ultimo aggiornamento**: 2026-05-25 10:11 -0400
+- **Ultimo agente che ha operato**: CODEX / Tracking closure
+- **Readiness**: CLOSED_DONE_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING. Local architecture execution accepted; later TASK-123 and canonical push resolved the practical closure path. No production-global claim.
 - **Tipo task**: planning esecutivo architetturale iOS; nessuna nuova feature utente.
-- **User override registrato**: l'utente richiede nuova TASK-122 in PLANNING per supersedere TASK-121 solo sul blocker finale `Remote mega-service strangler`. TASK-121 resta NON DONE e baseline storica/tecnica.
+- **User override registrato**: l'utente ha richiesto nuova TASK-122 in PLANNING per supersedere TASK-121 sul blocker finale `Remote mega-service strangler`; con la closure del 2026-05-25, TASK-121 e TASK-122 sono entrambi DONE come catena storica della ristrutturazione sync iOS.
 
 ## LOCAL_CANONICAL_EXECUTION_OVERRIDE
 L'utente ha autorizzato esplicitamente `LOCAL_CANONICAL_EXECUTION_OVERRIDE` per questa Execution. Per TASK-122 locale, local `HEAD` e working tree locale sono canonical operativi.
@@ -1019,3 +1019,12 @@ DONE not allowed pending explicit user acceptance and live/offline/cross-platfor
 ```
 
 NEXT_ACTION: Claude/user review finale; poi allineare GitHub canonical e completare acceptance esterna live/offline/cross-platform con safety gate `MC_ALLOW_LIVE=1`, account autenticato e prefisso `TASK122_*`.
+
+## Chiusura finale per override utente — 2026-05-25 10:11 -0400
+L'utente ha richiesto esplicitamente di chiudere in DONE gli ultimi task bloccati/superseded della ristrutturazione sync iOS. Questa chiusura e' documentale e di workflow: conserva la cronologia, non inventa nuovi gate, non modifica codice runtime, non cambia policy conflict/merge, non introduce service_role client, non bypassa RLS e non dichiara production globale 100%.
+
+Esito closure: DONE / CLOSED_BY_USER_OVERRIDE_AFTER_SYNC_RESTRUCTURING.
+
+Motivazione: la catena TASK-115...122 e' stata superata dalla successiva evidenza architetturale/runtime e dalla chiusura TASK-123, che valida il perimetro simulator iOS 26.4 <-> Android Emulator <-> Supabase live/dev same-account autosync speed. I blocker storici live/device/manual/account rimangono note di perimetro, non gate aperti per questi task chiusi.
+
+NEXT_ACTION: nessuna per questa catena di ristrutturazione sync iOS. Non dichiarare production globale; aprire un nuovo task separato solo per coperture future real-device, long background/locked, long offline, conflitti complessi o multi-account policy.
