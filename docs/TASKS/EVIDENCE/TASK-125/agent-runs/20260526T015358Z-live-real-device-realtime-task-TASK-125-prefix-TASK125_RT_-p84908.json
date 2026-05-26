@@ -1,0 +1,141 @@
+{
+  "NEXT_ACTION": "Fix the measured bottleneck and rerun task123-single-propagation.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T015358Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p84908.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T015358Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p84908.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T015358Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p84908.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260526T015358Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "PR-01",
+    "PR-03",
+    "PR-04",
+    "PR-08"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live real-device-realtime --task TASK-125 --prefix TASK125_RT_",
+  "command_slug": "live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "physical",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 465052,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-125",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK125_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-125"
+  },
+  "exit_code": 1,
+  "git_sha": "e4eb3a47",
+  "next_action_recommended": "Fix the measured bottleneck and rerun task123-single-propagation.",
+  "platform": "ios",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "acceptance": {
+      "maxMs": 15000,
+      "p50Ms": 3000,
+      "p95Ms": 5000
+    },
+    "completedAt": "2026-05-26T02:01:43Z",
+    "iterations": [
+      {
+        "direction": "iosToAndroid",
+        "iteration": 1,
+        "kind": "catalog_product_create",
+        "localOutboxEnqueueMs": null,
+        "localSaveMs": null,
+        "polls": 1,
+        "prefix": "TASK125_RT_SINGLE_20260526T015358Z_IOS_1_",
+        "remotePushMs": null,
+        "sourceAutoPushStartDelayMs": null,
+        "status": "PASS",
+        "syncEventAvailableMs": null,
+        "targetApplyMs": null,
+        "targetFetchMs": null,
+        "targetRealtimeDetectedMs": null,
+        "totalPropagationMs": 3778
+      },
+      {
+        "direction": "androidToIos",
+        "iteration": 1,
+        "kind": "catalog_product_create",
+        "localOutboxEnqueueMs": 146,
+        "localSaveMs": 146,
+        "polls": 1,
+        "prefix": "TASK125_RT_SINGLE_20260526T015358Z_ANDROID_1_",
+        "remotePushMs": 4615,
+        "sourceAutoPushStartDelayMs": 500,
+        "status": "PASS",
+        "syncEventAvailableMs": 4615,
+        "targetApplyMs": null,
+        "targetFetchMs": null,
+        "targetRealtimeDetectedMs": null,
+        "totalPropagationMs": 1001
+      }
+    ],
+    "prefix": "TASK125_RT_SINGLE_20260526T015358Z_",
+    "schemaVersion": "1.1",
+    "source": "live.task123-single-propagation",
+    "startedAt": "2026-05-26T01:53:58Z",
+    "status": "FAIL",
+    "summary": {
+      "androidToIos": {
+        "count": 1,
+        "maxMs": 1001,
+        "p50Ms": 1001,
+        "p95Ms": 1001,
+        "passCount": 1
+      },
+      "iosToAndroid": {
+        "count": 1,
+        "maxMs": 3778,
+        "p50Ms": 3778,
+        "p95Ms": 3778,
+        "passCount": 1
+      }
+    },
+    "taskId": "TASK-125"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260526T015358Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p84908",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-125",
+  "test_prefix": "TASK125_RT_SINGLE_20260526T015358Z_IOS_1_",
+  "timestamp_end": "2026-05-26T02:01:43Z",
+  "timestamp_start": "2026-05-26T01:53:58Z",
+  "warnings": []
+}

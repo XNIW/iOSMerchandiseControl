@@ -6,4 +6,5 @@ nonisolated enum SyncAutomaticTriggerSource: String, Sendable, Equatable {
     case networkReconnect
     case localMutation
     case remoteSyncEvent
+    case backgroundRefresh
 }

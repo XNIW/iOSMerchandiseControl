@@ -1,0 +1,3 @@
+=== mc-agent supabase verify-grants --task TASK-125 --profile linked ===
+failed to read profile: Unsupported Config Type ""
+Try rerunning the command with --debug to troubleshoot the error.

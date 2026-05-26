@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "sync-responsibility-map",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 Sync Responsibility Map",
+  "summary": "iOS sync responsibilities are separated across Orchestrator, Automatic engine/providers, Outbox, Realtime, Recovery, Manual and Background scheduler boundaries. Static gate passed, but full executable invariant suite remains open.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003720Z-ios-test-automatic-architecture-task-TASK-125-p22882.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003720Z-ios-test-automatic-architecture-task-TASK-125-p22882.md",
+      "command": "ios test automatic-architecture --task TASK-125",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003403Z-scan-no-root-legacy-sync-service-task-TASK-125-strict-p16728.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003403Z-scan-no-root-legacy-sync-service-task-TASK-125-strict-p16728.md",
+      "command": "scan no-root-legacy-sync-service --task TASK-125 --strict",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003108Z-scan-remote-adapter-single-domain-task-TASK-125-strict-p13605.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003108Z-scan-remote-adapter-single-domain-task-TASK-125-strict-p13605.md",
+      "command": "scan remote-adapter-single-domain --task TASK-125 --strict",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": ""
+}

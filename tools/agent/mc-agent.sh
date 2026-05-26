@@ -61,7 +61,9 @@ main() {
           local scan_task_id
           scan_task_id="$(mc_parse_opt --task "${args[@]:2}" 2>/dev/null || true)"
           scan_task_id="${scan_task_id:-${MC_TASK_ID:-}}"
-          if [[ "$scan_task_id" == "TASK-124" ]]; then
+          if [[ "$scan_task_id" == "TASK-125" ]]; then
+            handler=(mc_cmd_scan_task125_static "${args[1]}" "${args[@]:2}")
+          elif [[ "$scan_task_id" == "TASK-124" ]]; then
             handler=(mc_cmd_scan_task124_static "${args[1]}" "${args[@]:2}")
           elif [[ "$scan_task_id" == "TASK-122" ]]; then
             handler=(mc_cmd_scan_task122_static "${args[1]}" "${args[@]:2}")
@@ -77,7 +79,9 @@ main() {
           local scan_task_id
           scan_task_id="$(mc_parse_opt --task "${args[@]:2}" 2>/dev/null || true)"
           scan_task_id="${scan_task_id:-${MC_TASK_ID:-}}"
-          if [[ "$scan_task_id" == "TASK-124" ]]; then
+          if [[ "$scan_task_id" == "TASK-125" ]]; then
+            handler=(mc_cmd_scan_task125_static "${args[1]}" "${args[@]:2}")
+          elif [[ "$scan_task_id" == "TASK-124" ]]; then
             handler=(mc_cmd_scan_task124_static "${args[1]}" "${args[@]:2}")
           elif [[ "$scan_task_id" == "TASK-122" ]]; then
             handler=(mc_cmd_scan_task122_static "${args[1]}" "${args[@]:2}")
@@ -92,7 +96,9 @@ main() {
           local scan_task_id
           scan_task_id="$(mc_parse_opt --task "${args[@]:2}" 2>/dev/null || true)"
           scan_task_id="${scan_task_id:-${MC_TASK_ID:-}}"
-          if [[ "$scan_task_id" == "TASK-124" ]]; then
+          if [[ "$scan_task_id" == "TASK-125" ]]; then
+            handler=(mc_cmd_scan_task125_static "${args[1]}" "${args[@]:2}")
+          elif [[ "$scan_task_id" == "TASK-124" ]]; then
             handler=(mc_cmd_scan_task124_static "${args[1]}" "${args[@]:2}")
           elif [[ "$scan_task_id" == "TASK-122" ]]; then
             handler=(mc_cmd_scan_task122_static "${args[1]}" "${args[@]:2}")
@@ -110,14 +116,23 @@ main() {
         incremental-apply-contract) handler=(mc_cmd_scan_task117_static incremental-apply-contract "${args[@]:2}") ;;
         swiftdata-mainactor-heavy) handler=(mc_cmd_scan_task117_static swiftdata-mainactor-heavy "${args[@]:2}") ;;
         l10n-sync-keys) handler=(mc_cmd_scan_task117_static l10n-sync-keys "${args[@]:2}") ;;
-        no-root-supabase-legacy|no-automatic-manual-dependency|transport-thin-only|remote-adapter-single-domain|no-hidden-manual-sync|no-stale-pbxproj-reference|no-mainactor-heavy-sync|no-service-role-client|no-rls-bypass|dead-code-residue)
-          handler=(mc_cmd_scan_task124_static "${args[1]}" "${args[@]:2}")
+        no-root-supabase-legacy|no-automatic-manual-dependency|transport-thin-only|remote-adapter-single-domain|no-hidden-manual-sync|no-stale-pbxproj-reference|no-mainactor-heavy-sync|no-service-role-client|no-rls-bypass|dead-code-residue|no-test-fixture-in-app-target|no-root-legacy-sync-service|background-task-registration|background-task-no-ui-context|outbox-pending-survives-restart|evidence-redaction)
+          local scan_task_id
+          scan_task_id="$(mc_parse_opt --task "${args[@]:2}" 2>/dev/null || true)"
+          scan_task_id="${scan_task_id:-${MC_TASK_ID:-}}"
+          if [[ "$scan_task_id" == "TASK-125" ]]; then
+            handler=(mc_cmd_scan_task125_static "${args[1]}" "${args[@]:2}")
+          else
+            handler=(mc_cmd_scan_task124_static "${args[1]}" "${args[@]:2}")
+          fi
           ;;
         no-full-pull-normal-path)
           local scan_task_id
           scan_task_id="$(mc_parse_opt --task "${args[@]:2}" 2>/dev/null || true)"
           scan_task_id="${scan_task_id:-${MC_TASK_ID:-}}"
-          if [[ "$scan_task_id" == "TASK-124" ]]; then
+          if [[ "$scan_task_id" == "TASK-125" ]]; then
+            handler=(mc_cmd_scan_task125_static no-full-pull-normal-path "${args[@]:2}")
+          elif [[ "$scan_task_id" == "TASK-124" ]]; then
             handler=(mc_cmd_scan_task124_static no-full-pull-normal-path "${args[@]:2}")
           elif [[ "$scan_task_id" == "TASK-119" ]]; then
             handler=(mc_cmd_scan_task119_static no-full-pull-normal-path "${args[@]:2}")

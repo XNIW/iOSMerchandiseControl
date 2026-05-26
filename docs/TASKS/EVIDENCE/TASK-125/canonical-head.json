@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "canonical-head",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 Canonical Head Gate",
+  "summary": "Local worktree was used as primary canonical source. Git status/head/branch and local task/evidence presence were checked by harness.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003004Z-git-head-consistency-task-TASK-125-p10318.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003004Z-git-head-consistency-task-TASK-125-p10318.md",
+      "command": "git head-consistency --task TASK-125",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": ""
+}

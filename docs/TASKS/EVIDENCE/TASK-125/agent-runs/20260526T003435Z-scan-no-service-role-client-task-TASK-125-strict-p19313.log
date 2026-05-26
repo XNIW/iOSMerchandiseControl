@@ -1,0 +1,25 @@
+=== mc-agent scan no-service-role-client --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Fix no-service-role-client findings and rerun.",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "file": "SupabaseConfig.swift",
+          "hash": "a43adc47e8ee",
+          "line": 62
+        }
+      ],
+      "id": "client_code_has_no_<REDACTED_SERVICE_ROLE>_secret",
+      "reason": "Client code must not reference <REDACTED_SERVICE_ROLE> credentials.",
+      "status": "FAIL"
+    }
+  ],
+  "completedAt": "2026-05-26T00:34:35Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.no-service-role-client",
+  "startedAt": "2026-05-26T00:34:35Z",
+  "status": "FAIL",
+  "taskId": "TASK-125"
+}

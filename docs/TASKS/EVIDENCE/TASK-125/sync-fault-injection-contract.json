@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "sync-fault-injection-contract",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "FAIL",
+  "title": "TASK-125 Sync Fault Injection Contract",
+  "summary": "Sync Fault Injection Contract was not completed as an executable, repeatable cross-platform gate. This prevents TASK-125 from entering REVIEW/DONE.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003802Z-ios-test-sync-task-TASK-125-p24196.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003802Z-ios-test-sync-task-TASK-125-p24196.md",
+      "command": "ios test sync --task TASK-125",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004109Z-android-test-sync-task-TASK-125-p26121.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004109Z-android-test-sync-task-TASK-125-p26121.md",
+      "command": "android test sync --task TASK-125",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-schema-task-TASK-125-profile-linked-p27203.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-schema-task-TASK-125-profile-linked-p27203.md",
+      "command": "supabase verify-schema --task TASK-125 --profile linked",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-rls-task-TASK-125-profile-linked-p27204.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-rls-task-TASK-125-profile-linked-p27204.md",
+      "command": "supabase verify-rls --task TASK-125 --profile linked",
+      "result": "BLOCKED_EXTERNAL",
+      "status": "BLOCKED_EXTERNAL",
+      "exitCode": 2
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-grants-task-TASK-125-profile-linked-p27211.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-grants-task-TASK-125-profile-linked-p27211.md",
+      "command": "supabase verify-grants --task TASK-125 --profile linked",
+      "result": "BLOCKED_EXTERNAL",
+      "status": "BLOCKED_EXTERNAL",
+      "exitCode": 2
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": "Create/rerun the executable checker/fixture/fault-injection gate and fix iOS/Android/Supabase gaps until PASS."
+}

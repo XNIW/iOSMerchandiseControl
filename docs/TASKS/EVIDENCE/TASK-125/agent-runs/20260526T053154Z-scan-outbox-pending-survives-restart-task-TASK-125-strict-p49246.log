@@ -1,0 +1,25 @@
+=== mc-agent scan outbox-pending-survives-restart --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "local_pending_swiftdata_model_present",
+      "reason": "Local pending changes must be persisted in SwiftData.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "outbox_store_persists_pending",
+      "reason": "Outbox store must query/save persisted pending rows.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T05:31:54Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.outbox-pending-survives-restart",
+  "startedAt": "2026-05-26T05:31:54Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

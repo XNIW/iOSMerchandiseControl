@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "bg-debug-trigger",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "NOT_RUN",
+  "title": "TASK-125 iOS BGTask Debug Trigger",
+  "summary": "BGTask debug-trigger execution on physical iPhone was not run in this attempt.",
+  "redactionApplied": true,
+  "references": [],
+  "checks": [],
+  "details": {},
+  "nextAction": "Run BGTask debug trigger on iPhone with unlocked device and collect bg-debug-trigger report."
+}

@@ -1,0 +1,19 @@
+=== mc-agent scan no-test-fixture-in-app-target --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "no_fixture_or_fake_reference_in_pbxproj",
+      "reason": "App target must not include fixture/test-only files.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T05:31:51Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.no-test-fixture-in-app-target",
+  "startedAt": "2026-05-26T05:31:51Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

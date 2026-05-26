@@ -1,0 +1,19 @@
+=== mc-agent scan no-rls-bypass --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "client_code_has_no_rls_bypass",
+      "reason": "App clients must not bypass or disable RLS.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T00:34:04Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.no-rls-bypass",
+  "startedAt": "2026-05-26T00:34:04Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

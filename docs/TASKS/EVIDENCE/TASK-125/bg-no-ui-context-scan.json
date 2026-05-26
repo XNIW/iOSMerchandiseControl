@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "bg-no-ui-context-scan",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 iOS Background No UI Context Scan",
+  "summary": "Background runner scanner passed for no UI ModelContext/View dependency.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003352Z-scan-background-task-no-ui-context-task-TASK-125-strict-p15818.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003352Z-scan-background-task-no-ui-context-task-TASK-125-strict-p15818.md",
+      "command": "scan background-task-no-ui-context --task TASK-125 --strict",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": ""
+}

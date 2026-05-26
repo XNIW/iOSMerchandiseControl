@@ -1,0 +1,25 @@
+=== mc-agent scan background-task-no-ui-context --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "background_runner_uses_modelcontainer",
+      "reason": "Background runner must use ModelContainer/ModelContext independent of UI.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "background_runner_no_swiftui_environment_context",
+      "reason": "Background runner must not depend on SwiftUI View or @Environment ModelContext.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T05:31:54Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.background-task-no-ui-context",
+  "startedAt": "2026-05-26T05:31:54Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

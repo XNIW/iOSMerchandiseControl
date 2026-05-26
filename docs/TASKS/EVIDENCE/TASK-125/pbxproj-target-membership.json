@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "pbxproj-target-membership",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 PBXProj Target Membership",
+  "summary": "Stale pbxproj reference scanner passed. The added background scheduler is included through Xcode synchronized filesystem groups.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003403Z-scan-no-stale-pbxproj-reference-task-TASK-125-strict-p16717.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003403Z-scan-no-stale-pbxproj-reference-task-TASK-125-strict-p16717.md",
+      "command": "scan no-stale-pbxproj-reference --task TASK-125 --strict",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003534Z-ios-build-debug-task-TASK-125-p21500.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003534Z-ios-build-debug-task-TASK-125-p21500.md",
+      "command": "ios build debug --task TASK-125",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003559Z-ios-build-release-task-TASK-125-p22139.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003559Z-ios-build-release-task-TASK-125-p22139.md",
+      "command": "ios build release --task TASK-125",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": ""
+}

@@ -1,0 +1,50 @@
+=== mc-agent scan no-service-role-client --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Fix no-service-role-client findings and rerun.",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "file": "SupabaseConfig.swift",
+          "hash": "1a75b9283430",
+          "line": 63
+        },
+        {
+          "file": "SupabaseConfig.swift",
+          "hash": "1a75b9283430",
+          "line": 68
+        },
+        {
+          "file": "app/src/androidTest/java/com/example/merchandisecontrolsplitview/Task108AndroidAppAuthLiveTest.kt",
+          "hash": "1a75b9283430",
+          "line": 24
+        },
+        {
+          "file": "app/src/androidTest/java/com/example/merchandisecontrolsplitview/Task114AndroidFullReconciliationTest.kt",
+          "hash": "1a75b9283430",
+          "line": 25
+        },
+        {
+          "file": "app/src/androidTest/java/com/example/merchandisecontrolsplitview/Task103AuthPreflightTest.kt",
+          "hash": "1a75b9283430",
+          "line": 29
+        },
+        {
+          "file": "app/src/androidTest/java/com/example/merchandisecontrolsplitview/Task098CrossPlatformSmokeTest.kt",
+          "hash": "1a75b9283430",
+          "line": 42
+        }
+      ],
+      "id": "client_code_has_no_<REDACTED_SERVICE_ROLE>_secret",
+      "reason": "Client code must not reference <REDACTED_SERVICE_ROLE> credentials.",
+      "status": "FAIL"
+    }
+  ],
+  "completedAt": "2026-05-26T00:34:04Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.no-service-role-client",
+  "startedAt": "2026-05-26T00:34:04Z",
+  "status": "FAIL",
+  "taskId": "TASK-125"
+}

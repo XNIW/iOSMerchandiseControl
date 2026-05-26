@@ -1,0 +1,19 @@
+=== mc-agent scan no-mainactor-heavy-sync --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "heavy_automatic_sync_not_mainactor",
+      "reason": "Heavy sync engine/push/remote primitives must not be MainActor-bound.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T00:30:39Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.no-mainactor-heavy-sync",
+  "startedAt": "2026-05-26T00:30:39Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

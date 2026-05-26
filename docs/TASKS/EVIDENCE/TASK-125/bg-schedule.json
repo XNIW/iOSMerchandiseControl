@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "bg-schedule",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 iOS Background Schedule Hooks",
+  "summary": "Scheduler hooks were added after app launch, background scene transition, local pending, reconnect and foreground completion. Build/tests passed.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003534Z-ios-build-debug-task-TASK-125-p21500.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003534Z-ios-build-debug-task-TASK-125-p21500.md",
+      "command": "ios build debug --task TASK-125",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003802Z-ios-test-sync-task-TASK-125-p24196.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003802Z-ios-test-sync-task-TASK-125-p24196.md",
+      "command": "ios test sync --task TASK-125",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": ""
+}

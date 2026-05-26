@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "bg-expiration",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "NOT_RUN",
+  "title": "TASK-125 iOS BGTask Expiration",
+  "summary": "BGTask expiration handler runtime evidence was not collected on physical iPhone.",
+  "redactionApplied": true,
+  "references": [],
+  "checks": [],
+  "details": {},
+  "nextAction": "Run debug-trigger/expiration harness and verify safe cancellation/ack behavior."
+}

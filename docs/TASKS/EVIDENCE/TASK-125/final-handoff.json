@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-05-26T05:36:04Z",
+  "nextAction": "Implement/verify executable cross-platform contract gates to PASS, collect or explicitly accept iOS scheduler-policy background limitation, then rerun final evidence/redaction gates.",
+  "openFailures": [
+    "executable-contract-gate-final.json remains FAIL",
+    "cross-platform-architecture-gate-final.json remains FAIL",
+    "cross-platform-final-gate-summary.json remains FAIL",
+    "open-failures-zero-check.json remains FAIL",
+    "background-sync-matrix.json remains BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY until BGTask debug-trigger/expiration evidence or explicit user acceptance"
+  ],
+  "phase": "ACTIVE / FIX \u2014 EXECUTABLE_SYNC_CONTRACT_GATE_FAILED",
+  "redactionApplied": true,
+  "referencedEvidence": [
+    {
+      "notes": "24 iOS->Android + 20 Android->iOS; no full pull; drift zero; iOS->Android p95 within <=5s notes budget",
+      "path": "docs/TASKS/EVIDENCE/TASK-125/real-device-realtime-matrix.json",
+      "status": "PASS_WITH_NOTES_NETWORK_VARIANCE"
+    },
+    {
+      "notes": "iOS/Android offline reconnect, incremental/event-based, pending zero",
+      "path": "docs/TASKS/EVIDENCE/TASK-125/offline-reconnect-matrix.json",
+      "status": "PASS"
+    },
+    {
+      "notes": "kill/restart pending matrix on physical devices",
+      "path": "docs/TASKS/EVIDENCE/TASK-125/kill-restart-pending.json",
+      "status": "PASS"
+    },
+    {
+      "notes": "network flapping matrix on physical devices",
+      "path": "docs/TASKS/EVIDENCE/TASK-125/network-flapping.json",
+      "status": "PASS"
+    },
+    {
+      "notes": "BGTask scheduled evidence exists; debug-trigger/expiration physical evidence still missing",
+      "path": "docs/TASKS/EVIDENCE/TASK-125/background-sync-matrix.json",
+      "status": "BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY"
+    },
+    {
+      "notes": "iPhone physical + OnePlus + Supabase linked drift zero on active/user-visible counts",
+      "path": "docs/TASKS/EVIDENCE/TASK-125/final-runtime-parity.json",
+      "status": "PASS"
+    },
+    {
+      "notes": "TASK125_* cleanup dry-run plan",
+      "path": "docs/TASKS/EVIDENCE/TASK-125/cleanup-plan.json",
+      "status": "PASS"
+    },
+    {
+      "notes": "TASK125_* residue 0",
+      "path": "docs/TASKS/EVIDENCE/TASK-125/residue-check.json",
+      "status": "PASS"
+    }
+  ],
+  "schemaVersion": "1.1",
+  "status": "FIX_REQUIRED",
+  "summary": "Real-device Android retry completed: realtime/offline/restart/flapping/runtime parity/cleanup/scans are updated, but TASK-125 cannot enter REVIEW/DONE because executable/cross-platform final gates remain FAIL and iOS background debug-trigger/expiration evidence is missing.",
+  "taskId": "TASK-125"
+}

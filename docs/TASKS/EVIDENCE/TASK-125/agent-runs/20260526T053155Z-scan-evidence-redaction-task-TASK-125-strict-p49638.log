@@ -1,0 +1,19 @@
+=== mc-agent scan evidence-redaction --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "evidence_no_obvious_raw_secret_or_device_id",
+      "reason": "Evidence must redact JWT/token/service_role/device identifiers.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T05:31:55Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.evidence-redaction",
+  "startedAt": "2026-05-26T05:31:55Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

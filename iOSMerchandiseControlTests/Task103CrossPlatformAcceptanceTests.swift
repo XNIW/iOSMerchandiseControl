@@ -16,7 +16,11 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var isTask115: Bool { prefix.hasPrefix("TASK115_") }
         var isTask123: Bool { prefix.hasPrefix("TASK123_") }
         var isTask124: Bool { prefix.hasPrefix("TASK124_") }
+        var isTask125: Bool { prefix.hasPrefix("TASK125_") }
         var logPrefix: String {
+            if isTask125 {
+                return "TASK125"
+            }
             if isTask124 {
                 return "TASK124"
             }
@@ -356,9 +360,13 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             return
         }
 
-        let plan: SupabasePullApplyPlan?
-        do {
-            plan = try SupabasePullApplyService().prepareApplyPlan(
+        let shouldReplaceLocalWithCloud = Self.task125ReplaceLocalWithCloudEnabled
+        let catalogService = SupabasePullApplyService()
+        var plannedSuppliers = 0
+        var plannedCategories = 0
+        let result: SupabasePullApplyResult
+        if shouldReplaceLocalWithCloud {
+            result = try await catalogService.replaceLocalCatalogWithRemoteSnapshot(
                 preview: preview,
                 context: context,
                 isAuthenticated: true,
@@ -367,23 +375,46 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                     lastLinkedUserID: runtime.session.userID
                 )
             )
-        } catch let error as SupabasePullApplyError where error == .noApplicableChanges {
-            plan = nil
-        }
-
-        let result: SupabasePullApplyResult
-        if let plan {
-            result = try await SupabasePullApplyService().applyBatched(plan: plan, context: context)
             _ = try SupabaseCatalogBaselineWriter().commitLatestBaseline(
                 context: context,
                 ownerUserUUID: runtime.session.userID
             )
         } else {
-            result = SupabasePullApplyResult(inserted: 0, updated: 0, suppliersCreated: 0, categoriesCreated: 0)
+            let plan: SupabasePullApplyPlan?
+            do {
+                plan = try catalogService.prepareApplyPlan(
+                    preview: preview,
+                    context: context,
+                    isAuthenticated: true,
+                    accountGuard: SupabasePullApplyAccountGuard(
+                        currentUserID: runtime.session.userID,
+                        lastLinkedUserID: runtime.session.userID
+                    )
+                )
+            } catch let error as SupabasePullApplyError where error == .noApplicableChanges {
+                plan = nil
+            }
+            plannedSuppliers = plan?.suppliersToCreate.count ?? 0
+            plannedCategories = plan?.categoriesToCreate.count ?? 0
+
+            if let plan {
+                result = try await catalogService.applyBatched(plan: plan, context: context)
+                _ = try SupabaseCatalogBaselineWriter().commitLatestBaseline(
+                    context: context,
+                    ownerUserUUID: runtime.session.userID
+                )
+            } else {
+                result = SupabasePullApplyResult(inserted: 0, updated: 0, suppliersCreated: 0, categoriesCreated: 0)
+            }
         }
         let historyResult = try await HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: runtime.inventory))
             .pullHistorySessionsFromCloud(ownerUserID: runtime.session.userID, context: context)
-        let priceService = SupabaseProductPriceApplyService(fetcher: runtime.productPriceRemote)
+        let priceService = SupabaseProductPriceApplyService(
+            fetcher: runtime.productPriceRemote,
+            fetchOptions: ProductPriceApplyFetchOptions(
+                replaceLocalSnapshot: shouldReplaceLocalWithCloud
+            )
+        )
         let priceSession = ProductPriceApplySessionSnapshot(userID: runtime.session.userID)
         let pricePlan = try await priceService.loadBootstrapPreviewSample(
             context: context,
@@ -406,10 +437,10 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             "before_suppliers=\(before.suppliers) before_categories=\(before.categories) " +
             "before_prices=\(before.productPrices) " +
             "remote_suppliers=\(preview.remoteCounts.suppliers) remote_categories=\(preview.remoteCounts.categories) " +
-            "planned_suppliers=\(plan?.suppliersToCreate.count ?? 0) planned_categories=\(plan?.categoriesToCreate.count ?? 0) " +
+            "planned_suppliers=\(plannedSuppliers) planned_categories=\(plannedCategories) " +
             "suppliers_created=\(result.suppliersCreated) categories_created=\(result.categoriesCreated) " +
             "products_inserted=\(result.inserted) products_updated=\(result.updated) product_tombstoned=\(result.productTombstoned) " +
-            "product_pruned=\(result.productPruned) " +
+            "product_pruned=\(result.productPruned) replace_local_with_cloud=\(shouldReplaceLocalWithCloud) " +
             "price_inserted=\(priceResult.inserted) price_linked=\(priceResult.remoteIdentityLinked) price_pruned=\(priceResult.prunedLocal) " +
             "price_skipped=\(priceResult.skippedExisting) price_total=\(priceResult.totalConsidered) after_prices=\(after.productPrices) " +
             "history_inserted=\(historyResult.insertedCount) history_updated=\(historyResult.updatedCount) history_pruned=\(historyResult.prunedMissingRemoteCount) " +
@@ -2083,6 +2114,14 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         }
     }
 
+    private static var task125ReplaceLocalWithCloudEnabled: Bool {
+        let environment = ProcessInfo.processInfo.environment
+        let enabled = (environment["TASK125_IOS_REPLACE_LOCAL_WITH_CLOUD"]
+            ?? environment["TEST_RUNNER_TASK125_IOS_REPLACE_LOCAL_WITH_CLOUD"])?
+            .lowercased()
+        return enabled == "1" || enabled == "true"
+    }
+
     private func makeFixture() throws -> Fixture {
         let environment = ProcessInfo.processInfo.environment
         guard let prefix = environment["TASK104_PASS2_RUN_PREFIX"]
@@ -2103,8 +2142,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 || prefix.hasPrefix("TASK115_")
                 || prefix.hasPrefix("TASK123_")
                 || prefix.hasPrefix("TASK124_")
+                || prefix.hasPrefix("TASK125_")
         ), prefix.hasSuffix("_") else {
-            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._, TASK115_..._, TASK123_..._ or TASK124_..._.")
+            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._, TASK115_..._, TASK123_..._, TASK124_..._ or TASK125_..._.")
         }
         return Fixture(prefix: prefix)
     }

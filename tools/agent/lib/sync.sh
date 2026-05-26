@@ -304,11 +304,12 @@ mc_sync_copy_android_db() {
   local serial="$1"
   local dest="$2"
   local package_name="${MC_ANDROID_PACKAGE:-com.example.merchandisecontrolsplitview}"
-  if ! adb -s "$serial" exec-out run-as "$package_name" cat databases/app_database > "$dest" 2>/dev/null; then
+  local timeout_seconds="${MC_ANDROID_DB_COPY_TIMEOUT_SECONDS:-30}"
+  if ! mc_android_adb_timed "$timeout_seconds" -s "$serial" shell "run-as $package_name cat databases/app_database" > "$dest" 2>/dev/null; then
     return "$MC_EXIT_BLOCKED"
   fi
-  adb -s "$serial" exec-out run-as "$package_name" cat databases/app_database-wal > "${dest}-wal" 2>/dev/null || true
-  adb -s "$serial" exec-out run-as "$package_name" cat databases/app_database-shm > "${dest}-shm" 2>/dev/null || true
+  mc_android_adb_timed "$timeout_seconds" -s "$serial" shell "run-as $package_name cat databases/app_database-wal" > "${dest}-wal" 2>/dev/null || true
+  mc_android_adb_timed "$timeout_seconds" -s "$serial" shell "run-as $package_name cat databases/app_database-shm" > "${dest}-shm" 2>/dev/null || true
   [[ -s "$dest" ]] || return "$MC_EXIT_BLOCKED"
   return "$MC_EXIT_PASS"
 }

@@ -1,0 +1,231 @@
+{
+  "devices": {
+    "android": "OnePlus physical (serial hashed/redacted in source reports)",
+    "ios": "iPhone physical (UDID hashed/redacted in source reports)"
+  },
+  "finalRuntimeParity": {
+    "drift": {},
+    "pendingAggregate": null,
+    "status": "PASS"
+  },
+  "finalRuntimeParityReport": "20260526T050634Z-live-runtime-parity-task-TASK-125-prefix-TASK125_PARITY_-profile-linked-p17450.json",
+  "generatedAt": "2026-05-26T05:07:56Z",
+  "metrics": {
+    "androidToIos": {
+      "count": 20,
+      "maxMs": 1693,
+      "p50Ms": 881,
+      "p95Ms": 1376,
+      "valuesMs": [
+        1001,
+        936,
+        1016,
+        772,
+        820,
+        1072,
+        1135,
+        1693,
+        1376,
+        708,
+        881,
+        720,
+        1033,
+        889,
+        825,
+        821,
+        912,
+        842,
+        814,
+        762
+      ]
+    },
+    "iosToAndroid": {
+      "count": 24,
+      "maxMs": 4658,
+      "p50Ms": 3538,
+      "p95Ms": 3978,
+      "valuesMs": [
+        4658,
+        3504,
+        3778,
+        3485,
+        3388,
+        3512,
+        3431,
+        3358,
+        3796,
+        3275,
+        3675,
+        3597,
+        3716,
+        3978,
+        3627,
+        3579,
+        3872,
+        3433,
+        3538,
+        3422,
+        3500,
+        3650,
+        3449,
+        3750
+      ]
+    }
+  },
+  "notes": [
+    "p95 is above initial 3s target for iOS->Android but within <=5s network variance budget; drift is zero and no pending stuck in final runtime parity."
+  ],
+  "performanceBudget": {
+    "failMaxWithPendingStuckMs": 15000,
+    "passWithNotesP95Ms": 5000,
+    "targetP95Ms": 3000
+  },
+  "prefix": "TASK125_RT_",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "real-device-realtime-matrix.aggregate",
+  "sourceFullPullObserved": {
+    "android": [
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false"
+    ],
+    "ios": [
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false",
+      "false"
+    ]
+  },
+  "sourceReports": [
+    {
+      "countedCompleted": {
+        "androidToIos": 0,
+        "iosToAndroid": 1
+      },
+      "log": "20260526T012305Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p69544.log",
+      "note": "Only completed propagation lines are counted; later BLOCKED/FAIL in a source report is not converted to PASS.",
+      "reconciliationStatus": "PASS",
+      "report": "20260526T012305Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p69544.json",
+      "result": "FAIL"
+    },
+    {
+      "countedCompleted": {
+        "androidToIos": 0,
+        "iosToAndroid": 1
+      },
+      "log": "20260526T014430Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p79127.log",
+      "note": "Only completed propagation lines are counted; later BLOCKED/FAIL in a source report is not converted to PASS.",
+      "reconciliationStatus": "FAIL",
+      "report": "20260526T014430Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p79127.json",
+      "result": "FAIL"
+    },
+    {
+      "countedCompleted": {
+        "androidToIos": 1,
+        "iosToAndroid": 1
+      },
+      "log": "20260526T015358Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p84908.log",
+      "note": "Only completed propagation lines are counted; later BLOCKED/FAIL in a source report is not converted to PASS.",
+      "reconciliationStatus": "FAIL",
+      "report": "20260526T015358Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p84908.json",
+      "result": "FAIL"
+    },
+    {
+      "countedCompleted": {
+        "androidToIos": 2,
+        "iosToAndroid": 2
+      },
+      "log": "20260526T024744Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p15500.log",
+      "note": "Only completed propagation lines are counted; later BLOCKED/FAIL in a source report is not converted to PASS.",
+      "reconciliationStatus": null,
+      "report": "20260526T024744Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p15500.json",
+      "result": "BLOCKED_EXTERNAL"
+    },
+    {
+      "countedCompleted": {
+        "androidToIos": 2,
+        "iosToAndroid": 3
+      },
+      "log": "20260526T030524Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p29034.log",
+      "note": "Only completed propagation lines are counted; later BLOCKED/FAIL in a source report is not converted to PASS.",
+      "reconciliationStatus": null,
+      "report": "20260526T030524Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p29034.json",
+      "result": "BLOCKED_EXTERNAL"
+    },
+    {
+      "countedCompleted": {
+        "androidToIos": 8,
+        "iosToAndroid": 9
+      },
+      "log": "20260526T032534Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p41305.log",
+      "note": "Only completed propagation lines are counted; later BLOCKED/FAIL in a source report is not converted to PASS.",
+      "reconciliationStatus": null,
+      "report": "20260526T032534Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p41305.json",
+      "result": "BLOCKED_EXTERNAL"
+    },
+    {
+      "countedCompleted": {
+        "androidToIos": 5,
+        "iosToAndroid": 5
+      },
+      "log": "20260526T044209Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p89912.log",
+      "note": null,
+      "reconciliationStatus": "PASS_WITH_NOTES_NETWORK_VARIANCE",
+      "report": "20260526T044209Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p89912.json",
+      "result": "PASS_WITH_NOTES"
+    },
+    {
+      "countedCompleted": {
+        "androidToIos": 2,
+        "iosToAndroid": 2
+      },
+      "log": "20260526T045506Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p7040.log",
+      "note": null,
+      "reconciliationStatus": "PASS_WITH_NOTES_NETWORK_VARIANCE",
+      "report": "20260526T045506Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p7040.json",
+      "result": "PASS_WITH_NOTES"
+    }
+  ],
+  "status": "PASS_WITH_NOTES_NETWORK_VARIANCE",
+  "taskId": "TASK-125"
+}

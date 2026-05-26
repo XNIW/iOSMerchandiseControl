@@ -1,0 +1,22 @@
+{
+  "cleanup_plan_id": "cleanup-TASK-125-20260526T005031Z-TASK125_",
+  "created_at": "2026-05-26T00:50:33Z",
+  "forbidden": [
+    "auth.users",
+    "truncate",
+    "reset db",
+    "global delete"
+  ],
+  "prefix": "TASK125_",
+  "profile": "local",
+  "schema_version": "1.1",
+  "scope": [
+    "inventory_product_prices",
+    "inventory_products",
+    "inventory_suppliers",
+    "inventory_categories",
+    "shared_sheet_sessions",
+    "sync_events"
+  ],
+  "task_id": "TASK-125"
+}

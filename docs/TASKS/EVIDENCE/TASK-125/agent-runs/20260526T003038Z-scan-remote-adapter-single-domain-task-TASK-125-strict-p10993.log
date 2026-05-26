@@ -1,0 +1,30 @@
+=== mc-agent scan remote-adapter-single-domain --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Fix remote-adapter-single-domain findings and rerun.",
+  "checks": [
+    {
+      "evidence": [
+        "iOSMerchandiseControl/Sync/Remote/SupabaseCatalogRemoteDataSource.swift",
+        "iOSMerchandiseControl/Sync/Remote/SupabaseProductPriceRemoteDataSource.swift",
+        "iOSMerchandiseControl/Sync/Remote/SupabaseHistoryRemoteDataSource.swift",
+        "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRemoteDataSource.swift"
+      ],
+      "id": "remote_domain_adapters_present",
+      "reason": "Catalog/ProductPrice/History/SyncEvent remote adapters must be distinct.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [],
+      "id": "remote_adapters_not_obvious_megaservices",
+      "reason": "Remote adapters must not mix unrelated domains without composite justification.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T00:30:39Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.remote-adapter-single-domain",
+  "startedAt": "2026-05-26T00:30:39Z",
+  "status": "FAIL",
+  "taskId": "TASK-125"
+}

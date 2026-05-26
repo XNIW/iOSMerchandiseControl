@@ -81,6 +81,81 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         try assertPrepareThrows(.invalidLocalData, preview: preview, context: context)
     }
 
+    func testExplicitReplacementReplacesInvalidLocalCatalogWithRemoteSnapshot() async throws {
+        let context = try makeContext()
+        let duplicateRemoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000201")!
+        let staleProduct = try insertProduct(
+            context: context,
+            barcode: "STALE-LOCAL-1",
+            productName: "Stale local one",
+            supplierName: "Stale Supplier",
+            categoryName: "Stale Category",
+            remoteID: duplicateRemoteID
+        )
+        try insertProduct(
+            context: context,
+            barcode: "STALE-LOCAL-2",
+            productName: "Stale local two",
+            remoteID: duplicateRemoteID
+        )
+        context.insert(
+            ProductPrice(
+                type: .purchase,
+                price: 1.25,
+                effectiveAt: Date(timeIntervalSince1970: 1_777_777_701),
+                product: staleProduct
+            )
+        )
+        try context.save()
+
+        let remoteProductID = UUID(uuidString: "D8200000-0000-4000-8000-000000000202")!
+        let supplierID = UUID(uuidString: "D8200000-0000-4000-8000-000000000203")!
+        let categoryID = UUID(uuidString: "D8200000-0000-4000-8000-000000000204")!
+        let preview = makePreview(
+            updateCandidates: [
+                makeSummary(
+                    classification: .updateCandidate,
+                    payload: makePayload(
+                        remoteID: remoteProductID,
+                        barcode: "REMOTE-ONLY-1",
+                        productName: "Remote canonical",
+                        supplierName: "Cloud Supplier",
+                        supplierRemoteID: supplierID,
+                        categoryName: "Cloud Category",
+                        categoryRemoteID: categoryID
+                    )
+                )
+            ],
+            remoteSupplierLookups: [
+                SyncPreviewLookupSummary(remoteID: supplierID, displayName: "Cloud Supplier")
+            ],
+            remoteCategoryLookups: [
+                SyncPreviewLookupSummary(remoteID: categoryID, displayName: "Cloud Category")
+            ],
+            remoteProductIDs: [remoteProductID]
+        )
+
+        try assertPrepareThrows(.invalidLocalData, preview: preview, context: context)
+
+        let result = try await service.replaceLocalCatalogWithRemoteSnapshot(
+            preview: preview,
+            context: context,
+            isAuthenticated: true
+        )
+
+        XCTAssertEqual(result.inserted, 1)
+        XCTAssertEqual(result.productPruned, 2)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 0)
+        let products = try context.fetch(FetchDescriptor<Product>())
+        XCTAssertEqual(products.count, 1)
+        XCTAssertEqual(products.first?.barcode, "REMOTE-ONLY-1")
+        XCTAssertEqual(products.first?.remoteID, remoteProductID)
+        XCTAssertEqual(products.first?.supplier?.remoteID, supplierID)
+        XCTAssertEqual(products.first?.category?.remoteID, categoryID)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Supplier>()).map(\.name), ["Cloud Supplier"])
+        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductCategory>()).map(\.name), ["Cloud Category"])
+    }
+
     func testPrepareApplyPlanBlocksSessionMissing() throws {
         let context = try makeContext()
         let preview = makePreview(newProducts: [

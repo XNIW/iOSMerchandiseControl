@@ -1,0 +1,25 @@
+=== mc-agent scan remote-adapter-single-domain --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "remote_domain_adapters_present",
+      "reason": "Catalog/ProductPrice/History/SyncEvent remote adapters must be distinct.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "remote_adapters_not_obvious_megaservices",
+      "reason": "Remote adapters must not mix unrelated domains without composite justification.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T00:31:08Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.remote-adapter-single-domain",
+  "startedAt": "2026-05-26T00:31:08Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

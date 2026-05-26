@@ -1,0 +1,25 @@
+=== mc-agent scan background-task-registration --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Fix background-task-registration findings and rerun.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "backgroundtasks_swift_registration_present",
+      "reason": "BackgroundTasks framework registration/handler must exist.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "plist_permitted_identifiers_present",
+      "reason": "Info.plist must declare permitted background identifiers.",
+      "status": "FAIL"
+    }
+  ],
+  "completedAt": "2026-05-26T00:30:39Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.background-task-registration",
+  "startedAt": "2026-05-26T00:30:39Z",
+  "status": "FAIL",
+  "taskId": "TASK-125"
+}

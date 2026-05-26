@@ -70,6 +70,7 @@ final class SyncOrchestrator: ObservableObject {
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
     private let stateStore: SyncStateStore
     private let decisionInputProvider: any SyncDecisionInputProviding
+    private let backgroundScheduler: any SyncBackgroundTaskScheduling
 
     private var currentScenePhase: ScenePhase = .inactive
     private var foregroundTask: Task<Void, Never>?
@@ -87,7 +88,8 @@ final class SyncOrchestrator: ObservableObject {
         activityCenter: ForegroundCloudWorkflowActivityCenter,
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?,
         stateStore: SyncStateStore? = nil,
-        decisionInputProvider: any SyncDecisionInputProviding
+        decisionInputProvider: any SyncDecisionInputProviding,
+        backgroundScheduler: any SyncBackgroundTaskScheduling = SyncBackgroundTaskScheduler.shared
     ) {
         self.automaticRuntime = automaticRuntime
         self.authViewModel = authViewModel
@@ -95,6 +97,7 @@ final class SyncOrchestrator: ObservableObject {
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.stateStore = stateStore ?? SyncStateStore()
         self.decisionInputProvider = decisionInputProvider
+        self.backgroundScheduler = backgroundScheduler
     }
 
     var rootPresentationState: SyncRootPresentationState {
@@ -142,6 +145,7 @@ final class SyncOrchestrator: ObservableObject {
             startSyncEventSafetyLoopIfNeeded()
             submitForegroundTrigger(forceIncremental: true)
         case .background:
+            backgroundScheduler.schedule(reason: .periodicOpportunity)
             reconnectScheduler?.setForeground(false)
             syncEventSignalWatcher?.stop()
             stopSyncEventSafetyLoop()
@@ -174,6 +178,7 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     func handleLocalPendingChanges() {
+        backgroundScheduler.schedule(reason: .localPendingWrite)
         guard didReachInteractiveUI,
               currentScenePhase == .active else { return }
         submitForegroundTrigger(source: .localMutation, forceIncremental: true)
@@ -287,6 +292,7 @@ final class SyncOrchestrator: ObservableObject {
         guard reconnectScheduler == nil,
               reconnectObserver == nil else { return }
         let scheduler = AutomaticSyncReconnectScheduler { [weak self] in
+            self?.backgroundScheduler.schedule(reason: .networkReconnect)
             self?.submitForegroundTrigger(source: .networkReconnect, forceIncremental: true)
         }
         scheduler.setForeground(currentScenePhase == .active)
@@ -378,6 +384,7 @@ final class SyncOrchestrator: ObservableObject {
     }
 
     private func completeForegroundTask(runDeferred: Bool = true) {
+        backgroundScheduler.schedule(reason: .foregroundCompletion)
         foregroundTask = nil
         objectWillChange.send()
         if runDeferred {

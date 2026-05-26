@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "supabase-cross-platform-contract",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "BLOCKED_EXTERNAL",
+  "title": "TASK-125 Supabase Cross-platform Contract",
+  "summary": "Linked schema was reachable, but linked RLS/grants contract could not be fully verified due pooler/auth circuit breaker. Local contract checks passed.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-schema-task-TASK-125-profile-linked-p27203.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-schema-task-TASK-125-profile-linked-p27203.md",
+      "command": "supabase verify-schema --task TASK-125 --profile linked",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-rls-task-TASK-125-profile-linked-p27204.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-rls-task-TASK-125-profile-linked-p27204.md",
+      "command": "supabase verify-rls --task TASK-125 --profile linked",
+      "result": "BLOCKED_EXTERNAL",
+      "status": "BLOCKED_EXTERNAL",
+      "exitCode": 2
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-grants-task-TASK-125-profile-linked-p27211.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-grants-task-TASK-125-profile-linked-p27211.md",
+      "command": "supabase verify-grants --task TASK-125 --profile linked",
+      "result": "BLOCKED_EXTERNAL",
+      "status": "BLOCKED_EXTERNAL",
+      "exitCode": 2
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004516Z-supabase-verify-rls-task-TASK-125-profile-local-p29138.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004516Z-supabase-verify-rls-task-TASK-125-profile-local-p29138.md",
+      "command": "supabase verify-rls --task TASK-125 --profile local",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004516Z-supabase-verify-grants-task-TASK-125-profile-local-p29139.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004516Z-supabase-verify-grants-task-TASK-125-profile-local-p29139.md",
+      "command": "supabase verify-grants --task TASK-125 --profile local",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": "Resolve linked Supabase pooler/auth and rerun cross-platform contract gate."
+}

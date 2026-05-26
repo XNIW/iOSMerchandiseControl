@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "android-physical-auth-preflight",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 Android Physical Auth Preflight",
+  "summary": "Physical OnePlus preflight passed with serial redacted/hash only. Device unlocked, app installed and ADB state device were reported by harness.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004810Z-android-auth-preflight-live-task-TASK-125-p34794.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004810Z-android-auth-preflight-live-task-TASK-125-p34794.md",
+      "command": "android auth-preflight --live --task TASK-125",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": ""
+}

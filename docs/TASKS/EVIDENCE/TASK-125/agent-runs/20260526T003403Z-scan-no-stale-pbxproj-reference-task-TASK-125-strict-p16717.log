@@ -1,0 +1,19 @@
+=== mc-agent scan no-stale-pbxproj-reference --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "pbxproj_swift_references_exist",
+      "reason": "No stale Swift pbxproj references.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T00:34:03Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.no-stale-pbxproj-reference",
+  "startedAt": "2026-05-26T00:34:03Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

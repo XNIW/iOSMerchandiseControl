@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "feature-flags-parity",
+  "generatedAt": "2026-05-26T00:57:33Z",
+  "status": "FAIL",
+  "title": "TASK-125 Feature Flags Parity",
+  "summary": "Feature Flags Parity parity was not completed to PASS in this execution. Supporting iOS/Android static build/test evidence exists, but TASK-125 requires executable per-contract parity before real-device runtime.",
+  "redactionApplied": true,
+  "references": [],
+  "checks": [],
+  "details": {},
+  "nextAction": "Complete cross-platform per-contract audit/fix/rerun and update this artifact to PASS only from real evidence."
+}

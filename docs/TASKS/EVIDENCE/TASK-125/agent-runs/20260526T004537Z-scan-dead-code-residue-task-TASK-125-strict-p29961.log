@@ -1,0 +1,19 @@
+=== mc-agent scan dead-code-residue --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "no_marked_dead_sync_residue",
+      "reason": "No known dead-code residue markers may remain in Sync.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T00:45:37Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.dead-code-residue",
+  "startedAt": "2026-05-26T00:45:37Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

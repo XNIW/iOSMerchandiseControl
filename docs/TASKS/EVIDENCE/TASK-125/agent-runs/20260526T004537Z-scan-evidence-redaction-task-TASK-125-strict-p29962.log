@@ -1,0 +1,48 @@
+=== mc-agent scan evidence-redaction --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Fix evidence-redaction findings and rerun.",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "file": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003450Z-scan-no-service-role-client-task-TASK-125-strict-p20017.log",
+          "patternHash": "1a75b9283430"
+        },
+        {
+          "file": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003450Z-scan-no-service-role-client-task-TASK-125-strict-p20017.json",
+          "patternHash": "1a75b9283430"
+        },
+        {
+          "file": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004516Z-supabase-verify-grants-task-TASK-125-profile-local-p29139.log",
+          "patternHash": "1a75b9283430"
+        },
+        {
+          "file": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003403Z-scan-no-service-role-client-task-TASK-125-strict-p16683.log",
+          "patternHash": "1a75b9283430"
+        },
+        {
+          "file": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003435Z-scan-no-service-role-client-task-TASK-125-strict-p19313.log",
+          "patternHash": "1a75b9283430"
+        },
+        {
+          "file": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003435Z-scan-no-service-role-client-task-TASK-125-strict-p19313.json",
+          "patternHash": "1a75b9283430"
+        },
+        {
+          "file": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003403Z-scan-no-service-role-client-task-TASK-125-strict-p16683.json",
+          "patternHash": "1a75b9283430"
+        }
+      ],
+      "id": "evidence_no_obvious_raw_secret_or_device_id",
+      "reason": "Evidence must redact JWT/token/<REDACTED_SERVICE_ROLE>/device identifiers.",
+      "status": "FAIL"
+    }
+  ],
+  "completedAt": "2026-05-26T00:45:37Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.evidence-redaction",
+  "startedAt": "2026-05-26T00:45:37Z",
+  "status": "FAIL",
+  "taskId": "TASK-125"
+}

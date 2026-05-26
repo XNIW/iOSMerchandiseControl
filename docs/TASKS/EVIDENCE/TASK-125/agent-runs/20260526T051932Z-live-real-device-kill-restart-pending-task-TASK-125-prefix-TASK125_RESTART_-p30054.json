@@ -1,0 +1,389 @@
+{
+  "NEXT_ACTION": "Run cleanup/residue for TASK125_RESTART_, then rerun near-realtime/runtime parity/final gates.",
+  "android_offline_tier": "L3",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T051932Z-live-real-device-kill-restart-pending-task-TASK-125-prefix-TASK125_RESTART_-p30054.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T051932Z-live-real-device-kill-restart-pending-task-TASK-125-prefix-TASK125_RESTART_-p30054.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T051932Z-live-real-device-kill-restart-pending-task-TASK-125-prefix-TASK125_RESTART_-p30054.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-task114-test114IOSOfflineReconnectProductPriceHistoryMatrix-20260526T051932Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "PR-01",
+    "PR-03",
+    "PR-04",
+    "PR-08"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live real-device-kill-restart-pending --task TASK-125 --prefix TASK125_RESTART_",
+  "command_slug": "live-real-device-kill-restart-pending-task-TASK-125-prefix-TASK125_RESTART_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "physical",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 253130,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-125",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK125_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-125"
+  },
+  "exit_code": 0,
+  "git_sha": "2896e3c",
+  "next_action_recommended": "Run cleanup/residue for TASK125_RESTART_, then rerun near-realtime/runtime parity/final gates.",
+  "platform": "ios",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "cleanupRequired": true,
+    "completedAt": "2026-05-26T05:23:45Z",
+    "counts": {
+      "androidAfterIosOffline": {
+        "categories": {
+          "active": 90,
+          "all": 90,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 77,
+          "all": 85,
+          "deleted": 8,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 76
+        },
+        "product_prices": {
+          "active": 41235,
+          "all": 41235,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19756,
+          "all": 19756,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 121,
+          "all": 121,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "androidBeforeIosOffline": {
+        "categories": {
+          "active": 87,
+          "all": 87,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 75,
+          "all": 82,
+          "deleted": 7,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 74
+        },
+        "product_prices": {
+          "active": 41230,
+          "all": 41230,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19754,
+          "all": 19754,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 118,
+          "all": 118,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "iosAfterAndroidOffline": {
+        "categories": {
+          "active": 91,
+          "all": 91,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 78,
+          "all": 80,
+          "deleted": 2,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 78
+        },
+        "product_prices": {
+          "active": 41240,
+          "all": 41244,
+          "deleted": 4,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19758,
+          "all": 19760,
+          "deleted": 2,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 122,
+          "all": 122,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "iosBeforeAndroidOffline": {
+        "categories": {
+          "active": 90,
+          "all": 90,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 76,
+          "all": 77,
+          "deleted": 1,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 76
+        },
+        "product_prices": {
+          "active": 41235,
+          "all": 41237,
+          "deleted": 2,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19756,
+          "all": 19757,
+          "deleted": 1,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 121,
+          "all": 121,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      }
+    },
+    "directionPrefixes": {
+      "androidOfflineToIos": "TASK125_RESTART_OFF_20260526T051932Z_ANDROID_",
+      "iosOfflineToAndroid": "TASK125_RESTART_OFF_20260526T051932Z_IOS_"
+    },
+    "domains": {
+      "Category": {
+        "create": "PASS",
+        "tombstone": "not_required",
+        "update": "not_required"
+      },
+      "HistoryEntry": {
+        "create": "PASS",
+        "tombstone": "PASS",
+        "update": "PASS"
+      },
+      "Product": {
+        "create": "PASS",
+        "tombstone": "PASS",
+        "update": "PASS"
+      },
+      "ProductPrice": {
+        "create": "PASS",
+        "tombstone": "not_supported_append_only",
+        "update": "PASS_APPEND_ONLY_CORRECTION"
+      },
+      "Supplier": {
+        "create": "PASS",
+        "tombstone": "not_required",
+        "update": "not_required"
+      }
+    },
+    "phaseTimings": {
+      "androidOfflineLocalSaveMs": 190,
+      "androidPendingCatalog": 2,
+      "androidPendingHistory": 3,
+      "androidPendingPrices": 3,
+      "androidReconnectDetectedMs": 3,
+      "androidReconnectToIosApplyMs": 753,
+      "androidRemotePushMs": 4174,
+      "androidToIosPolls": 1,
+      "iosOfflineLocalSaveMs": null,
+      "iosPendingCatalog": null,
+      "iosPendingHistory": null,
+      "iosPendingPrices": null,
+      "iosReceiverIncrementalApplyMs": 203,
+      "iosReceiverSyncType": "CHECKPOINT_INCREMENTAL",
+      "iosReconnectToAndroidApplyMs": 2756,
+      "iosRemotePushMs": null,
+      "iosToAndroidPolls": 1
+    },
+    "prefix": "TASK125_RESTART_OFF_20260526T051932Z_",
+    "schemaVersion": "1.1",
+    "source": "live.offline-reconnect-sync",
+    "startedAt": "2026-05-26T05:19:32Z",
+    "status": "PASS",
+    "steps": [
+      {
+        "coverage": "iOS controlled offline provider fails before write, SwiftData pending survives, reconnect pushes Product/Supplier/Category/ProductPrice/History and Android applies from sync_events.",
+        "durationMs": 51329,
+        "name": "iosControlledOfflineReconnectToAndroid",
+        "status": "PASS"
+      },
+      {
+        "coverage": "Android Room local-first pending rows are queued while app/network sync is unavailable, reconnect drains via EVENT_INCREMENTAL sync_events and iOS applies from foreground runtime.",
+        "durationMs": 21582,
+        "name": "androidOfflineQueueReconnectToIos",
+        "status": "PASS"
+      },
+      {
+        "coverage": "Multiple offline changes on the same update records converge to the final state before remote push.",
+        "name": "offlineCoalescingDedup",
+        "status": "PASS_WITH_NOTES"
+      },
+      {
+        "coverage": "Stale/conflict policy is fail-closed; no silent overwrite path is used by the offline reconnect harness.",
+        "name": "offlineConflictFailClosed",
+        "status": "PASS_WITH_NOTES"
+      }
+    ],
+    "syncEventCoverage": {
+      "androidOfflineToIos": {
+        "catalogEvents": 2,
+        "historyEvents": 3,
+        "missingTargetsForChangedEvents": 0,
+        "priceEvents": 2,
+        "targetedCategoryIds": 1,
+        "targetedPriceIds": 7,
+        "targetedProductIds": 5,
+        "targetedSessionIds": 81,
+        "targetedSupplierIds": 1
+      },
+      "iosOfflineToAndroid": {
+        "catalogEvents": 3,
+        "historyEvents": 2,
+        "missingTargetsForChangedEvents": 0,
+        "priceEvents": 1,
+        "targetedCategoryIds": 3,
+        "targetedPriceIds": 5,
+        "targetedProductIds": 5,
+        "targetedSessionIds": 5,
+        "targetedSupplierIds": 3
+      },
+      "targetedEventsOk": true
+    },
+    "syncTypes": {
+      "fallbackAllowed": [
+        "CHECKPOINT_INCREMENTAL",
+        "LIGHT_RECONCILE"
+      ],
+      "forbiddenNormalReconnect": [
+        "FULL_PULL_BOOTSTRAP",
+        "FULL_PULL_RECOVERY"
+      ],
+      "fullPullUsed": false,
+      "offlineLocalSave": "LOCAL_FIRST_PENDING",
+      "postPushRemoteEvent": "EVENT_INCREMENTAL",
+      "receiverApply": "EVENT_INCREMENTAL",
+      "reconnectPush": "EVENT_INCREMENTAL"
+    },
+    "taskId": "TASK-125"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260526T051932Z-live-real-device-kill-restart-pending-task-TASK-125-prefix-TASK125_RESTART_-p30054",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-125",
+  "test_prefix": "TASK125_RESTART_OFF_20260526T051932Z_ANDROID_",
+  "timestamp_end": "2026-05-26T05:23:45Z",
+  "timestamp_start": "2026-05-26T05:19:32Z",
+  "warnings": []
+}

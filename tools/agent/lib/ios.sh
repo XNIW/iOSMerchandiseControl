@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
 mc_ios_destination() {
+  if [[ -n "${MC_IOS_DEVICE_UDID:-}" ]]; then
+    printf 'platform=iOS,id=%s' "$MC_IOS_DEVICE_UDID"
+    return 0
+  fi
   if [[ -n "${MC_IOS_SIMULATOR_ID:-}" ]]; then
     printf 'platform=iOS Simulator,id=%s' "$MC_IOS_SIMULATOR_ID"
     return 0
@@ -228,11 +232,16 @@ try:
             try:
                 raw = value.decode() if isinstance(value, (bytes, bytearray)) else str(value)
                 decoded = json.loads(raw)
+                store_identity = decoded.get("storeIdentity")
+                if isinstance(store_identity, dict):
+                    store_identity_value = store_identity.get("rawValue") or ""
+                else:
+                    store_identity_value = store_identity or ""
                 binding.update({
                     "decoded": True,
                     "accountHashPresent": bool(decoded.get("accountHash")),
                     "accountHashHash": sha(str(decoded.get("accountHash") or ""))[:12],
-                    "storeIdentityHash": sha(str(decoded.get("storeIdentity", {}).get("rawValue") or ""))[:12],
+                    "storeIdentityHash": sha(str(store_identity_value))[:12],
                     "boundAtPresent": bool(decoded.get("boundAt")),
                 })
             except Exception:
@@ -334,7 +343,7 @@ mc_ios_physical_device_json() {
   local json device_json
   json="$(mktemp /tmp/mc-agent-ios-physical-devices.XXXXXX)"
   xcrun devicectl list devices --json-output "$json" >/dev/null 2>&1 || return "$MC_EXIT_BLOCKED"
-  device_json="$(MC_IOS_DEVICE_ID="${MC_IOS_DEVICE_ID:-}" python3 - "$json" <<'PY'
+  device_json="$(MC_IOS_DEVICE_ID="${MC_IOS_DEVICE_ID:-${MC_IOS_DEVICE_UDID:-}}" python3 - "$json" <<'PY'
 import json, os, sys
 path = sys.argv[1]
 target = os.environ.get("MC_IOS_DEVICE_ID") or ""
@@ -401,26 +410,62 @@ mc_ios_physical_launch_app() {
     "$bundle_id" >/dev/null 2>&1
 }
 
-mc_ios_physical_copy_library() {
+mc_ios_physical_copy_source_to_dest() {
   local device_id="$1"
-  local dest
-  dest="$(mktemp -d /tmp/mc-agent-ios-physical-library.XXXXXX)"
+  local copy_source="$2"
+  local dest="$3"
+  local timeout_seconds="$4"
+  local guard_timeout copy_pid elapsed copy_code
+  guard_timeout=$((timeout_seconds + 10))
   xcrun devicectl device copy from \
     --device "$device_id" \
     --domain-type appDataContainer \
     --domain-identifier "$(mc_ios_app_bundle_id)" \
-    --source Library \
-    --destination "$dest" >/dev/null 2>&1 || {
-      rm -rf "$dest"
+    --source "$copy_source" \
+    --timeout "$timeout_seconds" \
+    --destination "$dest" >/dev/null 2>&1 &
+  copy_pid=$!
+  elapsed=0
+  while kill -0 "$copy_pid" 2>/dev/null; do
+    if [[ "$elapsed" -ge "$guard_timeout" ]]; then
+      kill "$copy_pid" >/dev/null 2>&1 || true
+      wait "$copy_pid" 2>/dev/null || true
       return "$MC_EXIT_BLOCKED"
-    }
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  copy_code=0
+  wait "$copy_pid" || copy_code=$?
+  [[ "$copy_code" -eq 0 ]] || return "$MC_EXIT_BLOCKED"
+  return "$MC_EXIT_PASS"
+}
+
+mc_ios_physical_copy_library() {
+  local device_id="$1"
+  local dest prefs_dest prefs_source prefs_tmp timeout_seconds store_source
+  dest="$(mktemp -d /tmp/mc-agent-ios-physical-library.XXXXXX)"
+  timeout_seconds="${MC_IOS_PHYSICAL_COPY_TIMEOUT_SECONDS:-30}"
+  store_source="${MC_IOS_PHYSICAL_COPY_STORE_SOURCE:-Library/Application Support}"
+  prefs_source="${MC_IOS_PHYSICAL_COPY_PREFS_SOURCE:-Library/Preferences}"
+  mc_ios_physical_copy_source_to_dest "$device_id" "$store_source" "$dest" "$timeout_seconds" || {
+    rm -rf "$dest"
+    return "$MC_EXIT_BLOCKED"
+  }
+  prefs_tmp="$(mktemp -d /tmp/mc-agent-ios-physical-prefs.XXXXXX)"
+  if mc_ios_physical_copy_source_to_dest "$device_id" "$prefs_source" "$prefs_tmp" "$timeout_seconds"; then
+    prefs_dest="$dest/Preferences"
+    mkdir -p "$prefs_dest"
+    find "$prefs_tmp" -maxdepth 1 -type f -name '*.plist' -exec cp '{}' "$prefs_dest/" ';'
+  fi
+  rm -rf "$prefs_tmp"
   printf '%s\n' "$dest"
 }
 
 mc_ios_physical_runtime_counts_payload() {
   local source="$1"
   local wait_seconds="${2:-60}"
-  local device_json device_id container store
+  local device_json device_id container store attempts attempt retry_wait attempt_wait last_blocker launch_code
   device_json="$(mc_ios_physical_device_json)" || {
     MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$MC_TASK_ID" "$source" "No single connected physical iPhone was found by devicectl.")"
     return "$MC_EXIT_BLOCKED"
@@ -430,21 +475,41 @@ import json, os
 print(json.loads(os.environ["DEVICE_JSON"])["identifier"])
 PY
 )"
-  mc_ios_physical_launch_app "$device_id" || {
-    MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$MC_TASK_ID" "$source" "Physical iPhone app launch failed; unlock/trust the device and ensure the app is installed.")"
-    return "$MC_EXIT_BLOCKED"
-  }
-  if [[ "$wait_seconds" != "0" && "$wait_seconds" != "0.0" ]]; then
-    sleep "$wait_seconds"
-  fi
-  container="$(mc_ios_physical_copy_library "$device_id")" || {
-    MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$MC_TASK_ID" "$source" "Physical iPhone appDataContainer copy failed; unlock/trust the device.")"
-    return "$MC_EXIT_BLOCKED"
-  }
-  store="$(mc_sync_ios_store_path "$container" 2>/dev/null || true)"
-  if [[ -z "$store" ]]; then
-    rm -rf "$container"
-    MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$MC_TASK_ID" "$source" "Physical iPhone SwiftData store was not found in copied appDataContainer.")"
+  attempts="${MC_IOS_PHYSICAL_COPY_RETRIES:-3}"
+  retry_wait="${MC_IOS_PHYSICAL_COPY_RETRY_WAIT_SECONDS:-2}"
+  for ((attempt=1; attempt<=attempts; attempt++)); do
+    launch_code=0
+    mc_ios_physical_launch_app "$device_id" || launch_code=$?
+    if [[ "$launch_code" -ne 0 ]]; then
+      last_blocker="Physical iPhone app launch failed on attempt ${attempt}/${attempts}; unlock/trust the device and ensure the app is installed."
+    else
+      attempt_wait="$wait_seconds"
+      if [[ "$attempt" -gt 1 ]]; then
+        attempt_wait="${MC_IOS_PHYSICAL_COPY_RETRY_RUNTIME_WAIT_SECONDS:-$retry_wait}"
+      fi
+      if [[ "$attempt_wait" != "0" && "$attempt_wait" != "0.0" ]]; then
+        sleep "$attempt_wait"
+      fi
+      container="$(mc_ios_physical_copy_library "$device_id")" || {
+        last_blocker="Physical iPhone appDataContainer copy failed on attempt ${attempt}/${attempts}; unlock/trust the device."
+        container=""
+      }
+      if [[ -n "$container" ]]; then
+        store="$(mc_sync_ios_store_path "$container" 2>/dev/null || true)"
+        if [[ -n "$store" ]]; then
+          break
+        fi
+        rm -rf "$container"
+        container=""
+        last_blocker="Physical iPhone SwiftData store was not found in copied appDataContainer on attempt ${attempt}/${attempts}."
+      fi
+    fi
+    if [[ "$attempt" -lt "$attempts" ]]; then
+      sleep "$retry_wait"
+    fi
+  done
+  if [[ -z "${container:-}" || -z "${store:-}" ]]; then
+    MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$MC_TASK_ID" "$source" "${last_blocker:-Physical iPhone runtime store was unavailable after retries.}")"
     return "$MC_EXIT_BLOCKED"
   fi
   MC_IOS_CONTAINER_KIND="physical" mc_ios_runtime_counts_payload "$source" "$wait_seconds" "$container" "$store"
@@ -510,6 +575,7 @@ runtime_flags = diagnostics.get("runtime", {})
 counts = payload.get("counts", {})
 binding = diagnostics.get("accountBinding") or {"present": False}
 pending = sum((counts.get(k, {}) or {}).get("pending") or 0 for k in ["products", "suppliers", "categories", "product_prices", "history_entries"])
+has_local_data = any(((counts.get(k, {}) or {}).get("all") or 0) > 0 for k in ["products", "suppliers", "categories", "product_prices", "history_entries"])
 auth_ready = runtime_flags.get("auth.isSignedIn") is True and runtime_flags.get("auth.userIDPresent") is True
 baseline_present = payload.get("baseline") is not None
 watermark_count = len(diagnostics.get("syncEventWatermarks") or [])
@@ -518,13 +584,21 @@ if not auth_ready:
     blocked.append("AUTH_SESSION_NOT_READY")
 if not runtime.get("isRuntimeAppContainer"):
     blocked.append("NOT_RUNTIME_APP_CONTAINER")
+if auth_ready and has_local_data and not (binding.get("present") and binding.get("decoded")):
+    blocked.append("ACCOUNT_BINDING_DECISION_REQUIRED")
+if runtime_flags.get("orchestrator.lastRunBlockReason") == "accountDecisionRequired":
+    blocked.append("SYNC_ACCOUNT_OR_RECOVERY_DECISION_REQUIRED")
 payload["physicalAuthStoreDiagnostics"] = {
     "authReady": auth_ready,
     "accountBindingPresent": bool(binding.get("present")),
     "accountBindingDecoded": bool(binding.get("decoded")),
+    "hasLocalData": has_local_data,
     "pendingAggregate": pending,
     "baselinePresent": baseline_present,
     "watermarkCount": watermark_count,
+    "foregroundOutcome": runtime_flags.get("foreground.outcome"),
+    "orchestratorBlockReason": runtime_flags.get("orchestrator.lastRunBlockReason"),
+    "incrementalRecoveryReason": runtime_flags.get("incremental.lastRequiresFullRecoveryReason"),
     "storePathHashPresent": bool(runtime.get("storePathHash")),
     "containerPathHashPresent": bool(runtime.get("containerPathHash")),
     "blockers": blocked,
@@ -545,6 +619,20 @@ PY
   MC_SUMMARY="iOS physical-auth-store-diagnostics BLOCKED: physical app session is not ready for acceptance."
   MC_NEXT_ACTION="Open the app on the physical iPhone, complete login/session restore, then rerun."
   return "$MC_EXIT_BLOCKED"
+}
+
+mc_ios_device_auth_preflight() {
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="live-readonly"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="AC-125-01,AC-125-27,AC-125-28"
+  mc_require_live || return $?
+  if [[ -z "${MC_IOS_DEVICE_UDID:-${MC_IOS_DEVICE_ID:-}}" ]]; then
+    MC_SUMMARY="iOS physical device-auth-preflight BLOCKED: MC_IOS_DEVICE_UDID is not set."
+    MC_NEXT_ACTION="Set MC_IOS_DEVICE_UDID for the physical device 'iPhone di Min', unlock/trust it, then rerun ios device-auth-preflight."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  mc_ios_physical_auth_store_diagnostics
 }
 
 mc_ios_physical_sync_loop_diagnostics() {
@@ -1168,7 +1256,7 @@ mc_ios_auth_preflight() {
   local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped
   dest="$(mc_ios_destination)"
   bundle="$(mc_ios_result_bundle auth-preflight)"
-  test_log="$(mktemp /tmp/mc-agent-ios-auth-preflight.XXXXXX.log)"
+  test_log="$(mktemp -t mc-agent-ios-auth-preflight)"
   derived_data="/tmp/mc-agent-ios-auth-preflight-${MC_TIMESTAMP}-DerivedData"
   xctestrun="${derived_data}/Build/Products/task114-ios-auth-preflight.xctestrun"
   MC_ARTIFACT_XCRESULT="$bundle"
@@ -1242,24 +1330,36 @@ mc_ios_live_full_pull() {
   MC_REQUIRES_LIVE="true"
   MC_CA_REFS="CA-03,CA-06,CA-10"
   mc_require_live || return $?
-  local dest bundle before_json after_json code test_log store_path store_hash derived_data xctestrun generated_xctestrun detail_status
+  local dest bundle before_json after_json code test_log store_path store_hash derived_data xctestrun generated_xctestrun detail_status physical_wait
   dest="$(mc_ios_destination)"
   bundle="$(mc_ios_result_bundle live-full-pull)"
-  test_log="$(mktemp /tmp/mc-agent-ios-live-full-pull.XXXXXX.log)"
+  test_log="$(mktemp -t mc-agent-ios-live-full-pull)"
   derived_data="/tmp/mc-agent-ios-live-full-pull-${MC_TIMESTAMP}-DerivedData"
   xctestrun="${derived_data}/Build/Products/task114-ios-live-full-pull.xctestrun"
   MC_ARTIFACT_XCRESULT="$bundle"
   mc_git_context "$MC_IOS_REPO"
 
-  mc_sync_counts_ios "$MC_TASK_ID"
-  before_json="$MC_SYNC_JSON_RESULT"
-  store_path="$(mc_sync_ios_container | { read -r container && mc_sync_ios_store_path "$container"; } 2>/dev/null || true)"
-  if [[ -z "$store_path" ]]; then
-    MC_SUMMARY="iOS live-full-pull BLOCKED. App SwiftData store path is unavailable."
-    MC_NEXT_ACTION="Install/launch the iOS app on the booted simulator, then retry ios live-full-pull."
-    return "$MC_EXIT_BLOCKED"
+  if [[ "${MC_IOS_RUNTIME_USE_PHYSICAL:-0}" == "1" || -n "${MC_IOS_DEVICE_UDID:-}" ]]; then
+    physical_wait="${MC_IOS_PHYSICAL_WAIT_SECONDS:-8}"
+    export MC_IOS_RUNTIME_USE_PHYSICAL=1
+    mc_ios_physical_runtime_counts_payload "ios.physical-before-live-full-pull" "$physical_wait" || {
+      MC_SUMMARY="iOS live-full-pull BLOCKED. Physical iPhone before-count evidence is unavailable."
+      MC_NEXT_ACTION="Unlock/trust the iPhone, keep the app installed/logged in, then retry ios live-full-pull."
+      return "$MC_EXIT_BLOCKED"
+    }
+    before_json="$MC_SYNC_JSON_RESULT"
+    store_hash="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("runtime",{}).get("storePathHash",""))' <<<"$before_json")"
+  else
+    mc_sync_counts_ios "$MC_TASK_ID"
+    before_json="$MC_SYNC_JSON_RESULT"
+    store_path="$(mc_sync_ios_container | { read -r container && mc_sync_ios_store_path "$container"; } 2>/dev/null || true)"
+    if [[ -z "$store_path" ]]; then
+      MC_SUMMARY="iOS live-full-pull BLOCKED. App SwiftData store path is unavailable."
+      MC_NEXT_ACTION="Install/launch the iOS app on the booted simulator, then retry ios live-full-pull."
+      return "$MC_EXIT_BLOCKED"
+    fi
+    store_hash="$(printf '%s' "$store_path" | shasum -a 256 | awk '{print $1}')"
   fi
-  store_hash="$(printf '%s' "$store_path" | shasum -a 256 | awk '{print $1}')"
 
   mc_ios_acquire_xcode_lock || return $?
   (
@@ -1279,7 +1379,13 @@ mc_ios_live_full_pull() {
       mkdir -p "$(dirname "$xctestrun")"
       cp "$generated_xctestrun" "$xctestrun"
       mc_ios_plist_set_or_add "$xctestrun" ":TestConfigurations:0:TestTargets:0:EnvironmentVariables:TASK114_IOS_FULL_PULL" "1" >>"$test_log" 2>&1
+      mc_ios_plist_set_or_add "$xctestrun" ":TestConfigurations:0:TestTargets:0:EnvironmentVariables:TEST_RUNNER_TASK114_IOS_FULL_PULL" "1" >>"$test_log" 2>&1
       mc_ios_plist_set_or_add "$xctestrun" ":TestConfigurations:0:TestTargets:0:EnvironmentVariables:TASK114_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
+      mc_ios_plist_set_or_add "$xctestrun" ":TestConfigurations:0:TestTargets:0:EnvironmentVariables:TEST_RUNNER_TASK114_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
+      if [[ "$MC_TASK_ID" == "TASK-125" || "${MC_IOS_REPLACE_LOCAL_WITH_CLOUD:-0}" == "1" ]]; then
+        mc_ios_plist_set_or_add "$xctestrun" ":TestConfigurations:0:TestTargets:0:EnvironmentVariables:TASK125_IOS_REPLACE_LOCAL_WITH_CLOUD" "1" >>"$test_log" 2>&1
+        mc_ios_plist_set_or_add "$xctestrun" ":TestConfigurations:0:TestTargets:0:EnvironmentVariables:TEST_RUNNER_TASK125_IOS_REPLACE_LOCAL_WITH_CLOUD" "1" >>"$test_log" 2>&1
+      fi
       (
         cd "$MC_IOS_REPO" || exit 3
         xcodebuild test-without-building -xctestrun "$xctestrun" \
@@ -1292,8 +1398,17 @@ mc_ios_live_full_pull() {
   mc_ios_release_xcode_lock
   mc_report_log "$(mc_redact_text "$(tail -n 80 "$test_log")")"
 
-  mc_sync_counts_ios "$MC_TASK_ID"
-  after_json="$MC_SYNC_JSON_RESULT"
+  if [[ "${MC_IOS_RUNTIME_USE_PHYSICAL:-0}" == "1" || -n "${MC_IOS_DEVICE_UDID:-}" ]]; then
+    mc_ios_physical_runtime_counts_payload "ios.physical-after-live-full-pull" "${MC_IOS_PHYSICAL_WAIT_SECONDS:-8}" || {
+      MC_SUMMARY="iOS live-full-pull BLOCKED. Physical iPhone after-count evidence is unavailable."
+      MC_NEXT_ACTION="Unlock/trust the iPhone and rerun iOS physical-runtime-counts."
+      return "$MC_EXIT_BLOCKED"
+    }
+    after_json="$MC_SYNC_JSON_RESULT"
+  else
+    mc_sync_counts_ios "$MC_TASK_ID"
+    after_json="$MC_SYNC_JSON_RESULT"
+  fi
 
   IOS_FULL_PULL_STARTED="${MC_TIMESTAMP_ISO:-$(mc_now_iso)}" \
   TASK_ID="$MC_TASK_ID" \
@@ -1429,6 +1544,63 @@ mc_ios_runtime_ui_counts() {
   MC_REQUIRES_LIVE="true"
   MC_CA_REFS="PR-01,PR-03,PR-04,PR-08"
   mc_require_live || return $?
+  if [[ "${MC_IOS_RUNTIME_USE_PHYSICAL:-0}" == "1" ]]; then
+    local physical_wait physical_status
+    physical_wait="${MC_IOS_PHYSICAL_WAIT_SECONDS:-8}"
+    mc_ios_physical_runtime_counts_payload "ios.physical-runtime-counts" "$physical_wait"
+    physical_status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT" 2>/dev/null || printf 'FAIL')"
+    if [[ "$physical_status" == "PASS" ]]; then
+      CURRENT_JSON="$MC_SYNC_JSON_RESULT" python3 - > /tmp/mc-agent-ios-runtime-readiness.$$.json <<'PY'
+import json, os
+
+payload = json.loads(os.environ["CURRENT_JSON"])
+runtime = payload.get("runtime", {})
+diagnostics = runtime.get("diagnostics", {})
+runtime_flags = diagnostics.get("runtime", {})
+binding = diagnostics.get("accountBinding") or {"present": False}
+counts = payload.get("counts", {})
+has_local_data = any(((counts.get(k, {}) or {}).get("all") or 0) > 0 for k in ["products", "suppliers", "categories", "product_prices", "history_entries"])
+auth_ready = runtime_flags.get("auth.isSignedIn") is True and runtime_flags.get("auth.userIDPresent") is True
+blockers = []
+if not auth_ready:
+    blockers.append("AUTH_SESSION_NOT_READY")
+if not runtime.get("isRuntimeAppContainer"):
+    blockers.append("NOT_RUNTIME_APP_CONTAINER")
+if auth_ready and has_local_data and not (binding.get("present") and binding.get("decoded")):
+    blockers.append("ACCOUNT_BINDING_DECISION_REQUIRED")
+if runtime_flags.get("orchestrator.lastRunBlockReason") == "accountDecisionRequired":
+    blockers.append("SYNC_ACCOUNT_OR_RECOVERY_DECISION_REQUIRED")
+payload["runtimeReadiness"] = {
+    "readyForAutomaticRuntime": not blockers,
+    "blockers": blockers,
+    "accountBindingPresent": bool(binding.get("present")),
+    "accountBindingDecoded": bool(binding.get("decoded")),
+    "hasLocalData": has_local_data,
+    "foregroundOutcome": runtime_flags.get("foreground.outcome"),
+    "orchestratorBlockReason": runtime_flags.get("orchestrator.lastRunBlockReason"),
+    "incrementalRecoveryReason": runtime_flags.get("incremental.lastRequiresFullRecoveryReason"),
+}
+if blockers:
+    payload["status"] = "BLOCKED"
+print(json.dumps(payload, sort_keys=True))
+PY
+      MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-ios-runtime-readiness.$$.json)"
+      rm -f /tmp/mc-agent-ios-runtime-readiness.$$.json
+      mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+      physical_status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","FAIL"))' <<<"$MC_SYNC_JSON_RESULT" 2>/dev/null || printf 'FAIL')"
+      if [[ "$physical_status" == "BLOCKED" ]]; then
+        MC_SUMMARY="iOS runtime-ui-counts BLOCKED: physical iPhone automatic runtime is gated by account/recovery decision."
+        MC_NEXT_ACTION="On the iPhone, open Options > account sync review/recovery, explicitly bind or recover the local store for the signed-in owner, then rerun TASK-125 iOS device-auth-preflight and real-device matrix."
+        return "$MC_EXIT_BLOCKED"
+      fi
+      MC_SUMMARY="iOS runtime-ui-counts PASS via physical iPhone app store copy."
+      MC_NEXT_ACTION="Continue TASK-125 physical runtime matrix."
+      return "$MC_EXIT_PASS"
+    fi
+    MC_SUMMARY="iOS runtime-ui-counts BLOCKED: physical iPhone store copy/counts unavailable."
+    MC_NEXT_ACTION="Unlock/trust iPhone, keep app installed/logged in, then rerun TASK-125 physical matrix."
+    return "$MC_EXIT_BLOCKED"
+  fi
   local derived_data app_path code wait_seconds container store status
   derived_data="$(mc_ios_runtime_derived_data runtime-ui-counts)"
   wait_seconds="${MC_IOS_RUNTIME_WAIT_SECONDS:-20}"
@@ -1544,7 +1716,7 @@ mc_ios_task114_matrix_step() {
   local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped store_path
   dest="$(mc_ios_destination)"
   bundle="$(mc_ios_result_bundle "task114-${method}")"
-  test_log="$(mktemp "/tmp/mc-agent-ios-task114-${method}.XXXXXX.log")"
+  test_log="$(mktemp -t "mc-agent-ios-task114-${method}")"
   derived_data="/tmp/mc-agent-ios-task114-${method}-${MC_TIMESTAMP}-DerivedData"
   xctestrun="${derived_data}/Build/Products/task114-${method}.xctestrun"
   MC_ARTIFACT_XCRESULT="$bundle"
@@ -1665,6 +1837,10 @@ mc_cmd_ios() {
     auth-preflight)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
       mc_ios_auth_preflight
+      ;;
+    device-auth-preflight)
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      mc_ios_device_auth_preflight
       ;;
     live-write)
       local prefix

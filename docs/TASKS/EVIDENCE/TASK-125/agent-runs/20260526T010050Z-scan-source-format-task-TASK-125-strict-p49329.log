@@ -1,0 +1,22 @@
+=== mc-agent scan source-format --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": {
+        "lines": [],
+        "outputHash": "e3b0c44298fc"
+      },
+      "id": "git_diff_check_clean",
+      "reason": "git diff --check must pass.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T01:00:50Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.source-format",
+  "startedAt": "2026-05-26T01:00:50Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

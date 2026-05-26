@@ -1,0 +1,2 @@
+=== mc-agent live real-device-realtime --task TASK-125 --prefix TASK125_RT_ ===
+{"NEXT_ACTION": "Set MC_IOS_DEVICE_UDID for iPhone di Min and MC_ANDROID_DEVICE_SERIAL for OnePlus, unlock/trust both devices, then rerun this TASK-125 live command.", "deviceGate": {"missing": ["MC_IOS_DEVICE_UDID"]}, "prefix": "TASK125_RT_", "redactionApplied": true, "schemaVersion": "1.1", "source": "live.real-device-realtime", "status": "BLOCKED_EXTERNAL", "taskId": "TASK-125"}

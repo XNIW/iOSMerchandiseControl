@@ -1,0 +1,91 @@
+{
+  "NEXT_ACTION": "Use this report in TASK-125 architecture/evidence matrix.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053146Z-scan-no-hidden-manual-sync-task-TASK-125-strict-p44443.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053146Z-scan-no-hidden-manual-sync-task-TASK-125-strict-p44443.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053146Z-scan-no-hidden-manual-sync-task-TASK-125-strict-p44443.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-125-A05",
+    "AC-125-30"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan no-hidden-manual-sync --task TASK-125 --strict",
+  "command_slug": "scan-no-hidden-manual-sync-task-TASK-125-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 235,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-125",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK125_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-125"
+  },
+  "exit_code": 0,
+  "git_sha": "e4eb3a47",
+  "next_action_recommended": "Use this report in TASK-125 architecture/evidence matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Continue TASK-125 gates.",
+    "checks": [
+      {
+        "evidence": [],
+        "id": "automatic_path_has_no_manual_or_compat_dependency",
+        "reason": "Normal automatic path must not call manual/compat sync.",
+        "status": "PASS"
+      }
+    ],
+    "completedAt": "2026-05-26T05:31:46Z",
+    "redactionApplied": true,
+    "schemaVersion": "1.1",
+    "source": "scan.no-hidden-manual-sync",
+    "startedAt": "2026-05-26T05:31:46Z",
+    "status": "PASS",
+    "taskId": "TASK-125"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260526T053146Z-scan-no-hidden-manual-sync-task-TASK-125-strict-p44443",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-125",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-26T05:31:46Z",
+  "timestamp_start": "2026-05-26T05:31:46Z",
+  "warnings": []
+}

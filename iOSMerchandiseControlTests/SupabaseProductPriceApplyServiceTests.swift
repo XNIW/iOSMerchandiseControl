@@ -688,6 +688,60 @@ final class SupabaseProductPriceApplyServiceTests: XCTestCase {
         XCTAssertEqual(prices.first?.remoteID, keptRemoteID)
     }
 
+    func testPagedFullPullReplacementPrunesLocalOnlyPricesMissingFromCompleteSnapshot() async throws {
+        let context = try makeContext()
+        let productID = uuid(977_000)
+        let product = try insertProduct(
+            context: context,
+            barcode: "TASK125-PRICE-REPLACE",
+            remoteID: productID
+        )
+        context.insert(
+            ProductPrice(
+                type: .retail,
+                price: 9.9,
+                effectiveAt: try date("2026-05-02 10:30:00"),
+                product: product
+            )
+        )
+        try context.save()
+
+        let keptRemoteID = uuid(977_100)
+        let rows = [
+            remotePrice(
+                id: keptRemoteID,
+                productID: productID,
+                type: "PURCHASE",
+                price: 2.5,
+                effectiveAt: "2026-05-01 10:30:00"
+            )
+        ]
+        let fetcher = ProductPricePagedFetcherFake(rows: rows)
+        let pagedService = SupabaseProductPriceApplyService(
+            fetcher: fetcher,
+            fetchOptions: ProductPriceApplyFetchOptions(
+                fullPullSafetyLimit: nil,
+                replaceLocalSnapshot: true
+            )
+        )
+        let samplePlan = try await pagedService.loadBootstrapPreviewSample(
+            context: context,
+            sessionSnapshot: session
+        )
+
+        let result = try await pagedService.applyPagedFullPull(
+            plan: samplePlan,
+            context: context,
+            currentSessionSnapshot: session
+        )
+
+        XCTAssertEqual(result.inserted, 1)
+        XCTAssertEqual(result.prunedLocal, 1)
+        let prices = try ModelContext(context.container).fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertEqual(prices.count, 1)
+        XCTAssertEqual(prices.first?.remoteID, keptRemoteID)
+    }
+
     func testPagedFullPullCanCancelLargeProductPriceHistoryWithoutFixedTotalLimit() async throws {
         let context = try makeContext()
         let productIDs = (0..<400).map { uuid(902_000 + $0) }

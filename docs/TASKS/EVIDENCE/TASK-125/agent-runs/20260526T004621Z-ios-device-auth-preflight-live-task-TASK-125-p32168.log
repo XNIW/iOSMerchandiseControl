@@ -1,0 +1,2 @@
+=== mc-agent ios device-auth-preflight --live --task TASK-125 ===
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/tools/agent/lib/ios.sh: line 1685: mc_ios_device_auth_preflight: command not found

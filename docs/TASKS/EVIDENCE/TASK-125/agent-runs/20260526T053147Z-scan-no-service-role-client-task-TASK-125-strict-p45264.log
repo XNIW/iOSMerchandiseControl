@@ -1,0 +1,19 @@
+=== mc-agent scan no-service-role-client --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "client_code_has_no_service_role_secret",
+      "reason": "Client code must not reference service_role credentials.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T05:31:48Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.no-service-role-client",
+  "startedAt": "2026-05-26T05:31:48Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

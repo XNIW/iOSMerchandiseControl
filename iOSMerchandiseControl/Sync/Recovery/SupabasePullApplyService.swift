@@ -669,6 +669,64 @@ nonisolated struct SupabasePullApplyService: Sendable {
         )
     }
 
+    func replaceLocalCatalogWithRemoteSnapshot(
+        preview: SyncPreview,
+        context: ModelContext,
+        options: SupabasePullApplyOptions = SupabasePullApplyOptions(
+            allowLookupOnlyApplyWhenProductConflicts: false
+        ),
+        isAuthenticated: Bool,
+        accountGuard: SupabasePullApplyAccountGuard? = nil,
+        onProgress: @escaping @MainActor @Sendable (SupabasePullApplyProgress) -> Void = { _ in }
+    ) async throws -> SupabasePullApplyResult {
+        let replacementOptions = SupabasePullApplyOptions(
+            applyStockQuantity: options.applyStockQuantity,
+            allowLookupOnlyApplyWhenProductConflicts: false,
+            isCompleteRemoteSnapshot: true
+        )
+        try validateGlobalGuards(
+            preview: preview,
+            isAuthenticated: isAuthenticated,
+            accountGuard: accountGuard,
+            options: replacementOptions
+        )
+        let replacementPreview = try makeCatalogReplacementPreview(from: preview)
+        try validateCatalogReplacementPayloads(replacementPreview, options: replacementOptions)
+        try validateNoActiveLocalPendingChanges(context: context)
+
+        let deletedCounts = try deleteLocalCatalogAndPricesForReplacement(context: context)
+        do {
+            let plan = try prepareApplyPlan(
+                preview: replacementPreview,
+                context: context,
+                options: replacementOptions,
+                isAuthenticated: isAuthenticated,
+                accountGuard: accountGuard
+            )
+            let applied = try await applyBatched(
+                plan: plan,
+                context: context,
+                onProgress: onProgress
+            )
+            return SupabasePullApplyResult(
+                inserted: applied.inserted,
+                updated: applied.updated,
+                suppliersCreated: applied.suppliersCreated,
+                categoriesCreated: applied.categoriesCreated,
+                productTombstoned: applied.productTombstoned,
+                productPruned: deletedCounts.products
+            )
+        } catch let error as SupabasePullApplyError where error == .noApplicableChanges {
+            return SupabasePullApplyResult(
+                inserted: 0,
+                updated: 0,
+                suppliersCreated: 0,
+                categoriesCreated: 0,
+                productPruned: deletedCounts.products
+            )
+        }
+    }
+
     private func cleanProductPrunes(
         preview: SyncPreview,
         snapshot: LocalInventorySnapshot,
@@ -695,6 +753,111 @@ nonisolated struct SupabasePullApplyService: Sendable {
                 expectedFingerprint: SupabasePullApplyProductFingerprint(snapshot: localProduct)
             )
         }
+    }
+
+    private func makeCatalogReplacementPreview(from preview: SyncPreview) throws -> SyncPreview {
+        let activeRemoteProducts = preview.newProducts + preview.updateCandidates + preview.unchangedProducts
+        let replacementProducts = activeRemoteProducts.map { summary in
+            SyncPreviewProductSummary(
+                id: summary.id,
+                classification: .newProduct,
+                remoteID: summary.remoteID,
+                barcode: summary.barcode,
+                productName: summary.productName,
+                detail: summary.detail,
+                fieldChanges: summary.fieldChanges,
+                applyPayload: summary.applyPayload
+            )
+        }
+        return SyncPreview(
+            generatedAt: preview.generatedAt,
+            outcome: preview.outcome,
+            remoteCounts: preview.remoteCounts,
+            localCounts: preview.localCounts,
+            newProducts: replacementProducts,
+            updateCandidates: [],
+            remoteSupplierLookups: preview.remoteSupplierLookups,
+            remoteCategoryLookups: preview.remoteCategoryLookups,
+            conflicts: preview.conflicts,
+            unchangedProducts: [],
+            remoteTombstones: [],
+            supplierDiffs: [],
+            categoryDiffs: [],
+            priceHistoryDiffs: preview.priceHistoryDiffs,
+            warnings: preview.warnings,
+            metrics: preview.metrics,
+            sourceErrors: preview.sourceErrors,
+            remoteProductIDs: Set(replacementProducts.compactMap(\.remoteID)),
+            remoteSupplierIDs: preview.remoteSupplierIDs,
+            remoteCategoryIDs: preview.remoteCategoryIDs
+        )
+    }
+
+    private func validateCatalogReplacementPayloads(
+        _ preview: SyncPreview,
+        options: SupabasePullApplyOptions
+    ) throws {
+        var barcodes = Set<String>()
+        for summary in preview.newProducts {
+            guard let payload = summary.applyPayload else {
+                throw SupabasePullApplyError.missingApplicablePayload(barcode: summary.barcode)
+            }
+            try validateNumbers(payload: payload, options: options)
+            guard let barcode = SupabasePullPreviewNormalizer.normalizedBarcode(payload.barcode) else {
+                throw SupabasePullApplyError.missingRequiredField(barcode: summary.barcode, field: "barcode")
+            }
+            guard barcodes.insert(barcode).inserted else {
+                throw SupabasePullApplyError.conflictsPresent
+            }
+            let primaryName = SupabasePullPreviewNormalizer.semanticString(payload.productName)
+            let secondaryName = SupabasePullPreviewNormalizer.semanticString(payload.secondProductName)
+            guard primaryName != nil || secondaryName != nil else {
+                throw SupabasePullApplyError.missingRequiredField(barcode: barcode, field: "productName")
+            }
+        }
+    }
+
+    private func validateNoActiveLocalPendingChanges(context: ModelContext) throws {
+        let changes = try context.fetch(FetchDescriptor<LocalPendingChange>())
+        guard !changes.contains(where: { !$0.status.isTerminal }) else {
+            throw SupabasePullApplyError.invalidLocalData
+        }
+    }
+
+    private func deleteLocalCatalogAndPricesForReplacement(
+        context: ModelContext
+    ) throws -> (products: Int, productPrices: Int, suppliers: Int, categories: Int) {
+        let prices = try context.fetch(FetchDescriptor<ProductPrice>())
+        let products = try context.fetch(FetchDescriptor<Product>())
+        let suppliers = try context.fetch(FetchDescriptor<Supplier>())
+        let categories = try context.fetch(FetchDescriptor<ProductCategory>())
+
+        for price in prices {
+            context.delete(price)
+        }
+        for product in products {
+            context.delete(product)
+        }
+        for supplier in suppliers {
+            context.delete(supplier)
+        }
+        for category in categories {
+            context.delete(category)
+        }
+
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            throw SupabasePullApplyError.saveFailed(message: String(describing: error))
+        }
+
+        return (
+            products: products.count,
+            productPrices: prices.count,
+            suppliers: suppliers.count,
+            categories: categories.count
+        )
     }
 
     private func pendingProductChanges(

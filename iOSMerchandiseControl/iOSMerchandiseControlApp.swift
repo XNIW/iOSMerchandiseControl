@@ -18,6 +18,8 @@ struct iOSMerchandiseControlApp: App {
         supabasePullPreviewService = dependencies.pullPreviewService
         syncEventOutboxDrainRecorder = dependencies.syncEventOutboxDrainRecorder
         syncEventSignalWatcher = dependencies.syncEventSignalWatcher
+        SyncBackgroundTaskScheduler.shared.register()
+        SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)
     }
 
     var body: some Scene {

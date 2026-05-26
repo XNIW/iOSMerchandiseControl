@@ -53,6 +53,14 @@
             </array>
         </dict>
     </array>
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>com.niwcyber.iOSMerchandiseControl.sync.refresh</string>
+    </array>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+    </array>
     <key>LSSupportsOpeningDocumentsInPlace</key>
     <false/>
 </dict>

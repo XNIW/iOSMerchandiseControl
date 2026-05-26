@@ -1,0 +1,111 @@
+=== mc-agent scan background-task-registration --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "file": "iOSMerchandiseControlApp.swift",
+          "hash": "84251d0282ec",
+          "line": 21
+        },
+        {
+          "file": "iOSMerchandiseControlApp.swift",
+          "hash": "84251d0282ec",
+          "line": 22
+        },
+        {
+          "file": "Sync/SyncOrchestrator.swift",
+          "hash": "84251d0282ec",
+          "line": 73
+        },
+        {
+          "file": "Sync/SyncOrchestrator.swift",
+          "hash": "84251d0282ec",
+          "line": 92
+        },
+        {
+          "file": "Sync/SyncOrchestrator.swift",
+          "hash": "84251d0282ec",
+          "line": 92
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "b289239e9798",
+          "line": 1
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "84251d0282ec",
+          "line": 18
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "84251d0282ec",
+          "line": 23
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "84251d0282ec",
+          "line": 23
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "84251d0282ec",
+          "line": 28
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "84251d0282ec",
+          "line": 28
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "84251d0282ec",
+          "line": 29
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "8fa0149e9ca2",
+          "line": 40
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "180af2866c5d",
+          "line": 54
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "8fa0149e9ca2",
+          "line": 57
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "180af2866c5d",
+          "line": 75
+        },
+        {
+          "file": "Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+          "hash": "84251d0282ec",
+          "line": 94
+        }
+      ],
+      "id": "backgroundtasks_swift_registration_present",
+      "reason": "BackgroundTasks framework registration/handler must exist.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "plist_permitted_identifiers_present",
+      "reason": "Info.plist must declare permitted background identifiers.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T05:31:53Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.background-task-registration",
+  "startedAt": "2026-05-26T05:31:53Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

@@ -1,0 +1,793 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "file-inventory",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 Sync File Inventory",
+  "summary": "Inventoried 129 iOS Sync files. No DELETE/MOVE candidate was executed in this partial execution; candidate deletion requires call-site proof before removal.",
+  "redactionApplied": true,
+  "references": [],
+  "checks": [
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/ProductPriceReleaseRemoteSupabaseAdapter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/ProductPricePreviewRemoteSupabaseAdapter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventDTOs.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRealtimeWatcher.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/ProductPriceManualPushRemoteSupabaseAdapter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/OptionsRemoteCountSupabaseAdapter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/SyncEventRPCRequestMapper.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRPCTransport.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Account/AccountSwitchPolicy.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Account/AccountBindingStore.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Account/AccountSyncDecisionView.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncOutboxProducerConversions.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugViewModel.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventIncrementalApplyService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SyncEventOutboxDrainDebugViewModel.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugFormatting.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogFingerprintNormalizer.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncBaselineCommitter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/HistorySessionPayloadSnapshotFactory.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/ManualSyncBoundary.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineModels.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStatusPresenter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticPresentationBoundary.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncAutomaticTriggerSource.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncTrigger.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalContracts.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalPullService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplyService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplySummary.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplySummary.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplySummary.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/BootstrapPullService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/RecoveryRemoteSupabaseAdapter.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/InventorySyncService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/DriftReconciliationService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/SwiftDataInventorySnapshotService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/FullRecoveryService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Shared/AutomaticSharedBoundary.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    },
+    {
+      "name": "iOSMerchandiseControl/Sync/Shared/SyncStringCollectionHelpers.swift",
+      "status": "KEEP",
+      "detail": "tracked Sync source file retained for TASK-125 audit"
+    }
+  ],
+  "details": {
+    "syncFileCount": 129,
+    "syncFiles": [
+      "iOSMerchandiseControl/Sync/Remote/ProductPriceReleaseRemoteSupabaseAdapter.swift",
+      "iOSMerchandiseControl/Sync/Remote/ProductPricePreviewRemoteSupabaseAdapter.swift",
+      "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventDTOs.swift",
+      "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRealtimeWatcher.swift",
+      "iOSMerchandiseControl/Sync/Remote/HistorySessionRemoteSupabaseAdapter.swift",
+      "iOSMerchandiseControl/Sync/Remote/ProductPriceManualPushRemoteSupabaseAdapter.swift",
+      "iOSMerchandiseControl/Sync/Remote/OptionsRemoteCountSupabaseAdapter.swift",
+      "iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift",
+      "iOSMerchandiseControl/Sync/Remote/SupabaseInventoryDTOs.swift",
+      "iOSMerchandiseControl/Sync/Remote/SyncEventRPCRequestMapper.swift",
+      "iOSMerchandiseControl/Sync/Remote/SupabaseTransportClient.swift",
+      "iOSMerchandiseControl/Sync/Remote/ProductPriceRemoteSupabaseAdapter.swift",
+      "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventLiveRecorder.swift",
+      "iOSMerchandiseControl/Sync/Remote/SyncEventRemoteSupabaseAdapter.swift",
+      "iOSMerchandiseControl/Sync/Remote/SupabaseSyncEventRPCTransport.swift",
+      "iOSMerchandiseControl/Sync/Remote/CatalogRemoteSupabaseAdapter.swift",
+      "iOSMerchandiseControl/Sync/Remote/SyncEventRecording.swift",
+      "iOSMerchandiseControl/Sync/SyncOrchestrator.swift",
+      "iOSMerchandiseControl/Sync/Account/AccountSwitchPolicy.swift",
+      "iOSMerchandiseControl/Sync/Account/AccountBindingStore.swift",
+      "iOSMerchandiseControl/Sync/Account/AccountSyncDecision.swift",
+      "iOSMerchandiseControl/Sync/Account/AccountSyncDecisionView.swift",
+      "iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift",
+      "iOSMerchandiseControl/Sync/AutomaticPushServices.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncOutboxProducerConversions.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLifecycleRunGate.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugViewModel.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventIncrementalApplyService.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift",
+      "iOSMerchandiseControl/Sync/Manual/CloudSyncOverviewState.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightModels.swift",
+      "iOSMerchandiseControl/Sync/Manual/SyncEventOutboxDrainDebugViewModel.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift",
+      "iOSMerchandiseControl/Sync/Manual/HistorySessionSyncService.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinator.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventDebugFormatting.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncRemotePreview.swift",
+      "iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogFingerprintNormalizer.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinating.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncBaselineCommitter.swift",
+      "iOSMerchandiseControl/Sync/Manual/HistorySessionPayloadSnapshotFactory.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncLocalPendingSnapshotProvider.swift",
+      "iOSMerchandiseControl/Sync/Manual/ManualSyncBoundary.swift",
+      "iOSMerchandiseControl/Sync/Manual/ProductPriceManualPushDebugViewModel.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseSyncEventPreviewService.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineModels.swift",
+      "iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncCoordinatorModels.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncState.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStateStore.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Presentation/SyncStatusPresenter.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticSyncReconnectScheduler.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Presentation/AutomaticPresentationBoundary.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Decision/SyncAutomaticTriggerSource.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Decision/SyncTrigger.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Decision/AutomaticDecisionBoundary.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift",
+      "iOSMerchandiseControl/Sync/Automatic/ProductPrice/SyncProductPricePushModels.swift",
+      "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushPayloads.swift",
+      "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPriceRemoteWriting.swift",
+      "iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift",
+      "iOSMerchandiseControl/Sync/Automatic/History/SyncHistorySessionPushModels.swift",
+      "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionRemoteWriting.swift",
+      "iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Catalog/SyncCatalogPushModels.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushPayloads.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogRemoteWriting.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalContracts.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalPullService.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplyService.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplySummary.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplySummary.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/SyncIncrementalPullSummary.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/AutomaticPullBoundary.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalApplyHelpers.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/WatermarkStore.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/CatalogIncrementalApplySummary.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/HistoryIncrementalApplyService.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Pull/ProductPriceIncrementalApplyService.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Core/SyncAutomaticRunResult.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncCancellationPolicy.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncSingleFlight.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationModels.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Outbox/SyncActivityRegistrationService.swift",
+      "iOSMerchandiseControl/Sync/Recovery/BootstrapPullService.swift",
+      "iOSMerchandiseControl/Sync/Recovery/RecoveryRemoteSupabaseAdapter.swift",
+      "iOSMerchandiseControl/Sync/Recovery/InventorySyncService.swift",
+      "iOSMerchandiseControl/Sync/Recovery/DriftReconciliationService.swift",
+      "iOSMerchandiseControl/Sync/Recovery/SwiftDataInventorySnapshotService.swift",
+      "iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift",
+      "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+      "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift",
+      "iOSMerchandiseControl/Sync/Recovery/FullRecoveryService.swift",
+      "iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift",
+      "iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewModels.swift",
+      "iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift",
+      "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift",
+      "iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+      "iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift",
+      "iOSMerchandiseControl/Sync/Outbox/PendingChangeCoalescer.swift",
+      "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift",
+      "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainer.swift",
+      "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift",
+      "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxRecorder.swift",
+      "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift",
+      "iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift",
+      "iOSMerchandiseControl/Sync/Shared/AutomaticSharedBoundary.swift",
+      "iOSMerchandiseControl/Sync/Shared/HistorySessionSyncShared.swift",
+      "iOSMerchandiseControl/Sync/Shared/SyncStringCollectionHelpers.swift"
+    ]
+  },
+  "nextAction": ""
+}

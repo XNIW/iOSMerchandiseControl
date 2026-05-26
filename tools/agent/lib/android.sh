@@ -331,7 +331,7 @@ mc_android_instrument() {
     MC_NEXT_ACTION="Verify device storage/install state and retry; restart only the selected emulator/device if adb is still stuck."
     return "$MC_EXIT_BLOCKED"
   fi
-  instrument_log="$(mktemp /tmp/mc-agent-android-instrument.XXXXXX.log)"
+  instrument_log="$(mktemp -t mc-agent-android-instrument)"
   mc_android_adb_timed "$instrument_timeout" -s "$serial" shell am instrument -w -r \
     "${extra_args[@]}" \
     -e class "$class" \

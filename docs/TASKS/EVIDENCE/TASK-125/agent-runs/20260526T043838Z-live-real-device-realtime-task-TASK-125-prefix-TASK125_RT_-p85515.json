@@ -1,0 +1,88 @@
+{
+  "NEXT_ACTION": "Set MC_IOS_DEVICE_UDID and MC_ANDROID_DEVICE_SERIAL, unlock/trust devices, then rerun.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T043838Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p85515.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T043838Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p85515.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T043838Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p85515.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-115-12",
+    "CA-115-16",
+    "CA-115-18"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live real-device-realtime --task TASK-125 --prefix TASK125_RT_",
+  "command_slug": "live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 216,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-125",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK125_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-125"
+  },
+  "exit_code": 2,
+  "git_sha": "e4eb3a47",
+  "next_action_recommended": "Set MC_IOS_DEVICE_UDID and MC_ANDROID_DEVICE_SERIAL, unlock/trust devices, then rerun.",
+  "platform": "live",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Set MC_IOS_DEVICE_UDID for iPhone di Min and MC_ANDROID_DEVICE_SERIAL for OnePlus, unlock/trust both devices, then rerun this TASK-125 live command.",
+    "deviceGate": {
+      "missing": [
+        "MC_IOS_DEVICE_UDID"
+      ]
+    },
+    "prefix": "TASK125_RT_",
+    "redactionApplied": true,
+    "schemaVersion": "1.1",
+    "source": "live.real-device-realtime",
+    "status": "BLOCKED_EXTERNAL",
+    "taskId": "TASK-125"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "BLOCKED_EXTERNAL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260526T043838Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p85515",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "BLOCKED_EXTERNAL",
+  "task_id": "TASK-125",
+  "test_prefix": "TASK125_RT_",
+  "timestamp_end": "2026-05-26T04:38:38Z",
+  "timestamp_start": "2026-05-26T04:38:38Z",
+  "warnings": []
+}

@@ -255,6 +255,8 @@ extension SyncAutomaticTriggerSource {
             return .localMutation
         case .remoteSyncEvent:
             return .remoteSyncEvent
+        case .backgroundRefresh:
+            return .networkAvailable
         }
     }
 
@@ -262,7 +264,7 @@ extension SyncAutomaticTriggerSource {
         switch self {
         case .releaseCard, .rootForeground, .networkReconnect:
             return true
-        case .localMutation, .remoteSyncEvent:
+        case .localMutation, .remoteSyncEvent, .backgroundRefresh:
             return false
         }
     }

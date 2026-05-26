@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "full-pull-normal-path-scan",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 Full Pull Normal Path Scan",
+  "summary": "Strict scanner passed: full pull is not accepted in the normal automatic path.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003108Z-scan-no-full-pull-normal-path-task-TASK-125-strict-p13606.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003108Z-scan-no-full-pull-normal-path-task-TASK-125-strict-p13606.md",
+      "command": "scan no-full-pull-normal-path --task TASK-125 --strict",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": ""
+}

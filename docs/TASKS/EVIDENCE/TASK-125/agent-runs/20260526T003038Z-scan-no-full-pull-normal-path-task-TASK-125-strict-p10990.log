@@ -1,0 +1,25 @@
+=== mc-agent scan no-full-pull-normal-path --task TASK-125 --strict ===
+{
+  "NEXT_ACTION": "Fix no-full-pull-normal-path findings and rerun.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "automatic_engine_blocks_full_pull_contexts",
+      "reason": "Automatic engine must fail closed for bootstrap/full recovery contexts.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [],
+      "id": "orchestrator_no_full_pull_callsite",
+      "reason": "Normal orchestrator path must not call full pull APIs.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T00:30:39Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.no-full-pull-normal-path",
+  "startedAt": "2026-05-26T00:30:39Z",
+  "status": "FAIL",
+  "taskId": "TASK-125"
+}

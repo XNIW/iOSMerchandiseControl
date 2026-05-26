@@ -319,17 +319,20 @@ nonisolated struct ProductPriceApplyFetchOptions: Sendable, Equatable {
     let maxRows: Int
     let maxPages: Int
     let fullPullSafetyLimit: Int?
+    let replaceLocalSnapshot: Bool
 
     init(
         pageSize: Int = 900,
         maxRows: Int = 1_000,
         maxPages: Int = 1,
-        fullPullSafetyLimit: Int? = 75_000
+        fullPullSafetyLimit: Int? = 75_000,
+        replaceLocalSnapshot: Bool = false
     ) {
         self.pageSize = max(1, min(pageSize, 1_000))
         self.maxRows = max(1, maxRows)
         self.maxPages = max(1, maxPages)
         self.fullPullSafetyLimit = fullPullSafetyLimit
+        self.replaceLocalSnapshot = replaceLocalSnapshot
     }
 }
 
@@ -981,8 +984,9 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
 
         if let remoteTotalRows, remoteTotalRows == totalConsidered {
             let pruneContext = ModelContext(context.container)
-            prunedLocal = try pruneRemoteLinkedPricesMissingFromCompleteSnapshot(
+            prunedLocal = try prunePricesMissingFromCompleteSnapshot(
                 remotePriceIDs: completeRemotePriceIDs,
+                includeLocalOnly: fetchOptions.replaceLocalSnapshot,
                 context: pruneContext
             )
         }
@@ -1011,8 +1015,9 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
         )
     }
 
-    private func pruneRemoteLinkedPricesMissingFromCompleteSnapshot(
+    private func prunePricesMissingFromCompleteSnapshot(
         remotePriceIDs: Set<UUID>,
+        includeLocalOnly: Bool,
         context: ModelContext
     ) throws -> Int {
         let pendingState = try fetchActiveProductPricePendingState(context: context)
@@ -1024,9 +1029,14 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
 
         var pruned = 0
         for price in prices {
-            guard let remoteID = price.remoteID,
-                  !remotePriceIDs.contains(remoteID),
-                  !pendingState.remoteIDs.contains(remoteID),
+            let shouldPrune: Bool
+            if let remoteID = price.remoteID {
+                shouldPrune = !remotePriceIDs.contains(remoteID)
+                    && !pendingState.remoteIDs.contains(remoteID)
+            } else {
+                shouldPrune = includeLocalOnly
+            }
+            guard shouldPrune,
                   productPricePendingKeys(for: price).isDisjoint(with: pendingState.logicalKeys) else {
                 continue
             }

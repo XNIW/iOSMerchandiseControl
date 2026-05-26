@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "mainactor-heavy-sync-scan",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 MainActor Heavy Sync Scan",
+  "summary": "Strict scanner passed for no heavy mutative sync on MainActor.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003038Z-scan-no-mainactor-heavy-sync-task-TASK-125-strict-p11003.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003038Z-scan-no-mainactor-heavy-sync-task-TASK-125-strict-p11003.md",
+      "command": "scan no-mainactor-heavy-sync --task TASK-125 --strict",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": ""
+}

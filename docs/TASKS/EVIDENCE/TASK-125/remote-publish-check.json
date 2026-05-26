@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "remote-publish-check",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS_WITH_NOTES",
+  "title": "TASK-125 Remote Publish Check",
+  "summary": "Remote/GitHub alignment was treated as advisory per TASK-125 policy. Local execution was authorized by the user even if publish alignment changes later.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003004Z-git-head-consistency-task-TASK-125-p10318.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003004Z-git-head-consistency-task-TASK-125-p10318.md",
+      "command": "git head-consistency --task TASK-125",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": "Publish local TASK-125 updates to GitHub before remote-only review if required."
+}

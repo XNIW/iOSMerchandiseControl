@@ -1,0 +1,2 @@
+=== mc-agent supabase verify-realtime --task TASK-125 --profile linked ===
+Supabase db query timed out after 20s for profile linked.

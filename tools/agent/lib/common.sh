@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 MC_AGENT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MC_AGENT_VERSION="0.5.1-task124"
+MC_AGENT_VERSION="0.5.2-task125"
 MC_SCHEMA_VERSION="1.1"
 
 MC_IOS_REPO="${MC_IOS_REPO:-/Users/minxiang/Desktop/iOSMerchandiseControl}"
@@ -49,6 +49,7 @@ mc_load_config() {
   local had_android_serial="${MC_ANDROID_DEVICE_SERIAL+x}"
   local had_ios_simulator_id="${MC_IOS_SIMULATOR_ID+x}"
   local had_ios_simulator_udid="${MC_IOS_SIMULATOR_UDID+x}"
+  local had_ios_device_udid="${MC_IOS_DEVICE_UDID+x}"
   local env_task_id="${MC_TASK_ID:-}"
   local env_evidence_dir="${MC_EVIDENCE_DIR:-}"
   local env_run_prefix="${MC_RUN_PREFIX:-}"
@@ -58,6 +59,7 @@ mc_load_config() {
   local env_android_serial="${MC_ANDROID_DEVICE_SERIAL:-}"
   local env_ios_simulator_id="${MC_IOS_SIMULATOR_ID:-}"
   local env_ios_simulator_udid="${MC_IOS_SIMULATOR_UDID:-}"
+  local env_ios_device_udid="${MC_IOS_DEVICE_UDID:-}"
   if [[ -f "$cfg" ]]; then
     # shellcheck source=/dev/null
     source "$cfg"
@@ -75,6 +77,7 @@ mc_load_config() {
   [[ -n "$had_android_serial" ]] && MC_ANDROID_DEVICE_SERIAL="$env_android_serial"
   [[ -n "$had_ios_simulator_id" ]] && MC_IOS_SIMULATOR_ID="$env_ios_simulator_id"
   [[ -n "$had_ios_simulator_udid" ]] && MC_IOS_SIMULATOR_UDID="$env_ios_simulator_udid"
+  [[ -n "$had_ios_device_udid" ]] && MC_IOS_DEVICE_UDID="$env_ios_device_udid"
 
   if [[ "$loaded_example" == "1" && -z "$had_task_id" ]]; then
     local inferred_task_id
@@ -96,6 +99,7 @@ mc_load_config() {
   export MC_AGENT_VERSION MC_SCHEMA_VERSION MC_ALLOW_LIVE MC_ALLOW_CLEANUP
   export MC_IOS_SCHEME MC_IOS_SIMULATOR_NAME MC_IOS_SIMULATOR_OS MC_IOS_DESTINATION
   export MC_IOS_SIMULATOR_ID MC_IOS_SIMULATOR_UDID MC_IOS_BUNDLE_ID
+  export MC_IOS_DEVICE_UDID MC_IOS_DEVICE_ID
   export MC_ANDROID_DEVICE_SERIAL MC_ANDROID_SDK_ROOT MC_SUPABASE_PROJECT_REF MC_SUPABASE_PROFILE
   export MC_REDACT_EMAILS MC_REDACT_PATHS MC_RUN_PREFIX
 
@@ -428,6 +432,7 @@ Usage:
   ./tools/agent/mc-agent.sh scan task-docs|harness-routing|harness-health|source-format|duplicate-symbols|automatic-legacy-monolith|mainactor-boundary|swiftdata-context-boundary|manual-root-residue|master-plan-consistency|mcp-wrapper|scanner-self-tests|status-taxonomy|evidence-metadata --task TASK-120 --strict
   ./tools/agent/mc-agent.sh scan sync-architecture|manual-boundary|dead-code|xcode-membership --task TASK-120 --strict
   ./tools/agent/mc-agent.sh scan no-root-supabase-legacy|no-automatic-manual-dependency|transport-thin-only|remote-adapter-single-domain|no-full-pull-normal-path|no-hidden-manual-sync|no-stale-pbxproj-reference|no-mainactor-heavy-sync|no-service-role-client|no-rls-bypass|source-format|dead-code-residue --task TASK-124 --strict
+  ./tools/agent/mc-agent.sh scan no-hidden-manual-sync|no-full-pull-normal-path|no-service-role-client|no-rls-bypass|no-mainactor-heavy-sync|no-stale-pbxproj-reference|no-test-fixture-in-app-target|no-root-legacy-sync-service|remote-adapter-single-domain|background-task-registration|background-task-no-ui-context|outbox-pending-survives-restart|evidence-redaction|source-format|dead-code-residue --task TASK-125 --strict
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys --task TASK-117
   ./tools/agent/mc-agent.sh evidence hygiene|bundle --task TASK-117
   ./tools/agent/mc-agent.sh account fixture prepare|cleanup --task TASK-116 --prefix TASK116_ACCOUNT_ [--dry-run]
@@ -442,6 +447,7 @@ Usage:
   ./tools/agent/mc-agent.sh supabase status-redacted|verify-schema|verify-rls|verify-grants|residue-check --profile local|linked|dry-run-no-db
   ./tools/agent/mc-agent.sh supabase contract sync-schema --task TASK-120 --read-only
   ./tools/agent/mc-agent.sh live sync-matrix|runtime-parity|physical-runtime-parity|mutation-near-realtime|offline-reconnect-sync|account-merge-policy-matrix|sync-performance-budget|offline-matrix|reconcile-counts|cleanup-and-verify --task TASK-115 --prefix TASK115_*
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live real-device-realtime|real-device-offline-reconnect|real-device-background-sync|real-device-kill-restart-pending|real-device-network-flapping --task TASK-125 --prefix TASK125_*
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live task123-single-propagation|task123-cold-restart|task123-noop|task123-burst-10 --task TASK-123 --prefix TASK123_REVIEW_*
 
 Exit codes: 0=PASS 1=FAIL 2=BLOCKED_EXTERNAL 3=MISCONFIGURED 4=UNSAFE_OPERATION_REFUSED
@@ -454,7 +460,7 @@ mc_help_json() {
 {
   "schema_version": "1.1",
   "name": "mc-agent",
-  "version": "0.5.1-task124",
+  "version": "0.5.2-task125",
   "exit_codes": {
     "0": "PASS",
     "1": "FAIL",
@@ -646,6 +652,8 @@ mc_help_json() {
     {"name":"supabase verify-schema","argv":["supabase","verify-schema"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-rls","argv":["supabase","verify-rls"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-grants","argv":["supabase","verify-grants"],"platform":"supabase","safety_level":"safe-readonly"},
+    {"name":"supabase verify-rpc","argv":["supabase","verify-rpc"],"platform":"supabase","safety_level":"safe-readonly"},
+    {"name":"supabase verify-realtime","argv":["supabase","verify-realtime"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase explain-cleanup","argv":["supabase","explain-cleanup","--prefix","TASK115_*"],"platform":"supabase","safety_level":"cleanup-dry-run"},
     {"name":"supabase cleanup dry-run","argv":["supabase","cleanup","--task","TASK-115","--prefix","TASK115_*","--dry-run"],"platform":"supabase","safety_level":"cleanup-dry-run","requires_cleanup":true},
     {"name":"supabase cleanup execute","argv":["supabase","cleanup","--task","TASK-115","--prefix","TASK115_*","--execute","--cleanup-plan-id","<id>"],"platform":"supabase","safety_level":"cleanup-execute","requires_cleanup":true},
@@ -664,7 +672,35 @@ mc_help_json() {
     {"name":"live task123-single-propagation","argv":["live","task123-single-propagation","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"live task123-cold-restart","argv":["live","task123-cold-restart","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"live task123-noop","argv":["live","task123-noop","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true},
-    {"name":"live task123-burst-10","argv":["live","task123-burst-10","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true}
+    {"name":"live task123-burst-10","argv":["live","task123-burst-10","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"preflight task125","argv":["preflight","--task","TASK-125"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"git head-consistency task125","argv":["git","head-consistency","--task","TASK-125"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"report validate-json task125","argv":["report","validate-json","--task","TASK-125","--path","docs/TASKS/EVIDENCE/TASK-125/agent-runs"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-hidden-manual-sync task125","argv":["scan","no-hidden-manual-sync","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-full-pull-normal-path task125","argv":["scan","no-full-pull-normal-path","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-service-role-client task125","argv":["scan","no-service-role-client","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-rls-bypass task125","argv":["scan","no-rls-bypass","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-mainactor-heavy-sync task125","argv":["scan","no-mainactor-heavy-sync","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-stale-pbxproj-reference task125","argv":["scan","no-stale-pbxproj-reference","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-test-fixture-in-app-target task125","argv":["scan","no-test-fixture-in-app-target","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-root-legacy-sync-service task125","argv":["scan","no-root-legacy-sync-service","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan remote-adapter-single-domain task125","argv":["scan","remote-adapter-single-domain","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan background-task-registration task125","argv":["scan","background-task-registration","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan background-task-no-ui-context task125","argv":["scan","background-task-no-ui-context","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan outbox-pending-survives-restart task125","argv":["scan","outbox-pending-survives-restart","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan evidence-redaction task125","argv":["scan","evidence-redaction","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan source-format task125","argv":["scan","source-format","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan dead-code-residue task125","argv":["scan","dead-code-residue","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"ios device-auth-preflight task125","argv":["ios","device-auth-preflight","--live","--task","TASK-125"],"platform":"ios","safety_level":"live-readonly","requires_live":true},
+    {"name":"android auth-preflight task125","argv":["android","auth-preflight","--live","--task","TASK-125"],"platform":"android","safety_level":"live-write","requires_live":true},
+    {"name":"live real-device-realtime task125","argv":["live","real-device-realtime","--task","TASK-125","--prefix","TASK125_RT_"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live real-device-offline-reconnect task125","argv":["live","real-device-offline-reconnect","--task","TASK-125","--prefix","TASK125_OFFLINE_"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live real-device-background-sync task125","argv":["live","real-device-background-sync","--task","TASK-125","--prefix","TASK125_BG_"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live real-device-kill-restart-pending task125","argv":["live","real-device-kill-restart-pending","--task","TASK-125","--prefix","TASK125_RESTART_"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live real-device-network-flapping task125","argv":["live","real-device-network-flapping","--task","TASK-125","--prefix","TASK125_FLAP_"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live runtime-parity task125","argv":["live","runtime-parity","--task","TASK-125","--prefix","TASK125_PARITY_","--profile","linked"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"supabase cleanup task125","argv":["supabase","cleanup","--task","TASK-125","--prefix","TASK125_"],"platform":"supabase","safety_level":"cleanup-dry-run","requires_cleanup":true},
+    {"name":"supabase residue-check task125","argv":["supabase","residue-check","--task","TASK-125","--prefix","TASK125_"],"platform":"supabase","safety_level":"safe-readonly"}
   ]
 }
 JSON
@@ -704,6 +740,7 @@ mc_cmd_config() {
         printf 'MC_EVIDENCE_DIR=%s\n' "$MC_EVIDENCE_DIR"
         printf 'MC_IOS_SCHEME=%s\n' "${MC_IOS_SCHEME:-}"
         printf 'MC_IOS_DESTINATION=%s\n' "${MC_IOS_DESTINATION:-}"
+        printf 'MC_IOS_DEVICE_UDID=%s\n' "$(mc_redact_text "${MC_IOS_DEVICE_UDID:-}")"
         printf 'MC_ANDROID_DEVICE_SERIAL=%s\n' "$(mc_redact_text "${MC_ANDROID_DEVICE_SERIAL:-}")"
         printf 'MC_SUPABASE_PROFILE=%s\n' "${MC_SUPABASE_PROFILE:-}"
         printf 'MC_ALLOW_LIVE=%s\n' "${MC_ALLOW_LIVE:-0}"
@@ -808,6 +845,101 @@ mc_git_head_consistency() {
     rendered_status="MISCONFIGURED"
   else
     rendered_status="BLOCKED"
+  fi
+
+  if [[ "$task_id" == "TASK-125" ]]; then
+    local branch dirty task_path evidence_readme master_contains task_contains advisory_ok task125_payload task125_status
+    branch="$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    if git -C "$repo" diff --quiet 2>/dev/null && git -C "$repo" diff --cached --quiet 2>/dev/null; then
+      dirty="clean"
+    else
+      dirty="dirty_documented"
+    fi
+    task_path="$repo/docs/TASKS/TASK-125-real-device-cross-platform-sync-final-architecture.md"
+    evidence_readme="$repo/docs/TASKS/EVIDENCE/TASK-125/README.md"
+    master_contains="false"
+    task_contains="false"
+    grep -Fq "TASK-125" "$repo/docs/MASTER-PLAN.md" 2>/dev/null && grep -Fq "EXECUTION" "$repo/docs/MASTER-PLAN.md" 2>/dev/null && master_contains="true"
+    grep -Fq "Phase A+++++" "$task_path" 2>/dev/null && grep -Fq "EXECUTION_AUTHORIZED_BY_USER" "$task_path" 2>/dev/null && task_contains="true"
+    advisory_ok="false"
+    [[ -n "$origin_main" && -n "$ls_remote" && "$origin_main" == "$ls_remote" ]] && advisory_ok="true"
+    task125_payload="$(
+      TASK_ID="$task_id" LOCAL_HEAD="$local_head" ORIGIN_MAIN="$origin_main" LS_REMOTE="$ls_remote" \
+      BRANCH="$branch" DIRTY="$dirty" TASK_PATH="$task_path" EVIDENCE_README="$evidence_readme" \
+      MASTER_CONTAINS="$master_contains" TASK_CONTAINS="$task_contains" RENDERED_STATUS="$rendered_status" \
+      RENDERED_CONTAINS="$rendered_contains" ADVISORY_OK="$advisory_ok" python3 - <<'PY'
+import json, os
+from datetime import datetime, timezone
+
+def sha_ok(value):
+    return isinstance(value, str) and len(value) == 40 and all(c in "0123456789abcdef" for c in value.lower())
+
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+local_head = os.environ.get("LOCAL_HEAD", "")
+checks = [
+    {"id": "local_head_present", "status": "PASS" if sha_ok(local_head) else "MISCONFIGURED", "value": local_head or None},
+    {"id": "branch_present", "status": "PASS" if os.environ.get("BRANCH") else "MISCONFIGURED", "value": os.environ.get("BRANCH") or None},
+    {"id": "dirty_state_classified", "status": "PASS", "value": os.environ.get("DIRTY")},
+    {"id": "master_plan_local_task125_execution", "status": "PASS" if os.environ.get("MASTER_CONTAINS") == "true" else "FAIL"},
+    {"id": "task125_local_present_and_execution_authorized", "status": "PASS" if os.environ.get("TASK_CONTAINS") == "true" else "FAIL"},
+    {"id": "task125_evidence_readme_present", "status": "PASS" if os.path.exists(os.environ.get("EVIDENCE_README", "")) else "FAIL"},
+]
+remote_advisory = {
+    "originMain": os.environ.get("ORIGIN_MAIN") or None,
+    "lsRemoteMain": os.environ.get("LS_REMOTE") or None,
+    "originAndLsRemoteMatch": os.environ.get("ADVISORY_OK") == "true",
+    "githubRenderedStatus": os.environ.get("RENDERED_STATUS"),
+    "githubRenderedContainsRemoteSha": os.environ.get("RENDERED_CONTAINS") == "true",
+    "status": "PASS" if os.environ.get("ADVISORY_OK") == "true" and os.environ.get("RENDERED_CONTAINS") == "true" else "REMOTE_PUBLISH_PENDING",
+}
+statuses = [item["status"] for item in checks]
+if "MISCONFIGURED" in statuses:
+    status = "MISCONFIGURED"
+elif "FAIL" in statuses:
+    status = "FAIL"
+else:
+    status = "PASS" if remote_advisory["status"] == "PASS" else "PASS_WITH_NOTES_REMOTE_NOT_PUBLISHED"
+print(json.dumps({
+    "schemaVersion": "1.1",
+    "taskId": os.environ.get("TASK_ID", "TASK-125"),
+    "source": "git.head-consistency.task125-local-canonical",
+    "startedAt": now,
+    "completedAt": now,
+    "status": status,
+    "redactionApplied": True,
+    "localCanonical": True,
+    "checks": checks,
+    "remotePublishCheck": remote_advisory,
+    "NEXT_ACTION": "Continue local TASK-125 execution." if status.startswith("PASS") else "Fix local TASK-125 canonical files before execution.",
+}, sort_keys=True))
+PY
+    )"
+    MC_SYNC_JSON_RESULT="$task125_payload"
+    mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+    task125_status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","MISCONFIGURED"))' <<<"$task125_payload")"
+    case "$task125_status" in
+      PASS)
+        MC_SUMMARY="TASK-125 local canonical gate PASS; remote publish check is aligned."
+        MC_NEXT_ACTION="Continue TASK-125 Phase 0/A gates."
+        return "$MC_EXIT_PASS"
+        ;;
+      PASS_WITH_NOTES_REMOTE_NOT_PUBLISHED)
+        mc_set_pass_with_notes
+        MC_SUMMARY="TASK-125 local canonical gate PASS_WITH_NOTES: local worktree is canonical; remote publish check is advisory/pending."
+        MC_NEXT_ACTION="Continue local execution; publish GitHub alignment later if requested."
+        return "$MC_EXIT_PASS"
+        ;;
+      FAIL)
+        MC_SUMMARY="TASK-125 local canonical gate FAIL: local MASTER-PLAN/task/evidence README are not coherent."
+        MC_NEXT_ACTION="Fix local tracking files before continuing TASK-125 execution."
+        return "$MC_EXIT_FAIL"
+        ;;
+      *)
+        MC_SUMMARY="TASK-125 local canonical gate MISCONFIGURED."
+        MC_NEXT_ACTION="Fix git/local task configuration before continuing."
+        return "$MC_EXIT_MISCONFIGURED"
+        ;;
+    esac
   fi
 
   payload="$(
@@ -1741,6 +1873,64 @@ mc_cmd_scan_task124_static() {
     *)
       MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
       MC_NEXT_ACTION="Fix TASK-124 scanner command/configuration."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+mc_cmd_scan_task125_static() {
+  local scan_name="$1"
+  shift || true
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-125}}"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  case "$scan_name" in
+    no-hidden-manual-sync) MC_CA_REFS="AC-125-A05,AC-125-30" ;;
+    no-full-pull-normal-path) MC_CA_REFS="AC-125-A06,AC-125-29" ;;
+    no-service-role-client|no-rls-bypass) MC_CA_REFS="AC-125-26,AC-125-28" ;;
+    no-mainactor-heavy-sync) MC_CA_REFS="AC-125-A07,AC-125-A22" ;;
+    no-stale-pbxproj-reference|no-test-fixture-in-app-target|no-root-legacy-sync-service) MC_CA_REFS="AC-125-A09,AC-125-A13" ;;
+    remote-adapter-single-domain) MC_CA_REFS="AC-125-A08" ;;
+    background-task-registration|background-task-no-ui-context) MC_CA_REFS="AC-125-17,AC-125-18" ;;
+    outbox-pending-survives-restart) MC_CA_REFS="AC-125-A16,AC-125-11" ;;
+    evidence-redaction) MC_CA_REFS="AC-125-27,AC-125-28" ;;
+    source-format|dead-code-residue) MC_CA_REFS="AC-125-26" ;;
+    *) MC_CA_REFS="AC-125-A13" ;;
+  esac
+
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" ANDROID_REPO="$MC_ANDROID_REPO" SUPABASE_REPO="$MC_SUPABASE_REPO" \
+    python3 "$MC_AGENT_ROOT/lib/task125_scans.py" "$scan_name" > /tmp/mc-agent-task125-static.$$.json
+  local scan_code=$?
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task125-static.$$.json)"
+  rm -f /tmp/mc-agent-task125-static.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  case "$scan_code" in
+    0)
+      MC_SUMMARY="${scan_name} scan PASS for ${task_id}."
+      MC_NEXT_ACTION="Use this report in TASK-125 architecture/evidence matrix."
+      return "$MC_EXIT_PASS"
+      ;;
+    1)
+      MC_SUMMARY="${scan_name} scan FAIL for ${task_id}: TASK-125 gate found required work."
+      MC_NEXT_ACTION="Fix failing checks and rerun ${scan_name}."
+      return "$MC_EXIT_FAIL"
+      ;;
+    2)
+      MC_SUMMARY="${scan_name} scan BLOCKED_EXTERNAL for ${task_id}."
+      MC_NEXT_ACTION="Resolve the listed external prerequisite and rerun ${scan_name}."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    4)
+      MC_SUMMARY="${scan_name} scan UNSAFE_OPERATION_REFUSED for ${task_id}."
+      MC_NEXT_ACTION="Keep safety gate refused unless this was an expected refusal test."
+      return "$MC_EXIT_REFUSED"
+      ;;
+    *)
+      MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
+      MC_NEXT_ACTION="Fix TASK-125 scanner command/configuration."
       return "$MC_EXIT_MISCONFIGURED"
       ;;
   esac

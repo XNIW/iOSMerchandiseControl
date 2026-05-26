@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "remote-adapter-domain-map",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 Remote Adapter Domain Map",
+  "summary": "Remote adapter single-domain scanner passed after tuning TASK-125 scanner ownership rules.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003108Z-scan-remote-adapter-single-domain-task-TASK-125-strict-p13605.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003108Z-scan-remote-adapter-single-domain-task-TASK-125-strict-p13605.md",
+      "command": "scan remote-adapter-single-domain --task TASK-125 --strict",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": ""
+}

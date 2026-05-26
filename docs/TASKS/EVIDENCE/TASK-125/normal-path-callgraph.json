@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "task125-evidence-1.0",
+  "taskId": "TASK-125",
+  "artifact": "normal-path-callgraph",
+  "generatedAt": "2026-05-26T00:57:09Z",
+  "status": "PASS",
+  "title": "TASK-125 Normal Path Callgraph",
+  "summary": "No hidden manual sync and no full pull normal path scanners passed on the normal automatic path.",
+  "redactionApplied": true,
+  "references": [
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003038Z-scan-no-hidden-manual-sync-task-TASK-125-strict-p10969.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003038Z-scan-no-hidden-manual-sync-task-TASK-125-strict-p10969.md",
+      "command": "scan no-hidden-manual-sync --task TASK-125 --strict",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003108Z-scan-no-full-pull-normal-path-task-TASK-125-strict-p13606.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003108Z-scan-no-full-pull-normal-path-task-TASK-125-strict-p13606.md",
+      "command": "scan no-full-pull-normal-path --task TASK-125 --strict",
+      "result": "PASS",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "checks": [],
+  "details": {},
+  "nextAction": ""
+}
