@@ -1,159 +1,689 @@
 {
-  "schemaVersion": "task125-evidence-1.0",
-  "taskId": "TASK-125",
+  "acceptanceNote": "User explicitly accepted TASK-125 as DONE with the documented iOS BGTask scheduler-policy note. background-sync-matrix/bg-debug-trigger/bg-expiration remain BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY and are not converted to technical PASS.",
+  "acceptedAtLocal": "2026-05-26 12:16 -0400",
+  "acceptedBy": "USER",
   "artifact": "final-review",
-  "generatedAt": "2026-05-26T00:57:09Z",
-  "status": "BLOCKED_EXTERNAL",
-  "title": "TASK-125 Final Review",
-  "summary": "TASK-125 is not REVIEW/DONE. Local architecture scanners/build/tests and physical auth preflights passed, but executable contract gates, linked Supabase RLS/grants, full real-device matrices, BG debug/expiration, linked cleanup/residue and final drift are incomplete or blocked.",
+  "checks": [
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003534Z-ios-build-debug-task-TASK-125-p21500.json"
+      },
+      "id": "ios_debug_build",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003559Z-ios-build-release-task-TASK-125-p22139.json"
+      },
+      "id": "ios_release_build",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003720Z-ios-test-automatic-architecture-task-TASK-125-p22882.json"
+      },
+      "id": "ios_automatic_architecture_tests",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003751Z-ios-test-automatic-domain-task-TASK-125-p23604.json"
+      },
+      "id": "ios_automatic_domain_tests",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003802Z-ios-test-sync-task-TASK-125-p24196.json"
+      },
+      "id": "ios_sync_tests",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004040Z-ios-test-manual-sync-regression-task-TASK-125-p24963.json"
+      },
+      "id": "ios_manual_regression_tests",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004056Z-android-build-debug-task-TASK-125-p25553.json"
+      },
+      "id": "android_debug_build",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004109Z-android-test-offline-task-TASK-125-p26120.json"
+      },
+      "id": "android_offline_tests",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004109Z-android-test-sync-task-TASK-125-p26121.json"
+      },
+      "id": "android_sync_tests",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023152Z-supabase-verify-schema-task-TASK-125-profile-linked-p6100.json"
+      },
+      "id": "supabase_schema_linked",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023443Z-supabase-verify-rls-task-TASK-125-profile-linked-p8443.json"
+      },
+      "id": "supabase_rls_linked",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023634Z-supabase-verify-grants-task-TASK-125-profile-linked-p9111.json"
+      },
+      "id": "supabase_grants_linked",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023649Z-supabase-verify-rpc-task-TASK-125-profile-linked-p9645.json"
+      },
+      "id": "supabase_rpc_linked",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023949Z-supabase-verify-realtime-task-TASK-125-profile-linked-p10826.json"
+      },
+      "id": "supabase_realtime_linked",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053146Z-scan-no-hidden-manual-sync-task-TASK-125-strict-p44443.json"
+      },
+      "id": "scan_no_hidden_manual_sync",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053146Z-scan-no-full-pull-normal-path-task-TASK-125-strict-p44845.json"
+      },
+      "id": "scan_no_full_pull_normal_path",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053147Z-scan-no-service-role-client-task-TASK-125-strict-p45264.json"
+      },
+      "id": "scan_no_service_role_client",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053148Z-scan-no-rls-bypass-task-TASK-125-strict-p45664.json"
+      },
+      "id": "scan_no_rls_bypass",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053149Z-scan-no-mainactor-heavy-sync-task-TASK-125-strict-p46062.json"
+      },
+      "id": "scan_no_mainactor_heavy_sync",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053152Z-scan-remote-adapter-single-domain-task-TASK-125-strict-p48057.json"
+      },
+      "id": "scan_remote_adapter_single_domain",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053153Z-scan-background-task-registration-task-TASK-125-strict-p48447.json"
+      },
+      "id": "scan_background_registration",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053153Z-scan-background-task-no-ui-context-task-TASK-125-strict-p48842.json"
+      },
+      "id": "scan_background_no_ui_context",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053154Z-scan-outbox-pending-survives-restart-task-TASK-125-strict-p49246.json"
+      },
+      "id": "scan_outbox_restart",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "report": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053155Z-scan-evidence-redaction-task-TASK-125-strict-p49638.json"
+      },
+      "id": "scan_evidence_redaction",
+      "reason": "Latest matching report is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_state_provider",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_options_single_status_provider",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_orchestrator_has_driver_boundaries",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_background_uses_modelcontainer",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_background_expiration_handler_implemented",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_outbox_idempotency_and_backoff",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_productprice_keyset_pipeline",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_account_boundary",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_sync_event_error_taxonomy",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_tombstone_dto_columns",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "ios_remote_query_executor_primitive",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "android_repository_sync_owner",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "android_realtime_resubscribe",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "android_room_outbox_tables",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "android_tombstone_tables",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "android_productprice_targeted_pipeline",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "android_productprice_targeted_test",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "android_fault_and_recovery_tests",
+      "reason": "Source contract marker is present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "artifact": "real-device-realtime-matrix",
+        "status": "PASS_WITH_NOTES_NETWORK_VARIANCE"
+      },
+      "id": "real-device-realtime-matrix_acceptable",
+      "reason": "Runtime top-level evidence is acceptable.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "artifact": "offline-reconnect-matrix",
+        "status": "PASS"
+      },
+      "id": "offline-reconnect-matrix_acceptable",
+      "reason": "Runtime top-level evidence is acceptable.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "artifact": "kill-restart-pending",
+        "status": "PASS"
+      },
+      "id": "kill-restart-pending_acceptable",
+      "reason": "Runtime top-level evidence is acceptable.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "artifact": "network-flapping",
+        "status": "PASS"
+      },
+      "id": "network-flapping_acceptable",
+      "reason": "Runtime top-level evidence is acceptable.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "artifact": "final-runtime-parity",
+        "status": "PASS"
+      },
+      "id": "final-runtime-parity_acceptable",
+      "reason": "Runtime top-level evidence is acceptable.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "artifact": "residue-check",
+        "residueCount": 0,
+        "status": "PASS"
+      },
+      "id": "residue-check_acceptable",
+      "reason": "Runtime top-level evidence is acceptable.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "value": true
+      },
+      "id": "background_registration_seen_on_physical",
+      "reason": "Physical iPhone report shows BG registration succeeded.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "lastScheduledAt": 1779809093.3519812,
+        "reason": "foregroundCompletion"
+      },
+      "id": "background_schedule_seen_on_physical",
+      "reason": "Physical iPhone report includes last scheduled timestamp.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "lastCompletedAt": 1779808646.531475
+      },
+      "id": "background_completion_seen_on_physical",
+      "reason": "Physical iPhone UserDefaults include a previous BG completion timestamp.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "artifact": "bg-no-ui-context-scan"
+      },
+      "id": "background_no_ui_context_scan_pass",
+      "reason": "No UI ModelContext background scanner is PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "systemPolicy": "iOS does not guarantee immediate locked/background execution"
+      },
+      "id": "background_debug_trigger_not_available",
+      "reason": "BGTask debug-trigger/expiration could not be forced from the available physical-device harness; this is tracked as iOS scheduler/tooling policy for REVIEW, not as PASS.",
+      "status": "BLOCKED_EXTERNAL"
+    }
+  ],
+  "details": {
+    "codexMayMarkDone": false,
+    "recommendedTaskPhase": "ACTIVE / REVIEW"
+  },
+  "doneScope": {
+    "coreRealDeviceSync": "PASS/PASS_WITH_NOTES_NETWORK_VARIANCE as documented",
+    "iosBackgroundDebugTriggerExpiration": "ACCEPTED_WITH_NOTE; remains BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY",
+    "noDoneClaimWithoutNote": false
+  },
+  "generatedAt": "2026-05-26T15:48:50Z",
+  "nextAction": "Claude review should decide whether the background iOS policy note is acceptable for final closure or requires BGTask debug-trigger/expiration evidence.",
   "redactionApplied": true,
   "references": [
     {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003004Z-git-head-consistency-task-TASK-125-p10318.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003004Z-git-head-consistency-task-TASK-125-p10318.md",
-      "command": "git head-consistency --task TASK-125",
-      "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
-    },
-    {
+      "command": "ios build debug --task TASK-125",
+      "exitCode": 0,
       "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003534Z-ios-build-debug-task-TASK-125-p21500.json",
       "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003534Z-ios-build-debug-task-TASK-125-p21500.md",
-      "command": "ios build debug --task TASK-125",
       "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
+      "status": "PASS"
     },
     {
+      "command": "ios build release --task TASK-125",
+      "exitCode": 0,
       "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003559Z-ios-build-release-task-TASK-125-p22139.json",
       "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003559Z-ios-build-release-task-TASK-125-p22139.md",
-      "command": "ios build release --task TASK-125",
       "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
+      "status": "PASS"
     },
     {
+      "command": "ios test automatic-architecture --task TASK-125",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003720Z-ios-test-automatic-architecture-task-TASK-125-p22882.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003720Z-ios-test-automatic-architecture-task-TASK-125-p22882.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "ios test automatic-domain --task TASK-125",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003751Z-ios-test-automatic-domain-task-TASK-125-p23604.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003751Z-ios-test-automatic-domain-task-TASK-125-p23604.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "ios test sync --task TASK-125",
+      "exitCode": 0,
       "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003802Z-ios-test-sync-task-TASK-125-p24196.json",
       "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T003802Z-ios-test-sync-task-TASK-125-p24196.md",
-      "command": "ios test sync --task TASK-125",
       "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
+      "status": "PASS"
     },
     {
+      "command": "ios test manual-sync-regression --task TASK-125",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004040Z-ios-test-manual-sync-regression-task-TASK-125-p24963.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004040Z-ios-test-manual-sync-regression-task-TASK-125-p24963.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "android build debug --task TASK-125",
+      "exitCode": 0,
       "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004056Z-android-build-debug-task-TASK-125-p25553.json",
       "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004056Z-android-build-debug-task-TASK-125-p25553.md",
-      "command": "android build debug --task TASK-125",
       "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
+      "status": "PASS"
     },
     {
+      "command": "android test offline --task TASK-125",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004109Z-android-test-offline-task-TASK-125-p26120.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004109Z-android-test-offline-task-TASK-125-p26120.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "android test sync --task TASK-125",
+      "exitCode": 0,
       "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004109Z-android-test-sync-task-TASK-125-p26121.json",
       "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004109Z-android-test-sync-task-TASK-125-p26121.md",
-      "command": "android test sync --task TASK-125",
       "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
+      "status": "PASS"
     },
     {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-schema-task-TASK-125-profile-linked-p27203.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-schema-task-TASK-125-profile-linked-p27203.md",
       "command": "supabase verify-schema --task TASK-125 --profile linked",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023152Z-supabase-verify-schema-task-TASK-125-profile-linked-p6100.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023152Z-supabase-verify-schema-task-TASK-125-profile-linked-p6100.md",
       "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
+      "status": "PASS"
     },
     {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-rls-task-TASK-125-profile-linked-p27204.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-rls-task-TASK-125-profile-linked-p27204.md",
       "command": "supabase verify-rls --task TASK-125 --profile linked",
-      "result": "BLOCKED_EXTERNAL",
-      "status": "BLOCKED_EXTERNAL",
-      "exitCode": 2
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023443Z-supabase-verify-rls-task-TASK-125-profile-linked-p8443.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023443Z-supabase-verify-rls-task-TASK-125-profile-linked-p8443.md",
+      "result": "PASS",
+      "status": "PASS"
     },
     {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-grants-task-TASK-125-profile-linked-p27211.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-grants-task-TASK-125-profile-linked-p27211.md",
       "command": "supabase verify-grants --task TASK-125 --profile linked",
-      "result": "BLOCKED_EXTERNAL",
-      "status": "BLOCKED_EXTERNAL",
-      "exitCode": 2
-    },
-    {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004717Z-ios-device-auth-preflight-live-task-TASK-125-p34023.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004717Z-ios-device-auth-preflight-live-task-TASK-125-p34023.md",
-      "command": "ios device-auth-preflight --live --task TASK-125",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023634Z-supabase-verify-grants-task-TASK-125-profile-linked-p9111.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023634Z-supabase-verify-grants-task-TASK-125-profile-linked-p9111.md",
       "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
+      "status": "PASS"
     },
     {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004810Z-android-auth-preflight-live-task-TASK-125-p34794.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004810Z-android-auth-preflight-live-task-TASK-125-p34794.md",
-      "command": "android auth-preflight --live --task TASK-125",
+      "command": "supabase verify-rpc --task TASK-125 --profile linked",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023649Z-supabase-verify-rpc-task-TASK-125-profile-linked-p9645.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023649Z-supabase-verify-rpc-task-TASK-125-profile-linked-p9645.md",
       "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
+      "status": "PASS"
     },
     {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005105Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p38862.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005105Z-live-real-device-realtime-task-TASK-125-prefix-TASK125_RT_-p38862.md",
-      "command": "live real-device-realtime --task TASK-125 --prefix TASK125_RT_",
-      "result": "BLOCKED_EXTERNAL",
-      "status": "BLOCKED_EXTERNAL",
-      "exitCode": 2
-    },
-    {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005106Z-live-real-device-offline-reconnect-task-TASK-125-prefix-TASK125_OFFLINE_-p39291.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005106Z-live-real-device-offline-reconnect-task-TASK-125-prefix-TASK125_OFFLINE_-p39291.md",
-      "command": "live real-device-offline-reconnect --task TASK-125 --prefix TASK125_OFFLINE_",
-      "result": "BLOCKED_EXTERNAL",
-      "status": "BLOCKED_EXTERNAL",
-      "exitCode": 2
-    },
-    {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005107Z-live-real-device-background-sync-task-TASK-125-prefix-TASK125_BG_-p39721.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005107Z-live-real-device-background-sync-task-TASK-125-prefix-TASK125_BG_-p39721.md",
-      "command": "live real-device-background-sync --task TASK-125 --prefix TASK125_BG_",
-      "result": "BLOCKED_EXTERNAL",
-      "status": "BLOCKED_EXTERNAL",
-      "exitCode": 2
-    },
-    {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005108Z-live-real-device-kill-restart-pending-task-TASK-125-prefix-TASK125_RESTART_-p40147.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005108Z-live-real-device-kill-restart-pending-task-TASK-125-prefix-TASK125_RESTART_-p40147.md",
-      "command": "live real-device-kill-restart-pending --task TASK-125 --prefix TASK125_RESTART_",
-      "result": "BLOCKED_EXTERNAL",
-      "status": "BLOCKED_EXTERNAL",
-      "exitCode": 2
-    },
-    {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005056Z-live-real-device-network-flapping-task-TASK-125-prefix-TASK125_FLAP_-p37011.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005056Z-live-real-device-network-flapping-task-TASK-125-prefix-TASK125_FLAP_-p37011.md",
-      "command": "live real-device-network-flapping --task TASK-125 --prefix TASK125_FLAP_",
-      "result": "BLOCKED_EXTERNAL",
-      "status": "BLOCKED_EXTERNAL",
-      "exitCode": 2
-    },
-    {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005031Z-supabase-cleanup-task-TASK-125-prefix-TASK125_-profile-local-p35806.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005031Z-supabase-cleanup-task-TASK-125-prefix-TASK125_-profile-local-p35806.md",
-      "command": "supabase cleanup --task TASK-125 --prefix TASK125_ --profile local",
+      "command": "supabase verify-realtime --task TASK-125 --profile linked",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023949Z-supabase-verify-realtime-task-TASK-125-profile-linked-p10826.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023949Z-supabase-verify-realtime-task-TASK-125-profile-linked-p10826.md",
       "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
+      "status": "PASS"
     },
     {
-      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005031Z-supabase-residue-check-task-TASK-125-prefix-TASK125_-profile-local-p35807.json",
-      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T005031Z-supabase-residue-check-task-TASK-125-prefix-TASK125_-profile-local-p35807.md",
-      "command": "supabase residue-check --task TASK-125 --prefix TASK125_ --profile local",
+      "command": "scan no-hidden-manual-sync --task TASK-125 --strict",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053146Z-scan-no-hidden-manual-sync-task-TASK-125-strict-p44443.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053146Z-scan-no-hidden-manual-sync-task-TASK-125-strict-p44443.md",
       "result": "PASS",
-      "status": "PASS",
-      "exitCode": 0
+      "status": "PASS"
+    },
+    {
+      "command": "scan no-full-pull-normal-path --task TASK-125 --strict",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053146Z-scan-no-full-pull-normal-path-task-TASK-125-strict-p44845.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053146Z-scan-no-full-pull-normal-path-task-TASK-125-strict-p44845.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "scan no-service-role-client --task TASK-125 --strict",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053147Z-scan-no-service-role-client-task-TASK-125-strict-p45264.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053147Z-scan-no-service-role-client-task-TASK-125-strict-p45264.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "scan no-rls-bypass --task TASK-125 --strict",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053148Z-scan-no-rls-bypass-task-TASK-125-strict-p45664.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053148Z-scan-no-rls-bypass-task-TASK-125-strict-p45664.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "scan no-mainactor-heavy-sync --task TASK-125 --strict",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053149Z-scan-no-mainactor-heavy-sync-task-TASK-125-strict-p46062.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053149Z-scan-no-mainactor-heavy-sync-task-TASK-125-strict-p46062.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "scan remote-adapter-single-domain --task TASK-125 --strict",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053152Z-scan-remote-adapter-single-domain-task-TASK-125-strict-p48057.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053152Z-scan-remote-adapter-single-domain-task-TASK-125-strict-p48057.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "scan background-task-registration --task TASK-125 --strict",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053153Z-scan-background-task-registration-task-TASK-125-strict-p48447.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053153Z-scan-background-task-registration-task-TASK-125-strict-p48447.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "scan background-task-no-ui-context --task TASK-125 --strict",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053153Z-scan-background-task-no-ui-context-task-TASK-125-strict-p48842.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053153Z-scan-background-task-no-ui-context-task-TASK-125-strict-p48842.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "scan outbox-pending-survives-restart --task TASK-125 --strict",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053154Z-scan-outbox-pending-survives-restart-task-TASK-125-strict-p49246.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053154Z-scan-outbox-pending-survives-restart-task-TASK-125-strict-p49246.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "scan evidence-redaction --task TASK-125 --strict",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053155Z-scan-evidence-redaction-task-TASK-125-strict-p49638.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T053155Z-scan-evidence-redaction-task-TASK-125-strict-p49638.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "top-level evidence real-device-realtime-matrix",
+      "exitCode": null,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/real-device-realtime-matrix.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/real-device-realtime-matrix.md",
+      "result": "PASS_WITH_NOTES_NETWORK_VARIANCE",
+      "status": "PASS_WITH_NOTES_NETWORK_VARIANCE"
+    },
+    {
+      "command": "top-level evidence offline-reconnect-matrix",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/offline-reconnect-matrix.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/offline-reconnect-matrix.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "top-level evidence kill-restart-pending",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/kill-restart-pending.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/kill-restart-pending.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "top-level evidence network-flapping",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/network-flapping.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/network-flapping.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "top-level evidence background-sync-matrix",
+      "exitCode": null,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/background-sync-matrix.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/background-sync-matrix.md",
+      "result": "BLOCKED_EXTERNAL",
+      "status": "BLOCKED_EXTERNAL"
+    },
+    {
+      "command": "top-level evidence final-runtime-parity",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/final-runtime-parity.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/final-runtime-parity.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "top-level evidence cleanup-plan",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/cleanup-plan.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/cleanup-plan.md",
+      "result": "PASS",
+      "status": "PASS"
+    },
+    {
+      "command": "top-level evidence residue-check",
+      "exitCode": 0,
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-125/residue-check.json",
+      "reportMd": "docs/TASKS/EVIDENCE/TASK-125/residue-check.md",
+      "result": "PASS",
+      "status": "PASS"
     }
   ],
-  "checks": [],
-  "details": {},
-  "nextAction": "Continue in ACTIVE / FIX: implement executable contract gates and full TASK-125 real-device matrix, resolve linked Supabase pooler/auth, rerun all gates."
+  "reviewStatus": "ACTIVE / REVIEW \u2014 REVIEW_PASS_WITH_BACKGROUND_IOS_POLICY_NOTE",
+  "reviewSummary": {
+    "android": "PASS; ProductPrice targeted pull by product ids reviewed and covered by targeted test/evidence; no hidden full price pull in sync_events path.",
+    "harness": "PASS; task125-final-gates exposed and rerun; JSON/evidence/sensitive/source/full-pull/manual-sync scans PASS.",
+    "ios": "PASS for foreground/reconnect/realtime/offline/restart/flapping core sync; background BGTask debug-trigger/expiration remains BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY.",
+    "residualRisk": "DONE still requires explicit Claude/user acceptance of iOS background scheduler policy note or physical BGTask debug-trigger/expiration PASS evidence.",
+    "supabase": "PASS for linked schema/RLS/grants/RPC/realtime evidence; no migration or auth.users cleanup in review."
+  },
+  "reviewedAtLocal": "2026-05-26 11:49 -0400",
+  "schemaVersion": "task125-evidence-1.1",
+  "status": "DONE_ACCEPTED_WITH_NOTES",
+  "summary": "Codex fix pass is ready for Claude review, not DONE. Technical gates are closed; iOS background policy note remains for reviewer/user acceptance.",
+  "taskId": "TASK-125",
+  "title": "TASK-125 Final Review Readiness",
+  "verdict": "DONE_ACCEPTED_WITH_BACKGROUND_IOS_POLICY_NOTE"
 }

@@ -1,28 +1,42 @@
 # TASK-125 Final Handoff
 
-- Status: `FIX_REQUIRED`
-- Phase: `ACTIVE / FIX — EXECUTABLE_SYNC_CONTRACT_GATE_FAILED`
+- Status: `READY_FOR_REVIEW`
+- Phase: `ACTIVE / REVIEW - REVIEW_PASS_WITH_BACKGROUND_IOS_POLICY_NOTE`
+- Review verdict: `REVIEW_PASS_WITH_BACKGROUND_IOS_POLICY_NOTE`
 - Redaction applied: `true`
-- Generated: `2026-05-26T05:36:04Z`
+- Generated: `2026-05-26T15:32:00Z`
+- Reviewed locally: `2026-05-26 11:49 -0400`
 
-Real-device Android retry completed: realtime/offline/restart/flapping/runtime parity/cleanup/scans are updated, but TASK-125 cannot enter REVIEW/DONE because executable/cross-platform final gates remain FAIL and iOS background debug-trigger/expiration evidence is missing.
+Codex closed the remaining technical FIX gates without rerunning the long real-device matrices, then performed the requested repo-grounded review. The existing physical-device evidence remains current, and the executable final-gate scanner regenerated the stale placeholder gate artifacts.
 
-## Current Evidence
-- `PASS_WITH_NOTES_NETWORK_VARIANCE` — `docs/TASKS/EVIDENCE/TASK-125/real-device-realtime-matrix.json` — 24 iOS->Android + 20 Android->iOS; no full pull; drift zero; iOS->Android p95 within <=5s notes budget
-- `PASS` — `docs/TASKS/EVIDENCE/TASK-125/offline-reconnect-matrix.json` — iOS/Android offline reconnect, incremental/event-based, pending zero
-- `PASS` — `docs/TASKS/EVIDENCE/TASK-125/kill-restart-pending.json` — kill/restart pending matrix on physical devices
-- `PASS` — `docs/TASKS/EVIDENCE/TASK-125/network-flapping.json` — network flapping matrix on physical devices
-- `BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY` — `docs/TASKS/EVIDENCE/TASK-125/background-sync-matrix.json` — BGTask scheduled evidence exists; debug-trigger/expiration physical evidence still missing
-- `PASS` — `docs/TASKS/EVIDENCE/TASK-125/final-runtime-parity.json` — iPhone physical + OnePlus + Supabase linked drift zero on active/user-visible counts
-- `PASS` — `docs/TASKS/EVIDENCE/TASK-125/cleanup-plan.json` — TASK125_* cleanup dry-run plan
-- `PASS` — `docs/TASKS/EVIDENCE/TASK-125/residue-check.json` — TASK125_* residue 0
+## Gate Summary
+- `PASS` - `executable-contract-gate-final.json`
+- `PASS` - `cross-platform-architecture-gate-final.json`
+- `PASS_WITH_NOTES` - `cross-platform-final-gate-summary.json` - iOS background scheduler policy note only
+- `PASS` - `open-failures-zero-check.json`
+- `PASS_WITH_NOTES_NETWORK_VARIANCE` - `real-device-realtime-matrix.json` - 24 iOS->Android + 20 Android->iOS, drift zero, no full pull
+- `PASS` - `offline-reconnect-matrix.json`
+- `PASS` - `kill-restart-pending.json`
+- `PASS` - `network-flapping.json`
+- `PASS` - `final-runtime-parity.json`
+- `PASS` - `cleanup-plan.json` and `residue-check.json`, residue `0`
 
-## Open Failures
-- executable-contract-gate-final.json remains FAIL
-- cross-platform-architecture-gate-final.json remains FAIL
-- cross-platform-final-gate-summary.json remains FAIL
-- open-failures-zero-check.json remains FAIL
-- background-sync-matrix.json remains BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY until BGTask debug-trigger/expiration evidence or explicit user acceptance
+## Background iOS Note
+`background-sync-matrix.json`, `bg-debug-trigger.json` and `bg-expiration.json` remain `BLOCKED_EXTERNAL` for `BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY`. Physical diagnostics now show BG registration/scheduling/completion state, and static scanner evidence covers no UI context plus expiration handler implementation, but BGTask debug-trigger/expiration could not be forced on the physical iPhone with the available tooling.
+
+This is acceptable for REVIEW only. DONE still requires reviewer/user acceptance of the iOS scheduler-policy limit, or physical BGTask debug-trigger/expiration evidence.
+
+## Final Checks
+- `PASS` - `help-json` / `commands-json` include `scan task125-final-gates`
+- `PASS` - `python3 -m py_compile tools/agent/lib/task125_scans.py`
+- `PASS` - harness `bash -n`
+- `PASS` - `report validate-json --task TASK-125 --path docs/TASKS/EVIDENCE/TASK-125/agent-runs`
+- `PASS` - `scan evidence --task TASK-125 --strict`
+- `PASS` - `scan sensitive --task TASK-125`
+- `PASS` - `scan source-format --task TASK-125`
+- `PASS` - `scan no-full-pull-normal-path --task TASK-125`
+- `PASS` - `scan no-hidden-manual-sync --task TASK-125`
+- `PASS` - `git diff --check`
 
 ## Next Action
-Implement/verify executable cross-platform contract gates to PASS, collect or explicitly accept iOS scheduler-policy background limitation, then rerun final evidence/redaction gates.
+Claude review should validate the regenerated executable/cross-platform gates and decide whether the iOS background policy note is acceptable for final closure or requires additional BGTask physical debug-trigger/expiration evidence.

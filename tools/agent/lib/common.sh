@@ -691,6 +691,7 @@ mc_help_json() {
     {"name":"scan evidence-redaction task125","argv":["scan","evidence-redaction","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan source-format task125","argv":["scan","source-format","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan dead-code-residue task125","argv":["scan","dead-code-residue","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan task125-final-gates","argv":["scan","task125-final-gates","--task","TASK-125","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"ios device-auth-preflight task125","argv":["ios","device-auth-preflight","--live","--task","TASK-125"],"platform":"ios","safety_level":"live-readonly","requires_live":true},
     {"name":"android auth-preflight task125","argv":["android","auth-preflight","--live","--task","TASK-125"],"platform":"android","safety_level":"live-write","requires_live":true},
     {"name":"live real-device-realtime task125","argv":["live","real-device-realtime","--task","TASK-125","--prefix","TASK125_RT_"],"platform":"live","safety_level":"live-write","requires_live":true},

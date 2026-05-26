@@ -1,0 +1,19 @@
+=== mc-agent scan no-hidden-manual-sync --task TASK-125 ===
+{
+  "NEXT_ACTION": "Continue TASK-125 gates.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "automatic_path_has_no_manual_or_compat_dependency",
+      "reason": "Normal automatic path must not call manual/compat sync.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-26T15:48:49Z",
+  "redactionApplied": true,
+  "schemaVersion": "1.1",
+  "source": "scan.no-hidden-manual-sync",
+  "startedAt": "2026-05-26T15:48:49Z",
+  "status": "PASS",
+  "taskId": "TASK-125"
+}

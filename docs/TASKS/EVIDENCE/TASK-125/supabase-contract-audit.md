@@ -1,18 +1,25 @@
 # TASK-125 Supabase Contract Audit
 
-- Status: `BLOCKED_EXTERNAL`
+- Status: `PASS`
 - Task: `TASK-125`
 - Redaction applied: `true`
-- Generated: `2026-05-26T00:57:09Z`
+- Generated: `2026-05-26T15:48:50Z`
 
-Supabase linked schema check passed, but linked RLS/grants checks were blocked by Supabase pooler/auth connectivity. Local RLS/grants checks passed. No schema write, migration, cleanup execute, <REDACTED_SERVICE_ROLE>, or RLS bypass was performed.
+Supabase linked/dev contract PASS using latest linked schema, RLS, grants, RPC and realtime evidence. Earlier pooler/auth blocked runs are superseded by later PASS reports.
 
-## Referenced agent runs
-- `PASS` — `supabase verify-schema --task TASK-125 --profile linked` — `docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-schema-task-TASK-125-profile-linked-p27203.json`
-- `BLOCKED_EXTERNAL` — `supabase verify-rls --task TASK-125 --profile linked` — `docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-rls-task-TASK-125-profile-linked-p27204.json`
-- `BLOCKED_EXTERNAL` — `supabase verify-grants --task TASK-125 --profile linked` — `docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004148Z-supabase-verify-grants-task-TASK-125-profile-linked-p27211.json`
-- `PASS` — `supabase verify-rls --task TASK-125 --profile local` — `docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004516Z-supabase-verify-rls-task-TASK-125-profile-local-p29138.json`
-- `PASS` — `supabase verify-grants --task TASK-125 --profile local` — `docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T004516Z-supabase-verify-grants-task-TASK-125-profile-local-p29139.json`
+## Checks
+- `PASS` — `supabase_schema_linked` — Latest matching report is PASS.
+- `PASS` — `supabase_rls_linked` — Latest matching report is PASS.
+- `PASS` — `supabase_grants_linked` — Latest matching report is PASS.
+- `PASS` — `supabase_rpc_linked` — Latest matching report is PASS.
+- `PASS` — `supabase_realtime_linked` — Latest matching report is PASS.
 
-## Next action
-Fix linked Supabase DB auth/pooler credentials or wait for pooler recovery, rerun linked verify-rls and verify-grants, then rerun live matrix.
+## References
+- `PASS` — `supabase verify-schema --task TASK-125 --profile linked` — `docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023152Z-supabase-verify-schema-task-TASK-125-profile-linked-p6100.json`
+- `PASS` — `supabase verify-rls --task TASK-125 --profile linked` — `docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023443Z-supabase-verify-rls-task-TASK-125-profile-linked-p8443.json`
+- `PASS` — `supabase verify-grants --task TASK-125 --profile linked` — `docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023634Z-supabase-verify-grants-task-TASK-125-profile-linked-p9111.json`
+- `PASS` — `supabase verify-rpc --task TASK-125 --profile linked` — `docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023649Z-supabase-verify-rpc-task-TASK-125-profile-linked-p9645.json`
+- `PASS` — `supabase verify-realtime --task TASK-125 --profile linked` — `docs/TASKS/EVIDENCE/TASK-125/agent-runs/20260526T023949Z-supabase-verify-realtime-task-TASK-125-profile-linked-p10826.json`
+
+## Next Action
+No migration/RLS/grant/RPC change required in this closure pass.

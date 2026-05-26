@@ -1,59 +1,50 @@
 {
-  "generatedAt": "2026-05-26T05:36:04Z",
-  "nextAction": "Implement/verify executable cross-platform contract gates to PASS, collect or explicitly accept iOS scheduler-policy background limitation, then rerun final evidence/redaction gates.",
-  "openFailures": [
-    "executable-contract-gate-final.json remains FAIL",
-    "cross-platform-architecture-gate-final.json remains FAIL",
-    "cross-platform-final-gate-summary.json remains FAIL",
-    "open-failures-zero-check.json remains FAIL",
-    "background-sync-matrix.json remains BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY until BGTask debug-trigger/expiration evidence or explicit user acceptance"
+  "acceptanceNote": "User explicitly accepted TASK-125 as DONE with the documented iOS BGTask scheduler-policy note. background-sync-matrix/bg-debug-trigger/bg-expiration remain BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY and are not converted to technical PASS.",
+  "acceptedAtLocal": "2026-05-26 12:16 -0400",
+  "acceptedBy": "USER",
+  "background": {
+    "doneRequirement": "Physical BGTask debug-trigger/expiration evidence or explicit reviewer/user acceptance of iOS scheduler policy.",
+    "reviewStatus": "BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY",
+    "summary": "Physical diagnostics show registration/schedule/completion state; debug-trigger/expiration could not be forced with current tooling."
+  },
+  "doneScope": {
+    "coreRealDeviceSync": "PASS/PASS_WITH_NOTES_NETWORK_VARIANCE as documented",
+    "iosBackgroundDebugTriggerExpiration": "ACCEPTED_WITH_NOTE; remains BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY",
+    "noDoneClaimWithoutNote": false
+  },
+  "finalChecks": [
+    "help-json/list commands-json include task125-final-gates PASS",
+    "python3 -m py_compile tools/agent/lib/task125_scans.py PASS",
+    "bash -n harness PASS",
+    "report validate-json PASS",
+    "scan evidence PASS",
+    "scan sensitive PASS",
+    "scan source-format PASS",
+    "scan no-full-pull-normal-path PASS",
+    "scan no-hidden-manual-sync PASS",
+    "git diff --check PASS"
   ],
-  "phase": "ACTIVE / FIX \u2014 EXECUTABLE_SYNC_CONTRACT_GATE_FAILED",
+  "gateSummary": {
+    "background-sync-matrix": "BLOCKED_EXTERNAL",
+    "cleanup-plan": "PASS",
+    "cross-platform-architecture-gate-final": "PASS",
+    "cross-platform-final-gate-summary": "PASS_WITH_NOTES",
+    "executable-contract-gate-final": "PASS",
+    "final-runtime-parity": "PASS",
+    "kill-restart-pending": "PASS",
+    "network-flapping": "PASS",
+    "offline-reconnect-matrix": "PASS",
+    "open-failures-zero-check": "PASS",
+    "real-device-realtime-matrix": "PASS_WITH_NOTES_NETWORK_VARIANCE",
+    "residue-check": "PASS"
+  },
+  "generatedAt": "2026-05-26T15:32:00Z",
+  "nextAction": "Claude review validates regenerated gates and decides whether iOS background scheduler-policy note is acceptable for closure or requires physical BGTask debug-trigger/expiration evidence.",
+  "phase": "ACTIVE / REVIEW - REVIEW_PASS_WITH_BACKGROUND_IOS_POLICY_NOTE",
   "redactionApplied": true,
-  "referencedEvidence": [
-    {
-      "notes": "24 iOS->Android + 20 Android->iOS; no full pull; drift zero; iOS->Android p95 within <=5s notes budget",
-      "path": "docs/TASKS/EVIDENCE/TASK-125/real-device-realtime-matrix.json",
-      "status": "PASS_WITH_NOTES_NETWORK_VARIANCE"
-    },
-    {
-      "notes": "iOS/Android offline reconnect, incremental/event-based, pending zero",
-      "path": "docs/TASKS/EVIDENCE/TASK-125/offline-reconnect-matrix.json",
-      "status": "PASS"
-    },
-    {
-      "notes": "kill/restart pending matrix on physical devices",
-      "path": "docs/TASKS/EVIDENCE/TASK-125/kill-restart-pending.json",
-      "status": "PASS"
-    },
-    {
-      "notes": "network flapping matrix on physical devices",
-      "path": "docs/TASKS/EVIDENCE/TASK-125/network-flapping.json",
-      "status": "PASS"
-    },
-    {
-      "notes": "BGTask scheduled evidence exists; debug-trigger/expiration physical evidence still missing",
-      "path": "docs/TASKS/EVIDENCE/TASK-125/background-sync-matrix.json",
-      "status": "BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY"
-    },
-    {
-      "notes": "iPhone physical + OnePlus + Supabase linked drift zero on active/user-visible counts",
-      "path": "docs/TASKS/EVIDENCE/TASK-125/final-runtime-parity.json",
-      "status": "PASS"
-    },
-    {
-      "notes": "TASK125_* cleanup dry-run plan",
-      "path": "docs/TASKS/EVIDENCE/TASK-125/cleanup-plan.json",
-      "status": "PASS"
-    },
-    {
-      "notes": "TASK125_* residue 0",
-      "path": "docs/TASKS/EVIDENCE/TASK-125/residue-check.json",
-      "status": "PASS"
-    }
-  ],
-  "schemaVersion": "1.1",
-  "status": "FIX_REQUIRED",
-  "summary": "Real-device Android retry completed: realtime/offline/restart/flapping/runtime parity/cleanup/scans are updated, but TASK-125 cannot enter REVIEW/DONE because executable/cross-platform final gates remain FAIL and iOS background debug-trigger/expiration evidence is missing.",
-  "taskId": "TASK-125"
+  "reviewedAtLocal": "2026-05-26 11:49 -0400",
+  "status": "DONE_ACCEPTED_WITH_NOTES",
+  "summary": "Codex full repo-grounded review passed with the documented iOS BGTask scheduler-policy note; not DONE without explicit acceptance or BGTask debug-trigger/expiration PASS evidence.",
+  "taskId": "TASK-125",
+  "verdict": "DONE_ACCEPTED_WITH_BACKGROUND_IOS_POLICY_NOTE"
 }
