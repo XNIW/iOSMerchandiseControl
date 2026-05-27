@@ -4,11 +4,11 @@
 
 - **Task ID**: TASK-126
 - **Titolo**: Cross-platform sync policy, conflict matrix and multi-store cache MVP
-- **Stato corrente**: ACTIVE / REVIEW — TASK126_POLICY_CACHE_MVP_READY
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: Claude/User Reviewer
+- **Stato corrente**: DONE / Chiusura — REVIEW PASS FINAL
+- **Fase attuale**: Chiusura
+- **Responsabile attuale**: USER / Closure authorized
 - **Ultimo aggiornamento**: 2026-05-27
-- **Ultimo agente**: Codex / Executor
+- **Ultimo agente**: Codex / Reviewer+Fixer
 - **Perimetro**: iOS target principale + Android parity + Supabase contract review
 - **Tipo task**: policy + architecture contract + MVP implementation plan + UX recovery + memory/cache strategy + automation/harness hardening
 - **Priorità**: HIGH / P0-P1 sync safety
@@ -1748,7 +1748,7 @@ Evidence:
 
 Exit:
 
-- stato massimo `ACTIVE / REVIEW — TASK126_POLICY_CACHE_MVP_READY`;
+- stato massimo dopo review-fix UI `ACTIVE / REVIEW — TASK126_POLICY_CACHE_MVP_READY_WITH_UI_INTERACTION_EVIDENCE`;
 - nessun `DONE` senza review indipendente e accettazione utente.
 
 ## Acceptance criteria
@@ -1908,7 +1908,7 @@ Exit:
 TASK-126 non deve essere marcato DONE da Codex/Cursor alla fine dell'Execution. Stato finale massimo senza review esplicita:
 
 ```text
-ACTIVE / REVIEW — TASK126_POLICY_CACHE_MVP_READY
+ACTIVE / REVIEW — TASK126_POLICY_CACHE_MVP_READY_WITH_UI_INTERACTION_EVIDENCE
 ```
 
 DONE richiede:
@@ -2007,7 +2007,7 @@ Physical devices non sono requisito TASK-126: le evidence dichiarano esplicitame
 
 ## Handoff post-execution — verso Claude/User Review
 
-Stato handoff: `ACTIVE / REVIEW — TASK126_POLICY_CACHE_MVP_READY`.
+Stato handoff: `ACTIVE / REVIEW — TASK126_POLICY_CACHE_MVP_READY_WITH_UI_INTERACTION_EVIDENCE`.
 
 Evidence principali:
 
@@ -2019,3 +2019,58 @@ Evidence principali:
 - `docs/TASKS/EVIDENCE/TASK-126/63-review-handoff.md`
 
 Next action: review indipendente Claude/User. Non marcare DONE senza accettazione esplicita utente.
+
+## Fix — Codex Review UI Interaction Evidence
+
+Pass mirato completato per la review TASK-126 su Case 3 e Case 4, senza riaprire il task da zero e senza marcare DONE.
+
+- Implementata una superficie minima nativa di Review/Recovery per evidence UI: `Task126ReviewInteractionSheet` su iOS e `Task126ReviewInteractionDialog` su Android, con copy localizzata IT/EN/ES/ZH-Hans.
+- Aggiunti reducer/fixture deterministici per tutte le scelte richieste: annulla, resta account corrente, esporta backup, scarta pending e cambia, usa locale, usa cloud, modifica manualmente, applica a simili, rimanda review.
+- Aggiunti wrapper harness: `ios/android test conflict-review-ui`, `ios/android test account-switch-review-ui`, `ios/android smoke conflict-review-ui`, `ios/android smoke account-switch-review-ui`.
+- Runtime smoke su iOS Simulator e Android Emulator: app installata/avviata, sheet/dialog visibile, pulsanti visibili, screenshot e JSON timing/state raccolti.
+- Corretto il caso batch misto: se l'utente rimanda la Review, i non-conflitti gia' mergiati non restano pending; resta solo l'entita' conflittuale.
+- Nessuna Supabase live mutation, nessun cleanup, nessun full pull, nessun service_role client, nessun bypass RLS.
+
+Evidence aggiunte:
+
+- `docs/TASKS/EVIDENCE/TASK-126/64-ios-conflict-review-ui-simulator.md`
+- `docs/TASKS/EVIDENCE/TASK-126/65-android-conflict-review-ui-emulator.md`
+- `docs/TASKS/EVIDENCE/TASK-126/66-ios-account-switch-review-ui-simulator.md`
+- `docs/TASKS/EVIDENCE/TASK-126/67-android-account-switch-review-ui-emulator.md`
+- `docs/TASKS/EVIDENCE/TASK-126/68-case3-case4-choice-outcome-matrix.md`
+- `docs/TASKS/EVIDENCE/TASK-126/69-case3-case4-timing-and-state-metrics.md`
+- `docs/TASKS/EVIDENCE/TASK-126/70-review-fix-final-gates.md`
+
+## Handoff post-fix — verso Claude/User Review
+
+Stato handoff: `ACTIVE / REVIEW — TASK126_POLICY_CACHE_MVP_READY_WITH_UI_INTERACTION_EVIDENCE`.
+
+Validated primarily on iOS Simulator + Android Emulator. Physical devices are not required for TASK-126 review unless explicitly noted.
+
+Next action: review indipendente Claude/User sulle evidence UI/runtime aggiunte. Non marcare DONE senza accettazione esplicita utente.
+
+## Chiusura — REVIEW PASS FINAL
+
+User override ricevuto per review/fix-to-DONE: Codex autorizzato a eseguire review indipendente completa, correggere problemi reali, rerunnare gate e chiudere TASK-126 a DONE se tutti i P0/P1 risultano PASS.
+
+Esito finale: `DONE / Chiusura — REVIEW PASS FINAL`.
+
+- Review/fix completata su codice iOS, Android, harness, evidence, task file, Master Plan, Supabase contract, UX/localizzazioni/accessibilità, performance/cache e safety scan.
+- Fix review applicato: il gancio iOS `TASK126_UI_SMOKE_KIND` è ora esplicitamente DEBUG-only; build iOS Release rerunnata e PASS.
+- Il blocco Xcode lock generato da parallelismo test durante review è stato rerunnato in sequenza e superseduto da PASS.
+- iOS Debug/Release build PASS.
+- Android Debug/Release build PASS.
+- iOS Simulator UI test/smoke Case 3/4 PASS.
+- Android Emulator UI test/smoke Case 3/4 PASS.
+- Core wrapper iOS/Android sync-policy, account-store-boundary, conflict-review e cache-memory PASS.
+- Scanner TASK-126, RED/GREEN, no-full-pull normal path, no-hidden-manual-sync, no-service-role-client, no-rls-bypass, sensitive/evidence/repo-diff e JSON validation PASS.
+- Supabase locale read-only schema/RLS/grants/RPC PASS; Supabase live mutation non usata e non necessaria per questa chiusura.
+- Cleanup execute non eseguito perché non sono stati creati dati live/remoti; residue-check locale `TASK126_POLICY_` PASS/0.
+- Physical devices non richiesti per TASK-126 DONE; nessun claim real-device o production globale 100%.
+
+Evidence finale:
+
+- `docs/TASKS/EVIDENCE/TASK-126/71-review-pass-final.md`
+- `docs/TASKS/EVIDENCE/TASK-126/71-review-pass-final.json`
+
+Stato finale tracking: TASK-126 chiuso nel perimetro richiesto, con validazione primaria su iOS Simulator + Android Emulator e Supabase `localDefaultStoreOnly` read-only contract.

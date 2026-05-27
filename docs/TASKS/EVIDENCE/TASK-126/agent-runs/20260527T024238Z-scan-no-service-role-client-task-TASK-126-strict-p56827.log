@@ -1,0 +1,32 @@
+=== mc-agent scan no-service-role-client --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Keep privileged keys out of client runtime.",
+  "canonicalHead": "88c90e205963cb00e78740e77ef0726558d2afde",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "service-role-client",
+      "reason": "Client app source must not contain service_role usage.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-27T02:42:39+00:00",
+  "exitCode": 0,
+  "githubHead": "88c90e205963cb00e78740e77ef0726558d2afde",
+  "localHead": "88c90e205963cb00e78740e77ef0726558d2afde",
+  "nextAction": "Keep privileged keys out of client runtime.",
+  "originHead": "88c90e205963cb00e78740e77ef0726558d2afde",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "no-service-role-client",
+  "scannerName": "no-service-role-client",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.no-service-role-client",
+  "started_at": "2026-05-27T02:42:39+00:00",
+  "status": "PASS",
+  "summary": "no-service-role-client: PASS (1 checks)",
+  "taskId": "TASK-126",
+  "task_id": "TASK-126"
+}

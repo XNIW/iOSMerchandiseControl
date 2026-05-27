@@ -434,8 +434,10 @@ Usage:
   ./tools/agent/mc-agent.sh scan no-root-supabase-legacy|no-automatic-manual-dependency|transport-thin-only|remote-adapter-single-domain|no-full-pull-normal-path|no-hidden-manual-sync|no-stale-pbxproj-reference|no-mainactor-heavy-sync|no-service-role-client|no-rls-bypass|source-format|dead-code-residue --task TASK-124 --strict
   ./tools/agent/mc-agent.sh scan no-hidden-manual-sync|no-full-pull-normal-path|no-service-role-client|no-rls-bypass|no-mainactor-heavy-sync|no-stale-pbxproj-reference|no-test-fixture-in-app-target|no-root-legacy-sync-service|remote-adapter-single-domain|background-task-registration|background-task-no-ui-context|outbox-pending-survives-restart|evidence-redaction|source-format|dead-code-residue --task TASK-125 --strict
   ./tools/agent/mc-agent.sh scan task126-policy-matrix|owner-store-scope|local-store-identity|pending-base-version|changed-fields-contract|no-cross-owner-store-pending-push|conflict-review-coverage|productprice-history-policy|cache-active-store-only|inactive-cache-cleanup-safety|task126-final-gates --task TASK-126 --strict
-  ./tools/agent/mc-agent.sh ios test sync-policy|account-store-boundary|conflict-review|cache-memory --task TASK-126
-  ./tools/agent/mc-agent.sh android test sync-policy|account-store-boundary|conflict-review|cache-memory --task TASK-126
+  ./tools/agent/mc-agent.sh ios test sync-policy|account-store-boundary|conflict-review|conflict-review-ui|account-switch-review-ui|cache-memory --task TASK-126
+  ./tools/agent/mc-agent.sh ios smoke conflict-review-ui|account-switch-review-ui --task TASK-126
+  ./tools/agent/mc-agent.sh android test sync-policy|account-store-boundary|conflict-review|conflict-review-ui|account-switch-review-ui|cache-memory --task TASK-126
+  ./tools/agent/mc-agent.sh android smoke conflict-review-ui|account-switch-review-ui --task TASK-126
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys --task TASK-117
   ./tools/agent/mc-agent.sh evidence hygiene|bundle --task TASK-117
   ./tools/agent/mc-agent.sh account fixture prepare|cleanup --task TASK-116 --prefix TASK116_ACCOUNT_ [--dry-run]
@@ -510,10 +512,18 @@ mc_help_json() {
     {"name":"ios test sync-policy task126","argv":["ios","test","sync-policy","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test account-store-boundary task126","argv":["ios","test","account-store-boundary","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test conflict-review task126","argv":["ios","test","conflict-review","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test conflict-review-ui task126","argv":["ios","test","conflict-review-ui","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test account-switch-review-ui task126","argv":["ios","test","account-switch-review-ui","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios smoke conflict-review-ui task126","argv":["ios","smoke","conflict-review-ui","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios smoke account-switch-review-ui task126","argv":["ios","smoke","account-switch-review-ui","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test cache-memory task126","argv":["ios","test","cache-memory","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"android test sync-policy task126","argv":["android","test","sync-policy","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android test account-store-boundary task126","argv":["android","test","account-store-boundary","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android test conflict-review task126","argv":["android","test","conflict-review","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
+    {"name":"android test conflict-review-ui task126","argv":["android","test","conflict-review-ui","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
+    {"name":"android test account-switch-review-ui task126","argv":["android","test","account-switch-review-ui","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
+    {"name":"android smoke conflict-review-ui task126","argv":["android","smoke","conflict-review-ui","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
+    {"name":"android smoke account-switch-review-ui task126","argv":["android","smoke","account-switch-review-ui","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android test cache-memory task126","argv":["android","test","cache-memory","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"scan sync-boundaries","argv":["scan","sync-boundaries","--task","TASK-118","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-full-pull-normal-path task118","argv":["scan","no-full-pull-normal-path","--task","TASK-118","--strict"],"platform":"general","safety_level":"safe-readonly"},

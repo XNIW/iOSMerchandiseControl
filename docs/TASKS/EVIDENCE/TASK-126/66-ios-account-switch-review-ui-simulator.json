@@ -1,0 +1,111 @@
+{
+  "NEXT_ACTION": "Use this TASK-126 review-fix evidence during independent review; do not mark DONE.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-126/66-ios-account-switch-review-ui-simulator.json",
+    "log": null,
+    "markdown": "docs/TASKS/EVIDENCE/TASK-126/66-ios-account-switch-review-ui-simulator.md",
+    "screenshot": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021729Z-ios-smoke-account-switch-review-ui-task-TASK-126-p71204-ios-account-switch-review-ui.png",
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [],
+  "checks": [
+    {
+      "id": "deterministic-choice-outcomes",
+      "reason": "Unit/JVM/XCTest interaction-equivalent choices verified expected local and sync result.",
+      "status": "PASS"
+    },
+    {
+      "id": "runtime-surface-visible",
+      "reason": "Simulator/emulator smoke launched the app and captured visible Review/Recovery surface screenshot.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "cancel,keepCurrentAccount,exportBackup,discardPendingAndSwitch",
+      "id": "buttons-visible",
+      "reason": "Runtime smoke JSON lists visible user choice controls.",
+      "status": "PASS"
+    },
+    {
+      "id": "timing-and-state-json",
+      "reason": "Runtime smoke JSON includes required timing and state counters.",
+      "status": "PASS"
+    },
+    {
+      "id": "cross-account-pending-blocked",
+      "reason": "Dirty account switch choices keep A pending scoped and block push to B until destructive confirmation.",
+      "status": "PASS"
+    },
+    {
+      "id": "strong-discard-choice",
+      "reason": "Discard pending and switch is exposed as destructive/explicit flow with pendingAfter=0 only after confirmation.",
+      "status": "PASS"
+    }
+  ],
+  "cleanup_plan_id": null,
+  "command": "evidence 66-ios-account-switch-review-ui-simulator --task TASK-126",
+  "command_slug": "evidence-66-ios-account-switch-review-ui-simulator-task-TASK-126",
+  "details": {
+    "runtimeSmoke": {
+      "duration_ms": 30292,
+      "payload": {
+        "buttons": "cancel,keepCurrentAccount,exportBackup,discardPendingAndSwitch",
+        "conflictCountAfter": "0",
+        "conflictCountBefore": "0",
+        "dialogVisible": "true",
+        "kind": "account-switch-review-ui",
+        "mergedCount": "0",
+        "pendingAfter": "3",
+        "pendingBefore": "3",
+        "reviewRemainingCount": "0",
+        "status": "PASS",
+        "surface": "accountSwitchRecovery",
+        "timeToApplyChoiceMs": "35",
+        "timeToFinalStateMs": "175",
+        "timeToReviewShownMs": "120"
+      },
+      "report": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021729Z-ios-smoke-account-switch-review-ui-task-TASK-126-p71204.json",
+      "runtime_json": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/runtime/20260527T021729Z-ios-smoke-account-switch-review-ui-task-TASK-126-p71204-ios-account-switch-review-ui-smoke.json",
+      "screenshot": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021729Z-ios-smoke-account-switch-review-ui-task-TASK-126-p71204-ios-account-switch-review-ui.png"
+    },
+    "scope": "Validated primarily on iOS Simulator + Android Emulator; physical devices not required for TASK-126 review."
+  },
+  "device_simulator_redacted": {},
+  "dirty_state": "dirty",
+  "duration_ms": 0,
+  "env_redacted": {
+    "MC_TASK_ID": "TASK-126"
+  },
+  "exit_code": 0,
+  "git_sha": "88c90e20",
+  "next_action_recommended": "Use this TASK-126 review-fix evidence during independent review; do not mark DONE.",
+  "platform": "ios",
+  "profile": null,
+  "raw_log_redacted": true,
+  "redactionApplied": true,
+  "references": [
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021711Z-ios-test-account-switch-review-ui-task-TASK-126-p70136.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021729Z-ios-smoke-account-switch-review-ui-task-TASK-126-p71204.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/runtime/20260527T021729Z-ios-smoke-account-switch-review-ui-task-TASK-126-p71204-ios-account-switch-review-ui-smoke.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021729Z-ios-smoke-account-switch-review-ui-task-TASK-126-p71204-ios-account-switch-review-ui.png"
+  ],
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "66-ios-account-switch-review-ui-simulator",
+  "safety_level": "safe-readonly",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "taskId": "TASK-126",
+  "task_id": "TASK-126",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-27T02:20:33Z",
+  "timestamp_start": "2026-05-27T02:20:33Z",
+  "warnings": []
+}

@@ -1,0 +1,35 @@
+=== mc-agent scan task126-policy-matrix --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-126 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {
+        "missing": []
+      },
+      "id": "matrix-c126-00-60-present",
+      "reason": "Task policy matrix must enumerate C126-00 through C126-60.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "mandatory-not-run-policy-present",
+      "reason": "Mandatory NOT_RUN must block REVIEW.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "store-scope-mode-present",
+      "reason": "Store scope mode decision options must be explicit.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T02:32:19Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.task126-policy-matrix",
+  "startedAt": "2026-05-27T02:32:19Z",
+  "status": "PASS",
+  "taskId": "TASK-126"
+}

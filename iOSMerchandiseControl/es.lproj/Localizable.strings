@@ -39,6 +39,30 @@
 "common.rows_header" = "Filas";
 "common.row_number" = "Fila %d";
 
+/* TASK-126 Review / Recovery */
+"task126.review.cancel" = "Cancelar";
+"task126.account.keep_current" = "Mantener cuenta actual";
+"task126.account.export_backup" = "Exportar respaldo";
+"task126.account.discard_and_switch" = "Descartar pendientes y cambiar";
+"task126.account.switch" = "Cambiar cuenta";
+"task126.account.clean_populated.title" = "Cambiar a cuenta con datos";
+"task126.account.clean_populated.message" = "La cache local esta limpia. La cuenta destino se verifica antes de abrirse.";
+"task126.account.dirty.title" = "Cambios pendientes requieren revision";
+"task126.account.dirty.message" = "El envio automatico esta bloqueado para no enviar cambios de esta cuenta a otra.";
+"task126.conflict.use_local" = "Usar local";
+"task126.conflict.use_remote" = "Usar nube";
+"task126.conflict.edit_manually" = "Editar manualmente";
+"task126.conflict.apply_to_similar" = "Aplicar a conflictos similares";
+"task126.conflict.postpone" = "Revisar mas tarde";
+"task126.conflict.auto_merge.title" = "Cambios combinables";
+"task126.conflict.auto_merge.message" = "Campos distintos se combinan automaticamente sin popup de revision.";
+"task126.conflict.same_field.title" = "Revision de conflicto";
+"task126.conflict.same_field.message" = "El mismo campo cambio en dos lugares. Elige que valor conservar.";
+"task126.conflict.delete_edit.title" = "Eliminado en nube, editado localmente";
+"task126.conflict.delete_edit.message" = "La revision es obligatoria antes de conservar la edicion o aceptar la eliminacion.";
+"task126.conflict.price_stale.title" = "Conflicto de historial de precios";
+"task126.conflict.price_stale.message" = "Este slot de precio tiene valores distintos. Elige como mantener la historia consistente.";
+
 /* Tabs */
 "tab.inventory" = "Inventario";
 "tab.database" = "Base de datos";

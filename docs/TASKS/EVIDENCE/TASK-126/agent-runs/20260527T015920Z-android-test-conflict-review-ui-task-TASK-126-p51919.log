@@ -1,0 +1,184 @@
+=== mc-agent android test conflict-review-ui --task TASK-126 ===
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+
+> Configure project :app
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: API 'applicationVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling applicationVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: API 'testVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling testVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: API 'unitTestVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling unitTestVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+w: [33m[1m⚠️ Deprecated 'org.jetbrains.kotlin.android' plugin usage[0m[0m
+The 'org.jetbrains.kotlin.android' plugin in project ':app' is no longer required for Kotlin support since AGP 9.0.
+[32m[1mSolution:[0m[0m
+[32m[3mRemove both `android.builtInKotlin=true` and `android.newDsl=false` from `gradle.properties`, then migrate to built-in Kotlin.[0m[0m
+[36mSee [0m[34mhttps://kotl.in/gradle/agp-built-in-kotlin[0m[36m for more details.[0m
+
+
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:processDebugUnitTestManifest UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:processDebugManifestForPackage
+> Task :app:processDebugResources
+> Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:packageDebugUnitTestForUnitTest UP-TO-DATE
+> Task :app:generateDebugUnitTestConfig UP-TO-DATE
+> Task :app:kspDebugUnitTestKotlin
+
+> Task :app:compileDebugUnitTestKotlin FAILED
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:11:21 Unresolved reference 'Task126ReviewInteractionFixtures'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:13:22 Unresolved reference 'Task126ReviewSurface'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:15:13 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:16:17 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:17:17 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:18:17 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:19:17 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:27:22 Unresolved reference 'Task126ReviewInteractionReducer'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:27:54 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:27:60 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:28:52 Unresolved reference 'observedLocalResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:29:61 Unresolved reference 'observedSyncResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:30:32 Unresolved reference 'pendingAfter'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:32:23 Unresolved reference 'Task126ReviewInteractionReducer'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:32:55 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:32:61 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:33:53 Unresolved reference 'observedLocalResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:34:84 Unresolved reference 'observedSyncResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:35:33 Unresolved reference 'pendingAfter'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:36:28 Unresolved reference 'timeToFinalStateMs'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:36:58 Unresolved reference 'timeToApplyChoiceMs'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:41:21 Unresolved reference 'Task126ReviewInteractionFixtures'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:44:22 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:44:29 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:44:55 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:46:23 Unresolved reference 'Task126ReviewInteractionReducer'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:46:55 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:46:61 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:48:58 Unresolved reference 'observedLocalResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:49:67 Unresolved reference 'observedSyncResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:50:33 Unresolved reference 'pendingAfter'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:51:33 Unresolved reference 'conflictCountAfter'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:56:21 Unresolved reference 'Task126ReviewInteractionFixtures'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:58:23 Unresolved reference 'Task126ReviewInteractionReducer'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:58:55 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:58:61 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:60:73 Unresolved reference 'observedLocalResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:61:62 Unresolved reference 'observedSyncResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126AccountSwitchReviewUiTest.kt:62:33 Unresolved reference 'pendingAfter'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:11:21 Unresolved reference 'Task126ReviewInteractionFixtures'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:13:22 Unresolved reference 'Task126ReviewSurface'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:15:13 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:16:17 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:17:17 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:18:17 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:19:17 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:20:17 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:27:23 Unresolved reference 'Task126ReviewInteractionReducer'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:27:55 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:27:61 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:29:48 Unresolved reference 'observedLocalResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:30:65 Unresolved reference 'observedSyncResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:31:33 Unresolved reference 'pendingAfter'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:32:33 Unresolved reference 'conflictCountAfter'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:33:33 Unresolved reference 'reviewRemainingCount'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:34:28 Unresolved reference 'timeToReviewShownMs'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:35:28 Unresolved reference 'timeToApplyChoiceMs'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:36:28 Unresolved reference 'timeToFinalStateMs'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:36:58 Unresolved reference 'timeToApplyChoiceMs'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:41:21 Unresolved reference 'Task126ReviewInteractionFixtures'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:47:23 Unresolved reference 'Task126ReviewInteractionReducer'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:47:55 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:47:61 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:49:78 Unresolved reference 'observedLocalResult'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:50:33 Unresolved reference 'pendingAfter'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:51:33 Unresolved reference 'conflictCountAfter'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:52:33 Unresolved reference 'reviewRemainingCount'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:53:33 Unresolved reference 'mergedCount'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:58:9 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:59:13 Unresolved reference 'Task126ReviewInteractionFixtures'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:60:13 Unresolved reference 'Task126ReviewInteractionFixtures'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:61:11 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:61:21 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:62:30 Unresolved reference 'isDialogVisible'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:63:30 Unresolved reference 'visibleChoices'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:63:54 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:64:30 Unresolved reference 'visibleChoices'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:64:54 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:65:30 Unresolved reference 'visibleChoices'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:65:54 Unresolved reference 'Task126UserChoice'.
+e: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/app/src/test/java/com/example/merchandisecontrolsplitview/data/Task126ConflictReviewUiTest.kt:66:30 Unresolved reference 'conflictCountBefore'.
+
+[Incubating] Problems report is available at: file://<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugUnitTestKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 5s
+30 actionable tasks: 6 executed, 24 up-to-date

@@ -221,7 +221,7 @@ SwiftEmitModule normal arm64 Emitting\ module\ for\ iOSMerchandiseControl (in ta
 
 EmitSwiftModule normal arm64 (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/SyncOrchestrator.swift:92:93: warning: main actor-isolated static property 'shared' can not be referenced from a nonisolated context; this is an error in the Swift 6 language mode
         backgroundScheduler: any SyncBackgroundTaskScheduling = SyncBackgroundTaskScheduler.shared
                                                                                             ^
@@ -233,7 +233,7 @@ SwiftCompile normal arm64 Compiling\ Task126SyncPolicy.swift <HOME_REDACTED>/Des
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Policy/Task126SyncPolicy.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftDriverJobDiscovery normal arm64 Compiling Task126SyncPolicy.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
@@ -241,59 +241,59 @@ SwiftCompile normal arm64 Compiling\ HistoryImportedGridSupport.swift,\ HistoryV
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/HistoryImportedGridSupport.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/HistoryView.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ EntryInfoEditor.swift,\ ExcelSessionViewModel.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/EntryInfoEditor.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/ExcelSessionViewModel.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/EntryInfoEditor.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/ExcelSessionViewModel.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ PreGenerateView.swift,\ ProductImportCore.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/PreGenerateView.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/ProductImportCore.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/PreGenerateView.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/ProductImportCore.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ GeneratedView.swift,\ HistoryEntryRuntimeSummary.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/GeneratedView.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/HistoryEntryRuntimeSummary.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/GeneratedView.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/HistoryEntryRuntimeSummary.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ SyncRecoveryPolicy.swift,\ DatabaseView.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/DatabaseView.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/SyncRecoveryPolicy.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/DatabaseView.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ ImportAnalysisView.swift,\ LocalPendingChange.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/ImportAnalysisView.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/ImportAnalysisView.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift:422:59: warning: call to main actor-isolated static method 'snapshot(for:ensureRemoteID:)' in a synchronous nonisolated context
                 for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
                                                           ^
@@ -305,137 +305,137 @@ SwiftCompile normal arm64 Compiling\ SupabaseSyncPlanContract.swift,\ SyncEventO
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseSyncPlanContract.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ SupabaseProductPricePreviewService.swift,\ SupabaseProductPricePushDryRunService.swift,\ SupabasePushPreflightViewModel.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePreviewService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseProductPricePushDryRunService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabasePushPreflightViewModel.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ SupabasePullApplyService.swift,\ SupabasePullPreviewService.swift,\ SwiftDataInventorySnapshotService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Recovery/SwiftDataInventorySnapshotService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Recovery/SupabasePullApplyService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Recovery/SupabasePullPreviewService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Recovery/SwiftDataInventorySnapshotService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ SyncEventOutboxState.swift,\ InventorySyncService.swift,\ SupabaseProductPriceApplyService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Recovery/InventorySyncService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxState.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Recovery/InventorySyncService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Recovery/SupabaseProductPriceApplyService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ AutomaticSyncEventOutboxWriter.swift,\ SyncEventIncrementalDomainApplyService.swift,\ LocalPendingAggregatedPushPlanner.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Pull/SyncEventIncrementalDomainApplyService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/LocalPendingAggregatedPushPlanner.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ SupabaseManualPushService.swift,\ SupabaseManualSyncOutboxProducerConversions.swift,\ SupabaseManualSyncReleaseFactory.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncOutboxProducerConversions.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualPushService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncOutboxProducerConversions.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ SupabaseManualSyncSemiAutomaticPolicy.swift,\ SupabaseManualSyncViewModel.swift,\ SupabaseProductPriceManualPushService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncSemiAutomaticPolicy.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncViewModel.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseProductPriceManualPushService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ LocalStoreIdentity.swift,\ AutomaticSyncRetryPolicy.swift,\ HistorySessionAutomaticPushService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRetryPolicy.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/History/HistorySessionAutomaticPushService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ SupabaseCatalogBaselineReader.swift,\ SupabaseCatalogBaselineWriter.swift,\ SupabaseManualPushPreflightService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineReader.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseCatalogBaselineWriter.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualPushPreflightService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ ProductPricePreviewRemoteSupabaseAdapter.swift,\ SupabaseRemoteQueryExecutor.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Remote/ProductPricePreviewRemoteSupabaseAdapter.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Remote/ProductPricePreviewRemoteSupabaseAdapter.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Remote/SupabaseRemoteQueryExecutor.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftDriverJobDiscovery normal arm64 Compiling LocalStoreIdentity.swift, AutomaticSyncRetryPolicy.swift, HistorySessionAutomaticPushService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
@@ -491,19 +491,19 @@ SwiftCompile normal arm64 Compiling\ Task126SyncPolicyTests.swift <HOME_REDACTED
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126SyncPolicyTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftEmitModule normal arm64 Emitting\ module\ for\ iOSMerchandiseControlTests (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
 
 EmitSwiftModule normal arm64 (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ Task126ConflictReviewTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126ConflictReviewTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126ConflictReviewTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftDriverJobDiscovery normal arm64 Compiling PreGenerateView.swift, ProductImportCore.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
@@ -578,31 +578,31 @@ ExtractAppIntentsMetadata (in target 'iOSMerchandiseControlTests' from project '
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
 <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib: replacing existing signature
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
 
 Validate <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')

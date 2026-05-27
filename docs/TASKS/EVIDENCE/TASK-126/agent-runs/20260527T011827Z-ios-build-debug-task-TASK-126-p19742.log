@@ -205,13 +205,13 @@ ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerc
 note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 ProcessProductPackaging "" <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl.app-Simulated.xcent (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Entitlements:
-    
+
     {
     "application-identifier" = "45PJ364B5B.com.niwcyber.iOSMerchandiseControl";
 }
-    
+
     builtin-productPackagingUtility -entitlements -format xml -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl.app-Simulated.xcent
 
 ProcessProductPackagingDER <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl.app-Simulated.xcent <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl.app-Simulated.xcent.der (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
@@ -247,24 +247,24 @@ ExtractAppIntentsMetadata (in target 'iOSMerchandiseControl' from project 'iOSMe
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
 <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib: replacing existing signature
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
 
 Validate <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')

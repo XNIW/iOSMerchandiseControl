@@ -1,0 +1,103 @@
+{
+  "NEXT_ACTION": "TASK-126 is closed DONE in task scope; do not infer global production or real-device acceptance.",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-126/71-review-pass-final.json",
+    "log": null,
+    "markdown": "docs/TASKS/EVIDENCE/TASK-126/71-review-pass-final.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "checks": [
+    {
+      "id": "independent-review-complete",
+      "reason": "Codex review/fix pass checked code, harness, evidence, builds, scans, Supabase local contract and Case 3/4 UI interaction evidence.",
+      "status": "PASS"
+    },
+    {
+      "id": "ios-debug-smoke-gate",
+      "reason": "TASK126_UI_SMOKE_KIND path is DEBUG-only and iOS Release build passed after the fix.",
+      "status": "PASS"
+    },
+    {
+      "id": "simulator-emulator-scope",
+      "reason": "Validation was performed primarily on iOS Simulator and Android Emulator; physical devices are not required for this TASK-126 closure.",
+      "status": "PASS"
+    },
+    {
+      "id": "safety-gates",
+      "reason": "No service_role client, no RLS bypass client, no full pull normal path, no global cleanup and no live mutation were used.",
+      "status": "PASS"
+    }
+  ],
+  "cleanup_plan_id": null,
+  "command": "evidence 71-review-pass-final --task TASK-126",
+  "command_slug": "evidence-71-review-pass-final-task-TASK-126",
+  "details": {
+    "android_head": "88d7667",
+    "choice_matrix_rows": 54,
+    "fixed_findings": [
+      "iOS TASK-126 UI smoke entrypoint gated to DEBUG builds",
+      "parallel XCTest lock superseded by sequential account-store-boundary PASS rerun"
+    ],
+    "ios_head": "88c90e20",
+    "latest_reports": {
+      "android_account_switch_review_ui_smoke": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T023630Z-android-smoke-account-switch-review-ui-task-TASK-126-p29896.json",
+      "android_build_debug": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T023422Z-android-build-debug-task-TASK-126-p24646.json",
+      "android_build_release": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T023430Z-android-build-release-task-TASK-126-p25092.json",
+      "android_conflict_review_ui_smoke": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T023554Z-android-smoke-conflict-review-ui-task-TASK-126-p27849.json",
+      "ios_account_switch_review_ui_smoke": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T023630Z-ios-smoke-account-switch-review-ui-task-TASK-126-p29897.json",
+      "ios_build_debug": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T023259Z-ios-build-debug-task-TASK-126-p23275.json",
+      "ios_build_release": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T023310Z-ios-build-release-task-TASK-126-p23815.json",
+      "ios_conflict_review_ui_smoke": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T023554Z-ios-smoke-conflict-review-ui-task-TASK-126-p27808.json",
+      "supabase_local_schema": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T023816Z-supabase-verify-schema-task-TASK-126-profile-local-p36286.json"
+    },
+    "performance": {
+      "androidAccountSmokeDurationMs": 5371,
+      "androidConflictSmokeDurationMs": 5475,
+      "iosAccountSmokeDurationMs": 30229,
+      "iosConflictSmokeDurationMs": 30377,
+      "maxTimeToApplyChoiceMs": 220,
+      "maxTimeToFinalStateMs": 360,
+      "productPricePageSize": 500,
+      "timeToReviewShownMs": 120
+    },
+    "scope": "TASK-126 policy/cache/harness/UI interaction evidence only; no global production-ready or physical-device claim"
+  },
+  "device_simulator_redacted": {},
+  "dirty_state": "dirty",
+  "duration_ms": 0,
+  "env_redacted": {
+    "MC_TASK_ID": "TASK-126"
+  },
+  "exit_code": 0,
+  "git_sha": "88c90e20",
+  "next_action_recommended": "TASK-126 closed in tracker after final gates; future production/real-device acceptance belongs to a separate task.",
+  "platform": "general",
+  "profile": null,
+  "raw_log_redacted": true,
+  "redactionApplied": true,
+  "references": [
+    "docs/TASKS/EVIDENCE/TASK-126/68-case3-case4-choice-outcome-matrix.json",
+    "docs/TASKS/EVIDENCE/TASK-126/69-case3-case4-timing-and-state-metrics.json",
+    "docs/TASKS/EVIDENCE/TASK-126/70-review-fix-final-gates.json"
+  ],
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "71-review-pass-final",
+  "safety_level": "safe-readonly",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "taskId": "TASK-126",
+  "task_id": "TASK-126",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-27T02:40:09Z",
+  "timestamp_start": "2026-05-27T02:40:09Z",
+  "warnings": []
+}

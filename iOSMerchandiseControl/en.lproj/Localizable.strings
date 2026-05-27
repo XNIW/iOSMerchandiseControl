@@ -39,6 +39,30 @@
 "common.rows_header" = "Rows";
 "common.row_number" = "Row %d";
 
+/* TASK-126 Review / Recovery */
+"task126.review.cancel" = "Cancel";
+"task126.account.keep_current" = "Stay on current account";
+"task126.account.export_backup" = "Export backup";
+"task126.account.discard_and_switch" = "Discard pending and switch";
+"task126.account.switch" = "Switch account";
+"task126.account.clean_populated.title" = "Switch to populated account";
+"task126.account.clean_populated.message" = "Local cache is clean. The target account will be verified before opening.";
+"task126.account.dirty.title" = "Pending changes need review";
+"task126.account.dirty.message" = "Automatic push is blocked so changes from this account cannot be sent to another account.";
+"task126.conflict.use_local" = "Use local";
+"task126.conflict.use_remote" = "Use cloud";
+"task126.conflict.edit_manually" = "Edit manually";
+"task126.conflict.apply_to_similar" = "Apply to similar conflicts";
+"task126.conflict.postpone" = "Review later";
+"task126.conflict.auto_merge.title" = "Changes can be merged";
+"task126.conflict.auto_merge.message" = "Different fields are merged automatically without a review popup.";
+"task126.conflict.same_field.title" = "Conflict review";
+"task126.conflict.same_field.message" = "The same field changed in two places. Choose which value should win.";
+"task126.conflict.delete_edit.title" = "Deleted remotely, edited locally";
+"task126.conflict.delete_edit.message" = "Review is required before keeping the edit or accepting the delete.";
+"task126.conflict.price_stale.title" = "Price history conflict";
+"task126.conflict.price_stale.message" = "This price slot has different values. Choose how to keep history consistent.";
+
 /* Tabs */
 "tab.inventory" = "Inventory";
 "tab.database" = "Database";

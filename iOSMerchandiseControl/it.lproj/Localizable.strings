@@ -39,6 +39,30 @@
 "common.rows_header" = "Righe";
 "common.row_number" = "Riga %d";
 
+/* TASK-126 Review / Recovery */
+"task126.review.cancel" = "Annulla";
+"task126.account.keep_current" = "Resta sull'account attuale";
+"task126.account.export_backup" = "Esporta backup";
+"task126.account.discard_and_switch" = "Scarta pending e cambia";
+"task126.account.switch" = "Cambia account";
+"task126.account.clean_populated.title" = "Cambia ad account popolato";
+"task126.account.clean_populated.message" = "La cache locale e' pulita. L'account di destinazione verra' verificato prima dell'apertura.";
+"task126.account.dirty.title" = "Modifiche pending da revisionare";
+"task126.account.dirty.message" = "Il push automatico e' bloccato per evitare invii da questo account verso un altro account.";
+"task126.conflict.use_local" = "Usa locale";
+"task126.conflict.use_remote" = "Usa cloud";
+"task126.conflict.edit_manually" = "Modifica manualmente";
+"task126.conflict.apply_to_similar" = "Applica a conflitti simili";
+"task126.conflict.postpone" = "Rivedi piu' tardi";
+"task126.conflict.auto_merge.title" = "Modifiche unibili";
+"task126.conflict.auto_merge.message" = "Campi diversi vengono uniti automaticamente senza popup di review.";
+"task126.conflict.same_field.title" = "Review conflitto";
+"task126.conflict.same_field.message" = "Lo stesso campo e' cambiato in due punti. Scegli quale valore mantenere.";
+"task126.conflict.delete_edit.title" = "Eliminato in cloud, modificato localmente";
+"task126.conflict.delete_edit.message" = "La review e' obbligatoria prima di tenere la modifica o accettare l'eliminazione.";
+"task126.conflict.price_stale.title" = "Conflitto storico prezzi";
+"task126.conflict.price_stale.message" = "Questo slot prezzo ha valori diversi. Scegli come mantenere coerente la cronologia.";
+
 /* Tabs */
 "tab.inventory" = "Inventario";
 "tab.database" = "Database";

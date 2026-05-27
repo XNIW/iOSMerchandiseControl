@@ -1,0 +1,16 @@
+{
+  "kind": "account-switch-review-ui",
+  "surface": "AccountSwitchRecovery",
+  "dialogVisible": true,
+  "buttons": "Cancel,KeepCurrentAccount,ExportBackup,DiscardPendingAndSwitch",
+  "timeToReviewShownMs": 120,
+  "timeToApplyChoiceMs": 35,
+  "timeToFinalStateMs": 175,
+  "pendingBefore": 3,
+  "pendingAfter": 3,
+  "conflictCountBefore": 0,
+  "conflictCountAfter": 0,
+  "mergedCount": 0,
+  "reviewRemainingCount": 0,
+  "status": "PASS"
+}

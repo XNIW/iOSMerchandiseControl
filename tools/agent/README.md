@@ -73,10 +73,18 @@ MC_TASK_ID=TASK-126 ./tools/agent/mc-agent.sh preflight --require-head-consisten
 ./tools/agent/mc-agent.sh ios test sync-policy --task TASK-126
 ./tools/agent/mc-agent.sh ios test account-store-boundary --task TASK-126
 ./tools/agent/mc-agent.sh ios test conflict-review --task TASK-126
+./tools/agent/mc-agent.sh ios test conflict-review-ui --task TASK-126
+./tools/agent/mc-agent.sh ios test account-switch-review-ui --task TASK-126
+./tools/agent/mc-agent.sh ios smoke conflict-review-ui --task TASK-126
+./tools/agent/mc-agent.sh ios smoke account-switch-review-ui --task TASK-126
 ./tools/agent/mc-agent.sh ios test cache-memory --task TASK-126
 ./tools/agent/mc-agent.sh android test sync-policy --task TASK-126
 ./tools/agent/mc-agent.sh android test account-store-boundary --task TASK-126
 ./tools/agent/mc-agent.sh android test conflict-review --task TASK-126
+./tools/agent/mc-agent.sh android test conflict-review-ui --task TASK-126
+./tools/agent/mc-agent.sh android test account-switch-review-ui --task TASK-126
+./tools/agent/mc-agent.sh android smoke conflict-review-ui --task TASK-126
+./tools/agent/mc-agent.sh android smoke account-switch-review-ui --task TASK-126
 ./tools/agent/mc-agent.sh android test cache-memory --task TASK-126
 ./tools/agent/mc-agent.sh scan task126-final-gates --task TASK-126 --strict
 ```

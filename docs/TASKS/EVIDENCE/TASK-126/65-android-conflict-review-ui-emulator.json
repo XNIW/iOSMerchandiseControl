@@ -1,0 +1,111 @@
+{
+  "NEXT_ACTION": "Use this TASK-126 review-fix evidence during independent review; do not mark DONE.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-126/65-android-conflict-review-ui-emulator.json",
+    "log": null,
+    "markdown": "docs/TASKS/EVIDENCE/TASK-126/65-android-conflict-review-ui-emulator.md",
+    "screenshot": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021306Z-android-smoke-conflict-review-ui-task-TASK-126-p63521-android-conflict-review-ui.png",
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [],
+  "checks": [
+    {
+      "id": "deterministic-choice-outcomes",
+      "reason": "Unit/JVM/XCTest interaction-equivalent choices verified expected local and sync result.",
+      "status": "PASS"
+    },
+    {
+      "id": "runtime-surface-visible",
+      "reason": "Simulator/emulator smoke launched the app and captured visible Review/Recovery surface screenshot.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "UseLocal,UseRemote,EditManually,ApplyToSimilar,PostponeReview",
+      "id": "buttons-visible",
+      "reason": "Runtime smoke JSON lists visible user choice controls.",
+      "status": "PASS"
+    },
+    {
+      "id": "timing-and-state-json",
+      "reason": "Runtime smoke JSON includes required timing and state counters.",
+      "status": "PASS"
+    },
+    {
+      "id": "non-conflicts-auto-merge",
+      "reason": "Different-field changes merge without popup in both directions.",
+      "status": "PASS"
+    },
+    {
+      "id": "only-conflicts-remain-review",
+      "reason": "Mixed batch leaves only conflicting entity in Review.",
+      "status": "PASS"
+    }
+  ],
+  "cleanup_plan_id": null,
+  "command": "evidence 65-android-conflict-review-ui-emulator --task TASK-126",
+  "command_slug": "evidence-65-android-conflict-review-ui-emulator-task-TASK-126",
+  "details": {
+    "runtimeSmoke": {
+      "duration_ms": 5417,
+      "payload": {
+        "buttons": "UseLocal,UseRemote,EditManually,ApplyToSimilar,PostponeReview",
+        "conflictCountAfter": 0,
+        "conflictCountBefore": 1,
+        "dialogVisible": true,
+        "kind": "conflict-review-ui",
+        "mergedCount": 0,
+        "pendingAfter": 0,
+        "pendingBefore": 1,
+        "reviewRemainingCount": 0,
+        "status": "PASS",
+        "surface": "ConflictReview",
+        "timeToApplyChoiceMs": 95,
+        "timeToFinalStateMs": 235,
+        "timeToReviewShownMs": 120
+      },
+      "report": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021306Z-android-smoke-conflict-review-ui-task-TASK-126-p63521.json",
+      "runtime_json": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/runtime/20260527T021306Z-android-smoke-conflict-review-ui-task-TASK-126-p63521-android-conflict-review-ui-smoke.json",
+      "screenshot": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021306Z-android-smoke-conflict-review-ui-task-TASK-126-p63521-android-conflict-review-ui.png"
+    },
+    "scope": "Validated primarily on iOS Simulator + Android Emulator; physical devices not required for TASK-126 review."
+  },
+  "device_simulator_redacted": {},
+  "dirty_state": "dirty",
+  "duration_ms": 0,
+  "env_redacted": {
+    "MC_TASK_ID": "TASK-126"
+  },
+  "exit_code": 0,
+  "git_sha": "88c90e20",
+  "next_action_recommended": "Use this TASK-126 review-fix evidence during independent review; do not mark DONE.",
+  "platform": "android",
+  "profile": null,
+  "raw_log_redacted": true,
+  "redactionApplied": true,
+  "references": [
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021511Z-android-test-conflict-review-ui-task-TASK-126-p67065.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021306Z-android-smoke-conflict-review-ui-task-TASK-126-p63521.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/runtime/20260527T021306Z-android-smoke-conflict-review-ui-task-TASK-126-p63521-android-conflict-review-ui-smoke.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021306Z-android-smoke-conflict-review-ui-task-TASK-126-p63521-android-conflict-review-ui.png"
+  ],
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "65-android-conflict-review-ui-emulator",
+  "safety_level": "safe-readonly",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "taskId": "TASK-126",
+  "task_id": "TASK-126",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-27T02:20:33Z",
+  "timestamp_start": "2026-05-27T02:20:33Z",
+  "warnings": []
+}

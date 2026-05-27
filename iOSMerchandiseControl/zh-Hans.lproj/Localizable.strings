@@ -39,6 +39,30 @@
 "common.rows_header" = "行";
 "common.row_number" = "第 %d 行";
 
+/* TASK-126 Review / Recovery */
+"task126.review.cancel" = "取消";
+"task126.account.keep_current" = "留在当前账号";
+"task126.account.export_backup" = "导出备份";
+"task126.account.discard_and_switch" = "丢弃待同步并切换";
+"task126.account.switch" = "切换账号";
+"task126.account.clean_populated.title" = "切换到已有数据的账号";
+"task126.account.clean_populated.message" = "本地缓存是干净的。打开前会验证目标账号。";
+"task126.account.dirty.title" = "待同步更改需要复核";
+"task126.account.dirty.message" = "自动推送已阻止，避免把此账号的更改发送到其他账号。";
+"task126.conflict.use_local" = "使用本地";
+"task126.conflict.use_remote" = "使用云端";
+"task126.conflict.edit_manually" = "手动编辑";
+"task126.conflict.apply_to_similar" = "应用到类似冲突";
+"task126.conflict.postpone" = "稍后复核";
+"task126.conflict.auto_merge.title" = "更改可自动合并";
+"task126.conflict.auto_merge.message" = "不同字段会自动合并，不显示复核弹窗。";
+"task126.conflict.same_field.title" = "冲突复核";
+"task126.conflict.same_field.message" = "同一字段在两处更改。请选择保留哪个值。";
+"task126.conflict.delete_edit.title" = "云端已删除，本地已编辑";
+"task126.conflict.delete_edit.message" = "必须复核后才能保留编辑或接受删除。";
+"task126.conflict.price_stale.title" = "价格历史冲突";
+"task126.conflict.price_stale.message" = "此价格时段存在不同值。请选择如何保持历史一致。";
+
 /* Tabs */
 "tab.inventory" = "库存";
 "tab.database" = "数据库";

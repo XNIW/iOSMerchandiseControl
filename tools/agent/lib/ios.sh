@@ -143,6 +143,88 @@ mc_ios_runtime_foreground_installed_app() {
   xcrun simctl launch "$target" "$bundle_id" || return "$MC_EXIT_BLOCKED"
 }
 
+mc_ios_task126_ui_smoke() {
+  local kind="$1"
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_CA_REFS="AC-126-05,AC-126-12,AC-126-52"
+  local target bundle_id derived_data app_path code run_id screenshot_abs screenshot_rel container smoke_json artifact_json
+
+  target="$(mc_ios_simulator_target)" || return $?
+  bundle_id="$(mc_ios_app_bundle_id)"
+  run_id="${MC_RUN_ID:-${MC_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}-ios-smoke-${kind}-p$$}"
+  derived_data="$(mc_ios_runtime_derived_data "task126-ui-smoke-${kind}")"
+
+  mc_ios_acquire_xcode_lock || return $?
+  app_path="$(mc_ios_build_app_for_runtime "$derived_data")"
+  code=$?
+  mc_ios_release_xcode_lock
+  if [[ "$code" -ne 0 ]]; then
+    MC_SUMMARY="iOS smoke ${kind} FAIL: app build for Simulator did not complete."
+    MC_NEXT_ACTION="Inspect xcodebuild output and rerun the targeted UI smoke."
+    return "$MC_EXIT_FAIL"
+  fi
+
+  mc_ios_boot_simulator || return "$MC_EXIT_BLOCKED"
+  xcrun simctl terminate "$target" "$bundle_id" >/dev/null 2>&1 || true
+  xcrun simctl install "$target" "$app_path" || {
+    MC_SUMMARY="iOS smoke ${kind} BLOCKED: Simulator install failed."
+    MC_NEXT_ACTION="Inspect simctl install output and the selected Simulator target."
+    return "$MC_EXIT_BLOCKED"
+  }
+  xcrun simctl terminate "$target" "$bundle_id" >/dev/null 2>&1 || true
+  SIMCTL_CHILD_TASK126_UI_SMOKE_KIND="$kind" xcrun simctl launch "$target" "$bundle_id" >/dev/null || {
+    MC_SUMMARY="iOS smoke ${kind} BLOCKED: Simulator launch failed."
+    MC_NEXT_ACTION="Inspect simctl launch output and rerun with the same Simulator target."
+    return "$MC_EXIT_BLOCKED"
+  }
+  sleep 2
+
+  mkdir -p "$MC_EVIDENCE_ABS/agent-runs/runtime"
+  screenshot_abs="$MC_EVIDENCE_ABS/agent-runs/${run_id}-ios-${kind}.png"
+  if xcrun simctl io "$target" screenshot "$screenshot_abs" >/dev/null; then
+    screenshot_rel="$MC_EVIDENCE_DIR/agent-runs/$(basename "$screenshot_abs")"
+    MC_ARTIFACT_SCREENSHOT="$screenshot_rel"
+  else
+    MC_SUMMARY="iOS smoke ${kind} FAIL: Simulator screenshot capture failed."
+    MC_NEXT_ACTION="Verify the Simulator is booted and rerun the UI smoke."
+    return "$MC_EXIT_FAIL"
+  fi
+
+  container="$(xcrun simctl get_app_container "$target" "$bundle_id" data 2>/dev/null || true)"
+  smoke_json="$container/Documents/task126-ui-smoke-${kind}.json"
+  artifact_json="$MC_EVIDENCE_ABS/agent-runs/runtime/${run_id}-ios-${kind}-smoke.json"
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    [[ -f "$smoke_json" ]] && break
+    sleep 1
+  done
+  if [[ ! -f "$smoke_json" ]]; then
+    MC_SUMMARY="iOS smoke ${kind} FAIL: runtime UI smoke evidence JSON was not written by the Simulator app."
+    MC_NEXT_ACTION="Inspect app launch logs and TASK126_UI_SMOKE_KIND handling."
+    return "$MC_EXIT_FAIL"
+  fi
+  cp "$smoke_json" "$artifact_json"
+  if ! python3 - "$artifact_json" <<'PY'
+import json, sys
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+assert payload.get("status") == "PASS"
+assert payload.get("dialogVisible") in ("true", True)
+assert payload.get("buttons")
+for key in ["timeToReviewShownMs", "timeToApplyChoiceMs", "timeToFinalStateMs", "pendingBefore", "pendingAfter", "conflictCountBefore", "conflictCountAfter", "mergedCount", "reviewRemainingCount"]:
+    int(payload[key])
+PY
+  then
+    MC_SUMMARY="iOS smoke ${kind} FAIL: runtime evidence JSON is incomplete."
+    MC_NEXT_ACTION="Fix the Task126ReviewInteractionSmokeView payload and rerun smoke."
+    return "$MC_EXIT_FAIL"
+  fi
+  mc_report_log "TASK-126 iOS UI smoke JSON: $(mc_relpath "$artifact_json")"
+  MC_SUMMARY="iOS smoke ${kind} PASS on iOS Simulator with visible Review/Recovery sheet, buttons, screenshot, and timing/state JSON."
+  MC_NEXT_ACTION="Use the screenshot and smoke JSON as simulator UI interaction evidence."
+  return "$MC_EXIT_PASS"
+}
+
 mc_ios_store_runtime_guard() {
   local store="$1"
   if [[ -z "$store" || ! -f "$store" ]]; then
@@ -1122,6 +1204,14 @@ mc_ios_test() {
       MC_CA_REFS="AC-126-05,AC-126-06,AC-126-24"
       tests=(-only-testing:iOSMerchandiseControlTests/Task126ConflictReviewTests)
       ;;
+    conflict-review-ui)
+      MC_CA_REFS="AC-126-05,AC-126-06,AC-126-24,AC-126-52"
+      tests=(-only-testing:iOSMerchandiseControlTests/Task126ConflictReviewUITests)
+      ;;
+    account-switch-review-ui)
+      MC_CA_REFS="AC-126-02,AC-126-12,AC-126-13,AC-126-52"
+      tests=(-only-testing:iOSMerchandiseControlTests/Task126AccountSwitchReviewUITests)
+      ;;
     cache-memory)
       MC_CA_REFS="AC-126-08,AC-126-09,AC-126-40,AC-126-41"
       tests=(-only-testing:iOSMerchandiseControlTests/Task126CacheMemoryTests)
@@ -1205,6 +1295,11 @@ mc_ios_smoke() {
       MC_SUMMARY="iOS smoke history PASS_WITH_NOTES: runtime app launched and HistoryView uses the UUID/technical-title display formatter; capture visual/XcodeBuildMCP evidence for strict UI proof."
       MC_NEXT_ACTION="Capture iOS History screenshot/accessibility evidence and run live runtime-parity."
       return "$MC_EXIT_PASS"
+      ;;
+    conflict-review-ui|account-switch-review-ui)
+      MC_CA_REFS="AC-126-05,AC-126-12,AC-126-52"
+      mc_ios_task126_ui_smoke "$kind"
+      return $?
       ;;
     *)
       MC_SUMMARY="Unknown iOS smoke kind: ${kind}"

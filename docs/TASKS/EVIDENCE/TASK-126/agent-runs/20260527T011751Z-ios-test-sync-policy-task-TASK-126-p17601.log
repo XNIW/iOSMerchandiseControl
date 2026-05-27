@@ -221,24 +221,24 @@ SwiftCompile normal arm64 Compiling\ Task126SyncPolicy.swift <HOME_REDACTED>/Des
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Policy/Task126SyncPolicy.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ SyncEventOutboxDrainService.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxDrainService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ LocalOutboxStore.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/LocalOutboxStore.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftEmitModule normal arm64 Emitting\ module\ for\ iOSMerchandiseControl (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 EmitSwiftModule normal arm64 (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/SyncOrchestrator.swift:92:93: warning: main actor-isolated static property 'shared' can not be referenced from a nonisolated context; this is an error in the Swift 6 language mode
         backgroundScheduler: any SyncBackgroundTaskScheduling = SyncBackgroundTaskScheduler.shared
                                                                                             ^
@@ -252,7 +252,7 @@ SwiftCompile normal arm64 Compiling\ SupabaseManualSyncReleaseActivityRegistrati
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseActivityRegistrationAdapter.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftDriverJobDiscovery normal arm64 Compiling SyncEventOutboxDrainService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
@@ -264,24 +264,24 @@ SwiftCompile normal arm64 Compiling\ AutomaticSyncEventOutboxWriter.swift <HOME_
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Outbox/AutomaticSyncEventOutboxWriter.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ SyncEventOutboxEntry.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ LocalStoreIdentity.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ LocalPendingChange.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift:422:59: warning: call to main actor-isolated static method 'snapshot(for:ensureRemoteID:)' in a synchronous nonisolated context
                 for: HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
                                                           ^
@@ -293,7 +293,7 @@ SwiftCompile normal arm64 Compiling\ SyncEventOutboxEnqueueService.swift <HOME_R
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEnqueueService.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftDriverJobDiscovery normal arm64 Compiling LocalStoreIdentity.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
@@ -342,13 +342,13 @@ SwiftDriverJobDiscovery normal arm64 Compiling bridging header (in target 'iOSMe
 SwiftEmitModule normal arm64 Emitting\ module\ for\ iOSMerchandiseControlTests (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
 EmitSwiftModule normal arm64 (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ Task126SyncPolicyTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126SyncPolicyTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126SyncPolicyTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 ConstructStubExecutorLinkFileList <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-ExecutorLinkFileList-normal-arm64.txt (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
@@ -405,31 +405,31 @@ ExtractAppIntentsMetadata (in target 'iOSMerchandiseControlTests' from project '
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
 <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib: replacing existing signature
 
 CodeSign <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
 
 Validate <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')

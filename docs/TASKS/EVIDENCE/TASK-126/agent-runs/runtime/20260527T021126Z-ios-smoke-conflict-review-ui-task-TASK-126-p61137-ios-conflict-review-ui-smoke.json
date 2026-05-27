@@ -1,0 +1,16 @@
+{
+  "buttons" : "useLocal,useRemote,editManually,applyToSimilar,postponeReview",
+  "conflictCountAfter" : "0",
+  "conflictCountBefore" : "1",
+  "dialogVisible" : "true",
+  "kind" : "conflict-review-ui",
+  "mergedCount" : "0",
+  "pendingAfter" : "0",
+  "pendingBefore" : "1",
+  "reviewRemainingCount" : "0",
+  "status" : "PASS",
+  "surface" : "conflictReview",
+  "timeToApplyChoiceMs" : "95",
+  "timeToFinalStateMs" : "235",
+  "timeToReviewShownMs" : "120"
+}

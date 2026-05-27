@@ -1,0 +1,124 @@
+{
+  "NEXT_ACTION": "Hand off TASK-126 for independent review; do not mark DONE.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-126/70-review-fix-final-gates.json",
+    "log": null,
+    "markdown": "docs/TASKS/EVIDENCE/TASK-126/70-review-fix-final-gates.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-126-05",
+    "AC-126-06",
+    "AC-126-12",
+    "AC-126-23",
+    "AC-126-24",
+    "AC-126-52"
+  ],
+  "checks": [
+    {
+      "id": "final-gates",
+      "reason": "task126-final-gates strict scan passed after UI wrappers were discoverable.",
+      "status": "PASS"
+    },
+    {
+      "id": "json-validation-agent-runs",
+      "reason": "agent-runs JSON schema validation passed after moving runtime payload JSON under agent-runs/runtime.",
+      "status": "PASS"
+    },
+    {
+      "id": "sensitive-scan",
+      "reason": "Sensitive scan passed with redacted reports.",
+      "status": "PASS"
+    },
+    {
+      "id": "evidence-scan",
+      "reason": "Evidence scan passed after 64-69 were produced.",
+      "status": "PASS"
+    },
+    {
+      "id": "repo-diff-scan",
+      "reason": "Repo diff scan passed.",
+      "status": "PASS"
+    },
+    {
+      "id": "ui-runtime-scope",
+      "reason": "Validated primarily on iOS Simulator + Android Emulator; physical devices not required.",
+      "status": "PASS"
+    }
+  ],
+  "cleanup_plan_id": null,
+  "command": "evidence 70-review-fix-final-gates --task TASK-126",
+  "command_slug": "evidence-70-review-fix-final-gates-task-TASK-126",
+  "details": {
+    "physicalDevices": "NOT_APPLICABLE for TASK-126 review unless explicitly noted",
+    "references": {
+      "android_account_smoke": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021729Z-android-smoke-account-switch-review-ui-task-TASK-126-p71205.json",
+      "android_account_ui": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021712Z-android-test-account-switch-review-ui-task-TASK-126-p70216.json",
+      "android_conflict_smoke": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021306Z-android-smoke-conflict-review-ui-task-TASK-126-p63521.json",
+      "android_conflict_ui": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021511Z-android-test-conflict-review-ui-task-TASK-126-p67065.json",
+      "evidence": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T022514Z-scan-evidence-task-TASK-126-p89071.json",
+      "ios_account_smoke": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021729Z-ios-smoke-account-switch-review-ui-task-TASK-126-p71204.json",
+      "ios_account_ui": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021711Z-ios-test-account-switch-review-ui-task-TASK-126-p70136.json",
+      "ios_conflict_smoke": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021126Z-ios-smoke-conflict-review-ui-task-TASK-126-p61137.json",
+      "ios_conflict_ui": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021511Z-ios-test-conflict-review-ui-task-TASK-126-p67064.json",
+      "json_validation": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T022514Z-report-validate-json-task-TASK-126-path-docs-TASKS-EVIDENCE-TASK-126-agent-runs-p89069.json",
+      "repo_diff": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T022514Z-scan-repo-diff-task-TASK-126-p89072.json",
+      "sensitive": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T022514Z-scan-sensitive-task-TASK-126-p89070.json",
+      "task126_final_gates": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T022504Z-scan-task126-final-gates-task-TASK-126-strict-p88604.json"
+    },
+    "scope": "Validated primarily on iOS Simulator + Android Emulator",
+    "verdict": "ACTIVE / REVIEW \u2014 TASK126_POLICY_CACHE_MVP_READY_WITH_UI_INTERACTION_EVIDENCE"
+  },
+  "device_simulator_redacted": {},
+  "dirty_state": "dirty",
+  "duration_ms": 0,
+  "env_redacted": {
+    "MC_TASK_ID": "TASK-126"
+  },
+  "exit_code": 0,
+  "git_sha": "88c90e20",
+  "next_action_recommended": "Hand off TASK-126 for independent review; do not mark DONE.",
+  "platform": "general",
+  "profile": null,
+  "raw_log_redacted": true,
+  "redactionApplied": true,
+  "references": [
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T022504Z-scan-task126-final-gates-task-TASK-126-strict-p88604.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T022514Z-report-validate-json-task-TASK-126-path-docs-TASKS-EVIDENCE-TASK-126-agent-runs-p89069.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T022514Z-scan-sensitive-task-TASK-126-p89070.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T022514Z-scan-evidence-task-TASK-126-p89071.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T022514Z-scan-repo-diff-task-TASK-126-p89072.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021511Z-ios-test-conflict-review-ui-task-TASK-126-p67064.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021511Z-android-test-conflict-review-ui-task-TASK-126-p67065.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021711Z-ios-test-account-switch-review-ui-task-TASK-126-p70136.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021712Z-android-test-account-switch-review-ui-task-TASK-126-p70216.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021126Z-ios-smoke-conflict-review-ui-task-TASK-126-p61137.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021306Z-android-smoke-conflict-review-ui-task-TASK-126-p63521.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021729Z-ios-smoke-account-switch-review-ui-task-TASK-126-p71204.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T021729Z-android-smoke-account-switch-review-ui-task-TASK-126-p71205.json"
+  ],
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "70-review-fix-final-gates",
+  "safety_level": "safe-readonly",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "taskId": "TASK-126",
+  "task_id": "TASK-126",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-27T02:25:56Z",
+  "timestamp_start": "2026-05-27T02:24:03Z",
+  "warnings": [
+    "LINKED_READONLY_BLOCKED_EXTERNAL_PREEXISTING",
+    "PHYSICAL_DEVICE_NOT_REQUIRED"
+  ]
+}

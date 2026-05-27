@@ -1,0 +1,33 @@
+=== mc-agent scan cache-active-store-only --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-126 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "active-store-only-present",
+      "reason": "Only active store/cache may be loaded.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "cache-mode-present",
+      "reason": "Cache mode must be explicit.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "manifest-present",
+      "reason": "Cache manifest must be represented.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T02:32:35Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.cache-active-store-only",
+  "startedAt": "2026-05-27T02:32:35Z",
+  "status": "PASS",
+  "taskId": "TASK-126"
+}

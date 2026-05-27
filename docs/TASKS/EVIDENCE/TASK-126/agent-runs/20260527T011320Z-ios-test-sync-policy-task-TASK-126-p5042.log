@@ -237,7 +237,7 @@ SwiftEmitModule normal arm64 Emitting\ module\ for\ iOSMerchandiseControl (in ta
 
 EmitSwiftModule normal arm64 (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ LocalStoreIdentity.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 Failed frontend command:
@@ -245,7 +245,7 @@ Failed frontend command:
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Account/LocalStoreIdentity.swift:3:20: error: type 'LocalStoreIdentity' does not conform to protocol 'RawRepresentable'
 nonisolated struct LocalStoreIdentity: RawRepresentable, Codable, Equatable, Hashable, Sendable {
                    ^
@@ -260,19 +260,19 @@ SwiftCompile normal arm64 Compiling\ SyncEventOutboxEntry.swift <HOME_REDACTED>/
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Outbox/SyncEventOutboxEntry.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ LocalPendingChange.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ Task126SyncPolicy.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Policy/Task126SyncPolicy.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Policy/Task126SyncPolicy.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 
 Test session results, code coverage, and logs:

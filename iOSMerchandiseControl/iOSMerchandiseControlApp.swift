@@ -24,7 +24,9 @@ struct iOSMerchandiseControlApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if Self.isRunningHostedXCTest {
+            if let task126SmokeKind = Self.task126UISmokeKind {
+                Task126ReviewInteractionSmokeView(kind: task126SmokeKind)
+            } else if Self.isRunningHostedXCTest {
                 HostedXCTestRootView()
             } else {
                 ContentView(
@@ -55,6 +57,16 @@ struct iOSMerchandiseControlApp: App {
     private static var isRunningHostedXCTest: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
             && ProcessInfo.processInfo.environment["TASK115_REAL_ROOT_LIFECYCLE_TEST"] != "1"
+    }
+
+    private static var task126UISmokeKind: String? {
+        #if DEBUG
+        let value = ProcessInfo.processInfo.environment["TASK126_UI_SMOKE_KIND"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return value?.isEmpty == false ? value : nil
+        #else
+        return nil
+        #endif
     }
 
     private static func makeHostedXCTestDependencies() -> SupabaseAppDependencies {

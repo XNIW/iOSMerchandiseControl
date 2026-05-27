@@ -593,11 +593,102 @@ STATUS
   return "$MC_EXIT_PASS"
 }
 
+mc_android_prefer_emulator_for_task126_ui() {
+  if [[ -n "${MC_ANDROID_DEVICE_SERIAL:-}" ]]; then
+    return 0
+  fi
+  local emulator
+  emulator="$(adb devices | awk '$1 ~ /^emulator-/ && $2 == "device" { print $1; exit }')"
+  if [[ -n "$emulator" ]]; then
+    MC_ANDROID_DEVICE_SERIAL="$emulator"
+    export MC_ANDROID_DEVICE_SERIAL
+  fi
+}
+
+mc_android_task126_ui_smoke() {
+  local kind="$1"
+  MC_PLATFORM="android"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_CA_REFS="AC-126-05,AC-126-12,AC-126-52"
+  local serial pkg component apk code run_id screenshot_abs screenshot_rel artifact_json
+  pkg="com.example.merchandisecontrolsplitview"
+  component="${pkg}/.MainActivity"
+  run_id="${MC_RUN_ID:-${MC_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}-android-smoke-${kind}-p$$}"
+
+  mc_android_prefer_emulator_for_task126_ui
+  mc_android_serial >/dev/null || return $?
+  serial="$MC_ANDROID_SELECTED_SERIAL"
+  mc_android_require_unlocked "$serial" || return $?
+  mc_android_gradle :app:assembleDebug || return "$MC_EXIT_FAIL"
+  apk="$MC_ANDROID_REPO/app/build/outputs/apk/debug/app-debug.apk"
+  adb -s "$serial" install -r "$apk" >/dev/null || return "$MC_EXIT_BLOCKED"
+  adb -s "$serial" shell am force-stop "$pkg" >/dev/null 2>&1 || true
+  adb -s "$serial" shell run-as "$pkg" rm -f "files/task126-ui-smoke-${kind}.json" >/dev/null 2>&1 || true
+  adb -s "$serial" shell am start -n "$component" --es task126_ui_smoke_kind "$kind" >/dev/null
+  code=$?
+  if [[ "$code" -ne 0 ]]; then
+    MC_SUMMARY="Android smoke ${kind} BLOCKED: emulator launch intent failed."
+    MC_NEXT_ACTION="Inspect adb am start output and selected emulator state."
+    return "$MC_EXIT_BLOCKED"
+  fi
+
+  mkdir -p "$MC_EVIDENCE_ABS/agent-runs/runtime"
+  artifact_json="$MC_EVIDENCE_ABS/agent-runs/runtime/${run_id}-android-${kind}-smoke.json"
+  local artifact_tmp valid_json
+  artifact_tmp="${artifact_json}.tmp"
+  valid_json=0
+  local attempt
+  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    adb -s "$serial" exec-out run-as "$pkg" cat "files/task126-ui-smoke-${kind}.json" > "$artifact_tmp" 2>/dev/null || true
+    if [[ -s "$artifact_tmp" ]] && python3 - "$artifact_tmp" <<'PY'
+import json, sys
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+assert payload.get("status") == "PASS"
+assert payload.get("dialogVisible") is True
+assert payload.get("buttons")
+for key in ["timeToReviewShownMs", "timeToApplyChoiceMs", "timeToFinalStateMs", "pendingBefore", "pendingAfter", "conflictCountBefore", "conflictCountAfter", "mergedCount", "reviewRemainingCount"]:
+    int(payload[key])
+PY
+    then
+      mv "$artifact_tmp" "$artifact_json"
+      valid_json=1
+      break
+    fi
+    sleep 1
+  done
+  rm -f "$artifact_tmp"
+  if [[ "$valid_json" != "1" ]]; then
+    MC_SUMMARY="Android smoke ${kind} FAIL: runtime UI smoke evidence JSON was not written by the emulator app."
+    MC_NEXT_ACTION="Inspect app launch logs and task126_ui_smoke_kind handling."
+    return "$MC_EXIT_FAIL"
+  fi
+
+  screenshot_abs="$MC_EVIDENCE_ABS/agent-runs/${run_id}-android-${kind}.png"
+  if adb -s "$serial" exec-out screencap -p > "$screenshot_abs"; then
+    screenshot_rel="$MC_EVIDENCE_DIR/agent-runs/$(basename "$screenshot_abs")"
+    MC_ARTIFACT_SCREENSHOT="$screenshot_rel"
+  else
+    MC_SUMMARY="Android smoke ${kind} FAIL: emulator screenshot capture failed."
+    MC_NEXT_ACTION="Verify the emulator display is available and rerun smoke."
+    return "$MC_EXIT_FAIL"
+  fi
+  mc_report_log "TASK-126 Android UI smoke JSON: $(mc_relpath "$artifact_json")"
+  MC_SUMMARY="Android smoke ${kind} PASS on Android Emulator with visible Review/Recovery dialog, buttons, screenshot, and timing/state JSON."
+  MC_NEXT_ACTION="Use the screenshot and smoke JSON as emulator UI interaction evidence."
+  return "$MC_EXIT_PASS"
+}
+
 mc_android_smoke() {
   local kind="$1"
   MC_PLATFORM="android"
   MC_SAFETY_LEVEL="safe-readonly"
   MC_CA_REFS="CA-113-29,CA-113-30"
+  case "$kind" in
+    conflict-review-ui|account-switch-review-ui)
+      mc_android_task126_ui_smoke "$kind"
+      return $?
+      ;;
+  esac
   local serial
   mc_android_serial >/dev/null || return $?
   serial="$MC_ANDROID_SELECTED_SERIAL"
@@ -635,6 +726,14 @@ mc_android_test_task126_suite() {
       MC_CA_REFS="AC-126-05,AC-126-06,AC-126-24"
       pattern="*Task126ConflictReviewTest*"
       ;;
+    conflict-review-ui)
+      MC_CA_REFS="AC-126-05,AC-126-06,AC-126-24,AC-126-52"
+      pattern="*Task126ConflictReviewUiTest*"
+      ;;
+    account-switch-review-ui)
+      MC_CA_REFS="AC-126-02,AC-126-12,AC-126-13,AC-126-52"
+      pattern="*Task126AccountSwitchReviewUiTest*"
+      ;;
     cache-memory)
       MC_CA_REFS="AC-126-08,AC-126-09,AC-126-40,AC-126-41"
       pattern="*Task126CacheMemoryTest*"
@@ -664,7 +763,7 @@ mc_cmd_android() {
       case "${1:-sync}" in
         sync) mc_android_test_sync ;;
         offline) mc_android_test_offline ;;
-        sync-policy|account-store-boundary|conflict-review|cache-memory) mc_android_test_task126_suite "${1:-}" ;;
+        sync-policy|account-store-boundary|conflict-review|conflict-review-ui|account-switch-review-ui|cache-memory) mc_android_test_task126_suite "${1:-}" ;;
         *) MC_SUMMARY="Unknown android test suite: ${1:-}"; return "$MC_EXIT_MISCONFIGURED" ;;
       esac
       ;;

@@ -1,0 +1,33 @@
+=== mc-agent scan conflict-review-coverage --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-126 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "conflict-review-type-present",
+      "reason": "Conflict Review surface/model must exist.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "delete-vs-edit-present",
+      "reason": "Delete-vs-edit must route to Review.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "batch-review-present",
+      "reason": "Batch conflict review must be represented.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T02:32:35Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.conflict-review-coverage",
+  "startedAt": "2026-05-27T02:32:35Z",
+  "status": "PASS",
+  "taskId": "TASK-126"
+}

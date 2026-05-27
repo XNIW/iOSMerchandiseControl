@@ -11,7 +11,7 @@ The current default is 'true'.
 It will be removed in version 10.0 of the Android Gradle plugin.
 WARNING: API 'applicationVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
 It will be removed in version 10.0 of the Android Gradle plugin.
-The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
     android.newDsl=false
 to this project's gradle.properties file.
 For more information, see http://developer.android.com/build/r/new-dsl.
@@ -19,7 +19,7 @@ For more information, see http://developer.android.com/build/r/new-dsl.
 To determine what is calling applicationVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
 WARNING: API 'testVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
 It will be removed in version 10.0 of the Android Gradle plugin.
-The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
     android.newDsl=false
 to this project's gradle.properties file.
 For more information, see http://developer.android.com/build/r/new-dsl.
@@ -27,7 +27,7 @@ For more information, see http://developer.android.com/build/r/new-dsl.
 To determine what is calling testVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
 WARNING: API 'unitTestVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
 It will be removed in version 10.0 of the Android Gradle plugin.
-The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding
     android.newDsl=false
 to this project's gradle.properties file.
 For more information, see http://developer.android.com/build/r/new-dsl.

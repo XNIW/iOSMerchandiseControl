@@ -244,7 +244,7 @@ SwiftEmitModule normal arm64 Emitting\ module\ for\ iOSMerchandiseControlTests (
 
 EmitSwiftModule normal arm64 (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 
 SwiftCompile normal arm64 Compiling\ Task126ConflictReviewTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126ConflictReviewTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
 Failed frontend command:
@@ -252,7 +252,7 @@ Failed frontend command:
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126ConflictReviewTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126ConflictReviewTests.swift:6:24: error: cannot find 'Task126ChangedFieldsContract' in scope
         XCTAssertFalse(Task126ChangedFieldsContract.isValid(operation: .update, changedFields: []))
                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -329,7 +329,7 @@ Failed frontend command:
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126CacheMemoryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126CacheMemoryTests.swift:6:24: error: cannot find 'Task126CacheManifest' in scope
         let manifest = Task126CacheManifest(
                        ^~~~~~~~~~~~~~~~~~~~
@@ -370,7 +370,7 @@ Failed frontend command:
 
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126SyncPolicyTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126SyncPolicyTests.swift:6:24: error: cannot find 'Task126SyncPolicy' in scope
         XCTAssertEqual(Task126SyncPolicy.storeScopeMode, .localDefaultStoreOnly)
                        ^~~~~~~~~~~~~~~~~
@@ -427,7 +427,7 @@ SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerch
 SwiftCompile normal arm64 Compiling\ Task126AccountStoreBoundaryTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126AccountStoreBoundaryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
 SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126AccountStoreBoundaryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
     cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
-    
+
 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126AccountStoreBoundaryTests.swift:12:42: error: extra arguments at positions #2, #3, #4, #5, #6 in call
         let identity = LocalStoreIdentity(
                                          ^
