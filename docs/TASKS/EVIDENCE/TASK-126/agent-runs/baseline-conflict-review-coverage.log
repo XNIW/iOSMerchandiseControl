@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T010003Z-scan-conflict-review-coverage-task-TASK-126-strict-p94015.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T010003Z-scan-conflict-review-coverage-task-TASK-126-strict-p94015.json
+NEXT_ACTION Use this report in TASK-126 evidence matrix.

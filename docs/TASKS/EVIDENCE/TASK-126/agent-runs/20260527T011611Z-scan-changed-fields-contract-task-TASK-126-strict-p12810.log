@@ -1,0 +1,33 @@
+=== mc-agent scan changed-fields-contract --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-126 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "changed-fields-present",
+      "reason": "Mutative pending changes must record changedFields.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "same-field-conflict-present",
+      "reason": "Same-field conflict must route to Review.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "domain-invariant-present",
+      "reason": "Field-level merge must respect business invariants.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T01:16:12Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.changed-fields-contract",
+  "startedAt": "2026-05-27T01:16:12Z",
+  "status": "PASS",
+  "taskId": "TASK-126"
+}

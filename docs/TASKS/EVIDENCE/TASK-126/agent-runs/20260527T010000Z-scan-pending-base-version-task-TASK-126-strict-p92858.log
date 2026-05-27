@@ -1,0 +1,39 @@
+=== mc-agent scan pending-base-version --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Add base version/event metadata to pending changes.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "baseRemoteUpdatedAt-present",
+      "reason": "Pending changes should persist baseRemoteUpdatedAt when available.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "baseVersion-present",
+      "reason": "Pending changes should persist baseVersion when available.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "baseEventId-present",
+      "reason": "Pending changes should persist baseEventId when available.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "idempotency-key-present",
+      "reason": "Pending/outbox entries must have idempotency.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T01:00:00Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "FAIL",
+  "schemaVersion": "1.1",
+  "source": "scan.pending-base-version",
+  "startedAt": "2026-05-27T01:00:00Z",
+  "status": "FAIL",
+  "taskId": "TASK-126"
+}

@@ -1,0 +1,39 @@
+=== mc-agent scan productprice-history-policy --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-126 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "productprice-present",
+      "reason": "ProductPrice domain must be covered.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "append-dedupe-present",
+      "reason": "ProductPrice history policy must be append/dedupe.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "stale-or-same-slot-present",
+      "reason": "Stale/same-slot ProductPrice conflicts must be handled.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "paging-memory-present",
+      "reason": "ProductPrice memory policy must be paged.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T01:00:03Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.productprice-history-policy",
+  "startedAt": "2026-05-27T01:00:03Z",
+  "status": "PASS",
+  "taskId": "TASK-126"
+}

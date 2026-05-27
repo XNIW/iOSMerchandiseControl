@@ -1,0 +1,39 @@
+=== mc-agent scan pending-base-version --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-126 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "baseRemoteUpdatedAt-present",
+      "reason": "Pending changes should persist baseRemoteUpdatedAt when available.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "baseVersion-present",
+      "reason": "Pending changes should persist baseVersion when available.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "baseEventId-present",
+      "reason": "Pending changes should persist baseEventId when available.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "idempotency-key-present",
+      "reason": "Pending/outbox entries must have idempotency.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T01:16:11Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.pending-base-version",
+  "startedAt": "2026-05-27T01:16:11Z",
+  "status": "PASS",
+  "taskId": "TASK-126"
+}

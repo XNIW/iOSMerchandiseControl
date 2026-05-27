@@ -1110,6 +1110,22 @@ mc_ios_test() {
     offline)
       tests=(-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test06OfflineRetryCatalogPendingNoDuplicate)
       ;;
+    sync-policy)
+      MC_CA_REFS="AC-126-01,AC-126-03,AC-126-04,AC-126-10"
+      tests=(-only-testing:iOSMerchandiseControlTests/Task126SyncPolicyTests)
+      ;;
+    account-store-boundary)
+      MC_CA_REFS="AC-126-01,AC-126-02,AC-126-12,AC-126-13"
+      tests=(-only-testing:iOSMerchandiseControlTests/Task126AccountStoreBoundaryTests)
+      ;;
+    conflict-review)
+      MC_CA_REFS="AC-126-05,AC-126-06,AC-126-24"
+      tests=(-only-testing:iOSMerchandiseControlTests/Task126ConflictReviewTests)
+      ;;
+    cache-memory)
+      MC_CA_REFS="AC-126-08,AC-126-09,AC-126-40,AC-126-41"
+      tests=(-only-testing:iOSMerchandiseControlTests/Task126CacheMemoryTests)
+      ;;
     *)
       MC_SUMMARY="Unknown iOS test suite: ${suite}"
       return "$MC_EXIT_MISCONFIGURED"

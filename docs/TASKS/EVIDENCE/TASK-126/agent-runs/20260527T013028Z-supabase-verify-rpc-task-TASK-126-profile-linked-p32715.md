@@ -1,0 +1,39 @@
+# mc-agent report
+
+- **Schema**: 1.1
+- **Run ID**: 20260527T013028Z-supabase-verify-rpc-task-TASK-126-profile-linked-p32715
+- **Task**: TASK-126
+- **Command**: `supabase verify-rpc --task TASK-126 --profile linked`
+- **Platform**: supabase
+- **Safety**: safe-readonly
+- **Result**: BLOCKED_EXTERNAL (exit 2)
+- **Duration**: 45242 ms
+- **Repo**: <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+- **Branch**: main
+- **Git SHA**: d7db6732
+- **Dirty**: dirty
+- **Profile**: linked
+- **Android offline tier**: none
+- **Cleanup plan ID**: n/a
+
+## Summary
+
+Supabase verify-rpc BLOCKED for profile linked.
+
+## Counts
+
+- rows_created: 0
+- rows_deleted: 0
+- residue_count: 0
+
+## Artifacts
+
+- Markdown: `docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T013028Z-supabase-verify-rpc-task-TASK-126-profile-linked-p32715.md`
+- JSON: `docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T013028Z-supabase-verify-rpc-task-TASK-126-profile-linked-p32715.json`
+- Log: `docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T013028Z-supabase-verify-rpc-task-TASK-126-profile-linked-p32715.log`
+- xcresult: `n/a`
+- screenshot: `n/a`
+
+## Next Action
+
+Link Supabase project or start local DB, then retry.

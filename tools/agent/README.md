@@ -51,6 +51,38 @@ TASK-118 harness gates:
 
 Per TASK-118 ogni comando deve usare `--task TASK-118` oppure `MC_TASK_ID=TASK-118`; evidence prodotta fuori da `docs/TASKS/EVIDENCE/TASK-118/` e' misconfigurata. Gli scan storici TASK-116/TASK-117 chiudono TASK-118 solo se eseguiti con semantica CA-118 e evidence TASK-118.
 
+TASK-126 automation-first gates:
+
+```bash
+MC_TASK_ID=TASK-126 ./tools/agent/mc-agent.sh help-json
+MC_TASK_ID=TASK-126 ./tools/agent/mc-agent.sh list commands-json
+MC_TASK_ID=TASK-126 ./tools/agent/mc-agent.sh config validate
+MC_TASK_ID=TASK-126 ./tools/agent/mc-agent.sh git head-consistency --task TASK-126
+MC_TASK_ID=TASK-126 ./tools/agent/mc-agent.sh preflight --require-head-consistency --task TASK-126
+./tools/agent/mc-agent.sh scan task126-policy-matrix --task TASK-126 --strict
+./tools/agent/mc-agent.sh scan owner-store-scope --task TASK-126 --strict
+./tools/agent/mc-agent.sh scan local-store-identity --task TASK-126 --strict
+./tools/agent/mc-agent.sh scan pending-base-version --task TASK-126 --strict
+./tools/agent/mc-agent.sh scan changed-fields-contract --task TASK-126 --strict
+./tools/agent/mc-agent.sh scan no-cross-owner-store-pending-push --task TASK-126 --strict
+./tools/agent/mc-agent.sh scan conflict-review-coverage --task TASK-126 --strict
+./tools/agent/mc-agent.sh scan productprice-history-policy --task TASK-126 --strict
+./tools/agent/mc-agent.sh scan cache-active-store-only --task TASK-126 --strict
+./tools/agent/mc-agent.sh scan inactive-cache-cleanup-safety --task TASK-126 --strict
+./tools/agent/mc-agent.sh scan scanner-self-tests --task TASK-126 --strict
+./tools/agent/mc-agent.sh ios test sync-policy --task TASK-126
+./tools/agent/mc-agent.sh ios test account-store-boundary --task TASK-126
+./tools/agent/mc-agent.sh ios test conflict-review --task TASK-126
+./tools/agent/mc-agent.sh ios test cache-memory --task TASK-126
+./tools/agent/mc-agent.sh android test sync-policy --task TASK-126
+./tools/agent/mc-agent.sh android test account-store-boundary --task TASK-126
+./tools/agent/mc-agent.sh android test conflict-review --task TASK-126
+./tools/agent/mc-agent.sh android test cache-memory --task TASK-126
+./tools/agent/mc-agent.sh scan task126-final-gates --task TASK-126 --strict
+```
+
+TASK-126 scanner fixtures live under `tools/agent/fixtures/task126_scanners/`. RED fixtures must fail and GREEN fixtures must pass before scanner output can be used as final evidence.
+
 Per operatore umano:
 
 ```bash

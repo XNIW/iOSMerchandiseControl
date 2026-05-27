@@ -1,0 +1,63 @@
+{
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-126/12-account-store-boundary-contract.json",
+    "log": null,
+    "markdown": "docs/TASKS/EVIDENCE/TASK-126/12-account-store-boundary-contract.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [],
+  "checks": [
+    {
+      "id": "owner_store_scope_present",
+      "reason": "Verified",
+      "status": "PASS"
+    },
+    {
+      "id": "no_cross_pending_push",
+      "reason": "Verified",
+      "status": "PASS"
+    }
+  ],
+  "cleanup_plan_id": null,
+  "command": "evidence 12-account-store-boundary-contract --task TASK-126",
+  "command_slug": "evidence-12-account-store-boundary-contract-task-TASK-126",
+  "device_simulator_redacted": {},
+  "dirty_state": "dirty",
+  "duration_ms": 0,
+  "env_redacted": {
+    "MC_TASK_ID": "TASK-126"
+  },
+  "exit_code": 0,
+  "git_sha": "d7db6732",
+  "next_action_recommended": "Proceed to final REVIEW packaging.",
+  "platform": "general",
+  "profile": null,
+  "raw_log_redacted": true,
+  "redactionApplied": true,
+  "references": [
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011737Z-scan-owner-store-scope-task-TASK-126-strict-p16337.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011738Z-scan-no-cross-owner-store-pending-push-task-TASK-126-strict-p16722.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011802Z-ios-test-account-store-boundary-task-TASK-126-p18151.json",
+    "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T012306Z-android-test-account-store-boundary-task-TASK-126-p23812.json"
+  ],
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "12-account-store-boundary-contract",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "taskId": "TASK-126",
+  "task_id": "TASK-126",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-27T01:38:00Z",
+  "timestamp_start": "2026-05-27T01:38:00Z",
+  "warnings": []
+}

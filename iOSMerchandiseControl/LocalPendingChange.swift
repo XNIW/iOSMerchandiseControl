@@ -53,6 +53,12 @@ final class LocalPendingChange {
     var changeID: String
     var recordSchemaVersion: Int
     var ownerUserID: String?
+    var ownerHash: String?
+    var storeId: String?
+    var localStoreId: String?
+    var syncProtocolVersion: Int = Task126SyncPolicy.syncProtocolVersion
+    var schemaVersion: Int = Task126SyncPolicy.localSchemaVersion
+    var storeEpoch: Int = Task126SyncPolicy.defaultStoreEpoch
     var entityKindRaw: String
     var operationRaw: String
     var statusRaw: String
@@ -61,6 +67,10 @@ final class LocalPendingChange {
     var changedFieldsRaw: String
     var baselineFingerprintHash: String?
     var intendedFingerprintHash: String?
+    var baseRemoteUpdatedAt: Date?
+    var baseVersion: Int?
+    var baseEventId: String?
+    var idempotencyKey: String = UUID().uuidString.lowercased()
     var entityRemoteIDRaw: String?
     var createdAt: Date
     var updatedAt: Date
@@ -71,6 +81,16 @@ final class LocalPendingChange {
         changeID: UUID = UUID(),
         recordSchemaVersion: Int = 1,
         ownerUserID: UUID? = nil,
+        ownerHash: String? = nil,
+        storeId: String? = nil,
+        localStoreId: String? = nil,
+        syncProtocolVersion: Int = Task126SyncPolicy.syncProtocolVersion,
+        schemaVersion: Int = Task126SyncPolicy.localSchemaVersion,
+        storeEpoch: Int = Task126SyncPolicy.defaultStoreEpoch,
+        baseRemoteUpdatedAt: Date? = nil,
+        baseVersion: Int? = nil,
+        baseEventId: String? = nil,
+        idempotencyKey: String? = nil,
         entityKind: LocalPendingChangeEntityKind,
         operation: LocalPendingChangeOperation,
         status: LocalPendingChangeStatus = .pending,
@@ -87,7 +107,18 @@ final class LocalPendingChange {
     ) {
         self.changeID = changeID.uuidString.lowercased()
         self.recordSchemaVersion = recordSchemaVersion
-        self.ownerUserID = ownerUserID?.uuidString.lowercased()
+        let ownerRaw = ownerUserID?.uuidString.lowercased()
+        let normalizedStoreId = Task126OwnerStoreScope.normalizedStoreId(storeId)
+        self.ownerUserID = ownerRaw
+        self.ownerHash = ownerHash ?? ownerRaw.map(AccountBindingStore.redactedAccountHash(for:))
+        self.storeId = normalizedStoreId
+        self.localStoreId = Task126OwnerStoreScope.normalizedLocalStoreId(
+            localStoreId,
+            storeId: normalizedStoreId
+        )
+        self.syncProtocolVersion = syncProtocolVersion
+        self.schemaVersion = schemaVersion
+        self.storeEpoch = storeEpoch
         self.entityKindRaw = entityKind.rawValue
         self.operationRaw = operation.rawValue
         self.statusRaw = status.rawValue
@@ -96,6 +127,15 @@ final class LocalPendingChange {
         self.changedFieldsRaw = Self.encodeChangedFields(changedFields)
         self.baselineFingerprintHash = baselineFingerprintHash
         self.intendedFingerprintHash = intendedFingerprintHash
+        self.baseRemoteUpdatedAt = baseRemoteUpdatedAt
+        self.baseVersion = baseVersion
+        self.baseEventId = baseEventId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let safeIdempotencyKey = idempotencyKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let safeIdempotencyKey, !safeIdempotencyKey.isEmpty {
+            self.idempotencyKey = safeIdempotencyKey
+        } else {
+            self.idempotencyKey = changeID.uuidString.lowercased()
+        }
         self.entityRemoteIDRaw = entityRemoteID?.uuidString.lowercased()
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -136,6 +176,17 @@ final class LocalPendingChange {
         set {
             entityRemoteIDRaw = newValue?.uuidString.lowercased()
         }
+    }
+
+    var ownerStoreScope: Task126OwnerStoreScope {
+        Task126OwnerStoreScope(
+            ownerHash: ownerHash ?? ownerUserID.map(AccountBindingStore.redactedAccountHash(for:)) ?? "anonymous",
+            storeId: storeId,
+            localStoreId: localStoreId,
+            syncProtocolVersion: syncProtocolVersion,
+            schemaVersion: schemaVersion,
+            storeEpoch: storeEpoch
+        )
     }
 
     static func encodeChangedFields(_ fields: [String]) -> String {
@@ -227,6 +278,7 @@ nonisolated final class LocalPendingChangeAccumulator {
 
     private let context: ModelContext
     private let ownerUserID: UUID?
+    private let storeIdentity: LocalStoreIdentity
     private let now: () -> Date
     private let maxActiveChanges: Int
     private var cachedActiveCount: Int?
@@ -234,11 +286,13 @@ nonisolated final class LocalPendingChangeAccumulator {
     init(
         context: ModelContext,
         ownerUserID: UUID? = nil,
+        storeIdentity: LocalStoreIdentity = .anonymous,
         now: @escaping () -> Date = Date.init,
         maxActiveChanges: Int = defaultMaxActiveChanges
     ) {
         self.context = context
         self.ownerUserID = ownerUserID
+        self.storeIdentity = storeIdentity
         self.now = now
         self.maxActiveChanges = max(1, maxActiveChanges)
     }
@@ -528,6 +582,11 @@ nonisolated final class LocalPendingChangeAccumulator {
 
         let change = LocalPendingChange(
             ownerUserID: ownerUserID,
+            storeId: storeIdentity.storeId,
+            localStoreId: storeIdentity.localStoreId,
+            syncProtocolVersion: storeIdentity.syncProtocolVersion,
+            schemaVersion: storeIdentity.schemaVersion,
+            storeEpoch: storeIdentity.storeEpoch,
             entityKind: entityKind,
             operation: operation,
             status: status,
@@ -653,7 +712,11 @@ nonisolated final class LocalPendingChangeAccumulator {
         guard let ownerUserID = ownerUserID?.uuidString.lowercased() else {
             return change.ownerUserID == nil
         }
-        return change.ownerUserID == ownerUserID
+        guard change.ownerUserID == ownerUserID else {
+            return false
+        }
+        let changeStore = Task126OwnerStoreScope.normalizedStoreId(change.storeId)
+        return changeStore == storeIdentity.storeId || change.storeId == nil
     }
 }
 

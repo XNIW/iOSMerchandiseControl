@@ -1,0 +1,33 @@
+=== mc-agent scan inactive-cache-cleanup-safety --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-126 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "inactive-cache-cleanup-present",
+      "reason": "Inactive cache cleanup policy must exist.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "dirty-cache-protected",
+      "reason": "Dirty inactive cache needs backup/export safety.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "confirm-strong-present",
+      "reason": "Destructive dirty flows need strong confirmation.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T01:00:05Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.inactive-cache-cleanup-safety",
+  "startedAt": "2026-05-27T01:00:05Z",
+  "status": "PASS",
+  "taskId": "TASK-126"
+}

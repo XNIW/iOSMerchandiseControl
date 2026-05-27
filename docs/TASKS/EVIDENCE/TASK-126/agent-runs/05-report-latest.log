@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005043Z-report-latest-task-TASK-126-p83329.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005043Z-report-latest-task-TASK-126-p83329.json
+NEXT_ACTION Validate JSON reports or open latest markdown.

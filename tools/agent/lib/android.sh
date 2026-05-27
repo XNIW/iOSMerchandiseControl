@@ -617,6 +617,44 @@ mc_android_smoke() {
   return "$MC_EXIT_FAIL"
 }
 
+mc_android_test_task126_suite() {
+  local suite="$1"
+  MC_PLATFORM="android"
+  MC_SAFETY_LEVEL="safe-readonly"
+  local pattern
+  case "$suite" in
+    sync-policy)
+      MC_CA_REFS="AC-126-01,AC-126-03,AC-126-04"
+      pattern="*Task126SyncPolicyTest*"
+      ;;
+    account-store-boundary)
+      MC_CA_REFS="AC-126-01,AC-126-02,AC-126-12"
+      pattern="*Task126AccountStoreBoundaryTest*"
+      ;;
+    conflict-review)
+      MC_CA_REFS="AC-126-05,AC-126-06,AC-126-24"
+      pattern="*Task126ConflictReviewTest*"
+      ;;
+    cache-memory)
+      MC_CA_REFS="AC-126-08,AC-126-09,AC-126-40,AC-126-41"
+      pattern="*Task126CacheMemoryTest*"
+      ;;
+    *)
+      MC_SUMMARY="Unknown Android TASK-126 test suite: ${suite}"
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+  mc_git_context "$MC_ANDROID_REPO"
+  if mc_android_gradle testDebugUnitTest --tests "$pattern"; then
+    MC_SUMMARY="Android TASK-126 ${suite} tests PASS."
+    MC_NEXT_ACTION="Continue TASK-126 Android parity gates."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="Android TASK-126 ${suite} tests FAIL or are missing."
+  MC_NEXT_ACTION="Implement/fix Android TASK-126 parity tests for ${suite}, then rerun."
+  return "$MC_EXIT_FAIL"
+}
+
 mc_cmd_android() {
   local sub="${1:-}"
   shift || true
@@ -626,6 +664,7 @@ mc_cmd_android() {
       case "${1:-sync}" in
         sync) mc_android_test_sync ;;
         offline) mc_android_test_offline ;;
+        sync-policy|account-store-boundary|conflict-review|cache-memory) mc_android_test_task126_suite "${1:-}" ;;
         *) MC_SUMMARY="Unknown android test suite: ${1:-}"; return "$MC_EXIT_MISCONFIGURED" ;;
       esac
       ;;

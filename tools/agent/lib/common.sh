@@ -433,6 +433,9 @@ Usage:
   ./tools/agent/mc-agent.sh scan sync-architecture|manual-boundary|dead-code|xcode-membership --task TASK-120 --strict
   ./tools/agent/mc-agent.sh scan no-root-supabase-legacy|no-automatic-manual-dependency|transport-thin-only|remote-adapter-single-domain|no-full-pull-normal-path|no-hidden-manual-sync|no-stale-pbxproj-reference|no-mainactor-heavy-sync|no-service-role-client|no-rls-bypass|source-format|dead-code-residue --task TASK-124 --strict
   ./tools/agent/mc-agent.sh scan no-hidden-manual-sync|no-full-pull-normal-path|no-service-role-client|no-rls-bypass|no-mainactor-heavy-sync|no-stale-pbxproj-reference|no-test-fixture-in-app-target|no-root-legacy-sync-service|remote-adapter-single-domain|background-task-registration|background-task-no-ui-context|outbox-pending-survives-restart|evidence-redaction|source-format|dead-code-residue --task TASK-125 --strict
+  ./tools/agent/mc-agent.sh scan task126-policy-matrix|owner-store-scope|local-store-identity|pending-base-version|changed-fields-contract|no-cross-owner-store-pending-push|conflict-review-coverage|productprice-history-policy|cache-active-store-only|inactive-cache-cleanup-safety|task126-final-gates --task TASK-126 --strict
+  ./tools/agent/mc-agent.sh ios test sync-policy|account-store-boundary|conflict-review|cache-memory --task TASK-126
+  ./tools/agent/mc-agent.sh android test sync-policy|account-store-boundary|conflict-review|cache-memory --task TASK-126
   ./tools/agent/mc-agent.sh scan no-full-pull-normal-path|automatic-contracts-clean|root-host-clean|options-observer-only|duplicate-sync-owner|incremental-apply-contract|swiftdata-mainactor-heavy|l10n-sync-keys --task TASK-117
   ./tools/agent/mc-agent.sh evidence hygiene|bundle --task TASK-117
   ./tools/agent/mc-agent.sh account fixture prepare|cleanup --task TASK-116 --prefix TASK116_ACCOUNT_ [--dry-run]
@@ -492,6 +495,26 @@ mc_help_json() {
     {"name":"scan evidence","argv":["scan","evidence","--task","TASK-115"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan repo-diff","argv":["scan","repo-diff"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan release-cta","argv":["scan","release-cta"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan task126-policy-matrix","argv":["scan","task126-policy-matrix","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan owner-store-scope task126","argv":["scan","owner-store-scope","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan local-store-identity task126","argv":["scan","local-store-identity","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan pending-base-version task126","argv":["scan","pending-base-version","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan changed-fields-contract task126","argv":["scan","changed-fields-contract","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan no-cross-owner-store-pending-push task126","argv":["scan","no-cross-owner-store-pending-push","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan conflict-review-coverage task126","argv":["scan","conflict-review-coverage","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan productprice-history-policy task126","argv":["scan","productprice-history-policy","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan cache-active-store-only task126","argv":["scan","cache-active-store-only","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan inactive-cache-cleanup-safety task126","argv":["scan","inactive-cache-cleanup-safety","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan task126-final-gates","argv":["scan","task126-final-gates","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan scanner-self-tests task126","argv":["scan","scanner-self-tests","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"ios test sync-policy task126","argv":["ios","test","sync-policy","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test account-store-boundary task126","argv":["ios","test","account-store-boundary","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test conflict-review task126","argv":["ios","test","conflict-review","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test cache-memory task126","argv":["ios","test","cache-memory","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"android test sync-policy task126","argv":["android","test","sync-policy","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
+    {"name":"android test account-store-boundary task126","argv":["android","test","account-store-boundary","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
+    {"name":"android test conflict-review task126","argv":["android","test","conflict-review","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
+    {"name":"android test cache-memory task126","argv":["android","test","cache-memory","--task","TASK-126"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"scan sync-boundaries","argv":["scan","sync-boundaries","--task","TASK-118","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan no-full-pull-normal-path task118","argv":["scan","no-full-pull-normal-path","--task","TASK-118","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan sync-architecture task119","argv":["scan","sync-architecture","--task","TASK-119","--strict"],"platform":"general","safety_level":"safe-readonly"},
@@ -1288,7 +1311,7 @@ if len(sys.argv) == 1:
 invalid = []
 validated = 0
 for path in sys.argv[1:]:
-    if os.path.basename(path) in {"00-help-json.json", "00-commands-json.json"}:
+    if os.path.basename(path) in {"00-help-json.json", "00-commands-json.json", "01-commands-json.json"}:
         continue
     try:
         with open(path, "r", encoding="utf-8") as fh:
@@ -1932,6 +1955,63 @@ mc_cmd_scan_task125_static() {
     *)
       MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
       MC_NEXT_ACTION="Fix TASK-125 scanner command/configuration."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+mc_cmd_scan_task126_static() {
+  local scan_name="$1"
+  shift || true
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-126}}"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  case "$scan_name" in
+    task126-policy-matrix) MC_CA_REFS="AC-126-01,AC-126-35" ;;
+    owner-store-scope|no-cross-owner-store-pending-push) MC_CA_REFS="AC-126-01,AC-126-02,AC-126-12" ;;
+    local-store-identity) MC_CA_REFS="AC-126-01,AC-126-36" ;;
+    pending-base-version|changed-fields-contract) MC_CA_REFS="AC-126-03,AC-126-04" ;;
+    conflict-review-coverage) MC_CA_REFS="AC-126-05,AC-126-06,AC-126-24" ;;
+    productprice-history-policy) MC_CA_REFS="AC-126-07,AC-126-41" ;;
+    cache-active-store-only|inactive-cache-cleanup-safety) MC_CA_REFS="AC-126-08,AC-126-09,AC-126-40" ;;
+    scanner-self-tests) MC_CA_REFS="AC-126-37" ;;
+    task126-final-gates) MC_CA_REFS="AC-126-32,AC-126-35,AC-126-37,AC-126-60" ;;
+    *) MC_CA_REFS="AC-126-35" ;;
+  esac
+
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" ANDROID_REPO="$MC_ANDROID_REPO" SUPABASE_REPO="$MC_SUPABASE_REPO" \
+    python3 "$MC_AGENT_ROOT/lib/task126_scans.py" "$scan_name" > /tmp/mc-agent-task126-static.$$.json
+  local scan_code=$?
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task126-static.$$.json)"
+  rm -f /tmp/mc-agent-task126-static.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  case "$scan_code" in
+    0)
+      MC_SUMMARY="${scan_name} scan PASS for ${task_id}."
+      MC_NEXT_ACTION="Use this report in TASK-126 evidence matrix."
+      return "$MC_EXIT_PASS"
+      ;;
+    1)
+      MC_SUMMARY="${scan_name} scan FAIL for ${task_id}: TASK-126 gate found required work."
+      MC_NEXT_ACTION="Fix failing checks and rerun ${scan_name}."
+      return "$MC_EXIT_FAIL"
+      ;;
+    2)
+      MC_SUMMARY="${scan_name} scan BLOCKED_EXTERNAL for ${task_id}."
+      MC_NEXT_ACTION="Resolve the listed external prerequisite and rerun ${scan_name}."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    4)
+      MC_SUMMARY="${scan_name} scan UNSAFE_OPERATION_REFUSED for ${task_id}."
+      MC_NEXT_ACTION="Keep safety gate refused unless this was an expected refusal test."
+      return "$MC_EXIT_REFUSED"
+      ;;
+    *)
+      MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
+      MC_NEXT_ACTION="Fix TASK-126 scanner command/configuration."
       return "$MC_EXIT_MISCONFIGURED"
       ;;
   esac

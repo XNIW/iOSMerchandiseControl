@@ -1,0 +1,349 @@
+{
+  "NEXT_ACTION": "Use this report in TASK-126 evidence matrix.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T014001Z-scan-task126-final-gates-task-TASK-126-strict-p39154.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T014001Z-scan-task126-final-gates-task-TASK-126-strict-p39154.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T014001Z-scan-task126-final-gates-task-TASK-126-strict-p39154.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-126-32",
+    "AC-126-35",
+    "AC-126-37",
+    "AC-126-60"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan task126-final-gates --task TASK-126 --strict",
+  "command_slug": "scan-task126-final-gates-task-TASK-126-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 320,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-126",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK126_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-126"
+  },
+  "exit_code": 0,
+  "git_sha": "d7db6732",
+  "next_action_recommended": "Use this report in TASK-126 evidence matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Use this TASK-126 scanner as evidence.",
+    "checks": [
+      {
+        "evidence": {
+          "missing": []
+        },
+        "id": "task126-command-catalog",
+        "reason": "TASK-126 scanners/wrappers must be discoverable.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan task126-policy-matrix --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011609Z-scan-task126-policy-matrix-task-TASK-126-strict-p11257.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "task126-policy-matrix-latest-pass",
+        "reason": "Latest task126-policy-matrix report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan owner-store-scope --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011737Z-scan-owner-store-scope-task-TASK-126-strict-p16337.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "owner-store-scope-latest-pass",
+        "reason": "Latest owner-store-scope report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan local-store-identity --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011610Z-scan-local-store-identity-task-TASK-126-strict-p12039.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "local-store-identity-latest-pass",
+        "reason": "Latest local-store-identity report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan pending-base-version --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011611Z-scan-pending-base-version-task-TASK-126-strict-p12426.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "pending-base-version-latest-pass",
+        "reason": "Latest pending-base-version report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan changed-fields-contract --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011611Z-scan-changed-fields-contract-task-TASK-126-strict-p12810.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "changed-fields-contract-latest-pass",
+        "reason": "Latest changed-fields-contract report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan no-cross-owner-store-pending-push --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011738Z-scan-no-cross-owner-store-pending-push-task-TASK-126-strict-p16722.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "no-cross-owner-store-pending-push-latest-pass",
+        "reason": "Latest no-cross-owner-store-pending-push report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan conflict-review-coverage --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011613Z-scan-conflict-review-coverage-task-TASK-126-strict-p13577.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "conflict-review-coverage-latest-pass",
+        "reason": "Latest conflict-review-coverage report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan productprice-history-policy --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011614Z-scan-productprice-history-policy-task-TASK-126-strict-p13960.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "productprice-history-policy-latest-pass",
+        "reason": "Latest productprice-history-policy report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan cache-active-store-only --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011739Z-scan-cache-active-store-only-task-TASK-126-strict-p17117.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "cache-active-store-only-latest-pass",
+        "reason": "Latest cache-active-store-only report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan inactive-cache-cleanup-safety --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011615Z-scan-inactive-cache-cleanup-safety-task-TASK-126-strict-p14737.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "inactive-cache-cleanup-safety-latest-pass",
+        "reason": "Latest inactive-cache-cleanup-safety report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "scan scanner-self-tests --task TASK-126 --strict",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011616Z-scan-scanner-self-tests-task-TASK-126-strict-p15120.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "scanner-self-tests-latest-pass",
+        "reason": "Latest scanner-self-tests report must be PASS.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "ios build debug --task TASK-126",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011827Z-ios-build-debug-task-TASK-126-p19742.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "ios-debug-build-latest-pass",
+        "reason": "ios-debug-build must have PASS report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "ios build release --task TASK-126",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011834Z-ios-build-release-task-TASK-126-p20329.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "ios-release-build-latest-pass",
+        "reason": "ios-release-build must have PASS report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "ios test sync-policy --task TASK-126",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011751Z-ios-test-sync-policy-task-TASK-126-p17601.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "ios-sync-policy-latest-pass",
+        "reason": "ios-sync-policy must have PASS report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "ios test account-store-boundary --task TASK-126",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011802Z-ios-test-account-store-boundary-task-TASK-126-p18151.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "ios-account-store-boundary-latest-pass",
+        "reason": "ios-account-store-boundary must have PASS report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "ios test conflict-review --task TASK-126",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011809Z-ios-test-conflict-review-task-TASK-126-p18646.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "ios-conflict-review-latest-pass",
+        "reason": "ios-conflict-review must have PASS report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "ios test cache-memory --task TASK-126",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T011816Z-ios-test-cache-memory-task-TASK-126-p19149.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "ios-cache-memory-latest-pass",
+        "reason": "ios-cache-memory must have PASS report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "reports": [
+            {
+              "command": "report validate-json --task TASK-126 --path docs/TASKS/EVIDENCE/TASK-126",
+              "path": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T013907Z-report-validate-json-task-TASK-126-path-docs-TASKS-EVIDENCE-TASK-126-p37968.json",
+              "result": "PASS"
+            }
+          ]
+        },
+        "id": "evidence-json-validation-latest-pass",
+        "reason": "evidence-json-validation must have PASS report.",
+        "status": "PASS"
+      }
+    ],
+    "completedAt": "2026-05-27T01:40:01Z",
+    "details": {},
+    "redactionApplied": true,
+    "result": "PASS",
+    "schemaVersion": "1.1",
+    "source": "scan.task126-final-gates",
+    "startedAt": "2026-05-27T01:40:01Z",
+    "status": "PASS",
+    "taskId": "TASK-126"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260527T014001Z-scan-task126-final-gates-task-TASK-126-strict-p39154",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-126",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-27T01:40:02Z",
+  "timestamp_start": "2026-05-27T01:40:01Z",
+  "warnings": []
+}

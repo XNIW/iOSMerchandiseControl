@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005734Z-ios-test-sync-policy-task-TASK-126-p88032.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005734Z-ios-test-sync-policy-task-TASK-126-p88032.json
+NEXT_ACTION Continue next iOS or cross-platform gate.

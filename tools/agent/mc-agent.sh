@@ -52,6 +52,9 @@ main() {
       ;;
     scan)
       case "${args[1]:-}" in
+        task126-policy-matrix|owner-store-scope|local-store-identity|pending-base-version|changed-fields-contract|no-cross-owner-store-pending-push|conflict-review-coverage|productprice-history-policy|cache-active-store-only|inactive-cache-cleanup-safety|task126-final-gates)
+          handler=(mc_cmd_scan_task126_static "${args[1]}" "${args[@]:2}")
+          ;;
         sensitive) handler=(mc_cmd_scan_sensitive "${args[@]:2}") ;;
         evidence) handler=(mc_cmd_scan_evidence "${args[@]:2}") ;;
         repo-diff) handler=(mc_cmd_scan_repo_diff) ;;
@@ -96,7 +99,9 @@ main() {
           local scan_task_id
           scan_task_id="$(mc_parse_opt --task "${args[@]:2}" 2>/dev/null || true)"
           scan_task_id="${scan_task_id:-${MC_TASK_ID:-}}"
-          if [[ "$scan_task_id" == "TASK-125" ]]; then
+          if [[ "$scan_task_id" == "TASK-126" && "${args[1]}" == "scanner-self-tests" ]]; then
+            handler=(mc_cmd_scan_task126_static "${args[1]}" "${args[@]:2}")
+          elif [[ "$scan_task_id" == "TASK-125" ]]; then
             handler=(mc_cmd_scan_task125_static "${args[1]}" "${args[@]:2}")
           elif [[ "$scan_task_id" == "TASK-124" ]]; then
             handler=(mc_cmd_scan_task124_static "${args[1]}" "${args[@]:2}")

@@ -1,0 +1,51 @@
+=== mc-agent scan local-store-identity --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Strengthen LocalStoreIdentity and legacy repair policy.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "defaultStoreId-present",
+      "reason": "LocalStoreIdentity must include defaultStoreId.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "localStoreId-present",
+      "reason": "LocalStoreIdentity must include localStoreId.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "schemaVersion-present",
+      "reason": "LocalStoreIdentity must include schemaVersion.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "syncProtocolVersion-present",
+      "reason": "LocalStoreIdentity must include syncProtocolVersion.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "storeEpoch-present",
+      "reason": "LocalStoreIdentity must include storeEpoch.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "legacy-repair-present",
+      "reason": "Legacy/unbound local store repair must be represented.",
+      "status": "FAIL"
+    }
+  ],
+  "completedAt": "2026-05-27T01:00:00Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "FAIL",
+  "schemaVersion": "1.1",
+  "source": "scan.local-store-identity",
+  "startedAt": "2026-05-27T01:00:00Z",
+  "status": "FAIL",
+  "taskId": "TASK-126"
+}

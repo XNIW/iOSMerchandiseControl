@@ -1,0 +1,1 @@
+activeStoreOnly physicalStore logicalScope CacheManifest

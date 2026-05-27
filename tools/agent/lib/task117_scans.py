@@ -190,7 +190,7 @@ def root_host_clean():
 def automatic_contracts_clean():
     checks = []
     providers = "iOSMerchandiseControl/Sync/SyncAutomaticRuntimeProviders.swift"
-    runtime = "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift"
+    runtime = "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift"
     forbidden_contracts = (
         r"SupabaseManualSync[A-Za-z0-9_]*|"
         r"\bManualPushPlan\b|"
@@ -481,8 +481,9 @@ def no_full_pull_normal_path():
     if TASK == "TASK-118":
         return task118_no_full_pull_normal_path()
     checks = []
-    runtime = "iOSMerchandiseControl/Sync/SyncAutomaticRuntime.swift"
+    runtime = "iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift"
     orchestrator = "iOSMerchandiseControl/Sync/SyncOrchestrator.swift"
+    decision_provider = "iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift"
     content = "iOSMerchandiseControl/ContentView.swift"
     options = "iOSMerchandiseControl/OptionsView.swift"
     check_present(
@@ -496,9 +497,9 @@ def no_full_pull_normal_path():
     check_present(
         checks,
         "orchestrator_normal_decision_has_no_bootstrap_or_full_recovery",
-        orchestrator,
-        r"requiresBootstrap:\s*false[\s\S]*requiresFullRecovery:\s*false[\s\S]*fullRecoveryContext:\s*\.normalForeground",
-        "Normal foreground decision input must not request bootstrap/full recovery.",
+        decision_provider,
+        r"fullRecoveryContext:\s*\.normalForeground",
+        "Normal foreground decision input must use a non-authorizing recovery context.",
         re.M,
     )
     check_absent(

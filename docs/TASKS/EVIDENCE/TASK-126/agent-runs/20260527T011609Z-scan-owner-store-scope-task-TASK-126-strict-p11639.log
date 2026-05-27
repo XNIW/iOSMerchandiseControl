@@ -1,0 +1,39 @@
+=== mc-agent scan owner-store-scope --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Add owner/store/localStoreId scope and fail-closed mismatch policy.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "owner-hash-marker",
+      "reason": "Sync policy/runtime must carry ownerHash.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "store-id-marker",
+      "reason": "Sync policy/runtime must carry store identity.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "local-store-id-marker",
+      "reason": "Sync policy/runtime must carry localStoreId.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "fail-closed-marker",
+      "reason": "Owner/store mismatch must fail closed.",
+      "status": "FAIL"
+    }
+  ],
+  "completedAt": "2026-05-27T01:16:09Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "FAIL",
+  "schemaVersion": "1.1",
+  "source": "scan.owner-store-scope",
+  "startedAt": "2026-05-27T01:16:09Z",
+  "status": "FAIL",
+  "taskId": "TASK-126"
+}

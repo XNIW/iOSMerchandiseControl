@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005734Z-scan-scanner-self-tests-task-TASK-126-strict-p88014.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005734Z-scan-scanner-self-tests-task-TASK-126-strict-p88014.json
+NEXT_ACTION Use this report in TASK-126 evidence matrix.

@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005043Z-report-validate-json-task-TASK-126-path-docs-TASKS-EVIDENCE-TASK-126-agent-runs-p83387.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005043Z-report-validate-json-task-TASK-126-path-docs-TASKS-EVIDENCE-TASK-126-agent-runs-p83387.json
+NEXT_ACTION Use report in CA evidence.

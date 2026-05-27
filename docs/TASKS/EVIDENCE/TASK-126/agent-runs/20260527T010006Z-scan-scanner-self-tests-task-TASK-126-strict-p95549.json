@@ -1,0 +1,426 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun scanner-self-tests.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T010006Z-scan-scanner-self-tests-task-TASK-126-strict-p95549.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T010006Z-scan-scanner-self-tests-task-TASK-126-strict-p95549.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T010006Z-scan-scanner-self-tests-task-TASK-126-strict-p95549.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-126-37"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan scanner-self-tests --task TASK-126 --strict",
+  "command_slug": "scan-scanner-self-tests-task-TASK-126-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 252,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-126",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK126_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-126"
+  },
+  "exit_code": 1,
+  "git_sha": "d7db6732",
+  "next_action_recommended": "Fix failing checks and rerun scanner-self-tests.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Fix TASK-126 scanner fixtures or scanner logic before trusting gates.",
+    "checks": [
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/task126-policy-matrix/README.md",
+        "id": "task126-policy-matrix-fixture-manifest",
+        "reason": "Fixture manifest exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/task126-policy-matrix/red",
+        "id": "task126-policy-matrix-red-fixture",
+        "reason": "RED fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/task126-policy-matrix/green",
+        "id": "task126-policy-matrix-green-fixture",
+        "reason": "GREEN fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "task126-policy-matrix-red-detects",
+        "reason": "RED fixture must fail the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "task126-policy-matrix-green-passes",
+        "reason": "GREEN fixture must pass the scanner.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/owner-store-scope/README.md",
+        "id": "owner-store-scope-fixture-manifest",
+        "reason": "Fixture manifest exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/owner-store-scope/red",
+        "id": "owner-store-scope-red-fixture",
+        "reason": "RED fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/owner-store-scope/green",
+        "id": "owner-store-scope-green-fixture",
+        "reason": "GREEN fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "owner-store-scope-red-detects",
+        "reason": "RED fixture must fail the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "PASS"
+        },
+        "id": "owner-store-scope-green-passes",
+        "reason": "GREEN fixture must pass the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/local-store-identity/README.md",
+        "id": "local-store-identity-fixture-manifest",
+        "reason": "Fixture manifest exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/local-store-identity/red",
+        "id": "local-store-identity-red-fixture",
+        "reason": "RED fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/local-store-identity/green",
+        "id": "local-store-identity-green-fixture",
+        "reason": "GREEN fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "local-store-identity-red-detects",
+        "reason": "RED fixture must fail the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "PASS"
+        },
+        "id": "local-store-identity-green-passes",
+        "reason": "GREEN fixture must pass the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/pending-base-version/README.md",
+        "id": "pending-base-version-fixture-manifest",
+        "reason": "Fixture manifest exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/pending-base-version/red",
+        "id": "pending-base-version-red-fixture",
+        "reason": "RED fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/pending-base-version/green",
+        "id": "pending-base-version-green-fixture",
+        "reason": "GREEN fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "pending-base-version-red-detects",
+        "reason": "RED fixture must fail the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "PASS"
+        },
+        "id": "pending-base-version-green-passes",
+        "reason": "GREEN fixture must pass the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/changed-fields-contract/README.md",
+        "id": "changed-fields-contract-fixture-manifest",
+        "reason": "Fixture manifest exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/changed-fields-contract/red",
+        "id": "changed-fields-contract-red-fixture",
+        "reason": "RED fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/changed-fields-contract/green",
+        "id": "changed-fields-contract-green-fixture",
+        "reason": "GREEN fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "changed-fields-contract-red-detects",
+        "reason": "RED fixture must fail the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "PASS"
+        },
+        "id": "changed-fields-contract-green-passes",
+        "reason": "GREEN fixture must pass the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/no-cross-owner-store-pending-push/README.md",
+        "id": "no-cross-owner-store-pending-push-fixture-manifest",
+        "reason": "Fixture manifest exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/no-cross-owner-store-pending-push/red",
+        "id": "no-cross-owner-store-pending-push-red-fixture",
+        "reason": "RED fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/no-cross-owner-store-pending-push/green",
+        "id": "no-cross-owner-store-pending-push-green-fixture",
+        "reason": "GREEN fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "no-cross-owner-store-pending-push-red-detects",
+        "reason": "RED fixture must fail the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "PASS"
+        },
+        "id": "no-cross-owner-store-pending-push-green-passes",
+        "reason": "GREEN fixture must pass the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/conflict-review-coverage/README.md",
+        "id": "conflict-review-coverage-fixture-manifest",
+        "reason": "Fixture manifest exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/conflict-review-coverage/red",
+        "id": "conflict-review-coverage-red-fixture",
+        "reason": "RED fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/conflict-review-coverage/green",
+        "id": "conflict-review-coverage-green-fixture",
+        "reason": "GREEN fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "conflict-review-coverage-red-detects",
+        "reason": "RED fixture must fail the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "PASS"
+        },
+        "id": "conflict-review-coverage-green-passes",
+        "reason": "GREEN fixture must pass the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/productprice-history-policy/README.md",
+        "id": "productprice-history-policy-fixture-manifest",
+        "reason": "Fixture manifest exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/productprice-history-policy/red",
+        "id": "productprice-history-policy-red-fixture",
+        "reason": "RED fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/productprice-history-policy/green",
+        "id": "productprice-history-policy-green-fixture",
+        "reason": "GREEN fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "productprice-history-policy-red-detects",
+        "reason": "RED fixture must fail the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "PASS"
+        },
+        "id": "productprice-history-policy-green-passes",
+        "reason": "GREEN fixture must pass the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/cache-active-store-only/README.md",
+        "id": "cache-active-store-only-fixture-manifest",
+        "reason": "Fixture manifest exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/cache-active-store-only/red",
+        "id": "cache-active-store-only-red-fixture",
+        "reason": "RED fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/cache-active-store-only/green",
+        "id": "cache-active-store-only-green-fixture",
+        "reason": "GREEN fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "cache-active-store-only-red-detects",
+        "reason": "RED fixture must fail the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "PASS"
+        },
+        "id": "cache-active-store-only-green-passes",
+        "reason": "GREEN fixture must pass the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/inactive-cache-cleanup-safety/README.md",
+        "id": "inactive-cache-cleanup-safety-fixture-manifest",
+        "reason": "Fixture manifest exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/inactive-cache-cleanup-safety/red",
+        "id": "inactive-cache-cleanup-safety-red-fixture",
+        "reason": "RED fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "tools/agent/fixtures/task126_scanners/inactive-cache-cleanup-safety/green",
+        "id": "inactive-cache-cleanup-safety-green-fixture",
+        "reason": "GREEN fixture directory exists.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "FAIL"
+        },
+        "id": "inactive-cache-cleanup-safety-red-detects",
+        "reason": "RED fixture must fail the scanner.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "observedStatus": "PASS"
+        },
+        "id": "inactive-cache-cleanup-safety-green-passes",
+        "reason": "GREEN fixture must pass the scanner.",
+        "status": "PASS"
+      }
+    ],
+    "completedAt": "2026-05-27T01:00:06Z",
+    "details": {},
+    "redactionApplied": true,
+    "result": "FAIL",
+    "schemaVersion": "1.1",
+    "source": "scan.scanner-self-tests",
+    "startedAt": "2026-05-27T01:00:06Z",
+    "status": "FAIL",
+    "taskId": "TASK-126"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260527T010006Z-scan-scanner-self-tests-task-TASK-126-strict-p95549",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-126",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-27T01:00:06Z",
+  "timestamp_start": "2026-05-27T01:00:05Z",
+  "warnings": []
+}

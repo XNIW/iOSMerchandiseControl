@@ -1,0 +1,5 @@
+RESULT FAIL
+EXIT_CODE 1
+REPORT_MD docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005959Z-scan-owner-store-scope-task-TASK-126-strict-p92087.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005959Z-scan-owner-store-scope-task-TASK-126-strict-p92087.json
+NEXT_ACTION Fix failing checks and rerun owner-store-scope.

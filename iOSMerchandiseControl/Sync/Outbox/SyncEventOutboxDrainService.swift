@@ -96,13 +96,19 @@ struct SyncEventOutboxDrainService {
             recoverStaleSending: { ownerUserID, now, staleInterval, scanLimit in
                 try store.recoverStaleSending(
                     ownerUserID: ownerUserID,
+                    storeId: Task126SyncPolicy.defaultStoreId,
                     now: now,
                     staleInterval: staleInterval,
                     scanLimit: scanLimit
                 )
             },
             fetchRetryable: { ownerUserID, now, limit in
-                try store.fetchRetryable(ownerUserID: ownerUserID, now: now, limit: limit)
+                try store.fetchRetryable(
+                    ownerUserID: ownerUserID,
+                    storeId: Task126SyncPolicy.defaultStoreId,
+                    now: now,
+                    limit: limit
+                )
             },
             saveChanges: {
                 try context.save()
@@ -200,7 +206,11 @@ struct SyncEventOutboxDrainService {
             }
 
             let now = clock()
-            guard entry.isRetryable(now: now, currentOwnerUserID: ownerUserID) else {
+            guard entry.isRetryable(
+                now: now,
+                currentOwnerUserID: ownerUserID,
+                currentStoreId: Task126SyncPolicy.defaultStoreId
+            ) else {
                 summary.skippedIneligible += 1
                 continue
             }

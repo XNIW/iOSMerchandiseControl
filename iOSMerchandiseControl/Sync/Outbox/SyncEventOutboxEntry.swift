@@ -166,6 +166,11 @@ nonisolated enum SyncEventOutboxPayloadCodec {
 final class SyncEventOutboxEntry {
     var id: String
     var ownerUserID: String
+    var storeId: String?
+    var localStoreId: String?
+    var syncProtocolVersion: Int = Task126SyncPolicy.syncProtocolVersion
+    var schemaVersion: Int = Task126SyncPolicy.localSchemaVersion
+    var storeEpoch: Int = Task126SyncPolicy.defaultStoreEpoch
     var clientEventID: String
     var batchID: String?
     var domain: String
@@ -191,6 +196,11 @@ final class SyncEventOutboxEntry {
     init(
         id: String = UUID().uuidString.lowercased(),
         ownerUserID: String,
+        storeId: String? = nil,
+        localStoreId: String? = nil,
+        syncProtocolVersion: Int = Task126SyncPolicy.syncProtocolVersion,
+        schemaVersion: Int = Task126SyncPolicy.localSchemaVersion,
+        storeEpoch: Int = Task126SyncPolicy.defaultStoreEpoch,
         clientEventID: String = UUID().uuidString.lowercased(),
         batchID: String? = nil,
         domain: String,
@@ -213,8 +223,17 @@ final class SyncEventOutboxEntry {
         sentAt: Date? = nil,
         sourceDeviceID: String? = nil
     ) {
+        let normalizedStoreId = Task126OwnerStoreScope.normalizedStoreId(storeId)
         self.id = id
         self.ownerUserID = ownerUserID
+        self.storeId = normalizedStoreId
+        self.localStoreId = Task126OwnerStoreScope.normalizedLocalStoreId(
+            localStoreId,
+            storeId: normalizedStoreId
+        )
+        self.syncProtocolVersion = syncProtocolVersion
+        self.schemaVersion = schemaVersion
+        self.storeEpoch = storeEpoch
         self.clientEventID = clientEventID
         self.batchID = batchID
         self.domain = domain
@@ -276,8 +295,20 @@ final class SyncEventOutboxEntry {
         sentAt = state.sentAt
     }
 
-    func isRetryable(now: Date, currentOwnerUserID: String) -> Bool {
-        SyncEventOutboxStateMachine.isRetryable(
+    func isRetryable(
+        now: Date,
+        currentOwnerUserID: String,
+        currentStoreId: String? = nil
+    ) -> Bool {
+        if let currentStoreId,
+           Task126OwnerStoreGate.validate(
+               entry: self,
+               activeOwnerUserID: currentOwnerUserID,
+               activeStoreId: currentStoreId
+           ) != .allowed {
+            return false
+        }
+        return SyncEventOutboxStateMachine.isRetryable(
             state: state,
             entryOwnerUserID: ownerUserID,
             currentOwnerUserID: currentOwnerUserID,
@@ -307,6 +338,11 @@ nonisolated enum SyncEventOutboxFactory {
 
     static func makeEntry(
         ownerUserID: String,
+        storeId: String? = nil,
+        localStoreId: String? = nil,
+        syncProtocolVersion: Int = Task126SyncPolicy.syncProtocolVersion,
+        schemaVersion: Int = Task126SyncPolicy.localSchemaVersion,
+        storeEpoch: Int = Task126SyncPolicy.defaultStoreEpoch,
         domain: String,
         eventType: String,
         changedCount: Int,
@@ -369,6 +405,11 @@ nonisolated enum SyncEventOutboxFactory {
         return SyncEventOutboxEntry(
             id: trimmed(id),
             ownerUserID: safeOwnerUserID,
+            storeId: storeId,
+            localStoreId: localStoreId,
+            syncProtocolVersion: syncProtocolVersion,
+            schemaVersion: schemaVersion,
+            storeEpoch: storeEpoch,
             clientEventID: safeClientEventID,
             batchID: trimmedOptional(batchID),
             domain: safeDomain,
@@ -420,50 +461,91 @@ nonisolated struct SyncEventOutboxLocalStore {
 
     func fetchRetryable(
         ownerUserID: String,
+        storeId: String? = nil,
         now: Date,
         limit: Int? = nil
     ) throws -> [SyncEventOutboxEntry] {
         let ownerUserID = ownerUserID.trimmingCharacters(in: .whitespacesAndNewlines)
         let pending = SyncEventOutboxStatus.pending.rawValue
         let failedRetryable = SyncEventOutboxStatus.failedRetryable.rawValue
-        var descriptor = FetchDescriptor<SyncEventOutboxEntry>(
-            predicate: #Predicate { entry in
-                entry.ownerUserID == ownerUserID
-                    && (entry.statusRaw == pending || entry.statusRaw == failedRetryable)
-                    && entry.attemptCount < entry.maxAttempts
-                    && entry.nextRetryAt <= now
-            },
-            sortBy: [
-                SortDescriptor(\SyncEventOutboxEntry.nextRetryAt, order: .forward),
-                SortDescriptor(\SyncEventOutboxEntry.createdAt, order: .forward),
-                SortDescriptor(\SyncEventOutboxEntry.id, order: .forward)
-            ]
-        )
+        let normalizedStoreId = storeId.map(Task126OwnerStoreScope.normalizedStoreId)
+        var descriptor: FetchDescriptor<SyncEventOutboxEntry>
+        if let normalizedStoreId {
+            descriptor = FetchDescriptor<SyncEventOutboxEntry>(
+                predicate: #Predicate { entry in
+                    entry.ownerUserID == ownerUserID
+                        && entry.storeId == normalizedStoreId
+                        && (entry.statusRaw == pending || entry.statusRaw == failedRetryable)
+                        && entry.attemptCount < entry.maxAttempts
+                        && entry.nextRetryAt <= now
+                },
+                sortBy: [
+                    SortDescriptor(\SyncEventOutboxEntry.nextRetryAt, order: .forward),
+                    SortDescriptor(\SyncEventOutboxEntry.createdAt, order: .forward),
+                    SortDescriptor(\SyncEventOutboxEntry.id, order: .forward)
+                ]
+            )
+        } else {
+            descriptor = FetchDescriptor<SyncEventOutboxEntry>(
+                predicate: #Predicate { entry in
+                    entry.ownerUserID == ownerUserID
+                        && (entry.statusRaw == pending || entry.statusRaw == failedRetryable)
+                        && entry.attemptCount < entry.maxAttempts
+                        && entry.nextRetryAt <= now
+                },
+                sortBy: [
+                    SortDescriptor(\SyncEventOutboxEntry.nextRetryAt, order: .forward),
+                    SortDescriptor(\SyncEventOutboxEntry.createdAt, order: .forward),
+                    SortDescriptor(\SyncEventOutboxEntry.id, order: .forward)
+                ]
+            )
+        }
         if let limit {
             descriptor.fetchLimit = max(0, limit)
         }
 
-        return try context.fetch(descriptor)
+        return try context.fetch(descriptor).filter { entry in
+            guard let normalizedStoreId else { return true }
+            return entry.isRetryable(now: now, currentOwnerUserID: ownerUserID, currentStoreId: normalizedStoreId)
+        }
     }
 
     func recoverStaleSending(
         ownerUserID: String,
+        storeId: String? = nil,
         now: Date,
         staleInterval: TimeInterval = SyncEventOutboxStateMachine.defaultSendingStaleInterval,
         scanLimit: Int = defaultSendingRecoveryScanLimit
     ) throws -> SyncEventOutboxSendingRecoveryResult {
         let ownerUserID = ownerUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedStoreId = storeId.map(Task126OwnerStoreScope.normalizedStoreId)
         let sending = SyncEventOutboxStatus.sending.rawValue
-        var descriptor = FetchDescriptor<SyncEventOutboxEntry>(
-            predicate: #Predicate { entry in
-                entry.ownerUserID == ownerUserID && entry.statusRaw == sending
-            },
-            sortBy: [
-                SortDescriptor(\SyncEventOutboxEntry.updatedAt, order: .forward),
-                SortDescriptor(\SyncEventOutboxEntry.createdAt, order: .forward),
-                SortDescriptor(\SyncEventOutboxEntry.id, order: .forward)
-            ]
-        )
+        var descriptor: FetchDescriptor<SyncEventOutboxEntry>
+        if let normalizedStoreId {
+            descriptor = FetchDescriptor<SyncEventOutboxEntry>(
+                predicate: #Predicate { entry in
+                    entry.ownerUserID == ownerUserID
+                        && entry.storeId == normalizedStoreId
+                        && entry.statusRaw == sending
+                },
+                sortBy: [
+                    SortDescriptor(\SyncEventOutboxEntry.updatedAt, order: .forward),
+                    SortDescriptor(\SyncEventOutboxEntry.createdAt, order: .forward),
+                    SortDescriptor(\SyncEventOutboxEntry.id, order: .forward)
+                ]
+            )
+        } else {
+            descriptor = FetchDescriptor<SyncEventOutboxEntry>(
+                predicate: #Predicate { entry in
+                    entry.ownerUserID == ownerUserID && entry.statusRaw == sending
+                },
+                sortBy: [
+                    SortDescriptor(\SyncEventOutboxEntry.updatedAt, order: .forward),
+                    SortDescriptor(\SyncEventOutboxEntry.createdAt, order: .forward),
+                    SortDescriptor(\SyncEventOutboxEntry.id, order: .forward)
+                ]
+            )
+        }
 
         let boundedLimit = min(
             max(0, scanLimit),
@@ -511,13 +593,23 @@ nonisolated struct SyncEventOutboxLocalStore {
         )
     }
 
-    func fetchCounts(ownerUserID: String, now: Date) throws -> SyncEventOutboxCounts {
+    func fetchCounts(ownerUserID: String, storeId: String? = nil, now: Date) throws -> SyncEventOutboxCounts {
         let ownerUserID = ownerUserID.trimmingCharacters(in: .whitespacesAndNewlines)
-        let descriptor = FetchDescriptor<SyncEventOutboxEntry>(
-            predicate: #Predicate { entry in
-                entry.ownerUserID == ownerUserID
-            }
-        )
+        let normalizedStoreId = storeId.map(Task126OwnerStoreScope.normalizedStoreId)
+        let descriptor: FetchDescriptor<SyncEventOutboxEntry>
+        if let normalizedStoreId {
+            descriptor = FetchDescriptor<SyncEventOutboxEntry>(
+                predicate: #Predicate { entry in
+                    entry.ownerUserID == ownerUserID && entry.storeId == normalizedStoreId
+                }
+            )
+        } else {
+            descriptor = FetchDescriptor<SyncEventOutboxEntry>(
+                predicate: #Predicate { entry in
+                    entry.ownerUserID == ownerUserID
+                }
+            )
+        }
         let entries = try context.fetch(descriptor)
 
         return entries.reduce(into: SyncEventOutboxCounts()) { counts, entry in
@@ -538,7 +630,7 @@ nonisolated struct SyncEventOutboxLocalStore {
                 break
             }
 
-            if entry.isRetryable(now: now, currentOwnerUserID: ownerUserID) {
+            if entry.isRetryable(now: now, currentOwnerUserID: ownerUserID, currentStoreId: normalizedStoreId) {
                 counts.retryable += 1
             }
         }

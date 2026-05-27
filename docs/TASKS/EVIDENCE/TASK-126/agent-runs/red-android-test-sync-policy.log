@@ -1,0 +1,5 @@
+RESULT MISCONFIGURED
+EXIT_CODE 3
+REPORT_MD docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005158Z-android-test-sync-policy-task-TASK-126-p84818.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-126/agent-runs/20260527T005158Z-android-test-sync-policy-task-TASK-126-p84818.json
+NEXT_ACTION Review report.

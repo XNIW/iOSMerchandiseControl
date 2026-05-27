@@ -1,0 +1,51 @@
+=== mc-agent scan local-store-identity --task TASK-126 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-126 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "defaultStoreId-present",
+      "reason": "LocalStoreIdentity must include defaultStoreId.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "localStoreId-present",
+      "reason": "LocalStoreIdentity must include localStoreId.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "schemaVersion-present",
+      "reason": "LocalStoreIdentity must include schemaVersion.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "syncProtocolVersion-present",
+      "reason": "LocalStoreIdentity must include syncProtocolVersion.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "storeEpoch-present",
+      "reason": "LocalStoreIdentity must include storeEpoch.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "legacy-repair-present",
+      "reason": "Legacy/unbound local store repair must be represented.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T01:16:10Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.local-store-identity",
+  "startedAt": "2026-05-27T01:16:10Z",
+  "status": "PASS",
+  "taskId": "TASK-126"
+}
