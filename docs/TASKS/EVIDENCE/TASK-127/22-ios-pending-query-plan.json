@@ -1,0 +1,7 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "optionsViewQueryRemoved": true,
+  "ownerScoped": true,
+  "terminalStatusesExcluded": ["superseded", "acknowledged"]
+}

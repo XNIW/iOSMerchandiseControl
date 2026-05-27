@@ -1,0 +1,8 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "fixtureDirectory": "tools/agent/fixtures/task127_scanners",
+  "redFixtures": 4,
+  "greenFixtures": 3,
+  "selfTest": "PASS"
+}

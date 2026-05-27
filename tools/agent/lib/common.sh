@@ -434,6 +434,10 @@ Usage:
   ./tools/agent/mc-agent.sh scan no-root-supabase-legacy|no-automatic-manual-dependency|transport-thin-only|remote-adapter-single-domain|no-full-pull-normal-path|no-hidden-manual-sync|no-stale-pbxproj-reference|no-mainactor-heavy-sync|no-service-role-client|no-rls-bypass|source-format|dead-code-residue --task TASK-124 --strict
   ./tools/agent/mc-agent.sh scan no-hidden-manual-sync|no-full-pull-normal-path|no-service-role-client|no-rls-bypass|no-mainactor-heavy-sync|no-stale-pbxproj-reference|no-test-fixture-in-app-target|no-root-legacy-sync-service|remote-adapter-single-domain|background-task-registration|background-task-no-ui-context|outbox-pending-survives-restart|evidence-redaction|source-format|dead-code-residue --task TASK-125 --strict
   ./tools/agent/mc-agent.sh scan task126-policy-matrix|owner-store-scope|local-store-identity|pending-base-version|changed-fields-contract|no-cross-owner-store-pending-push|conflict-review-coverage|productprice-history-policy|cache-active-store-only|inactive-cache-cleanup-safety|task126-final-gates --task TASK-126 --strict
+  ./tools/agent/mc-agent.sh scan options-mainactor-heavy-fetch|productprice-full-fetch-mainactor|options-refresh-debounce|task127-debug-hook-release-safety|task127-final-gates --task TASK-127 --strict
+  ./tools/agent/mc-agent.sh ios test options-summary-performance|options-summary-provider --task TASK-127
+  ./tools/agent/mc-agent.sh ios smoke options-performance --task TASK-127
+  ./tools/agent/mc-agent.sh android audit options-performance --task TASK-127
   ./tools/agent/mc-agent.sh ios test sync-policy|account-store-boundary|conflict-review|conflict-review-ui|account-switch-review-ui|cache-memory --task TASK-126
   ./tools/agent/mc-agent.sh ios smoke conflict-review-ui|account-switch-review-ui --task TASK-126
   ./tools/agent/mc-agent.sh android test sync-policy|account-store-boundary|conflict-review|conflict-review-ui|account-switch-review-ui|cache-memory --task TASK-126
@@ -509,6 +513,16 @@ mc_help_json() {
     {"name":"scan inactive-cache-cleanup-safety task126","argv":["scan","inactive-cache-cleanup-safety","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan task126-final-gates","argv":["scan","task126-final-gates","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan scanner-self-tests task126","argv":["scan","scanner-self-tests","--task","TASK-126","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan options-mainactor-heavy-fetch task127","argv":["scan","options-mainactor-heavy-fetch","--task","TASK-127","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan productprice-full-fetch-mainactor task127","argv":["scan","productprice-full-fetch-mainactor","--task","TASK-127","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan options-refresh-debounce task127","argv":["scan","options-refresh-debounce","--task","TASK-127","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan task127-debug-hook-release-safety","argv":["scan","task127-debug-hook-release-safety","--task","TASK-127","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan task127-final-gates","argv":["scan","task127-final-gates","--task","TASK-127","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan scanner-self-tests task127","argv":["scan","scanner-self-tests","--task","TASK-127","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"ios test options-summary-performance task127","argv":["ios","test","options-summary-performance","--task","TASK-127"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test options-summary-provider task127","argv":["ios","test","options-summary-provider","--task","TASK-127"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios smoke options-performance task127","argv":["ios","smoke","options-performance","--task","TASK-127"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"android audit options-performance task127","argv":["android","audit","options-performance","--task","TASK-127"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"ios test sync-policy task126","argv":["ios","test","sync-policy","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test account-store-boundary task126","argv":["ios","test","account-store-boundary","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test conflict-review task126","argv":["ios","test","conflict-review","--task","TASK-126"],"platform":"ios","safety_level":"safe-readonly"},
@@ -2022,6 +2036,60 @@ mc_cmd_scan_task126_static() {
     *)
       MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
       MC_NEXT_ACTION="Fix TASK-126 scanner command/configuration."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+mc_cmd_scan_task127_static() {
+  local scan_name="$1"
+  shift || true
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-127}}"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  case "$scan_name" in
+    options-mainactor-heavy-fetch|productprice-full-fetch-mainactor) MC_CA_REFS="AC-127-01,AC-127-02,AC-127-03" ;;
+    options-refresh-debounce) MC_CA_REFS="AC-127-05,AC-127-06" ;;
+    task127-debug-hook-release-safety) MC_CA_REFS="AC-127-09,AC-127-14,AC-127-15" ;;
+    android-options-performance) MC_CA_REFS="AC-127-13" ;;
+    scanner-self-tests) MC_CA_REFS="AC-127-02,AC-127-04,AC-127-05,AC-127-15" ;;
+    task127-final-gates) MC_CA_REFS="AC-127-01,AC-127-02,AC-127-03,AC-127-04,AC-127-05,AC-127-06,AC-127-07,AC-127-08,AC-127-09,AC-127-10,AC-127-11,AC-127-13,AC-127-14,AC-127-15" ;;
+    *) MC_CA_REFS="AC-127-15" ;;
+  esac
+
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" ANDROID_REPO="$MC_ANDROID_REPO" SUPABASE_REPO="$MC_SUPABASE_REPO" \
+    python3 "$MC_AGENT_ROOT/lib/task127_scans.py" "$scan_name" > /tmp/mc-agent-task127-static.$$.json
+  local scan_code=$?
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task127-static.$$.json)"
+  rm -f /tmp/mc-agent-task127-static.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  case "$scan_code" in
+    0)
+      MC_SUMMARY="${scan_name} scan PASS for ${task_id}."
+      MC_NEXT_ACTION="Use this report in TASK-127 evidence matrix."
+      return "$MC_EXIT_PASS"
+      ;;
+    1)
+      MC_SUMMARY="${scan_name} scan FAIL for ${task_id}: TASK-127 gate found required work."
+      MC_NEXT_ACTION="Fix failing checks and rerun ${scan_name}."
+      return "$MC_EXIT_FAIL"
+      ;;
+    2)
+      MC_SUMMARY="${scan_name} scan BLOCKED_EXTERNAL for ${task_id}."
+      MC_NEXT_ACTION="Resolve the listed external prerequisite and rerun ${scan_name}."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    4)
+      MC_SUMMARY="${scan_name} scan UNSAFE_OPERATION_REFUSED for ${task_id}."
+      MC_NEXT_ACTION="Keep safety gate refused unless this was an expected refusal test."
+      return "$MC_EXIT_REFUSED"
+      ;;
+    *)
+      MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
+      MC_NEXT_ACTION="Fix TASK-127 scanner command/configuration."
       return "$MC_EXIT_MISCONFIGURED"
       ;;
   esac

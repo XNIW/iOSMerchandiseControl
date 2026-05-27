@@ -1,0 +1,33 @@
+=== mc-agent scan options-mainactor-heavy-fetch --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-127 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "no-productprice-full-fetch-filter",
+      "reason": "Options path must not full-fetch ProductPrice and filter relationships on MainActor.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "no-options-unscoped-pending-query",
+      "reason": "OptionsView must not materialize all LocalPendingChange rows through @Query.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "provider-has-loading-stale-state",
+      "reason": "Provider/cache state must expose loading/stale/last refreshed metadata.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T18:37:10Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.options-mainactor-heavy-fetch",
+  "startedAt": "2026-05-27T18:37:10Z",
+  "status": "PASS",
+  "taskId": "TASK-127"
+}

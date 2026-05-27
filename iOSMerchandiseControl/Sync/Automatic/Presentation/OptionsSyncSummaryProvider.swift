@@ -20,11 +20,21 @@ final class OptionsSyncSummaryProvider: ObservableObject {
     @Published private(set) var lastSyncCountDriftCheckedAt: Date?
     @Published private(set) var accountSyncDecision: AccountSyncDecision?
     @Published private(set) var localPendingAttentionCount = 0
+    @Published private(set) var isLoading = false
+    @Published private(set) var isStale = false
+    @Published private(set) var lastRefreshedAt: Date?
+    @Published private(set) var source = "local"
+    @Published private(set) var refreshReason: String?
+    @Published private(set) var coalescedEvents = 0
 
     private static let freshRemoteCountVerificationInterval: TimeInterval = 60
+    private static let refreshDebounceNanoseconds: UInt64 = 120_000_000
     private let now: () -> Date
+    private var summaryTask: Task<Void, Never>?
     private var driftTask: Task<Void, Never>?
     private var driftTaskID: UUID?
+    private var isRefreshInFlight = false
+    private var pendingSummaryRefresh: SummaryRefreshRequest?
     private var isRemoteCountVerificationInFlight = false
     private var lastRemoteCountSnapshot: SyncInventoryCountSnapshot?
     private var isSignedIn = false
@@ -35,6 +45,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
     }
 
     deinit {
+        summaryTask?.cancel()
         driftTask?.cancel()
     }
 
@@ -63,7 +74,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
                 userID: authViewModel.sessionInfo?.userID
             ),
             remoteCountFetcher: remoteCountFetcher,
-            pendingChanges: pendingChanges
+            refreshReason: "auth-view-model"
         )
     }
 
@@ -73,12 +84,43 @@ final class OptionsSyncSummaryProvider: ObservableObject {
         remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?,
         pendingChanges: [LocalPendingChange]
     ) {
+        refreshAll(
+            context: context,
+            authSnapshot: authSnapshot,
+            remoteCountFetcher: remoteCountFetcher,
+            refreshReason: "legacy-pending-array"
+        )
+    }
+
+    func refreshAll(
+        context: ModelContext,
+        authViewModel: SupabaseAuthViewModel,
+        remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?,
+        refreshReason: String
+    ) {
+        refreshAll(
+            context: context,
+            authSnapshot: OptionsSyncAuthSnapshot(
+                isSignedIn: authViewModel.isSignedIn,
+                userID: authViewModel.sessionInfo?.userID
+            ),
+            remoteCountFetcher: remoteCountFetcher,
+            refreshReason: refreshReason
+        )
+    }
+
+    func refreshAll(
+        context: ModelContext,
+        authSnapshot: OptionsSyncAuthSnapshot,
+        remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?,
+        refreshReason: String
+    ) {
         updateAuthSnapshot(authSnapshot)
-        refreshLocalDatabaseSummary(context: context)
-        refreshSupabaseBaselineSummary(context: context)
-        refreshLocalPendingAttentionCount(pendingChanges)
-        refreshSyncCountDriftIfNeeded(context: context, remoteCountFetcher: remoteCountFetcher)
-        refreshAccountSyncDecision()
+        scheduleSummaryRefresh(
+            context: context,
+            remoteCountFetcher: remoteCountFetcher,
+            refreshReason: refreshReason
+        )
     }
 
     func handleAuthChanged(
@@ -91,7 +133,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
             context: context,
             authViewModel: authViewModel,
             remoteCountFetcher: remoteCountFetcher,
-            pendingChanges: pendingChanges
+            refreshReason: "auth-changed"
         )
     }
 
@@ -105,7 +147,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
             context: context,
             authViewModel: authViewModel,
             remoteCountFetcher: remoteCountFetcher,
-            pendingChanges: pendingChanges
+            refreshReason: "local-data-changed"
         )
     }
 
@@ -149,8 +191,85 @@ final class OptionsSyncSummaryProvider: ObservableObject {
         }
     }
 
-    private func refreshLocalPendingAttentionCount(_ pendingChanges: [LocalPendingChange]) {
-        localPendingAttentionCount = pendingChanges.filter(isRelevantToCurrentAccount).count
+    private func scheduleSummaryRefresh(
+        context: ModelContext,
+        remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?,
+        refreshReason: String
+    ) {
+        self.refreshReason = refreshReason
+        source = "local"
+        if isRefreshInFlight {
+            coalescedEvents += 1
+            isStale = true
+            pendingSummaryRefresh = SummaryRefreshRequest(
+                context: context,
+                remoteCountFetcher: remoteCountFetcher,
+                refreshReason: refreshReason
+            )
+            return
+        }
+        isRefreshInFlight = true
+        isLoading = true
+        isStale = lastRefreshedAt != nil
+        summaryTask?.cancel()
+        summaryTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: Self.refreshDebounceNanoseconds)
+                try Task.checkCancellation()
+                guard let self else { return }
+                self.refreshLocalDatabaseSummary(context: context)
+                self.refreshSupabaseBaselineSummary(context: context)
+                self.refreshLocalPendingAttentionCount(context: context)
+                self.isLoading = false
+                self.isStale = false
+                self.lastRefreshedAt = self.now()
+                self.isRefreshInFlight = false
+                self.summaryTask = nil
+                self.refreshSyncCountDriftIfNeeded(context: context, remoteCountFetcher: remoteCountFetcher)
+                self.refreshAccountSyncDecision()
+                self.runPendingSummaryRefreshIfNeeded()
+            } catch is CancellationError {
+                guard let self else { return }
+                self.isRefreshInFlight = false
+                self.isLoading = false
+                self.summaryTask = nil
+                self.runPendingSummaryRefreshIfNeeded()
+            } catch {
+                guard let self else { return }
+                self.localDatabaseSummary = .empty
+                self.localPendingAttentionCount = 0
+                self.isLoading = false
+                self.isStale = true
+                self.isRefreshInFlight = false
+                self.summaryTask = nil
+                self.refreshAccountSyncDecision()
+                self.runPendingSummaryRefreshIfNeeded()
+            }
+        }
+    }
+
+    private func runPendingSummaryRefreshIfNeeded() {
+        guard let pendingSummaryRefresh else { return }
+        self.pendingSummaryRefresh = nil
+        scheduleSummaryRefresh(
+            context: pendingSummaryRefresh.context,
+            remoteCountFetcher: pendingSummaryRefresh.remoteCountFetcher,
+            refreshReason: pendingSummaryRefresh.refreshReason
+        )
+    }
+
+    private func refreshLocalPendingAttentionCount(context: ModelContext) {
+        do {
+            localPendingAttentionCount = try OptionsPendingAttentionCounter.count(
+                context: context,
+                ownerUserID: currentUserID,
+                storeIdentity: AccountBindingStore().currentBinding?.storeIdentity
+                    ?? LocalStoreIdentity(rawValue: Task126SyncPolicy.defaultStoreId)
+            )
+        } catch {
+            localPendingAttentionCount = 0
+            isStale = true
+        }
     }
 
     private func refreshSyncCountDriftIfNeeded(
@@ -320,11 +439,44 @@ final class OptionsSyncSummaryProvider: ObservableObject {
         return binding.accountHash == currentAccountHash ? .sameAccount : .differentAccount
     }
 
-    private func isRelevantToCurrentAccount(_ change: LocalPendingChange) -> Bool {
-        guard !change.status.isTerminal else { return false }
-        guard let owner = currentUserID?.uuidString.lowercased() else {
-            return change.ownerUserID == nil
+}
+
+@MainActor
+private struct SummaryRefreshRequest {
+    let context: ModelContext
+    let remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?
+    let refreshReason: String
+}
+
+nonisolated enum OptionsPendingAttentionCounter {
+    static func count(
+        context: ModelContext,
+        ownerUserID: UUID?,
+        storeIdentity: LocalStoreIdentity = LocalStoreIdentity(rawValue: Task126SyncPolicy.defaultStoreId)
+    ) throws -> Int {
+        let terminalSuperseded = LocalPendingChangeStatus.superseded.rawValue
+        let terminalAcknowledged = LocalPendingChangeStatus.acknowledged.rawValue
+        let activeStoreId = storeIdentity.storeId
+        let activeLocalStoreId = storeIdentity.localStoreId
+        if let owner = ownerUserID?.uuidString.lowercased() {
+            return try context.fetchCount(FetchDescriptor<LocalPendingChange>(
+                predicate: #Predicate<LocalPendingChange> { change in
+                    change.ownerUserID == owner
+                        && change.storeId == activeStoreId
+                        && change.localStoreId == activeLocalStoreId
+                        && change.statusRaw != terminalSuperseded
+                        && change.statusRaw != terminalAcknowledged
+                }
+            ))
         }
-        return change.ownerUserID == owner
+        return try context.fetchCount(FetchDescriptor<LocalPendingChange>(
+            predicate: #Predicate<LocalPendingChange> { change in
+                change.ownerUserID == nil
+                    && change.storeId == activeStoreId
+                    && change.localStoreId == activeLocalStoreId
+                    && change.statusRaw != terminalSuperseded
+                    && change.statusRaw != terminalAcknowledged
+            }
+        ))
     }
 }

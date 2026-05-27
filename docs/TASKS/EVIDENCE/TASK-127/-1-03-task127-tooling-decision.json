@@ -1,0 +1,16 @@
+{
+  "RESULT": "PASS",
+  "EXIT_CODE": 0,
+  "REPORT_MD": "docs/TASKS/EVIDENCE/TASK-127/-1-03-task127-tooling-decision.md",
+  "REPORT_JSON": "docs/TASKS/EVIDENCE/TASK-127/-1-03-task127-tooling-decision.json",
+  "NEXT_ACTION": "Implement TASK-127 harness before Swift patch.",
+  "decision": "IMPLEMENT_HARNESS_FIRST",
+  "swiftPatchAllowed": false,
+  "requiredBeforeSwiftPatch": [
+    "TASK-127 wrappers",
+    "TASK-127 scanners",
+    "scanner RED/GREEN fixtures",
+    "baseline performance",
+    "summary semantics ADR"
+  ]
+}

@@ -1,0 +1,817 @@
+=== mc-agent ios test options-summary-performance --task TASK-127 ===
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5" -resultBundlePath /tmp/mc-agent-ios-test-options-summary-performance-20260527T185350Z.xcresult -parallel-testing-enabled NO "-only-testing:iOSMerchandiseControlTests/OptionsLocalSummaryServiceTests"
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  swift-concurrency-extras: https://github.com/pointfreeco/swift-concurrency-extras @ 1.3.2
+  libxlsxwriter: https://github.com/jmcnamara/libxlsxwriter @ main (f064715)
+  ZIPFoundation: https://github.com/weichsel/ZIPFoundation.git @ 0.9.20
+  swift-clocks: https://github.com/pointfreeco/swift-clocks @ 1.0.6
+  swift-crypto: https://github.com/apple/swift-crypto.git @ 4.5.0
+  SwiftSoup: https://github.com/scinfu/SwiftSoup @ 2.11.2
+  xctest-dynamic-overlay: https://github.com/pointfreeco/xctest-dynamic-overlay @ 1.9.0
+  xlsxwriter.swift: https://github.com/damuellen/xlsxwriter.swift @ SPM (f4c0e10)
+  swift-atomics: https://github.com/apple/swift-atomics.git @ 1.3.0
+  LRUCache: https://github.com/nicklockwood/LRUCache.git @ 1.2.0
+  Supabase: https://github.com/supabase/supabase-swift.git @ 2.46.0
+  swift-http-types: https://github.com/apple/swift-http-types.git @ 1.5.1
+  swift-asn1: https://github.com/apple/swift-asn1.git @ 1.7.0
+
+Writing result bundle at path:
+	/tmp/mc-agent-ios-test-options-summary-performance-20260527T185350Z.xcresult
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (38 targets)
+    Target 'iOSMerchandiseControlTests' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+    Target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation' (no dependencies)
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target '_AtomicsShims' in project 'swift-atomics' (no dependencies)
+    Target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+    Target 'LRUCache' in project 'LRUCache' (no dependencies)
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter' (no dependencies)
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'swift-crypto_Crypto' in project 'swift-crypto' (no dependencies)
+    Target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay' (no dependencies)
+    Target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+    Target 'HTTPTypes' in project 'swift-http-types' (no dependencies)
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x objective-c -c /dev/null
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+Build description signature: 38f3edc81fbe6b211f299d4126373be0
+Build description path: <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/XCBuildData/38f3edc81fbe6b211f299d4126373be0.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/swift-crypto_Crypto.bundle/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist (in target 'swift-crypto_Crypto' from project 'swift-crypto')
+    cd <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-crypto
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphonesimulator -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/swift-crypto_Crypto.bundle/Info.plist
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.bundle/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist (in target 'ZIPFoundation_ZIPFoundation' from project 'ZIPFoundation')
+    cd <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/ZIPFoundation
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphonesimulator -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.bundle/Info.plist
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+SwiftDriver iOSMerchandiseControl normal arm64 com.apple.xcode.tools.swift.compiler (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name iOSMerchandiseControl -Onone @<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.SwiftFileList -DDEBUG -Xcc -fmodule-map-file\=<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/libxlsxwriter.modulemap -default-isolation\=MainActor -enable-bare-slash-regex -enable-upcoming-feature DisableOutwardActorInference -enable-upcoming-feature InferSendableFromCaptures -enable-upcoming-feature GlobalActorIsolatedTypesUsability -enable-upcoming-feature MemberImportVisibility -enable-upcoming-feature InferIsolatedConformances -enable-upcoming-feature NonisolatedNonsendingByDefault -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios26.1-simulator -g -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -emit-localized-strings -emit-localized-strings-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64 -c -j16 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.swiftmodule -validate-clang-modules-once -clang-build-session-file <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl_const_extract_protocols.json -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-generated-files.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-own-target-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl-273df38b21a488d2d0f41432c876c62f-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-project-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/libxlsxwriter/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-atomics/Sources/_AtomicsShims/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/include -Xcc -I<HOME_REDACTED>/Desktop/iOSMerchandiseControl/Vendor/libxls/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/DerivedSources-normal/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/DerivedSources/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl-Swift.h -import-objc-header <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/iOSMerchandiseControl-Bridging-Header.h -working-directory <HOME_REDACTED>/Desktop/iOSMerchandiseControl -experimental-emit-module-separately -disable-cmo
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Info.plist <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist -producttype com.apple.product-type.application -genpkginfo <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/assetcatalog_generated_info.plist -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/swift-crypto_Crypto.bundle -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/Info.plist
+
+SwiftGeneratePch normal arm64 Compiling\ bridging\ header (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling bridging header (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 Compiling\ OptionsSyncSummaryProvider.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift:462:20: error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+            return try context.fetchCount(FetchDescriptor<LocalPendingChange>(
+                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift:472:16: error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+        return try context.fetchCount(FetchDescriptor<LocalPendingChange>(
+               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c -filelist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/sources-1 -primary-file <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift -emit-dependencies-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/OptionsSyncSummaryProvider.d -emit-const-values-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/OptionsSyncSummaryProvider.swiftconstvalues -emit-reference-dependencies-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/OptionsSyncSummaryProvider.swiftdeps -serialize-diagnostics-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/OptionsSyncSummaryProvider.dia -emit-localized-strings -emit-localized-strings-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64 -target arm64-apple-ios26.1-simulator -module-can-import-version DeveloperToolsSupport 23.40.26 23.40.26 -module-can-import-version SwiftSoup 2.11.2.0 0 -module-can-import-version SwiftUI 7.5.3 7.5.3 -module-can-import-version UIKit 9126.5.5.2 9126.5.5 -disable-cross-import-overlay-search -swift-module-cross-import AuthenticationServices /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/System/Cryptexes/OS/System/Library/Frameworks/AuthenticationServices.framework/Modules/AuthenticationServices.swiftcrossimport/SwiftUI.swiftoverlay -swift-module-cross-import AuthenticationServices /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/System/Library/Frameworks/AuthenticationServices.framework/Modules/AuthenticationServices.swiftcrossimport/SwiftUI.swiftoverlay -swift-module-cross-import Darwin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/usr/include/Darwin.swiftcrossimport/xlocale.swiftoverlay -swift-module-cross-import SwiftData /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/System/Library/Frameworks/SwiftData.framework/Modules/SwiftData.swiftcrossimport/CoreData.swiftoverlay -swift-module-cross-import SwiftData /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/System/Library/Frameworks/SwiftData.framework/Modules/SwiftData.swiftcrossimport/SwiftUI.swiftoverlay -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libFoundationMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#FoundationMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libObservationMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#ObservationMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libPreviewsMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#PreviewsMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libSwiftDataMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#SwiftDataMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libSwiftMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#SwiftMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libSwiftUIMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#SwiftUIMacros -disable-implicit-swift-modules -Xcc -fno-implicit-modules -Xcc -fno-implicit-module-maps -explicit-swift-module-map-file <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl-dependencies-1.json -debug-module-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.swiftmodule -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -I <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -no-color-diagnostics -Xcc -fno-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -profile-generate -profile-coverage-mapping -swift-version 5 -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl_const_extract_protocols.json -enable-upcoming-feature DisableOutwardActorInference -enable-upcoming-feature InferSendableFromCaptures -enable-upcoming-feature GlobalActorIsolatedTypesUsability -enable-upcoming-feature MemberImportVisibility -enable-upcoming-feature InferIsolatedConformances -enable-upcoming-feature NonisolatedNonsendingByDefault -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -default-isolation\=MainActor -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc <HOME_REDACTED>/Desktop/iOSMerchandiseControl -enable-anonymous-context-mangled-names -file-compilation-dir <HOME_REDACTED>/Desktop/iOSMerchandiseControl -Xcc -fmodule-map-file\=<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/libxlsxwriter.modulemap -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -Xcc -ivfsstatcache -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/swift-overrides.hmap -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-generated-files.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-own-target-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl-273df38b21a488d2d0f41432c876c62f-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-project-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/libxlsxwriter/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-atomics/Sources/_AtomicsShims/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/include -Xcc -I<HOME_REDACTED>/Desktop/iOSMerchandiseControl/Vendor/libxls/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/DerivedSources-normal/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/DerivedSources/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/DerivedSources -Xcc -DDEBUG\=1 -import-objc-header <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl-primary-Bridging-header.pch -no-auto-bridging-header-chaining -module-name iOSMerchandiseControl -frontend-parseable-output -disable-clang-spi -clang-target arm64-apple-ios26.5-simulator -target-sdk-version 26.5 -target-sdk-name iphonesimulator26.5 -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/OptionsSyncSummaryProvider.o -index-unit-output-path /iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/OptionsSyncSummaryProvider.o -index-store-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Index.noindex/DataStore -index-system-modules
+SwiftEmitModule normal arm64 Emitting\ module\ for\ iOSMerchandiseControl (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+
+EmitSwiftModule normal arm64 (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/SyncOrchestrator.swift:92:93: warning: main actor-isolated static property 'shared' can not be referenced from a nonisolated context; this is an error in the Swift 6 language mode
+        backgroundScheduler: any SyncBackgroundTaskScheduling = SyncBackgroundTaskScheduler.shared
+                                                                                            ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift:29:16: note: static property declared here
+    static let shared = SyncBackgroundTaskScheduler()
+               ^
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for iOSMerchandiseControl (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+
+SwiftDriver\ Compilation\ Requirements iOSMerchandiseControl normal arm64 com.apple.xcode.tools.swift.compiler (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name iOSMerchandiseControl -Onone @<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.SwiftFileList -DDEBUG -Xcc -fmodule-map-file\=<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/libxlsxwriter.modulemap -default-isolation\=MainActor -enable-bare-slash-regex -enable-upcoming-feature DisableOutwardActorInference -enable-upcoming-feature InferSendableFromCaptures -enable-upcoming-feature GlobalActorIsolatedTypesUsability -enable-upcoming-feature MemberImportVisibility -enable-upcoming-feature InferIsolatedConformances -enable-upcoming-feature NonisolatedNonsendingByDefault -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios26.1-simulator -g -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -emit-localized-strings -emit-localized-strings-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64 -c -j16 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.swiftmodule -validate-clang-modules-once -clang-build-session-file <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl_const_extract_protocols.json -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-generated-files.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-own-target-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl-273df38b21a488d2d0f41432c876c62f-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/iOSMerchandiseControl-project-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/libxlsxwriter/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-atomics/Sources/_AtomicsShims/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/include -Xcc -I<HOME_REDACTED>/Desktop/iOSMerchandiseControl/Vendor/libxls/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/DerivedSources-normal/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/DerivedSources/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl-Swift.h -import-objc-header <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/iOSMerchandiseControl-Bridging-Header.h -working-directory <HOME_REDACTED>/Desktop/iOSMerchandiseControl -experimental-emit-module-separately -disable-cmo
+
+Copy <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.swiftsourceinfo (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.swiftsourceinfo <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
+
+Copy <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.swiftmodule/arm64-apple-ios-simulator.abi.json <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.abi.json (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.abi.json <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.swiftmodule/arm64-apple-ios-simulator.abi.json
+
+Copy <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.swiftmodule/arm64-apple-ios-simulator.swiftmodule <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.swiftmodule (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl.build/Objects-normal/arm64/iOSMerchandiseControl.swiftmodule <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.swiftmodule/arm64-apple-ios-simulator.swiftmodule
+
+SwiftDriver iOSMerchandiseControlTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name iOSMerchandiseControlTests -Onone @<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.SwiftFileList -DDEBUG -Xcc -fmodule-map-file\=<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/libxlsxwriter.modulemap -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios26.1-simulator -g -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks -c -j16 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.swiftmodule -validate-clang-modules-once -clang-build-session-file <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests_const_extract_protocols.json -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-generated-files.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-own-target-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl-273df38b21a488d2d0f41432c876c62f-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-project-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/libxlsxwriter/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-atomics/Sources/_AtomicsShims/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources-normal/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests-Swift.h -import-objc-header <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/iOSMerchandiseControl-Bridging-Header.h -working-directory <HOME_REDACTED>/Desktop/iOSMerchandiseControl -experimental-emit-module-separately -disable-cmo
+
+SwiftGeneratePch normal arm64 Compiling\ bridging\ header (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling bridging header (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ iOSMerchandiseControlTests (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+EmitSwiftModule normal arm64 (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ Task126ConflictReviewTests.swift,\ Task126ConflictReviewUITests.swift,\ Task126SyncPolicyTests.swift,\ WatermarkStoreTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126ConflictReviewTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126ConflictReviewUITests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126SyncPolicyTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/WatermarkStoreTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126ConflictReviewTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126ConflictReviewUITests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126SyncPolicyTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/WatermarkStoreTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ Task105RealOpsClosureTests.swift,\ Task111ExcelImportParityTests.swift,\ Task115RealRootLifecycleTests.swift,\ Task118AutomaticDomainTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task105RealOpsClosureTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task115RealRootLifecycleTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task105RealOpsClosureTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task111ExcelImportParityTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task115RealRootLifecycleTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ SyncEventRecordingTests.swift,\ SyncRecoveryPolicyTests.swift,\ SyncStatusPresenterTests.swift,\ Task089LargeDatasetBenchmarkTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventRecordingTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncStatusPresenterTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task089LargeDatasetBenchmarkTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventRecordingTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift:14:9: warning: main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision, .requestLightReconcile)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift:26:9: warning: main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision, .runFullRecovery)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift:42:9: warning: main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision, .blockedBackoff)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncRecoveryPolicyTests.swift:54:9: warning: main actor-isolated conformance of 'SyncRecoveryPolicy.Decision' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision, .runBootstrapPull)
+        ^
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncStatusPresenterTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task089LargeDatasetBenchmarkTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ SupabasePullApplyServiceTests.swift,\ SupabasePullPreviewDiffEngineTests.swift,\ SupabasePullPreviewPaginationTests.swift,\ SupabasePushPreflightViewModelTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabasePullApplyServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabasePullPreviewDiffEngineTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabasePullPreviewPaginationTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabasePushPreflightViewModelTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabasePullApplyServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabasePullPreviewDiffEngineTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabasePullPreviewPaginationTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabasePushPreflightViewModelTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ SupabaseSyncEventDebugViewModelTests.swift,\ SupabaseSyncEventPreviewServiceTests.swift,\ SupabaseSyncPlanContractTests.swift,\ SyncCountReconciliationTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseSyncEventDebugViewModelTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseSyncEventPreviewServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseSyncPlanContractTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncCountReconciliationTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseSyncEventDebugViewModelTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseSyncEventPreviewServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseSyncPlanContractTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncCountReconciliationTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ SupabaseProductPriceApplyServiceTests.swift,\ SupabaseProductPriceManualPushServiceTests.swift,\ SupabaseProductPricePreviewServiceTests.swift,\ SupabaseProductPricePushDryRunServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseProductPriceApplyServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseProductPriceManualPushServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseProductPricePreviewServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseProductPricePushDryRunServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseProductPriceApplyServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseProductPriceManualPushServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseProductPricePreviewServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseProductPricePushDryRunServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ SupabaseConfigSecurityTests.swift,\ SupabaseManualPushPreflightTests.swift,\ SupabaseManualPushServiceTests.swift,\ SupabaseManualSyncCoordinatorTests.swift,\ SupabaseManualSyncLifecycleRunGateTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseConfigSecurityTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualPushPreflightTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualPushServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncLifecycleRunGateTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseConfigSecurityTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualPushPreflightTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualPushServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncCoordinatorTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncLifecycleRunGateTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ PendingChangeCoalescerTests.swift,\ RemoteIdentityMetadataSwiftDataTests.swift,\ SupabaseCatalogBaselinePreflightIntegrationTests.swift,\ SupabaseCatalogBaselineSwiftDataTests.swift,\ SupabaseCatalogBaselineWriterReaderTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/PendingChangeCoalescerTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/RemoteIdentityMetadataSwiftDataTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseCatalogBaselinePreflightIntegrationTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseCatalogBaselineSwiftDataTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseCatalogBaselineWriterReaderTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/PendingChangeCoalescerTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/RemoteIdentityMetadataSwiftDataTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseCatalogBaselinePreflightIntegrationTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseCatalogBaselineSwiftDataTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseCatalogBaselineWriterReaderTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ ManualPushFingerprintNormalizerTests.swift,\ OptionsLocalDatabaseSummaryTests.swift,\ OptionsLocalSummaryServiceTests.swift,\ OptionsSyncSummaryProviderTests.swift,\ OrderQuantitySummaryTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/ManualPushFingerprintNormalizerTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/OptionsLocalSummaryServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/OptionsSyncSummaryProviderTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/OrderQuantitySummaryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/ManualPushFingerprintNormalizerTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/OptionsLocalDatabaseSummaryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/OptionsLocalSummaryServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/OptionsSyncSummaryProviderTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/OrderQuantitySummaryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ AccountSyncPolicyTests.swift,\ AutomaticSyncReconnectSchedulerTests.swift,\ CloudSyncOverviewStateTests.swift,\ ExcelAnalyzerHTMLParsingTests.swift,\ HistorySessionSyncServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AutomaticSyncReconnectSchedulerTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/CloudSyncOverviewStateTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/ExcelAnalyzerHTMLParsingTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/HistorySessionSyncServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:16:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .promptBootstrapUpload)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:17:9: warning: main actor-isolated conformance of 'AccountSyncSafeAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.defaultSafeAction, .cancel)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:18:9: warning: main actor-isolated conformance of 'AccountRemoteMutationPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.remoteMutation, .allowedAfterUserConfirmation)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:19:9: warning: main actor-isolated conformance of 'AccountPendingHandling' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.pendingHandling, .keepUnboundUntilDecision)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:32:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .promptMergeReplaceUploadExportCancel)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:33:9: warning: main actor-isolated conformance of 'AccountSyncSafeAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.defaultSafeAction, .cancel)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:34:9: warning: main actor-isolated conformance of 'AccountRemoteMutationPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.remoteMutation, .blockedUntilUserDecision)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:35:9: warning: main actor-isolated conformance of 'AccountConflictPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.conflictPolicy, .noSilentMerge)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:48:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .promptRemoteVerification)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:49:9: warning: main actor-isolated conformance of 'AccountSyncSafeAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.defaultSafeAction, .cancel)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:50:9: warning: main actor-isolated conformance of 'AccountRemoteMutationPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.remoteMutation, .blockedUntilUserDecision)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:64:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .pushPendingDrainEventsLightReconcile)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:65:9: warning: main actor-isolated conformance of 'AccountRemoteMutationPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.remoteMutation, .allowed)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:66:9: warning: main actor-isolated conformance of 'AccountPendingHandling' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.pendingHandling, .pushOwnerBoundPending)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:81:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .pushPendingDrainEventsLightReconcile)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:82:9: warning: main actor-isolated conformance of 'AccountPendingHandling' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.pendingHandling, .pushOwnerBoundPending)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:96:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .promptSwitchStoreOrCreateStore)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:97:9: warning: main actor-isolated conformance of 'AccountSyncSafeAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.defaultSafeAction, .cancel)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:98:9: warning: main actor-isolated conformance of 'AccountPendingHandling' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.pendingHandling, .keepPendingWithOriginalOwner)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:99:9: warning: main actor-isolated conformance of 'AccountConflictPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.conflictPolicy, .noCrossAccountMerge)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:114:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .markConflictStale)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:115:9: warning: main actor-isolated conformance of 'AccountPendingHandling' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.pendingHandling, .preserveAsConflict)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:116:9: warning: main actor-isolated conformance of 'AccountConflictPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.conflictPolicy, .noSilentResurrect)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:130:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .markConflictStale)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:131:9: warning: main actor-isolated conformance of 'AccountConflictPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.conflictPolicy, .sameEffectiveAtPriceConflict)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:145:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .dedupeHistoryFingerprint)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:146:9: warning: main actor-isolated conformance of 'AccountConflictPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.conflictPolicy, .hideTaskDebugHistoryEntries)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:161:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .markConflictStale)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:162:9: warning: main actor-isolated conformance of 'AccountConflictPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.conflictPolicy, .noSilentResurrect)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:176:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .useRemoteOrdering)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:177:9: warning: main actor-isolated conformance of 'AccountConflictPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.conflictPolicy, .preferRemoteTimestampsAndEventIDs)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:191:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .drainEventsLightReconcile)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:192:9: warning: main actor-isolated conformance of 'AccountConflictPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.conflictPolicy, .remoteSourceOfTruth)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:206:9: warning: main actor-isolated conformance of 'AccountSyncDecisionAction' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.action, .keepAnonymousOrPreviousOwnerBound)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:207:9: warning: main actor-isolated conformance of 'AccountRemoteMutationPolicy' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.remoteMutation, .blocked)
+        ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AccountSyncPolicyTests.swift:208:9: warning: main actor-isolated conformance of 'AccountPendingHandling' to 'Equatable' cannot be used in nonisolated context; this is an error in the Swift 6 language mode
+        XCTAssertEqual(decision.pendingHandling, .keepLocalOnly)
+        ^
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/AutomaticSyncReconnectSchedulerTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/CloudSyncOverviewStateTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/ExcelAnalyzerHTMLParsingTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/HistorySessionSyncServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ Task119AutomaticArchitectureTests.swift,\ Task126AccountStoreBoundaryTests.swift,\ Task126AccountSwitchReviewUITests.swift,\ Task126CacheMemoryTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126AccountStoreBoundaryTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126AccountSwitchReviewUITests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126CacheMemoryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126AccountStoreBoundaryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126AccountSwitchReviewUITests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task126CacheMemoryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ SyncDecisionEngineTests.swift,\ SyncEventIncrementalDomainApplyServiceTests.swift,\ SyncEventLiveRecorderTests.swift,\ SyncEventOutboxDrainDebugViewModelTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncDecisionEngineTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventIncrementalDomainApplyServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncDecisionEngineTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventIncrementalDomainApplyServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventLiveRecorderTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift:185:31: warning: converting non-Sendable function value to '@MainActor @Sendable (String, Date) async throws -> SyncEventOutboxCounts' may introduce data races
+            fetchCounts: fake.fetchCounts(ownerUserID:now:),
+                              ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift:186:29: warning: converting non-Sendable function value to '@MainActor @Sendable (String, Int, Int?) async throws -> SyncEventOutboxDrainOutcome' may introduce data races
+            drainOnce: fake.drainOnce(ownerUserID:limit:fetchScanLimit:)
+                            ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift:289:31: warning: converting non-Sendable function value to '@MainActor @Sendable (String, Date) async throws -> SyncEventOutboxCounts' may introduce data races
+            fetchCounts: fake.fetchCounts(ownerUserID:now:),
+                              ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainDebugViewModelTests.swift:290:29: warning: converting non-Sendable function value to '@MainActor @Sendable (String, Int, Int?) async throws -> SyncEventOutboxDrainOutcome' may introduce data races
+            drainOnce: fake.drainOnce(ownerUserID:limit:fetchScanLimit:)
+                            ^
+
+SwiftCompile normal arm64 Compiling\ SupabaseManualSyncLocalPendingSnapshotProviderTests.swift,\ SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift,\ SupabaseManualSyncReleaseUITests.swift,\ SupabaseManualSyncRemotePreviewTests.swift,\ SupabaseManualSyncViewModelTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncLocalPendingSnapshotProviderTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncRemotePreviewTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncLocalPendingSnapshotProviderTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncReleaseUITests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncRemotePreviewTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseManualSyncViewModelTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 Compiling\ Task097RuntimeSmokeTests.swift,\ Task098CrossPlatformSmokeTests.swift,\ Task100LargeDatasetAcceptanceTests.swift,\ Task103CrossPlatformAcceptanceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task097RuntimeSmokeTests.swift:16:29: warning: main actor-isolated initializer 'init(config:redirectURL:)' cannot be called from outside of the actor; this is an error in the Swift 6 language mode
+            clientProvider: SupabaseClientProvider(config: config)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift:612:13: warning: call to main actor-isolated initializer 'init(remote:)' in a synchronous nonisolated context
+            ProductPriceReleaseRemoteSupabaseAdapter(remote: inventory)
+            ^
+iOSMerchandiseControl.ProductPriceReleaseRemoteSupabaseAdapter.init:2:21: note: calls to initializer 'init(remote:)' from outside of its actor context are implicitly asynchronous
+@MainActor internal init(remote: iOSMerchandiseControl.SupabaseTransportClient)}
+                    ^
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task100LargeDatasetAcceptanceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift:2790:13: warning: call to main actor-isolated initializer 'init(remote:)' in a synchronous nonisolated context
+            ProductPriceReleaseRemoteSupabaseAdapter(remote: inventory)
+            ^
+iOSMerchandiseControl.ProductPriceReleaseRemoteSupabaseAdapter.init:2:21: note: calls to initializer 'init(remote:)' from outside of its actor context are implicitly asynchronous
+@MainActor internal init(remote: iOSMerchandiseControl.SupabaseTransportClient)}
+                    ^
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift:2794:13: warning: call to main actor-isolated initializer 'init(remote:)' in a synchronous nonisolated context
+            RecoveryRemoteSupabaseAdapter(remote: inventory)
+            ^
+iOSMerchandiseControl.RecoveryRemoteSupabaseAdapter.init:2:21: note: calls to initializer 'init(remote:)' from outside of its actor context are implicitly asynchronous
+@MainActor internal init(remote: iOSMerchandiseControl.SupabaseTransportClient)}
+                    ^
+
+SwiftCompile normal arm64 Compiling\ HistoryViewStateTests.swift,\ InventorySyncServiceTests.swift,\ LocalizationCoverageTests.swift,\ LocalPendingAggregatedPushPlannerTests.swift,\ LocalPendingChangeAccumulatorTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/HistoryViewStateTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/InventorySyncServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/LocalizationCoverageTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/LocalPendingChangeAccumulatorTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/HistoryViewStateTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/InventorySyncServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/LocalizationCoverageTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/LocalPendingAggregatedPushPlannerTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/LocalPendingChangeAccumulatorTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftDriverJobDiscovery normal arm64 Compiling Task126ConflictReviewTests.swift, Task126ConflictReviewUITests.swift, Task126SyncPolicyTests.swift, WatermarkStoreTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 Compiling\ SyncEventOutboxDrainServiceTests.swift,\ SyncEventOutboxEnqueueServiceTests.swift,\ SyncEventOutboxLocalStoreTests.swift,\ SyncEventOutboxStateTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxEnqueueServiceTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxLocalStoreTests.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxStateTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxDrainServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxEnqueueServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxLocalStoreTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SyncEventOutboxStateTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+
+SwiftDriverJobDiscovery normal arm64 Compiling Task119AutomaticArchitectureTests.swift, Task126AccountStoreBoundaryTests.swift, Task126AccountSwitchReviewUITests.swift, Task126CacheMemoryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling ManualPushFingerprintNormalizerTests.swift, OptionsLocalDatabaseSummaryTests.swift, OptionsLocalSummaryServiceTests.swift, OptionsSyncSummaryProviderTests.swift, OrderQuantitySummaryTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling PendingChangeCoalescerTests.swift, RemoteIdentityMetadataSwiftDataTests.swift, SupabaseCatalogBaselinePreflightIntegrationTests.swift, SupabaseCatalogBaselineSwiftDataTests.swift, SupabaseCatalogBaselineWriterReaderTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling AccountSyncPolicyTests.swift, AutomaticSyncReconnectSchedulerTests.swift, CloudSyncOverviewStateTests.swift, ExcelAnalyzerHTMLParsingTests.swift, HistorySessionSyncServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SyncEventRecordingTests.swift, SyncRecoveryPolicyTests.swift, SyncStatusPresenterTests.swift, Task089LargeDatasetBenchmarkTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SyncDecisionEngineTests.swift, SyncEventIncrementalDomainApplyServiceTests.swift, SyncEventLiveRecorderTests.swift, SyncEventOutboxDrainDebugViewModelTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SupabasePullApplyServiceTests.swift, SupabasePullPreviewDiffEngineTests.swift, SupabasePullPreviewPaginationTests.swift, SupabasePushPreflightViewModelTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for iOSMerchandiseControlTests (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriver\ Compilation\ Requirements iOSMerchandiseControlTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name iOSMerchandiseControlTests -Onone @<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.SwiftFileList -DDEBUG -Xcc -fmodule-map-file\=<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/libxlsxwriter.modulemap -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios26.1-simulator -g -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks -c -j16 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.swiftmodule -validate-clang-modules-once -clang-build-session-file <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests_const_extract_protocols.json -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-generated-files.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-own-target-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl-273df38b21a488d2d0f41432c876c62f-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-project-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/libxlsxwriter/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-atomics/Sources/_AtomicsShims/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources-normal/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests-Swift.h -import-objc-header <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/iOSMerchandiseControl-Bridging-Header.h -working-directory <HOME_REDACTED>/Desktop/iOSMerchandiseControl -experimental-emit-module-separately -disable-cmo
+
+Copy <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControlTests.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.swiftsourceinfo (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.swiftsourceinfo <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControlTests.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
+
+SwiftMergeGeneratedHeaders <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources/iOSMerchandiseControlTests-Swift.h <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests-Swift.h (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-swiftHeaderTool -arch arm64 <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests-Swift.h -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources/iOSMerchandiseControlTests-Swift.h
+
+SwiftDriverJobDiscovery normal arm64 Compiling Task105RealOpsClosureTests.swift, Task111ExcelImportParityTests.swift, Task115RealRootLifecycleTests.swift, Task118AutomaticDomainTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+Copy <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControlTests.swiftmodule/arm64-apple-ios-simulator.swiftmodule <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.swiftmodule (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.swiftmodule <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControlTests.swiftmodule/arm64-apple-ios-simulator.swiftmodule
+
+Copy <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControlTests.swiftmodule/arm64-apple-ios-simulator.abi.json <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.abi.json (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.abi.json <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/iOSMerchandiseControlTests.swiftmodule/arm64-apple-ios-simulator.abi.json
+
+SwiftDriverJobDiscovery normal arm64 Compiling SupabaseConfigSecurityTests.swift, SupabaseManualPushPreflightTests.swift, SupabaseManualPushServiceTests.swift, SupabaseManualSyncCoordinatorTests.swift, SupabaseManualSyncLifecycleRunGateTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling HistoryViewStateTests.swift, InventorySyncServiceTests.swift, LocalizationCoverageTests.swift, LocalPendingAggregatedPushPlannerTests.swift, LocalPendingChangeAccumulatorTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SupabaseProductPriceApplyServiceTests.swift, SupabaseProductPriceManualPushServiceTests.swift, SupabaseProductPricePreviewServiceTests.swift, SupabaseProductPricePushDryRunServiceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SyncEventOutboxDrainServiceTests.swift, SyncEventOutboxEnqueueServiceTests.swift, SyncEventOutboxLocalStoreTests.swift, SyncEventOutboxStateTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SupabaseManualSyncLocalPendingSnapshotProviderTests.swift, SupabaseManualSyncReleaseActivityRegistrationAdapterTests.swift, SupabaseManualSyncReleaseUITests.swift, SupabaseManualSyncRemotePreviewTests.swift, SupabaseManualSyncViewModelTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SupabaseSyncEventDebugViewModelTests.swift, SupabaseSyncEventPreviewServiceTests.swift, SupabaseSyncPlanContractTests.swift, SyncCountReconciliationTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriverJobDiscovery normal arm64 Compiling Task097RuntimeSmokeTests.swift, Task098CrossPlatformSmokeTests.swift, Task100LargeDatasetAcceptanceTests.swift, Task103CrossPlatformAcceptanceTests.swift (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+
+SwiftDriver\ Compilation iOSMerchandiseControlTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name iOSMerchandiseControlTests -Onone @<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.SwiftFileList -DDEBUG -Xcc -fmodule-map-file\=<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/libxlsxwriter.modulemap -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios26.1-simulator -g -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/PackageFrameworks -F <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks -c -j16 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.swiftmodule -validate-clang-modules-once -clang-build-session-file <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests_const_extract_protocols.json -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-generated-files.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-own-target-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControl-273df38b21a488d2d0f41432c876c62f-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests-project-headers.hmap -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/libxlsxwriter/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-atomics/Sources/_AtomicsShims/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphonesimulator/include -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources-normal/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources/arm64 -Xcc -I<HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests-Swift.h -import-objc-header <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/iOSMerchandiseControl-Bridging-Header.h -working-directory <HOME_REDACTED>/Desktop/iOSMerchandiseControl -experimental-emit-module-separately -disable-cmo
+
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-test-options-summary-performance-20260527T185350Z.xcresult
+
+Testing failed:
+	The compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+	The compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+	Testing cancelled because the build failed.
+
+** TEST FAILED **
+
+
+The following build commands failed:
+	SwiftCompile normal arm64 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+	SwiftCompile normal arm64 Compiling\ OptionsSyncSummaryProvider.swift <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+	Testing project iOSMerchandiseControl with scheme iOSMerchandiseControl
+(3 failures)

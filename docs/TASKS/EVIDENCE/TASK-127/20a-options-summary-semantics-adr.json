@@ -1,0 +1,9 @@
+{
+  "taskId": "TASK-127",
+  "status": "ACCEPTED",
+  "productPriceSemantics": "count ProductPrice rows linked to non-tombstoned products",
+  "uiCanBeLoading": true,
+  "uiCanBeStale": true,
+  "falseGreenAllowed": false,
+  "task126Preserved": true
+}

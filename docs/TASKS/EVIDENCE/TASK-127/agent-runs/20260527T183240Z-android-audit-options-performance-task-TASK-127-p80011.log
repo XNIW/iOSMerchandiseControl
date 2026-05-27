@@ -1,0 +1,41 @@
+=== mc-agent android audit options-performance --task TASK-127 ===
+{
+  "NEXT_ACTION": "Use this TASK-127 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "status-state-viewmodel-flow",
+      "reason": "Options status should be emitted as ViewModel/Flow state.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "repository-uses-dispatchers-io",
+      "reason": "Repository/status queries should run on IO dispatcher.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "options-no-direct-dao",
+      "reason": "Options Composable must not call DAO/repository directly.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "productprice-summary-view-present",
+      "reason": "ProductPriceSummary/index support should exist for large datasets.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T18:32:40Z",
+  "details": {
+    "verdict": "NO_RUNTIME_PATCH_REQUIRED"
+  },
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.android-options-performance",
+  "startedAt": "2026-05-27T18:32:40Z",
+  "status": "PASS",
+  "taskId": "TASK-127"
+}

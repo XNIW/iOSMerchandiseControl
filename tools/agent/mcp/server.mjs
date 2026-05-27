@@ -101,6 +101,19 @@ const TOOLS = [
   { name: "mc_android_build_release", args: ["android", "build", "release"], live: false, cleanup: false },
   { name: "mc_android_test_sync", args: ["android", "test", "sync"], live: false, cleanup: false },
   { name: "mc_android_test_offline", args: ["android", "test", "offline"], live: false, cleanup: false },
+  { name: "mc_task127_head_consistency", args: ["git", "head-consistency", "--task"], taskArg: true, defaultTask: "TASK-127", live: false, cleanup: false },
+  { name: "mc_task127_preflight_head_consistency", args: ["preflight", "--require-head-consistency", "--task"], taskArg: true, defaultTask: "TASK-127", live: false, cleanup: false },
+  { name: "mc_task127_scan_options_mainactor_heavy_fetch", args: ["scan", "options-mainactor-heavy-fetch", "--task"], taskArg: true, defaultTask: "TASK-127", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task127_scan_productprice_full_fetch_mainactor", args: ["scan", "productprice-full-fetch-mainactor", "--task"], taskArg: true, defaultTask: "TASK-127", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task127_scan_options_refresh_debounce", args: ["scan", "options-refresh-debounce", "--task"], taskArg: true, defaultTask: "TASK-127", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task127_scan_debug_hook_release_safety", args: ["scan", "task127-debug-hook-release-safety", "--task"], taskArg: true, defaultTask: "TASK-127", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task127_scan_final_gates", args: ["scan", "task127-final-gates", "--task"], taskArg: true, defaultTask: "TASK-127", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task127_scan_scanner_self_tests", args: ["scan", "scanner-self-tests", "--task"], taskArg: true, defaultTask: "TASK-127", suffixArgs: ["--strict"], live: false, cleanup: false },
+  { name: "mc_task127_ios_test_options_summary_performance", args: ["ios", "test", "options-summary-performance", "--task"], taskArg: true, defaultTask: "TASK-127", live: false, cleanup: false },
+  { name: "mc_task127_ios_test_options_summary_provider", args: ["ios", "test", "options-summary-provider", "--task"], taskArg: true, defaultTask: "TASK-127", live: false, cleanup: false },
+  { name: "mc_task127_ios_smoke_options_performance", args: ["ios", "smoke", "options-performance", "--task"], taskArg: true, defaultTask: "TASK-127", live: false, cleanup: false },
+  { name: "mc_task127_android_audit_options_performance", args: ["android", "audit", "options-performance", "--task"], taskArg: true, defaultTask: "TASK-127", live: false, cleanup: false },
+  { name: "mc_task127_report_validate_json", args: ["report", "validate-json", "--task"], taskArg: true, defaultTask: "TASK-127", suffixArgs: ["--path"], reportPathArg: true, defaultPath: "docs/TASKS/EVIDENCE/TASK-127/agent-runs", live: false, cleanup: false },
   { name: "mc_sync_counts_supabase_task115", args: ["sync", "counts", "--task", "TASK-115", "--source", "supabase", "--profile", "linked"], live: false, cleanup: false },
   { name: "mc_sync_counts_android_task115", args: ["sync", "counts", "--task", "TASK-115", "--source", "android"], live: false, cleanup: false },
   { name: "mc_sync_counts_ios_task115", args: ["sync", "counts", "--task", "TASK-115", "--source", "ios"], live: false, cleanup: false },
@@ -238,6 +251,10 @@ async function selfTest() {
       !names.has("mc_task122_scan_adapter_delegation_depth") ||
       !names.has("mc_task122_scan_sync_efficiency_acceptance") ||
       !names.has("mc_android_test_offline") ||
+      !names.has("mc_task127_scan_options_mainactor_heavy_fetch") ||
+      !names.has("mc_task127_scan_scanner_self_tests") ||
+      !names.has("mc_task127_ios_test_options_summary_performance") ||
+      !names.has("mc_task127_android_audit_options_performance") ||
       !names.has("mc_sync_counts_supabase_task115") ||
       !names.has("mc_live_sync_matrix_task115")) {
     throw new Error("allowlist missing required tool");

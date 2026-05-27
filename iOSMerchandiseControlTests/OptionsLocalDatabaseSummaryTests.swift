@@ -76,6 +76,7 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
 
         let cachedRefreshFetchCount = await remoteFetcher.numberOfFetches()
         XCTAssertEqual(cachedRefreshFetchCount, 1)
+        try await waitForDriftLocalProducts(provider, expected: 1)
         XCTAssertEqual(provider.syncCountDriftReport?.local.products, 1)
         XCTAssertEqual(provider.syncCountDriftReport?.remote.products, 0)
         XCTAssertEqual(provider.syncCountDriftReport?.mismatches, [.products])
@@ -117,6 +118,19 @@ final class OptionsLocalDatabaseSummaryTests: XCTestCase {
             try await Task.sleep(nanoseconds: 10_000_000)
         }
         XCTFail("Timed out waiting for sync count drift refresh.")
+    }
+
+    private func waitForDriftLocalProducts(
+        _ provider: OptionsSyncSummaryProvider,
+        expected: Int
+    ) async throws {
+        for _ in 0..<80 {
+            if provider.syncCountDriftReport?.local.products == expected {
+                return
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for sync count drift local products \(expected).")
     }
 
     private func waitForFetchCount(

@@ -1,0 +1,10 @@
+{
+  "RESULT": "PASS_WITH_NOTES",
+  "EXIT_CODE": 0,
+  "REPORT_MD": "docs/TASKS/EVIDENCE/TASK-127/-1-02-mcp-allowlist-gap-analysis.md",
+  "REPORT_JSON": "docs/TASKS/EVIDENCE/TASK-127/-1-02-mcp-allowlist-gap-analysis.json",
+  "NEXT_ACTION": "Update MCP allowlist after TASK-127 CLI commands are added.",
+  "mcpStatus": "INCOMPLETE_FOR_TASK127",
+  "requiresCliFirst": true,
+  "mustRemainThinWrapper": true
+}

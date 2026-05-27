@@ -1,0 +1,32 @@
+=== mc-agent scan no-rls-bypass --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Keep app client under normal RLS.",
+  "canonicalHead": "ab33b6058041be50b20b6e235c11aca7a00225b3",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "rls-bypass-symbols",
+      "reason": "Client runtime must not use RLS bypass/admin client symbols.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-27T19:06:29+00:00",
+  "exitCode": 0,
+  "githubHead": "ab33b6058041be50b20b6e235c11aca7a00225b3",
+  "localHead": "ab33b6058041be50b20b6e235c11aca7a00225b3",
+  "nextAction": "Keep app client under normal RLS.",
+  "originHead": "ab33b6058041be50b20b6e235c11aca7a00225b3",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "no-rls-bypass",
+  "scannerName": "no-rls-bypass",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.no-rls-bypass",
+  "started_at": "2026-05-27T19:06:29+00:00",
+  "status": "PASS",
+  "summary": "no-rls-bypass: PASS (1 checks)",
+  "taskId": "TASK-127",
+  "task_id": "TASK-127"
+}

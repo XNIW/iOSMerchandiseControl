@@ -1,0 +1,7 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "commandsDiscoverable": 10,
+  "scannerNamespace": "top-level scan",
+  "forbiddenNamespace": "ios scan"
+}

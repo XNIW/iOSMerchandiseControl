@@ -1,0 +1,19 @@
+{
+  "RESULT": "PASS_WITH_NOTES",
+  "EXIT_CODE": 0,
+  "REPORT_MD": "docs/TASKS/EVIDENCE/TASK-127/-1-01-command-catalog-gap-analysis.md",
+  "REPORT_JSON": "docs/TASKS/EVIDENCE/TASK-127/-1-01-command-catalog-gap-analysis.json",
+  "NEXT_ACTION": "Add TASK-127 dispatcher/help-json entries before relying on commands as final evidence.",
+  "classifications": {
+    "ios test options-summary-performance": "MISSING",
+    "ios test options-summary-provider": "MISSING",
+    "ios smoke options-performance": "MISSING",
+    "android audit options-performance": "MISSING",
+    "scan options-mainactor-heavy-fetch": "MISSING",
+    "scan productprice-full-fetch-mainactor": "MISSING",
+    "scan options-refresh-debounce": "MISSING",
+    "scan task127-debug-hook-release-safety": "MISSING",
+    "scan task127-final-gates": "MISSING",
+    "scan scanner-self-tests --task TASK-127": "INCOMPLETE"
+  }
+}

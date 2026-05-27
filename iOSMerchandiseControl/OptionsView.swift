@@ -27,7 +27,6 @@ struct OptionsView: View {
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
-    @Query private var localPendingChanges: [LocalPendingChange]
     @ObservedObject private var syncStateStore: SyncStateStore
     @StateObject private var syncSummaryProvider = OptionsSyncSummaryProvider()
     @State private var isAccountDecisionSheetPresented = false
@@ -431,6 +430,9 @@ struct OptionsView: View {
     }
 
     private var localDatabaseTitle: String {
+        if syncSummaryProvider.isLoading {
+            return L("options.localDatabase.loading.title")
+        }
         if syncSummaryProvider.localDatabaseSummary.isCatalogEmpty {
             return L("options.localDatabase.empty.title")
         }
@@ -454,6 +456,9 @@ struct OptionsView: View {
     }
 
     private var localDatabaseDetail: String {
+        if syncSummaryProvider.isLoading {
+            return L("options.localDatabase.loading.detail")
+        }
         if syncSummaryProvider.localDatabaseSummary.isCatalogEmpty {
             return L("options.localDatabase.empty.detail")
         }
@@ -541,7 +546,7 @@ struct OptionsView: View {
             context: modelContext,
             authViewModel: supabaseAuthViewModel,
             remoteCountFetcher: remoteCountFetcher,
-            pendingChanges: localPendingChanges
+            refreshReason: "options-view"
         )
         if syncSummaryProvider.accountSyncDecision == nil {
             isAccountDecisionSheetPresented = false

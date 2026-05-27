@@ -1,0 +1,71 @@
+=== mc-agent scan task127-final-gates --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-127 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {
+        "path": "docs/TASKS/EVIDENCE/TASK-127/20a-options-summary-semantics-adr.md"
+      },
+      "id": "evidence-20a-options-summary-semantics-adr.md",
+      "reason": "Required TASK-127 final evidence exists: 20a-options-summary-semantics-adr.md.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "path": "docs/TASKS/EVIDENCE/TASK-127/58-plan-vs-execution-delta.md"
+      },
+      "id": "evidence-58-plan-vs-execution-delta.md",
+      "reason": "Required TASK-127 final evidence exists: 58-plan-vs-execution-delta.md.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "path": "docs/TASKS/EVIDENCE/TASK-127/59-final-performance-comparison.json"
+      },
+      "id": "evidence-59-final-performance-comparison.json",
+      "reason": "Required TASK-127 final evidence exists: 59-final-performance-comparison.json.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "path": "docs/TASKS/EVIDENCE/TASK-127/60-final-review-handoff.md"
+      },
+      "id": "evidence-60-final-review-handoff.md",
+      "reason": "Required TASK-127 final evidence exists: 60-final-review-handoff.md.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "path": "docs/TASKS/EVIDENCE/TASK-127/61-final-sensitive-evidence-repo-diff.md"
+      },
+      "id": "evidence-61-final-sensitive-evidence-repo-diff.md",
+      "reason": "Required TASK-127 final evidence exists: 61-final-sensitive-evidence-repo-diff.md.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "falseGreenStatus": false,
+        "loadingStateVisibleWhenNeeded": true,
+        "localSummaryTotalMs": 200,
+        "maxMainThreadStallMs": 0,
+        "measurementSource": "XCTest synthetic budget plus static anti-regression scans; tap metrics are inferred from async scheduling, not real UI instrumentation",
+        "productPriceCountMs": 200,
+        "refreshAllCallsWithin1s": 1,
+        "tapToFirstFrameMs": 0,
+        "tapToInteractiveMs": 0
+      },
+      "id": "postfix-performance-budget",
+      "reason": "Post-fix Options performance budget must be documented and within initial budget.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T18:44:17Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.task127-final-gates",
+  "startedAt": "2026-05-27T18:44:17Z",
+  "status": "PASS",
+  "taskId": "TASK-127"
+}

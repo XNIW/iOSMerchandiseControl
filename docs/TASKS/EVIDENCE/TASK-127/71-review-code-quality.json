@@ -1,0 +1,16 @@
+{
+  "taskId": "TASK-127",
+  "phase": "REVIEW",
+  "result": "PASS_WITH_NOTES",
+  "fixedFindings": [
+    "Pending attention count is now owner/store/localStore scoped via fetchCount.",
+    "Coalesced summary refresh requests are replayed after in-flight refresh completion.",
+    "Provider remote fetcher test fake made deterministic.",
+    "Debounced drift cached-snapshot test now waits for refreshed local drift state."
+  ],
+  "acceptedNotes": [
+    "Presenter remains MainActor but heavy array materialization paths are removed.",
+    "Legacy nil-store pending rows are not counted in the Options hot path; new rows are store-normalized."
+  ]
+}
+

@@ -1,0 +1,85 @@
+=== mc-agent scan options-mainactor-heavy-fetch --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Move heavy summary/pending work out of OptionsView/MainActor.",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()).filter",
+          "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+          "line": 217
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()).filter",
+          "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+          "line": 217
+        },
+        {
+          "excerpt": "FetchDescriptor<ProductPrice>()).filter { price in guard let product = price.product else { return false } return product.remoteDeletedAt == nil",
+          "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+          "line": 217
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+          "line": 2050
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+          "line": 2605
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+          "line": 2050
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+          "line": 2605
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+          "line": 439
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+          "line": 439
+        }
+      ],
+      "id": "no-productprice-full-fetch-filter",
+      "reason": "Options path must not full-fetch ProductPrice and filter relationships on MainActor.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [
+        {
+          "excerpt": "@Query private var localPendingChanges: [LocalPendingChange]",
+          "file": "iOSMerchandiseControl/OptionsView.swift",
+          "line": 30
+        }
+      ],
+      "id": "no-options-unscoped-pending-query",
+      "reason": "OptionsView must not materialize all LocalPendingChange rows through @Query.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "provider-has-loading-stale-state",
+      "reason": "Provider/cache state must expose loading/stale/last refreshed metadata.",
+      "status": "FAIL"
+    }
+  ],
+  "completedAt": "2026-05-27T18:32:50Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "FAIL",
+  "schemaVersion": "1.1",
+  "source": "scan.options-mainactor-heavy-fetch",
+  "startedAt": "2026-05-27T18:32:50Z",
+  "status": "FAIL",
+  "taskId": "TASK-127"
+}

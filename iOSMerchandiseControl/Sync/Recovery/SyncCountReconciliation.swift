@@ -214,10 +214,11 @@ extension LocalDatabasePublicSummary {
             categories: try context.fetchCount(FetchDescriptor<ProductCategory>(
                 predicate: #Predicate<ProductCategory> { $0.remoteDeletedAt == nil }
             )),
-            productPrices: try context.fetch(FetchDescriptor<ProductPrice>()).filter { price in
-                guard let product = price.product else { return false }
-                return product.remoteDeletedAt == nil
-            }.count,
+            productPrices: try context.fetchCount(FetchDescriptor<ProductPrice>(
+                predicate: #Predicate<ProductPrice> { price in
+                    price.product != nil && price.product?.remoteDeletedAt == nil
+                }
+            )),
             historySessions: try context.fetchCount(FetchDescriptor<HistoryEntry>(
                 predicate: #Predicate<HistoryEntry> { $0.remoteDeletedAt == nil }
             ))

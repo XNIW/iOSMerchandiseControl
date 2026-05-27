@@ -1,0 +1,8 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "strategy": "XCTest in-memory SwiftData synthetic dataset",
+  "prefix": "TASK127_PERF_",
+  "supabaseDataCreated": false,
+  "remoteCleanupNeeded": false
+}

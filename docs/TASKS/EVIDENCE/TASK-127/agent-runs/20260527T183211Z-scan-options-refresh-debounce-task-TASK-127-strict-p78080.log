@@ -1,0 +1,32 @@
+=== mc-agent scan options-refresh-debounce --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Add single-flight/debounce/coalescing to Options summary refresh.",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "excerpt": "refreshAll lacks explicit single-flight/in-flight guard",
+          "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+          "line": 1
+        },
+        {
+          "excerpt": "refreshAll lacks debounce/coalescing markers",
+          "file": "iOSMerchandiseControl/Sync/Automatic/Presentation/OptionsSyncSummaryProvider.swift",
+          "line": 1
+        }
+      ],
+      "id": "refresh-single-flight-debounced",
+      "reason": "Options summary refresh must be single-flight/debounced/coalesced.",
+      "status": "FAIL"
+    }
+  ],
+  "completedAt": "2026-05-27T18:32:11Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "FAIL",
+  "schemaVersion": "1.1",
+  "source": "scan.options-refresh-debounce",
+  "startedAt": "2026-05-27T18:32:11Z",
+  "status": "FAIL",
+  "taskId": "TASK-127"
+}

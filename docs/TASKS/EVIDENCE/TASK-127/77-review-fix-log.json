@@ -1,0 +1,21 @@
+{
+  "taskId": "TASK-127",
+  "phase": "REVIEW",
+  "result": "PASS",
+  "fixesApplied": [
+    "Replay latest coalesced Options summary refresh after in-flight completion.",
+    "Scope pending attention count by owner/store/localStore via fetchCount.",
+    "Add store-scoped pending counter test coverage.",
+    "Add coalesced refresh replay provider test.",
+    "Fix remote fetcher test fake race.",
+    "Wait for debounced cached drift refresh in existing test.",
+    "Harden options-performance smoke and final gate against unsupported numeric UI timing claims.",
+    "Set missing UI timing metrics to null in final performance comparison."
+  ],
+  "intermediateFailuresResolved": [
+    "ios test options-summary-performance",
+    "ios test options-summary-provider",
+    "ios test sync"
+  ]
+}
+

@@ -1,0 +1,18 @@
+{
+  "taskId": "TASK-127",
+  "phase": "REVIEW",
+  "verdict": "ACTIVE / REVIEW -- REVIEW_PASS_WITH_NOTES",
+  "result": "REVIEW_PASS_WITH_NOTES",
+  "criticalGatesPass": true,
+  "done": false,
+  "task126RemainsDone": true,
+  "acceptedNotes": [
+    "Baseline tap pre-fix is not numeric.",
+    "Options performance smoke is artifact/static/XCTest-backed, not a real simulator tap timing probe.",
+    "No iPhone physical test was run.",
+    "Provider remains MainActor but heavy full-fetch/materialization paths are removed."
+  ],
+  "supabaseMutation": false,
+  "androidVerdict": "NO_RUNTIME_PATCH_REQUIRED"
+}
+

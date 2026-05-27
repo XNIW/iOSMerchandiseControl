@@ -1,0 +1,85 @@
+=== mc-agent scan scanner-self-tests --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-127 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {
+        "actual": "FAIL",
+        "expected": "FAIL",
+        "scan": "productprice-full-fetch-mainactor"
+      },
+      "id": "red_productprice_fetch_filter_mainactor.swift-productprice-full-fetch-mainactor",
+      "reason": "Fixture red_productprice_fetch_filter_mainactor.swift must produce FAIL.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "actual": "FAIL",
+        "expected": "FAIL",
+        "scan": "options-mainactor-heavy-fetch"
+      },
+      "id": "red_options_view_unscoped_pending_query.swift-options-mainactor-heavy-fetch",
+      "reason": "Fixture red_options_view_unscoped_pending_query.swift must produce FAIL.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "actual": "FAIL",
+        "expected": "FAIL",
+        "scan": "options-refresh-debounce"
+      },
+      "id": "red_refreshall_no_debounce.swift-options-refresh-debounce",
+      "reason": "Fixture red_refreshall_no_debounce.swift must produce FAIL.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "actual": "FAIL",
+        "expected": "FAIL",
+        "scan": "task127-debug-hook-release-safety"
+      },
+      "id": "red_debug_hook_release_string.swift-task127-debug-hook-release-safety",
+      "reason": "Fixture red_debug_hook_release_string.swift must produce FAIL.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "actual": "PASS",
+        "expected": "PASS",
+        "scan": "productprice-full-fetch-mainactor"
+      },
+      "id": "green_background_summary_service.swift-productprice-full-fetch-mainactor",
+      "reason": "Fixture green_background_summary_service.swift must produce PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "actual": "PASS",
+        "expected": "PASS",
+        "scan": "options-refresh-debounce"
+      },
+      "id": "green_debounced_presenter.swift-options-refresh-debounce",
+      "reason": "Fixture green_debounced_presenter.swift must produce PASS.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "actual": "PASS",
+        "expected": "PASS",
+        "scan": "task127-debug-hook-release-safety"
+      },
+      "id": "green_debug_only_probe.swift-task127-debug-hook-release-safety",
+      "reason": "Fixture green_debug_only_probe.swift must produce PASS.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T18:58:02Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.scanner-self-tests",
+  "startedAt": "2026-05-27T18:58:02Z",
+  "status": "PASS",
+  "taskId": "TASK-127"
+}

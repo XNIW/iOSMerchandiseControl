@@ -1,0 +1,27 @@
+=== mc-agent scan productprice-full-fetch-mainactor --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-127 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "no-productprice-fetch-filter-mainactor",
+      "reason": "ProductPrice count must avoid full fetch/filter on the MainActor.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "efficient-count-marker",
+      "reason": "Implementation must use fetchCount, background summary service, or a documented cached count path.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T18:58:03Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.productprice-full-fetch-mainactor",
+  "startedAt": "2026-05-27T18:58:03Z",
+  "status": "PASS",
+  "taskId": "TASK-127"
+}

@@ -754,6 +754,46 @@ mc_android_test_task126_suite() {
   return "$MC_EXIT_FAIL"
 }
 
+mc_android_audit_options_performance() {
+  MC_PLATFORM="android"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  MC_CA_REFS="AC-127-13"
+  MC_PLATFORM="general"
+  TASK_ID="${MC_TASK_ID:-TASK-127}" IOS_REPO="$MC_IOS_REPO" ANDROID_REPO="$MC_ANDROID_REPO" SUPABASE_REPO="$MC_SUPABASE_REPO" \
+    python3 "$MC_AGENT_ROOT/lib/task127_scans.py" android-options-performance > /tmp/mc-agent-task127-android-audit.$$.json
+  local code=$?
+  MC_PLATFORM="android"
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task127-android-audit.$$.json)"
+  rm -f /tmp/mc-agent-task127-android-audit.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  local verdict
+  verdict="$(python3 - <<'PY' "$MC_SYNC_JSON_RESULT"
+import json, sys
+payload=json.loads(sys.argv[1])
+print((payload.get("details") or {}).get("verdict", "MISCONFIGURED_REPO_OR_GRADLE"))
+PY
+)"
+  if [[ "$code" -eq 0 ]]; then
+    MC_SUMMARY="Android Options performance audit PASS: ${verdict}."
+    MC_NEXT_ACTION="Use Android audit verdict in TASK-127 parity evidence."
+    return "$MC_EXIT_PASS"
+  fi
+  if [[ "$code" -eq 2 ]]; then
+    MC_SUMMARY="Android Options performance audit BLOCKED_EXTERNAL: ${verdict}."
+    MC_NEXT_ACTION="Restore/configure Android repo and rerun audit."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  if [[ "$code" -eq 1 ]]; then
+    MC_SUMMARY="Android Options performance audit FAIL: ${verdict}."
+    MC_NEXT_ACTION="Apply targeted Android threading/summary fix only if classified P0/P1."
+    return "$MC_EXIT_FAIL"
+  fi
+  MC_SUMMARY="Android Options performance audit MISCONFIGURED."
+  MC_NEXT_ACTION="Fix TASK-127 Android audit scanner routing."
+  return "$MC_EXIT_MISCONFIGURED"
+}
+
 mc_cmd_android() {
   local sub="${1:-}"
   shift || true
@@ -768,6 +808,12 @@ mc_cmd_android() {
       esac
       ;;
     smoke) mc_android_smoke "${1:-device}" ;;
+    audit)
+      case "${1:-}" in
+        options-performance) mc_android_audit_options_performance ;;
+        *) MC_SUMMARY="Unknown android audit: ${1:-}"; return "$MC_EXIT_MISCONFIGURED" ;;
+      esac
+      ;;
     auth-preflight)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
       mc_android_auth_preflight

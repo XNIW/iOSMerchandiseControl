@@ -1,0 +1,9 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS_WITH_NOTES",
+  "serviceTests": "PASS",
+  "providerTests": "PASS",
+  "staticScans": "PASS",
+  "uiSmoke": "metrics-backed",
+  "realDevice": "NOT_RUN"
+}

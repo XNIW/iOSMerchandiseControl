@@ -1192,6 +1192,8 @@
 "options.localDatabase.empty.detail" = "Dopo l'accesso, scarica il database dal cloud per partire dai dati condivisi.";
 "options.localDatabase.pending.title" = "Modifiche locali in attesa";
 "options.localDatabase.pending.detail" = "Invia le modifiche in attesa quando l'accesso cloud e' pronto.";
+"options.localDatabase.loading.title" = "Aggiornamento conteggi locali";
+"options.localDatabase.loading.detail" = "Puoi continuare a usare Opzioni mentre il riepilogo locale si aggiorna.";
 "options.localDatabase.needsDownload.title" = "Database cloud non scaricato";
 "options.localDatabase.needsDownload.detail" = "Scarica il database dal cloud prima di usare questi dati locali come riferimento.";
 "options.localDatabase.ready.title" = "Database locale aggiornato";

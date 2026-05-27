@@ -1,0 +1,12 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS_WITH_PREFIX_RED_BASELINE",
+  "routing": "implemented",
+  "scannerSelfTests": "PASS",
+  "prefixScans": {
+    "options-mainactor-heavy-fetch": "FAIL_EXPECTED_PREFIx",
+    "productprice-full-fetch-mainactor": "FAIL_EXPECTED_PREFIx",
+    "options-refresh-debounce": "FAIL_EXPECTED_PREFIx",
+    "task127-debug-hook-release-safety": "PASS"
+  }
+}

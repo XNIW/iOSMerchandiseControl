@@ -1,0 +1,73 @@
+=== mc-agent scan productprice-full-fetch-mainactor --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Replace ProductPrice full fetch/filter with efficient counted/background summary path.",
+  "checks": [
+    {
+      "evidence": [
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()).filter",
+          "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+          "line": 217
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()).filter",
+          "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+          "line": 217
+        },
+        {
+          "excerpt": "FetchDescriptor<ProductPrice>()).filter { price in guard let product = price.product else { return false } return product.remoteDeletedAt == nil",
+          "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+          "line": 217
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+          "line": 2050
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+          "line": 2605
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+          "line": 2050
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+          "line": 2605
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+          "line": 439
+        },
+        {
+          "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+          "file": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+          "line": 439
+        }
+      ],
+      "id": "no-productprice-fetch-filter-mainactor",
+      "reason": "ProductPrice count must avoid full fetch/filter on the MainActor.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {},
+      "id": "efficient-count-marker",
+      "reason": "Implementation must use fetchCount, background summary service, or a documented cached count path.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T18:32:12Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "FAIL",
+  "schemaVersion": "1.1",
+  "source": "scan.productprice-full-fetch-mainactor",
+  "startedAt": "2026-05-27T18:32:12Z",
+  "status": "FAIL",
+  "taskId": "TASK-127"
+}

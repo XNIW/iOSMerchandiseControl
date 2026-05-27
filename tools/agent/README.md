@@ -91,6 +91,28 @@ MC_TASK_ID=TASK-126 ./tools/agent/mc-agent.sh preflight --require-head-consisten
 
 TASK-126 scanner fixtures live under `tools/agent/fixtures/task126_scanners/`. RED fixtures must fail and GREEN fixtures must pass before scanner output can be used as final evidence.
 
+TASK-127 Options performance gates:
+
+```bash
+MC_TASK_ID=TASK-127 ./tools/agent/mc-agent.sh help-json
+MC_TASK_ID=TASK-127 ./tools/agent/mc-agent.sh list commands-json
+MC_TASK_ID=TASK-127 ./tools/agent/mc-agent.sh config validate
+MC_TASK_ID=TASK-127 ./tools/agent/mc-agent.sh git head-consistency --task TASK-127
+MC_TASK_ID=TASK-127 ./tools/agent/mc-agent.sh preflight --require-head-consistency --task TASK-127
+./tools/agent/mc-agent.sh ios test options-summary-performance --task TASK-127
+./tools/agent/mc-agent.sh ios test options-summary-provider --task TASK-127
+./tools/agent/mc-agent.sh ios smoke options-performance --task TASK-127
+./tools/agent/mc-agent.sh android audit options-performance --task TASK-127
+./tools/agent/mc-agent.sh scan scanner-self-tests --task TASK-127 --strict
+./tools/agent/mc-agent.sh scan options-mainactor-heavy-fetch --task TASK-127 --strict
+./tools/agent/mc-agent.sh scan productprice-full-fetch-mainactor --task TASK-127 --strict
+./tools/agent/mc-agent.sh scan options-refresh-debounce --task TASK-127 --strict
+./tools/agent/mc-agent.sh scan task127-debug-hook-release-safety --task TASK-127 --strict
+./tools/agent/mc-agent.sh scan task127-final-gates --task TASK-127 --strict
+```
+
+TASK-127 scanners are top-level `scan` commands; do not use `ios scan ...`. Scanner fixtures live under `tools/agent/fixtures/task127_scanners/` and must prove RED/GREEN behavior before final evidence is accepted. Cursor, Codex and Claude should use the same one-line commands above and rely on the standard `RESULT`, `EXIT_CODE`, `REPORT_MD`, `REPORT_JSON`, `NEXT_ACTION` wrapper output.
+
 Per operatore umano:
 
 ```bash

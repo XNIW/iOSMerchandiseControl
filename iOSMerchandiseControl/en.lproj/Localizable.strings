@@ -1193,6 +1193,8 @@
 "options.localDatabase.empty.detail" = "After signing in, download the cloud database to start from shared data.";
 "options.localDatabase.pending.title" = "Local changes are waiting";
 "options.localDatabase.pending.detail" = "Send the pending changes when cloud access is ready.";
+"options.localDatabase.loading.title" = "Updating local counts";
+"options.localDatabase.loading.detail" = "You can keep using Options while the local summary refreshes.";
 "options.localDatabase.needsDownload.title" = "Cloud database not downloaded";
 "options.localDatabase.needsDownload.detail" = "Download the cloud database before relying on this device's local data.";
 "options.localDatabase.ready.title" = "Local database is up to date";

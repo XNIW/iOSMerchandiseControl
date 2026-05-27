@@ -1,0 +1,46 @@
+=== mc-agent ios smoke options-performance --task TASK-127 ===
+{
+  "taskId": "TASK-127",
+  "status": "PASS_WITH_NOTES",
+  "verdict": "post-fix static and XCTest performance evidence passes; pre-fix numeric tap metrics were not available",
+  "baseline": {
+    "tapToFirstFrameMs": null,
+    "tapToInteractiveMs": null,
+    "maxMainThreadStallMs": null,
+    "localSummaryTotalMs": null,
+    "productPriceCountMs": null,
+    "refreshAllCallsWithin1s": null,
+    "staticScans": {
+      "optionsMainactorHeavyFetch": "FAIL",
+      "productPriceFullFetchMainactor": "FAIL",
+      "optionsRefreshDebounce": "FAIL"
+    }
+  },
+  "postFix": {
+    "tapToFirstFrameMs": 0,
+    "tapToInteractiveMs": 0,
+    "maxMainThreadStallMs": 0,
+    "localSummaryTotalMs": 200,
+    "productPriceCountMs": 200,
+    "refreshAllCallsWithin1s": 1,
+    "falseGreenStatus": false,
+    "loadingStateVisibleWhenNeeded": true,
+    "measurementSource": "XCTest synthetic budget plus static anti-regression scans; tap metrics are inferred from async scheduling, not real UI instrumentation"
+  },
+  "delta": {
+    "productPriceFullFetchMainactor": "removed",
+    "optionsPendingQueryArray": "removed",
+    "refreshDuplication": "coalesced"
+  },
+  "budget": {
+    "tapToFirstFrameMs": 200,
+    "maxMainThreadStallMs": 100,
+    "refreshAllCallsWithin1s": 1
+  },
+  "measurementLimits": {
+    "preFixNumericTapMetricsAvailable": false,
+    "simulatorUiTapProbeAvailable": false,
+    "physicalIPhoneRun": false,
+    "supabaseLivePerformanceDataCreated": false
+  }
+}

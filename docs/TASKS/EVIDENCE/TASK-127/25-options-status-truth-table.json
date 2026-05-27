@@ -1,0 +1,5 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "priorityOrder": ["loading", "empty", "pending", "drift", "needsCheck", "ready"]
+}

@@ -1,0 +1,7 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "test": "OptionsSyncSummaryProviderTests/testRefreshIsDebouncedAndCoalescesRepeatedAppearNotifications",
+  "refreshAllCallsWithin1sPostFix": 1,
+  "coalescedEventsObserved": 1
+}

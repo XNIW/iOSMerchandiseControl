@@ -1,0 +1,5 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "requiredTopLevelKeys": ["baseline", "postFix", "delta", "budget", "measurementLimits", "verdict"]
+}

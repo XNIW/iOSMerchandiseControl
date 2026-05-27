@@ -1,0 +1,146 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun productprice-full-fetch-mainactor.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-127/agent-runs/20260527T183211Z-scan-productprice-full-fetch-mainactor-task-TASK-127-strict-p78079.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-127/agent-runs/20260527T183211Z-scan-productprice-full-fetch-mainactor-task-TASK-127-strict-p78079.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-127/agent-runs/20260527T183211Z-scan-productprice-full-fetch-mainactor-task-TASK-127-strict-p78079.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-127-01",
+    "AC-127-02",
+    "AC-127-03"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan productprice-full-fetch-mainactor --task TASK-127 --strict",
+  "command_slug": "scan-productprice-full-fetch-mainactor-task-TASK-127-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 1471,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-127",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK127_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-127"
+  },
+  "exit_code": 1,
+  "git_sha": "ab33b605",
+  "next_action_recommended": "Fix failing checks and rerun productprice-full-fetch-mainactor.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Replace ProductPrice full fetch/filter with efficient counted/background summary path.",
+    "checks": [
+      {
+        "evidence": [
+          {
+            "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()).filter",
+            "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+            "line": 217
+          },
+          {
+            "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()).filter",
+            "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+            "line": 217
+          },
+          {
+            "excerpt": "FetchDescriptor<ProductPrice>()).filter { price in guard let product = price.product else { return false } return product.remoteDeletedAt == nil",
+            "file": "iOSMerchandiseControl/Sync/Recovery/SyncCountReconciliation.swift",
+            "line": 217
+          },
+          {
+            "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+            "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+            "line": 2050
+          },
+          {
+            "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+            "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+            "line": 2605
+          },
+          {
+            "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+            "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+            "line": 2050
+          },
+          {
+            "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+            "file": "iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift",
+            "line": 2605
+          },
+          {
+            "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+            "file": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+            "line": 439
+          },
+          {
+            "excerpt": "context.fetch(FetchDescriptor<ProductPrice>()) .filter",
+            "file": "iOSMerchandiseControlTests/Task098CrossPlatformSmokeTests.swift",
+            "line": 439
+          }
+        ],
+        "id": "no-productprice-fetch-filter-mainactor",
+        "reason": "ProductPrice count must avoid full fetch/filter on the MainActor.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": {},
+        "id": "efficient-count-marker",
+        "reason": "Implementation must use fetchCount, background summary service, or a documented cached count path.",
+        "status": "PASS"
+      }
+    ],
+    "completedAt": "2026-05-27T18:32:12Z",
+    "details": {},
+    "redactionApplied": true,
+    "result": "FAIL",
+    "schemaVersion": "1.1",
+    "source": "scan.productprice-full-fetch-mainactor",
+    "startedAt": "2026-05-27T18:32:12Z",
+    "status": "FAIL",
+    "taskId": "TASK-127"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260527T183211Z-scan-productprice-full-fetch-mainactor-task-TASK-127-strict-p78079",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-127",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-27T18:32:12Z",
+  "timestamp_start": "2026-05-27T18:32:10Z",
+  "warnings": []
+}

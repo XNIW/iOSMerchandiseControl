@@ -1,0 +1,11 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS_WITH_NOTES",
+  "profileType": "static-plus-targeted-xctest",
+  "preFixMainThreadRisks": [
+    "OptionsView @Query LocalPendingChange array",
+    "OptionsSyncSummaryProvider @MainActor synchronous refresh",
+    "ProductPrice full fetch/filter with relationship faulting"
+  ],
+  "postFixMainThreadRisksMitigated": true
+}

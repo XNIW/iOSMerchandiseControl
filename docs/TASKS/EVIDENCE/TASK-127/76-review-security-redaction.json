@@ -1,0 +1,21 @@
+{
+  "taskId": "TASK-127",
+  "phase": "REVIEW",
+  "result": "PASS",
+  "runs": [
+    {"command": "scan sensitive --task TASK-127 --strict", "result": "PASS", "runId": "20260527T190639Z-scan-sensitive-task-TASK-127-strict-p30823"},
+    {"command": "scan evidence --task TASK-127 --strict", "result": "PASS", "runId": "20260527T190640Z-scan-evidence-task-TASK-127-strict-p30881"},
+    {"command": "scan repo-diff --task TASK-127 --strict", "result": "PASS", "runId": "20260527T190640Z-scan-repo-diff-task-TASK-127-strict-p30887"},
+    {"command": "scan source-format --task TASK-127 --strict", "result": "PASS", "runId": "20260527T190656Z-scan-source-format-task-TASK-127-strict-p38891"},
+    {"command": "report validate-json --task TASK-127 --path docs/TASKS/EVIDENCE/TASK-127/agent-runs", "result": "PASS", "runId": "20260527T190656Z-report-validate-json-task-TASK-127-path-docs-TASKS-EVIDENCE-TASK-127-agent-runs-p38892"}
+  ],
+  "supabase": {
+    "readOnly": true,
+    "mutation": false,
+    "migration": false,
+    "cleanup": false,
+    "serviceRoleClient": false,
+    "rlsBypass": false
+  }
+}
+

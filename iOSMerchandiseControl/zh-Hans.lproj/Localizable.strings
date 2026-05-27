@@ -1193,6 +1193,8 @@
 "options.localDatabase.empty.detail" = "登录后下载云端数据库，以共享数据开始使用。";
 "options.localDatabase.pending.title" = "有本地更改待发送";
 "options.localDatabase.pending.detail" = "云端访问就绪后发送待处理更改。";
+"options.localDatabase.loading.title" = "正在更新本地计数";
+"options.localDatabase.loading.detail" = "本地摘要刷新时，你仍可继续使用选项。";
 "options.localDatabase.needsDownload.title" = "尚未下载云端数据库";
 "options.localDatabase.needsDownload.detail" = "请先下载云端数据库，再将此设备的本地数据作为依据。";
 "options.localDatabase.ready.title" = "本地数据库已更新";

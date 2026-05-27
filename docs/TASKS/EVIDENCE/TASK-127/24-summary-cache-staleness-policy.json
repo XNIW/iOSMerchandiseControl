@@ -1,0 +1,6 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "fields": ["isLoading", "isStale", "lastRefreshedAt", "source", "refreshReason", "coalescedEvents"],
+  "falseGreenAllowed": false
+}

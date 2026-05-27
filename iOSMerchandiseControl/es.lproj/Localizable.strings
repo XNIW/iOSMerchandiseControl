@@ -1193,6 +1193,8 @@
 "options.localDatabase.empty.detail" = "Después de iniciar sesión, descarga la base cloud para empezar con datos compartidos.";
 "options.localDatabase.pending.title" = "Cambios locales pendientes";
 "options.localDatabase.pending.detail" = "Envía los cambios pendientes cuando el acceso cloud esté listo.";
+"options.localDatabase.loading.title" = "Actualizando conteos locales";
+"options.localDatabase.loading.detail" = "Puedes seguir usando Opciones mientras se actualiza el resumen local.";
 "options.localDatabase.needsDownload.title" = "Base cloud no descargada";
 "options.localDatabase.needsDownload.detail" = "Descarga la base cloud antes de confiar en los datos locales de este dispositivo.";
 "options.localDatabase.ready.title" = "Base local actualizada";

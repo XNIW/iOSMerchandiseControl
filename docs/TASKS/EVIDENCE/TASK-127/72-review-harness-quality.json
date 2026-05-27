@@ -1,0 +1,20 @@
+{
+  "taskId": "TASK-127",
+  "phase": "REVIEW",
+  "result": "PASS",
+  "syntax": {
+    "iosSh": "PASS",
+    "task127ScansPy": "PASS",
+    "mcpServerMjs": "PASS"
+  },
+  "scannerRuns": [
+    {"command": "scan scanner-self-tests --task TASK-127 --strict", "result": "PASS", "runId": "20260527T185802Z-scan-scanner-self-tests-task-TASK-127-strict-p19724"},
+    {"command": "scan options-mainactor-heavy-fetch --task TASK-127 --strict", "result": "PASS", "runId": "20260527T185802Z-scan-options-mainactor-heavy-fetch-task-TASK-127-strict-p19746"},
+    {"command": "scan productprice-full-fetch-mainactor --task TASK-127 --strict", "result": "PASS", "runId": "20260527T185802Z-scan-productprice-full-fetch-mainactor-task-TASK-127-strict-p19747"},
+    {"command": "scan options-refresh-debounce --task TASK-127 --strict", "result": "PASS", "runId": "20260527T185814Z-scan-options-refresh-debounce-task-TASK-127-strict-p20965"},
+    {"command": "scan task127-debug-hook-release-safety --task TASK-127 --strict", "result": "PASS", "runId": "20260527T185814Z-scan-task127-debug-hook-release-safety-task-TASK-127-strict-p20966"},
+    {"command": "scan task127-final-gates --task TASK-127 --strict", "result": "PASS", "runId": "20260527T190656Z-scan-task127-final-gates-task-TASK-127-strict-p38893"}
+  ],
+  "unsupportedClaimsBlocked": true
+}
+

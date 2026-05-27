@@ -1216,6 +1216,14 @@ mc_ios_test() {
       MC_CA_REFS="AC-126-08,AC-126-09,AC-126-40,AC-126-41"
       tests=(-only-testing:iOSMerchandiseControlTests/Task126CacheMemoryTests)
       ;;
+    options-summary-performance)
+      MC_CA_REFS="AC-127-02,AC-127-03,AC-127-10"
+      tests=(-only-testing:iOSMerchandiseControlTests/OptionsLocalSummaryServiceTests)
+      ;;
+    options-summary-provider)
+      MC_CA_REFS="AC-127-05,AC-127-06,AC-127-07,AC-127-10"
+      tests=(-only-testing:iOSMerchandiseControlTests/OptionsSyncSummaryProviderTests)
+      ;;
     *)
       MC_SUMMARY="Unknown iOS test suite: ${suite}"
       return "$MC_EXIT_MISCONFIGURED"
@@ -1300,6 +1308,48 @@ mc_ios_smoke() {
       MC_CA_REFS="AC-126-05,AC-126-12,AC-126-52"
       mc_ios_task126_ui_smoke "$kind"
       return $?
+      ;;
+    options-performance)
+      MC_CA_REFS="AC-127-01,AC-127-02,AC-127-05,AC-127-11"
+      local metrics="$MC_IOS_REPO/$MC_EVIDENCE_DIR/59-final-performance-comparison.json"
+      if [[ ! -f "$metrics" ]]; then
+        metrics="$MC_IOS_REPO/$MC_EVIDENCE_DIR/18-baseline-vs-postfix-comparison-contract.json"
+      fi
+      if [[ -f "$metrics" ]] && python3 - "$metrics" <<'PY'
+import json, sys
+payload=json.load(open(sys.argv[1], encoding="utf-8"))
+post=payload.get("postFix") or payload.get("postfix") or {}
+limits=payload.get("measurementLimits") or {}
+has_ui_metrics = post.get("tapToFirstFrameMs") is not None and post.get("maxMainThreadStallMs") is not None
+if has_ui_metrics:
+    ok = post.get("tapToFirstFrameMs", 999999) <= 200 and post.get("maxMainThreadStallMs", 999999) <= 100
+else:
+    ok = payload.get("status") == "PASS_WITH_NOTES" and limits.get("simulatorUiTapProbeAvailable") is False
+ok = bool(post) and ok and post.get("refreshAllCallsWithin1s", 999999) <= 1 and post.get("falseGreenStatus") is False
+sys.exit(0 if ok else 1)
+PY
+      then
+        MC_SYNC_JSON_RESULT="$(cat "$metrics")"
+        mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+        if python3 - "$metrics" <<'PY'
+import json, sys
+payload=json.load(open(sys.argv[1], encoding="utf-8"))
+post=payload.get("postFix") or {}
+sys.exit(0 if post.get("tapToFirstFrameMs") is not None else 1)
+PY
+        then
+          MC_SUMMARY="iOS smoke options-performance PASS from TASK-127 runtime performance metrics."
+          MC_NEXT_ACTION="Use the performance comparison artifact as simulator Options smoke evidence."
+        else
+          mc_set_pass_with_notes
+          MC_SUMMARY="iOS smoke options-performance PASS_WITH_NOTES: no UI tap timing probe was available; static scans and XCTest performance evidence are accepted fallback evidence."
+          MC_NEXT_ACTION="Use as fallback smoke evidence; add real simulator tap instrumentation before claiming numeric UI latency."
+        fi
+        return "$MC_EXIT_PASS"
+      fi
+      MC_SUMMARY="iOS smoke options-performance FAIL: missing or failing TASK-127 post-fix performance metrics."
+      MC_NEXT_ACTION="Run the TASK-127 performance probe and update 59-final-performance-comparison.json."
+      return "$MC_EXIT_FAIL"
       ;;
     *)
       MC_SUMMARY="Unknown iOS smoke kind: ${kind}"

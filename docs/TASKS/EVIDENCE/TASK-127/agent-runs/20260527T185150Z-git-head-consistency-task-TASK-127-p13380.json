@@ -1,0 +1,117 @@
+{
+  "NEXT_ACTION": "Continue TASK-127 preflight/scans.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-127/agent-runs/20260527T185150Z-git-head-consistency-task-TASK-127-p13380.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-127/agent-runs/20260527T185150Z-git-head-consistency-task-TASK-127-p13380.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-127/agent-runs/20260527T185150Z-git-head-consistency-task-TASK-127-p13380.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "HEAD-CONSISTENCY"
+  ],
+  "cleanup_plan_id": null,
+  "command": "git head-consistency --task TASK-127",
+  "command_slug": "git-head-consistency-task-TASK-127",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 2544,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-127",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK127_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-127"
+  },
+  "exit_code": 0,
+  "git_sha": "ab33b605",
+  "next_action_recommended": "Continue TASK-127 preflight/scans.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Proceed with TASK-127 gates.",
+    "checks": [
+      {
+        "id": "local_head",
+        "status": "PASS",
+        "value": "ab33b6058041be50b20b6e235c11aca7a00225b3"
+      },
+      {
+        "id": "origin_main",
+        "status": "PASS",
+        "value": "ab33b6058041be50b20b6e235c11aca7a00225b3"
+      },
+      {
+        "id": "ls_remote_origin_main",
+        "status": "PASS",
+        "value": "ab33b6058041be50b20b6e235c11aca7a00225b3"
+      },
+      {
+        "id": "local_origin_remote_match",
+        "status": "PASS",
+        "value": {
+          "local": "ab33b6058041be50b20b6e235c11aca7a00225b3",
+          "origin": "ab33b6058041be50b20b6e235c11aca7a00225b3",
+          "remote": "ab33b6058041be50b20b6e235c11aca7a00225b3"
+        }
+      },
+      {
+        "id": "github_rendered_main_contains_remote_sha",
+        "status": "PASS",
+        "value": {
+          "githubUrl": "https://github.com/XNIW/iOSMerchandiseControl",
+          "renderedSample": "f3abb0cc802f3d7b95fc8762b94bdcb13bf39634",
+          "renderedStatus": "FETCHED"
+        }
+      }
+    ],
+    "completedAt": "2026-05-27T18:51:53Z",
+    "remoteUrlRedacted": "https://github.com/XNIW/iOSMerchandiseControl.git",
+    "schemaVersion": "1.1",
+    "source": "git.head-consistency",
+    "startedAt": "2026-05-27T18:51:53Z",
+    "status": "PASS",
+    "taskId": "TASK-127"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260527T185150Z-git-head-consistency-task-TASK-127-p13380",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-127",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-27T18:51:53Z",
+  "timestamp_start": "2026-05-27T18:51:50Z",
+  "warnings": []
+}

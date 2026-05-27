@@ -1,0 +1,7 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "loadingTitleKey": "options.localDatabase.loading.title",
+  "loadingDetailKey": "options.localDatabase.loading.detail",
+  "popupIntroduced": false
+}

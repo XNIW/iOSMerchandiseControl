@@ -1,0 +1,155 @@
+{
+  "NEXT_ACTION": "Use this report in TASK-127 evidence matrix.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-127/agent-runs/20260527T184541Z-scan-task127-final-gates-task-TASK-127-strict-p4965.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-127/agent-runs/20260527T184541Z-scan-task127-final-gates-task-TASK-127-strict-p4965.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-127/agent-runs/20260527T184541Z-scan-task127-final-gates-task-TASK-127-strict-p4965.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-127-01",
+    "AC-127-02",
+    "AC-127-03",
+    "AC-127-04",
+    "AC-127-05",
+    "AC-127-06",
+    "AC-127-07",
+    "AC-127-08",
+    "AC-127-09",
+    "AC-127-10",
+    "AC-127-11",
+    "AC-127-13",
+    "AC-127-14",
+    "AC-127-15"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan task127-final-gates --task TASK-127 --strict",
+  "command_slug": "scan-task127-final-gates-task-TASK-127-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 281,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-127",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK127_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-127"
+  },
+  "exit_code": 0,
+  "git_sha": "ab33b605",
+  "next_action_recommended": "Use this report in TASK-127 evidence matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Use this TASK-127 scanner as evidence.",
+    "checks": [
+      {
+        "evidence": {
+          "path": "docs/TASKS/EVIDENCE/TASK-127/20a-options-summary-semantics-adr.md"
+        },
+        "id": "evidence-20a-options-summary-semantics-adr.md",
+        "reason": "Required TASK-127 final evidence exists: 20a-options-summary-semantics-adr.md.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "path": "docs/TASKS/EVIDENCE/TASK-127/58-plan-vs-execution-delta.md"
+        },
+        "id": "evidence-58-plan-vs-execution-delta.md",
+        "reason": "Required TASK-127 final evidence exists: 58-plan-vs-execution-delta.md.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "path": "docs/TASKS/EVIDENCE/TASK-127/59-final-performance-comparison.json"
+        },
+        "id": "evidence-59-final-performance-comparison.json",
+        "reason": "Required TASK-127 final evidence exists: 59-final-performance-comparison.json.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "path": "docs/TASKS/EVIDENCE/TASK-127/60-final-review-handoff.md"
+        },
+        "id": "evidence-60-final-review-handoff.md",
+        "reason": "Required TASK-127 final evidence exists: 60-final-review-handoff.md.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "path": "docs/TASKS/EVIDENCE/TASK-127/61-final-sensitive-evidence-repo-diff.md"
+        },
+        "id": "evidence-61-final-sensitive-evidence-repo-diff.md",
+        "reason": "Required TASK-127 final evidence exists: 61-final-sensitive-evidence-repo-diff.md.",
+        "status": "PASS"
+      },
+      {
+        "evidence": {
+          "falseGreenStatus": false,
+          "loadingStateVisibleWhenNeeded": true,
+          "localSummaryTotalMs": 200,
+          "maxMainThreadStallMs": 0,
+          "measurementSource": "XCTest synthetic budget plus static anti-regression scans; tap metrics are inferred from async scheduling, not real UI instrumentation",
+          "productPriceCountMs": 200,
+          "refreshAllCallsWithin1s": 1,
+          "tapToFirstFrameMs": 0,
+          "tapToInteractiveMs": 0
+        },
+        "id": "postfix-performance-budget",
+        "reason": "Post-fix Options performance budget must be documented and within initial budget.",
+        "status": "PASS"
+      }
+    ],
+    "completedAt": "2026-05-27T18:45:41Z",
+    "details": {},
+    "redactionApplied": true,
+    "result": "PASS",
+    "schemaVersion": "1.1",
+    "source": "scan.task127-final-gates",
+    "startedAt": "2026-05-27T18:45:41Z",
+    "status": "PASS",
+    "taskId": "TASK-127"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260527T184541Z-scan-task127-final-gates-task-TASK-127-strict-p4965",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-127",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-27T18:45:41Z",
+  "timestamp_start": "2026-05-27T18:45:41Z",
+  "warnings": []
+}

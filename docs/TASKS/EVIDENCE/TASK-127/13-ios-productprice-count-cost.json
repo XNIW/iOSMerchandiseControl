@@ -1,0 +1,11 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "strategy": "fetchCount with active product predicate",
+  "largeSyntheticDataset": {
+    "products": 1000,
+    "productPrices": 2000,
+    "budgetMs": 200,
+    "result": "PASS"
+  }
+}

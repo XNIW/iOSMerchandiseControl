@@ -1,0 +1,12 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS_WITH_NOTES",
+  "implementedDataset": {
+    "products": 1000,
+    "productPrices": 2000
+  },
+  "futureDatasetTarget": {
+    "products": 20000,
+    "productPrices": 40000
+  }
+}

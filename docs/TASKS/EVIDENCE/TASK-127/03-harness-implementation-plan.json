@@ -1,0 +1,16 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "phase": "Phase 0",
+  "implemented": [
+    "TASK-127 top-level scan routing",
+    "TASK-127 scanner wrapper",
+    "TASK-127 Python scanner",
+    "iOS test/smoke command routing",
+    "Android audit command routing",
+    "MCP allowlist entries",
+    "README command catalog examples"
+  ],
+  "swiftKotlinSqlPatched": false,
+  "supabaseMutation": false
+}

@@ -1,0 +1,21 @@
+=== mc-agent scan options-refresh-debounce --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-127 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "refresh-single-flight-debounced",
+      "reason": "Options summary refresh must be single-flight/debounced/coalesced.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T18:58:14Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.options-refresh-debounce",
+  "startedAt": "2026-05-27T18:58:14Z",
+  "status": "PASS",
+  "taskId": "TASK-127"
+}

@@ -1,0 +1,8 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS",
+  "allowlistAdded": true,
+  "selfTest": "PASS",
+  "liveCommandsAdded": false,
+  "cleanupCommandsAdded": false
+}

@@ -1,0 +1,20 @@
+{
+  "taskId": "TASK-127",
+  "phase": "REVIEW",
+  "result": "PASS",
+  "checkedAt": "2026-05-27",
+  "commands": [
+    {"command": "help-json", "result": "PASS"},
+    {"command": "list commands-json", "result": "PASS"},
+    {"command": "config validate", "result": "PASS", "runId": "20260527T185150Z-config-validate-p13377"},
+    {"command": "git head-consistency --task TASK-127", "result": "PASS", "runId": "20260527T185150Z-git-head-consistency-task-TASK-127-p13380"},
+    {"command": "preflight --require-head-consistency --task TASK-127", "result": "PASS", "runId": "20260527T185150Z-preflight-require-head-consistency-task-TASK-127-p13378"}
+  ],
+  "tracking": {
+    "task127": "ACTIVE / REVIEW",
+    "task126": "DONE",
+    "doneClaim": false,
+    "supabaseMutation": false
+  }
+}
+

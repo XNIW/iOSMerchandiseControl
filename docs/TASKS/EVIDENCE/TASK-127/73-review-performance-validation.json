@@ -1,0 +1,19 @@
+{
+  "taskId": "TASK-127",
+  "phase": "REVIEW",
+  "result": "PASS_WITH_NOTES",
+  "runs": [
+    {"command": "ios test options-summary-performance --task TASK-127", "result": "PASS", "runId": "20260527T185636Z-ios-test-options-summary-performance-task-TASK-127-p17506"},
+    {"command": "ios test options-summary-provider --task TASK-127", "result": "PASS", "runId": "20260527T185743Z-ios-test-options-summary-provider-task-TASK-127-p19105"},
+    {"command": "ios smoke options-performance --task TASK-127", "result": "PASS_WITH_NOTES", "runId": "20260527T185814Z-ios-smoke-options-performance-task-TASK-127-p21007"},
+    {"command": "ios build debug --task TASK-127", "result": "PASS", "runId": "20260527T185819Z-ios-build-debug-task-TASK-127-p22200"},
+    {"command": "ios build release --task TASK-127", "result": "PASS", "runId": "20260527T185826Z-ios-build-release-task-TASK-127-p22715"}
+  ],
+  "performanceClaims": {
+    "baselineTapNumeric": false,
+    "postFixTapNumeric": false,
+    "realDevicePassClaimed": false,
+    "verdict": "PASS_WITH_NOTES"
+  }
+}
+

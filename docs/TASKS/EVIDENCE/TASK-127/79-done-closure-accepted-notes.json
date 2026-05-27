@@ -1,0 +1,24 @@
+{
+  "taskId": "TASK-127",
+  "status": "DONE",
+  "phase": "Chiusura -- DONE con note accettate, nessun claim real-device",
+  "closureDate": "2026-05-27",
+  "authorization": "Explicit user request after Codex review REVIEW_PASS_WITH_NOTES",
+  "verdict": "DONE con note accettate, nessun claim real-device",
+  "acceptedNotes": [
+    "Baseline tap pre-fix non numerica.",
+    "Options performance smoke basato su artifact/static/XCTest fallback, non su tap UI reale.",
+    "Nessun iPhone fisico testato.",
+    "Nessun claim real-device.",
+    "Nessun claim production-ready globale.",
+    "Provider ancora MainActor, ma senza full fetch/filter ProductPrice e senza pending array materialization nel path Options."
+  ],
+  "supabase": {
+    "readOnly": true,
+    "mutation": false,
+    "cleanup": false,
+    "migration": false
+  },
+  "androidVerdict": "NO_RUNTIME_PATCH_REQUIRED",
+  "task126RemainsDone": true
+}

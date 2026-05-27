@@ -1,0 +1,21 @@
+=== mc-agent scan task127-debug-hook-release-safety --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-127 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "task127-debug-probe-debug-only",
+      "reason": "TASK-127 debug performance hooks must be compiled only in DEBUG.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-27T18:32:40Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.task127-debug-hook-release-safety",
+  "startedAt": "2026-05-27T18:32:40Z",
+  "status": "PASS",
+  "taskId": "TASK-127"
+}

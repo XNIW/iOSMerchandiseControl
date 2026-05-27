@@ -1,0 +1,20 @@
+{
+  "taskId": "TASK-127",
+  "phase": "REVIEW",
+  "result": "PASS",
+  "task126RemainsDone": true,
+  "runs": [
+    {"command": "ios test sync --task TASK-127", "result": "PASS", "runId": "20260527T190304Z-ios-test-sync-task-TASK-127-p24616"},
+    {"command": "ios test account-store-boundary --task TASK-127", "result": "PASS", "runId": "20260527T190542Z-ios-test-account-store-boundary-task-TASK-127-p25448"},
+    {"command": "ios test sync-policy --task TASK-127", "result": "PASS", "runId": "20260527T190554Z-ios-test-sync-policy-task-TASK-127-p26685"},
+    {"command": "ios test conflict-review --task TASK-127", "result": "PASS", "runId": "20260527T190600Z-ios-test-conflict-review-task-TASK-127-p27209"},
+    {"command": "ios test cache-memory --task TASK-127", "result": "PASS", "runId": "20260527T190607Z-ios-test-cache-memory-task-TASK-127-p26684"},
+    {"command": "scan task126-final-gates --task TASK-127 --strict", "result": "PASS", "runId": "20260527T190619Z-scan-task126-final-gates-task-TASK-127-strict-p28303"},
+    {"command": "scan no-full-pull-normal-path --task TASK-127 --strict", "result": "PASS", "runId": "20260527T190619Z-scan-no-full-pull-normal-path-task-TASK-127-strict-p28304"},
+    {"command": "scan no-hidden-manual-sync --task TASK-127 --strict", "result": "PASS", "runId": "20260527T190619Z-scan-no-hidden-manual-sync-task-TASK-127-strict-p28317"},
+    {"command": "scan no-service-role-client --task TASK-127 --strict", "result": "PASS", "runId": "20260527T190628Z-scan-no-service-role-client-task-TASK-127-strict-p29559"},
+    {"command": "scan no-rls-bypass --task TASK-127 --strict", "result": "PASS", "runId": "20260527T190628Z-scan-no-rls-bypass-task-TASK-127-strict-p29561"}
+  ],
+  "supabaseMutation": false
+}
+

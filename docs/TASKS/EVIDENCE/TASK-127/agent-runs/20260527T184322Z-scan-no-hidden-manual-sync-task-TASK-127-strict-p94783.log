@@ -1,0 +1,32 @@
+=== mc-agent scan no-hidden-manual-sync --task TASK-127 --strict ===
+{
+  "NEXT_ACTION": "Remove hidden manual sync from automatic tests/runtime.",
+  "canonicalHead": "ab33b6058041be50b20b6e235c11aca7a00225b3",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "hidden-manual-sync",
+      "reason": "Automatic gates must not hide manual sync calls.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-27T18:43:23+00:00",
+  "exitCode": 0,
+  "githubHead": "ab33b6058041be50b20b6e235c11aca7a00225b3",
+  "localHead": "ab33b6058041be50b20b6e235c11aca7a00225b3",
+  "nextAction": "Remove hidden manual sync from automatic tests/runtime.",
+  "originHead": "ab33b6058041be50b20b6e235c11aca7a00225b3",
+  "repository": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "no-hidden-manual-sync",
+  "scannerName": "no-hidden-manual-sync",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.no-hidden-manual-sync",
+  "started_at": "2026-05-27T18:43:23+00:00",
+  "status": "PASS",
+  "summary": "no-hidden-manual-sync: PASS (1 checks)",
+  "taskId": "TASK-127",
+  "task_id": "TASK-127"
+}

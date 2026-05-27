@@ -1,0 +1,9 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS_WITH_NOTES",
+  "implemented": ["harness", "scanners", "swift-options-fix", "tests", "builds", "android-audit", "task126-supporting-gates"],
+  "notApplicable": ["supabase-performance-dataset", "android-runtime-patch"],
+  "blockedExternal": ["physical-iphone-performance-run"],
+  "baselineNumericTapMetricsAvailable": false,
+  "unsupportedClaims": false
+}

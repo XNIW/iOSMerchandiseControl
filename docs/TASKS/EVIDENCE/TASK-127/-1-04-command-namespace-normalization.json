@@ -1,0 +1,20 @@
+{
+  "RESULT": "PASS",
+  "EXIT_CODE": 0,
+  "REPORT_MD": "docs/TASKS/EVIDENCE/TASK-127/-1-04-command-namespace-normalization.md",
+  "REPORT_JSON": "docs/TASKS/EVIDENCE/TASK-127/-1-04-command-namespace-normalization.json",
+  "NEXT_ACTION": "Register TASK-127 scanners under top-level scan.",
+  "scannerNamespace": "scan",
+  "forbidden": ["ios scan"],
+  "expectedCommands": [
+    "ios test options-summary-performance",
+    "ios test options-summary-provider",
+    "ios smoke options-performance",
+    "android audit options-performance",
+    "scan options-mainactor-heavy-fetch",
+    "scan productprice-full-fetch-mainactor",
+    "scan options-refresh-debounce",
+    "scan task127-debug-hook-release-safety",
+    "scan task127-final-gates"
+  ]
+}

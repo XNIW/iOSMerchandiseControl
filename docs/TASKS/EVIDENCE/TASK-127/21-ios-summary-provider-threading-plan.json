@@ -1,0 +1,7 @@
+{
+  "taskId": "TASK-127",
+  "status": "PASS_WITH_NOTES",
+  "mainActorPublisher": true,
+  "entryCallbackBlocksOnSummary": false,
+  "fullObjectMaterializationRemoved": true
+}
