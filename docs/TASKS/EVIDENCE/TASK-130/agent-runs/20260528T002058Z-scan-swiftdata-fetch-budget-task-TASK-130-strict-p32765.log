@@ -1,0 +1,37 @@
+=== mc-agent scan swiftdata-fetch-budget --task TASK-130 --strict ===
+{
+  "NEXT_ACTION": "Keep benchmark/runtime measurement as PASS_WITH_NOTES unless large-device data is provided.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/ExcelSessionViewModel.swift",
+      "id": "TASK130-SWIFTDATA-PREGENERATE-NO-FETCH-ALL",
+      "reason": "PreGenerate old-price lookup must not fetch every Product and filter in memory.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/ExcelSessionViewModel.swift",
+      "id": "TASK130-SWIFTDATA-PREGENERATE-CHUNKED-BARCODE",
+      "reason": "PreGenerate lookup uses chunked barcode predicates.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/DatabaseView.swift",
+      "id": "TASK130-SWIFTDATA-DATABASE-UI-QUERY-NOT-IMPORT-BLOCKER",
+      "reason": "Database product list still uses SwiftUI @Query for UI listing; this is not the import/pre-generate hot path.",
+      "status": "PASS_WITH_NOTES"
+    }
+  ],
+  "completed_at": "2026-05-28T00:20:58+00:00",
+  "requires_live": false,
+  "result_status": "PASS_WITH_NOTES",
+  "safety_level": "read_only_static_scan",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.swiftdata-fetch-budget",
+  "started_at": "2026-05-28T00:20:58+00:00",
+  "status": "PASS_WITH_NOTES",
+  "strict": true,
+  "summary": "scan.swiftdata-fetch-budget: PASS_WITH_NOTES (3 checks)",
+  "taskId": "TASK-130",
+  "task_id": "TASK-130"
+}

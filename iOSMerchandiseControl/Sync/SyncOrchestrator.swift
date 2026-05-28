@@ -89,7 +89,7 @@ final class SyncOrchestrator: ObservableObject {
         syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?,
         stateStore: SyncStateStore? = nil,
         decisionInputProvider: any SyncDecisionInputProviding,
-        backgroundScheduler: any SyncBackgroundTaskScheduling = SyncBackgroundTaskScheduler.shared
+        backgroundScheduler: (any SyncBackgroundTaskScheduling)? = nil
     ) {
         self.automaticRuntime = automaticRuntime
         self.authViewModel = authViewModel
@@ -97,7 +97,7 @@ final class SyncOrchestrator: ObservableObject {
         self.syncEventSignalWatcher = syncEventSignalWatcher
         self.stateStore = stateStore ?? SyncStateStore()
         self.decisionInputProvider = decisionInputProvider
-        self.backgroundScheduler = backgroundScheduler
+        self.backgroundScheduler = backgroundScheduler ?? SyncBackgroundTaskScheduler.shared
     }
 
     var rootPresentationState: SyncRootPresentationState {

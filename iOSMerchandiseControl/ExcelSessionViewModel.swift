@@ -691,13 +691,25 @@ extension ExcelSessionViewModel {
 
         guard !allBarcodes.isEmpty else { return [:] }
 
-        // Fetch di tutti i Product, filtro in memoria (più semplice che fare un "IN" dinamico in SwiftData)
-        let products = try context.fetch(FetchDescriptor<Product>())
-
         var map: [String: (Double?, Double?)] = [:]
-        for product in products where allBarcodes.contains(product.barcode) {
-            map[product.barcode] = (product.purchasePrice, product.retailPrice)
+        let barcodeList = Array(allBarcodes).sorted()
+        let chunkSize = 250
+
+        for start in stride(from: 0, to: barcodeList.count, by: chunkSize) {
+            let end = min(start + chunkSize, barcodeList.count)
+            let chunk = Array(barcodeList[start..<end])
+            let descriptor = FetchDescriptor<Product>(
+                predicate: #Predicate<Product> { product in
+                    chunk.contains(product.barcode)
+                }
+            )
+
+            let products = try context.fetch(descriptor)
+            for product in products {
+                map[product.barcode] = (product.purchasePrice, product.retailPrice)
+            }
         }
+
         return map
     }
 

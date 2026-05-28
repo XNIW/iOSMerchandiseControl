@@ -1,0 +1,123 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun the TASK-130 consolidation command.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-130/agent-runs/20260528T002058Z-harness-golden-corpus-roundtrip-task-TASK-130-p32764.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-130/agent-runs/20260528T002058Z-harness-golden-corpus-roundtrip-task-TASK-130-p32764.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-130/agent-runs/20260528T002058Z-harness-golden-corpus-roundtrip-task-TASK-130-p32764.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [],
+  "cleanup_plan_id": null,
+  "command": "harness golden-corpus roundtrip --task TASK-130",
+  "command_slug": "harness-golden-corpus-roundtrip-task-TASK-130",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 314,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-130",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK130_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-130"
+  },
+  "exit_code": 1,
+  "git_sha": "cdb22534",
+  "next_action_recommended": "Fix failing checks and rerun the TASK-130 consolidation command.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Reviewer must accept PARTIAL binary roundtrip limits or request device/app-auth execution inside TASK-130.",
+    "checks": [
+      {
+        "file": "iOSMerchandiseControl/DatabaseView.swift",
+        "id": "TASK130-ROUNDTRIP-IOS-EXPORT-FULL-DB",
+        "reason": "iOS full DB export path includes PriceHistory and XLSX writer.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/DatabaseView.swift",
+        "id": "TASK130-ROUNDTRIP-IOS-IMPORT-FULL-DB",
+        "reason": "iOS full DB import path is present.",
+        "status": "FAIL"
+      },
+      {
+        "file": "app/src/main/java/com/example/merchandisecontrolsplitview/util/ExcelUtils.kt",
+        "id": "TASK130-ROUNDTRIP-ANDROID-IMPORT-PATH",
+        "reason": "Android spreadsheet import utility is present for static parity.",
+        "status": "PASS"
+      },
+      {
+        "file": "app/src/main/java/com/example/merchandisecontrolsplitview/ui/screens/DatabaseScreen.kt",
+        "id": "TASK130-ROUNDTRIP-ANDROID-EXPORT-PATH",
+        "reason": "Android export UI/path was statically inspected; no Android-produced XLSX artifact was generated for iOS import in this run.",
+        "status": "PARTIAL"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus",
+        "id": "TASK130-ROUNDTRIP-IOS-TO-ANDROID-BINARY",
+        "reason": "No binary iOS export artifact was imported into Android during this consolidation run; static paths and fixtures are documented.",
+        "status": "PARTIAL"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus",
+        "id": "TASK130-ROUNDTRIP-ANDROID-TO-IOS-BINARY",
+        "reason": "No binary Android export artifact was imported into iOS during this consolidation run; static paths and fixtures are documented.",
+        "status": "PARTIAL"
+      }
+    ],
+    "completed_at": "2026-05-28T00:20:58+00:00",
+    "requires_live": false,
+    "result_status": "FAIL",
+    "safety_level": "read_only_static_scan",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "harness.golden-corpus.roundtrip",
+    "started_at": "2026-05-28T00:20:58+00:00",
+    "status": "FAIL",
+    "summary": "harness.golden-corpus.roundtrip: FAIL (6 checks)",
+    "taskId": "TASK-130",
+    "task_id": "TASK-130"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260528T002058Z-harness-golden-corpus-roundtrip-task-TASK-130-p32764",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-130",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-28T00:20:58Z",
+  "timestamp_start": "2026-05-28T00:20:57Z",
+  "warnings": []
+}

@@ -1,0 +1,43 @@
+=== mc-agent harness real-device-feasibility --task TASK-130 ===
+{
+  "NEXT_ACTION": "Reviewer must accept these as feasibility notes or provide devices/auth windows for a TASK-130 live run.",
+  "checks": [
+    {
+      "evidence": {
+        "returncode": 0
+      },
+      "file": "xcrun devicectl list devices",
+      "id": "TASK130-REALDEVICE-IOS-LISTABLE",
+      "reason": "iOS physical device list was queried; this does not prove app-auth/background acceptance.",
+      "status": "PASS_WITH_NOTES"
+    },
+    {
+      "evidence": {
+        "deviceRows": 2,
+        "returncode": 0
+      },
+      "file": "adb devices",
+      "id": "TASK130-REALDEVICE-ANDROID-LISTABLE",
+      "reason": "Android device list was queried; this does not prove physical/offline/locked acceptance.",
+      "status": "PASS_WITH_NOTES"
+    },
+    {
+      "file": "docs/TASKS/TASK-130-price-contract-current-previous-old.md",
+      "id": "TASK130-REALDEVICE-BACKGROUND-LOCKED-LONG",
+      "reason": "No 30-60 minute background/locked/offline real-device run was executed in this consolidation pass.",
+      "status": "PARTIAL"
+    }
+  ],
+  "completed_at": "2026-05-28T00:32:05+00:00",
+  "requires_live": false,
+  "result_status": "PASS_WITH_NOTES",
+  "safety_level": "read_only_static_scan",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "harness.real-device-feasibility",
+  "started_at": "2026-05-28T00:32:05+00:00",
+  "status": "PASS_WITH_NOTES",
+  "summary": "harness.real-device-feasibility: PASS_WITH_NOTES (3 checks)",
+  "taskId": "TASK-130",
+  "task_id": "TASK-130"
+}

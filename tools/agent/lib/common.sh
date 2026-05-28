@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 MC_AGENT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MC_AGENT_VERSION="0.5.2-task125"
+MC_AGENT_VERSION="0.5.5-task130-consolidated"
 MC_SCHEMA_VERSION="1.1"
 
 MC_IOS_REPO="${MC_IOS_REPO:-/Users/minxiang/Desktop/iOSMerchandiseControl}"
@@ -435,7 +435,13 @@ Usage:
   ./tools/agent/mc-agent.sh scan no-hidden-manual-sync|no-full-pull-normal-path|no-service-role-client|no-rls-bypass|no-mainactor-heavy-sync|no-stale-pbxproj-reference|no-test-fixture-in-app-target|no-root-legacy-sync-service|remote-adapter-single-domain|background-task-registration|background-task-no-ui-context|outbox-pending-survives-restart|evidence-redaction|source-format|dead-code-residue --task TASK-125 --strict
   ./tools/agent/mc-agent.sh scan task126-policy-matrix|owner-store-scope|local-store-identity|pending-base-version|changed-fields-contract|no-cross-owner-store-pending-push|conflict-review-coverage|productprice-history-policy|cache-active-store-only|inactive-cache-cleanup-safety|task126-final-gates --task TASK-126 --strict
   ./tools/agent/mc-agent.sh scan options-mainactor-heavy-fetch|productprice-full-fetch-mainactor|options-refresh-debounce|task127-debug-hook-release-safety|task127-final-gates --task TASK-127 --strict
+  ./tools/agent/mc-agent.sh scan price-contract|swiftdata-fetch-budget --task TASK-130 --strict
+  ./tools/agent/mc-agent.sh harness golden-corpus validate|roundtrip --task TASK-130
+  ./tools/agent/mc-agent.sh harness real-device-feasibility --task TASK-130
   ./tools/agent/mc-agent.sh ios test options-summary-performance|options-summary-provider --task TASK-127
+  ./tools/agent/mc-agent.sh ios test price-contract --task TASK-130
+  ./tools/agent/mc-agent.sh ios benchmark import-large --task TASK-130
+  ./tools/agent/mc-agent.sh ios smoke options-first-sync|scanner-edge|accessibility --task TASK-130
   ./tools/agent/mc-agent.sh ios smoke options-performance --task TASK-127
   ./tools/agent/mc-agent.sh android audit options-performance --task TASK-127
   ./tools/agent/mc-agent.sh ios test sync-policy|account-store-boundary|conflict-review|conflict-review-ui|account-switch-review-ui|cache-memory --task TASK-126
@@ -449,12 +455,13 @@ Usage:
   ./tools/agent/mc-agent.sh ios build debug|release | ios test sync|automatic-domain|automatic-architecture|lifecycle|offline | ios smoke simulator|options|history
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios live-full-pull --live --task TASK-115
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios runtime-ui-counts --live --task TASK-115
-  ./tools/agent/mc-agent.sh android build debug|release | android test sync|offline | android offline-tier-status
+  ./tools/agent/mc-agent.sh android build debug|release | android test sync|offline|broad|quarantine-report|price-contract | android offline-tier-status
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh android live-full-pull --live
   ./tools/agent/mc-agent.sh android offline-write|reconnect-drain --tier L1|L2|L3 --prefix TASK115_OFFLINE_*
   ./tools/agent/mc-agent.sh sync counts --task TASK-115 --source supabase|android|ios [--profile linked]
   ./tools/agent/mc-agent.sh supabase status-redacted|verify-schema|verify-rls|verify-grants|residue-check --profile local|linked|dry-run-no-db
   ./tools/agent/mc-agent.sh supabase contract sync-schema --task TASK-120 --read-only
+  ./tools/agent/mc-agent.sh supabase contract price-schema --task TASK-130 --read-only
   ./tools/agent/mc-agent.sh live sync-matrix|runtime-parity|physical-runtime-parity|mutation-near-realtime|offline-reconnect-sync|account-merge-policy-matrix|sync-performance-budget|offline-matrix|reconcile-counts|cleanup-and-verify --task TASK-115 --prefix TASK115_*
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live real-device-realtime|real-device-offline-reconnect|real-device-background-sync|real-device-kill-restart-pending|real-device-network-flapping --task TASK-125 --prefix TASK125_*
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live task123-single-propagation|task123-cold-restart|task123-noop|task123-burst-10 --task TASK-123 --prefix TASK123_REVIEW_*
@@ -469,7 +476,7 @@ mc_help_json() {
 {
   "schema_version": "1.1",
   "name": "mc-agent",
-  "version": "0.5.2-task125",
+  "version": "0.5.5-task130-consolidated",
   "exit_codes": {
     "0": "PASS",
     "1": "FAIL",
@@ -648,6 +655,11 @@ mc_help_json() {
     {"name":"scan incremental-apply-contract","argv":["scan","incremental-apply-contract","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan swiftdata-mainactor-heavy","argv":["scan","swiftdata-mainactor-heavy","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"scan l10n-sync-keys","argv":["scan","l10n-sync-keys","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan price-contract task130","argv":["scan","price-contract","--task","TASK-130","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan swiftdata-fetch-budget task130","argv":["scan","swiftdata-fetch-budget","--task","TASK-130","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"harness golden-corpus validate task130","argv":["harness","golden-corpus","validate","--task","TASK-130"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"harness golden-corpus roundtrip task130","argv":["harness","golden-corpus","roundtrip","--task","TASK-130"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"harness real-device-feasibility task130","argv":["harness","real-device-feasibility","--task","TASK-130"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"evidence hygiene","argv":["evidence","hygiene","--task","TASK-116"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"evidence bundle","argv":["evidence","bundle","--task","TASK-117"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"account fixture prepare","argv":["account","fixture","prepare","--task","TASK-116","--prefix","TASK116_ACCOUNT_","--dry-run"],"platform":"general","safety_level":"safe-readonly"},
@@ -665,6 +677,11 @@ mc_help_json() {
     {"name":"ios test automatic-architecture task121","argv":["ios","test","automatic-architecture","--task","TASK-121"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test sync task121","argv":["ios","test","sync","--task","TASK-121"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test manual-sync-regression task121","argv":["ios","test","manual-sync-regression","--task","TASK-121"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test price-contract task130","argv":["ios","test","price-contract","--task","TASK-130"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios benchmark import-large task130","argv":["ios","benchmark","import-large","--task","TASK-130"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios smoke options-first-sync task130","argv":["ios","smoke","options-first-sync","--task","TASK-130"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios smoke scanner-edge task130","argv":["ios","smoke","scanner-edge","--task","TASK-130"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios smoke accessibility task130","argv":["ios","smoke","accessibility","--task","TASK-130"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test lifecycle","argv":["ios","test","lifecycle"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test offline","argv":["ios","test","offline"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios smoke simulator","argv":["ios","smoke","simulator"],"platform":"ios","safety_level":"safe-readonly"},
@@ -682,6 +699,9 @@ mc_help_json() {
     {"name":"android build release","argv":["android","build","release"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android test sync","argv":["android","test","sync"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android test offline","argv":["android","test","offline"],"platform":"android","safety_level":"safe-readonly","android_offline_tier":"L1"},
+    {"name":"android test broad task129","argv":["android","test","broad","--task","TASK-129"],"platform":"android","safety_level":"safe-readonly"},
+    {"name":"android test quarantine-report task129","argv":["android","test","quarantine-report","--task","TASK-129"],"platform":"android","safety_level":"safe-readonly"},
+    {"name":"android test price-contract task130","argv":["android","test","price-contract","--task","TASK-130"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android smoke device","argv":["android","smoke","device"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android smoke options","argv":["android","smoke","options"],"platform":"android","safety_level":"safe-readonly"},
     {"name":"android auth-preflight","argv":["android","auth-preflight","--live"],"platform":"android","safety_level":"live-write","requires_live":true},
@@ -696,6 +716,7 @@ mc_help_json() {
     {"name":"supabase status-redacted","argv":["supabase","status-redacted"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase contract sync-schema task120","argv":["supabase","contract","sync-schema","--task","TASK-120","--read-only"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase contract sync-schema task121","argv":["supabase","contract","sync-schema","--task","TASK-121","--read-only"],"platform":"supabase","safety_level":"safe-readonly"},
+    {"name":"supabase contract price-schema task130","argv":["supabase","contract","price-schema","--task","TASK-130","--read-only"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-schema","argv":["supabase","verify-schema"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-rls","argv":["supabase","verify-rls"],"platform":"supabase","safety_level":"safe-readonly"},
     {"name":"supabase verify-grants","argv":["supabase","verify-grants"],"platform":"supabase","safety_level":"safe-readonly"},
@@ -1152,9 +1173,100 @@ mc_cmd_preflight() {
   return "$MC_EXIT_PASS"
 }
 
+mc_cmd_task130_consolidation() {
+  local mode="$1"
+  shift || true
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-130}}"
+  local tmp payload_status code
+
+  case "$mode" in
+    golden-corpus-validate|golden-corpus-roundtrip|real-device-feasibility)
+      MC_PLATFORM="general"
+      MC_SAFETY_LEVEL="safe-readonly"
+      ;;
+    swiftdata-fetch-budget)
+      MC_PLATFORM="general"
+      MC_SAFETY_LEVEL="safe-readonly"
+      MC_CA_REFS="AC-130-CONSOLIDATED-SWIFTDATA"
+      ;;
+    ios-benchmark-import-large|ios-smoke-options-first-sync|ios-smoke-scanner-edge|ios-smoke-accessibility)
+      MC_PLATFORM="ios"
+      MC_SAFETY_LEVEL="safe-readonly"
+      ;;
+    *)
+      MC_SUMMARY="Unknown TASK-130 consolidation mode: ${mode}"
+      MC_NEXT_ACTION="Use documented TASK-130 consolidation commands."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+
+  MC_REQUIRES_LIVE="false"
+  tmp="/tmp/mc-agent-task130-consolidation-${mode}.$$.json"
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" ANDROID_REPO="$MC_ANDROID_REPO" SUPABASE_REPO="$MC_SUPABASE_REPO" \
+    python3 "$MC_AGENT_ROOT/lib/task130_consolidation.py" "$mode" "$@" > "$tmp"
+  code=$?
+  MC_SYNC_JSON_RESULT="$(cat "$tmp")"
+  rm -f "$tmp"
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  payload_status="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","MISCONFIGURED"))' <<<"$MC_SYNC_JSON_RESULT")"
+
+  case "$payload_status" in
+    PASS)
+      MC_SUMMARY="TASK-130 ${mode} PASS."
+      MC_NEXT_ACTION="Use this report in the consolidated TASK-130 ledger."
+      return "$MC_EXIT_PASS"
+      ;;
+    PASS_WITH_NOTES)
+      mc_set_pass_with_notes
+      MC_SUMMARY="TASK-130 ${mode} PASS_WITH_NOTES: static/local evidence includes PARTIAL or NOT_RUN limits."
+      MC_NEXT_ACTION="Review PARTIAL/NOT_RUN rows in the report before accepting consolidation."
+      return "$MC_EXIT_PASS"
+      ;;
+    FAIL)
+      MC_SUMMARY="TASK-130 ${mode} FAIL."
+      MC_NEXT_ACTION="Fix failing checks and rerun the TASK-130 consolidation command."
+      return "$MC_EXIT_FAIL"
+      ;;
+    BLOCKED_EXTERNAL)
+      MC_SUMMARY="TASK-130 ${mode} BLOCKED_EXTERNAL."
+      MC_NEXT_ACTION="Resolve external prerequisite or keep the blocker explicit in TASK-130 review."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    UNSAFE_OPERATION_REFUSED)
+      MC_SUMMARY="TASK-130 ${mode} UNSAFE_OPERATION_REFUSED."
+      MC_NEXT_ACTION="Respect the safety gate; do not bypass live/cleanup restrictions."
+      return "$MC_EXIT_REFUSED"
+      ;;
+    *)
+      MC_SUMMARY="TASK-130 ${mode} MISCONFIGURED."
+      MC_NEXT_ACTION="Fix harness routing or scanner config."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
 mc_cmd_harness() {
   local sub="${1:-doctor}"
   case "$sub" in
+    golden-corpus)
+      local action="${2:-validate}"
+      shift 2 || true
+      case "$action" in
+        validate) mc_cmd_task130_consolidation golden-corpus-validate "$@" ;;
+        roundtrip) mc_cmd_task130_consolidation golden-corpus-roundtrip "$@" ;;
+        *)
+          MC_SUMMARY="Unknown harness golden-corpus action: ${action}"
+          MC_NEXT_ACTION="Use harness golden-corpus validate or harness golden-corpus roundtrip."
+          return "$MC_EXIT_MISCONFIGURED"
+          ;;
+      esac
+      ;;
+    real-device-feasibility)
+      shift || true
+      mc_cmd_task130_consolidation real-device-feasibility "$@"
+      ;;
     doctor)
       MC_PLATFORM="general"
       MC_SAFETY_LEVEL="safe-readonly"
@@ -2090,6 +2202,50 @@ mc_cmd_scan_task127_static() {
     *)
       MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
       MC_NEXT_ACTION="Fix TASK-127 scanner command/configuration."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+mc_cmd_scan_task130_price_contract() {
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-130}}"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  MC_CA_REFS="AC-130-01,AC-130-02,AC-130-03,AC-130-04,AC-130-05,AC-130-06"
+
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" ANDROID_REPO="$MC_ANDROID_REPO" SUPABASE_REPO="$MC_SUPABASE_REPO" \
+    python3 "$MC_AGENT_ROOT/lib/task130_price_contract.py" scan-price-contract "$@" > /tmp/mc-agent-task130-price-contract.$$.json
+  local scan_code=$?
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task130-price-contract.$$.json)"
+  rm -f /tmp/mc-agent-task130-price-contract.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  case "$scan_code" in
+    0)
+      MC_SUMMARY="price-contract scan PASS for ${task_id}."
+      MC_NEXT_ACTION="Use this report in TASK-130 price contract matrix."
+      return "$MC_EXIT_PASS"
+      ;;
+    1)
+      MC_SUMMARY="price-contract scan FAIL for ${task_id}: contract checks found required work."
+      MC_NEXT_ACTION="Fix failing checks and rerun scan price-contract."
+      return "$MC_EXIT_FAIL"
+      ;;
+    2)
+      MC_SUMMARY="price-contract scan BLOCKED_EXTERNAL for ${task_id}."
+      MC_NEXT_ACTION="Resolve the listed external prerequisite and rerun scan price-contract."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    4)
+      MC_SUMMARY="price-contract scan UNSAFE_OPERATION_REFUSED for ${task_id}."
+      MC_NEXT_ACTION="Keep safety gate refused unless this was an expected refusal test."
+      return "$MC_EXIT_REFUSED"
+      ;;
+    *)
+      MC_SUMMARY="price-contract scan MISCONFIGURED for ${task_id}."
+      MC_NEXT_ACTION="Fix TASK-130 price contract scanner command/configuration."
       return "$MC_EXIT_MISCONFIGURED"
       ;;
   esac

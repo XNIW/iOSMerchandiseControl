@@ -1,0 +1,9 @@
+barcode,itemNumber,productName,secondProductName,quantity,purchasePrice,retailPrice,discount,discountedPrice,supplier,category,oldPurchasePrice,oldRetailPrice
+TASK130_000001,SKU-001,TASK130 Widget A,,10,12.50,18.99,0,18.99,TASK130 Supplier A,TASK130 Category A,10.00,17.50
+8.001234567890E12,SKU-002,TASK130 Scientific Barcode,,3,"7,25","9,50",5,"9,02",TASK130 Supplier A,TASK130 Category B,,
+TASK130_DUP001,SKU-003,TASK130 Duplicate First,,4,2.40,3.20,0,3.20,TASK130 Supplier B,TASK130 Category A,2.00,3.00
+TASK130_DUP001,SKU-003B,TASK130 Duplicate Second,,6,2.60,3.40,0,3.40,TASK130 Supplier B,TASK130 Category A,2.40,3.20
+,SKU-004,TASK130 Missing Barcode,,1,1.00,2.00,0,2.00,TASK130 Supplier C,TASK130 Category C,,
+TASK130_NONAME,SKU-005,,TASK130 Second Name Fallback,2,5.00,8.00,0,8.00,TASK130 Supplier C,TASK130 Category C,,
+TASK130_BADPRICE,SKU-006,TASK130 Invalid Retail,,2,5.00,not-a-price,0,,TASK130 Supplier D,TASK130 Category D,,
+TASK130_NEGQTY,SKU-007,TASK130 Negative Quantity,,-4,3.00,4.50,0,4.50,TASK130 Supplier D,TASK130 Category D,,

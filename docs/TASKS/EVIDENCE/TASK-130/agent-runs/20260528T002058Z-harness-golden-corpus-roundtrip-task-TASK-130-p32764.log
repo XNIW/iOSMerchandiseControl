@@ -1,0 +1,54 @@
+=== mc-agent harness golden-corpus roundtrip --task TASK-130 ===
+{
+  "NEXT_ACTION": "Reviewer must accept PARTIAL binary roundtrip limits or request device/app-auth execution inside TASK-130.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/DatabaseView.swift",
+      "id": "TASK130-ROUNDTRIP-IOS-EXPORT-FULL-DB",
+      "reason": "iOS full DB export path includes PriceHistory and XLSX writer.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/DatabaseView.swift",
+      "id": "TASK130-ROUNDTRIP-IOS-IMPORT-FULL-DB",
+      "reason": "iOS full DB import path is present.",
+      "status": "FAIL"
+    },
+    {
+      "file": "app/src/main/java/com/example/merchandisecontrolsplitview/util/ExcelUtils.kt",
+      "id": "TASK130-ROUNDTRIP-ANDROID-IMPORT-PATH",
+      "reason": "Android spreadsheet import utility is present for static parity.",
+      "status": "PASS"
+    },
+    {
+      "file": "app/src/main/java/com/example/merchandisecontrolsplitview/ui/screens/DatabaseScreen.kt",
+      "id": "TASK130-ROUNDTRIP-ANDROID-EXPORT-PATH",
+      "reason": "Android export UI/path was statically inspected; no Android-produced XLSX artifact was generated for iOS import in this run.",
+      "status": "PARTIAL"
+    },
+    {
+      "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus",
+      "id": "TASK130-ROUNDTRIP-IOS-TO-ANDROID-BINARY",
+      "reason": "No binary iOS export artifact was imported into Android during this consolidation run; static paths and fixtures are documented.",
+      "status": "PARTIAL"
+    },
+    {
+      "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus",
+      "id": "TASK130-ROUNDTRIP-ANDROID-TO-IOS-BINARY",
+      "reason": "No binary Android export artifact was imported into iOS during this consolidation run; static paths and fixtures are documented.",
+      "status": "PARTIAL"
+    }
+  ],
+  "completed_at": "2026-05-28T00:20:58+00:00",
+  "requires_live": false,
+  "result_status": "FAIL",
+  "safety_level": "read_only_static_scan",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "harness.golden-corpus.roundtrip",
+  "started_at": "2026-05-28T00:20:58+00:00",
+  "status": "FAIL",
+  "summary": "harness.golden-corpus.roundtrip: FAIL (6 checks)",
+  "taskId": "TASK-130",
+  "task_id": "TASK-130"
+}

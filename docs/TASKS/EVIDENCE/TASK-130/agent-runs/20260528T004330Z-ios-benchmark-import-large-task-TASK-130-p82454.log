@@ -1,0 +1,36 @@
+=== mc-agent ios benchmark import-large --task TASK-130 ===
+{
+  "NEXT_ACTION": "Run the synthetic benchmark on the review machine/device if numeric time/memory budgets are required before acceptance.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/Task089SyntheticBenchmarkHarness.swift",
+      "id": "TASK130-BENCH-HARNESS-AVAILABLE",
+      "reason": "Existing synthetic XLSX benchmark harness can generate privacy-safe large imports.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/ExcelSessionViewModel.swift",
+      "id": "TASK130-BENCH-HOT-PATH-BUDGET",
+      "reason": "PreGenerate price snapshot hot path avoids fetch-all Product lookup.",
+      "status": "PASS"
+    },
+    {
+      "file": "docs/TASKS/TASK-130-price-contract-current-previous-old.md",
+      "id": "TASK130-BENCH-RUNTIME-DATASET",
+      "reason": "No device/simulator large XLSX timing was executed in this consolidation pass; static hot-path budget and harness availability were verified.",
+      "status": "PARTIAL"
+    }
+  ],
+  "completed_at": "2026-05-28T00:43:30+00:00",
+  "requires_live": false,
+  "result_status": "PASS_WITH_NOTES",
+  "safety_level": "read_only_static_scan",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "ios.benchmark.import-large",
+  "started_at": "2026-05-28T00:43:30+00:00",
+  "status": "PASS_WITH_NOTES",
+  "summary": "ios.benchmark.import-large: PASS_WITH_NOTES (3 checks)",
+  "taskId": "TASK-130",
+  "task_id": "TASK-130"
+}

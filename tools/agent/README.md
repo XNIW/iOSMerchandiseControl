@@ -113,6 +113,56 @@ MC_TASK_ID=TASK-127 ./tools/agent/mc-agent.sh preflight --require-head-consisten
 
 TASK-127 scanners are top-level `scan` commands; do not use `ios scan ...`. Scanner fixtures live under `tools/agent/fixtures/task127_scanners/` and must prove RED/GREEN behavior before final evidence is accepted. Cursor, Codex and Claude should use the same one-line commands above and rely on the standard `RESULT`, `EXIT_CODE`, `REPORT_MD`, `REPORT_JSON`, `NEXT_ACTION` wrapper output.
 
+TASK-129 Android broad test health gates:
+
+```bash
+MC_TASK_ID=TASK-129 ./tools/agent/mc-agent.sh help-json
+MC_TASK_ID=TASK-129 ./tools/agent/mc-agent.sh list commands-json
+MC_TASK_ID=TASK-129 ./tools/agent/mc-agent.sh config validate
+MC_TASK_ID=TASK-129 ./tools/agent/mc-agent.sh git head-consistency --task TASK-129
+MC_TASK_ID=TASK-129 ./tools/agent/mc-agent.sh preflight --require-head-consistency --task TASK-129
+./tools/agent/mc-agent.sh android build debug --task TASK-129
+./tools/agent/mc-agent.sh android test sync --task TASK-129
+./tools/agent/mc-agent.sh android test broad --task TASK-129
+./tools/agent/mc-agent.sh android test quarantine-report --task TASK-129
+./tools/agent/mc-agent.sh scan sensitive --task TASK-129 docs/TASKS/EVIDENCE/TASK-129
+./tools/agent/mc-agent.sh scan evidence --task TASK-129
+./tools/agent/mc-agent.sh report validate-json --task TASK-129 --path docs/TASKS/EVIDENCE/TASK-129/agent-runs
+```
+
+`android test broad` is the canonical broad JVM suite wrapper for `:app:testDebugUnitTest`; it sets the shared Gradle/JDK attach environment through `mc_android_gradle`, keeps console output short, and writes Markdown/JSON/log evidence. If broad is non-green, `android test quarantine-report` classifies failures as `REAL_REGRESSION`, `BYTEBUDDY_ATTACH_ENV`, `JDK_TOOLCHAIN_ENV`, `ROOM_TEST_ENV`, `FLAKY_RETRY_REQUIRED` or `UNKNOWN_NEEDS_FIX`. A quarantine report is not broad PASS; it can only support a `PASS_WITH_NOTES` review candidate when failures are instrumental and the stable CI alternative (`android build debug` + `android test sync`) is documented.
+
+TASK-130 price contract and consolidated TASK-128 hardening gates:
+
+```bash
+MC_TASK_ID=TASK-130 ./tools/agent/mc-agent.sh help-json
+MC_TASK_ID=TASK-130 ./tools/agent/mc-agent.sh list commands-json
+MC_TASK_ID=TASK-130 ./tools/agent/mc-agent.sh config validate
+MC_TASK_ID=TASK-130 ./tools/agent/mc-agent.sh git head-consistency --task TASK-130
+MC_TASK_ID=TASK-130 ./tools/agent/mc-agent.sh preflight --require-head-consistency --task TASK-130
+./tools/agent/mc-agent.sh ios build debug --task TASK-130
+./tools/agent/mc-agent.sh ios test price-contract --task TASK-130
+./tools/agent/mc-agent.sh android build debug --task TASK-130
+./tools/agent/mc-agent.sh android test price-contract --task TASK-130
+./tools/agent/mc-agent.sh supabase contract price-schema --task TASK-130 --read-only
+./tools/agent/mc-agent.sh scan price-contract --task TASK-130 --strict
+./tools/agent/mc-agent.sh scan swiftdata-fetch-budget --task TASK-130 --strict
+./tools/agent/mc-agent.sh harness golden-corpus validate --task TASK-130
+./tools/agent/mc-agent.sh harness golden-corpus roundtrip --task TASK-130
+./tools/agent/mc-agent.sh harness real-device-feasibility --task TASK-130
+./tools/agent/mc-agent.sh ios benchmark import-large --task TASK-130
+./tools/agent/mc-agent.sh ios smoke options-first-sync --task TASK-130
+./tools/agent/mc-agent.sh ios smoke scanner-edge --task TASK-130
+./tools/agent/mc-agent.sh ios smoke accessibility --task TASK-130
+./tools/agent/mc-agent.sh scan sensitive --task TASK-130 docs/TASKS/EVIDENCE/TASK-130
+./tools/agent/mc-agent.sh scan evidence --task TASK-130
+./tools/agent/mc-agent.sh report validate-json --task TASK-130 --path docs/TASKS/EVIDENCE/TASK-130/agent-runs
+```
+
+`scan price-contract` is a read-only static contract matrix for iOS, Android and local Supabase migrations. `ios/android test price-contract` run targeted unit/XCTest coverage only. `supabase contract price-schema` reads local migrations and does not run live queries or schema changes.
+
+The consolidated TASK-130 commands keep the residual TASK-128 scope inside TASK-130 by design. `harness golden-corpus validate` checks privacy-safe fixture coverage and parser/export support; `harness golden-corpus roundtrip` records static cross-platform roundtrip readiness and marks binary app-to-app gaps as `PARTIAL` when no generated artifact is executed. `scan swiftdata-fetch-budget` guards import/pre-generate SwiftData lookup against fetch-all Product hot paths. `ios benchmark import-large` is a static/harness-readiness benchmark gate unless a reviewer provides a runtime dataset/device. `ios smoke options-first-sync`, `ios smoke scanner-edge`, and `ios smoke accessibility` are static smoke gates and must not be treated as physical-device or VoiceOver PASS. `harness real-device-feasibility` records local device/tool feasibility only; long background/locked/offline acceptance remains explicit `PARTIAL`/`BLOCKED_EXTERNAL` unless live/device commands are run.
+
 Per operatore umano:
 
 ```bash

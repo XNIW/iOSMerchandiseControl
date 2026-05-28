@@ -1,0 +1,54 @@
+=== mc-agent ios smoke accessibility --task TASK-130 ===
+{
+  "NEXT_ACTION": "Use PASS_WITH_NOTES rows as static smoke only; run VoiceOver/Dynamic Type simulator review if required.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-A11Y-OPTIONS-LABELS",
+      "reason": "Options combines key status rows for VoiceOver.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/DatabaseView.swift",
+      "id": "TASK130-A11Y-DATABASE-LABELS",
+      "reason": "Database rows/search/actions expose accessibility labels/actions.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/GeneratedView.swift",
+      "id": "TASK130-A11Y-GENERATED-LABELS",
+      "reason": "Generated has some accessibility coverage; full VoiceOver traversal not executed.",
+      "status": "PASS_WITH_NOTES"
+    },
+    {
+      "file": "iOSMerchandiseControl/BarcodeScannerView.swift",
+      "id": "TASK130-A11Y-SCANNER-LABELS",
+      "reason": "Scanner close/torch controls are labeled.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-A11Y-DYNAMIC-TYPE",
+      "reason": "Dynamic Type/text overflow safeguards are present statically; simulator XXL screenshots were not captured in this pass.",
+      "status": "PASS_WITH_NOTES"
+    },
+    {
+      "file": "iOSMerchandiseControl/*.lproj/Localizable.strings",
+      "id": "TASK130-A11Y-LOCALIZATIONS",
+      "reason": "Localization files for English/Italian/Spanish/Chinese are present.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-28T00:21:09+00:00",
+  "requires_live": false,
+  "result_status": "PASS_WITH_NOTES",
+  "safety_level": "read_only_static_scan",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "ios.smoke.accessibility",
+  "started_at": "2026-05-28T00:21:09+00:00",
+  "status": "PASS_WITH_NOTES",
+  "summary": "ios.smoke.accessibility: PASS_WITH_NOTES (6 checks)",
+  "taskId": "TASK-130",
+  "task_id": "TASK-130"
+}

@@ -1,0 +1,220 @@
+=== mc-agent scan price-contract --task TASK-130 --strict ===
+{
+  "NEXT_ACTION": "Run targeted iOS/Android price-contract tests and Supabase price-schema contract.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/Models.swift",
+      "id": "TASK130-IOS-CONTRACT-HELPER",
+      "reason": "iOS has a single helper for current/last/previous price semantics.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/Models.swift",
+      "id": "TASK130-IOS-CURRENT-PRODUCT-FIELD",
+      "reason": "iOS current price resolves from Product current fields.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/DatabaseView.swift",
+      "id": "TASK130-IOS-EXPORT-CURRENT",
+      "reason": "iOS DB export uses Product current field and previous history row.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/ProductPriceHistoryView.swift",
+      "id": "TASK130-IOS-HISTORY-UI-CURRENT",
+      "reason": "iOS price history UI displays current from Product field.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/ProductImportCore.swift",
+      "id": "TASK130-IOS-IMPORT-OLD-PREVIOUS",
+      "reason": "iOS import old fields are previous/import snapshots.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/ExcelSessionViewModel.swift",
+      "id": "TASK130-IOS-PREGENERATE-SNAPSHOT",
+      "reason": "iOS PreGenerate old prices snapshot Product current fields.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControlTests/Task130PriceContractTests.swift",
+      "id": "TASK130-IOS-TESTS",
+      "reason": "iOS targeted price-contract tests are present.",
+      "status": "PASS"
+    },
+    {
+      "file": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ProductWithDetails.kt",
+      "id": "TASK130-ANDROID-CURRENT-PRODUCT-FIELD",
+      "reason": "Android current price resolves from Product current fields, not summary fallback.",
+      "status": "PASS"
+    },
+    {
+      "file": "app/src/main/java/com/example/merchandisecontrolsplitview/data/ProductPriceSummary.kt",
+      "id": "TASK130-ANDROID-LAST-PREVIOUS",
+      "reason": "Android ProductPriceSummary exposes last/previous history by type/effectiveAt.",
+      "status": "PASS"
+    },
+    {
+      "file": "app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt",
+      "id": "TASK130-ANDROID-IMPORT-OLD-PREVIOUS",
+      "reason": "Android import old fields create previous history rows.",
+      "status": "PASS"
+    },
+    {
+      "file": "app/src/test/java/com/example/merchandisecontrolsplitview/data/Task130PriceContractTest.kt",
+      "id": "TASK130-ANDROID-TESTS",
+      "reason": "Android targeted price-contract tests are present.",
+      "status": "PASS"
+    },
+    {
+      "file": "supabase/migrations/*.sql",
+      "id": "TASK130-SUPABASE-PRODUCT-CURRENT",
+      "reason": "Supabase inventory_products has current purchase/retail columns.",
+      "status": "PASS"
+    },
+    {
+      "file": "supabase/migrations/*.sql",
+      "id": "TASK130-SUPABASE-PRICE-HISTORY",
+      "reason": "Supabase inventory_product_prices has price/type/effective_at/source columns.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-27T23:55:28+00:00",
+  "price_contract_matrix": [
+    {
+      "android": "Product.purchasePrice / ProductWithDetails.currentPurchasePrice",
+      "concept": "current purchase price",
+      "import_export": "Products sheet current purchase field",
+      "ios": "Product.purchasePrice",
+      "rule": "Do not derive current from ProductPrice history.",
+      "status": "PASS",
+      "supabase": "inventory_products.purchase_price",
+      "sync": "inventory_products.purchase_price",
+      "truth": "Product current field"
+    },
+    {
+      "android": "Product.retailPrice / ProductWithDetails.currentRetailPrice",
+      "concept": "current retail price",
+      "import_export": "Products sheet current retail field",
+      "ios": "Product.retailPrice",
+      "rule": "Do not derive current from ProductPrice history.",
+      "status": "PASS",
+      "supabase": "inventory_products.retail_price",
+      "sync": "inventory_products.retail_price",
+      "truth": "Product current field"
+    },
+    {
+      "android": "ProductPriceSummary.lastPurchase",
+      "concept": "last purchase ProductPrice",
+      "import_export": "PriceHistory sheet or import-generated current event",
+      "ios": "ProductPriceContract.lastPrice(..., .purchase)",
+      "rule": "Sort by effectiveAt descending, tie-break locally where available.",
+      "status": "PASS",
+      "supabase": "inventory_product_prices price/type/effective_at",
+      "sync": "inventory_product_prices type=purchase/PURCHASE",
+      "truth": "Latest purchase ProductPrice by effectiveAt"
+    },
+    {
+      "android": "ProductPriceSummary.prevPurchase",
+      "concept": "previous purchase ProductPrice",
+      "import_export": "oldPurchasePrice maps to previous/import snapshot, not current",
+      "ios": "ProductPriceContract.previousPrice(..., .purchase)",
+      "rule": "Second event after sorting history descending.",
+      "status": "PASS",
+      "supabase": "inventory_product_prices price/type/effective_at",
+      "sync": "history row remains append-only",
+      "truth": "Penultimate purchase ProductPrice by effectiveAt"
+    },
+    {
+      "android": "ProductPriceSummary.lastRetail",
+      "concept": "last retail ProductPrice",
+      "import_export": "PriceHistory sheet or import-generated current event",
+      "ios": "ProductPriceContract.lastPrice(..., .retail)",
+      "rule": "Sort by effectiveAt descending, tie-break locally where available.",
+      "status": "PASS",
+      "supabase": "inventory_product_prices price/type/effective_at",
+      "sync": "inventory_product_prices type=retail/RETAIL",
+      "truth": "Latest retail ProductPrice by effectiveAt"
+    },
+    {
+      "android": "ProductPriceSummary.prevRetail",
+      "concept": "previous retail ProductPrice",
+      "import_export": "oldRetailPrice maps to previous/import snapshot, not current",
+      "ios": "ProductPriceContract.previousPrice(..., .retail)",
+      "rule": "Second event after sorting history descending.",
+      "status": "PASS",
+      "supabase": "inventory_product_prices price/type/effective_at",
+      "sync": "history row remains append-only",
+      "truth": "Penultimate retail ProductPrice by effectiveAt"
+    },
+    {
+      "android": "Product.oldPurchasePrice / generated grid oldPurchasePrice",
+      "concept": "oldPurchasePrice import/grid",
+      "import_export": "Can create IMPORT_PREV history or export previous snapshot",
+      "ios": "ProductDraft.oldPurchasePrice / generated grid oldPurchasePrice",
+      "rule": "Never use as remote current source of truth.",
+      "status": "PASS",
+      "supabase": "No inventory_products old purchase column",
+      "sync": "Not a primary remote Product column",
+      "truth": "Import or PreGenerate snapshot only"
+    },
+    {
+      "android": "Product.oldRetailPrice / generated grid oldRetailPrice",
+      "concept": "oldRetailPrice import/grid",
+      "import_export": "Can create IMPORT_PREV history or export previous snapshot",
+      "ios": "ProductDraft.oldRetailPrice / generated grid oldRetailPrice",
+      "rule": "Never use as remote current source of truth.",
+      "status": "PASS",
+      "supabase": "No inventory_products old retail column",
+      "sync": "Not a primary remote Product column",
+      "truth": "Import or PreGenerate snapshot only"
+    },
+    {
+      "android": "ExcelViewModel current-price snapshot",
+      "concept": "PreGenerate old price snapshot",
+      "import_export": "Generated old columns",
+      "ios": "ExcelSessionViewModel.fetchOldPricesByBarcode uses Product current fields",
+      "rule": "Snapshot remains grid/input state, not remote current.",
+      "status": "PASS",
+      "supabase": "N/A local generated grid",
+      "sync": "No direct remote write from old columns",
+      "truth": "Current DB Product price at generation time"
+    },
+    {
+      "android": "ProductPrice.effectiveAt",
+      "concept": "ProductPrice effectiveAt/effective_at",
+      "import_export": "PriceHistory timestamp",
+      "ios": "ProductPrice.effectiveAt",
+      "rule": "Latest/previous are computed per type/effectiveAt.",
+      "status": "PASS",
+      "supabase": "inventory_product_prices.effective_at",
+      "sync": "effective_at remote column",
+      "truth": "History ordering key"
+    },
+    {
+      "android": "ProductPrice.source",
+      "concept": "source/origin import/manual/sync",
+      "import_export": "IMPORT_EXCEL/IMPORT_PREV or IMPORT/IMPORT_PREV",
+      "ios": "ProductPrice.source",
+      "rule": "Source does not override current/previous ordering rules.",
+      "status": "PASS",
+      "supabase": "inventory_product_prices.source",
+      "sync": "manual/import/sync origin metadata",
+      "truth": "Audit metadata only"
+    }
+  ],
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "price-contract",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "scan.price-contract",
+  "started_at": "2026-05-27T23:55:28+00:00",
+  "status": "PASS",
+  "strict": true,
+  "summary": "price-contract: PASS (13 checks)",
+  "taskId": "TASK-130",
+  "task_id": "TASK-130"
+}

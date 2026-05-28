@@ -152,3 +152,36 @@ final class ProductPrice {
         self.product = product
     }
 }
+
+enum ProductPriceContract {
+    static func currentPrice(for product: Product, type: PriceType) -> Double? {
+        switch type {
+        case .purchase:
+            return product.purchasePrice
+        case .retail:
+            return product.retailPrice
+        }
+    }
+
+    static func sortedHistory(_ prices: [ProductPrice], type: PriceType? = nil) -> [ProductPrice] {
+        prices
+            .filter { price in
+                guard let type else { return true }
+                return price.type == type
+            }
+            .sorted { lhs, rhs in
+                if lhs.effectiveAt != rhs.effectiveAt {
+                    return lhs.effectiveAt > rhs.effectiveAt
+                }
+                return lhs.createdAt > rhs.createdAt
+            }
+    }
+
+    static func lastPrice(in prices: [ProductPrice], type: PriceType) -> ProductPrice? {
+        sortedHistory(prices, type: type).first
+    }
+
+    static func previousPrice(in prices: [ProductPrice], type: PriceType) -> ProductPrice? {
+        sortedHistory(prices, type: type).dropFirst().first
+    }
+}

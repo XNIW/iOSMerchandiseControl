@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.1",
+  "task_id": "TASK-130",
+  "fixture": "task130-golden-products",
+  "expected": {
+    "privacy": "zero_real_data",
+    "newProductsMinimum": 4,
+    "warningsMinimum": 2,
+    "errorsMinimum": 2,
+    "scenarios": {
+      "normalXlsx": "covered_by_existing_docs_fixture_TASK_031",
+      "htmlExcel": "covered_by_task130_golden_excel_html",
+      "legacyXls": "supported_by_existing_libxls_corpus_but_task130_semantic_binary_partial",
+      "scientificBarcode": "8001234567890",
+      "decimalSeparators": "dot_and_comma",
+      "discount": "discount_and_discountedPrice_present",
+      "duplicateBarcode": "TASK130_DUP001",
+      "missingBarcode": "row_error",
+      "missingProductNameWithSecondName": "TASK130_NONAME",
+      "invalidRetailPrice": "TASK130_BADPRICE",
+      "negativeQuantity": "TASK130_NEGQTY",
+      "fullDbSheets": [
+        "Products",
+        "Suppliers",
+        "Categories",
+        "PriceHistory"
+      ]
+    }
+  }
+}

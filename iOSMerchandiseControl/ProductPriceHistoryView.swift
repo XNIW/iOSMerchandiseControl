@@ -33,7 +33,7 @@ struct ProductPriceHistoryView: View {
 
     /// Storico completo, ordinato dal più recente
     private var prices: [ProductPrice] {
-        product.priceHistory.sorted { $0.effectiveAt > $1.effectiveAt }
+        ProductPriceContract.sortedHistory(product.priceHistory)
     }
 
     private var purchasePrices: [ProductPrice] {
@@ -150,15 +150,7 @@ struct ProductPriceHistoryView: View {
     }
 
     private func currentPriceText(for type: PriceType) -> String {
-        let value: Double?
-        switch type {
-        case .purchase:
-            value = product.purchasePrice
-        case .retail:
-            value = product.retailPrice
-        }
-
-        guard let value else {
+        guard let value = ProductPriceContract.currentPrice(for: product, type: type) else {
             return L("product.history.no_current_price")
         }
         return formatMoney(value)

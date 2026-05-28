@@ -1224,6 +1224,10 @@ mc_ios_test() {
       MC_CA_REFS="AC-127-05,AC-127-06,AC-127-07,AC-127-10"
       tests=(-only-testing:iOSMerchandiseControlTests/OptionsSyncSummaryProviderTests)
       ;;
+    price-contract)
+      MC_CA_REFS="AC-130-01,AC-130-02,AC-130-03,AC-130-05"
+      tests=(-only-testing:iOSMerchandiseControlTests/Task130PriceContractTests)
+      ;;
     *)
       MC_SUMMARY="Unknown iOS test suite: ${suite}"
       return "$MC_EXIT_MISCONFIGURED"
@@ -1262,6 +1266,18 @@ mc_ios_smoke() {
   dest="$(mc_ios_destination)"
   mc_git_context "$MC_IOS_REPO"
   case "$kind" in
+    options-first-sync)
+      mc_cmd_task130_consolidation ios-smoke-options-first-sync
+      return $?
+      ;;
+    scanner-edge)
+      mc_cmd_task130_consolidation ios-smoke-scanner-edge
+      return $?
+      ;;
+    accessibility)
+      mc_cmd_task130_consolidation ios-smoke-accessibility
+      return $?
+      ;;
     simulator)
       mc_ios_acquire_xcode_lock || return $?
       (
@@ -1970,6 +1986,14 @@ mc_cmd_ios() {
   case "$sub" in
     build) mc_ios_build "${1:-debug}" ;;
     test) mc_ios_test "${1:-sync}" ;;
+    benchmark)
+      local bench="${1:-}"
+      shift || true
+      case "$bench" in
+        import-large) mc_cmd_task130_consolidation ios-benchmark-import-large "$@" ;;
+        *) MC_SUMMARY="Unknown iOS benchmark: ${bench}"; return "$MC_EXIT_MISCONFIGURED" ;;
+      esac
+      ;;
     smoke) mc_ios_smoke "${1:-simulator}" ;;
     runtime-ui-counts)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }

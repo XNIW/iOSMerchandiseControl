@@ -52,6 +52,12 @@ main() {
       ;;
     scan)
       case "${args[1]:-}" in
+        price-contract)
+          handler=(mc_cmd_scan_task130_price_contract "${args[@]:2}")
+          ;;
+        swiftdata-fetch-budget)
+          handler=(mc_cmd_task130_consolidation swiftdata-fetch-budget "${args[@]:2}")
+          ;;
         options-mainactor-heavy-fetch|productprice-full-fetch-mainactor|options-refresh-debounce|task127-debug-hook-release-safety|task127-final-gates|android-options-performance)
           handler=(mc_cmd_scan_task127_static "${args[1]}" "${args[@]:2}")
           ;;

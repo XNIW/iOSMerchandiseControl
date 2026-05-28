@@ -1,0 +1,220 @@
+{
+  "NEXT_ACTION": "Review PARTIAL/NOT_RUN rows in the report before accepting consolidation.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-130/agent-runs/20260528T003205Z-harness-golden-corpus-validate-task-TASK-130-p47713.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-130/agent-runs/20260528T003205Z-harness-golden-corpus-validate-task-TASK-130-p47713.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-130/agent-runs/20260528T003205Z-harness-golden-corpus-validate-task-TASK-130-p47713.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [],
+  "cleanup_plan_id": null,
+  "command": "harness golden-corpus validate --task TASK-130",
+  "command_slug": "harness-golden-corpus-validate-task-TASK-130",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 396,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-130",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK130_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-130"
+  },
+  "exit_code": 0,
+  "git_sha": "cdb22534",
+  "next_action_recommended": "Review PARTIAL/NOT_RUN rows in the report before accepting consolidation.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Use PASS/PARTIAL rows in the consolidated TASK-130 golden corpus ledger.",
+    "checks": [
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus/README.md",
+        "id": "TASK130-GOLDEN-README",
+        "reason": "TASK-130 synthetic golden fixture is versioned.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus/task130-golden-products.csv",
+        "id": "TASK130-GOLDEN-CSV",
+        "reason": "TASK-130 synthetic golden fixture is versioned.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus/task130-golden-excel.html",
+        "id": "TASK130-GOLDEN-HTML",
+        "reason": "TASK-130 synthetic golden fixture is versioned.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus/full-db/Products.csv",
+        "id": "TASK130-GOLDEN-FULL-PRODUCTS",
+        "reason": "TASK-130 synthetic golden fixture is versioned.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus/full-db/Suppliers.csv",
+        "id": "TASK130-GOLDEN-FULL-SUPPLIERS",
+        "reason": "TASK-130 synthetic golden fixture is versioned.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus/full-db/Categories.csv",
+        "id": "TASK130-GOLDEN-FULL-CATEGORIES",
+        "reason": "TASK-130 synthetic golden fixture is versioned.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus/full-db/PriceHistory.csv",
+        "id": "TASK130-GOLDEN-FULL-PRICEHISTORY",
+        "reason": "TASK-130 synthetic golden fixture is versioned.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus/expected-results.json",
+        "id": "TASK130-GOLDEN-EXPECTED",
+        "reason": "TASK-130 synthetic golden fixture is versioned.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/fixtures/TASK-031/canonical-headers.xlsx",
+        "id": "TASK130-GOLDEN-XLSX-SUPPORT",
+        "reason": "Existing privacy-safe XLSX fixture and iOS XLSX parser are present.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/ExcelSessionViewModel.swift",
+        "id": "TASK130-GOLDEN-HTML-SUPPORT",
+        "reason": "HTML Excel parsing support and TASK-130 HTML fixture are present.",
+        "status": "PASS"
+      },
+      {
+        "file": "Vendor/libxls/test/files",
+        "id": "TASK130-GOLDEN-LEGACY-XLS-SUPPORT",
+        "reason": "Legacy XLS parser and vendor XLS corpus exist; TASK-130 semantic XLS binary was not generated in this text-only evidence pass.",
+        "status": "PARTIAL"
+      },
+      {
+        "file": "iOSMerchandiseControl/ProductImportCore.swift",
+        "id": "TASK130-GOLDEN-SCIENTIFIC-BARCODE",
+        "reason": "Scientific notation barcodes are normalized.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/ProductImportCore.swift",
+        "id": "TASK130-GOLDEN-DECIMAL-SEPARATORS",
+        "reason": "Dot/comma prices are parsed deterministically.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/ProductImportCore.swift",
+        "id": "TASK130-GOLDEN-DISCOUNT",
+        "reason": "discount/discountedPrice columns are recognized.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/ProductImportCore.swift",
+        "id": "TASK130-GOLDEN-DUPLICATE-BARCODE",
+        "reason": "Duplicate barcode warnings are produced.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/ProductImportCore.swift",
+        "id": "TASK130-GOLDEN-MISSING-BARCODE",
+        "reason": "Missing barcode errors are produced.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/ProductImportCore.swift",
+        "id": "TASK130-GOLDEN-MISSING-NAME",
+        "reason": "Missing product name cases are represented.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/ProductImportCore.swift",
+        "id": "TASK130-GOLDEN-INVALID-RETAIL",
+        "reason": "Retail price field is represented in parser/import contract.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/ProductImportCore.swift",
+        "id": "TASK130-GOLDEN-NEGATIVE-QTY",
+        "reason": "Negative quantity handling is represented.",
+        "status": "PASS"
+      },
+      {
+        "file": "iOSMerchandiseControl/DatabaseView.swift",
+        "id": "TASK130-GOLDEN-FULL-DB-SHEETS",
+        "reason": "Full DB import/export path references Products/Suppliers/Categories/PriceHistory sheets.",
+        "status": "PASS"
+      },
+      {
+        "file": "app/src/main/java/com/example/merchandisecontrolsplitview/util/ExcelUtils.kt",
+        "id": "TASK130-GOLDEN-ANDROID-IMPORT-SUPPORT",
+        "reason": "Android import utility can read spreadsheet-like inputs for cross-platform parity.",
+        "status": "PASS"
+      },
+      {
+        "file": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus",
+        "id": "TASK130-GOLDEN-PRIVACY",
+        "reason": "Golden corpus contains no email-shaped real data.",
+        "status": "PASS"
+      }
+    ],
+    "completed_at": "2026-05-28T00:32:05+00:00",
+    "fixture_dir": "docs/TASKS/EVIDENCE/TASK-130/golden-corpus",
+    "requires_live": false,
+    "result_status": "PASS_WITH_NOTES",
+    "safety_level": "read_only_static_scan",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "harness.golden-corpus.validate",
+    "started_at": "2026-05-28T00:32:05+00:00",
+    "status": "PASS_WITH_NOTES",
+    "summary": "harness.golden-corpus.validate: PASS_WITH_NOTES (22 checks)",
+    "taskId": "TASK-130",
+    "task_id": "TASK-130"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS_WITH_NOTES",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260528T003205Z-harness-golden-corpus-validate-task-TASK-130-p47713",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS_WITH_NOTES",
+  "task_id": "TASK-130",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-28T00:32:05Z",
+  "timestamp_start": "2026-05-28T00:32:05Z",
+  "warnings": []
+}

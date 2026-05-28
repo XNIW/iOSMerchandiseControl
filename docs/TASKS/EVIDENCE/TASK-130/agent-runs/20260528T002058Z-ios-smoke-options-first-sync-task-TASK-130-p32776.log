@@ -1,0 +1,78 @@
+=== mc-agent ios smoke options-first-sync --task TASK-130 ===
+{
+  "NEXT_ACTION": "Reviewer should decide whether the visible retry state is enough or whether TASK-130 needs a dedicated Options retry button.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-OPTIONS-ACCOUNT",
+      "reason": "Options exposes account connected/signed-in/signed-out state.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-OPTIONS-LOCAL-DATA",
+      "reason": "Options exposes local data summary.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-OPTIONS-CLOUD-DATA",
+      "reason": "Options exposes cloud/baseline data summary.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-OPTIONS-REVIEW",
+      "reason": "Options exposes review needed/completed path.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-OPTIONS-AUTOSYNC",
+      "reason": "Options exposes automatic sync status.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-OPTIONS-PENDING",
+      "reason": "Options exposes pending local count.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-OPTIONS-LAST-SYNC",
+      "reason": "Options exposes last sync/success timestamp.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-OPTIONS-SIGN-IN",
+      "reason": "Options exposes Sign in CTA.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-OPTIONS-REVIEW-CTA",
+      "reason": "Options exposes Review CTA.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-OPTIONS-RETRY-CTA",
+      "reason": "Retry state is visible via automatic-sync retry badge/root sync action; Options does not add a separate manual retry button in this pass.",
+      "status": "PASS_WITH_NOTES"
+    }
+  ],
+  "completed_at": "2026-05-28T00:20:58+00:00",
+  "requires_live": false,
+  "result_status": "PASS_WITH_NOTES",
+  "safety_level": "read_only_static_scan",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "ios.smoke.options-first-sync",
+  "started_at": "2026-05-28T00:20:58+00:00",
+  "status": "PASS_WITH_NOTES",
+  "summary": "ios.smoke.options-first-sync: PASS_WITH_NOTES (10 checks)",
+  "taskId": "TASK-130",
+  "task_id": "TASK-130"
+}

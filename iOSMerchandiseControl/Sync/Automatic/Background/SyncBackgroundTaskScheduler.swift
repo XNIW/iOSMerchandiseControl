@@ -98,22 +98,28 @@ nonisolated enum SyncBackgroundTaskRunner {
     static func drainOnce() async -> Bool {
         do {
             let config = try SupabaseConfig.load()
-            let provider = SupabaseClientProvider(config: config)
-            let authService = SupabaseAuthService(provider: provider)
-            guard let session = authService.currentSession,
+            let (provider, authService) = await MainActor.run {
+                let provider = SupabaseClientProvider(config: config)
+                return (provider, SupabaseAuthService(provider: provider))
+            }
+            guard let session = await MainActor.run(body: { authService.currentSession }),
                   !session.isExpired else {
                 UserDefaults.standard.set("blocked_auth", forKey: "sync.runtime.background.lastOutcome")
                 return false
             }
 
             let modelContainer = try makeModelContainer()
-            let transport = SupabaseTransportClient(clientProvider: provider)
+            let transport = await MainActor.run {
+                SupabaseTransportClient(clientProvider: provider)
+            }
             let recorder: (any SyncEventRecording)? = SupabaseSyncEventLiveRecorder(
                 configProvider: SupabaseSyncEventLiveRecorderConfigurationProvider(),
                 sessionProvider: authService,
-                transport: SupabaseSyncEventRPCTransport(clientProvider: provider)
+                transport: await MainActor.run {
+                    SupabaseSyncEventRPCTransport(clientProvider: provider)
+                }
             )
-            let engine = AutomaticSyncEngine(
+            let engine = await AutomaticSyncEngine(
                 catalogPushProvider: CatalogPushService(
                     modelContainer: modelContainer,
                     remote: CatalogRemoteSupabaseAdapter(remote: transport)

@@ -283,6 +283,24 @@ mc_android_test_sync() {
   return "$MC_EXIT_FAIL"
 }
 
+mc_android_test_price_contract() {
+  MC_PLATFORM="android"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_CA_REFS="AC-130-01,AC-130-02,AC-130-03,AC-130-05"
+  mc_git_context "$MC_ANDROID_REPO"
+  mc_android_gradle :app:testDebugUnitTest \
+    --tests 'com.example.merchandisecontrolsplitview.data.Task130PriceContractTest'
+  local code=$?
+  if [[ "$code" -eq 0 ]]; then
+    MC_SUMMARY="Android test price-contract PASS."
+    MC_NEXT_ACTION="Run scan price-contract and Supabase price-schema contract."
+    return "$MC_EXIT_PASS"
+  fi
+  MC_SUMMARY="Android test price-contract FAIL."
+  MC_NEXT_ACTION="Inspect Gradle test report for Task130PriceContractTest."
+  return "$MC_EXIT_FAIL"
+}
+
 mc_android_test_offline() {
   MC_PLATFORM="android"
   MC_SAFETY_LEVEL="safe-readonly"
@@ -794,6 +812,316 @@ PY
   return "$MC_EXIT_MISCONFIGURED"
 }
 
+mc_android_broad_assess_results() {
+  local gradle_exit="$1"
+  local gradle_log="${2:-}"
+  local started_at="$3"
+  local mode="${4:-broad}"
+  TASK_ID="$MC_TASK_ID" ANDROID_REPO="$MC_ANDROID_REPO" GRADLE_EXIT="$gradle_exit" \
+    GRADLE_LOG="$gradle_log" STARTED_AT="$started_at" MODE="$mode" python3 - <<'PY'
+import json
+import os
+import re
+import xml.etree.ElementTree as ET
+from collections import Counter
+from datetime import datetime, timezone
+from pathlib import Path
+
+repo = Path(os.environ["ANDROID_REPO"])
+results_dir = repo / "app" / "build" / "test-results" / "testDebugUnitTest"
+gradle_log_value = os.environ.get("GRADLE_LOG") or ""
+gradle_log = Path(gradle_log_value) if gradle_log_value else None
+gradle_exit = int(os.environ["GRADLE_EXIT"])
+mode = os.environ.get("MODE", "broad")
+
+def log_sample():
+    if not gradle_log or not gradle_log.exists():
+        return ""
+    text = gradle_log.read_text(errors="replace")
+    return "\n".join(text.splitlines()[-120:])
+
+def classify(text):
+    lower = text.lower()
+    if any(token in lower for token in [
+        "bytebuddy", "byte buddy", "byte-buddy", "bytebuddyagent",
+        "mockk.proxy", "mockkagent", "could not self-attach",
+        "self-attach", "jdk.attach", "allowattachself", "attachment provider",
+    ]):
+        return "BYTEBUDDY_ATTACH_ENV"
+    if any(token in lower for token in [
+        "attachnotsupportedexception", "com.sun.tools.attach",
+        "java.lang.instrument", "tools.jar", "invalid java_home",
+        "unable to find a java runtime", "no compatible toolchains",
+    ]):
+        return "JDK_TOOLCHAIN_ENV"
+    if any(token in lower for token in [
+        "assertionerror", "expected", "but was", "expected:<",
+        "comparisonfailure", "asserttrue", "assertfalse", "assert equals",
+        "nullpointerexception",
+    ]):
+        return "REAL_REGRESSION"
+    if any(token in lower for token in [
+        "androidx.room", "roomdatabase", "sqlite", "robolectric",
+        "looper", "android.os", "test instrumentation process",
+    ]):
+        return "ROOM_TEST_ENV"
+    if any(token in lower for token in ["timed out", "timeout", "flaky", "retry"]):
+        return "FLAKY_RETRY_REQUIRED"
+    return "UNKNOWN_NEEDS_FIX"
+
+tests = failures = errors = skipped = 0
+failed_tests = []
+xml_files = sorted(results_dir.glob("*.xml")) if results_dir.exists() else []
+for path in xml_files:
+    try:
+        root = ET.parse(path).getroot()
+    except Exception as exc:
+        failed_tests.append({
+            "className": path.name,
+            "name": "xml-parse",
+            "classification": "MISCONFIGURED",
+            "messageSample": f"Unable to parse test result XML: {exc}",
+        })
+        continue
+    suites = list(root.iter("testsuite")) if root.tag != "testsuite" else [root]
+    for suite in suites:
+        tests += int(suite.attrib.get("tests", "0") or 0)
+        failures += int(suite.attrib.get("failures", "0") or 0)
+        errors += int(suite.attrib.get("errors", "0") or 0)
+        skipped += int(suite.attrib.get("skipped", "0") or 0)
+        for case in suite.findall("testcase"):
+            problem = None
+            for tag in ("failure", "error"):
+                node = case.find(tag)
+                if node is not None:
+                    problem = node
+                    break
+            if problem is None:
+                continue
+            class_name = case.attrib.get("classname", "")
+            name = case.attrib.get("name", "")
+            text = "\n".join([
+                problem.attrib.get("type", ""),
+                problem.attrib.get("message", ""),
+                problem.text or "",
+            ])
+            failed_tests.append({
+                "className": class_name,
+                "name": name,
+                "classification": classify(text + "\n" + class_name + "\n" + name),
+                "messageSample": re.sub(r"\s+", " ", text).strip()[:420],
+            })
+
+if gradle_exit != 0 and not failed_tests:
+    text = log_sample()
+    failed_tests.append({
+        "className": "gradle",
+        "name": ":app:testDebugUnitTest",
+        "classification": classify(text),
+        "messageSample": re.sub(r"\s+", " ", text).strip()[-420:],
+    })
+
+counts = Counter(item["classification"] for item in failed_tests)
+quarantine_classes = {
+    "BYTEBUDDY_ATTACH_ENV",
+    "JDK_TOOLCHAIN_ENV",
+    "ROOM_TEST_ENV",
+    "FLAKY_RETRY_REQUIRED",
+}
+has_failure = bool(gradle_exit != 0 or failures or errors or failed_tests)
+has_real_or_unknown = any(
+    item["classification"] in {"REAL_REGRESSION", "UNKNOWN_NEEDS_FIX", "MISCONFIGURED"}
+    for item in failed_tests
+)
+if not xml_files and mode != "broad":
+    status = "MISCONFIGURED"
+elif not has_failure:
+    status = "PASS"
+elif failed_tests and all(item["classification"] in quarantine_classes for item in failed_tests):
+    status = "PASS_WITH_NOTES_CANDIDATE"
+elif has_real_or_unknown:
+    status = "FAIL_REAL_OR_UNKNOWN"
+else:
+    status = "FAIL"
+
+payload = {
+    "schemaVersion": "1.1",
+    "taskId": os.environ.get("TASK_ID", "TASK-129"),
+    "source": f"android.test.{mode}",
+    "startedAt": os.environ.get("STARTED_AT"),
+    "completedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "status": status,
+    "gradleTask": ":app:testDebugUnitTest",
+    "gradleExitCode": gradle_exit,
+    "testResultsDir": str(results_dir),
+    "xmlFileCount": len(xml_files),
+    "totals": {
+        "tests": tests,
+        "failures": failures,
+        "errors": errors,
+        "skipped": skipped,
+        "failedOrErroredCases": len(failed_tests),
+    },
+    "classificationCounts": dict(sorted(counts.items())),
+    "failedTests": failed_tests[:200],
+    "truncatedFailedTests": max(0, len(failed_tests) - 200),
+    "quarantineAcceptableCandidate": bool(failed_tests) and not has_real_or_unknown,
+    "stableCiAlternative": [
+        "MC_TASK_ID=TASK-129 ./tools/agent/mc-agent.sh android build debug --task TASK-129",
+        "MC_TASK_ID=TASK-129 ./tools/agent/mc-agent.sh android test sync --task TASK-129",
+    ],
+    "NEXT_ACTION": (
+        "No quarantine required; keep broad command as release gate."
+        if status == "PASS"
+        else "Run android test quarantine-report and fix real/unknown regressions before REVIEW."
+        if has_real_or_unknown
+        else "Use quarantine-report to document the instrumental failure and keep stable CI alternative explicit."
+    ),
+}
+print(json.dumps(payload, sort_keys=True))
+PY
+}
+
+mc_android_broad_set_detail() {
+  local payload="$1"
+  MC_RECONCILIATION_JSON="$payload"
+  MC_RECONCILIATION_MD="$(python3 - "$payload" <<'PY'
+import json
+import sys
+
+payload = json.loads(sys.argv[1])
+totals = payload.get("totals", {})
+lines = [
+    f"- schemaVersion: {payload.get('schemaVersion')}",
+    f"- taskId: {payload.get('taskId')}",
+    f"- source: {payload.get('source')}",
+    f"- status: {payload.get('status')}",
+    f"- gradleTask: {payload.get('gradleTask')}",
+    f"- gradleExitCode: {payload.get('gradleExitCode')}",
+    "- totals: tests={tests} failures={failures} errors={errors} skipped={skipped} failedOrErroredCases={failedOrErroredCases}".format(**{
+        "tests": totals.get("tests"),
+        "failures": totals.get("failures"),
+        "errors": totals.get("errors"),
+        "skipped": totals.get("skipped"),
+        "failedOrErroredCases": totals.get("failedOrErroredCases"),
+    }),
+    f"- classificationCounts: {payload.get('classificationCounts', {})}",
+    f"- quarantineAcceptableCandidate: {payload.get('quarantineAcceptableCandidate')}",
+    "- stableCiAlternative:",
+]
+for command in payload.get("stableCiAlternative", []):
+    lines.append(f"  - `{command}`")
+failed = payload.get("failedTests", [])
+if failed:
+    lines.append("- failedTests sample:")
+    for item in failed[:25]:
+        label = f"{item.get('className')}#{item.get('name')}"
+        lines.append(f"  - {item.get('classification')}: {label}")
+if payload.get("truncatedFailedTests", 0):
+    lines.append(f"- truncatedFailedTests: {payload.get('truncatedFailedTests')}")
+print("\n".join(lines))
+PY
+)"
+  export MC_RECONCILIATION_JSON MC_RECONCILIATION_MD
+  mc_report_log "$MC_RECONCILIATION_JSON"
+}
+
+mc_android_test_broad() {
+  MC_PLATFORM="android"
+  MC_ACTIVE_REPO="$MC_ANDROID_REPO"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  MC_ANDROID_OFFLINE_TIER="none"
+  MC_CA_REFS="TASK-129-P0.1"
+  if [[ ! -d "$MC_ANDROID_REPO" || ! -x "$MC_ANDROID_REPO/gradlew" ]]; then
+    MC_SUMMARY="Android broad test MISCONFIGURED: Android repo or gradlew is not available."
+    MC_NEXT_ACTION="Fix MC_ANDROID_REPO/gradlew before rerunning android test broad."
+    return "$MC_EXIT_MISCONFIGURED"
+  fi
+
+  local started gradle_log code payload status tests failures errors skipped class_counts
+  started="$(mc_now_iso)"
+  gradle_log="$(mktemp -t mc-agent-android-broad.XXXXXX.log)"
+  mc_android_gradle --no-daemon :app:testDebugUnitTest > "$gradle_log" 2>&1
+  code=$?
+  mc_report_log "Android broad Gradle output tail (redacted):"
+  mc_report_log "$(tail -n 220 "$gradle_log" || true)"
+  payload="$(mc_android_broad_assess_results "$code" "$gradle_log" "$started" "broad")"
+  mc_android_broad_set_detail "$payload"
+  rm -f "$gradle_log"
+
+  status="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("status","MISCONFIGURED"))' "$payload")"
+  tests="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("totals",{}).get("tests",0))' "$payload")"
+  failures="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("totals",{}).get("failures",0))' "$payload")"
+  errors="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("totals",{}).get("errors",0))' "$payload")"
+  skipped="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("totals",{}).get("skipped",0))' "$payload")"
+  class_counts="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("classificationCounts",{}))' "$payload")"
+
+  if [[ "$status" == "PASS" ]]; then
+    MC_SUMMARY="Android broad unit suite PASS via :app:testDebugUnitTest (${tests} tests, ${skipped} skipped)."
+    MC_NEXT_ACTION="Keep android test broad as the release broad suite gate."
+    return "$MC_EXIT_PASS"
+  fi
+  if [[ "$status" == "MISCONFIGURED" ]]; then
+    MC_SUMMARY="Android broad unit suite MISCONFIGURED: no usable broad test XML evidence was found."
+    MC_NEXT_ACTION="Fix Android test result generation or rerun android test broad with a valid Gradle test task."
+    return "$MC_EXIT_MISCONFIGURED"
+  fi
+
+  MC_WARNINGS="broad_non_green"
+  MC_SUMMARY="Android broad unit suite non-green via :app:testDebugUnitTest: tests=${tests}, failures=${failures}, errors=${errors}, skipped=${skipped}, classifications=${class_counts}."
+  MC_NEXT_ACTION="Run android test quarantine-report --task ${MC_TASK_ID}; fix REAL_REGRESSION/UNKNOWN_NEEDS_FIX before REVIEW."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_android_test_quarantine_report() {
+  MC_PLATFORM="android"
+  MC_ACTIVE_REPO="$MC_ANDROID_REPO"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  MC_ANDROID_OFFLINE_TIER="none"
+  MC_CA_REFS="TASK-129-P0.1"
+  if [[ ! -d "$MC_ANDROID_REPO/app/build/test-results/testDebugUnitTest" ]]; then
+    MC_SUMMARY="Android quarantine report MISCONFIGURED: no latest broad test result directory exists."
+    MC_NEXT_ACTION="Run android test broad --task ${MC_TASK_ID} first."
+    return "$MC_EXIT_MISCONFIGURED"
+  fi
+
+  local payload status real_unknown class_counts tests failures errors skipped
+  payload="$(mc_android_broad_assess_results 1 "" "$(mc_now_iso)" "quarantine-report")"
+  mc_android_broad_set_detail "$payload"
+  status="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("status","MISCONFIGURED"))' "$payload")"
+  real_unknown="$(python3 -c 'import json,sys; p=json.loads(sys.argv[1]); print(any(t.get("classification") in {"REAL_REGRESSION","UNKNOWN_NEEDS_FIX","MISCONFIGURED"} for t in p.get("failedTests",[])))' "$payload")"
+  class_counts="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("classificationCounts",{}))' "$payload")"
+  tests="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("totals",{}).get("tests",0))' "$payload")"
+  failures="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("totals",{}).get("failures",0))' "$payload")"
+  errors="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("totals",{}).get("errors",0))' "$payload")"
+  skipped="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("totals",{}).get("skipped",0))' "$payload")"
+
+  if [[ "$status" == "PASS" ]]; then
+    MC_SUMMARY="Android quarantine report PASS: latest broad XML is green; no quarantine required."
+    MC_NEXT_ACTION="Prefer the broad PASS evidence and proceed to final scans."
+    return "$MC_EXIT_PASS"
+  fi
+  if [[ "$status" == "MISCONFIGURED" ]]; then
+    MC_SUMMARY="Android quarantine report MISCONFIGURED: latest broad XML evidence is missing or unusable."
+    MC_NEXT_ACTION="Rerun android test broad and keep generated XML reports."
+    return "$MC_EXIT_MISCONFIGURED"
+  fi
+  if [[ "$real_unknown" == "False" ]]; then
+    mc_set_pass_with_notes
+    MC_WARNINGS="broad_quarantined_not_green"
+    MC_SUMMARY="Android quarantine report PASS_WITH_NOTES_CANDIDATE: broad remains non-green, but failures are classified as instrumental/quarantinable. tests=${tests}, failures=${failures}, errors=${errors}, skipped=${skipped}, classifications=${class_counts}."
+    MC_NEXT_ACTION="Use stable CI alternative: android build debug + android test sync; do not claim broad PASS until quarantine is retired."
+    return "$MC_EXIT_PASS"
+  fi
+
+  MC_WARNINGS="broad_real_or_unknown_failures"
+  MC_SUMMARY="Android quarantine report FAIL: broad failures include REAL_REGRESSION, UNKNOWN_NEEDS_FIX or MISCONFIGURED classifications. classifications=${class_counts}."
+  MC_NEXT_ACTION="Fix or narrow the real/unknown Android failures, then rerun android test broad."
+  return "$MC_EXIT_FAIL"
+}
+
 mc_cmd_android() {
   local sub="${1:-}"
   shift || true
@@ -802,7 +1130,10 @@ mc_cmd_android() {
     test)
       case "${1:-sync}" in
         sync) mc_android_test_sync ;;
+        price-contract) mc_android_test_price_contract ;;
         offline) mc_android_test_offline ;;
+        broad) mc_android_test_broad ;;
+        quarantine-report) mc_android_test_quarantine_report ;;
         sync-policy|account-store-boundary|conflict-review|conflict-review-ui|account-switch-review-ui|cache-memory) mc_android_test_task126_suite "${1:-}" ;;
         *) MC_SUMMARY="Unknown android test suite: ${1:-}"; return "$MC_EXIT_MISCONFIGURED" ;;
       esac

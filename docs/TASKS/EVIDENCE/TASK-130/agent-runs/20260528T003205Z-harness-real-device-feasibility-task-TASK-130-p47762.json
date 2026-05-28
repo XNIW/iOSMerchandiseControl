@@ -1,0 +1,112 @@
+{
+  "NEXT_ACTION": "Review PARTIAL/NOT_RUN rows in the report before accepting consolidation.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-130/agent-runs/20260528T003205Z-harness-real-device-feasibility-task-TASK-130-p47762.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-130/agent-runs/20260528T003205Z-harness-real-device-feasibility-task-TASK-130-p47762.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-130/agent-runs/20260528T003205Z-harness-real-device-feasibility-task-TASK-130-p47762.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [],
+  "cleanup_plan_id": null,
+  "command": "harness real-device-feasibility --task TASK-130",
+  "command_slug": "harness-real-device-feasibility-task-TASK-130",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 439,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-130",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK130_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-130"
+  },
+  "exit_code": 0,
+  "git_sha": "cdb22534",
+  "next_action_recommended": "Review PARTIAL/NOT_RUN rows in the report before accepting consolidation.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Reviewer must accept these as feasibility notes or provide devices/auth windows for a TASK-130 live run.",
+    "checks": [
+      {
+        "evidence": {
+          "returncode": 0
+        },
+        "file": "xcrun devicectl list devices",
+        "id": "TASK130-REALDEVICE-IOS-LISTABLE",
+        "reason": "iOS physical device list was queried; this does not prove app-auth/background acceptance.",
+        "status": "PASS_WITH_NOTES"
+      },
+      {
+        "evidence": {
+          "deviceRows": 2,
+          "returncode": 0
+        },
+        "file": "adb devices",
+        "id": "TASK130-REALDEVICE-ANDROID-LISTABLE",
+        "reason": "Android device list was queried; this does not prove physical/offline/locked acceptance.",
+        "status": "PASS_WITH_NOTES"
+      },
+      {
+        "file": "docs/TASKS/TASK-130-price-contract-current-previous-old.md",
+        "id": "TASK130-REALDEVICE-BACKGROUND-LOCKED-LONG",
+        "reason": "No 30-60 minute background/locked/offline real-device run was executed in this consolidation pass.",
+        "status": "PARTIAL"
+      }
+    ],
+    "completed_at": "2026-05-28T00:32:05+00:00",
+    "requires_live": false,
+    "result_status": "PASS_WITH_NOTES",
+    "safety_level": "read_only_static_scan",
+    "schemaVersion": "1.1",
+    "schema_version": "1.1",
+    "source": "harness.real-device-feasibility",
+    "started_at": "2026-05-28T00:32:05+00:00",
+    "status": "PASS_WITH_NOTES",
+    "summary": "harness.real-device-feasibility: PASS_WITH_NOTES (3 checks)",
+    "taskId": "TASK-130",
+    "task_id": "TASK-130"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS_WITH_NOTES",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260528T003205Z-harness-real-device-feasibility-task-TASK-130-p47762",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS_WITH_NOTES",
+  "task_id": "TASK-130",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-28T00:32:05Z",
+  "timestamp_start": "2026-05-28T00:32:05Z",
+  "warnings": []
+}

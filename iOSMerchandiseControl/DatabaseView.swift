@@ -3963,28 +3963,13 @@ struct DatabaseView: View {
         type: PriceType,
         fallbackCurrentPrice: Double?
     ) -> ExportedProductPriceSummary {
-        let history = (resolvedCurrentProduct(for: product)?.priceHistory ?? product.priceHistory)
-            .filter { $0.type == type }
-            .sorted { lhs, rhs in
-                if lhs.effectiveAt != rhs.effectiveAt {
-                    return lhs.effectiveAt > rhs.effectiveAt
-                }
-                return lhs.createdAt > rhs.createdAt
-            }
-
-        guard let latest = history.first else {
-            return ExportedProductPriceSummary(
-                current: fallbackCurrentPrice,
-                previous: nil
-            )
-        }
-
-        let previous = history.dropFirst().first {
-            $0.effectiveAt < latest.effectiveAt
-        }?.price
+        let currentProduct = resolvedCurrentProduct(for: product) ?? product
+        let history = ProductPriceContract.sortedHistory(currentProduct.priceHistory, type: type)
+        let current = ProductPriceContract.currentPrice(for: currentProduct, type: type) ?? fallbackCurrentPrice
+        let previous = history.dropFirst().first?.price
 
         return ExportedProductPriceSummary(
-            current: latest.price,
+            current: current,
             previous: previous
         )
     }

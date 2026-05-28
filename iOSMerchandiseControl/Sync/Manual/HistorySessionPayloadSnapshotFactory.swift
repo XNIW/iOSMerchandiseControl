@@ -1,6 +1,6 @@
 import Foundation
 
-enum HistorySessionPayloadSnapshotFactory {
+nonisolated enum HistorySessionPayloadSnapshotFactory {
     static func snapshot(
         for entry: HistoryEntry,
         ensureRemoteID: Bool

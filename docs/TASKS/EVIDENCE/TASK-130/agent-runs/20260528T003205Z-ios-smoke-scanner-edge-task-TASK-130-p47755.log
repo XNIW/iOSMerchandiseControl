@@ -1,0 +1,48 @@
+=== mc-agent ios smoke scanner-edge --task TASK-130 ===
+{
+  "NEXT_ACTION": "Run physical low-light/double-scan cases if reviewer requires real-device scanner acceptance.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/BarcodeScannerView.swift",
+      "id": "TASK130-SCANNER-FALLBACK",
+      "reason": "Scanner exposes manual fallback callbacks.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/BarcodeScannerView.swift",
+      "id": "TASK130-SCANNER-BACKGROUND",
+      "reason": "Scanner stops/resumes camera work on scene phase changes.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/DatabaseView.swift",
+      "id": "TASK130-SCANNER-DB-EXISTING",
+      "reason": "Database scanner distinguishes barcode already in DB from new product.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/DatabaseView.swift",
+      "id": "TASK130-SCANNER-DB-FALLBACK-FOCUS",
+      "reason": "Database scanner fallback returns to manual search input.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/GeneratedView.swift",
+      "id": "TASK130-SCANNER-GENERATED-SURFACE",
+      "reason": "Generated scanner surface exists; physical double-scan/low-light behavior was not run.",
+      "status": "PASS_WITH_NOTES"
+    }
+  ],
+  "completed_at": "2026-05-28T00:32:05+00:00",
+  "requires_live": false,
+  "result_status": "PASS_WITH_NOTES",
+  "safety_level": "read_only_static_scan",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "ios.smoke.scanner-edge",
+  "started_at": "2026-05-28T00:32:05+00:00",
+  "status": "PASS_WITH_NOTES",
+  "summary": "ios.smoke.scanner-edge: PASS_WITH_NOTES (5 checks)",
+  "taskId": "TASK-130",
+  "task_id": "TASK-130"
+}

@@ -1,0 +1,3 @@
+barcode,itemNumber,productName,secondProductName,purchasePrice,retailPrice,supplier,category,stockQuantity
+TASK130_DB001,DB-001,TASK130 DB Product One,,20.00,29.99,TASK130 DB Supplier,TASK130 DB Category,5
+TASK130_DB002,DB-002,TASK130 DB Product Two,TASK130 DB Product Two Alt,8.50,12.75,TASK130 DB Supplier,TASK130 DB Category,0
