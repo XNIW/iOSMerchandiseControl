@@ -332,7 +332,7 @@ mc_sync_counts_android() {
     rm -rf "$tmp"
     return "$MC_EXIT_BLOCKED"
   }
-  DB_PATH="$tmp/app_database" TASK_ID="$task_id" STARTED_AT="$started" python3 - > "$tmp/counts.json" <<'PY'
+  DB_PATH="$tmp/app_database" TASK_ID="$task_id" STARTED_AT="$started" MC_SCOPED_COUNT_PREFIX="${MC_SCOPED_COUNT_PREFIX:-}" python3 - > "$tmp/counts.json" <<'PY'
 import hashlib, json, os, sqlite3
 from datetime import datetime, timezone
 
@@ -343,6 +343,12 @@ con.row_factory = sqlite3.Row
 def q(sql):
     try:
         return int(con.execute(sql).fetchone()[0] or 0)
+    except Exception:
+        return None
+
+def q_params(sql, params):
+    try:
+        return int(con.execute(sql, params).fetchone()[0] or 0)
     except Exception:
         return None
 
@@ -440,6 +446,94 @@ counts = {
         "userVisible": q(history_user_visible),
     },
 }
+
+scoped_counts = None
+scoped_prefix = (os.environ.get("MC_SCOPED_COUNT_PREFIX") or "").replace("*", "")
+if scoped_prefix:
+    like = scoped_prefix + "%"
+    scoped_counts = {
+        "products": {
+            "active": q_params(
+                "SELECT count(*) FROM products WHERE barcode LIKE ? OR productName LIKE ? OR itemNumber LIKE ?",
+                (like, like, like),
+            ),
+            "pending": q_params(
+                "SELECT count(*) FROM products p JOIN product_remote_refs r ON r.productId = p.id "
+                "WHERE r.localChangeRevision > r.lastSyncedLocalRevision AND (p.barcode LIKE ? OR p.productName LIKE ? OR p.itemNumber LIKE ?)",
+                (like, like, like),
+            ),
+            "localOnly": q_params(
+                "SELECT count(*) FROM products p LEFT JOIN product_remote_refs r ON r.productId = p.id "
+                "WHERE r.remoteId IS NULL AND (p.barcode LIKE ? OR p.productName LIKE ? OR p.itemNumber LIKE ?)",
+                (like, like, like),
+            ),
+        },
+        "suppliers": {
+            "active": q_params("SELECT count(*) FROM suppliers WHERE name LIKE ?", (like,)),
+            "pending": q_params(
+                "SELECT count(*) FROM suppliers s JOIN supplier_remote_refs r ON r.supplierId = s.id "
+                "WHERE r.localChangeRevision > r.lastSyncedLocalRevision AND s.name LIKE ?",
+                (like,),
+            ),
+            "localOnly": q_params(
+                "SELECT count(*) FROM suppliers s LEFT JOIN supplier_remote_refs r ON r.supplierId = s.id "
+                "WHERE r.remoteId IS NULL AND s.name LIKE ?",
+                (like,),
+            ),
+        },
+        "categories": {
+            "active": q_params("SELECT count(*) FROM categories WHERE name LIKE ?", (like,)),
+            "pending": q_params(
+                "SELECT count(*) FROM categories c JOIN category_remote_refs r ON r.categoryId = c.id "
+                "WHERE r.localChangeRevision > r.lastSyncedLocalRevision AND c.name LIKE ?",
+                (like,),
+            ),
+            "localOnly": q_params(
+                "SELECT count(*) FROM categories c LEFT JOIN category_remote_refs r ON r.categoryId = c.id "
+                "WHERE r.remoteId IS NULL AND c.name LIKE ?",
+                (like,),
+            ),
+        },
+        "product_prices": {
+            "active": q_params(
+                "SELECT count(*) FROM product_prices pp JOIN products p ON p.id = pp.productId "
+                "WHERE p.barcode LIKE ? OR p.productName LIKE ? OR p.itemNumber LIKE ?",
+                (like, like, like),
+            ),
+            "pending": 0,
+            "localOnly": q_params(
+                "SELECT count(*) FROM product_prices pp JOIN products p ON p.id = pp.productId "
+                "LEFT JOIN product_price_remote_refs r ON r.productPriceId = pp.id "
+                "WHERE r.remoteId IS NULL AND (p.barcode LIKE ? OR p.productName LIKE ? OR p.itemNumber LIKE ?)",
+                (like, like, like),
+            ),
+        },
+        "history_entries": {
+            "active": q_params(
+                "SELECT count(*) FROM history_entries WHERE deletedAt IS NULL AND "
+                "(id LIKE ? OR displayName LIKE ? OR supplier LIKE ? OR category LIKE ?)",
+                (like, like, like, like),
+            ),
+            "userVisible": q_params(
+                "SELECT count(*) FROM history_entries WHERE id NOT LIKE 'APPLY_IMPORT_%' AND id NOT LIKE 'FULL_IMPORT_%' "
+                "AND (deletedAt IS NULL OR syncStatus = 'NOT_ATTEMPTED') AND "
+                "(id LIKE ? OR displayName LIKE ? OR supplier LIKE ? OR category LIKE ?)",
+                (like, like, like, like),
+            ),
+            "pending": q_params(
+                "SELECT count(*) FROM history_entries h LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid "
+                "WHERE h.id NOT LIKE 'APPLY_IMPORT_%' AND h.id NOT LIKE 'FULL_IMPORT_%' "
+                "AND (r.historyEntryUid IS NULL OR r.localChangeRevision > r.lastSyncedLocalRevision) "
+                "AND (h.id LIKE ? OR h.displayName LIKE ? OR h.supplier LIKE ? OR h.category LIKE ?)",
+                (like, like, like, like),
+            ),
+            "localOnly": q_params(
+                "SELECT count(*) FROM history_entries h LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid "
+                "WHERE r.remoteId IS NULL AND (h.id LIKE ? OR h.displayName LIKE ? OR h.supplier LIKE ? OR h.category LIKE ?)",
+                (like, like, like, like),
+            ),
+        },
+    }
 pending = q(pending_refs)
 technical_history_local_only = q(history_technical_local_only) or 0
 now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -452,6 +546,7 @@ payload = {
     "account": {"state": "redacted"},
     "session": {"state": "device-local-redacted"},
     "counts": counts,
+    "scopedCounts": scoped_counts,
     "checkpoint": {"local": {"pendingAggregate": pending}, "remote": None},
     "lastPush": None,
     "lastPull": None,
@@ -531,7 +626,7 @@ mc_sync_counts_ios() {
     MC_SYNC_JSON_RESULT="$(mc_sync_make_blocked_json "$task_id" "ios" "No SwiftData SQLite store was found in the booted simulator app container.")"
     return "$MC_EXIT_BLOCKED"
   fi
-  DB_PATH="$store" TASK_ID="$task_id" STARTED_AT="$started" python3 - > /tmp/mc-agent-ios-counts.$$.json <<'PY'
+  DB_PATH="$store" TASK_ID="$task_id" STARTED_AT="$started" MC_SCOPED_COUNT_PREFIX="${MC_SCOPED_COUNT_PREFIX:-}" python3 - > /tmp/mc-agent-ios-counts.$$.json <<'PY'
 import hashlib, json, os, sqlite3
 from datetime import datetime, timezone
 
@@ -571,6 +666,12 @@ def cols(table):
 def q(sql):
     try:
         return int(con.execute(sql).fetchone()[0] or 0)
+    except Exception:
+        return None
+
+def q_params(sql, params):
+    try:
+        return int(con.execute(sql, params).fetchone()[0] or 0)
     except Exception:
         return None
 
@@ -654,6 +755,85 @@ for key, pending_kind in kind_map.items():
         "userVisible": None,
     }
 
+def like_condition(table, names):
+    if not table:
+        return None, []
+    c = cols(table)
+    parts = []
+    params = []
+    for name in names:
+        col = c.get(name)
+        if col:
+            parts.append(f"{col} LIKE ?")
+            params.append(scoped_like)
+    if not parts:
+        return None, []
+    return "(" + " OR ".join(parts) + ")", params
+
+def and_conditions(*conditions):
+    present = [condition for condition in conditions if condition]
+    return " AND ".join(present) if present else None
+
+scoped_counts = None
+scoped_prefix = (os.environ.get("MC_SCOPED_COUNT_PREFIX") or "").replace("*", "")
+if scoped_prefix:
+    scoped_like = scoped_prefix + "%"
+    product_table = entity_tables["products"]
+    supplier_table = entity_tables["suppliers"]
+    category_table = entity_tables["categories"]
+    price_table = entity_tables["product_prices"]
+    history_table = entity_tables["history_entries"]
+    product_cond, product_params = like_condition(product_table, ["ZBARCODE", "ZPRODUCTNAME", "ZSECONDPRODUCTNAME", "ZITEMNUMBER"])
+    supplier_cond, supplier_params = like_condition(supplier_table, ["ZNAME"])
+    category_cond, category_params = like_condition(category_table, ["ZNAME"])
+    history_cond, history_params = like_condition(history_table, ["ZID", "ZTITLE", "ZSUPPLIER", "ZCATEGORY"])
+    product_active_cond = and_conditions(product_cond, remote_deleted_where(product_table))
+    supplier_active_cond = and_conditions(supplier_cond, remote_deleted_where(supplier_table))
+    category_active_cond = and_conditions(category_cond, remote_deleted_where(category_table))
+    history_active_cond = and_conditions(history_cond, remote_deleted_where(history_table))
+    scoped_counts = {
+        "products": {
+            "active": q_params(f"SELECT count(*) FROM {product_table} WHERE {product_active_cond}", product_params) if product_active_cond else None,
+            "pending": 0,
+            "localOnly": None,
+        },
+        "suppliers": {
+            "active": q_params(f"SELECT count(*) FROM {supplier_table} WHERE {supplier_active_cond}", supplier_params) if supplier_active_cond else None,
+            "pending": 0,
+            "localOnly": None,
+        },
+        "categories": {
+            "active": q_params(f"SELECT count(*) FROM {category_table} WHERE {category_active_cond}", category_params) if category_active_cond else None,
+            "pending": 0,
+            "localOnly": None,
+        },
+        "product_prices": {
+            "active": None,
+            "pending": 0,
+            "localOnly": None,
+        },
+        "history_entries": {
+            "active": q_params(f"SELECT count(*) FROM {history_table} WHERE {history_active_cond}", history_params) if history_active_cond else None,
+            "userVisible": q_params(f"SELECT count(*) FROM {history_table} WHERE {history_active_cond}", history_params) if history_active_cond else None,
+            "pending": 0,
+            "localOnly": None,
+        },
+    }
+    if price_table and product_table and product_cond:
+        price_cols = cols(price_table)
+        product_cols = cols(product_table)
+        price_product = price_cols.get("ZPRODUCT")
+        product_pk = product_cols.get("Z_PK")
+        product_deleted = product_cols.get("ZREMOTEDELETEDAT")
+        if price_product and product_pk:
+            price_product_cond = product_cond
+            if product_deleted:
+                price_product_cond = and_conditions(product_cond, f"p.{product_deleted} IS NULL")
+            scoped_counts["product_prices"]["active"] = q_params(
+                f"SELECT count(*) FROM {price_table} pp JOIN {product_table} p ON p.{product_pk} = pp.{price_product} WHERE {price_product_cond}",
+                product_params,
+            )
+
 history = entity_tables["history_entries"]
 if history:
     c = cols(history)
@@ -684,6 +864,7 @@ payload = {
     "account": {"state": "redacted"},
     "session": {"state": "simulator-local-redacted"},
     "counts": counts,
+    "scopedCounts": scoped_counts,
     "checkpoint": {"local": {"pendingAggregate": pending_count() + (outbox_pending or 0)}, "remote": None},
     "lastPush": None,
     "lastPull": None,

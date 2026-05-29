@@ -112,7 +112,7 @@ struct ContentView: View {
     @StateObject private var excelSession = ExcelSessionViewModel()
     @StateObject private var foregroundActivityCenter = ForegroundCloudWorkflowActivityCenter()
     @StateObject private var syncStateStore = SyncStateStore()
-    @State private var selectedTab = 0
+    @State private var selectedTab = Self.initialSelectedTab()
 
     init(
         supabaseTransportClient: SupabaseTransportClient? = nil,
@@ -143,6 +143,18 @@ struct ContentView: View {
         default:
             return nil
         }
+    }
+
+    private static func initialSelectedTab() -> Int {
+        #if DEBUG
+        let value = ProcessInfo.processInfo.environment["TASK131_INITIAL_TAB"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        if value == "options" {
+            return 3
+        }
+        #endif
+        return 0
     }
 
     var body: some View {

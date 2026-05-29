@@ -9,6 +9,7 @@ mc_android_available_devices_json() {
   raw="$(adb devices -l 2>/dev/null || true)"
   ADB_DEVICES_RAW="$raw" python3 - <<'PY'
 import json, os
+import hashlib
 rows = []
 for line in os.environ.get("ADB_DEVICES_RAW", "").splitlines()[1:]:
     line = line.strip()
@@ -24,12 +25,14 @@ for line in os.environ.get("ADB_DEVICES_RAW", "").splitlines()[1:]:
             details[key] = value
     rows.append({
         "serial": "<REDACTED>",
-        "serialHash": __import__("hashlib").sha256(serial.encode()).hexdigest()[:12],
+        "serialHash": hashlib.sha256(serial.encode()).hexdigest()[:12],
         "status": status,
         "targetType": "emulator" if serial.startswith("emulator-") else "physical",
-        "model": details.get("model"),
-        "device": details.get("device"),
-        "transport": details.get("transport_id"),
+        "model": "<REDACTED_DEVICE_MODEL>" if details.get("model") else None,
+        "modelHash": hashlib.sha256(details.get("model", "").encode()).hexdigest()[:12] if details.get("model") else None,
+        "device": "<REDACTED_DEVICE_MODEL>" if details.get("device") else None,
+        "deviceHash": hashlib.sha256(details.get("device", "").encode()).hexdigest()[:12] if details.get("device") else None,
+        "transport": "<REDACTED_TRANSPORT_ID>" if details.get("transport_id") else None,
     })
 print(json.dumps(rows, sort_keys=True))
 PY
@@ -740,6 +743,10 @@ mc_android_test_task126_suite() {
       MC_CA_REFS="AC-126-01,AC-126-02,AC-126-12"
       pattern="*Task126AccountStoreBoundaryTest*"
       ;;
+    auth-fail-closed)
+      MC_CA_REFS="C126-18,C126-19,C126-20,C126-33,C126-34"
+      pattern="*SyncErrorClassifierTest*"
+      ;;
     conflict-review)
       MC_CA_REFS="AC-126-05,AC-126-06,AC-126-24"
       pattern="*Task126ConflictReviewTest*"
@@ -1127,6 +1134,11 @@ mc_cmd_android() {
   shift || true
   case "$sub" in
     build) mc_android_build "${1:-debug}" ;;
+    physical)
+      local physical_action="${1:-}"
+      shift || true
+      mc_task131_physical_platform "android" "$physical_action" "$@"
+      ;;
     test)
       case "${1:-sync}" in
         sync) mc_android_test_sync ;;
@@ -1134,7 +1146,7 @@ mc_cmd_android() {
         offline) mc_android_test_offline ;;
         broad) mc_android_test_broad ;;
         quarantine-report) mc_android_test_quarantine_report ;;
-        sync-policy|account-store-boundary|conflict-review|conflict-review-ui|account-switch-review-ui|cache-memory) mc_android_test_task126_suite "${1:-}" ;;
+        sync-policy|account-store-boundary|auth-fail-closed|conflict-review|conflict-review-ui|account-switch-review-ui|cache-memory) mc_android_test_task126_suite "${1:-}" ;;
         *) MC_SUMMARY="Unknown android test suite: ${1:-}"; return "$MC_EXIT_MISCONFIGURED" ;;
       esac
       ;;

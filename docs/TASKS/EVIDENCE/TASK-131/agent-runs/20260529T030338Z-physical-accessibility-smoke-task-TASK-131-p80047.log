@@ -1,0 +1,67 @@
+=== mc-agent physical accessibility-smoke --task TASK-131 ===
+{"NEXT_ACTION": "Connect trusted physical iPhone and Android device, set any required device identifiers, then rerun with MC_ALLOW_LIVE=1 and scoped TASK131_* prefix.", "androidPhysicalDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "deviceHash": "63ffe45473ff", "model": "<REDACTED_DEVICE_MODEL>", "modelHash": "92faf5e2b2b2", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical"}], "caseStatus": "NOT_RUN", "cleanupStatus": "NOT_RUN", "completedAt": "2026-05-29T03:03:38Z", "coveredPolicyGroupsPlanned": ["AC-126-21..25"], "deviceReadiness": {"androidPhysicalAvailable": true, "currentScope": "FULL_PHYSICAL_IOS_ANDROID_SCOPE", "iosPhysicalAvailable": true, "iosPhysicalCaseStatus": "AVAILABLE_FOR_FULL_PHYSICAL_SCOPE", "iosPhysicalEnabledForTask131": true, "iosSimulatorAvailable": true}, "iosPhysicalDevices": [{"id": "<REDACTED>", "idHash": "7f099f9425ab", "name": "<REDACTED_DEVICE_NAME>", "nameHash": "f7a40c9546e9", "platform": "iOS", "state": "connected", "targetType": "physical"}], "iosSimulators": [{"id": "<REDACTED>", "idHash": "d679e1d927ee", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-4", "state": "Booted", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "320c3202d5dc", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2", "state": "Shutdown", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "c1e1bf33cb91", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5", "state": "Booted", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "936e040d3cab", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-1", "state": "Shutdown", "targetType": "simulator"}], "matrix": "accessibility-smoke", "prefix": null, "residueStatus": "NOT_RUN", "resultRule": "NOT_RUN mandatory physical cases are blocking and are not PASS.", "schemaVersion": "1.1", "screenshots": [], "source": "physical.accessibility-smoke", "taskId": "TASK-131", "videos": []}
+{"allowedExternalBlockers": [], "blocked": [{"blocker": "OPERATOR_ACCESSIBILITY_CHECKLIST_NOT_PROVIDED", "cleanupRequired": false, "detail": {"blocker": "OPERATOR_ACCESSIBILITY_CHECKLIST_NOT_PROVIDED", "cleanupRequired": false, "schemaVersion": "1.1", "source": "task131.physical.accessibility.operator-checklist", "status": "BLOCKED_EXTERNAL", "taskId": "TASK-131"}, "exitCode": 2, "name": "physicalOperatorAccessibilityChecklist", "prefix": null, "source": "task131.physical.accessibility.operator-checklist", "status": "BLOCKED_EXTERNAL", "warnings": null}], "cleanupRequired": false, "completedAt": "2026-05-29T03:03:46Z", "failures": [{"blocker": null, "cleanupRequired": null, "detail": {"adbState": "device", "appInstalled": true, "availableAdbDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "deviceHash": "63ffe45473ff", "model": "<REDACTED_DEVICE_MODEL>", "modelHash": "92faf5e2b2b2", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical", "transport": "<REDACTED_TRANSPORT_ID>"}, {"device": "<REDACTED_DEVICE_MODEL>", "deviceHash": "fb9f32f61a9f", "model": "<REDACTED_DEVICE_MODEL>", "modelHash": "fa140d8db36f", "serial": "<REDACTED>", "serialHash": "04ab3fc382bf", "status": "device", "targetType": "emulator", "transport": "<REDACTED_TRANSPORT_ID>"}], "bootCompleted": "1", "foregroundAppMatches": false, "foregroundPackage": null, "lockState": {"locked": false, "screenOn": true, "unlocked": true}, "schemaVersion": "1.1", "selectedSerial": "<REDACTED>", "selectedTargetType": "physical", "source": "android.live-preflight"}, "exitCode": 4, "name": "iosPhysicalOptionsAccessibilityPreflight", "prefix": null, "source": "android.live-preflight", "status": "FAIL", "warnings": null}], "matrix": "accessibility-smoke", "prefix": "", "redactionApplied": true, "schemaVersion": "1.1", "source": "task131.physical.accessibility-smoke", "startedAt": "2026-05-29T03:03:38Z", "status": "FAIL", "steps": [{"blocker": null, "cleanupRequired": null, "detail": {"adbState": "device", "appInstalled": true, "availableAdbDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "deviceHash": "63ffe45473ff", "model": "<REDACTED_DEVICE_MODEL>", "modelHash": "92faf5e2b2b2", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical", "transport": "<REDACTED_TRANSPORT_ID>"}, {"device": "<REDACTED_DEVICE_MODEL>", "deviceHash": "fb9f32f61a9f", "model": "<REDACTED_DEVICE_MODEL>", "modelHash": "fa140d8db36f", "serial": "<REDACTED>", "serialHash": "04ab3fc382bf", "status": "device", "targetType": "emulator", "transport": "<REDACTED_TRANSPORT_ID>"}], "bootCompleted": "1", "foregroundAppMatches": false, "foregroundPackage": null, "lockState": {"locked": false, "screenOn": true, "unlocked": true}, "schemaVersion": "1.1", "selectedSerial": "<REDACTED>", "selectedTargetType": "physical", "source": "android.live-preflight"}, "exitCode": 4, "name": "iosPhysicalOptionsAccessibilityPreflight", "prefix": null, "source": "android.live-preflight", "status": "FAIL", "warnings": null}, {"blocker": null, "cleanupRequired": null, "detail": {"adbState": "device", "appInstalled": true, "availableAdbDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "deviceHash": "63ffe45473ff", "model": "<REDACTED_DEVICE_MODEL>", "modelHash": "92faf5e2b2b2", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical", "transport": "<REDACTED_TRANSPORT_ID>"}, {"device": "<REDACTED_DEVICE_MODEL>", "deviceHash": "fb9f32f61a9f", "model": "<REDACTED_DEVICE_MODEL>", "modelHash": "fa140d8db36f", "serial": "<REDACTED>", "serialHash": "04ab3fc382bf", "status": "device", "targetType": "emulator", "transport": "<REDACTED_TRANSPORT_ID>"}], "bootCompleted": "1", "foregroundAppMatches": false, "foregroundPackage": null, "lockState": {"locked": false, "screenOn": true, "unlocked": true}, "schemaVersion": "1.1", "selectedSerial": "<REDACTED>", "selectedTargetType": "physical", "source": "android.live-preflight"}, "exitCode": 0, "name": "androidPhysicalOptionsAccessibilityPreflight", "prefix": null, "source": "android.live-preflight", "status": "PASS", "warnings": null}, {"blocker": "OPERATOR_ACCESSIBILITY_CHECKLIST_NOT_PROVIDED", "cleanupRequired": false, "detail": {"blocker": "OPERATOR_ACCESSIBILITY_CHECKLIST_NOT_PROVIDED", "cleanupRequired": false, "schemaVersion": "1.1", "source": "task131.physical.accessibility.operator-checklist", "status": "BLOCKED_EXTERNAL", "taskId": "TASK-131"}, "exitCode": 2, "name": "physicalOperatorAccessibilityChecklist", "prefix": null, "source": "task131.physical.accessibility.operator-checklist", "status": "BLOCKED_EXTERNAL", "warnings": null}], "taskId": "TASK-131"}
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:generateDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :app:packageDebug UP-TO-DATE
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug UP-TO-DATE
+
+BUILD SUCCESSFUL in 561ms
+39 actionable tasks: 39 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.1/userguide/configuration_cache_enabling.html
+  bash arg: -p
+  bash arg: com.example.merchandisecontrolsplitview
+  bash arg: -c
+  bash arg: android.intent.category.LAUNCHER
+  bash arg: 1
+args: [-p, com.example.merchandisecontrolsplitview, -c, android.intent.category.LAUNCHER, 1]
+ arg: "-p"
+ arg: "com.example.merchandisecontrolsplitview"
+ arg: "-c"
+ arg: "android.intent.category.LAUNCHER"
+ arg: "1"
+data="com.example.merchandisecontrolsplitview"
+data="android.intent.category.LAUNCHER"
+Events injected: 1
+## Network stats: elapsed time=49ms (0ms mobile, 0ms wifi, 49ms not connected)

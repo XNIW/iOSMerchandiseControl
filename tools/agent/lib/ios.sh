@@ -86,6 +86,12 @@ mc_ios_result_bundle() {
   printf '%s' "/tmp/mc-agent-ios-${slug}-${MC_TIMESTAMP}.xcresult"
 }
 
+mc_ios_xcodebuild_timed() {
+  local seconds="$1"
+  shift
+  perl -e 'alarm shift @ARGV; exec @ARGV' "$seconds" xcodebuild "$@"
+}
+
 mc_ios_runtime_derived_data() {
   local slug="$1"
   printf '%s' "/tmp/mc-agent-ios-${slug}-${MC_TIMESTAMP}-DerivedData"
@@ -118,6 +124,39 @@ mc_ios_build_app_for_runtime() {
   app_path="$(find "$derived_data/Build/Products" -path '*/Debug-iphonesimulator/iOSMerchandiseControl.app' -type d | sort | head -1)"
   [[ -n "$app_path" && -d "$app_path" ]] || return "$MC_EXIT_BLOCKED"
   printf '%s\n' "$app_path"
+}
+
+mc_ios_build_app_for_physical() {
+  local derived_data="$1"
+  local app_path
+  local args=(
+    xcodebuild build
+    -project iOSMerchandiseControl.xcodeproj
+    -scheme "${MC_IOS_SCHEME}"
+    -configuration Debug
+    -destination "generic/platform=iOS"
+    -derivedDataPath "$derived_data"
+    -parallel-testing-enabled NO
+  )
+  if [[ "${MC_IOS_ALLOW_PROVISIONING_UPDATES:-1}" == "1" ]]; then
+    args+=(-allowProvisioningUpdates)
+  fi
+  (
+    cd "$MC_IOS_REPO" || exit 3
+    "${args[@]}"
+  ) >&2 || return $?
+  app_path="$(find "$derived_data/Build/Products" -path '*/Debug-iphoneos/iOSMerchandiseControl.app' -type d | sort | head -1)"
+  [[ -n "$app_path" && -d "$app_path" ]] || return "$MC_EXIT_BLOCKED"
+  printf '%s\n' "$app_path"
+}
+
+mc_ios_physical_install_app() {
+  local device_id="$1"
+  local app_path="$2"
+  xcrun devicectl device install app \
+    --device "$device_id" \
+    --timeout "${MC_IOS_PHYSICAL_INSTALL_TIMEOUT_SECONDS:-120}" \
+    "$app_path" >/dev/null 2>&1
 }
 
 mc_ios_runtime_launch_app() {
@@ -427,12 +466,14 @@ mc_ios_physical_device_json() {
   xcrun devicectl list devices --json-output "$json" >/dev/null 2>&1 || return "$MC_EXIT_BLOCKED"
   device_json="$(MC_IOS_DEVICE_ID="${MC_IOS_DEVICE_ID:-${MC_IOS_DEVICE_UDID:-}}" python3 - "$json" <<'PY'
 import json, os, sys
+import hashlib
 path = sys.argv[1]
 target = os.environ.get("MC_IOS_DEVICE_ID") or ""
 with open(path) as handle:
     data = json.load(handle)
 devices = data.get("result", {}).get("devices", [])
 iphones = []
+ready_states = {"available", "connected", "ready"}
 for device in devices:
     hw = device.get("hardwareProperties", {})
     props = device.get("deviceProperties", {})
@@ -449,18 +490,23 @@ for device in devices:
     }
     if target and target not in candidates:
         continue
+    state = conn.get("tunnelState") or "unknown"
+    device_name = props.get("name") or ""
     iphones.append({
         "identifier": ident,
-        "name": props.get("name"),
+        "name": "<REDACTED_DEVICE_NAME>" if device_name else None,
+        "nameHash": hashlib.sha256(device_name.encode()).hexdigest()[:12] if device_name else None,
         "productType": hw.get("productType"),
         "osVersion": props.get("osVersionNumber"),
-        "state": conn.get("tunnelState") or "unknown",
-        "udidHash": __import__("hashlib").sha256(str(hw.get("udid") or ident or "").encode()).hexdigest()[:12],
+        "state": state,
+        "isReady": state in ready_states,
+        "udidHash": hashlib.sha256(str(hw.get("udid") or ident or "").encode()).hexdigest()[:12],
     })
-if len(iphones) == 1:
-    print(json.dumps(iphones[0], sort_keys=True))
+ready = [device for device in iphones if device.get("isReady")]
+if len(ready) == 1:
+    print(json.dumps(ready[0], sort_keys=True))
     sys.exit(0)
-if len(iphones) == 0:
+if len(ready) == 0:
     sys.exit(2)
 sys.exit(3)
 PY
@@ -601,6 +647,7 @@ payload = json.loads(os.environ["CURRENT_JSON"])
 device = json.loads(os.environ["DEVICE_JSON"])
 payload.setdefault("runtime", {})["physicalDevice"] = {
     "name": device.get("name"),
+    "nameHash": device.get("nameHash"),
     "productType": device.get("productType"),
     "osVersion": device.get("osVersion"),
     "state": device.get("state"),
@@ -710,9 +757,11 @@ mc_ios_device_auth_preflight() {
   MC_CA_REFS="AC-125-01,AC-125-27,AC-125-28"
   mc_require_live || return $?
   if [[ -z "${MC_IOS_DEVICE_UDID:-${MC_IOS_DEVICE_ID:-}}" ]]; then
-    MC_SUMMARY="iOS physical device-auth-preflight BLOCKED: MC_IOS_DEVICE_UDID is not set."
-    MC_NEXT_ACTION="Set MC_IOS_DEVICE_UDID for the physical device 'iPhone di Min', unlock/trust it, then rerun ios device-auth-preflight."
-    return "$MC_EXIT_BLOCKED"
+    mc_ios_physical_device_json >/dev/null || {
+      MC_SUMMARY="iOS physical device-auth-preflight BLOCKED: no single trusted physical iPhone was auto-detectable."
+      MC_NEXT_ACTION="Set MC_IOS_DEVICE_UDID when multiple iPhones are connected, or unlock/trust the device and rerun."
+      return "$MC_EXIT_BLOCKED"
+    }
   fi
   mc_ios_physical_auth_store_diagnostics
 }
@@ -1196,6 +1245,27 @@ mc_ios_test() {
       MC_CA_REFS="AC-126-01,AC-126-03,AC-126-04,AC-126-10"
       tests=(-only-testing:iOSMerchandiseControlTests/Task126SyncPolicyTests)
       ;;
+    account-sync-policy)
+      MC_CA_REFS="C126-00,C126-01,C126-02,C126-18,C126-19,C126-36,C126-37,C126-38,C126-39,C126-44"
+      tests=(
+        -only-testing:iOSMerchandiseControlTests/AccountSyncPolicyTests
+        -only-testing:iOSMerchandiseControlTests/WatermarkStoreTests
+      )
+      ;;
+    auth-fail-closed)
+      MC_CA_REFS="C126-18,C126-19,C126-20,C126-33,C126-34"
+      tests=(
+        -only-testing:iOSMerchandiseControlTests/SyncEventLiveRecorderTests/testConfigMissingOrInvalidReturnsAuthWithoutTransportCall
+        -only-testing:iOSMerchandiseControlTests/SyncEventLiveRecorderTests/testHTTP401And403MapToAuth
+        -only-testing:iOSMerchandiseControlTests/SyncEventLiveRecorderTests/testSessionExpiredReturnsAuthWithoutTransportCall
+        -only-testing:iOSMerchandiseControlTests/SyncEventLiveRecorderTests/testSessionMissingReturnsAuthWithoutTransportCall
+        -only-testing:iOSMerchandiseControlTests/SyncEventRecordingTests/testAuthErrorClassification
+        -only-testing:iOSMerchandiseControlTests/SyncEventRecordingTests/testClassifiedFailuresSanitizeSecretsBeforeExposure
+        -only-testing:iOSMerchandiseControlTests/SupabaseSyncPlanContractTests/testTask099AuthRequiredUsesSignInAgainAction
+        -only-testing:iOSMerchandiseControlTests/SupabaseSyncPlanContractTests/testTask099StatePrecedenceAuthThenPermissionThenStaleThenFailedThenReview
+        -only-testing:iOSMerchandiseControlTests/SupabasePullApplyServiceTests/testPrepareApplyPlanBlocksSessionMissing
+      )
+      ;;
     account-store-boundary)
       MC_CA_REFS="AC-126-01,AC-126-02,AC-126-12,AC-126-13"
       tests=(-only-testing:iOSMerchandiseControlTests/Task126AccountStoreBoundaryTests)
@@ -1227,6 +1297,10 @@ mc_ios_test() {
     price-contract)
       MC_CA_REFS="AC-130-01,AC-130-02,AC-130-03,AC-130-05"
       tests=(-only-testing:iOSMerchandiseControlTests/Task130PriceContractTests)
+      ;;
+    task131-harness)
+      MC_CA_REFS="TASK-131-HARNESS"
+      tests=(-only-testing:iOSMerchandiseControlTests/Task131HarnessLaunchTests)
       ;;
     *)
       MC_SUMMARY="Unknown iOS test suite: ${suite}"
@@ -1462,6 +1536,7 @@ mc_ios_auth_preflight() {
       mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK112_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
       (
         cd "$MC_IOS_REPO" || exit 3
+        rm -rf "$bundle"
         xcodebuild test-without-building -xctestrun "$xctestrun" \
           -destination "$dest" -resultBundlePath "$bundle" \
           -only-testing:iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testTask103IOSAuthPreflightWhenEnabled
@@ -1890,12 +1965,15 @@ mc_ios_task114_matrix_step() {
   mc_validate_task_prefix "$prefix" || return $?
   mc_require_live || return $?
   MC_TEST_PREFIX="$prefix"
-  local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped store_path
+  local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped store_path build_timeout test_timeout invocation_id
   dest="$(mc_ios_destination)"
-  bundle="$(mc_ios_result_bundle "task114-${method}")"
+  invocation_id="$(mc_now_ms)"
+  bundle="$(mc_ios_result_bundle "task114-${method}-${invocation_id}")"
   test_log="$(mktemp -t "mc-agent-ios-task114-${method}")"
-  derived_data="/tmp/mc-agent-ios-task114-${method}-${MC_TIMESTAMP}-DerivedData"
+  derived_data="/tmp/mc-agent-ios-task114-${method}-${MC_TIMESTAMP}-${invocation_id}-DerivedData"
   xctestrun="${derived_data}/Build/Products/task114-${method}.xctestrun"
+  build_timeout="${MC_IOS_XCODEBUILD_BUILD_TIMEOUT_SECONDS:-240}"
+  test_timeout="${MC_IOS_XCODEBUILD_TEST_TIMEOUT_SECONDS:-120}"
   MC_ARTIFACT_XCRESULT="$bundle"
   mc_git_context "$MC_IOS_REPO"
   store_path="$(mc_sync_ios_container | { read -r container && mc_sync_ios_store_path "$container"; } 2>/dev/null || true)"
@@ -1905,13 +1983,16 @@ mc_ios_task114_matrix_step() {
   mc_ios_acquire_xcode_lock || return $?
   (
     cd "$MC_IOS_REPO" || exit 3
-    xcodebuild build-for-testing -project iOSMerchandiseControl.xcodeproj \
+    mc_ios_xcodebuild_timed "$build_timeout" build-for-testing -project iOSMerchandiseControl.xcodeproj \
         -scheme "${MC_IOS_SCHEME}" -configuration Debug \
         -destination "$dest" -derivedDataPath "$derived_data" \
         -parallel-testing-enabled NO \
         "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/${method}"
   ) >"$test_log" 2>&1
   code=$?
+  if [[ "$code" -eq 142 ]]; then
+    printf '\nTASK114_IOS_MATRIX_BUILD_TIMEOUT method=%s timeoutSeconds=%s\n' "$method" "$build_timeout" >>"$test_log"
+  fi
   if [[ "$code" -eq 0 ]]; then
     generated_xctestrun="$(find "$derived_data/Build/Products" -name '*.xctestrun' 2>/dev/null | sort | head -1)"
     if [[ -z "$generated_xctestrun" ]]; then
@@ -1931,11 +2012,14 @@ mc_ios_task114_matrix_step() {
 	      rm -rf "$bundle"
 	      (
 	        cd "$MC_IOS_REPO" || exit 3
-	        xcodebuild test-without-building -xctestrun "$xctestrun" \
+	        mc_ios_xcodebuild_timed "$test_timeout" test-without-building -xctestrun "$xctestrun" \
           -destination "$dest" -resultBundlePath "$bundle" \
           "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/${method}"
       ) >>"$test_log" 2>&1
       code=$?
+      if [[ "$code" -eq 142 ]]; then
+        printf '\nTASK114_IOS_MATRIX_TEST_TIMEOUT method=%s timeoutSeconds=%s\n' "$method" "$test_timeout" >>"$test_log"
+      fi
     fi
   fi
   mc_ios_release_xcode_lock
@@ -1985,6 +2069,16 @@ mc_cmd_ios() {
   shift || true
   case "$sub" in
     build) mc_ios_build "${1:-debug}" ;;
+    physical)
+      local physical_action="${1:-}"
+      shift || true
+      mc_task131_physical_platform "ios" "$physical_action" "$@"
+      ;;
+    simulator)
+      local simulator_action="${1:-}"
+      shift || true
+      mc_task131_ios_simulator_platform "$simulator_action" "$@"
+      ;;
     test) mc_ios_test "${1:-sync}" ;;
     benchmark)
       local bench="${1:-}"

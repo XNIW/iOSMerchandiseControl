@@ -46,6 +46,7 @@ nonisolated struct SyncEventOutboxProducerResult: Sendable, Equatable {
 nonisolated enum SyncEventOutboxProducerOutcome: Sendable, Equatable {
     case catalogManualPush(CatalogManualPush)
     case productPriceManualPush(ProductPriceManualPush)
+    case catalogGeneratedProductPrices(CatalogGeneratedProductPrices)
     case unsupported(source: String)
 
     nonisolated struct CatalogManualPush: Sendable, Equatable {
@@ -124,6 +125,49 @@ nonisolated enum SyncEventOutboxProducerOutcome: Sendable, Equatable {
             self.currentOwnerUserID = currentOwnerUserID
             self.terminalStatus = terminalStatus
             self.confirmedPriceRows = max(0, confirmedPriceRows)
+            self.skippedCount = max(0, skippedCount)
+            self.failedCount = max(0, failedCount)
+            self.clientEventID = clientEventID
+            self.sourceDeviceID = sourceDeviceID
+            self.batchID = batchID
+            self.validationEntityIDs = validationEntityIDs
+            self.validationMetadata = validationMetadata
+        }
+    }
+
+    nonisolated struct CatalogGeneratedProductPrices: Sendable, Equatable {
+        let ownerUserID: String?
+        let currentOwnerUserID: String?
+        let terminalStatus: SyncEventOutboxProducerTerminalStatus
+        let confirmedPriceRows: Int
+        let productCount: Int
+        let skippedCount: Int
+        let failedCount: Int
+        let clientEventID: String?
+        let sourceDeviceID: String?
+        let batchID: UUID?
+        let validationEntityIDs: SyncEventJSONValue?
+        let validationMetadata: SyncEventJSONValue?
+
+        init(
+            ownerUserID: String?,
+            currentOwnerUserID: String? = nil,
+            terminalStatus: SyncEventOutboxProducerTerminalStatus,
+            confirmedPriceRows: Int,
+            productCount: Int,
+            skippedCount: Int = 0,
+            failedCount: Int = 0,
+            clientEventID: String? = nil,
+            sourceDeviceID: String? = nil,
+            batchID: UUID? = nil,
+            validationEntityIDs: SyncEventJSONValue? = nil,
+            validationMetadata: SyncEventJSONValue? = nil
+        ) {
+            self.ownerUserID = ownerUserID
+            self.currentOwnerUserID = currentOwnerUserID
+            self.terminalStatus = terminalStatus
+            self.confirmedPriceRows = max(0, confirmedPriceRows)
+            self.productCount = max(0, productCount)
             self.skippedCount = max(0, skippedCount)
             self.failedCount = max(0, failedCount)
             self.clientEventID = clientEventID
@@ -413,6 +457,7 @@ private enum SyncEventOutboxProducerMapper {
     private static let pricesEventType = "prices_changed"
     private static let catalogSource = "ios_catalog_manual_push"
     private static let pricesSource = "ios_prices_manual_push"
+    private static let catalogGeneratedPricesSource = "ios_catalog_generated_prices"
 
     static func map(_ outcome: SyncEventOutboxProducerOutcome) -> MappedEvent? {
         switch outcome {
@@ -420,6 +465,8 @@ private enum SyncEventOutboxProducerMapper {
             return mapCatalog(catalog)
         case .productPriceManualPush(let prices):
             return mapPrices(prices)
+        case .catalogGeneratedProductPrices(let prices):
+            return mapCatalogGeneratedPrices(prices)
         case .unsupported:
             return nil
         }
@@ -479,6 +526,37 @@ private enum SyncEventOutboxProducerMapper {
             entityIDsShape: "price_rows:count=\(outcome.confirmedPriceRows)",
             metadataShape: "source=\(pricesSource);partial=\(isPartial);skipped=\(outcome.skippedCount);failed=\(outcome.failedCount)",
             source: pricesSource,
+            sourceDeviceID: outcome.sourceDeviceID,
+            batchID: outcome.batchID
+        )
+    }
+
+    private static func mapCatalogGeneratedPrices(
+        _ outcome: SyncEventOutboxProducerOutcome.CatalogGeneratedProductPrices
+    ) -> MappedEvent {
+        let isPartial = outcome.terminalStatus == .partial
+        let entityIDs = outcome.validationEntityIDs ?? .null
+        let metadata = outcome.validationMetadata ?? .object([
+            "source": .string(catalogGeneratedPricesSource),
+            "partial": .bool(isPartial),
+            "product_count": .number(Double(outcome.productCount)),
+            "skipped_count": .number(Double(outcome.skippedCount)),
+            "failed_count": .number(Double(outcome.failedCount))
+        ])
+
+        return MappedEvent(
+            ownerUserID: outcome.ownerUserID,
+            currentOwnerUserID: outcome.currentOwnerUserID,
+            clientEventID: outcome.clientEventID,
+            terminalStatus: outcome.terminalStatus,
+            domain: pricesDomain,
+            eventType: pricesEventType,
+            changedCount: outcome.confirmedPriceRows,
+            entityIDs: entityIDs,
+            metadata: metadata,
+            entityIDsShape: "price_rows:count=\(outcome.confirmedPriceRows);products:count=\(outcome.productCount)",
+            metadataShape: "source=\(catalogGeneratedPricesSource);partial=\(isPartial);products=\(outcome.productCount);skipped=\(outcome.skippedCount);failed=\(outcome.failedCount)",
+            source: catalogGeneratedPricesSource,
             sourceDeviceID: outcome.sourceDeviceID,
             batchID: outcome.batchID
         )

@@ -1,0 +1,201 @@
+{
+  "NEXT_ACTION": "Fix failing checks and rerun task131-final-gates.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T020248Z-scan-task131-final-gates-task-TASK-131-strict-p87277.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T020248Z-scan-task131-final-gates-task-TASK-131-strict-p87277.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T020248Z-scan-task131-final-gates-task-TASK-131-strict-p87277.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "TASK-131-FINAL-GATES",
+    "C126-00..C126-60"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan task131-final-gates --task TASK-131 --strict",
+  "command_slug": "scan-task131-final-gates-task-TASK-131-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 485,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-131",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK131_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-131"
+  },
+  "exit_code": 1,
+  "git_sha": "96b900ef",
+  "next_action_recommended": "Fix failing checks and rerun task131-final-gates.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Complete missing hybrid reports/state before moving TASK-131 to REVIEW.",
+    "checks": [
+      {
+        "evidence": [],
+        "id": "hybrid-command-discovery",
+        "reason": "TASK-131 hybrid commands must be discoverable in help-json/list commands-json.",
+        "status": "PASS"
+      },
+      {
+        "evidence": null,
+        "id": "task-state-hybrid-execution-or-fix",
+        "reason": "Task doc must reflect approved hybrid Execution/Fix scope.",
+        "status": "PASS"
+      },
+      {
+        "evidence": null,
+        "id": "master-plan-state-hybrid-execution-or-fix",
+        "reason": "Master Plan must reflect current TASK-131 hybrid Execution/Fix scope.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": "docs/TASKS/EVIDENCE/TASK-131/README.md",
+        "id": "evidence-readme-present",
+        "reason": "Evidence README must exist.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T223509Z-scan-task131-redaction-task-TASK-131-strict-p85999.json"
+        ],
+        "id": "redaction-scan-pass",
+        "reason": "task131-redaction must have a PASS report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T161619Z-scan-task131-matrix-completeness-task-TASK-131-strict-p44802.json"
+        ],
+        "id": "matrix-completeness-pass",
+        "reason": "task131-matrix-completeness must have a PASS report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T162939Z-ios-simulator-sync-policy-ui-task-TASK-131-prefix-TASK131_IOS_SIM_-p67594.json"
+        ],
+        "id": "ios-simulator-sync-policy-ui-pass",
+        "reason": "ios-simulator-sync-policy-ui-pass requires a latest accepted TASK-131 report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T233201Z-android-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_ANDROID_PHYS_RESUME2_-p99950.json"
+        ],
+        "id": "android-physical-sync-policy-ui-pass",
+        "reason": "android-physical-sync-policy-ui-pass requires a latest accepted TASK-131 report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [],
+        "id": "hybrid-sync-policy-matrix-pass",
+        "reason": "hybrid-sync-policy-matrix-pass requires a latest accepted TASK-131 report.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": [],
+        "id": "hybrid-conflict-review-matrix-pass",
+        "reason": "hybrid-conflict-review-matrix-pass requires a latest accepted TASK-131 report.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": [],
+        "id": "hybrid-offline-reconnect-matrix-pass",
+        "reason": "hybrid-offline-reconnect-matrix-pass requires a latest accepted TASK-131 report.",
+        "status": "FAIL"
+      },
+      {
+        "evidence": [
+          "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T194630Z-supabase-cleanup-task-TASK-131-prefix-TASK131_-execute-cleanup-plan-id-cleanup-TASK-131-20260528T194616Z-TASK131_-p59648.json"
+        ],
+        "id": "cleanup-execute-pass",
+        "reason": "cleanup-execute-pass requires a latest accepted TASK-131 report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T194641Z-supabase-residue-check-task-TASK-131-prefix-TASK131_-profile-linked-p60187.json"
+        ],
+        "id": "residue-check-pass",
+        "reason": "residue-check-pass requires a latest accepted TASK-131 report.",
+        "status": "PASS"
+      },
+      {
+        "evidence": [
+          "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T181800Z-ios-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_IOS_PHYS_-p70153.json",
+          "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T185853Z-ios-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_IOS_PHYS_-p4260.json",
+          "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T205420Z-ios-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_IOS_PHYS_RESUME_-p6451.json",
+          "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T233735Z-ios-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_IOS_PHYS_RESUME7_-p7604.json"
+        ],
+        "id": "ios-physical-blocked-not-passed",
+        "reason": "iPhone physical must remain blocked, not passed, in this scope.",
+        "status": "FAIL"
+      }
+    ],
+    "completedAt": "2026-05-29T02:02:48Z",
+    "details": {
+      "requiredCommands": [
+        "physical devices list --task TASK-131",
+        "ios simulator sync-policy-ui --task TASK-131 --prefix TASK131_IOS_SIM_",
+        "android physical sync-policy-ui --task TASK-131 --prefix TASK131_ANDROID_PHYS_",
+        "physical hybrid-sync-policy-matrix --task TASK-131 --prefix TASK131_HYBRID_",
+        "physical hybrid-conflict-review-matrix --task TASK-131 --prefix TASK131_CONFLICT_",
+        "physical hybrid-offline-reconnect-matrix --task TASK-131 --prefix TASK131_OFFLINE_",
+        "physical hybrid-accessibility-smoke --task TASK-131",
+        "scan task131-matrix-completeness --task TASK-131 --strict",
+        "scan task131-redaction --task TASK-131 --strict",
+        "scan task131-final-gates --task TASK-131 --strict"
+      ]
+    },
+    "redactionApplied": true,
+    "result": "FAIL",
+    "schemaVersion": "1.1",
+    "source": "scan.task131-final-gates",
+    "startedAt": "2026-05-29T02:02:48Z",
+    "status": "FAIL",
+    "taskId": "TASK-131"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260529T020248Z-scan-task131-final-gates-task-TASK-131-strict-p87277",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-131",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-29T02:02:48Z",
+  "timestamp_start": "2026-05-29T02:02:48Z",
+  "warnings": []
+}

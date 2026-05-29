@@ -1,0 +1,171 @@
+{
+  "NEXT_ACTION": "Use this report in TASK-131 hybrid execution matrix.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T164855Z-scan-task131-redaction-task-TASK-131-strict-p19664.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T164855Z-scan-task131-redaction-task-TASK-131-strict-p19664.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T164855Z-scan-task131-redaction-task-TASK-131-strict-p19664.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "TASK-131-PHASE--0.4",
+    "C126-58"
+  ],
+  "cleanup_plan_id": null,
+  "command": "scan task131-redaction --task TASK-131 --strict",
+  "command_slug": "scan-task131-redaction-task-TASK-131-strict",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 741,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-131",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK131_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-131"
+  },
+  "exit_code": 0,
+  "git_sha": "96b900ef",
+  "next_action_recommended": "Use this report in TASK-131 hybrid execution matrix.",
+  "platform": "general",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Use this TASK-131 scanner as evidence.",
+    "checks": [
+      {
+        "evidence": "<REDACTED_EMAIL>",
+        "id": "redact-email",
+        "reason": "Redaction must remove email sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "<REDACTED_JWT>",
+        "id": "redact-jwt",
+        "reason": "Redaction must remove jwt sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "Authorization: Bearer <REDACTED_TOKEN>",
+        "id": "redact-bearer",
+        "reason": "Redaction must remove bearer sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "service_role=<REDACTED_SECRET>",
+        "id": "redact-service_role",
+        "reason": "Redaction must remove service_role sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "anon_key=<REDACTED_SECRET>",
+        "id": "redact-anon_key",
+        "reason": "Redaction must remove anon_key sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "https://<REDACTED_PROJECT_REF>.supabase.co/rest/v1",
+        "id": "redact-project_ref_url",
+        "reason": "Redaction must remove project_ref_url sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "project_ref: <REDACTED_PROJECT_REF>",
+        "id": "redact-project_ref",
+        "reason": "Redaction must remove project_ref sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/log.txt",
+        "id": "redact-home_path",
+        "reason": "Redaction must remove home_path sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "adb -s <REDACTED_SERIAL> logcat",
+        "id": "redact-android_serial",
+        "reason": "Redaction must remove android_serial <REDACTED_SERIAL>",
+        "status": "PASS"
+      },
+      {
+        "evidence": "UDID: <REDACTED_DEVICE_ID>",
+        "id": "redact-ios_udid",
+        "reason": "Redaction must remove ios_udid sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "com.example.app://callback?access_token=<REDACTED_SECRET>",
+        "id": "redact-oauth_callback",
+        "reason": "Redaction must remove oauth_callback sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "deviceIdentifier=<REDACTED_DEVICE_ID> xcodebuild",
+        "id": "redact-xcode_log",
+        "reason": "Redaction must remove xcode_log sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "screenshot=<HOME_REDACTED>/Desktop/evidence/device.png",
+        "id": "redact-screenshot_manifest",
+        "reason": "Redaction must remove screenshot_manifest sample.",
+        "status": "PASS"
+      },
+      {
+        "evidence": "TASK131_SYNTHETIC_PRODUCT TASK131_SYNTHETIC_STORE barcode TASK131_FAKE_001",
+        "id": "green-fixture-preserved",
+        "reason": "Synthetic TASK131 fixture labels should remain readable.",
+        "status": "PASS"
+      }
+    ],
+    "completedAt": "2026-05-28T16:48:56Z",
+    "details": {},
+    "redactionApplied": true,
+    "result": "PASS",
+    "schemaVersion": "1.1",
+    "source": "scan.task131-redaction",
+    "startedAt": "2026-05-28T16:48:56Z",
+    "status": "PASS",
+    "taskId": "TASK-131"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260528T164855Z-scan-task131-redaction-task-TASK-131-strict-p19664",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-131",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-28T16:48:56Z",
+  "timestamp_start": "2026-05-28T16:48:55Z",
+  "warnings": []
+}

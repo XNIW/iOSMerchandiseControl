@@ -1,0 +1,3 @@
+=== mc-agent report validate-json --task TASK-131 --path docs/TASKS/EVIDENCE/TASK-131/agent-runs ===
+INVALID
+docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T164738Z-scan-task131-redaction-task-TASK-131-strict-p4731.json: unreadable/non-json (Invalid control character at: line 116 column 79 (char 4183))

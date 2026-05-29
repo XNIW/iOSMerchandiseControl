@@ -1,0 +1,154 @@
+{
+  "NEXT_ACTION": "If either platform has zero physical devices, resolve readiness before running live physical matrices.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022220Z-physical-devices-list-task-TASK-131-p47531.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022220Z-physical-devices-list-task-TASK-131-p47531.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022220Z-physical-devices-list-task-TASK-131-p47531.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "TASK-131-PHASE-1"
+  ],
+  "cleanup_plan_id": null,
+  "command": "physical devices list --task TASK-131",
+  "command_slug": "physical-devices-list-task-TASK-131",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 757,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-131",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK131_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-131"
+  },
+  "exit_code": 0,
+  "git_sha": "96b900ef",
+  "next_action_recommended": "If either platform has zero physical devices, resolve readiness before running live physical matrices.",
+  "platform": "physical",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "NEXT_ACTION": "Connect trusted physical iPhone and Android device, set any required device identifiers, then rerun with MC_ALLOW_LIVE=1 and scoped TASK131_* prefix.",
+    "androidPhysicalDevices": [
+      {
+        "device": "<REDACTED_DEVICE_MODEL>",
+        "model": "<REDACTED_DEVICE_MODEL>",
+        "serial": "<REDACTED>",
+        "serialHash": "583da02ea2da",
+        "status": "device",
+        "targetType": "physical"
+      }
+    ],
+    "caseStatus": "DISCOVERY_ONLY",
+    "cleanupStatus": "NOT_RUN",
+    "completedAt": "2026-05-29T02:22:21Z",
+    "coveredPolicyGroupsPlanned": [],
+    "deviceReadiness": {
+      "androidPhysicalAvailable": true,
+      "currentScope": "FULL_PHYSICAL_IOS_ANDROID_SCOPE",
+      "iosPhysicalAvailable": true,
+      "iosPhysicalCaseStatus": "BLOCKED_EXTERNAL_IOS_PHYSICAL_DEVICE_NOT_AVAILABLE",
+      "iosPhysicalEnabledForTask131": false,
+      "iosSimulatorAvailable": true
+    },
+    "iosPhysicalDevices": [
+      {
+        "id": "<REDACTED>",
+        "idHash": "7f099f9425ab",
+        "name": "<REDACTED_DEVICE_NAME>",
+        "platform": "iOS",
+        "state": "connected",
+        "targetType": "physical"
+      }
+    ],
+    "iosSimulators": [
+      {
+        "id": "<REDACTED>",
+        "idHash": "d679e1d927ee",
+        "isAvailable": true,
+        "name": "iPhone 17 Pro",
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-4",
+        "state": "Booted",
+        "targetType": "simulator"
+      },
+      {
+        "id": "<REDACTED>",
+        "idHash": "320c3202d5dc",
+        "isAvailable": true,
+        "name": "iPhone 17 Pro",
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2",
+        "state": "Shutdown",
+        "targetType": "simulator"
+      },
+      {
+        "id": "<REDACTED>",
+        "idHash": "c1e1bf33cb91",
+        "isAvailable": true,
+        "name": "iPhone 17 Pro",
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+        "state": "Booted",
+        "targetType": "simulator"
+      },
+      {
+        "id": "<REDACTED>",
+        "idHash": "936e040d3cab",
+        "isAvailable": true,
+        "name": "iPhone 17 Pro",
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-1",
+        "state": "Shutdown",
+        "targetType": "simulator"
+      }
+    ],
+    "matrix": "devices-list",
+    "prefix": null,
+    "residueStatus": "NOT_RUN",
+    "resultRule": "NOT_RUN mandatory physical cases are blocking and are not PASS.",
+    "schemaVersion": "1.1",
+    "screenshots": [],
+    "source": "physical.devices.list",
+    "taskId": "TASK-131",
+    "videos": []
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260529T022220Z-physical-devices-list-task-TASK-131-p47531",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-131",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-29T02:22:21Z",
+  "timestamp_start": "2026-05-29T02:22:20Z",
+  "warnings": []
+}

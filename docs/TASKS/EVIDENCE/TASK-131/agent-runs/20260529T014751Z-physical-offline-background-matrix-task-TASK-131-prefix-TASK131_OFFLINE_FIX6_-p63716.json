@@ -1,0 +1,1098 @@
+{
+  "NEXT_ACTION": "Run account-switch/accessibility matrices and final scans.",
+  "android_offline_tier": "L3",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T014751Z-physical-offline-background-matrix-task-TASK-131-prefix-TASK131_OFFLINE_FIX6_-p63716.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T014751Z-physical-offline-background-matrix-task-TASK-131-prefix-TASK131_OFFLINE_FIX6_-p63716.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T014751Z-physical-offline-background-matrix-task-TASK-131-prefix-TASK131_OFFLINE_FIX6_-p63716.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-task114-test114IOSOfflineReconnectProductPriceHistoryMatrix-1780019738405-20260529T014751Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-125-17",
+    "AC-125-18",
+    "AC-125-19"
+  ],
+  "cleanup_plan_id": null,
+  "command": "physical offline-background-matrix --task TASK-131 --prefix TASK131_OFFLINE_FIX6_",
+  "command_slug": "physical-offline-background-matrix-task-TASK-131-prefix-TASK131_OFFLINE_FIX6_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "physical",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 603402,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-131",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK131_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-131"
+  },
+  "exit_code": 0,
+  "git_sha": "4c08ff8",
+  "next_action_recommended": "Run account-switch/accessibility matrices and final scans.",
+  "platform": "live",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "allowedExternalBlockers": [
+      "BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY",
+      "iosBackgroundSchedulerPolicy"
+    ],
+    "blocked": [],
+    "cleanupRequired": true,
+    "completedAt": "2026-05-29T01:57:54Z",
+    "failures": [],
+    "matrix": "offline-background-matrix",
+    "prefix": "TASK131_OFFLINE_FIX6_",
+    "redactionApplied": true,
+    "schemaVersion": "1.1",
+    "source": "task131.physical.offline-background-matrix",
+    "startedAt": "2026-05-29T01:47:52Z",
+    "status": "PASS",
+    "steps": [
+      {
+        "blocker": null,
+        "cleanupRequired": true,
+        "detail": {
+          "cleanupRequired": true,
+          "completedAt": "2026-05-29T01:51:10Z",
+          "counts": {
+            "androidAfterIosOffline": {
+              "categories": {
+                "active": 214,
+                "all": 214,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 133,
+                "all": 161,
+                "deleted": 28,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 132
+              },
+              "product_prices": {
+                "active": 41551,
+                "all": 41551,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19892,
+                "all": 19892,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 245,
+                "all": 245,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            },
+            "androidBeforeIosOffline": {
+              "categories": {
+                "active": 211,
+                "all": 211,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 131,
+                "all": 158,
+                "deleted": 27,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 130
+              },
+              "product_prices": {
+                "active": 41546,
+                "all": 41546,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19890,
+                "all": 19890,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 242,
+                "all": 242,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            },
+            "iosAfterAndroidOffline": {
+              "categories": {
+                "active": 234,
+                "all": 234,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 154,
+                "all": 172,
+                "deleted": 18,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 154
+              },
+              "product_prices": {
+                "active": 41656,
+                "all": 41696,
+                "deleted": 40,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19929,
+                "all": 19950,
+                "deleted": 21,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 265,
+                "all": 265,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            },
+            "iosBeforeAndroidOffline": {
+              "categories": {
+                "active": 233,
+                "all": 233,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 152,
+                "all": 169,
+                "deleted": 17,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 152
+              },
+              "product_prices": {
+                "active": 41651,
+                "all": 41689,
+                "deleted": 38,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19927,
+                "all": 19947,
+                "deleted": 20,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 264,
+                "all": 264,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            }
+          },
+          "directionPrefixes": {
+            "androidOfflineToIos": "TASK131_OFFLINE_FIX6_OFF_20260529T014751Z_1780019272670_ANDROID_",
+            "iosOfflineToAndroid": "TASK131_OFFLINE_FIX6_OFF_20260529T014751Z_1780019272670_IOS_"
+          },
+          "domains": {
+            "Category": {
+              "create": "PASS",
+              "tombstone": "not_required",
+              "update": "not_required"
+            },
+            "HistoryEntry": {
+              "create": "PASS",
+              "tombstone": "PASS",
+              "update": "PASS"
+            },
+            "Product": {
+              "create": "PASS",
+              "tombstone": "PASS",
+              "update": "PASS"
+            },
+            "ProductPrice": {
+              "create": "PASS",
+              "tombstone": "not_supported_append_only",
+              "update": "PASS_APPEND_ONLY_CORRECTION"
+            },
+            "Supplier": {
+              "create": "PASS",
+              "tombstone": "not_required",
+              "update": "not_required"
+            }
+          },
+          "phaseTimings": {
+            "androidOfflineLocalSaveMs": 175,
+            "androidPendingCatalog": 2,
+            "androidPendingHistory": 3,
+            "androidPendingPrices": 3,
+            "androidReconnectDetectedMs": 8,
+            "androidReconnectToIosApplyMs": 403,
+            "androidRemotePushMs": 4582,
+            "androidToIosPolls": 1,
+            "iosOfflineLocalSaveMs": null,
+            "iosPendingCatalog": null,
+            "iosPendingHistory": null,
+            "iosPendingPrices": null,
+            "iosReceiverIncrementalApplyMs": 121,
+            "iosReceiverSyncType": "CHECKPOINT_INCREMENTAL",
+            "iosReconnectToAndroidApplyMs": 2722,
+            "iosRemotePushMs": null,
+            "iosToAndroidPolls": 1
+          },
+          "prefix": "TASK131_OFFLINE_FIX6_OFF_20260529T014751Z_1780019272670_",
+          "schemaVersion": "1.1",
+          "source": "live.offline-reconnect-sync",
+          "startedAt": "2026-05-29T01:47:52Z",
+          "status": "PASS",
+          "steps": [
+            {
+              "coverage": "iOS controlled offline provider fails before write, SwiftData pending survives, reconnect pushes Product/Supplier/Category/ProductPrice/History and Android applies from sync_events.",
+              "durationMs": 48302,
+              "name": "iosControlledOfflineReconnectToAndroid",
+              "status": "PASS"
+            },
+            {
+              "coverage": "Android Room local-first pending rows are queued while app/network sync is unavailable, reconnect drains via EVENT_INCREMENTAL sync_events and iOS applies from foreground runtime.",
+              "durationMs": 24949,
+              "name": "androidOfflineQueueReconnectToIos",
+              "status": "PASS"
+            },
+            {
+              "coverage": "Multiple offline changes on the same update records converge to the final state before remote push.",
+              "name": "offlineCoalescingDedup",
+              "status": "PASS_WITH_NOTES"
+            },
+            {
+              "coverage": "Stale/conflict policy is fail-closed; no silent overwrite path is used by the offline reconnect harness.",
+              "name": "offlineConflictFailClosed",
+              "status": "PASS_WITH_NOTES"
+            }
+          ],
+          "syncEventCoverage": {
+            "androidOfflineToIos": {
+              "catalogEvents": 2,
+              "historyEvents": 2,
+              "missingTargetsForChangedEvents": 0,
+              "priceEvents": 2,
+              "targetedCategoryIds": 1,
+              "targetedPriceIds": 7,
+              "targetedProductIds": 5,
+              "targetedSessionIds": 5,
+              "targetedSupplierIds": 1
+            },
+            "iosOfflineToAndroid": {
+              "catalogEvents": 3,
+              "historyEvents": 2,
+              "missingTargetsForChangedEvents": 0,
+              "priceEvents": 1,
+              "targetedCategoryIds": 3,
+              "targetedPriceIds": 5,
+              "targetedProductIds": 5,
+              "targetedSessionIds": 5,
+              "targetedSupplierIds": 3
+            },
+            "targetedEventsOk": true
+          },
+          "syncTypes": {
+            "fallbackAllowed": [
+              "CHECKPOINT_INCREMENTAL",
+              "LIGHT_RECONCILE"
+            ],
+            "forbiddenNormalReconnect": [
+              "FULL_PULL_BOOTSTRAP",
+              "FULL_PULL_RECOVERY"
+            ],
+            "fullPullUsed": false,
+            "offlineLocalSave": "LOCAL_FIRST_PENDING",
+            "postPushRemoteEvent": "EVENT_INCREMENTAL",
+            "receiverApply": "EVENT_INCREMENTAL",
+            "reconnectPush": "EVENT_INCREMENTAL"
+          },
+          "taskId": "TASK-131"
+        },
+        "exitCode": 0,
+        "name": "offlineReconnectBothDirections",
+        "prefix": "TASK131_OFFLINE_FIX6_OFF_20260529T014751Z_1780019272670_",
+        "source": "live.offline-reconnect-sync",
+        "status": "PASS",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": true,
+        "detail": {
+          "cleanupRequired": true,
+          "completedAt": "2026-05-29T01:54:26Z",
+          "counts": {
+            "androidAfterIosOffline": {
+              "categories": {
+                "active": 218,
+                "all": 218,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 137,
+                "all": 167,
+                "deleted": 30,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 136
+              },
+              "product_prices": {
+                "active": 41561,
+                "all": 41561,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19896,
+                "all": 19896,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 249,
+                "all": 249,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            },
+            "androidBeforeIosOffline": {
+              "categories": {
+                "active": 215,
+                "all": 215,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 135,
+                "all": 164,
+                "deleted": 29,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 134
+              },
+              "product_prices": {
+                "active": 41556,
+                "all": 41556,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19894,
+                "all": 19894,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 246,
+                "all": 246,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            },
+            "iosAfterAndroidOffline": {
+              "categories": {
+                "active": 238,
+                "all": 238,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 158,
+                "all": 177,
+                "deleted": 19,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 158
+              },
+              "product_prices": {
+                "active": 41666,
+                "all": 41708,
+                "deleted": 42,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19933,
+                "all": 19955,
+                "deleted": 22,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 269,
+                "all": 269,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            },
+            "iosBeforeAndroidOffline": {
+              "categories": {
+                "active": 237,
+                "all": 237,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 156,
+                "all": 174,
+                "deleted": 18,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 156
+              },
+              "product_prices": {
+                "active": 41661,
+                "all": 41701,
+                "deleted": 40,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19931,
+                "all": 19952,
+                "deleted": 21,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 268,
+                "all": 268,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            }
+          },
+          "directionPrefixes": {
+            "androidOfflineToIos": "TASK131_OFFLINE_FIX6_RESTART_20260529T014751Z_1780019470736_ANDROID_",
+            "iosOfflineToAndroid": "TASK131_OFFLINE_FIX6_RESTART_20260529T014751Z_1780019470736_IOS_"
+          },
+          "domains": {
+            "Category": {
+              "create": "PASS",
+              "tombstone": "not_required",
+              "update": "not_required"
+            },
+            "HistoryEntry": {
+              "create": "PASS",
+              "tombstone": "PASS",
+              "update": "PASS"
+            },
+            "Product": {
+              "create": "PASS",
+              "tombstone": "PASS",
+              "update": "PASS"
+            },
+            "ProductPrice": {
+              "create": "PASS",
+              "tombstone": "not_supported_append_only",
+              "update": "PASS_APPEND_ONLY_CORRECTION"
+            },
+            "Supplier": {
+              "create": "PASS",
+              "tombstone": "not_required",
+              "update": "not_required"
+            }
+          },
+          "phaseTimings": {
+            "androidOfflineLocalSaveMs": 161,
+            "androidPendingCatalog": 2,
+            "androidPendingHistory": 3,
+            "androidPendingPrices": 3,
+            "androidReconnectDetectedMs": 3,
+            "androidReconnectToIosApplyMs": 424,
+            "androidRemotePushMs": 3985,
+            "androidToIosPolls": 1,
+            "iosOfflineLocalSaveMs": null,
+            "iosPendingCatalog": null,
+            "iosPendingHistory": null,
+            "iosPendingPrices": null,
+            "iosReceiverIncrementalApplyMs": 107,
+            "iosReceiverSyncType": "CHECKPOINT_INCREMENTAL",
+            "iosReconnectToAndroidApplyMs": 2796,
+            "iosRemotePushMs": null,
+            "iosToAndroidPolls": 1
+          },
+          "prefix": "TASK131_OFFLINE_FIX6_RESTART_20260529T014751Z_1780019470736_",
+          "schemaVersion": "1.1",
+          "source": "live.offline-reconnect-sync",
+          "startedAt": "2026-05-29T01:51:10Z",
+          "status": "PASS",
+          "steps": [
+            {
+              "coverage": "iOS controlled offline provider fails before write, SwiftData pending survives, reconnect pushes Product/Supplier/Category/ProductPrice/History and Android applies from sync_events.",
+              "durationMs": 48986,
+              "name": "iosControlledOfflineReconnectToAndroid",
+              "status": "PASS"
+            },
+            {
+              "coverage": "Android Room local-first pending rows are queued while app/network sync is unavailable, reconnect drains via EVENT_INCREMENTAL sync_events and iOS applies from foreground runtime.",
+              "durationMs": 22913,
+              "name": "androidOfflineQueueReconnectToIos",
+              "status": "PASS"
+            },
+            {
+              "coverage": "Multiple offline changes on the same update records converge to the final state before remote push.",
+              "name": "offlineCoalescingDedup",
+              "status": "PASS_WITH_NOTES"
+            },
+            {
+              "coverage": "Stale/conflict policy is fail-closed; no silent overwrite path is used by the offline reconnect harness.",
+              "name": "offlineConflictFailClosed",
+              "status": "PASS_WITH_NOTES"
+            }
+          ],
+          "syncEventCoverage": {
+            "androidOfflineToIos": {
+              "catalogEvents": 2,
+              "historyEvents": 2,
+              "missingTargetsForChangedEvents": 0,
+              "priceEvents": 2,
+              "targetedCategoryIds": 1,
+              "targetedPriceIds": 7,
+              "targetedProductIds": 5,
+              "targetedSessionIds": 5,
+              "targetedSupplierIds": 1
+            },
+            "iosOfflineToAndroid": {
+              "catalogEvents": 3,
+              "historyEvents": 2,
+              "missingTargetsForChangedEvents": 0,
+              "priceEvents": 1,
+              "targetedCategoryIds": 3,
+              "targetedPriceIds": 5,
+              "targetedProductIds": 5,
+              "targetedSessionIds": 5,
+              "targetedSupplierIds": 3
+            },
+            "targetedEventsOk": true
+          },
+          "syncTypes": {
+            "fallbackAllowed": [
+              "CHECKPOINT_INCREMENTAL",
+              "LIGHT_RECONCILE"
+            ],
+            "forbiddenNormalReconnect": [
+              "FULL_PULL_BOOTSTRAP",
+              "FULL_PULL_RECOVERY"
+            ],
+            "fullPullUsed": false,
+            "offlineLocalSave": "LOCAL_FIRST_PENDING",
+            "postPushRemoteEvent": "EVENT_INCREMENTAL",
+            "receiverApply": "EVENT_INCREMENTAL",
+            "reconnectPush": "EVENT_INCREMENTAL"
+          },
+          "taskId": "TASK-131"
+        },
+        "exitCode": 0,
+        "name": "killRestartPendingDurability",
+        "prefix": "TASK131_OFFLINE_FIX6_RESTART_20260529T014751Z_1780019470736_",
+        "source": "live.offline-reconnect-sync",
+        "status": "PASS",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": true,
+        "detail": {
+          "cleanupRequired": true,
+          "completedAt": "2026-05-29T01:57:41Z",
+          "counts": {
+            "androidAfterIosOffline": {
+              "categories": {
+                "active": 222,
+                "all": 222,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 141,
+                "all": 173,
+                "deleted": 32,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 140
+              },
+              "product_prices": {
+                "active": 41571,
+                "all": 41571,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19900,
+                "all": 19900,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 253,
+                "all": 253,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            },
+            "androidBeforeIosOffline": {
+              "categories": {
+                "active": 219,
+                "all": 219,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 139,
+                "all": 170,
+                "deleted": 31,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 138
+              },
+              "product_prices": {
+                "active": 41566,
+                "all": 41566,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19898,
+                "all": 19898,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 250,
+                "all": 250,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            },
+            "iosAfterAndroidOffline": {
+              "categories": {
+                "active": 242,
+                "all": 242,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 162,
+                "all": 182,
+                "deleted": 20,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 162
+              },
+              "product_prices": {
+                "active": 41676,
+                "all": 41720,
+                "deleted": 44,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19937,
+                "all": 19960,
+                "deleted": 23,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 273,
+                "all": 273,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            },
+            "iosBeforeAndroidOffline": {
+              "categories": {
+                "active": 241,
+                "all": 241,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "history_entries": {
+                "active": 160,
+                "all": 179,
+                "deleted": 19,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": 160
+              },
+              "product_prices": {
+                "active": 41671,
+                "all": 41713,
+                "deleted": 42,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "products": {
+                "active": 19935,
+                "all": 19957,
+                "deleted": 22,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              },
+              "suppliers": {
+                "active": 272,
+                "all": 272,
+                "deleted": 0,
+                "dirty": 0,
+                "localOnly": 0,
+                "pending": 0,
+                "userVisible": null
+              }
+            }
+          },
+          "directionPrefixes": {
+            "androidOfflineToIos": "TASK131_OFFLINE_FIX6_FLAP_20260529T014751Z_1780019666445_ANDROID_",
+            "iosOfflineToAndroid": "TASK131_OFFLINE_FIX6_FLAP_20260529T014751Z_1780019666445_IOS_"
+          },
+          "domains": {
+            "Category": {
+              "create": "PASS",
+              "tombstone": "not_required",
+              "update": "not_required"
+            },
+            "HistoryEntry": {
+              "create": "PASS",
+              "tombstone": "PASS",
+              "update": "PASS"
+            },
+            "Product": {
+              "create": "PASS",
+              "tombstone": "PASS",
+              "update": "PASS"
+            },
+            "ProductPrice": {
+              "create": "PASS",
+              "tombstone": "not_supported_append_only",
+              "update": "PASS_APPEND_ONLY_CORRECTION"
+            },
+            "Supplier": {
+              "create": "PASS",
+              "tombstone": "not_required",
+              "update": "not_required"
+            }
+          },
+          "phaseTimings": {
+            "androidOfflineLocalSaveMs": 115,
+            "androidPendingCatalog": 2,
+            "androidPendingHistory": 3,
+            "androidPendingPrices": 3,
+            "androidReconnectDetectedMs": 1,
+            "androidReconnectToIosApplyMs": 412,
+            "androidRemotePushMs": 5906,
+            "androidToIosPolls": 1,
+            "iosOfflineLocalSaveMs": null,
+            "iosPendingCatalog": null,
+            "iosPendingHistory": null,
+            "iosPendingPrices": null,
+            "iosReceiverIncrementalApplyMs": 289,
+            "iosReceiverSyncType": "CHECKPOINT_INCREMENTAL",
+            "iosReconnectToAndroidApplyMs": 2668,
+            "iosRemotePushMs": null,
+            "iosToAndroidPolls": 1
+          },
+          "prefix": "TASK131_OFFLINE_FIX6_FLAP_20260529T014751Z_1780019666445_",
+          "schemaVersion": "1.1",
+          "source": "live.offline-reconnect-sync",
+          "startedAt": "2026-05-29T01:54:26Z",
+          "status": "PASS",
+          "steps": [
+            {
+              "coverage": "iOS controlled offline provider fails before write, SwiftData pending survives, reconnect pushes Product/Supplier/Category/ProductPrice/History and Android applies from sync_events.",
+              "durationMs": 45884,
+              "name": "iosControlledOfflineReconnectToAndroid",
+              "status": "PASS"
+            },
+            {
+              "coverage": "Android Room local-first pending rows are queued while app/network sync is unavailable, reconnect drains via EVENT_INCREMENTAL sync_events and iOS applies from foreground runtime.",
+              "durationMs": 25713,
+              "name": "androidOfflineQueueReconnectToIos",
+              "status": "PASS"
+            },
+            {
+              "coverage": "Multiple offline changes on the same update records converge to the final state before remote push.",
+              "name": "offlineCoalescingDedup",
+              "status": "PASS_WITH_NOTES"
+            },
+            {
+              "coverage": "Stale/conflict policy is fail-closed; no silent overwrite path is used by the offline reconnect harness.",
+              "name": "offlineConflictFailClosed",
+              "status": "PASS_WITH_NOTES"
+            }
+          ],
+          "syncEventCoverage": {
+            "androidOfflineToIos": {
+              "catalogEvents": 2,
+              "historyEvents": 3,
+              "missingTargetsForChangedEvents": 0,
+              "priceEvents": 2,
+              "targetedCategoryIds": 1,
+              "targetedPriceIds": 7,
+              "targetedProductIds": 5,
+              "targetedSessionIds": 145,
+              "targetedSupplierIds": 1
+            },
+            "iosOfflineToAndroid": {
+              "catalogEvents": 3,
+              "historyEvents": 2,
+              "missingTargetsForChangedEvents": 0,
+              "priceEvents": 1,
+              "targetedCategoryIds": 3,
+              "targetedPriceIds": 5,
+              "targetedProductIds": 5,
+              "targetedSessionIds": 5,
+              "targetedSupplierIds": 3
+            },
+            "targetedEventsOk": true
+          },
+          "syncTypes": {
+            "fallbackAllowed": [
+              "CHECKPOINT_INCREMENTAL",
+              "LIGHT_RECONCILE"
+            ],
+            "forbiddenNormalReconnect": [
+              "FULL_PULL_BOOTSTRAP",
+              "FULL_PULL_RECOVERY"
+            ],
+            "fullPullUsed": false,
+            "offlineLocalSave": "LOCAL_FIRST_PENDING",
+            "postPushRemoteEvent": "EVENT_INCREMENTAL",
+            "receiverApply": "EVENT_INCREMENTAL",
+            "reconnectPush": "EVENT_INCREMENTAL"
+          },
+          "taskId": "TASK-131"
+        },
+        "exitCode": 0,
+        "name": "networkFlapNoFalseAck",
+        "prefix": "TASK131_OFFLINE_FIX6_FLAP_20260529T014751Z_1780019666445_",
+        "source": "live.offline-reconnect-sync",
+        "status": "PASS",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "NEXT_ACTION": "Set MC_TASK125_IOS_BG_DEBUG_CONFIRMED=1 only after collecting BGTask debug-trigger/expiration evidence on the physical iPhone; otherwise accept BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY and keep foreground/reconnect PASS required.",
+          "background": {
+            "debugTriggerConfirmed": false,
+            "lastCompletedAt": 1779911772.496001,
+            "lastExpiredAt": null,
+            "lastScheduleReason": "appLaunch",
+            "lastScheduledAt": 1780019862.3881788,
+            "noUIContextEvidence": "scanner background-task-no-ui-context must be PASS",
+            "registrationSucceeded": true,
+            "systemPolicy": "iOS does not guarantee immediate locked/background execution"
+          },
+          "completedAt": "2026-05-29T01:57:54Z",
+          "iosPhysicalStatus": "PASS",
+          "prefix": "TASK131_OFFLINE_FIX6_",
+          "redactionApplied": true,
+          "schemaVersion": "1.1",
+          "source": "live.real-device-background-sync",
+          "startedAt": "2026-05-29T01:57:42Z",
+          "status": "BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY",
+          "taskId": "TASK-131"
+        },
+        "exitCode": 2,
+        "name": "iosBackgroundSchedulerPolicy",
+        "prefix": "TASK131_OFFLINE_FIX6_",
+        "source": "live.real-device-background-sync",
+        "status": "BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY",
+        "warnings": null
+      }
+    ],
+    "taskId": "TASK-131"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260529T014751Z-physical-offline-background-matrix-task-TASK-131-prefix-TASK131_OFFLINE_FIX6_-p63716",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-131",
+  "test_prefix": "TASK131_OFFLINE_FIX6_",
+  "timestamp_end": "2026-05-29T01:57:54Z",
+  "timestamp_start": "2026-05-29T01:47:51Z",
+  "warnings": []
+}

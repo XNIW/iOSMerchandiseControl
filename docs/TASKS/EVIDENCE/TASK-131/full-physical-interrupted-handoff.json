@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-131",
+  "generatedAt": "2026-05-28",
+  "state": "ACTIVE / BLOCKED \u2014 IOS_PHYSICAL_DEVICE_DETACHED_DURING_FULL_MATRIX",
+  "result": "BLOCKED_EXTERNAL",
+  "blockedReason": "IOS_PHYSICAL_DEVICE_DETACHED_DURING_FULL_MATRIX",
+  "canonicality": "LOCAL_CANONICAL_AHEAD_OF_REMOTE",
+  "scope": {
+    "iosPhysical": "available_then_detached",
+    "androidPhysical": "available_unlocked",
+    "supabasePrefix": "TASK131_*"
+  },
+  "passEvidence": [
+    {
+      "gate": "device_discovery",
+      "result": "PASS",
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T185853Z-physical-devices-list-task-TASK-131-p4202.json"
+    },
+    {
+      "gate": "ios_physical_sync_policy_ui",
+      "result": "PASS",
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T185853Z-ios-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_IOS_PHYS_-p4260.json"
+    },
+    {
+      "gate": "android_physical_sync_policy_ui",
+      "result": "PASS",
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T190355Z-android-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_ANDROID_PHYS_-p13552.json"
+    },
+    {
+      "gate": "redaction_sensitive_json_validation",
+      "result": "PASS",
+      "reportJson": [
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T195435Z-scan-task131-redaction-task-TASK-131-strict-p81848.json",
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T195435Z-scan-sensitive-task-TASK-131-docs-TASKS-EVIDENCE-TASK-131-p81849.json",
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T195435Z-report-validate-json-task-TASK-131-path-docs-TASKS-EVIDENCE-TASK-131-agent-runs-p81890.json"
+      ]
+    },
+    {
+      "gate": "supabase_cleanup_residue",
+      "result": "PASS",
+      "residue": 0,
+      "reportJson": [
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T194616Z-supabase-cleanup-task-TASK-131-prefix-TASK131_-dry-run-p59081.json",
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T194630Z-supabase-cleanup-task-TASK-131-prefix-TASK131_-execute-cleanup-plan-id-cleanup-TASK-131-20260528T194616Z-TASK131_-p59648.json",
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T194641Z-supabase-residue-check-task-TASK-131-prefix-TASK131_-profile-linked-p60187.json"
+      ]
+    }
+  ],
+  "notAcceptedAsPass": [
+    "physical sync-policy-matrix with prefix TASK131_POLICY_FINAL_ was interrupted before canonical report generation",
+    "final drift/pending/ProductPrice duplicate gates are not proven",
+    "conflict/review, offline/background/locked, account switch and accessibility full physical gates remain incomplete"
+  ],
+  "cleanup": {
+    "dryRunFirst": true,
+    "executeWithCleanupPlanId": true,
+    "supabaseResidue": 0,
+    "globalCleanup": false,
+    "authUsersTouched": false,
+    "truncateUsed": false,
+    "serviceRoleClientUsed": false
+  },
+  "nextAction": "Reconnect and trust the iPhone physical device, rerun physical devices list, ios physical sync-policy-ui, android physical sync-policy-ui, then rerun a fresh physical sync-policy-matrix with prefix TASK131_POLICY_RESUME_."
+}

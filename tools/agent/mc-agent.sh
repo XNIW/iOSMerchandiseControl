@@ -64,6 +64,9 @@ main() {
         task126-policy-matrix|owner-store-scope|local-store-identity|pending-base-version|changed-fields-contract|no-cross-owner-store-pending-push|conflict-review-coverage|productprice-history-policy|cache-active-store-only|inactive-cache-cleanup-safety|task126-final-gates)
           handler=(mc_cmd_scan_task126_static "${args[1]}" "${args[@]:2}")
           ;;
+        task131-matrix-completeness|task131-redaction|task131-final-gates)
+          handler=(mc_cmd_scan_task131_static "${args[1]}" "${args[@]:2}")
+          ;;
         sensitive) handler=(mc_cmd_scan_sensitive "${args[@]:2}") ;;
         evidence) handler=(mc_cmd_scan_evidence "${args[@]:2}") ;;
         repo-diff) handler=(mc_cmd_scan_repo_diff) ;;
@@ -168,6 +171,7 @@ main() {
     harness) handler=(mc_cmd_harness "${args[@]:1}") ;;
     ios) handler=(mc_cmd_ios "${args[@]:1}") ;;
     android) handler=(mc_cmd_android "${args[@]:1}") ;;
+    physical) handler=(mc_cmd_task131_physical "${args[@]:1}") ;;
     sync) handler=(mc_cmd_sync "${args[@]:1}") ;;
     supabase) handler=(mc_cmd_supabase "${args[@]:1}") ;;
     live) handler=(mc_cmd_live "${args[@]:1}") ;;

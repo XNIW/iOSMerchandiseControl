@@ -124,6 +124,55 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertEqual(entry.clientEventID, "prices-manual-push:\(sha256Hex("prices-fingerprint"))")
     }
 
+    func testCatalogGeneratedProductPriceRowsEnqueuePricesEventWithPriceIds() throws {
+        let context = try makeContext()
+        let service = makeService(context: context)
+        let priceID1 = UUID(uuidString: "00000000-0000-4000-8000-000000000501")!
+        let priceID2 = UUID(uuidString: "00000000-0000-4000-8000-000000000502")!
+        let productID = UUID(uuidString: "00000000-0000-4000-8000-000000000401")!
+
+        let result = service.enqueue(
+            .catalogGeneratedProductPrices(
+                SyncEventOutboxProducerOutcome.CatalogGeneratedProductPrices(
+                    ownerUserID: ownerID,
+                    currentOwnerUserID: ownerID,
+                    terminalStatus: .completed,
+                    confirmedPriceRows: 2,
+                    productCount: 1,
+                    clientEventID: "client-catalog-generated-prices",
+                    validationEntityIDs: .object([
+                        "price_ids": .array([
+                            .string(priceID1.uuidString.lowercased()),
+                            .string(priceID2.uuidString.lowercased())
+                        ])
+                    ]),
+                    validationMetadata: .object([
+                        "source": .string("ios_catalog_generated_prices"),
+                        "product_ids": .array([.string(productID.uuidString.lowercased())])
+                    ])
+                )
+            )
+        )
+
+        let entry = try onlyEntry(in: context)
+        XCTAssertEqual(result.kind, .enqueued)
+        XCTAssertEqual(entry.domain, "prices")
+        XCTAssertEqual(entry.eventType, "prices_changed")
+        XCTAssertEqual(entry.changedCount, 2)
+        XCTAssertEqual(entry.entityIDsShape, "price_rows:count=2;products:count=1")
+        XCTAssertEqual(
+            entry.entityIDsPayloadJSON,
+            #"{"price_ids":["00000000-0000-4000-8000-000000000501","00000000-0000-4000-8000-000000000502"]}"#
+        )
+        XCTAssertEqual(
+            entry.metadataPayloadJSON,
+            #"{"product_ids":["00000000-0000-4000-8000-000000000401"],"source":"ios_catalog_generated_prices"}"#
+        )
+        let replayRequest = try entry.makeRecordRequestForReplay()
+        XCTAssertEqual(replayRequest.source, "ios_catalog_generated_prices")
+        XCTAssertEqual(entry.clientEventID, "client-catalog-generated-prices")
+    }
+
     func testPlanFingerprintDerivedClientEventIDDoesNotPersistRawCatalogFields() throws {
         let context = try makeContext()
         let service = makeService(context: context)

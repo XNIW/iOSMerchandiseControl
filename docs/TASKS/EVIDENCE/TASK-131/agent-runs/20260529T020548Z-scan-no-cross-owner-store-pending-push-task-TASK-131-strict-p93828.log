@@ -1,0 +1,33 @@
+=== mc-agent scan no-cross-owner-store-pending-push --task TASK-131 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-126 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": {},
+      "id": "cross-owner-push-block-present",
+      "reason": "Push must block pending from another owner.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "cross-store-push-block-present",
+      "reason": "Push must block pending from another store.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {},
+      "id": "outbox-scope-validation-present",
+      "reason": "Outbox drain must validate owner/store scope before mutation.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-29T02:05:48Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.no-cross-owner-store-pending-push",
+  "startedAt": "2026-05-29T02:05:48Z",
+  "status": "PASS",
+  "taskId": "TASK-131"
+}

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-131",
+  "generatedAt": "2026-05-29T03:15:00Z",
+  "finalState": "ACTIVE / BLOCKED — PHYSICAL_REVIEW_ACCESSIBILITY_OPERATOR_EVIDENCE_REQUIRED",
+  "reviewApproved": false,
+  "doneClaimed": false,
+  "productionReadyClaimed": false,
+  "scope": "FULL_PHYSICAL_IOS_ANDROID_SCOPE",
+  "caseGroups": [
+    {"caseIds": "C126-00..02", "scenario": "auth/session", "result": "PASS"},
+    {"caseIds": "C126-03..06", "scenario": "normal sync", "result": "PASS"},
+    {"caseIds": "C126-07..09", "scenario": "conflict basics", "result": "BLOCKED_EXTERNAL", "blocker": "OPERATOR_CONFLICT_REVIEW_CHECKLIST_NOT_PROVIDED"},
+    {"caseIds": "C126-10..13", "scenario": "offline/reconnect/ack", "result": "PASS"},
+    {"caseIds": "C126-14..19", "scenario": "account switch/auth transition", "result": "MIXED", "note": "Same-account logout/login and token/session fail-closed PASS; true A->B C126-14/15/16/17 BLOCKED_EXTERNAL_SECOND_ACCOUNT."},
+    {"caseIds": "C126-20..21", "scenario": "RLS/schema/protocol", "result": "PASS"},
+    {"caseIds": "C126-22..26", "scenario": "Review/ProductPrice stale", "result": "BLOCKED_EXTERNAL", "blocker": "OPERATOR_CONFLICT_REVIEW_CHECKLIST_NOT_PROVIDED"},
+    {"caseIds": "C126-27", "scenario": "cursor gap/reset", "result": "PASS"},
+    {"caseIds": "C126-28..32", "scenario": "store/cache/pending scope", "result": "PASS"},
+    {"caseIds": "C126-33..34", "scenario": "permission/protocol fail-closed", "result": "PASS"},
+    {"caseIds": "C126-35..40", "scenario": "account switch dirty/legacy", "result": "MIXED", "note": "Owner mismatch, legacy/unbound dirty Review/Recovery and export/cancel PASS; C126-40 true B populated decision BLOCKED_EXTERNAL_SECOND_ACCOUNT."},
+    {"caseIds": "C126-41..43", "scenario": "no-op/burst/realtime", "result": "PASS"},
+    {"caseIds": "C126-44..48", "scenario": "legacy/cache/permission", "result": "PASS"},
+    {"caseIds": "C126-49..54", "scenario": "Options/Review/accessibility", "result": "BLOCKED_EXTERNAL", "blocker": "OPERATOR_ACCESSIBILITY_CHECKLIST_NOT_PROVIDED"},
+    {"caseIds": "C126-55..57", "scenario": "background/locked/long offline", "result": "PASS_WITH_BLOCKED_SUBCASE", "blocker": "BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY"},
+    {"caseIds": "C126-58", "scenario": "sensitive evidence", "result": "PASS"},
+    {"caseIds": "C126-59", "scenario": "cleanup/residue", "result": "PASS_WITH_IOS_LOCAL_NOTE"},
+    {"caseIds": "C126-60", "scenario": "final drift/pending/duplicates", "result": "PASS"}
+  ],
+  "p0Mandatory": {
+    "iosPhysicalReadiness": "PASS",
+    "androidPhysicalReadiness": "PASS",
+    "normalSyncBidirectional": "PASS",
+    "mergeDifferentFields": "PASS",
+    "sameFieldConflictReview": "BLOCKED_EXTERNAL",
+    "deleteVsEditReview": "BLOCKED_EXTERNAL",
+    "productPriceAppendDedupe": "PASS",
+    "productPriceStaleReview": "BLOCKED_EXTERNAL",
+    "offlineReconnect": "PASS",
+    "killRestartPending": "PASS",
+    "accountSwitchCleanDirty": "PASS_NON_B_CASES_WITH_C126_14_15_16_17_40_BLOCKED_EXTERNAL_SECOND_ACCOUNT",
+    "optionsNoFalseUpdated": "PASS_WITH_OPERATOR_UX_BLOCKERS",
+    "noFullPullNormalPath": "PASS",
+    "noCrossOwnerStorePendingPush": "PASS",
+    "cleanupResidue": "PASS"
+  },
+  "invariants": {
+    "driftFinal": 0,
+    "pendingFinal": 0,
+    "duplicateProductPriceKeys": 0,
+    "supabaseResidue": 0
+  },
+  "finalGates": {
+    "result": "PASS_BLOCKER_AWARE_VALIDATION",
+    "matrixCompletenessJson": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T031442Z-scan-task131-matrix-completeness-task-TASK-131-strict-p99127.json",
+    "reportJson": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T031816Z-scan-task131-final-gates-task-TASK-131-strict-p74496.json",
+    "reviewFullAcceptanceAllowed": false,
+    "reason": "Physical Conflict/Review operator evidence and accessibility operator evidence are still missing."
+  },
+  "codexReviewAddendum": {
+    "reviewApproved": false,
+    "stateAfterReview": "ACTIVE / BLOCKED — PHYSICAL_REVIEW_ACCESSIBILITY_OPERATOR_EVIDENCE_REQUIRED",
+    "fixesApplied": [
+      "TASK-131 evidence/device redaction hardening",
+      "Android ProductPrice FK fallback log redaction",
+      "Supabase verify-schema CLI timeout",
+      "TASK-131 matrix BLOCKED* classification and explicit MISCONFIGURED/UNSAFE_OPERATION_REFUSED handling",
+      "Accessibility smoke stale step detail isolation",
+      "Operator Review/Accessibility checklist template"
+    ],
+    "latestAccountSwitchMatrix": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T030217Z-physical-account-switch-matrix-task-TASK-131-prefix-TASK131_REVIEW_ACCOUNT_-p77663.json",
+    "latestConflictReviewMatrix": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T030338Z-physical-conflict-review-matrix-task-TASK-131-prefix-TASK131_REVIEW_CONFLICT_-p80048.json",
+    "latestAccessibilitySmoke": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T030624Z-physical-accessibility-smoke-task-TASK-131-p83429.json",
+    "operatorChecklistTemplate": "docs/TASKS/EVIDENCE/TASK-131/operator-review-accessibility-checklist.json"
+  },
+  "accountSwitchNonBPass": {
+    "reportJson": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022420Z-physical-account-switch-matrix-task-TASK-131-prefix-TASK131_ACCOUNT_SPLIT2_-p50384.json",
+    "blockedExternalSecondAccountCaseIds": ["C126-14", "C126-15", "C126-16", "C126-17", "C126-40"]
+  },
+  "requiredNextEvidence": [
+    "Physical Conflict/Review tap checklist or reliable UI automation.",
+    "VoiceOver/TalkBack traversal checklist or reliable UI automation.",
+    "Second synthetic account only for true A->B cases C126-14/15/16/17/40.",
+    "Rerun blocked matrices and final gates after evidence is provided."
+  ]
+}

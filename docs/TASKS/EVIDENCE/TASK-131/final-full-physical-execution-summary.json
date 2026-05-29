@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-131",
+  "generatedAt": "2026-05-29T03:15:00Z",
+  "scope": "FULL_PHYSICAL_IOS_ANDROID_SCOPE",
+  "finalState": "ACTIVE / BLOCKED — PHYSICAL_REVIEW_ACCESSIBILITY_OPERATOR_EVIDENCE_REQUIRED",
+  "doneClaimed": false,
+  "productionReadyClaimed": false,
+  "canonicality": "LOCAL_CANONICAL_AHEAD_OF_REMOTE",
+  "summary": {
+    "coreFullPhysicalSync": "PASS",
+    "offlineReconnectRestartFlap": "PASS",
+    "conflictReviewPhysicalUx": "BLOCKED_EXTERNAL",
+    "accessibilityPhysicalUx": "BLOCKED_EXTERNAL",
+    "accountSwitch": "PASS_NON_B_CASES_WITH_TRUE_A_TO_B_CASES_BLOCKED_EXTERNAL_SECOND_ACCOUNT",
+    "iosBackgroundScheduler": "BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY",
+    "cleanupResidueSupabase": "PASS_ZERO_RESIDUE"
+  },
+  "reviewAddendum": {
+    "reviewer": "Codex reviewer/fixer via user override",
+    "reviewApproved": false,
+    "fixesApplied": [
+      "TASK-131 evidence/device redaction hardening",
+      "Android ProductPrice FK fallback log redaction",
+      "Supabase verify-schema CLI timeout",
+      "TASK-131 matrix BLOCKED* classification and explicit MISCONFIGURED/UNSAFE_OPERATION_REFUSED handling",
+      "Accessibility smoke stale step detail isolation",
+      "Operator Review/Accessibility checklist template"
+    ],
+    "latestAccountSwitchMatrix": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T030217Z-physical-account-switch-matrix-task-TASK-131-prefix-TASK131_REVIEW_ACCOUNT_-p77663.json",
+    "latestConflictReviewMatrix": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T030338Z-physical-conflict-review-matrix-task-TASK-131-prefix-TASK131_REVIEW_CONFLICT_-p80048.json",
+    "latestAccessibilitySmoke": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T030624Z-physical-accessibility-smoke-task-TASK-131-p83429.json",
+    "operatorChecklistTemplate": "docs/TASKS/EVIDENCE/TASK-131/operator-review-accessibility-checklist.json"
+  },
+  "reports": {
+    "devicesList": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T011315Z-physical-devices-list-task-TASK-131-p18223.json",
+    "iosPhysicalSyncPolicyUi": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T233735Z-ios-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_IOS_PHYS_RESUME7_-p7604.json",
+    "androidPhysicalSyncPolicyUi": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T233201Z-android-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_ANDROID_PHYS_RESUME2_-p99950.json",
+    "syncPolicyMatrix": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T013114Z-physical-sync-policy-matrix-task-TASK-131-prefix-TASK131_POLICY_FIX9_-p39908.json",
+    "offlineBackgroundMatrix": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T014751Z-physical-offline-background-matrix-task-TASK-131-prefix-TASK131_OFFLINE_FIX6_-p63716.json",
+    "conflictReviewMatrix": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T013030Z-physical-conflict-review-matrix-task-TASK-131-prefix-TASK131_CONFLICT_FIX6_-p38740.json",
+    "accountSwitchMatrix": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022420Z-physical-account-switch-matrix-task-TASK-131-prefix-TASK131_ACCOUNT_SPLIT2_-p50384.json",
+    "accessibilitySmoke": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T015938Z-physical-accessibility-smoke-task-TASK-131-p80272.json",
+    "noFullPullNormalPath": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022538Z-scan-no-full-pull-normal-path-task-TASK-131-strict-p52198.json",
+    "noCrossOwnerStorePendingPush": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022538Z-scan-no-cross-owner-store-pending-push-task-TASK-131-strict-p52201.json",
+    "noServiceRoleClient": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022651Z-scan-no-service-role-client-task-TASK-131-strict-p56066.json",
+    "noRlsBypass": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022651Z-scan-no-rls-bypass-task-TASK-131-strict-p56064.json",
+    "supabaseCleanupDryRun": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022610Z-supabase-cleanup-task-TASK-131-prefix-TASK131_-dry-run-p54450.json",
+    "supabaseCleanupExecute": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022628Z-supabase-cleanup-task-TASK-131-prefix-TASK131_-execute-cleanup-plan-id-cleanup-TASK-131-20260529T022610Z-TASK131_-p55016.json",
+    "supabaseResidueCheck": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022634Z-supabase-residue-check-task-TASK-131-prefix-TASK131_-profile-linked-p55005.json",
+    "sensitiveScan": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T023314Z-scan-sensitive-task-TASK-131-docs-TASKS-EVIDENCE-TASK-131-p13847.json",
+    "evidenceScan": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T023314Z-scan-evidence-task-TASK-131-p13860.json",
+    "jsonValidation": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T023314Z-report-validate-json-task-TASK-131-path-docs-TASKS-EVIDENCE-TASK-131-agent-runs-p13836.json",
+    "matrixCompletenessReview": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T031442Z-scan-task131-matrix-completeness-task-TASK-131-strict-p99127.json",
+    "finalGates": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T031816Z-scan-task131-final-gates-task-TASK-131-strict-p74496.json"
+  },
+  "invariants": {
+    "driftFinal": 0,
+    "pendingFinal": 0,
+    "duplicateProductPriceKeys": 0,
+    "noFullPullNormalPath": "PASS",
+    "noCrossOwnerStorePendingPush": "PASS",
+    "noServiceRoleClient": "PASS",
+    "noRlsBypass": "PASS",
+    "supabaseTask131Residue": 0
+  },
+  "blocked": [
+    {
+      "gate": "physical conflict/review tap evidence",
+      "status": "BLOCKED_EXTERNAL",
+      "blocker": "OPERATOR_CONFLICT_REVIEW_CHECKLIST_NOT_PROVIDED",
+      "nextAction": "Provide MC_TASK131_CONFLICT_REVIEW_CHECKLIST_JSON or physical UI automation evidence."
+    },
+    {
+      "gate": "physical accessibility traversal",
+      "status": "BLOCKED_EXTERNAL",
+      "blocker": "OPERATOR_ACCESSIBILITY_CHECKLIST_NOT_PROVIDED",
+      "nextAction": "Provide redacted VoiceOver/TalkBack operator checklist or automation evidence."
+    },
+    {
+      "gate": "iOS background scheduler",
+      "status": "BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY",
+      "blocker": "OS_SCHEDULER_NOT_FORCE_PROVEN",
+      "nextAction": "Keep as scheduler policy note unless a real physical BGTask execution can be captured."
+    }
+  ],
+  "caseLevelBlocked": [
+    {
+      "caseIds": ["C126-14", "C126-15", "C126-16", "C126-17", "C126-40"],
+      "scenario": "true Account A -> Account B switch cases",
+      "status": "BLOCKED_EXTERNAL_SECOND_ACCOUNT",
+      "reportJson": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022420Z-physical-account-switch-matrix-task-TASK-131-prefix-TASK131_ACCOUNT_SPLIT2_-p50384.json",
+      "nextAction": "Provision and authorize a second synthetic account only for these cases."
+    }
+  ],
+  "accountSwitchNonBPass": {
+    "reportJson": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T022420Z-physical-account-switch-matrix-task-TASK-131-prefix-TASK131_ACCOUNT_SPLIT2_-p50384.json",
+    "passedSubcases": [
+      "same-account logout/login with cache/pending/cursor preserved",
+      "token expired/session missing fail-closed",
+      "owner mismatch and no cross-owner/store pending push fixture",
+      "legacy/unbound dirty local store Review/Recovery",
+      "export before discard and non-destructive cancel",
+      "localDefaultStoreOnly with no remote store_id or multi-store cloud promise"
+    ]
+  },
+  "cleanup": {
+    "prefix": "TASK131_",
+    "dryRunBeforeExecute": true,
+    "cleanupPlanId": "cleanup-TASK-131-20260529T022610Z-TASK131_",
+    "supabaseResidue": 0,
+    "androidLocalCleanup": "PASS",
+    "iosLocalCleanup": "DRY_RUN_ONLY_NO_ZERO_RESIDUE_CLAIM"
+  }
+}

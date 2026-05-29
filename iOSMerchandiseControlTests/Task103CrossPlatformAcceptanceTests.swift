@@ -17,7 +17,11 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var isTask123: Bool { prefix.hasPrefix("TASK123_") }
         var isTask124: Bool { prefix.hasPrefix("TASK124_") }
         var isTask125: Bool { prefix.hasPrefix("TASK125_") }
+        var isTask131: Bool { prefix.hasPrefix("TASK131_") }
         var logPrefix: String {
+            if isTask131 {
+                return "TASK131"
+            }
             if isTask125 {
                 return "TASK125"
             }
@@ -1477,6 +1481,41 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 throw HarnessError.unexpectedCatalogPushStatus("sync_event_drain_\(drain.status.rawValue)")
             }
         }
+
+        let generatedPriceEnqueue = try await CatalogGeneratedProductPriceSyncEventRecorder(
+            context: context,
+            remote: runtime.productPriceRemote
+        ).recordIfNeeded(
+            catalogResult: result,
+            ownerUserID: runtime.session.userID,
+            planFingerprint: planFingerprint
+        )
+        print(
+            "TASK114_CATALOG_GENERATED_PRICE_SYNC_EVENT_ENQUEUE kind=\(generatedPriceEnqueue.kind.rawValue) " +
+            "entryStatus=\(generatedPriceEnqueue.entryStatus?.rawValue ?? "nil") " +
+            "error=\(generatedPriceEnqueue.errorCode ?? "nil") " +
+            "products=\(result.touchedIDs.products.count)"
+        )
+        guard generatedPriceEnqueue.kind == .enqueued
+            || generatedPriceEnqueue.kind == .duplicateNoOp
+            || generatedPriceEnqueue.kind == .skippedNoOp else {
+            throw HarnessError.unexpectedCatalogPushStatus("catalog_generated_price_sync_event_enqueue_failed")
+        }
+        if generatedPriceEnqueue.kind == .enqueued {
+            let priceDrain = try await SyncEventOutboxDrainService(context: context, recorder: recorder)
+                .drainOnce(ownerUserID: runtime.session.userID.uuidString, limit: 25)
+            print(
+                "TASK114_CATALOG_GENERATED_PRICE_SYNC_EVENT_DRAIN status=\(priceDrain.status.rawValue) " +
+                "attempted=\(priceDrain.attempted) sent=\(priceDrain.sent) " +
+                "retry=\(priceDrain.retryScheduled) blocked=\(priceDrain.blocked) " +
+                "dead=\(priceDrain.dead) skipped=\(priceDrain.skippedIneligible)"
+            )
+            guard priceDrain.sent > 0 else {
+                throw HarnessError.unexpectedCatalogPushStatus(
+                    "catalog_generated_price_sync_event_drain_no_sent_status_\(priceDrain.status.rawValue)"
+                )
+            }
+        }
     }
 
     private func pushPendingPrices(
@@ -2143,8 +2182,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 || prefix.hasPrefix("TASK123_")
                 || prefix.hasPrefix("TASK124_")
                 || prefix.hasPrefix("TASK125_")
+                || prefix.hasPrefix("TASK131_")
         ), prefix.hasSuffix("_") else {
-            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._, TASK115_..._, TASK123_..._, TASK124_..._ or TASK125_..._.")
+            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._, TASK115_..._, TASK123_..._, TASK124_..._, TASK125_..._ or TASK131_..._.")
         }
         return Fixture(prefix: prefix)
     }

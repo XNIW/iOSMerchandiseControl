@@ -35,6 +35,8 @@ mc_agent_source_libs() {
   source "${MC_AGENT_ROOT}/lib/supabase.sh"
   # shellcheck source=/dev/null
   source "${MC_AGENT_ROOT}/lib/sync.sh"
+  # shellcheck source=/dev/null
+  source "${MC_AGENT_ROOT}/lib/task131_physical.sh"
 }
 
 mc_load_config() {
@@ -440,6 +442,7 @@ Usage:
   ./tools/agent/mc-agent.sh harness real-device-feasibility --task TASK-130
   ./tools/agent/mc-agent.sh ios test options-summary-performance|options-summary-provider --task TASK-127
   ./tools/agent/mc-agent.sh ios test price-contract --task TASK-130
+  ./tools/agent/mc-agent.sh ios test task131-harness --task TASK-131
   ./tools/agent/mc-agent.sh ios benchmark import-large --task TASK-130
   ./tools/agent/mc-agent.sh ios smoke options-first-sync|scanner-edge|accessibility --task TASK-130
   ./tools/agent/mc-agent.sh ios smoke options-performance --task TASK-127
@@ -465,6 +468,15 @@ Usage:
   ./tools/agent/mc-agent.sh live sync-matrix|runtime-parity|physical-runtime-parity|mutation-near-realtime|offline-reconnect-sync|account-merge-policy-matrix|sync-performance-budget|offline-matrix|reconcile-counts|cleanup-and-verify --task TASK-115 --prefix TASK115_*
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live real-device-realtime|real-device-offline-reconnect|real-device-background-sync|real-device-kill-restart-pending|real-device-network-flapping --task TASK-125 --prefix TASK125_*
   MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh live task123-single-propagation|task123-cold-restart|task123-noop|task123-burst-10 --task TASK-123 --prefix TASK123_REVIEW_*
+  ./tools/agent/mc-agent.sh physical devices list --task TASK-131
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios physical sync-policy-ui --task TASK-131 --prefix TASK131_IOS_
+  ./tools/agent/mc-agent.sh ios simulator sync-policy-ui --task TASK-131 --prefix TASK131_IOS_SIM_
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh android physical sync-policy-ui --task TASK-131 --prefix TASK131_ANDROID_
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh physical sync-policy-matrix|conflict-review-matrix|account-switch-matrix|offline-background-matrix --task TASK-131 --prefix TASK131_POLICY_
+  MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh physical hybrid-sync-policy-matrix|hybrid-conflict-review-matrix|hybrid-offline-reconnect-matrix --task TASK-131 --prefix TASK131_HYBRID_
+  ./tools/agent/mc-agent.sh physical hybrid-accessibility-smoke --task TASK-131
+  ./tools/agent/mc-agent.sh physical accessibility-smoke --task TASK-131
+  ./tools/agent/mc-agent.sh scan task131-matrix-completeness|task131-redaction|task131-final-gates --task TASK-131 --strict
 
 Exit codes: 0=PASS 1=FAIL 2=BLOCKED_EXTERNAL 3=MISCONFIGURED 4=UNSAFE_OPERATION_REFUSED
 Reports: docs/TASKS/EVIDENCE/<task>/agent-runs/<timestamp>-<command>.{log,md,json}
@@ -678,6 +690,7 @@ mc_help_json() {
     {"name":"ios test sync task121","argv":["ios","test","sync","--task","TASK-121"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test manual-sync-regression task121","argv":["ios","test","manual-sync-regression","--task","TASK-121"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios test price-contract task130","argv":["ios","test","price-contract","--task","TASK-130"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"ios test task131-harness","argv":["ios","test","task131-harness","--task","TASK-131"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios benchmark import-large task130","argv":["ios","benchmark","import-large","--task","TASK-130"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios smoke options-first-sync task130","argv":["ios","smoke","options-first-sync","--task","TASK-130"],"platform":"ios","safety_level":"safe-readonly"},
     {"name":"ios smoke scanner-edge task130","argv":["ios","smoke","scanner-edge","--task","TASK-130"],"platform":"ios","safety_level":"safe-readonly"},
@@ -769,7 +782,23 @@ mc_help_json() {
     {"name":"live real-device-network-flapping task125","argv":["live","real-device-network-flapping","--task","TASK-125","--prefix","TASK125_FLAP_"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"live runtime-parity task125","argv":["live","runtime-parity","--task","TASK-125","--prefix","TASK125_PARITY_","--profile","linked"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"supabase cleanup task125","argv":["supabase","cleanup","--task","TASK-125","--prefix","TASK125_"],"platform":"supabase","safety_level":"cleanup-dry-run","requires_cleanup":true},
-    {"name":"supabase residue-check task125","argv":["supabase","residue-check","--task","TASK-125","--prefix","TASK125_"],"platform":"supabase","safety_level":"safe-readonly"}
+    {"name":"supabase residue-check task125","argv":["supabase","residue-check","--task","TASK-125","--prefix","TASK125_"],"platform":"supabase","safety_level":"safe-readonly"},
+    {"name":"physical devices list task131","argv":["physical","devices","list","--task","TASK-131"],"platform":"physical","safety_level":"safe-readonly"},
+    {"name":"ios physical sync-policy-ui task131","argv":["ios","physical","sync-policy-ui","--task","TASK-131","--prefix","TASK131_IOS_"],"platform":"ios","safety_level":"live-write","requires_live":true},
+    {"name":"ios simulator sync-policy-ui task131","argv":["ios","simulator","sync-policy-ui","--task","TASK-131","--prefix","TASK131_IOS_SIM_"],"platform":"ios","safety_level":"safe-readonly"},
+    {"name":"android physical sync-policy-ui task131","argv":["android","physical","sync-policy-ui","--task","TASK-131","--prefix","TASK131_ANDROID_PHYS_"],"platform":"android","safety_level":"live-write","requires_live":true},
+    {"name":"physical sync-policy-matrix task131","argv":["physical","sync-policy-matrix","--task","TASK-131","--prefix","TASK131_POLICY_"],"platform":"physical","safety_level":"live-write","requires_live":true},
+    {"name":"physical conflict-review-matrix task131","argv":["physical","conflict-review-matrix","--task","TASK-131","--prefix","TASK131_CONFLICT_"],"platform":"physical","safety_level":"live-write","requires_live":true},
+    {"name":"physical account-switch-matrix task131","argv":["physical","account-switch-matrix","--task","TASK-131","--prefix","TASK131_ACCOUNT_"],"platform":"physical","safety_level":"live-write","requires_live":true},
+    {"name":"physical offline-background-matrix task131","argv":["physical","offline-background-matrix","--task","TASK-131","--prefix","TASK131_OFFLINE_"],"platform":"physical","safety_level":"live-write","requires_live":true},
+    {"name":"physical accessibility-smoke task131","argv":["physical","accessibility-smoke","--task","TASK-131"],"platform":"physical","safety_level":"safe-readonly"},
+    {"name":"physical hybrid-sync-policy-matrix task131","argv":["physical","hybrid-sync-policy-matrix","--task","TASK-131","--prefix","TASK131_HYBRID_"],"platform":"physical","safety_level":"live-write","requires_live":true},
+    {"name":"physical hybrid-conflict-review-matrix task131","argv":["physical","hybrid-conflict-review-matrix","--task","TASK-131","--prefix","TASK131_CONFLICT_"],"platform":"physical","safety_level":"live-write","requires_live":true},
+    {"name":"physical hybrid-offline-reconnect-matrix task131","argv":["physical","hybrid-offline-reconnect-matrix","--task","TASK-131","--prefix","TASK131_OFFLINE_"],"platform":"physical","safety_level":"live-write","requires_live":true},
+    {"name":"physical hybrid-accessibility-smoke task131","argv":["physical","hybrid-accessibility-smoke","--task","TASK-131"],"platform":"physical","safety_level":"safe-readonly"},
+    {"name":"scan task131-matrix-completeness","argv":["scan","task131-matrix-completeness","--task","TASK-131","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan task131-redaction","argv":["scan","task131-redaction","--task","TASK-131","--strict"],"platform":"general","safety_level":"safe-readonly"},
+    {"name":"scan task131-final-gates","argv":["scan","task131-final-gates","--task","TASK-131","--strict"],"platform":"general","safety_level":"safe-readonly"}
   ]
 }
 JSON
@@ -2148,6 +2177,57 @@ mc_cmd_scan_task126_static() {
     *)
       MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
       MC_NEXT_ACTION="Fix TASK-126 scanner command/configuration."
+      return "$MC_EXIT_MISCONFIGURED"
+      ;;
+  esac
+}
+
+mc_cmd_scan_task131_static() {
+  local scan_name="$1"
+  shift || true
+  local task_id
+  task_id="$(mc_parse_opt --task "$@" || true)"
+  task_id="${task_id:-${MC_TASK_ID:-TASK-131}}"
+  MC_PLATFORM="general"
+  MC_SAFETY_LEVEL="safe-readonly"
+  MC_REQUIRES_LIVE="false"
+  case "$scan_name" in
+    task131-matrix-completeness) MC_CA_REFS="TASK-131-PHASE--0.5,C126-00..C126-60" ;;
+    task131-redaction) MC_CA_REFS="TASK-131-PHASE--0.4,C126-58" ;;
+    task131-final-gates) MC_CA_REFS="TASK-131-FINAL-GATES,C126-00..C126-60" ;;
+    *) MC_CA_REFS="TASK-131" ;;
+  esac
+
+  TASK_ID="$task_id" IOS_REPO="$MC_IOS_REPO" ANDROID_REPO="$MC_ANDROID_REPO" SUPABASE_REPO="$MC_SUPABASE_REPO" \
+    python3 "$MC_AGENT_ROOT/lib/task131_scans.py" "$scan_name" > /tmp/mc-agent-task131-static.$$.json
+  local scan_code=$?
+  MC_SYNC_JSON_RESULT="$(cat /tmp/mc-agent-task131-static.$$.json)"
+  rm -f /tmp/mc-agent-task131-static.$$.json
+  mc_sync_set_detail "$MC_SYNC_JSON_RESULT"
+  case "$scan_code" in
+    0)
+      MC_SUMMARY="${scan_name} scan PASS for ${task_id}."
+      MC_NEXT_ACTION="Use this report in TASK-131 hybrid execution matrix."
+      return "$MC_EXIT_PASS"
+      ;;
+    1)
+      MC_SUMMARY="${scan_name} scan FAIL for ${task_id}: TASK-131 gate found required work."
+      MC_NEXT_ACTION="Fix failing checks and rerun ${scan_name}."
+      return "$MC_EXIT_FAIL"
+      ;;
+    2)
+      MC_SUMMARY="${scan_name} scan BLOCKED_EXTERNAL for ${task_id}."
+      MC_NEXT_ACTION="Resolve the listed external prerequisite and rerun ${scan_name}."
+      return "$MC_EXIT_BLOCKED"
+      ;;
+    4)
+      MC_SUMMARY="${scan_name} scan UNSAFE_OPERATION_REFUSED for ${task_id}."
+      MC_NEXT_ACTION="Keep safety gate refused unless this was an expected refusal test."
+      return "$MC_EXIT_REFUSED"
+      ;;
+    *)
+      MC_SUMMARY="${scan_name} scan MISCONFIGURED for ${task_id}."
+      MC_NEXT_ACTION="Fix TASK-131 scanner command/configuration."
       return "$MC_EXIT_MISCONFIGURED"
       ;;
   esac

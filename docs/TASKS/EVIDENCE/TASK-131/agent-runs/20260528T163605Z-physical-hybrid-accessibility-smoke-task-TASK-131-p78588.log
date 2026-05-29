@@ -1,0 +1,56 @@
+=== mc-agent physical hybrid-accessibility-smoke --task TASK-131 ===
+{"NEXT_ACTION": "Connect trusted physical iPhone and Android device, set any required device identifiers, then rerun with MC_ALLOW_LIVE=1 and scoped TASK131_* prefix.", "androidPhysicalDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical"}], "caseStatus": "NOT_RUN", "cleanupStatus": "NOT_RUN", "completedAt": "2026-05-28T16:36:05Z", "coveredPolicyGroupsPlanned": ["C126-49..54"], "deviceReadiness": {"androidPhysicalAvailable": true, "currentScope": "ANDROID_PHYSICAL_IOS_SIMULATOR_SCOPE", "iosPhysicalAvailable": true, "iosPhysicalCaseStatus": "BLOCKED_EXTERNAL_IOS_PHYSICAL_DEVICE_NOT_AVAILABLE", "iosPhysicalEnabledForTask131": false, "iosSimulatorAvailable": true}, "iosPhysicalDevices": [{"id": "<REDACTED>", "idHash": "25019b4fafaa", "name": "<REDACTED_DEVICE_NAME>", "platform": "", "state": null, "targetType": "physical"}, {"id": "<REDACTED>", "idHash": "7f099f9425ab", "name": "<REDACTED_DEVICE_NAME>", "platform": "", "state": null, "targetType": "physical"}], "iosSimulators": [{"id": "<REDACTED>", "idHash": "d679e1d927ee", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-4", "state": "Booted", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "320c3202d5dc", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2", "state": "Shutdown", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "c1e1bf33cb91", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5", "state": "Shutdown", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "936e040d3cab", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-1", "state": "Shutdown", "targetType": "simulator"}], "matrix": "hybrid-accessibility-smoke", "prefix": null, "residueStatus": "NOT_RUN", "resultRule": "NOT_RUN mandatory physical cases are blocking and are not PASS.", "schemaVersion": "1.1", "screenshots": [], "source": "physical.hybrid-accessibility-smoke", "taskId": "TASK-131", "videos": []}
+{
+  "NEXT_ACTION": "Use PASS_WITH_NOTES rows as static smoke only; run VoiceOver/Dynamic Type simulator review if required.",
+  "checks": [
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-A11Y-OPTIONS-LABELS",
+      "reason": "Options combines key status rows for VoiceOver.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/DatabaseView.swift",
+      "id": "TASK130-A11Y-DATABASE-LABELS",
+      "reason": "Database rows/search/actions expose accessibility labels/actions.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/GeneratedView.swift",
+      "id": "TASK130-A11Y-GENERATED-LABELS",
+      "reason": "Generated has some accessibility coverage; full VoiceOver traversal not executed.",
+      "status": "PASS_WITH_NOTES"
+    },
+    {
+      "file": "iOSMerchandiseControl/BarcodeScannerView.swift",
+      "id": "TASK130-A11Y-SCANNER-LABELS",
+      "reason": "Scanner close/torch controls are labeled.",
+      "status": "PASS"
+    },
+    {
+      "file": "iOSMerchandiseControl/OptionsView.swift",
+      "id": "TASK130-A11Y-DYNAMIC-TYPE",
+      "reason": "Dynamic Type/text overflow safeguards are present statically; simulator XXL screenshots were not captured in this pass.",
+      "status": "PASS_WITH_NOTES"
+    },
+    {
+      "file": "iOSMerchandiseControl/*.lproj/Localizable.strings",
+      "id": "TASK130-A11Y-LOCALIZATIONS",
+      "reason": "Localization files for English/Italian/Spanish/Chinese are present.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-28T16:36:05+00:00",
+  "requires_live": false,
+  "result_status": "PASS_WITH_NOTES",
+  "safety_level": "read_only_static_scan",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "ios.smoke.accessibility",
+  "started_at": "2026-05-28T16:36:05+00:00",
+  "status": "PASS_WITH_NOTES",
+  "summary": "ios.smoke.accessibility: PASS_WITH_NOTES (6 checks)",
+  "taskId": "TASK-131",
+  "task_id": "TASK-131"
+}
+{"NEXT_ACTION": "Connect trusted physical iPhone and Android device, set any required device identifiers, then rerun with MC_ALLOW_LIVE=1 and scoped TASK131_* prefix.", "androidPhysicalDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical"}], "caseStatus": "NOT_RUN", "cleanupStatus": "NOT_RUN", "completedAt": "2026-05-28T16:36:08Z", "coveredPolicyGroupsPlanned": ["C126-49..54"], "deviceReadiness": {"androidPhysicalAvailable": true, "currentScope": "ANDROID_PHYSICAL_IOS_SIMULATOR_SCOPE", "iosPhysicalAvailable": true, "iosPhysicalCaseStatus": "BLOCKED_EXTERNAL_IOS_PHYSICAL_DEVICE_NOT_AVAILABLE", "iosPhysicalEnabledForTask131": false, "iosSimulatorAvailable": true}, "iosPhysicalDevices": [{"id": "<REDACTED>", "idHash": "25019b4fafaa", "name": "<REDACTED_DEVICE_NAME>", "platform": "", "state": null, "targetType": "physical"}, {"id": "<REDACTED>", "idHash": "7f099f9425ab", "name": "<REDACTED_DEVICE_NAME>", "platform": "", "state": null, "targetType": "physical"}], "iosSimulators": [{"id": "<REDACTED>", "idHash": "d679e1d927ee", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-4", "state": "Booted", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "320c3202d5dc", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2", "state": "Shutdown", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "c1e1bf33cb91", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5", "state": "Shutdown", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "936e040d3cab", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-1", "state": "Shutdown", "targetType": "simulator"}], "matrix": "hybrid-accessibility-smoke", "prefix": null, "residueStatus": "NOT_RUN", "resultRule": "NOT_RUN mandatory physical cases are blocking and are not PASS.", "schemaVersion": "1.1", "screenshots": [], "source": "physical.hybrid-accessibility-smoke", "taskId": "TASK-131", "videos": []}

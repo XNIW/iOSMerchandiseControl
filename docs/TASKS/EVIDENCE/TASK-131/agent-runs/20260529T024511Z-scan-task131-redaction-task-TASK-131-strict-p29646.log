@@ -1,0 +1,111 @@
+=== mc-agent scan task131-redaction --task TASK-131 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-131 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": "<REDACTED_EMAIL>",
+      "id": "redact-email",
+      "reason": "Redaction must remove email sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "<REDACTED_JWT>",
+      "id": "redact-jwt",
+      "reason": "Redaction must remove jwt sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "Authorization: Bearer <REDACTED_TOKEN>",
+      "id": "redact-bearer",
+      "reason": "Redaction must remove bearer sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "service_role=<REDACTED_SECRET>",
+      "id": "redact-service_role",
+      "reason": "Redaction must remove service_role sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "anon_key=<REDACTED_SECRET>",
+      "id": "redact-anon_key",
+      "reason": "Redaction must remove anon_key sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "https://<REDACTED_PROJECT_REF>.supabase.co/rest/v1",
+      "id": "redact-project_ref_url",
+      "reason": "Redaction must remove project_ref_url sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "project_ref: <REDACTED_PROJECT_REF>",
+      "id": "redact-project_ref",
+      "reason": "Redaction must remove project_ref sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/log.txt",
+      "id": "redact-home_path",
+      "reason": "Redaction must remove home_path sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "adb -s <REDACTED_SERIAL> logcat",
+      "id": "redact-android_serial",
+      "reason": "Redaction must remove android_serial <REDACTED_SERIAL>",
+      "status": "PASS"
+    },
+    {
+      "evidence": "UDID: <REDACTED_DEVICE_ID>",
+      "id": "redact-ios_udid",
+      "reason": "Redaction must remove ios_udid sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "{ platform:iOS, arch:arm64e, id:<REDACTED_DEVICE_ID>, name:<REDACTED_DEVICE_NAME>}",
+      "id": "redact-ios_xcode_id",
+      "reason": "Redaction must remove ios_xcode_id sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "{\"name\":\"<REDACTED_DEVICE_NAME>\"}",
+      "id": "redact-ios_watch_name",
+      "reason": "Redaction must remove ios_watch_name sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "com.example.app://callback?access_token=<REDACTED_SECRET>",
+      "id": "redact-oauth_callback",
+      "reason": "Redaction must remove oauth_callback sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "deviceIdentifier=<REDACTED_DEVICE_ID> xcodebuild",
+      "id": "redact-xcode_log",
+      "reason": "Redaction must remove xcode_log sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "screenshot=<HOME_REDACTED>/Desktop/evidence/device.png",
+      "id": "redact-screenshot_manifest",
+      "reason": "Redaction must remove screenshot_manifest sample.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "TASK131_SYNTHETIC_PRODUCT TASK131_SYNTHETIC_STORE barcode TASK131_FAKE_001",
+      "id": "green-fixture-preserved",
+      "reason": "Synthetic TASK131 fixture labels should remain readable.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-29T02:45:12Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.task131-redaction",
+  "startedAt": "2026-05-29T02:45:12Z",
+  "status": "PASS",
+  "taskId": "TASK-131"
+}

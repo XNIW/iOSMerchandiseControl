@@ -1,0 +1,193 @@
+=== mc-agent physical hybrid-offline-reconnect-matrix --task TASK-131 --prefix TASK131_OFFLINE_ ===
+{"NEXT_ACTION": "Connect trusted physical iPhone and Android device, set any required device identifiers, then rerun with MC_ALLOW_LIVE=1 and scoped TASK131_* prefix.", "androidPhysicalDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical"}], "caseStatus": "NOT_RUN", "cleanupStatus": "NOT_RUN", "completedAt": "2026-05-28T16:34:32Z", "coveredPolicyGroupsPlanned": ["C126-10..13", "C126-27", "C126-39", "C126-55..57"], "deviceReadiness": {"androidPhysicalAvailable": true, "currentScope": "ANDROID_PHYSICAL_IOS_SIMULATOR_SCOPE", "iosPhysicalAvailable": true, "iosPhysicalCaseStatus": "BLOCKED_EXTERNAL_IOS_PHYSICAL_DEVICE_NOT_AVAILABLE", "iosPhysicalEnabledForTask131": false, "iosSimulatorAvailable": true}, "iosPhysicalDevices": [{"id": "<REDACTED>", "idHash": "25019b4fafaa", "name": "<REDACTED_DEVICE_NAME>", "platform": "", "state": null, "targetType": "physical"}, {"id": "<REDACTED>", "idHash": "7f099f9425ab", "name": "<REDACTED_DEVICE_NAME>", "platform": "", "state": null, "targetType": "physical"}], "iosSimulators": [{"id": "<REDACTED>", "idHash": "d679e1d927ee", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-4", "state": "Booted", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "320c3202d5dc", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2", "state": "Shutdown", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "c1e1bf33cb91", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5", "state": "Shutdown", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "936e040d3cab", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-1", "state": "Shutdown", "targetType": "simulator"}], "matrix": "hybrid-offline-reconnect-matrix", "prefix": "TASK131_OFFLINE_", "residueStatus": "NOT_RUN", "resultRule": "NOT_RUN mandatory physical cases are blocking and are not PASS.", "schemaVersion": "1.1", "screenshots": [], "source": "physical.hybrid-offline-reconnect-matrix", "taskId": "TASK-131", "videos": []}
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103AuthPreflightTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103AuthPreflightTest:
+INSTRUMENTATION_STATUS: test=authSessionOwnerHashWhenEnabled
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103AuthPreflightTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=authSessionOwnerHashWhenEnabled
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 0,016
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-auth-preflight-20260528T163432Z-DerivedData/Build/Products/task114-ios-auth-preflight.xctestrun -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5" -resultBundlePath /tmp/mc-agent-ios-auth-preflight-20260528T163432Z.xcresult "-only-testing:iOSMerchandiseControlTests/SupabaseConfigSecurityTests/testTask103IOSAuthPreflightWhenEnabled"
+
+2026-05-28 12:35:13.490 xcodebuild[76698:8875471] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-auth-preflight-20260528T163432Z.xcresult
+
+2026-05-28 12:35:13.495 xcodebuild[76698:8875471] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-28 12:35:13.691 xcodebuild[76698:8875471] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-28 12:35:14.275 xcodebuild[76698:8875471] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-05-28 12:35:14.473 xcodebuild[76698:8875471] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-05-28 12:35:23.927.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-28 12:35:23.927.
+Test Suite 'SupabaseConfigSecurityTests' started at 2026-05-28 12:35:23.927.
+Test Case '-[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled]' started.
+objc[76889]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x108250310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x107b00398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+<HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/SupabaseConfigSecurityTests.swift:29: error: -[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled] : failed - TASK-103 iOS auth preflight requires an existing non-expired device session.
+Test Case '-[iOSMerchandiseControlTests.SupabaseConfigSecurityTests testTask103IOSAuthPreflightWhenEnabled]' failed (2.479 seconds).
+Test Suite 'SupabaseConfigSecurityTests' failed at 2026-05-28 12:35:26.407.
+	 Executed 1 test, with 1 failure (0 unexpected) in 2.479 (2.480) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' failed at 2026-05-28 12:35:26.407.
+	 Executed 1 test, with 1 failure (0 unexpected) in 2.479 (2.480) seconds
+Test Suite 'Selected tests' failed at 2026-05-28 12:35:26.407.
+	 Executed 1 test, with 1 failure (0 unexpected) in 2.479 (2.481) seconds
+2026-05-28 12:35:39.908 xcodebuild[76698:8875471] [MT] IDETestOperationsObserverDebug: 26.215 elapsed -- Testing started completed.
+2026-05-28 12:35:39.908 xcodebuild[76698:8875471] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-28 12:35:39.908 xcodebuild[76698:8875471] [MT] IDETestOperationsObserverDebug: 26.215 sec, +26.215 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-auth-preflight-20260528T163432Z.xcresult
+
+Failing tests:
+	SupabaseConfigSecurityTests.testTask103IOSAuthPreflightWhenEnabled()
+
+** TEST EXECUTE FAILED **
+
+Testing started
+{"NEXT_ACTION": "Connect trusted physical iPhone and Android device, set any required device identifiers, then rerun with MC_ALLOW_LIVE=1 and scoped TASK131_* prefix.", "androidPhysicalDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical"}], "caseStatus": "NOT_RUN", "cleanupStatus": "NOT_RUN", "completedAt": "2026-05-28T16:35:46Z", "coveredPolicyGroupsPlanned": ["C126-10..13", "C126-27", "C126-39", "C126-55..57"], "deviceReadiness": {"androidPhysicalAvailable": true, "currentScope": "ANDROID_PHYSICAL_IOS_SIMULATOR_SCOPE", "iosPhysicalAvailable": true, "iosPhysicalCaseStatus": "BLOCKED_EXTERNAL_IOS_PHYSICAL_DEVICE_NOT_AVAILABLE", "iosPhysicalEnabledForTask131": false, "iosSimulatorAvailable": true}, "iosPhysicalDevices": [{"id": "<REDACTED>", "idHash": "25019b4fafaa", "name": "<REDACTED_DEVICE_NAME>", "platform": "", "state": null, "targetType": "physical"}, {"id": "<REDACTED>", "idHash": "7f099f9425ab", "name": "<REDACTED_DEVICE_NAME>", "platform": "", "state": null, "targetType": "physical"}], "iosSimulators": [{"id": "<REDACTED>", "idHash": "d679e1d927ee", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-4", "state": "Booted", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "320c3202d5dc", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2", "state": "Shutdown", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "c1e1bf33cb91", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5", "state": "Shutdown", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "936e040d3cab", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-1", "state": "Shutdown", "targetType": "simulator"}], "matrix": "hybrid-offline-reconnect-matrix", "prefix": "TASK131_OFFLINE_", "residueStatus": "NOT_RUN", "resultRule": "NOT_RUN mandatory physical cases are blocking and are not PASS.", "schemaVersion": "1.1", "screenshots": [], "source": "physical.hybrid-offline-reconnect-matrix", "taskId": "TASK-131", "videos": []}
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:generateDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :app:packageDebug UP-TO-DATE
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :app:processDebugAndroidTestManifest UP-TO-DATE
+> Task :app:generateDebugAndroidTestBuildConfig UP-TO-DATE
+> Task :app:generateDebugAndroidTestResources UP-TO-DATE
+> Task :app:packageDebugAndroidTestResources UP-TO-DATE
+> Task :app:processDebugAndroidTestNavigationResources UP-TO-DATE
+> Task :app:parseDebugAndroidTestLocalResources UP-TO-DATE
+> Task :app:generateDebugAndroidTestRFile UP-TO-DATE
+> Task :app:kspDebugAndroidTestKotlin UP-TO-DATE
+> Task :app:compileDebugAndroidTestKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebugAndroidTest UP-TO-DATE
+> Task :app:compileDebugAndroidTestJavaWithJavac UP-TO-DATE
+> Task :app:generateDebugAndroidTestAssets UP-TO-DATE
+> Task :app:mergeDebugAndroidTestAssets UP-TO-DATE
+> Task :app:compressDebugAndroidTestAssets UP-TO-DATE
+> Task :app:generateDebugAndroidTestGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugAndroidTestJavaRes UP-TO-DATE
+> Task :app:mergeDebugAndroidTestJavaResource UP-TO-DATE
+> Task :app:checkDebugAndroidTestDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugAndroidTestFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebugAndroidTest UP-TO-DATE
+> Task :app:mergeLibDexDebugAndroidTest UP-TO-DATE
+> Task :app:checkDebugAndroidTestAarMetadata UP-TO-DATE
+> Task :app:mapDebugAndroidTestSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugAndroidTestNavigationResources UP-TO-DATE
+> Task :app:mergeDebugAndroidTestResources UP-TO-DATE
+> Task :app:processDebugAndroidTestResources UP-TO-DATE
+> Task :app:dexBuilderDebugAndroidTest UP-TO-DATE
+> Task :app:mergeProjectDexDebugAndroidTest UP-TO-DATE
+> Task :app:mergeDebugAndroidTestJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugAndroidTestNativeLibs NO-SOURCE
+> Task :app:stripDebugAndroidTestDebugSymbols NO-SOURCE
+> Task :app:validateSigningDebugAndroidTest UP-TO-DATE
+> Task :app:writeDebugAndroidTestSigningConfigVersions UP-TO-DATE
+> Task :app:packageDebugAndroidTest UP-TO-DATE
+> Task :app:createDebugAndroidTestApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebugAndroidTest UP-TO-DATE
+
+BUILD SUCCESSFUL in 621ms
+72 actionable tasks: 72 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.1/userguide/configuration_cache_enabling.html

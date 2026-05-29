@@ -1,0 +1,124 @@
+=== mc-agent scan task131-final-gates --task TASK-131 --strict ===
+{
+  "NEXT_ACTION": "Complete missing hybrid reports/state before moving TASK-131 to REVIEW.",
+  "checks": [
+    {
+      "evidence": [],
+      "id": "hybrid-command-discovery",
+      "reason": "TASK-131 hybrid commands must be discoverable in help-json/list commands-json.",
+      "status": "PASS"
+    },
+    {
+      "evidence": null,
+      "id": "task-state-hybrid-execution-or-fix",
+      "reason": "Task doc must reflect approved hybrid Execution/Fix scope.",
+      "status": "PASS"
+    },
+    {
+      "evidence": null,
+      "id": "master-plan-state-hybrid-execution-or-fix",
+      "reason": "Master Plan must reflect current TASK-131 hybrid Execution/Fix scope.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "docs/TASKS/EVIDENCE/TASK-131/README.md",
+      "id": "evidence-readme-present",
+      "reason": "Evidence README must exist.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T164855Z-scan-task131-redaction-task-TASK-131-strict-p19664.json"
+      ],
+      "id": "redaction-scan-pass",
+      "reason": "task131-redaction must have a PASS report.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T161619Z-scan-task131-matrix-completeness-task-TASK-131-strict-p44802.json"
+      ],
+      "id": "matrix-completeness-pass",
+      "reason": "task131-matrix-completeness must have a PASS report.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T162939Z-ios-simulator-sync-policy-ui-task-TASK-131-prefix-TASK131_IOS_SIM_-p67594.json"
+      ],
+      "id": "ios-simulator-sync-policy-ui-pass",
+      "reason": "ios-simulator-sync-policy-ui-pass requires a latest accepted TASK-131 report.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T163130Z-android-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_ANDROID_PHYS_-p70194.json"
+      ],
+      "id": "android-physical-sync-policy-ui-pass",
+      "reason": "android-physical-sync-policy-ui-pass requires a latest accepted TASK-131 report.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "hybrid-sync-policy-matrix-pass",
+      "reason": "hybrid-sync-policy-matrix-pass requires a latest accepted TASK-131 report.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [],
+      "id": "hybrid-conflict-review-matrix-pass",
+      "reason": "hybrid-conflict-review-matrix-pass requires a latest accepted TASK-131 report.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [],
+      "id": "hybrid-offline-reconnect-matrix-pass",
+      "reason": "hybrid-offline-reconnect-matrix-pass requires a latest accepted TASK-131 report.",
+      "status": "FAIL"
+    },
+    {
+      "evidence": [
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T164323Z-supabase-cleanup-task-TASK-131-prefix-TASK131_-execute-cleanup-plan-id-cleanup-TASK-131-20260528T164252Z-TASK131_-p88471.json"
+      ],
+      "id": "cleanup-execute-pass",
+      "reason": "cleanup-execute-pass requires a latest accepted TASK-131 report.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [
+        "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260528T164330Z-supabase-residue-check-task-TASK-131-prefix-TASK131_-profile-linked-p88460.json"
+      ],
+      "id": "residue-check-pass",
+      "reason": "residue-check-pass requires a latest accepted TASK-131 report.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "ios-physical-blocked-not-passed",
+      "reason": "iPhone physical must remain blocked, not passed, in this scope.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-28T16:54:30Z",
+  "details": {
+    "requiredCommands": [
+      "physical devices list --task TASK-131",
+      "ios simulator sync-policy-ui --task TASK-131 --prefix TASK131_IOS_SIM_",
+      "android physical sync-policy-ui --task TASK-131 --prefix TASK131_ANDROID_PHYS_",
+      "physical hybrid-sync-policy-matrix --task TASK-131 --prefix TASK131_HYBRID_",
+      "physical hybrid-conflict-review-matrix --task TASK-131 --prefix TASK131_CONFLICT_",
+      "physical hybrid-offline-reconnect-matrix --task TASK-131 --prefix TASK131_OFFLINE_",
+      "physical hybrid-accessibility-smoke --task TASK-131",
+      "scan task131-matrix-completeness --task TASK-131 --strict",
+      "scan task131-redaction --task TASK-131 --strict",
+      "scan task131-final-gates --task TASK-131 --strict"
+    ]
+  },
+  "redactionApplied": true,
+  "result": "FAIL",
+  "schemaVersion": "1.1",
+  "source": "scan.task131-final-gates",
+  "startedAt": "2026-05-28T16:54:30Z",
+  "status": "FAIL",
+  "taskId": "TASK-131"
+}

@@ -1,0 +1,43 @@
+=== mc-agent supabase contract price-schema --task TASK-131 --read-only ===
+{
+  "NEXT_ACTION": "Use this read-only schema contract in TASK-130 evidence.",
+  "checks": [
+    {
+      "file": "supabase/migrations/*.sql",
+      "id": "TASK130-SB-READONLY-MIGRATIONS-FOUND",
+      "reason": "Local Supabase migrations were read without applying SQL.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "missing": []
+      },
+      "file": "supabase/migrations/*.sql",
+      "id": "TASK130-SB-INVENTORY-PRODUCTS-CURRENT",
+      "reason": "inventory_products contains required TASK-130 price contract columns.",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "missing": []
+      },
+      "file": "supabase/migrations/*.sql",
+      "id": "TASK130-SB-INVENTORY-PRODUCT-PRICES-HISTORY",
+      "reason": "inventory_product_prices contains required TASK-130 price contract columns.",
+      "status": "PASS"
+    }
+  ],
+  "completed_at": "2026-05-28T22:35:24+00:00",
+  "requires_live": false,
+  "result_status": "PASS",
+  "safety_level": "read_only_static_scan",
+  "scan": "supabase-price-schema",
+  "schemaVersion": "1.1",
+  "schema_version": "1.1",
+  "source": "supabase.contract.price-schema",
+  "started_at": "2026-05-28T22:35:24+00:00",
+  "status": "PASS",
+  "summary": "supabase price-schema: PASS (3 checks)",
+  "taskId": "TASK-131",
+  "task_id": "TASK-131"
+}

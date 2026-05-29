@@ -1,0 +1,369 @@
+{
+  "NEXT_ACTION": "Provide MC_TASK131_CONFLICT_REVIEW_CHECKLIST_JSON with redacted physical tap evidence, or implement physical UI automation, then rerun.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T012851Z-physical-conflict-review-matrix-task-TASK-131-prefix-TASK131_CONFLICT_FIX5_-p37258.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T012851Z-physical-conflict-review-matrix-task-TASK-131-prefix-TASK131_CONFLICT_FIX5_-p37258.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T012851Z-physical-conflict-review-matrix-task-TASK-131-prefix-TASK131_CONFLICT_FIX5_-p37258.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-test-conflict-review-ui-20260529T012851Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "AC-126-05",
+    "AC-126-06",
+    "AC-126-24",
+    "AC-126-52"
+  ],
+  "cleanup_plan_id": null,
+  "command": "physical conflict-review-matrix --task TASK-131 --prefix TASK131_CONFLICT_FIX5_",
+  "command_slug": "physical-conflict-review-matrix-task-TASK-131-prefix-TASK131_CONFLICT_FIX5_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "physical",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 20965,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-131",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK131_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-131"
+  },
+  "exit_code": 2,
+  "git_sha": "4c08ff8",
+  "next_action_recommended": "Provide MC_TASK131_CONFLICT_REVIEW_CHECKLIST_JSON with redacted physical tap evidence, or implement physical UI automation, then rerun.",
+  "platform": "android",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "allowedExternalBlockers": [],
+    "blocked": [
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "adbState": "device",
+          "appInstalled": true,
+          "availableAdbDevices": [
+            {
+              "device": "<REDACTED_DEVICE_MODEL>",
+              "model": "<REDACTED_DEVICE_MODEL>",
+              "serial": "<REDACTED>",
+              "serialHash": "583da02ea2da",
+              "status": "device",
+              "targetType": "physical",
+              "transport": "5"
+            },
+            {
+              "device": "emu64a",
+              "model": "sdk_gphone64_arm64",
+              "serial": "<REDACTED>",
+              "serialHash": "04ab3fc382bf",
+              "status": "device",
+              "targetType": "emulator",
+              "transport": "2"
+            }
+          ],
+          "bootCompleted": "1",
+          "foregroundAppMatches": false,
+          "foregroundPackage": null,
+          "lockState": {
+            "locked": false,
+            "screenOn": true,
+            "unlocked": true
+          },
+          "schemaVersion": "1.1",
+          "selectedSerial": "<REDACTED>",
+          "selectedTargetType": "physical",
+          "source": "android.live-preflight"
+        },
+        "exitCode": 2,
+        "name": "physicalOperatorConflictReviewChecklist",
+        "prefix": null,
+        "source": "android.live-preflight",
+        "status": "BLOCKED_EXTERNAL",
+        "warnings": null
+      }
+    ],
+    "cleanupRequired": true,
+    "completedAt": "2026-05-29T01:29:12Z",
+    "failures": [],
+    "matrix": "conflict-review-matrix",
+    "prefix": "TASK131_CONFLICT_FIX5_",
+    "redactionApplied": true,
+    "schemaVersion": "1.1",
+    "source": "task131.physical.conflict-review-matrix",
+    "startedAt": "2026-05-29T01:28:53Z",
+    "status": "BLOCKED_EXTERNAL",
+    "steps": [
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "adbState": "device",
+          "appInstalled": true,
+          "availableAdbDevices": [
+            {
+              "device": "<REDACTED_DEVICE_MODEL>",
+              "model": "<REDACTED_DEVICE_MODEL>",
+              "serial": "<REDACTED>",
+              "serialHash": "583da02ea2da",
+              "status": "device",
+              "targetType": "physical",
+              "transport": "5"
+            },
+            {
+              "device": "emu64a",
+              "model": "sdk_gphone64_arm64",
+              "serial": "<REDACTED>",
+              "serialHash": "04ab3fc382bf",
+              "status": "device",
+              "targetType": "emulator",
+              "transport": "2"
+            }
+          ],
+          "bootCompleted": "1",
+          "foregroundAppMatches": false,
+          "foregroundPackage": null,
+          "lockState": {
+            "locked": false,
+            "screenOn": true,
+            "unlocked": true
+          },
+          "schemaVersion": "1.1",
+          "selectedSerial": "<REDACTED>",
+          "selectedTargetType": "physical",
+          "source": "android.live-preflight"
+        },
+        "exitCode": 0,
+        "name": "iosConflictReviewPolicyUnit",
+        "prefix": null,
+        "source": "android.live-preflight",
+        "status": "PASS",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "adbState": "device",
+          "appInstalled": true,
+          "availableAdbDevices": [
+            {
+              "device": "<REDACTED_DEVICE_MODEL>",
+              "model": "<REDACTED_DEVICE_MODEL>",
+              "serial": "<REDACTED>",
+              "serialHash": "583da02ea2da",
+              "status": "device",
+              "targetType": "physical",
+              "transport": "5"
+            },
+            {
+              "device": "emu64a",
+              "model": "sdk_gphone64_arm64",
+              "serial": "<REDACTED>",
+              "serialHash": "04ab3fc382bf",
+              "status": "device",
+              "targetType": "emulator",
+              "transport": "2"
+            }
+          ],
+          "bootCompleted": "1",
+          "foregroundAppMatches": false,
+          "foregroundPackage": null,
+          "lockState": {
+            "locked": false,
+            "screenOn": true,
+            "unlocked": true
+          },
+          "schemaVersion": "1.1",
+          "selectedSerial": "<REDACTED>",
+          "selectedTargetType": "physical",
+          "source": "android.live-preflight"
+        },
+        "exitCode": 0,
+        "name": "iosConflictReviewUiContract",
+        "prefix": null,
+        "source": "android.live-preflight",
+        "status": "PASS",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "adbState": "device",
+          "appInstalled": true,
+          "availableAdbDevices": [
+            {
+              "device": "<REDACTED_DEVICE_MODEL>",
+              "model": "<REDACTED_DEVICE_MODEL>",
+              "serial": "<REDACTED>",
+              "serialHash": "583da02ea2da",
+              "status": "device",
+              "targetType": "physical",
+              "transport": "5"
+            },
+            {
+              "device": "emu64a",
+              "model": "sdk_gphone64_arm64",
+              "serial": "<REDACTED>",
+              "serialHash": "04ab3fc382bf",
+              "status": "device",
+              "targetType": "emulator",
+              "transport": "2"
+            }
+          ],
+          "bootCompleted": "1",
+          "foregroundAppMatches": false,
+          "foregroundPackage": null,
+          "lockState": {
+            "locked": false,
+            "screenOn": true,
+            "unlocked": true
+          },
+          "schemaVersion": "1.1",
+          "selectedSerial": "<REDACTED>",
+          "selectedTargetType": "physical",
+          "source": "android.live-preflight"
+        },
+        "exitCode": 0,
+        "name": "androidConflictReviewPolicyUnit",
+        "prefix": null,
+        "source": "android.live-preflight",
+        "status": "PASS",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "adbState": "device",
+          "appInstalled": true,
+          "availableAdbDevices": [
+            {
+              "device": "<REDACTED_DEVICE_MODEL>",
+              "model": "<REDACTED_DEVICE_MODEL>",
+              "serial": "<REDACTED>",
+              "serialHash": "583da02ea2da",
+              "status": "device",
+              "targetType": "physical",
+              "transport": "5"
+            },
+            {
+              "device": "emu64a",
+              "model": "sdk_gphone64_arm64",
+              "serial": "<REDACTED>",
+              "serialHash": "04ab3fc382bf",
+              "status": "device",
+              "targetType": "emulator",
+              "transport": "2"
+            }
+          ],
+          "bootCompleted": "1",
+          "foregroundAppMatches": false,
+          "foregroundPackage": null,
+          "lockState": {
+            "locked": false,
+            "screenOn": true,
+            "unlocked": true
+          },
+          "schemaVersion": "1.1",
+          "selectedSerial": "<REDACTED>",
+          "selectedTargetType": "physical",
+          "source": "android.live-preflight"
+        },
+        "exitCode": 0,
+        "name": "androidConflictReviewUiContract",
+        "prefix": null,
+        "source": "android.live-preflight",
+        "status": "PASS",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "adbState": "device",
+          "appInstalled": true,
+          "availableAdbDevices": [
+            {
+              "device": "<REDACTED_DEVICE_MODEL>",
+              "model": "<REDACTED_DEVICE_MODEL>",
+              "serial": "<REDACTED>",
+              "serialHash": "583da02ea2da",
+              "status": "device",
+              "targetType": "physical",
+              "transport": "5"
+            },
+            {
+              "device": "emu64a",
+              "model": "sdk_gphone64_arm64",
+              "serial": "<REDACTED>",
+              "serialHash": "04ab3fc382bf",
+              "status": "device",
+              "targetType": "emulator",
+              "transport": "2"
+            }
+          ],
+          "bootCompleted": "1",
+          "foregroundAppMatches": false,
+          "foregroundPackage": null,
+          "lockState": {
+            "locked": false,
+            "screenOn": true,
+            "unlocked": true
+          },
+          "schemaVersion": "1.1",
+          "selectedSerial": "<REDACTED>",
+          "selectedTargetType": "physical",
+          "source": "android.live-preflight"
+        },
+        "exitCode": 2,
+        "name": "physicalOperatorConflictReviewChecklist",
+        "prefix": null,
+        "source": "android.live-preflight",
+        "status": "BLOCKED_EXTERNAL",
+        "warnings": null
+      }
+    ],
+    "taskId": "TASK-131"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "BLOCKED_EXTERNAL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260529T012851Z-physical-conflict-review-matrix-task-TASK-131-prefix-TASK131_CONFLICT_FIX5_-p37258",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "BLOCKED_EXTERNAL",
+  "task_id": "TASK-131",
+  "test_prefix": "TASK131_CONFLICT_FIX5_",
+  "timestamp_end": "2026-05-29T01:29:12Z",
+  "timestamp_start": "2026-05-29T01:28:51Z",
+  "warnings": []
+}

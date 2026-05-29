@@ -59,6 +59,47 @@ extension SyncEventOutboxProducerOutcome {
             )
         )
     }
+
+    static func catalogGeneratedProductPrices(
+        priceIDs: [UUID],
+        productIDs: [UUID],
+        ownerUserID: UUID?,
+        currentOwnerUserID: UUID?,
+        planFingerprint: String?,
+        sourceDeviceID: String? = nil
+    ) -> SyncEventOutboxProducerOutcome {
+        let sortedPriceIDs = priceIDs
+            .sorted { $0.uuidString < $1.uuidString }
+        let sortedProductIDs = productIDs
+            .sorted { $0.uuidString < $1.uuidString }
+        let fingerprint = [
+            planFingerprint ?? "",
+            sortedPriceIDs.map { $0.uuidString.lowercased() }.joined(separator: ",")
+        ].joined(separator: "|")
+
+        return .catalogGeneratedProductPrices(
+            CatalogGeneratedProductPrices(
+                ownerUserID: ownerUserID?.uuidString.lowercased(),
+                currentOwnerUserID: currentOwnerUserID?.uuidString.lowercased(),
+                terminalStatus: .completed,
+                confirmedPriceRows: sortedPriceIDs.count,
+                productCount: sortedProductIDs.count,
+                clientEventID: Self.clientEventID(prefix: "catalog-generated-prices", fingerprint: fingerprint),
+                sourceDeviceID: sourceDeviceID,
+                validationEntityIDs: .object([
+                    "price_ids": .array(
+                        sortedPriceIDs.map { .string($0.uuidString.lowercased()) }
+                    )
+                ]),
+                validationMetadata: .object([
+                    "source": .string("ios_catalog_generated_prices"),
+                    "product_ids": .array(
+                        sortedProductIDs.map { .string($0.uuidString.lowercased()) }
+                    )
+                ])
+            )
+        )
+    }
 }
 
 private extension SyncEventOutboxProducerTerminalStatus {

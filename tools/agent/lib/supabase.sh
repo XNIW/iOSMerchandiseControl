@@ -14,6 +14,39 @@ mc_supabase_run() {
   )
 }
 
+mc_supabase_run_with_timeout() {
+  local timeout_seconds="$1"
+  shift
+  SUPABASE_REPO="$MC_SUPABASE_REPO" SUPABASE_TIMEOUT="$timeout_seconds" python3 - "$@" <<'PY'
+import os
+import subprocess
+import sys
+
+repo = os.environ["SUPABASE_REPO"]
+timeout = float(os.environ.get("SUPABASE_TIMEOUT") or 90)
+cmd = ["supabase", *sys.argv[1:]]
+
+try:
+    proc = subprocess.run(
+        cmd,
+        cwd=repo,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=timeout,
+    )
+except subprocess.TimeoutExpired:
+    print(f"Supabase CLI command timed out after {timeout:.0f}s.", file=sys.stderr)
+    sys.exit(124)
+
+if proc.stdout:
+    print(proc.stdout, end="")
+if proc.stderr:
+    print(proc.stderr, end="", file=sys.stderr)
+sys.exit(proc.returncode)
+PY
+}
+
 mc_supabase_db_query_with_timeout() {
   local profile="$1"
   local sql="$2"
@@ -106,6 +139,71 @@ mc_supabase_residue_count() {
   total="$(printf '%s' "$out" | awk '/[0-9]+/ {sum+=$NF} END {print sum+0}')"
   MC_RESIDUE_COUNT="$total"
   printf '%s' "$out"
+}
+
+mc_live_scoped_supabase_counts_json() {
+  local profile="$1"
+  local prefix="$2"
+  local like_prefix raw code
+  like_prefix="$(mc_prefix_like "$prefix")"
+  raw="$(mc_supabase_query_profile "$profile" "
+WITH scoped_products AS (
+  SELECT id
+  FROM inventory_products
+  WHERE deleted_at IS NULL
+    AND (barcode LIKE '${like_prefix}' OR product_name LIKE '${like_prefix}')
+),
+price_keys AS (
+  SELECT ipp.product_id, ipp.type, ipp.effective_at, ipp.price, count(*) AS n
+  FROM inventory_product_prices ipp
+  JOIN scoped_products sp ON sp.id = ipp.product_id
+  GROUP BY ipp.product_id, ipp.type, ipp.effective_at, ipp.price
+),
+stale_price_keys AS (
+  SELECT ipp.product_id, ipp.type, ipp.effective_at, count(DISTINCT ipp.price) AS price_versions
+  FROM inventory_product_prices ipp
+  JOIN scoped_products sp ON sp.id = ipp.product_id
+  GROUP BY ipp.product_id, ipp.type, ipp.effective_at
+  HAVING count(DISTINCT ipp.price) > 1
+)
+SELECT json_build_object(
+  'schemaVersion', '1.1',
+  'source', 'supabase.scoped-counts',
+  'prefix', '${prefix}',
+  'counts', json_build_object(
+    'products', json_build_object('active', (SELECT count(*) FROM inventory_products WHERE deleted_at IS NULL AND (barcode LIKE '${like_prefix}' OR product_name LIKE '${like_prefix}')), 'pending', 0, 'localOnly', 0),
+    'suppliers', json_build_object('active', (SELECT count(*) FROM inventory_suppliers WHERE deleted_at IS NULL AND name LIKE '${like_prefix}'), 'pending', 0, 'localOnly', 0),
+    'categories', json_build_object('active', (SELECT count(*) FROM inventory_categories WHERE deleted_at IS NULL AND name LIKE '${like_prefix}'), 'pending', 0, 'localOnly', 0),
+    'product_prices', json_build_object('active', (SELECT count(*) FROM inventory_product_prices ipp JOIN scoped_products sp ON sp.id = ipp.product_id), 'pending', 0, 'localOnly', 0),
+    'history_entries', json_build_object('active', (SELECT count(*) FROM shared_sheet_sessions WHERE deleted_at IS NULL AND (remote_id LIKE '${like_prefix}' OR display_name LIKE '${like_prefix}' OR supplier LIKE '${like_prefix}' OR category LIKE '${like_prefix}' OR data::text LIKE '${like_prefix}')), 'userVisible', (SELECT count(*) FROM shared_sheet_sessions WHERE deleted_at IS NULL AND (remote_id LIKE '${like_prefix}' OR display_name LIKE '${like_prefix}' OR supplier LIKE '${like_prefix}' OR category LIKE '${like_prefix}' OR data::text LIKE '${like_prefix}')), 'pending', 0, 'localOnly', 0)
+  ),
+  'integrity', json_build_object(
+    'duplicateProductPriceKeys', (SELECT count(*) FROM price_keys WHERE n > 1),
+    'staleProductPriceKeys', (SELECT count(*) FROM stale_price_keys),
+    'syncEvents', (SELECT count(*) FROM sync_events WHERE client_event_id LIKE '${like_prefix}' OR source_device_id LIKE '${like_prefix}' OR entity_ids::text LIKE '${like_prefix}' OR metadata::text LIKE '${like_prefix}')
+  )
+)::text AS scoped_counts_json;
+")"
+  code=$?
+  if [[ "$code" -ne 0 ]]; then
+    mc_sync_make_blocked_json "$MC_TASK_ID" "supabase.scoped-counts" "Supabase scoped count query failed for ${prefix}."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  RAW_SUPABASE="$raw" python3 - <<'PY'
+import json, os, re, sys
+raw = os.environ.get("RAW_SUPABASE", "")
+match = re.search(r"\{.*\}", raw, re.S)
+if not match:
+    print(json.dumps({"schemaVersion":"1.1","source":"supabase.scoped-counts","status":"BLOCKED","blocker":"NO_JSON_IN_SUPABASE_OUTPUT"}, sort_keys=True))
+    sys.exit(2)
+outer = json.loads(match.group(0))
+if isinstance(outer, dict) and "rows" in outer:
+    payload = json.loads(outer["rows"][0]["scoped_counts_json"])
+else:
+    payload = outer
+payload["status"] = "PASS"
+print(json.dumps(payload, sort_keys=True))
+PY
 }
 
 mc_supabase_residue_total_from_output() {
@@ -249,18 +347,29 @@ mc_supabase_verify_schema() {
     MC_NEXT_ACTION="Use --profile local or --profile linked for live read-only verification."
     return "$MC_EXIT_PASS"
   fi
+  local timeout_seconds="${MC_SUPABASE_CLI_TIMEOUT_SECONDS:-90}"
   if [[ "$profile" == "linked" ]]; then
-    mc_supabase_run migration list --linked
+    mc_supabase_run_with_timeout "$timeout_seconds" migration list --linked
   else
-    mc_supabase_run migration list
+    mc_supabase_run_with_timeout "$timeout_seconds" migration list
   fi
   local code1=$?
+  if [[ "$code1" -eq 124 ]]; then
+    MC_SUMMARY="Supabase verify-schema BLOCKED_EXTERNAL: migration list timed out after ${timeout_seconds}s for profile ${profile}."
+    MC_NEXT_ACTION="Retry when Supabase linked/local CLI access is responsive."
+    return "$MC_EXIT_BLOCKED"
+  fi
   if [[ "$profile" == "linked" ]]; then
-    mc_supabase_run db lint --linked
+    mc_supabase_run_with_timeout "$timeout_seconds" db lint --linked
   else
-    mc_supabase_run db lint
+    mc_supabase_run_with_timeout "$timeout_seconds" db lint
   fi
   local code2=$?
+  if [[ "$code2" -eq 124 ]]; then
+    MC_SUMMARY="Supabase verify-schema BLOCKED_EXTERNAL: db lint timed out after ${timeout_seconds}s for profile ${profile}."
+    MC_NEXT_ACTION="Retry when Supabase linked/local CLI access is responsive."
+    return "$MC_EXIT_BLOCKED"
+  fi
   if [[ "$code1" -eq 0 && "$code2" -eq 0 ]]; then
     MC_SUMMARY="Supabase verify-schema PASS for profile ${profile}."
     MC_NEXT_ACTION="Run verify-rls and verify-grants."
@@ -1656,6 +1765,7 @@ mc_live_task123_noop_matrix() {
   local prefix="$2"
   local iterations="${MC_TASK123_NOOP_ITERATIONS:-3}"
   local settle_seconds="${MC_TASK123_NOOP_SETTLE_SECONDS:-0.25}"
+  local max_ms="${MC_TASK123_NOOP_MAX_MS:-2000}"
   local started run_prefix iter_file tmp_json status
   MC_PLATFORM="live"
   MC_SAFETY_LEVEL="live-write"
@@ -1688,7 +1798,7 @@ mc_live_task123_noop_matrix() {
     after="$MC_SYNC_JSON_RESULT"
     elapsed=$(( $(mc_now_ms) - started_ms ))
     events_json="$(mc_live_sync_events_for_prefix_json "$run_prefix")"
-    ITER="$i" DIRECTION="androidNoop" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" EVENTS_JSON="$events_json" SETTLE_SECONDS="$settle_seconds" python3 - >>"$iter_file" <<'PY'
+    ITER="$i" DIRECTION="androidNoop" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" EVENTS_JSON="$events_json" SETTLE_SECONDS="$settle_seconds" MAX_MS="$max_ms" python3 - >>"$iter_file" <<'PY'
 import json, os
 before=json.loads(os.environ["BEFORE"])
 after=json.loads(os.environ["AFTER"])
@@ -1697,7 +1807,8 @@ keys=("products","product_prices","history_entries")
 same=all(before.get("counts",{}).get(k)==after.get("counts",{}).get(k) for k in keys)
 event_count=len(events.get("rows",[]))
 elapsed=int(os.environ["ELAPSED"])
-print(json.dumps({"iteration":int(os.environ["ITER"]),"direction":os.environ["DIRECTION"],"status":"PASS" if same and event_count==0 and elapsed<=2000 else "FAIL","elapsedMs":elapsed,"syncEventsCreated":event_count,"countsUnchanged":same,"settleSeconds":float(os.environ["SETTLE_SECONDS"])}, sort_keys=True))
+max_ms=int(os.environ["MAX_MS"])
+print(json.dumps({"iteration":int(os.environ["ITER"]),"direction":os.environ["DIRECTION"],"status":"PASS" if same and event_count==0 and elapsed<=max_ms else "FAIL","elapsedMs":elapsed,"syncEventsCreated":event_count,"countsUnchanged":same,"settleSeconds":float(os.environ["SETTLE_SECONDS"]),"maxMs":max_ms}, sort_keys=True))
 PY
 
     MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
@@ -1708,7 +1819,7 @@ PY
     after="$MC_SYNC_JSON_RESULT"
     elapsed=$(( $(mc_now_ms) - started_ms ))
     events_json="$(mc_live_sync_events_for_prefix_json "$run_prefix")"
-    ITER="$i" DIRECTION="iosNoop" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" EVENTS_JSON="$events_json" SETTLE_SECONDS="$settle_seconds" python3 - >>"$iter_file" <<'PY'
+    ITER="$i" DIRECTION="iosNoop" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" EVENTS_JSON="$events_json" SETTLE_SECONDS="$settle_seconds" MAX_MS="$max_ms" python3 - >>"$iter_file" <<'PY'
 import json, os
 before=json.loads(os.environ["BEFORE"])
 after=json.loads(os.environ["AFTER"])
@@ -1717,11 +1828,12 @@ keys=("products","product_prices","history_entries")
 same=all(before.get("counts",{}).get(k)==after.get("counts",{}).get(k) for k in keys)
 event_count=len(events.get("rows",[]))
 elapsed=int(os.environ["ELAPSED"])
-print(json.dumps({"iteration":int(os.environ["ITER"]),"direction":os.environ["DIRECTION"],"status":"PASS" if same and event_count==0 and elapsed<=2000 else "FAIL","elapsedMs":elapsed,"syncEventsCreated":event_count,"countsUnchanged":same,"settleSeconds":float(os.environ["SETTLE_SECONDS"])}, sort_keys=True))
+max_ms=int(os.environ["MAX_MS"])
+print(json.dumps({"iteration":int(os.environ["ITER"]),"direction":os.environ["DIRECTION"],"status":"PASS" if same and event_count==0 and elapsed<=max_ms else "FAIL","elapsedMs":elapsed,"syncEventsCreated":event_count,"countsUnchanged":same,"settleSeconds":float(os.environ["SETTLE_SECONDS"]),"maxMs":max_ms}, sort_keys=True))
 PY
   done
   tmp_json="$(mktemp -t mc-agent-task123-noop-summary)"
-  TASK_ID="$task_id" RUN_PREFIX="$run_prefix" STARTED="$started" ITER_FILE="$iter_file" ITERATIONS="$iterations" SETTLE_SECONDS="$settle_seconds" python3 - >"$tmp_json" <<'PY'
+  TASK_ID="$task_id" RUN_PREFIX="$run_prefix" STARTED="$started" ITER_FILE="$iter_file" ITERATIONS="$iterations" SETTLE_SECONDS="$settle_seconds" MAX_MS="$max_ms" python3 - >"$tmp_json" <<'PY'
 import json, os
 from datetime import datetime, timezone
 rows=[json.loads(line) for line in open(os.environ["ITER_FILE"]) if line.strip()]
@@ -1732,7 +1844,7 @@ ios=stats("iosNoop")
 android=stats("androidNoop")
 required=int(os.environ["ITERATIONS"])
 ok=all(r["status"]=="PASS" for r in rows) and ios["count"]==required and android["count"]==required
-print(json.dumps({"schemaVersion":"1.1","taskId":os.environ["TASK_ID"],"source":"live.task123-noop-matrix","prefix":os.environ["RUN_PREFIX"],"startedAt":os.environ["STARTED"],"completedAt":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),"status":"PASS" if ok else "FAIL","iterations":rows,"summary":{"iosNoop":ios,"androidNoop":android},"acceptance":{"maxMeasurableMs":2000,"settleSeconds":float(os.environ["SETTLE_SECONDS"]),"elapsedMsExcludesSettle":True}}, sort_keys=True))
+print(json.dumps({"schemaVersion":"1.1","taskId":os.environ["TASK_ID"],"source":"live.task123-noop-matrix","prefix":os.environ["RUN_PREFIX"],"startedAt":os.environ["STARTED"],"completedAt":datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),"status":"PASS" if ok else "FAIL","iterations":rows,"summary":{"iosNoop":ios,"androidNoop":android},"acceptance":{"maxMeasurableMs":int(os.environ["MAX_MS"]),"settleSeconds":float(os.environ["SETTLE_SECONDS"]),"elapsedMsExcludesSettle":True}}, sort_keys=True))
 PY
   rm -f "$iter_file"
   MC_SYNC_JSON_RESULT="$(cat "$tmp_json")"
@@ -1860,7 +1972,7 @@ PY
 mc_live_offline_reconnect_sync() {
   local task_id="$1"
   local prefix="$2"
-  local started status timeout_seconds run_prefix ios_prefix android_prefix
+  local started status timeout_seconds run_prefix ios_prefix android_prefix mode_suffix unique_suffix
   local android_before ios_before android_after_ios ios_after_android
   local ios_started ios_finished ios_code android_wait_code android_started android_finished android_code ios_wait_code
   local ios_to_android_ms android_to_ios_ms ios_to_android_polls android_to_ios_polls
@@ -1872,8 +1984,15 @@ mc_live_offline_reconnect_sync() {
   mc_validate_task_prefix "$prefix" || return $?
   mc_require_live || return $?
   timeout_seconds="${MC_OFFLINE_RECONNECT_TIMEOUT_SECONDS:-30}"
+  mode_suffix="OFF"
+  if [[ "${MC_TASK125_KILL_RESTART_MODE:-0}" == "1" ]]; then
+    mode_suffix="RESTART"
+  elif [[ "${MC_TASK125_NETWORK_FLAPPING_MODE:-0}" == "1" ]]; then
+    mode_suffix="FLAP"
+  fi
+  unique_suffix="$(mc_now_ms)"
   run_prefix="${prefix//\*/}"
-  run_prefix="${run_prefix%_}_OFF_${MC_TIMESTAMP}_"
+  run_prefix="${run_prefix%_}_${mode_suffix}_${MC_TIMESTAMP}_${unique_suffix}_"
   ios_prefix="${run_prefix}IOS_"
   android_prefix="${run_prefix}ANDROID_"
   mc_validate_task_prefix "$ios_prefix" || return $?
@@ -2304,13 +2423,15 @@ mc_live_physical_runtime_parity() {
   local task_id="$1"
   local prefix="$2"
   local profile="$3"
-  local started physical_json ios_json android_json supabase_json code_p code_i code_a code_s code_launch
+  local started physical_json ios_json android_json supabase_json supabase_scoped_json code_p code_i code_a code_s code_scoped code_launch previous_scoped_prefix
   MC_PLATFORM="live"
   MC_SAFETY_LEVEL="live-readonly"
   MC_REQUIRES_LIVE="true"
   MC_CA_REFS="CA-115-12,CA-115-13,CA-115-16"
   MC_TEST_PREFIX="$prefix"
   started="$(mc_now_iso)"
+  previous_scoped_prefix="${MC_SCOPED_COUNT_PREFIX:-}"
+  export MC_SCOPED_COUNT_PREFIX="$prefix"
 
   mc_ios_physical_runtime_counts_payload "live.physical-runtime-parity.iosPhysical" "${MC_IOS_PHYSICAL_PARITY_WAIT_SECONDS:-20}"
   code_p=$?
@@ -2331,8 +2452,18 @@ mc_live_physical_runtime_parity() {
   mc_sync_counts_supabase "$task_id" "$profile"
   code_s=$?
   supabase_json="$MC_SYNC_JSON_RESULT"
+  supabase_scoped_json="$(mc_live_scoped_supabase_counts_json "$profile" "$prefix" 2>/dev/null)"
+  code_scoped=$?
+  if [[ "$code_scoped" -ne 0 || -z "$supabase_scoped_json" ]]; then
+    supabase_scoped_json="$(mc_sync_make_blocked_json "$task_id" "supabase.scoped-counts" "Supabase scoped count query failed for ${prefix}.")"
+  fi
+  if [[ -n "$previous_scoped_prefix" ]]; then
+    export MC_SCOPED_COUNT_PREFIX="$previous_scoped_prefix"
+  else
+    unset MC_SCOPED_COUNT_PREFIX
+  fi
 
-  TASK_ID="$task_id" PREFIX="$prefix" STARTED="$started" PHYSICAL_JSON="$physical_json" IOS_JSON="$ios_json" ANDROID_JSON="$android_json" SUPABASE_JSON="$supabase_json" CODES="$code_p,$code_i,$code_a,$code_s" python3 - > /tmp/mc-agent-physical-runtime-parity.$$.json <<'PY'
+  TASK_ID="$task_id" PREFIX="$prefix" STARTED="$started" PHYSICAL_JSON="$physical_json" IOS_JSON="$ios_json" ANDROID_JSON="$android_json" SUPABASE_JSON="$supabase_json" SUPABASE_SCOPED_JSON="$supabase_scoped_json" CODES="$code_p,$code_i,$code_a,$code_s,$code_scoped" python3 - > /tmp/mc-agent-physical-runtime-parity.$$.json <<'PY'
 import json, os
 from datetime import datetime, timezone
 
@@ -2342,6 +2473,7 @@ sources = {
     "iosSimulator": json.loads(os.environ["IOS_JSON"]),
     "android": json.loads(os.environ["ANDROID_JSON"]),
 }
+supabase_scoped = json.loads(os.environ["SUPABASE_SCOPED_JSON"])
 fields = {
     "products": ["active", "pending", "localOnly"],
     "suppliers": ["active", "pending", "localOnly"],
@@ -2353,24 +2485,75 @@ blocked = {name: payload.get("blocker") for name, payload in sources.items() if 
 ios_physical_runtime = sources["iosPhysical"].get("runtime", {}).get("diagnostics", {}).get("runtime", {})
 if ios_physical_runtime.get("auth.isSignedIn") is not True or ios_physical_runtime.get("auth.userIDPresent") is not True:
     blocked["iosPhysical"] = "AUTH_SESSION_NOT_READY"
+
+task_id = os.environ["TASK_ID"]
+prefix = os.environ["PREFIX"]
+is_task131 = task_id == "TASK-131" or prefix.startswith("TASK131_")
 drift = {}
-for table, table_fields in fields.items():
-    for field in table_fields:
-        values = {name: payload.get("counts", {}).get(table, {}).get(field) for name, payload in sources.items()}
-        comparable = {name: value for name, value in values.items() if value is not None}
-        if len(set(comparable.values())) > 1:
-            drift.setdefault(table, {})[field] = values
+task131_scoped = None
+integrity = supabase_scoped.get("integrity", {})
+if is_task131:
+    scoped_sources = {
+        "supabase": supabase_scoped.get("counts"),
+        "iosPhysical": sources["iosPhysical"].get("scopedCounts"),
+        "android": sources["android"].get("scopedCounts"),
+    }
+    for name, counts in scoped_sources.items():
+        if not isinstance(counts, dict):
+            blocked[name] = "SCOPED_COUNTS_UNAVAILABLE"
+    scoped_fields = {
+        "products": ["active", "pending", "localOnly"],
+        "suppliers": ["active", "pending", "localOnly"],
+        "categories": ["active", "pending", "localOnly"],
+        "product_prices": ["active", "pending", "localOnly"],
+        "history_entries": ["userVisible", "pending", "localOnly"],
+    }
+    if not blocked:
+        for table, table_fields in scoped_fields.items():
+            for field in table_fields:
+                values = {name: (counts.get(table, {}) or {}).get(field) for name, counts in scoped_sources.items()}
+                comparable = {name: value for name, value in values.items() if value is not None}
+                if len(comparable) >= 2 and len(set(comparable.values())) > 1:
+                    drift.setdefault(table, {})[field] = values
+    pending_aggregate = {}
+    for name, payload in sources.items():
+        if name not in ("iosPhysical", "android"):
+            continue
+        checkpoint = payload.get("checkpoint") or {}
+        local = checkpoint.get("local") or {}
+        pending_aggregate[name] = local.get("pendingAggregate")
+    pending_nonzero = {name: value for name, value in pending_aggregate.items() if value not in (0, None)}
+    if pending_nonzero:
+        drift.setdefault("pendingAggregate", {})["local"] = pending_aggregate
+    if int(integrity.get("duplicateProductPriceKeys") or 0) != 0:
+        drift.setdefault("product_prices", {})["duplicateProductPriceKeys"] = integrity.get("duplicateProductPriceKeys")
+    if int(integrity.get("staleProductPriceKeys") or 0) != 0:
+        drift.setdefault("product_prices", {})["staleProductPriceKeys"] = integrity.get("staleProductPriceKeys")
+    task131_scoped = {
+        "definition": "TASK-131 physical parity compares only synthetic rows matching prefix across Supabase, iOS physical and Android physical; full-cache counts remain diagnostic because devices may hold legitimate historical cache.",
+        "fields": scoped_fields,
+        "counts": scoped_sources,
+        "pendingAggregate": pending_aggregate,
+        "integrity": integrity,
+    }
+else:
+    for table, table_fields in fields.items():
+        for field in table_fields:
+            values = {name: payload.get("counts", {}).get(table, {}).get(field) for name, payload in sources.items()}
+            comparable = {name: value for name, value in values.items() if value is not None}
+            if len(set(comparable.values())) > 1:
+                drift.setdefault(table, {})[field] = values
 status = "BLOCKED" if blocked else ("PASS" if not drift else "FAIL")
 print(json.dumps({
     "schemaVersion": "1.1",
-    "taskId": os.environ["TASK_ID"],
+    "taskId": task_id,
     "source": "live.physical-runtime-parity",
     "status": status,
-    "prefix": os.environ["PREFIX"],
+    "prefix": prefix,
     "startedAt": os.environ["STARTED"],
     "completedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "blockers": blocked,
-    "comparison": {"fields": fields},
+    "comparison": {"fields": fields, "task131Scoped": task131_scoped},
     "counts": {name: payload.get("counts", {}) for name, payload in sources.items()},
     "runtime": {
         "iosPhysical": sources["iosPhysical"].get("runtime", {}),
@@ -2566,7 +2749,7 @@ payload = {
     "redactionApplied": True,
     "prefix": os.environ["PREFIX"],
     "deviceGate": {"missing": os.environ.get("MISSING", "").split()},
-    "NEXT_ACTION": "Set MC_IOS_DEVICE_UDID for iPhone di Min and MC_ANDROID_DEVICE_SERIAL for OnePlus, unlock/trust both devices, then rerun this TASK-125 live command.",
+    "NEXT_ACTION": "Set MC_IOS_DEVICE_UDID and MC_ANDROID_DEVICE_SERIAL for trusted physical devices, unlock/trust both devices, then rerun this TASK-125 live command.",
 }
 print(json.dumps(payload, sort_keys=True))
 PY

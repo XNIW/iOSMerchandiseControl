@@ -27,7 +27,8 @@ enum SupabaseManualSyncReleaseFactory {
         let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = manualPushService.map {
             SyncCatalogPushAdapter(
                 context: context,
-                manualPushService: $0
+                manualPushService: $0,
+                generatedPriceRemote: productPriceRemote
             )
         }
         let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = productPriceRemote.map {
@@ -540,6 +541,7 @@ final class SyncProductPriceAdapter: SupabaseManualSyncProductPriceSyncProviding
 final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
     private let context: ModelContext
     private let manualPushService: SupabaseManualPushService
+    private let generatedPriceRemote: (any SupabaseProductPricePushDryRunRemoteFetching)?
     private let preflightService: SupabaseManualPushPreflightService
     private let baselineReader: SupabaseCatalogBaselineReader
     private var stagedPendingBatchesByFingerprint: [String: LocalPendingAggregatedCatalogBatch] = [:]
@@ -547,11 +549,13 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
     init(
         context: ModelContext,
         manualPushService: SupabaseManualPushService,
+        generatedPriceRemote: (any SupabaseProductPricePushDryRunRemoteFetching)? = nil,
         preflightService: SupabaseManualPushPreflightService = SupabaseManualPushPreflightService(),
         baselineReader: SupabaseCatalogBaselineReader = SupabaseCatalogBaselineReader()
     ) {
         self.context = context
         self.manualPushService = manualPushService
+        self.generatedPriceRemote = generatedPriceRemote
         self.preflightService = preflightService
         self.baselineReader = baselineReader
     }
@@ -622,6 +626,26 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
                 planFingerprint: plan.planFingerprint
             )
         )
+        let generatedPriceTelemetry: SyncEventOutboxProducerResult
+        if let generatedPriceRemote {
+            do {
+                generatedPriceTelemetry = try await CatalogGeneratedProductPriceSyncEventRecorder(
+                    context: context,
+                    remote: generatedPriceRemote
+                ).recordIfNeeded(
+                    catalogResult: result,
+                    ownerUserID: ownerUserID,
+                    planFingerprint: plan.planFingerprint
+                )
+            } catch {
+                generatedPriceTelemetry = SyncEventOutboxProducerResult(
+                    kind: .blockedContract,
+                    errorCode: "catalog_generated_price_event_failed"
+                )
+            }
+        } else {
+            generatedPriceTelemetry = SyncEventOutboxProducerResult(kind: .skippedNoOp)
+        }
         if result.status == .completed, !telemetry.isAggregatedPushSuccess {
             return SupabaseManualPushResult(
                 status: .completedBaselineRefreshFailed,
@@ -637,6 +661,23 @@ final class SyncCatalogPushAdapter: SupabaseManualSyncCatalogPushProviding {
                 touchedIDs: result.touchedIDs,
                 baselineRunID: result.baselineRunID,
                 message: "Technical follow-up required after verified push."
+            )
+        }
+        if result.status == .completed, !generatedPriceTelemetry.isAggregatedPushSuccess {
+            return SupabaseManualPushResult(
+                status: .completedBaselineRefreshFailed,
+                supplierCreates: result.supplierCreates,
+                supplierUpdates: result.supplierUpdates,
+                supplierLinks: result.supplierLinks,
+                categoryCreates: result.categoryCreates,
+                categoryUpdates: result.categoryUpdates,
+                categoryLinks: result.categoryLinks,
+                productCreates: result.productCreates,
+                productUpdates: result.productUpdates,
+                productLinks: result.productLinks,
+                touchedIDs: result.touchedIDs,
+                baselineRunID: result.baselineRunID,
+                message: "Technical follow-up required after generated ProductPrice event."
             )
         }
         return result

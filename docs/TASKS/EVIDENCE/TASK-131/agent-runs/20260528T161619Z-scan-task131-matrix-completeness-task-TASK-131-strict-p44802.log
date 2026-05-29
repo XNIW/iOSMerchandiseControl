@@ -1,0 +1,54 @@
+=== mc-agent scan task131-matrix-completeness --task TASK-131 --strict ===
+{
+  "NEXT_ACTION": "Use this TASK-131 scanner as evidence.",
+  "checks": [
+    {
+      "evidence": [
+        "caseId",
+        "scenario",
+        "requiredEvidenceTier",
+        "platforms",
+        "command",
+        "prefix",
+        "expectedUserUX",
+        "expectedDataInvariant",
+        "result",
+        "reportJson",
+        "reportMd",
+        "cleanupRequired",
+        "residueResult",
+        "notes"
+      ],
+      "id": "matrix-header-columns",
+      "reason": "C126 matrix must expose all TASK-131 tracking columns.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "c126-00-through-60-present",
+      "reason": "All C126-00..C126-60 rows must be present.",
+      "status": "PASS"
+    },
+    {
+      "evidence": [],
+      "id": "p0-subset-described",
+      "reason": "P0 physical-live mandatory subset must be described.",
+      "status": "PASS"
+    },
+    {
+      "evidence": "BLOCKED_EXTERNAL_IOS_PHYSICAL_DEVICE_NOT_AVAILABLE",
+      "id": "ios-physical-blocker-taxonomy",
+      "reason": "Hybrid Execution must explicitly classify missing iPhone physical cases.",
+      "status": "PASS"
+    }
+  ],
+  "completedAt": "2026-05-28T16:16:20Z",
+  "details": {},
+  "redactionApplied": true,
+  "result": "PASS",
+  "schemaVersion": "1.1",
+  "source": "scan.task131-matrix-completeness",
+  "startedAt": "2026-05-28T16:16:20Z",
+  "status": "PASS",
+  "taskId": "TASK-131"
+}

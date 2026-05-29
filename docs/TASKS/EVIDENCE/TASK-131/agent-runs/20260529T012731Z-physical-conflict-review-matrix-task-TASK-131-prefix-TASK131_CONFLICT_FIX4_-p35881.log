@@ -1,0 +1,589 @@
+=== mc-agent physical conflict-review-matrix --task TASK-131 --prefix TASK131_CONFLICT_FIX4_ ===
+{"NEXT_ACTION": "Connect trusted physical iPhone and Android device, set any required device identifiers, then rerun with MC_ALLOW_LIVE=1 and scoped TASK131_* prefix.", "androidPhysicalDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical"}], "caseStatus": "NOT_RUN", "cleanupStatus": "NOT_RUN", "completedAt": "2026-05-29T01:27:32Z", "coveredPolicyGroupsPlanned": ["C126-07..09", "C126-24..26", "C126-45"], "deviceReadiness": {"androidPhysicalAvailable": true, "currentScope": "FULL_PHYSICAL_IOS_ANDROID_SCOPE", "iosPhysicalAvailable": true, "iosPhysicalCaseStatus": "AVAILABLE_FOR_FULL_PHYSICAL_SCOPE", "iosPhysicalEnabledForTask131": true, "iosSimulatorAvailable": true}, "iosPhysicalDevices": [{"id": "<REDACTED>", "idHash": "7f099f9425ab", "name": "<REDACTED_DEVICE_NAME>", "platform": "iOS", "state": "connected", "targetType": "physical"}], "iosSimulators": [{"id": "<REDACTED>", "idHash": "d679e1d927ee", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-4", "state": "Booted", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "320c3202d5dc", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-2", "state": "Shutdown", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "c1e1bf33cb91", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5", "state": "Booted", "targetType": "simulator"}, {"id": "<REDACTED>", "idHash": "936e040d3cab", "isAvailable": true, "name": "iPhone 17 Pro", "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-1", "state": "Shutdown", "targetType": "simulator"}], "matrix": "conflict-review-matrix", "prefix": "TASK131_CONFLICT_FIX4_", "residueStatus": "NOT_RUN", "resultRule": "NOT_RUN mandatory physical cases are blocking and are not PASS.", "schemaVersion": "1.1", "screenshots": [], "source": "physical.conflict-review-matrix", "taskId": "TASK-131", "videos": []}
+{"allowedExternalBlockers": [], "blocked": [{"blocker": null, "cleanupRequired": null, "detail": {"adbState": "device", "appInstalled": true, "availableAdbDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical", "transport": "5"}, {"device": "emu64a", "model": "sdk_gphone64_arm64", "serial": "<REDACTED>", "serialHash": "04ab3fc382bf", "status": "device", "targetType": "emulator", "transport": "2"}], "bootCompleted": "1", "foregroundAppMatches": false, "foregroundPackage": null, "lockState": {"locked": false, "screenOn": true, "unlocked": true}, "schemaVersion": "1.1", "selectedSerial": "<REDACTED>", "selectedTargetType": "physical", "source": "android.live-preflight"}, "exitCode": 2, "name": "physicalOperatorConflictReviewChecklist", "prefix": null, "source": "android.live-preflight", "status": "BLOCKED_EXTERNAL", "warnings": null}], "cleanupRequired": true, "completedAt": "2026-05-29T01:27:50Z", "failures": [], "matrix": "conflict-review-matrix", "prefix": "TASK131_CONFLICT_FIX4_", "redactionApplied": true, "schemaVersion": "1.1", "source": "task131.physical.conflict-review-matrix", "startedAt": "2026-05-29T01:27:33Z", "status": "BLOCKED_EXTERNAL", "steps": [{"blocker": null, "cleanupRequired": null, "detail": {"adbState": "device", "appInstalled": true, "availableAdbDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical", "transport": "5"}, {"device": "emu64a", "model": "sdk_gphone64_arm64", "serial": "<REDACTED>", "serialHash": "04ab3fc382bf", "status": "device", "targetType": "emulator", "transport": "2"}], "bootCompleted": "1", "foregroundAppMatches": false, "foregroundPackage": null, "lockState": {"locked": false, "screenOn": true, "unlocked": true}, "schemaVersion": "1.1", "selectedSerial": "<REDACTED>", "selectedTargetType": "physical", "source": "android.live-preflight"}, "exitCode": 0, "name": "iosConflictReviewPolicyUnit", "prefix": null, "source": "android.live-preflight", "status": "PASS", "warnings": null}, {"blocker": null, "cleanupRequired": null, "detail": {"adbState": "device", "appInstalled": true, "availableAdbDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical", "transport": "5"}, {"device": "emu64a", "model": "sdk_gphone64_arm64", "serial": "<REDACTED>", "serialHash": "04ab3fc382bf", "status": "device", "targetType": "emulator", "transport": "2"}], "bootCompleted": "1", "foregroundAppMatches": false, "foregroundPackage": null, "lockState": {"locked": false, "screenOn": true, "unlocked": true}, "schemaVersion": "1.1", "selectedSerial": "<REDACTED>", "selectedTargetType": "physical", "source": "android.live-preflight"}, "exitCode": 0, "name": "iosConflictReviewUiContract", "prefix": null, "source": "android.live-preflight", "status": "PASS", "warnings": null}, {"blocker": null, "cleanupRequired": null, "detail": {"adbState": "device", "appInstalled": true, "availableAdbDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical", "transport": "5"}, {"device": "emu64a", "model": "sdk_gphone64_arm64", "serial": "<REDACTED>", "serialHash": "04ab3fc382bf", "status": "device", "targetType": "emulator", "transport": "2"}], "bootCompleted": "1", "foregroundAppMatches": false, "foregroundPackage": null, "lockState": {"locked": false, "screenOn": true, "unlocked": true}, "schemaVersion": "1.1", "selectedSerial": "<REDACTED>", "selectedTargetType": "physical", "source": "android.live-preflight"}, "exitCode": 0, "name": "androidConflictReviewPolicyUnit", "prefix": null, "source": "android.live-preflight", "status": "PASS", "warnings": null}, {"blocker": null, "cleanupRequired": null, "detail": {"adbState": "device", "appInstalled": true, "availableAdbDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical", "transport": "5"}, {"device": "emu64a", "model": "sdk_gphone64_arm64", "serial": "<REDACTED>", "serialHash": "04ab3fc382bf", "status": "device", "targetType": "emulator", "transport": "2"}], "bootCompleted": "1", "foregroundAppMatches": false, "foregroundPackage": null, "lockState": {"locked": false, "screenOn": true, "unlocked": true}, "schemaVersion": "1.1", "selectedSerial": "<REDACTED>", "selectedTargetType": "physical", "source": "android.live-preflight"}, "exitCode": 0, "name": "androidConflictReviewUiContract", "prefix": null, "source": "android.live-preflight", "status": "PASS", "warnings": null}, {"blocker": null, "cleanupRequired": null, "detail": {"adbState": "device", "appInstalled": true, "availableAdbDevices": [{"device": "<REDACTED_DEVICE_MODEL>", "model": "<REDACTED_DEVICE_MODEL>", "serial": "<REDACTED>", "serialHash": "583da02ea2da", "status": "device", "targetType": "physical", "transport": "5"}, {"device": "emu64a", "model": "sdk_gphone64_arm64", "serial": "<REDACTED>", "serialHash": "04ab3fc382bf", "status": "device", "targetType": "emulator", "transport": "2"}], "bootCompleted": "1", "foregroundAppMatches": false, "foregroundPackage": null, "lockState": {"locked": false, "screenOn": true, "unlocked": true}, "schemaVersion": "1.1", "selectedSerial": "<REDACTED>", "selectedTargetType": "physical", "source": "android.live-preflight"}, "exitCode": 2, "name": "physicalOperatorConflictReviewChecklist", "prefix": null, "source": "android.live-preflight", "status": "BLOCKED_EXTERNAL", "warnings": null}], "taskId": "TASK-131"}
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination platform=iOS,id=<REDACTED_DEVICE_ID> -resultBundlePath /tmp/mc-agent-ios-test-conflict-review-20260529T012731Z.xcresult -parallel-testing-enabled NO "-only-testing:iOSMerchandiseControlTests/Task126ConflictReviewTests"
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  libxlsxwriter: https://github.com/jmcnamara/libxlsxwriter @ main (f064715)
+  xlsxwriter.swift: https://github.com/damuellen/xlsxwriter.swift @ SPM (f4c0e10)
+  swift-http-types: https://github.com/apple/swift-http-types.git @ 1.5.1
+  swift-crypto: https://github.com/apple/swift-crypto.git @ 4.5.0
+  swift-atomics: https://github.com/apple/swift-atomics.git @ 1.3.0
+  swift-concurrency-extras: https://github.com/pointfreeco/swift-concurrency-extras @ 1.3.2
+  SwiftSoup: https://github.com/scinfu/SwiftSoup @ 2.11.2
+  swift-clocks: https://github.com/pointfreeco/swift-clocks @ 1.0.6
+  xctest-dynamic-overlay: https://github.com/pointfreeco/xctest-dynamic-overlay @ 1.9.0
+  Supabase: https://github.com/supabase/supabase-swift.git @ 2.46.0
+  swift-asn1: https://github.com/apple/swift-asn1.git @ 1.7.0
+  LRUCache: https://github.com/nicklockwood/LRUCache.git @ 1.2.0
+  ZIPFoundation: https://github.com/weichsel/ZIPFoundation.git @ 0.9.20
+
+Writing result bundle at path:
+	/tmp/mc-agent-ios-test-conflict-review-20260529T012731Z.xcresult
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (38 targets)
+    Target 'iOSMerchandiseControlTests' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+    Target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation' (no dependencies)
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target '_AtomicsShims' in project 'swift-atomics' (no dependencies)
+    Target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+    Target 'LRUCache' in project 'LRUCache' (no dependencies)
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter' (no dependencies)
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'swift-crypto_Crypto' in project 'swift-crypto' (no dependencies)
+    Target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay' (no dependencies)
+    Target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+    Target 'HTTPTypes' in project 'swift-http-types' (no dependencies)
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x objective-c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+Build description signature: 4a8c211542984348d9a8199c0582dce3
+Build description path: <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/XCBuildData/4a8c211542984348d9a8199c0582dce3.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F73-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F73-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/swift-crypto_Crypto.bundle/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphoneos/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist (in target 'swift-crypto_Crypto' from project 'swift-crypto')
+    cd <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-crypto
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphoneos/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/swift-crypto_Crypto.bundle/Info.plist
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/ZIPFoundation_ZIPFoundation.bundle/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist (in target 'ZIPFoundation_ZIPFoundation' from project 'ZIPFoundation')
+    cd <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/ZIPFoundation
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/ZIPFoundation_ZIPFoundation.bundle/Info.plist
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/Info.plist <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist -producttype com.apple.product-type.application -genpkginfo <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PkgInfo -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphoneos/iOSMerchandiseControl.build/assetcatalog_generated_info.plist -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/swift-crypto_Crypto.bundle -requiredArchitecture arm64 -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/Info.plist
+
+CopySwiftLibs <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-swiftStdLibTool --copy --verbose --sign CC2F8556196F84EF3DC6CDD594FA52A255E05BCD --scan-executable <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/Frameworks --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/SystemExtensions --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/Extensions --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphoneos/iOSMerchandiseControl.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphoneos/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphoneos/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphoneos -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/swift-crypto_Crypto.bundle -requiredArchitecture arm64 -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist
+
+CopySwiftLibs <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-swiftStdLibTool --copy --verbose --sign CC2F8556196F84EF3DC6CDD594FA52A255E05BCD --scan-executable <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/iOSMerchandiseControlTests --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Frameworks --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/PlugIns --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/SystemExtensions --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Extensions --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphoneos/iOSMerchandiseControlTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+Test Suite 'Selected tests' started at 2026-05-28 21:27:39.041.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-28 21:27:39.041.
+Test Suite 'Task126ConflictReviewTests' started at 2026-05-28 21:27:39.041.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewTests testBatchReviewSeparatesMergeableRowsFromReviewRows]' started.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewTests testBatchReviewSeparatesMergeableRowsFromReviewRows]' passed (0.003 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewTests testDeleteVsEditRoutesToReview]' started.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewTests testDeleteVsEditRoutesToReview]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewTests testProductPriceAppendDedupeAndSameSlotDifferentValuePolicy]' started.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewTests testProductPriceAppendDedupeAndSameSlotDifferentValuePolicy]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewTests testUpdateWithoutChangedFieldsIsRejectedByContract]' started.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewTests testUpdateWithoutChangedFieldsIsRejectedByContract]' passed (0.001 seconds).
+Test Suite 'Task126ConflictReviewTests' passed at 2026-05-28 21:27:39.049.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.005 (0.008) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-28 21:27:39.049.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.005 (0.008) seconds
+Test Suite 'Selected tests' passed at 2026-05-28 21:27:39.050.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.005 (0.009) seconds
+2026-05-28 21:27:39.503 xcodebuild[36136:10930251] [MT] IDETestOperationsObserverDebug: 2.774 elapsed -- Testing started completed.
+2026-05-28 21:27:39.503 xcodebuild[36136:10930251] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-28 21:27:39.503 xcodebuild[36136:10930251] [MT] IDETestOperationsObserverDebug: 2.774 sec, +2.774 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-test-conflict-review-20260529T012731Z.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project iOSMerchandiseControl.xcodeproj -scheme iOSMerchandiseControl -configuration Debug -destination platform=iOS,id=<REDACTED_DEVICE_ID> -resultBundlePath /tmp/mc-agent-ios-test-conflict-review-ui-20260529T012731Z.xcresult -parallel-testing-enabled NO "-only-testing:iOSMerchandiseControlTests/Task126ConflictReviewUITests"
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  ZIPFoundation: https://github.com/weichsel/ZIPFoundation.git @ 0.9.20
+  swift-crypto: https://github.com/apple/swift-crypto.git @ 4.5.0
+  SwiftSoup: https://github.com/scinfu/SwiftSoup @ 2.11.2
+  Supabase: https://github.com/supabase/supabase-swift.git @ 2.46.0
+  swift-http-types: https://github.com/apple/swift-http-types.git @ 1.5.1
+  swift-asn1: https://github.com/apple/swift-asn1.git @ 1.7.0
+  libxlsxwriter: https://github.com/jmcnamara/libxlsxwriter @ main (f064715)
+  swift-clocks: https://github.com/pointfreeco/swift-clocks @ 1.0.6
+  swift-atomics: https://github.com/apple/swift-atomics.git @ 1.3.0
+  swift-concurrency-extras: https://github.com/pointfreeco/swift-concurrency-extras @ 1.3.2
+  LRUCache: https://github.com/nicklockwood/LRUCache.git @ 1.2.0
+  xlsxwriter.swift: https://github.com/damuellen/xlsxwriter.swift @ SPM (f4c0e10)
+  xctest-dynamic-overlay: https://github.com/pointfreeco/xctest-dynamic-overlay @ 1.9.0
+
+Writing result bundle at path:
+	/tmp/mc-agent-ios-test-conflict-review-ui-20260529T012731Z.xcresult
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (38 targets)
+    Target 'iOSMerchandiseControlTests' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+    Target 'iOSMerchandiseControl' in project 'iOSMerchandiseControl'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation' in project 'ZIPFoundation'
+        ➜ Explicit dependency on target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation'
+    Target 'ZIPFoundation_ZIPFoundation' in project 'ZIPFoundation' (no dependencies)
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'SwiftSoup' in project 'SwiftSoup'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target 'Atomics' in project 'swift-atomics'
+        ➜ Explicit dependency on target '_AtomicsShims' in project 'swift-atomics'
+    Target '_AtomicsShims' in project 'swift-atomics' (no dependencies)
+    Target 'LRUCache' in project 'LRUCache'
+        ➜ Explicit dependency on target 'LRUCache' in project 'LRUCache'
+    Target 'LRUCache' in project 'LRUCache' (no dependencies)
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'xlsxwriter' in project 'xlsxwriter.swift'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter'
+        ➜ Explicit dependency on target 'libxlsxwriter' in project 'libxlsxwriter'
+    Target 'libxlsxwriter' in project 'libxlsxwriter' (no dependencies)
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Supabase' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Storage' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Realtime' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'PostgREST' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Functions' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'Auth' in project 'Supabase'
+        ➜ Explicit dependency on target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'Crypto' in project 'swift-crypto'
+        ➜ Explicit dependency on target 'swift-crypto_Crypto' in project 'swift-crypto'
+    Target 'swift-crypto_Crypto' in project 'swift-crypto' (no dependencies)
+    Target 'Helpers' in project 'Supabase'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'XCTestDynamicOverlay' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'Clocks' in project 'swift-clocks'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReporting' in project 'xctest-dynamic-overlay'
+        ➜ Explicit dependency on target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay'
+    Target 'IssueReportingPackageSupport' in project 'xctest-dynamic-overlay' (no dependencies)
+    Target 'HTTPTypes' in project 'swift-http-types'
+        ➜ Explicit dependency on target 'HTTPTypes' in project 'swift-http-types'
+    Target 'HTTPTypes' in project 'swift-http-types' (no dependencies)
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+        ➜ Explicit dependency on target 'ConcurrencyExtras' in project 'swift-concurrency-extras'
+    Target 'ConcurrencyExtras' in project 'swift-concurrency-extras' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x objective-c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+Build description signature: 0569bc70c2c95c21bb4cd3b4fdd352a9
+Build description path: <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/XCBuildData/0569bc70c2c95c21bb4cd3b4fdd352a9.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F73-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F73-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/ZIPFoundation_ZIPFoundation.bundle/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist (in target 'ZIPFoundation_ZIPFoundation' from project 'ZIPFoundation')
+    cd <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/ZIPFoundation
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation_ZIPFoundation.build/empty-ZIPFoundation_ZIPFoundation.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/ZIPFoundation_ZIPFoundation.bundle/Info.plist
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/swift-crypto_Crypto.bundle/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphoneos/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist (in target 'swift-crypto_Crypto' from project 'swift-crypto')
+    cd <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/SourcePackages/checkouts/swift-crypto
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/swift-crypto.build/Debug-iphoneos/swift-crypto_Crypto.build/empty-swift-crypto_Crypto.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/swift-crypto_Crypto.bundle/Info.plist
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/Info.plist <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Info.plist -producttype com.apple.product-type.application -genpkginfo <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PkgInfo -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphoneos/iOSMerchandiseControl.build/assetcatalog_generated_info.plist -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/swift-crypto_Crypto.bundle -requiredArchitecture arm64 -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/Info.plist
+
+CopySwiftLibs <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-swiftStdLibTool --copy --verbose --sign CC2F8556196F84EF3DC6CDD594FA52A255E05BCD --scan-executable <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/Frameworks --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/SystemExtensions --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/Extensions --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphoneos/iOSMerchandiseControl.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ProcessInfoPlistFile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphoneos/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphoneos/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphoneos -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/swift-crypto_Crypto.bundle -requiredArchitecture arm64 -o <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist
+
+CopySwiftLibs <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-swiftStdLibTool --copy --verbose --sign CC2F8556196F84EF3DC6CDD594FA52A255E05BCD --scan-executable <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/iOSMerchandiseControlTests --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Frameworks --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/PlugIns --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/SystemExtensions --scan-folder <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Extensions --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Products/Debug-iphoneos/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info <HOME_REDACTED>/Library/Developer/Xcode/DerivedData/iOSMerchandiseControl-hipxsmlvmjphcyaknnsmrggoalrx/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphoneos/iOSMerchandiseControlTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+Test Suite 'Selected tests' started at 2026-05-28 21:27:46.134.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-05-28 21:27:46.135.
+Test Suite 'Task126ConflictReviewUITests' started at 2026-05-28 21:27:46.135.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewUITests testDeleteVsEditAndProductPriceStaleRequireReviewChoices]' started.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewUITests testDeleteVsEditAndProductPriceStaleRequireReviewChoices]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewUITests testDifferentFieldDirectionsAutoMergeWithoutReviewPopup]' started.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewUITests testDifferentFieldDirectionsAutoMergeWithoutReviewPopup]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewUITests testDifferentFieldsMergeWithoutPopupAndSameBatchLeavesOnlyConflictForReview]' started.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewUITests testDifferentFieldsMergeWithoutPopupAndSameBatchLeavesOnlyConflictForReview]' passed (0.000 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewUITests testSameFieldChoiceOutcomesCoverEveryReviewButton]' started.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewUITests testSameFieldChoiceOutcomesCoverEveryReviewButton]' passed (0.001 seconds).
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewUITests testSameFieldReviewShowsAllUserChoicesAndKeepsOnlyConflictInReview]' started.
+Test Case '-[iOSMerchandiseControlTests.Task126ConflictReviewUITests testSameFieldReviewShowsAllUserChoicesAndKeepsOnlyConflictInReview]' passed (0.000 seconds).
+Test Suite 'Task126ConflictReviewUITests' passed at 2026-05-28 21:27:46.139.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-05-28 21:27:46.140.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.003 (0.005) seconds
+Test Suite 'Selected tests' passed at 2026-05-28 21:27:46.140.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.003 (0.006) seconds
+2026-05-28 21:27:46.598 xcodebuild[36222:10930879] [MT] IDETestOperationsObserverDebug: 2.949 elapsed -- Testing started completed.
+2026-05-28 21:27:46.598 xcodebuild[36222:10930879] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-05-28 21:27:46.598 xcodebuild[36222:10930879] [MT] IDETestOperationsObserverDebug: 2.949 sec, +2.949 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-test-conflict-review-ui-20260529T012731Z.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:kspDebugUnitTestKotlin UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:compileDebugUnitTestKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:packageDebugUnitTestForUnitTest UP-TO-DATE
+> Task :app:processDebugUnitTestManifest UP-TO-DATE
+> Task :app:generateDebugUnitTestConfig UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+
+> Task :app:testDebugUnitTest
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+
+BUILD SUCCESSFUL in 1s
+32 actionable tasks: 1 executed, 31 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.1/userguide/configuration_cache_enabling.html
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:kspDebugUnitTestKotlin UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:compileDebugUnitTestKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:packageDebugUnitTestForUnitTest UP-TO-DATE
+> Task :app:processDebugUnitTestManifest UP-TO-DATE
+> Task :app:generateDebugUnitTestConfig UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+
+> Task :app:testDebugUnitTest
+Picked up JAVA_TOOL_OPTIONS:  -Djdk.attach.allowAttachSelf=true
+
+BUILD SUCCESSFUL in 1s
+32 actionable tasks: 1 executed, 31 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.1/userguide/configuration_cache_enabling.html

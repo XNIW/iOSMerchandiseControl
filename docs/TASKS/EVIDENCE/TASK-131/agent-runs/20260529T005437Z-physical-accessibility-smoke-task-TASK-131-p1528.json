@@ -1,0 +1,170 @@
+{
+  "NEXT_ACTION": "Provide MC_TASK131_ACCESSIBILITY_CHECKLIST_JSON with Dynamic Type/VoiceOver/TalkBack results, then rerun.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T005437Z-physical-accessibility-smoke-task-TASK-131-p1528.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T005437Z-physical-accessibility-smoke-task-TASK-131-p1528.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T005437Z-physical-accessibility-smoke-task-TASK-131-p1528.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-113-29",
+    "CA-113-30"
+  ],
+  "cleanup_plan_id": null,
+  "command": "physical accessibility-smoke --task TASK-131",
+  "command_slug": "physical-accessibility-smoke-task-TASK-131",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "physical",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 3706,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "0",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-131",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK131_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-131"
+  },
+  "exit_code": 1,
+  "git_sha": "96b900ef",
+  "next_action_recommended": "Provide MC_TASK131_ACCESSIBILITY_CHECKLIST_JSON with Dynamic Type/VoiceOver/TalkBack results, then rerun.",
+  "platform": "android",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "allowedExternalBlockers": [],
+    "blocked": [
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "parseError": true
+        },
+        "exitCode": 2,
+        "name": "androidPhysicalOptionsAccessibilityPreflight",
+        "prefix": null,
+        "source": null,
+        "status": "BLOCKED_EXTERNAL",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "parseError": true
+        },
+        "exitCode": 2,
+        "name": "physicalOperatorAccessibilityChecklist",
+        "prefix": null,
+        "source": null,
+        "status": "BLOCKED_EXTERNAL",
+        "warnings": null
+      }
+    ],
+    "cleanupRequired": false,
+    "completedAt": "2026-05-29T00:54:41Z",
+    "failures": [
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "parseError": true
+        },
+        "exitCode": 4,
+        "name": "iosPhysicalOptionsAccessibilityPreflight",
+        "prefix": null,
+        "source": null,
+        "status": "FAIL",
+        "warnings": null
+      }
+    ],
+    "matrix": "accessibility-smoke",
+    "prefix": "",
+    "redactionApplied": true,
+    "schemaVersion": "1.1",
+    "source": "task131.physical.accessibility-smoke",
+    "startedAt": "2026-05-29T00:54:37Z",
+    "status": "FAIL",
+    "steps": [
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "parseError": true
+        },
+        "exitCode": 4,
+        "name": "iosPhysicalOptionsAccessibilityPreflight",
+        "prefix": null,
+        "source": null,
+        "status": "FAIL",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "parseError": true
+        },
+        "exitCode": 2,
+        "name": "androidPhysicalOptionsAccessibilityPreflight",
+        "prefix": null,
+        "source": null,
+        "status": "BLOCKED_EXTERNAL",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "parseError": true
+        },
+        "exitCode": 2,
+        "name": "physicalOperatorAccessibilityChecklist",
+        "prefix": null,
+        "source": null,
+        "status": "BLOCKED_EXTERNAL",
+        "warnings": null
+      }
+    ],
+    "taskId": "TASK-131"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260529T005437Z-physical-accessibility-smoke-task-TASK-131-p1528",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-131",
+  "test_prefix": null,
+  "timestamp_end": "2026-05-29T00:54:41Z",
+  "timestamp_start": "2026-05-29T00:54:37Z",
+  "warnings": []
+}

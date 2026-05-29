@@ -1,0 +1,142 @@
+{
+  "NEXT_ACTION": "Run conflict-review, offline-background, account-switch and accessibility matrices.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T002447Z-physical-sync-policy-matrix-task-TASK-131-prefix-TASK131_POLICY_FIX8_-p62254.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T002447Z-physical-sync-policy-matrix-task-TASK-131-prefix-TASK131_POLICY_FIX8_-p62254.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-131/agent-runs/20260529T002447Z-physical-sync-policy-matrix-task-TASK-131-prefix-TASK131_POLICY_FIX8_-p62254.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-task114-test123IOSSingleCatalogCreatePropagation-20260529T002447Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-113-29",
+    "CA-113-30"
+  ],
+  "cleanup_plan_id": null,
+  "command": "physical sync-policy-matrix --task TASK-131 --prefix TASK131_POLICY_FIX8_",
+  "command_slug": "physical-sync-policy-matrix-task-TASK-131-prefix-TASK131_POLICY_FIX8_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "physical",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 1023270,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-131",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK131_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-131"
+  },
+  "exit_code": 0,
+  "git_sha": "96b900ef",
+  "next_action_recommended": "Run conflict-review, offline-background, account-switch and accessibility matrices.",
+  "platform": "android",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "allowedExternalBlockers": [],
+    "blocked": [],
+    "cleanupRequired": true,
+    "completedAt": "2026-05-29T00:41:50Z",
+    "failures": [],
+    "matrix": "sync-policy-matrix",
+    "prefix": "TASK131_POLICY_FIX8_",
+    "redactionApplied": true,
+    "schemaVersion": "1.1",
+    "source": "task131.physical.sync-policy-matrix",
+    "startedAt": "2026-05-29T00:24:49Z",
+    "status": "PASS",
+    "steps": [
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "parseError": true
+        },
+        "exitCode": 0,
+        "name": "fullPhysicalNearRealtimeBidirectionalProductPriceHistory",
+        "prefix": null,
+        "source": null,
+        "status": "PASS",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "parseError": true
+        },
+        "exitCode": 0,
+        "name": "noOpNoFullPullNoEvents",
+        "prefix": null,
+        "source": null,
+        "status": "PASS",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "parseError": true
+        },
+        "exitCode": 0,
+        "name": "burst10NoDuplicates",
+        "prefix": null,
+        "source": null,
+        "status": "PASS",
+        "warnings": null
+      },
+      {
+        "blocker": null,
+        "cleanupRequired": null,
+        "detail": {
+          "parseError": true
+        },
+        "exitCode": 0,
+        "name": "finalPhysicalRuntimeParityDriftZeroPendingZero",
+        "prefix": null,
+        "source": null,
+        "status": "PASS",
+        "warnings": null
+      }
+    ],
+    "taskId": "TASK-131"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260529T002447Z-physical-sync-policy-matrix-task-TASK-131-prefix-TASK131_POLICY_FIX8_-p62254",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-131",
+  "test_prefix": "TASK131_POLICY_FIX8_",
+  "timestamp_end": "2026-05-29T00:41:51Z",
+  "timestamp_start": "2026-05-29T00:24:47Z",
+  "warnings": []
+}

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-131",
+  "generatedAt": "2026-05-28T16:50:00Z",
+  "finalState": "ACTIVE / FIX — ANDROID_PHYSICAL_IOS_SIMULATOR_SCOPE_NEEDS_IOS_SIM_AUTH_AND_HYBRID_AUTOMATION_FIXES",
+  "scope": {
+    "androidPhysical": "EXECUTED",
+    "iosSimulator": "EXECUTED",
+    "iosPhysical": "BLOCKED_EXTERNAL_IOS_PHYSICAL_DEVICE_NOT_AVAILABLE",
+    "supabaseProfile": "linked",
+    "prefix": "TASK131_*",
+    "storeMode": "localDefaultStoreOnly"
+  },
+  "summary": {
+    "reviewPromoted": false,
+    "doneClaimed": false,
+    "fullPhysicalAcceptanceClaimed": false,
+    "productionReadyClaimed": false,
+    "supabaseResidueTask131": 0,
+    "crossPlatformDriftFinal": "NOT_PROVEN",
+    "pendingFinal": "NOT_PROVEN",
+    "duplicateProductPriceFinal": "NOT_PROVEN"
+  },
+  "passes": [
+    {"gate": "config validate", "result": "PASS", "reportJson": "agent-runs/20260528T161641Z-config-validate-p46635.json"},
+    {"gate": "preflight", "result": "PASS", "reportJson": "agent-runs/20260528T161644Z-preflight-require-head-consistency-task-TASK-131-p46624.json"},
+    {"gate": "supabase read-only schema/RLS/grants/RPC/realtime/price", "result": "PASS", "reportJson": "agent-runs/20260528T161704Z..20260528T161740Z"},
+    {"gate": "iOS Debug build", "result": "PASS", "reportJson": "agent-runs/20260528T163640Z-ios-build-debug-p82092.json"},
+    {"gate": "iOS Release build", "result": "PASS", "reportJson": "agent-runs/20260528T163644Z-ios-build-release-p82653.json"},
+    {"gate": "iOS sync tests", "result": "PASS", "reportJson": "agent-runs/20260528T163752Z-ios-test-sync-p83308.json"},
+    {"gate": "iOS price-contract tests", "result": "PASS", "reportJson": "agent-runs/20260528T164039Z-ios-test-price-contract-task-TASK-131-p82081.json"},
+    {"gate": "iOS TASK-131 harness tests", "result": "PASS", "reportJson": "agent-runs/20260528T164223Z-ios-test-task131-harness-task-TASK-131-p86592.json"},
+    {"gate": "Android debug build", "result": "PASS", "reportJson": "agent-runs/20260528T162223Z-android-build-debug-p58582.json"},
+    {"gate": "Android sync tests", "result": "PASS", "reportJson": "agent-runs/20260528T162235Z-android-test-sync-p59263.json"},
+    {"gate": "Android price-contract tests", "result": "PASS", "reportJson": "agent-runs/20260528T162243Z-android-test-price-contract-task-TASK-131-p55298.json"},
+    {"gate": "iOS Simulator Options smoke", "result": "PASS", "reportJson": "agent-runs/20260528T162939Z-ios-simulator-sync-policy-ui-task-TASK-131-prefix-TASK131_IOS_SIM_-p67594.json"},
+    {"gate": "Android physical Options/auth/launch smoke", "result": "PASS", "reportJson": "agent-runs/20260528T163130Z-android-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_ANDROID_PHYS_-p70194.json"},
+    {"gate": "redaction", "result": "PASS", "reportJson": "agent-runs/20260528T164855Z-scan-task131-redaction-task-TASK-131-strict-p19664.json"},
+    {"gate": "JSON validation", "result": "PASS", "reportJson": "agent-runs/20260528T165555Z-report-validate-json-task-TASK-131-path-docs-TASKS-EVIDENCE-TASK-131-agent-runs-p41221.json"},
+    {"gate": "cleanup execute", "result": "PASS", "reportJson": "agent-runs/20260528T164323Z-supabase-cleanup-task-TASK-131-prefix-TASK131_-execute-cleanup-plan-id-cleanup-TASK-131-20260528T164252Z-TASK131_-p88471.json"},
+    {"gate": "residue check", "result": "PASS", "reportJson": "agent-runs/20260528T164330Z-supabase-residue-check-task-TASK-131-prefix-TASK131_-profile-linked-p88460.json"}
+  ],
+  "blockers": [
+    {"gate": "iOS physical sync-policy-ui", "result": "BLOCKED_EXTERNAL", "reason": "iPhone physical unavailable in approved scope", "reportJson": "agent-runs/20260528T163615Z-ios-physical-sync-policy-ui-task-TASK-131-prefix-TASK131_IOS_-p79402.json"},
+    {"gate": "hybrid sync-policy matrix", "result": "BLOCKED_EXTERNAL", "reason": "iOS Simulator auth session missing or expired", "reportJson": "agent-runs/20260528T163217Z-physical-hybrid-sync-policy-matrix-task-TASK-131-prefix-TASK131_HYBRID_-p71543.json"},
+    {"gate": "hybrid offline/reconnect matrix", "result": "BLOCKED_EXTERNAL", "reason": "iOS Simulator auth session missing or expired", "reportJson": "agent-runs/20260528T163432Z-physical-hybrid-offline-reconnect-matrix-task-TASK-131-prefix-TASK131_OFFLINE_-p75195.json"},
+    {"gate": "hybrid conflict/review matrix", "result": "FAIL", "reason": "Real scoped conflict fixtures and Review tap evidence are missing", "reportJson": "agent-runs/20260528T163358Z-physical-hybrid-conflict-review-matrix-task-TASK-131-prefix-TASK131_CONFLICT_-p74026.json"},
+    {"gate": "hybrid accessibility smoke", "result": "FAIL", "reason": "Traversal automation or operator-assisted checklist is missing", "reportJson": "agent-runs/20260528T163605Z-physical-hybrid-accessibility-smoke-task-TASK-131-p78588.json"},
+    {"gate": "task131 final gates", "result": "FAIL", "reason": "Mandatory hybrid matrices are not PASS", "reportJson": "agent-runs/20260528T165430Z-scan-task131-final-gates-task-TASK-131-strict-p24477.json"}
+  ],
+  "nextAction": "Restore a valid iOS Simulator Supabase session, complete real conflict/review and accessibility evidence, rerun hybrid matrices/final gates/cleanup, then run full iPhone physical scope when available."
+}

@@ -163,7 +163,38 @@ MC_TASK_ID=TASK-130 ./tools/agent/mc-agent.sh preflight --require-head-consisten
 
 The consolidated TASK-130 commands keep the residual TASK-128 scope inside TASK-130 by design. `harness golden-corpus validate` checks privacy-safe fixture coverage and parser/export support; `harness golden-corpus roundtrip` records static cross-platform roundtrip readiness and marks binary app-to-app gaps as `PARTIAL` when no generated artifact is executed. `scan swiftdata-fetch-budget` guards import/pre-generate SwiftData lookup against fetch-all Product hot paths. `ios benchmark import-large` is a static/harness-readiness benchmark gate unless a reviewer provides a runtime dataset/device. `ios smoke options-first-sync`, `ios smoke scanner-edge`, and `ios smoke accessibility` are static smoke gates and must not be treated as physical-device or VoiceOver PASS. `harness real-device-feasibility` records local device/tool feasibility only; long background/locked/offline acceptance remains explicit `PARTIAL`/`BLOCKED_EXTERNAL` unless live/device commands are run.
 
-Per operatore umano:
+TASK-131 physical-device sync policy acceptance gates:
+
+```bash
+MC_TASK_ID=TASK-131 ./tools/agent/mc-agent.sh help-json
+MC_TASK_ID=TASK-131 ./tools/agent/mc-agent.sh list commands-json
+MC_TASK_ID=TASK-131 ./tools/agent/mc-agent.sh config validate
+MC_TASK_ID=TASK-131 ./tools/agent/mc-agent.sh git head-consistency --task TASK-131
+MC_TASK_ID=TASK-131 ./tools/agent/mc-agent.sh preflight --require-head-consistency --task TASK-131
+./tools/agent/mc-agent.sh physical devices list --task TASK-131
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh ios physical sync-policy-ui --task TASK-131 --prefix TASK131_IOS_
+./tools/agent/mc-agent.sh ios simulator sync-policy-ui --task TASK-131 --prefix TASK131_IOS_SIM_
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh android physical sync-policy-ui --task TASK-131 --prefix TASK131_ANDROID_PHYS_
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh physical sync-policy-matrix --task TASK-131 --prefix TASK131_POLICY_
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh physical conflict-review-matrix --task TASK-131 --prefix TASK131_CONFLICT_
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh physical account-switch-matrix --task TASK-131 --prefix TASK131_ACCOUNT_
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh physical offline-background-matrix --task TASK-131 --prefix TASK131_OFFLINE_
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh physical accessibility-smoke --task TASK-131
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh physical hybrid-sync-policy-matrix --task TASK-131 --prefix TASK131_HYBRID_
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh physical hybrid-conflict-review-matrix --task TASK-131 --prefix TASK131_CONFLICT_
+MC_ALLOW_LIVE=1 ./tools/agent/mc-agent.sh physical hybrid-offline-reconnect-matrix --task TASK-131 --prefix TASK131_OFFLINE_
+./tools/agent/mc-agent.sh physical hybrid-accessibility-smoke --task TASK-131
+./tools/agent/mc-agent.sh scan task131-matrix-completeness --task TASK-131 --strict
+./tools/agent/mc-agent.sh scan task131-redaction --task TASK-131 --strict
+./tools/agent/mc-agent.sh scan task131-final-gates --task TASK-131 --strict
+./tools/agent/mc-agent.sh report validate-json --task TASK-131 --path docs/TASKS/EVIDENCE/TASK-131/agent-runs
+```
+
+TASK-131 wrappers are intentionally strict. `physical devices list` is discovery-only and can PASS with redacted device readiness. Full physical scope uses trusted iPhone physical plus Android physical; hybrid scope remains support-only when explicitly requested. Mandatory matrix and UI cases must not emit PASS while cases remain `NOT_RUN`; if devices or live gates are missing they return `BLOCKED_EXTERNAL`/`MISCONFIGURED`/`UNSAFE_OPERATION_REFUSED` instead of silently passing. Conflict/Review and accessibility physical UX require real tap/traversal evidence through reliable UI automation or redacted operator-assisted checklist JSON; static policy/UI contract tests alone are not physical PASS evidence.
+
+`physical account-switch-matrix` is split by prerequisite. Same-account logout/login, auth fail-closed, owner/store mismatch fixture, legacy/unbound dirty recovery, export-before-discard/cancel and `localDefaultStoreOnly` run without a second account. Only true Account A -> Account B cases (`C126-14`, `C126-15`, `C126-16`, `C126-17`, `C126-40`) are classified as `BLOCKED_EXTERNAL_SECOND_ACCOUNT` when no approved second synthetic account is configured.
+
+For operator-assisted evidence, use `docs/TASKS/EVIDENCE/TASK-131/operator-review-accessibility-checklist.md` / `.json` as the minimum checklist for Review CTA/cancel/destructive actions, VoiceOver, TalkBack and enlarged text/font-scale. Missing checklist evidence is `BLOCKED_EXTERNAL_OPERATOR_EVIDENCE_REQUIRED`, not PASS.
 
 ```bash
 ./tools/agent/mc-agent.sh config validate
@@ -253,7 +284,7 @@ Regola: L1 non e' live offline PASS. Chiusura piena richiede almeno L2 PASS o PA
 - `local`: usa Supabase local/Docker.
 - `linked`: usa progetto linked read-only/cleanup backend dove autorizzato.
 
-Mancanza linked/local deve risultare BLOCKED con next action, non crash.
+Mancanza linked/local deve risultare BLOCKED con next action, non crash. `supabase verify-schema` uses a bounded CLI timeout for `migration list`/`db lint`; if the Supabase CLI or linked project hangs, rerun after the linked/local environment is responsive.
 
 ## MCP adapter
 
