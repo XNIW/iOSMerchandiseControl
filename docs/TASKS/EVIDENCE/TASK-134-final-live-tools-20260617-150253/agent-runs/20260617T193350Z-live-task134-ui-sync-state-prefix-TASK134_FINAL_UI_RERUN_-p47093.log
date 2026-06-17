@@ -1,0 +1,96 @@
+=== mc-agent live task134-ui-sync-state --prefix TASK134_FINAL_UI_RERUN_ ===
+{
+  "artifacts": {
+    "json": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state.json",
+    "markdown": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state.md",
+    "rawLog": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-ui-sync-state.log"
+  },
+  "command": "task134-ui-sync-state",
+  "completedAt": "2026-06-17T19:33:53Z",
+  "data": {
+    "scenarioPrefix": "TASK134_FINAL_UI_RERUN_UI_SYNC_STATE_",
+    "screenshots": {
+      "android": {
+        "bytes": 131412,
+        "captureExitCode": 0,
+        "path": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.png",
+        "serial": "<REDACTED_SERIAL>",
+        "serialMetadata": {
+          "devicesOutput": "",
+          "source": "env"
+        },
+        "uiautomatorCatExitCode": 0,
+        "uiautomatorDumpExitCode": 0,
+        "uiautomatorXml": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.xml",
+        "uiautomatorXmlBytes": 22649
+      },
+      "ios": {
+        "bytes": 2556257,
+        "captureExitCode": 0,
+        "path": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-ios.png"
+      }
+    },
+    "states": [
+      {
+        "platform": "iOS",
+        "redacted": true,
+        "state": "synced"
+      },
+      {
+        "platform": "iOS",
+        "redacted": true,
+        "state": "dirty_protected"
+      },
+      {
+        "platform": "Android",
+        "redacted": true,
+        "state": "synced"
+      },
+      {
+        "platform": "Android",
+        "redacted": true,
+        "state": "conflict_review"
+      }
+    ]
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "[{\"platform\": \"iOS\", \"redacted\": true, \"state\": \"synced\"}, {\"platform\": \"iOS\", \"redacted\": true, \"state\": \"dirty_protected\"}, {\"platform\": \"Android\", \"redacted\": true, \"state\": \"synced\"}, {\"platform\": \"Android\", \"redacted\": true, \"state\": \"conflict_review\"}]",
+      "name": "ui_states_redacted",
+      "status": "PASS"
+    },
+    {
+      "evidence": "path=<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-ios.png bytes=2556257 exit=0",
+      "name": "ios_screenshot_artifact",
+      "status": "PASS"
+    },
+    {
+      "evidence": "PASS_REAL_SCREENSHOT path=<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.png bytes=131412 serial=<REDACTED_SERIAL> exit=0",
+      "name": "android_real_screenshot_artifact",
+      "status": "PASS"
+    },
+    {
+      "evidence": "path=<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.xml bytes=22649 options_visible=True",
+      "name": "android_uiautomator_xml_redacted",
+      "status": "PASS"
+    },
+    {
+      "evidence": "synced, dirty_protected and conflict_review state names are mirrored across artifacts",
+      "name": "sync_state_parity",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_FINAL_UI_RERUN_",
+  "residueCount": 0,
+  "rowsCreated": 0,
+  "rowsDeleted": 0,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:33:50Z",
+  "status": "PASS",
+  "summary": "UI sync state parity artifacts captured/redacted for iOS and Android.",
+  "taskId": "TASK-134"
+}
+{"artifact": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state.json", "status": "PASS", "summary": "UI sync state parity artifacts captured/redacted for iOS and Android."}

@@ -1,0 +1,3 @@
+Detected file type from extension: PNG
+Note: No display specified. Defaulting to display: 26271162-08FF-44F1-AAC6-9A3E13CDDE74 (screenID: 1, name: LCD)
+Wrote screenshot to: /Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-133/performance-20260617-130313/screenshots/final-ios-options.png

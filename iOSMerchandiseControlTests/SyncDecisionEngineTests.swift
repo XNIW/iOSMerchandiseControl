@@ -33,19 +33,46 @@ final class SyncDecisionEngineTests: XCTestCase {
         XCTAssertFalse(action.containsFullRecovery)
     }
 
-    func testSameAccountReconnectPushesPendingThenDrainsAndLightReconciles() {
+    func testRemoteEventWithPendingDrainsBeforeAnyPush() {
         let action = SyncDecisionEngine.decide(
             SyncDecisionInput(
                 trigger: .networkAvailable,
                 isAuthenticated: true,
                 isNetworkAvailable: true,
                 hasPendingLocalChanges: true,
-                hasRemoteSyncEvent: true,
+                hasRemoteSyncEvent: true
+            )
+        )
+
+        XCTAssertEqual(action, .drainEvents)
+    }
+
+    func testRemoteVerificationDriftBlocksPendingPush() {
+        let action = SyncDecisionEngine.decide(
+            SyncDecisionInput(
+                trigger: .networkAvailable,
+                isAuthenticated: true,
+                isNetworkAvailable: true,
+                hasPendingLocalChanges: true,
                 hasRemoteVerificationDrift: true
             )
         )
 
-        XCTAssertEqual(action, .sequence([.pushPending, .drainEvents, .lightReconcile]))
+        XCTAssertEqual(action, .lightReconcile)
+    }
+
+    func testPendingWithRequestedLightReconcileDoesNotPushBeforeReconcile() {
+        let action = SyncDecisionEngine.decide(
+            SyncDecisionInput(
+                trigger: .networkAvailable,
+                isAuthenticated: true,
+                isNetworkAvailable: true,
+                hasPendingLocalChanges: true,
+                requestsLightReconcile: true
+            )
+        )
+
+        XCTAssertEqual(action, .lightReconcile)
     }
 
     func testAccountDecisionBlocksBeforePushOrDrain() {
@@ -107,7 +134,7 @@ final class SyncDecisionEngineTests: XCTestCase {
     }
 
     @MainActor
-    func testSameAccountBindingDoesNotForceBootstrapWhenBaselineIsAbsent() async throws {
+    func testSameAccountBindingStillRequiresBootstrapWhenBaselineIsAbsent() async throws {
         let originalBinding = UserDefaults.standard.data(forKey: "sync.accountBinding.v1")
         defer {
             if let originalBinding {
@@ -124,7 +151,7 @@ final class SyncDecisionEngineTests: XCTestCase {
         )
         let container = try makeContainer()
         let context = ModelContext(container)
-        context.insert(Product(barcode: "TASK123_BASELINE_ABSENT", productName: "Task 123"))
+        context.insert(Product(barcode: "TASK132_BASELINE_ABSENT", productName: "Task 132"))
         try context.save()
 
         let provider = SyncDecisionInputProvider(
@@ -139,8 +166,8 @@ final class SyncDecisionEngineTests: XCTestCase {
         )
 
         XCTAssertTrue(snapshot.accountBindingMatches)
-        XCTAssertFalse(snapshot.requiresBootstrap)
-        XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .lightReconcile)
+        XCTAssertTrue(snapshot.requiresBootstrap)
+        XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .bootstrap)
     }
 
     @MainActor
@@ -157,7 +184,7 @@ final class SyncDecisionEngineTests: XCTestCase {
 
         let container = try makeContainer()
         let context = ModelContext(container)
-        context.insert(Product(barcode: "TASK123_ANON_BASELINE_ABSENT", productName: "Task 123"))
+        context.insert(Product(barcode: "TASK132_ANON_BASELINE_ABSENT", productName: "Task 132"))
         try context.save()
 
         let provider = SyncDecisionInputProvider(

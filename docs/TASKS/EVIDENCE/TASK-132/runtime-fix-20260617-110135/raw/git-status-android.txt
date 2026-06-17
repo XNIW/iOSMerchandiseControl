@@ -1,0 +1,3 @@
+ M .idea/deploymentTargetSelector.xml
+ M app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogAutoSyncCoordinator.kt
+ M app/src/test/java/com/example/merchandisecontrolsplitview/data/CatalogAutoSyncCoordinatorTest.kt

@@ -1,0 +1,76 @@
+=== mc-agent live task134-delete-edit-conflict --prefix TASK134_FINAL_ ===
+{
+  "artifacts": {
+    "json": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-delete-edit-conflict.json",
+    "markdown": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-delete-edit-conflict.md",
+    "rawLog": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-delete-edit-conflict.log"
+  },
+  "command": "task134-delete-edit-conflict",
+  "completedAt": "2026-06-17T19:07:54Z",
+  "data": {
+    "cleanupEnd": {
+      "categories": 1,
+      "product_prices": 0,
+      "products": 1,
+      "suppliers": 1,
+      "sync_events": 1
+    },
+    "cleanupStart": {
+      "categories": 0,
+      "product_prices": 0,
+      "products": 0,
+      "suppliers": 0,
+      "sync_events": 0
+    },
+    "finalSnapshot": {
+      "barcode": "TASK134_FINAL_DELETE_EDIT_CONFLICT_BARCODE_001",
+      "category_name": "TASK134_FINAL_DELETE_EDIT_CONFLICT_CATEGORY_BASE",
+      "deleted_at": "2026-06-17 19:07:23+00",
+      "id": "d9ab37b0-7aa1-46b1-9c15-433094bae648",
+      "item_number": "TASK134_FINAL_DELETE_EDIT_CONFLICT_ITEM_001",
+      "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+      "product_name": "TASK134_FINAL_DELETE_EDIT_CONFLICT_DELETE_EDIT",
+      "purchase_price": 7.25,
+      "retail_price": 10.5,
+      "stock_quantity": 4,
+      "supplier_name": "TASK134_FINAL_DELETE_EDIT_CONFLICT_SUPPLIER",
+      "updated_at": "2026-06-17 19:07:27.151642+00"
+    },
+    "scenarioPrefix": "TASK134_FINAL_DELETE_EDIT_CONFLICT_"
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "2026-06-17 19:07:23+00",
+      "name": "remote_delete_retained",
+      "status": "PASS"
+    },
+    {
+      "evidence": "attempted_updates=0, product_name=TASK134_FINAL_DELETE_EDIT_CONFLICT_DELETE_EDIT",
+      "name": "local_edit_no_resurrect",
+      "status": "PASS"
+    },
+    {
+      "evidence": "local edit was blocked by deleted_at is null guard",
+      "name": "protected_state",
+      "status": "PASS"
+    },
+    {
+      "evidence": "residue=0",
+      "name": "cleanup_residue_zero",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_FINAL_",
+  "residueCount": 0,
+  "rowsCreated": 4,
+  "rowsDeleted": 4,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:07:09Z",
+  "status": "PASS",
+  "summary": "Remote delete plus local edit conflict did not resurrect the product.",
+  "taskId": "TASK-134"
+}
+{"artifact": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-delete-edit-conflict.json", "status": "PASS", "summary": "Remote delete plus local edit conflict did not resurrect the product."}

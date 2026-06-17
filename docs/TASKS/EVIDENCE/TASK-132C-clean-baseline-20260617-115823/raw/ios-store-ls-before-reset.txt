@@ -1,0 +1,6 @@
+total 922920
+drwxr-xr-x  5 minxiang  staff        160 May 14 18:40 .
+drwxr-xr-x  8 minxiang  staff        256 May 14 18:40 ..
+-rw-r--r--@ 1 minxiang  staff  472502272 Jun 17 11:09 default.store
+-rw-r--r--@ 1 minxiang  staff      32768 Jun 17 11:10 default.store-shm
+-rw-r--r--@ 1 minxiang  staff          0 Jun 17 11:09 default.store-wal

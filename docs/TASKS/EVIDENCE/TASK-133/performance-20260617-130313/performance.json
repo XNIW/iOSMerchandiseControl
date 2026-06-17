@@ -1,0 +1,54 @@
+{
+  "cleanup": {
+    "android_task133_residue": "PASS",
+    "ios_task133_user_visible_residue": "PASS",
+    "supabase_task133_residue": "PASS",
+    "sync_events_benchmark_window_deleted_after_backup": 30
+  },
+  "critical_gates_not_covered_by_live_fixture": [
+    "Android productName + iOS retailPrice same barcode field-level merge runtime",
+    "Android category + iOS purchasePrice same barcode runtime",
+    "Android retailPrice T1 + iOS retailPrice T2 append-only runtime",
+    "same effectiveAt different retailPrice conflict runtime",
+    "remote deleted + local edited protected mode runtime",
+    "dirty/protected reopen no-push runtime fixture"
+  ],
+  "evidence_dir": "docs/TASKS/EVIDENCE/TASK-133/performance-20260617-130313",
+  "fixture_prefix": "TASK133_PERF_20260617_130313_",
+  "propagation": {
+    "android_to_ios": {
+      "count": 10,
+      "maxMs": 482,
+      "p50Ms": 462,
+      "p95Ms": 482,
+      "passCount": 10
+    },
+    "ios_to_android": {
+      "count": 10,
+      "maxMs": 1314,
+      "p50Ms": 1241,
+      "p95Ms": 1314,
+      "passCount": 10
+    },
+    "measured_kind": "catalog_product_create",
+    "note": "Existing harness measures scoped catalog product create propagation, not the stricter TASK-133 field-merge mutation scenarios.",
+    "status": "PASS"
+  },
+  "startup_noop": {
+    "android": {
+      "count": 10,
+      "max_ms": 1103,
+      "p50_ms": 1038,
+      "p95_ms": 1103
+    },
+    "ios": {
+      "count": 10,
+      "max_ms": 775,
+      "p50_ms": 751,
+      "p95_ms": 775
+    },
+    "status": "PASS",
+    "sync_events_created_each_iteration": 0
+  },
+  "task": "TASK-133"
+}

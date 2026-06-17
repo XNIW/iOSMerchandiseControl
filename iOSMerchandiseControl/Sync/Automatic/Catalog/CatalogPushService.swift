@@ -172,7 +172,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
             } else if let remoteID = product.remoteID {
                 let row = try await remote.updateProduct(
                     id: remoteID,
-                    payload: makeProductUpdatePayload(product)
+                    payload: makeProductUpdatePayload(product, changedFields: change.changedFields)
                 )
                 apply(row, to: product)
                 outcome.result.productUpdates += 1
@@ -287,18 +287,22 @@ final class CatalogPushService: SyncCatalogPushProviding {
         )
     }
 
-    nonisolated private static func makeProductUpdatePayload(_ product: Product) -> SyncAutomaticProductUpdatePayload {
-        SyncAutomaticProductUpdatePayload(
-            barcode: product.barcode,
-            itemNumber: product.itemNumber,
-            productName: product.productName,
-            secondProductName: product.secondProductName,
-            purchasePrice: product.purchasePrice,
-            retailPrice: product.retailPrice,
-            supplierID: product.supplier?.remoteID,
-            categoryID: product.category?.remoteID,
-            stockQuantity: product.stockQuantity,
-            deletedAt: product.remoteDeletedAt.map(timestamp)
+    nonisolated static func makeProductUpdatePayload(
+        _ product: Product,
+        changedFields: [String]
+    ) -> SyncAutomaticProductUpdatePayload {
+        let fields = Set(changedFields.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+        return SyncAutomaticProductUpdatePayload(
+            barcode: fields.contains("barcode") ? product.barcode : nil,
+            itemNumber: fields.contains("itemnumber") ? product.itemNumber : nil,
+            productName: fields.contains("productname") ? product.productName : nil,
+            secondProductName: fields.contains("secondproductname") ? product.secondProductName : nil,
+            purchasePrice: fields.contains("purchaseprice") ? product.purchasePrice : nil,
+            retailPrice: fields.contains("retailprice") ? product.retailPrice : nil,
+            supplierID: fields.contains("supplier") ? product.supplier?.remoteID : nil,
+            categoryID: fields.contains("category") ? product.category?.remoteID : nil,
+            stockQuantity: fields.contains("stockquantity") ? product.stockQuantity : nil,
+            deletedAt: fields.contains("tombstone") ? product.remoteDeletedAt.map(timestamp) : nil
         )
     }
 

@@ -1,0 +1,9 @@
+products|19891
+suppliers|193
+categories|162
+productPrices|41524
+historySessions|152
+pendingLocalChanges|4
+pendingOutboxEntries|1
+baselineRuns|25
+baselineRecords|395624

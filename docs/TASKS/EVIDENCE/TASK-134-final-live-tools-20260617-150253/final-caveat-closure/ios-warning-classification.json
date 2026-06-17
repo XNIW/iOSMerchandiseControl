@@ -1,0 +1,45 @@
+{
+  "buildExitCode": 0,
+  "classification": [
+    {
+      "classification": "preexisting_or_external",
+      "file": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift",
+      "line": "2582:/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift:612:24: warning: main actor-isolated static property 'localPendingChangesDidChange' can not be referenced from a nonisolated context",
+      "relativeFile": "iOSMerchandiseControl/LocalPendingChange.swift"
+    },
+    {
+      "classification": "preexisting_or_external",
+      "file": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+      "line": "2886:/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift:145:41: warning: main actor-isolated initializer 'init(modelContainer:initialNetworkStatus:)' cannot be called from outside of the actor; this is an error in the Swift 6 language mode",
+      "relativeFile": "iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift"
+    },
+    {
+      "classification": "preexisting_or_external",
+      "file": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift",
+      "line": "3340:/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift:145:41: warning: main actor-isolated initializer 'init(modelContainer:initialNetworkStatus:)' cannot be called from outside of the actor; this is an error in the Swift 6 language mode",
+      "relativeFile": "iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift"
+    },
+    {
+      "classification": "preexisting_or_external",
+      "file": "/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift",
+      "line": "3440:/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl/LocalPendingChange.swift:612:24: warning: main actor-isolated static property 'localPendingChangesDidChange' can not be referenced from a nonisolated context",
+      "relativeFile": "iOSMerchandiseControl/LocalPendingChange.swift"
+    },
+    {
+      "classification": "preexisting_or_external",
+      "file": null,
+      "line": "4075:2026-06-17 15:40:14.402 appintentsmetadataprocessor[80836:3034864] warning: Metadata extraction skipped. No AppIntents.framework dependency found.",
+      "relativeFile": ""
+    }
+  ],
+  "gate": "NO_NEW_TASK134_WARNINGS",
+  "introducedByTask134": [],
+  "status": "PASS",
+  "task134FilesChecked": [
+    "tools/agent/lib/task134_live.py",
+    "tools/agent/lib/task134.sh",
+    "iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift",
+    "iOSMerchandiseControl/Services/CatalogPushService.swift"
+  ],
+  "totalWarnings": 5
+}

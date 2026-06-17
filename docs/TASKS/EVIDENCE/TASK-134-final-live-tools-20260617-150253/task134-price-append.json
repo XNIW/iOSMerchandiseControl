@@ -1,0 +1,76 @@
+{
+  "artifacts": {
+    "json": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-price-append.json",
+    "markdown": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-price-append.md",
+    "rawLog": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-price-append.log"
+  },
+  "command": "task134-price-append",
+  "completedAt": "2026-06-17T19:06:22Z",
+  "data": {
+    "cleanupEnd": {
+      "categories": 1,
+      "product_prices": 2,
+      "products": 1,
+      "suppliers": 1,
+      "sync_events": 2
+    },
+    "cleanupStart": {
+      "categories": 0,
+      "product_prices": 0,
+      "products": 0,
+      "suppliers": 0,
+      "sync_events": 0
+    },
+    "prices": [
+      {
+        "effective_at": "2026-06-17 10:00:00",
+        "id": "3e0387c7-d4f0-41b6-b42a-ee4a36f4fd48",
+        "price": 31.1,
+        "source": "TASK134_FINAL_PRICE_APPEND_ANDROID_T1",
+        "type": "RETAIL"
+      },
+      {
+        "effective_at": "2026-06-17 11:00:00",
+        "id": "9df75c5c-dd74-4e6a-b951-2abaf1058097",
+        "price": 32.2,
+        "source": "TASK134_FINAL_PRICE_APPEND_IOS_T2",
+        "type": "RETAIL"
+      }
+    ],
+    "scenarioPrefix": "TASK134_FINAL_PRICE_APPEND_"
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "{\"insertedCount\": 1, \"id\": \"3e0387c7-d4f0-41b6-b42a-ee4a36f4fd48\"}",
+      "name": "append_t1_inserted",
+      "status": "PASS"
+    },
+    {
+      "evidence": "{\"insertedCount\": 1, \"id\": \"9df75c5c-dd74-4e6a-b951-2abaf1058097\"}",
+      "name": "append_t2_inserted",
+      "status": "PASS"
+    },
+    {
+      "evidence": "[{\"effective_at\": \"2026-06-17 10:00:00\", \"id\": \"3e0387c7-d4f0-41b6-b42a-ee4a36f4fd48\", \"price\": 31.1, \"source\": \"TASK134_FINAL_PRICE_APPEND_ANDROID_T1\", \"type\": \"RETAIL\"}, {\"effective_at\": \"2026-06-17 11:00:00\", \"id\": \"9df75c5c-dd74-4e6a-b951-2abaf1058097\", \"price\": 32.2, \"source\": \"TASK134_FINAL_PRICE_APPEND_IOS_T2\", \"type\": \"RETAIL\"}]",
+      "name": "append_only_two_effective_dates",
+      "status": "PASS"
+    },
+    {
+      "evidence": "residue=0",
+      "name": "cleanup_residue_zero",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_FINAL_",
+  "residueCount": 0,
+  "rowsCreated": 6,
+  "rowsDeleted": 7,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:05:31Z",
+  "status": "PASS",
+  "summary": "Append-only product price history verified for T1/T2 effectiveAt rows.",
+  "taskId": "TASK-134"
+}

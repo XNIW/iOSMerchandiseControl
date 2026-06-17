@@ -1,0 +1,4 @@
+0|ownerUserId|TEXT|1||1
+1|storeScope|TEXT|1||2
+2|lastSyncEventId|INTEGER|1||0
+6425adb0-33e3-4b6c-a9a7-ed3761e8257e||3065

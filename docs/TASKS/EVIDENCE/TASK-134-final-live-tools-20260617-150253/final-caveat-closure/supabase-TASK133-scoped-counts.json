@@ -1,0 +1,13 @@
+{
+  "counts": {
+    "categories": 0,
+    "product_prices": 0,
+    "products": 0,
+    "suppliers": 0,
+    "sync_events": 0
+  },
+  "prefix": "TASK133_%",
+  "source": "supabase.TASK133-scoped-counts",
+  "status": "PASS",
+  "watermark": 3035
+}

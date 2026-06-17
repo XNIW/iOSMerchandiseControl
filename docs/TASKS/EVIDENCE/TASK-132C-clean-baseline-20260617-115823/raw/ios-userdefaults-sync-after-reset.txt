@@ -1,0 +1,23 @@
+  "sync.runtime.auth.canSignIn" => false
+  "sync.runtime.auth.isSignedIn" => true
+  "sync.runtime.auth.isTransitioning" => false
+  "sync.runtime.auth.userIDPresent" => true
+  "sync.runtime.automatic.lastError" => "networkError(statusCode: nil, message: Optional("La connessione a internet sembra essere offline."))"
+  "sync.runtime.background.lastScheduleError" => "Error Domain=BGTaskSchedulerErrorDomain Code=1 "(null)""
+  "sync.runtime.incremental.lastSyncType" => "LIGHT_RECONCILE"
+  "sync.runtime.incremental.requiresFullRecovery" => true
+  "sync.runtime.orchestrator.lastAction" => "drainEvents"
+  "sync.runtime.orchestrator.lastRunErrorCode" => "networkError(statusCode: nil, message: Optional("La connessione a internet sembra essere offline."))"
+  "sync.runtime.timer.isSignedIn" => true
+  "task114.runtime.auth.isSignedIn" => false
+  "task114.runtime.incremental.lastError" => "failed_cancelled"
+  "task114.runtime.incremental.lastRequiresFullRecovery" => true
+  "task114.runtime.incremental.lastRequiresFullRecoveryReason" => "sync_event_missing_entity_ids"
+  "task114.runtime.incremental.lastSyncType" => "EVENT_INCREMENTAL"
+  "task114.runtime.timer.isSignedIn" => false
+  "task115.runtime.auth.isSignedIn" => false
+  "task115.runtime.automatic.lastError" => "networkError(statusCode: nil, message: Optional("La connessione a internet sembra essere offline."))"
+  "task115.runtime.incremental.lastSyncType" => "LIGHT_RECONCILE"
+  "task115.runtime.incremental.requiresFullRecovery" => true
+  "task115.runtime.orchestrator.lastAction" => "drainEvents"
+  "task115.runtime.timer.isSignedIn" => false

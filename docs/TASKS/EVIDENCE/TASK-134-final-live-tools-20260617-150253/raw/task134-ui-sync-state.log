@@ -1,0 +1,44 @@
+2026-06-17T19:33:50Z RUN xcrun simctl io booted screenshot /Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-ios.png cwd=/Users/minxiang/Desktop/iOSMerchandiseControl
+2026-06-17T19:33:50Z EXIT 0 elapsed_ms=225
+2026-06-17T19:33:50Z STDERR Detected file type from extension: PNG
+Note: No display specified. Defaulting to display: 26271162-08FF-44F1-AAC6-9A3E13CDDE74 (screenID: 1, name: LCD)
+Wrote screenshot to: /Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-ios.png
+2026-06-17T19:33:50Z RUN /Users/minxiang/Library/Android/sdk/platform-tools/adb -s 8ac48ff0 shell dumpsys window cwd=/Users/minxiang/Desktop/iOSMerchandiseControl
+2026-06-17T19:33:50Z EXIT 0 elapsed_ms=120
+2026-06-17T19:33:50Z STDOUT WINDOW MANAGER LAST ANR (dumpsys window lastanr)
+  <no ANR has occurred since boot>
+
+WINDOW MANAGER POLICY STATE (dumpsys window policy)
+Wallet Config : [null, null, null, null, null]
+    StrategyVolumeKeyEndTalkbackmTouchExplorationState : {{0=false}}
+    OplusKeyCombination rules:
+    , mRules:  KEYCODE_VOLUME_DOWN + KEYCODE_VOLUME_UP
+OplusModifierShortcutManager, mIntentShortcutsVersion : 1, mIntentShortcuts : {16={0=OplusShortcutInfo{launchType=customize, pkgName=null, className=null, action=speech, category=null, launchMode=null, flags=0, extras=null}, 29=OplusShortcutInfo{launchType=customize, pkgName=null, className=null, action=screenshot, category=null, launchMode=null, flags=0, extras={source=2, type=1}}, 31=OplusShortcutInfo{launchType=activity, pkgName=null, className=null, action=oplus.intent.action.CALCULATOR, category=null, launchMode=null, flags=335544320, extras={start_mode=start_mode_float_window, source=from_smart_sidebar}}, 34=OplusShortcutInfo{launchType=activity, pkgName=com.coloros.filemanager, className=com.oplus.filemanager.main.ui.MainActivity, action=android.intent.action.MAIN, category=android.intent.category.LAUNCHER, launchMode=null, flags=270532608, extras=null}, 40=OplusShortcutInfo{launchType=customize, pkgName=null, className=null, action=sleep, category=null, launchMode=null, flags=0, extras={keyguardOn=1}}, 47=OplusShortcutInfo{launchType=activity, pkgName=com.heytap.quicksearchbox, className=com.heytap.quicksearchbox.ui.activity.SearchHomeActivity, action=android.search.action.GLOBAL_SEARCH, category=null, launchMode=null, flags=268435456, extras=null}}}
+InputPolicy DUMP START!
+    DO DUMP StrategyManager : { StrategyShutdown StrategyLaunchIntercomCustom StrategyCustomizeIgnoreVirtualKey StrategyUnusedPhoneDetection StrategyBlackscreenshot StrategyPowerKeyEndCall StrategyDisableBottomKey StrategyVolumeKeyLaunchCamera StrategyIngoreKeyInFocusedWindow}
+    DO DUMP NotifyService : {
+    mQueueingInterceptorsCopy : [120:com.android.server.policy.KeyLongPressBaseStrategy$1@ccb9145, 130:com.android.server.policy.StrategyCustomizeIgnoreVirtualKey$1@94e109a, 170:com.android.server.policy.StrategyDisableBottomKey$2@682dcb, 190:com.android.server.policy.StrategyIngoreKeyInFocusedWindow$1@5189a8]
+    mQueueingObserversCopy : [110:com.android.server.policy.StrategyShutdown$3@a98fcc1, 140:com.android.server.policy.StrategyUnusedPhoneDetection$1@e6c9c66, 150:com.android.server.policy.StrategyBlackscreenshot$1@8c9dba7, 160:com.android.server.policy.StrategyPowerKeyEndCall$5@9099854, 180:com.android.server.policy.StrategyVolumeKeyLaunchCamera$3@a77a3fd]
+    mDispatchingInterceptorsCopy : [120:com.android.server.policy.KeyLongPressBaseStrategy$1@ccb9145, 130:com.android.server.policy.StrategyCustomizeIgnoreVirtualKey$1@94e109a, 170:com.android.server.policy.StrategyDisableBottomKey$2@682dcb, 190:com.android.server.policy.StrategyIngoreKeyInFocusedWindow$1@5189a8]
+    mDispatchingObserversCopy : [110:com.android.server.policy.StrategyShutdown$3@a98fcc1, 140:com.android.server.policy.StrategyUnusedPhoneDetection$1@e6c9c66, 150:com.android.server.policy.StrategyBlackscreenshot$1@8c9dba7, 160:com.android.server.policy.StrategyPowerKeyEndCall$5@9099854, 180:com.android.server.policy.StrategyVolumeKeyLaunchCamera$3@a77a3fd]
+}
+InputPolicy DUMP END!
+    mSafeMode=false mSystemReady=true mSystemBooted=true
+    mCameraLensCoverState=CAMERA_LENS_COVER_ABSENT
+    mWakeGestureEnabledSetting=false
+    mUiMode=UI_MODE_TYPE_NORMALmEnableCarDockHomeCapture=true
+    mLidKeyboardAccessibility=0 mLidNavigationAccessibility=0 getLidBehavior=LID_BEHAVIOR_SLEEP
+    mLongPressOnBackBehavior=LONG_PRESS_BACK_NOTHING
+    mLongPressOnHomeBehavior=LONG_PRESS_HOME_ASSIST
+    mDoubleTapOnHomeBehavior=DOUBLE_TAP_HOME_NOTHING
+    mShortPressOnPowerBehavior=SHORT_PRESS_POWER_GO_TO_SLEEP
+    mLongPressOnPowerBehavior=LONG_PRESS_POWER_ASSISTANT
+    mLongPressOnPowerAssistantTimeoutMs=500
+    mVeryLongPressOnPowerBehavior=VERY_LONG_PRESS_POWER
+2026-06-17T19:33:50Z RUN /Users/minxiang/Library/Android/sdk/platform-tools/adb -s 8ac48ff0 exec-out screencap -p cwd=/Users/minxiang/Desktop/iOSMerchandiseControl
+2026-06-17T19:33:50Z EXIT 0 elapsed_ms=324 stdout_bytes=131412
+2026-06-17T19:33:50Z RUN /Users/minxiang/Library/Android/sdk/platform-tools/adb -s 8ac48ff0 shell uiautomator dump /sdcard/task134-window.xml cwd=/Users/minxiang/Desktop/iOSMerchandiseControl
+2026-06-17T19:33:53Z EXIT 0 elapsed_ms=2321
+2026-06-17T19:33:53Z STDOUT UI hierchary dumped to: /sdcard/task134-window.xml
+2026-06-17T19:33:53Z RUN /Users/minxiang/Library/Android/sdk/platform-tools/adb -s 8ac48ff0 exec-out cat /sdcard/task134-window.xml cwd=/Users/minxiang/Desktop/iOSMerchandiseControl
+2026-06-17T19:33:53Z EXIT 0 elapsed_ms=63 stdout_bytes=22649

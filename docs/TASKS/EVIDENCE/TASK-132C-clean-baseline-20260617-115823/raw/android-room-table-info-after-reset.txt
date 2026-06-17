@@ -1,0 +1,108 @@
+-- products
+0|id|INTEGER|1||1
+1|barcode|TEXT|1||0
+2|itemNumber|TEXT|0||0
+3|productName|TEXT|0||0
+4|secondProductName|TEXT|0||0
+5|purchasePrice|REAL|0||0
+6|retailPrice|REAL|0||0
+7|oldPurchasePrice|REAL|0||0
+8|oldRetailPrice|REAL|0||0
+9|supplierId|INTEGER|0||0
+10|categoryId|INTEGER|0||0
+11|stockQuantity|REAL|0||0
+-- suppliers
+0|id|INTEGER|1||1
+1|name|TEXT|1||0
+-- categories
+0|id|INTEGER|1||1
+1|name|TEXT|1||0
+-- product_prices
+0|id|INTEGER|1||1
+1|productId|INTEGER|1||0
+2|type|TEXT|1||0
+3|price|REAL|1||0
+4|effectiveAt|TEXT|1||0
+5|source|TEXT|0||0
+6|note|TEXT|0||0
+7|createdAt|TEXT|1||0
+-- history_entries
+0|uid|INTEGER|1||1
+1|id|TEXT|1||0
+2|displayName|TEXT|1||0
+3|timestamp|TEXT|1||0
+4|data|TEXT|1||0
+5|editable|TEXT|1||0
+6|complete|TEXT|1||0
+7|supplier|TEXT|1||0
+8|category|TEXT|1||0
+9|wasExported|INTEGER|1||0
+10|syncStatus|TEXT|1||0
+11|orderTotal|REAL|1||0
+12|paymentTotal|REAL|1||0
+13|missingItems|INTEGER|1||0
+14|totalItems|INTEGER|1||0
+15|isManualEntry|INTEGER|1||0
+16|deletedAt|TEXT|0||0
+-- sync_event_outbox
+0|id|INTEGER|1||1
+1|ownerUserId|TEXT|1||0
+2|storeScope|TEXT|1||0
+3|domain|TEXT|1||0
+4|eventType|TEXT|1||0
+5|source|TEXT|0||0
+6|sourceDeviceId|TEXT|0||0
+7|batchId|TEXT|0||0
+8|clientEventId|TEXT|1||0
+9|changedCount|INTEGER|1||0
+10|entityIdsJson|TEXT|1||0
+11|metadataJson|TEXT|1||0
+12|createdAtMs|INTEGER|1||0
+13|attemptCount|INTEGER|1||0
+14|lastAttemptAtMs|INTEGER|0||0
+15|lastErrorType|TEXT|0||0
+-- product_remote_refs
+0|id|INTEGER|1||1
+1|productId|INTEGER|1||0
+2|remoteId|TEXT|1||0
+3|localChangeRevision|INTEGER|1||0
+4|lastSyncedLocalRevision|INTEGER|1||0
+5|lastRemoteAppliedAt|INTEGER|0||0
+6|lastRemotePayloadFingerprint|TEXT|0||0
+7|remoteUpdatedAt|TEXT|0||0
+-- supplier_remote_refs
+0|id|INTEGER|1||1
+1|supplierId|INTEGER|1||0
+2|remoteId|TEXT|1||0
+3|localChangeRevision|INTEGER|1||0
+4|lastSyncedLocalRevision|INTEGER|1||0
+5|lastRemoteAppliedAt|INTEGER|0||0
+6|lastRemotePayloadFingerprint|TEXT|0||0
+7|remoteUpdatedAt|TEXT|0||0
+-- category_remote_refs
+0|id|INTEGER|1||1
+1|categoryId|INTEGER|1||0
+2|remoteId|TEXT|1||0
+3|localChangeRevision|INTEGER|1||0
+4|lastSyncedLocalRevision|INTEGER|1||0
+5|lastRemoteAppliedAt|INTEGER|0||0
+6|lastRemotePayloadFingerprint|TEXT|0||0
+7|remoteUpdatedAt|TEXT|0||0
+-- product_price_remote_refs
+0|id|INTEGER|1||1
+1|productPriceId|INTEGER|1||0
+2|remoteId|TEXT|1||0
+-- sync_event_watermarks
+0|ownerUserId|TEXT|1||1
+1|storeScope|TEXT|1||2
+2|lastSyncEventId|INTEGER|1||0
+-- sync_event_device_state
+0|id|INTEGER|1||1
+1|deviceId|TEXT|1||0
+2|createdAtMs|INTEGER|1||0
+-- pending_catalog_tombstones
+0|id|INTEGER|1||1
+1|entityType|TEXT|1||0
+2|remoteId|TEXT|1||0
+3|enqueuedAtMs|INTEGER|1||0
+4|attemptCount|INTEGER|1||0

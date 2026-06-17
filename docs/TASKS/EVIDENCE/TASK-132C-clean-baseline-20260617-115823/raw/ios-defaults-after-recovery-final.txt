@@ -1,0 +1,4 @@
+{
+    appLanguage = en;
+    appTheme = light;
+}

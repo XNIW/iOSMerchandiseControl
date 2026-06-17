@@ -1,0 +1,9 @@
+Using workdir /Users/minxiang/Desktop/MerchandiseControlSupabase
+Initialising login role...
+┌────────────────────────────────────────────┬──────────────┐
+│                backup_table                │ backup_count │
+├────────────────────────────────────────────┼──────────────┤
+│ backup_task133_sync_events_20260617_174403 │ 30           │
+└────────────────────────────────────────────┴──────────────┘
+A new version of Supabase CLI is available: v2.107.0 (currently installed v2.106.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

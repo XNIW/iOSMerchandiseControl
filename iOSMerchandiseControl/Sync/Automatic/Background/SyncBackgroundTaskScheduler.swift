@@ -142,8 +142,19 @@ nonisolated enum SyncBackgroundTaskRunner {
                     recorder: recorder
                 )
             )
+            let decisionInputProvider = SyncDecisionInputProvider(
+                modelContainer: modelContainer,
+                initialNetworkStatus: .satisfied
+            )
+            let snapshot = await decisionInputProvider.makeSnapshot(
+                triggerSource: .backgroundRefresh,
+                isAuthenticated: true,
+                ownerUserID: session.userID,
+                isSyncBusy: await engine.isRunning()
+            )
+            let action = SyncDecisionEngine.decide(snapshot.input)
             let result = await engine.run(
-                action: .sequence([.pushPending, .drainEvents]),
+                action: action,
                 source: .backgroundRefresh,
                 ownerUserID: session.userID
             )

@@ -1,0 +1,66 @@
+Using workdir /Users/minxiang/Desktop/MerchandiseControlSupabase
+Initialising login role...
+┌──────────────────────────┬─────────────────────┬──────────────────────────┐
+│        table_name        │     column_name     │        data_type         │
+├──────────────────────────┼─────────────────────┼──────────────────────────┤
+│ inventory_categories     │ id                  │ uuid                     │
+│ inventory_categories     │ owner_user_id       │ uuid                     │
+│ inventory_categories     │ name                │ text                     │
+│ inventory_categories     │ updated_at          │ timestamp with time zone │
+│ inventory_categories     │ deleted_at          │ timestamp with time zone │
+│ inventory_product_prices │ id                  │ uuid                     │
+│ inventory_product_prices │ owner_user_id       │ uuid                     │
+│ inventory_product_prices │ product_id          │ uuid                     │
+│ inventory_product_prices │ type                │ text                     │
+│ inventory_product_prices │ price               │ double precision         │
+│ inventory_product_prices │ effective_at        │ text                     │
+│ inventory_product_prices │ source              │ text                     │
+│ inventory_product_prices │ note                │ text                     │
+│ inventory_product_prices │ created_at          │ text                     │
+│ inventory_products       │ id                  │ uuid                     │
+│ inventory_products       │ owner_user_id       │ uuid                     │
+│ inventory_products       │ barcode             │ text                     │
+│ inventory_products       │ item_number         │ text                     │
+│ inventory_products       │ product_name        │ text                     │
+│ inventory_products       │ second_product_name │ text                     │
+│ inventory_products       │ purchase_price      │ double precision         │
+│ inventory_products       │ retail_price        │ double precision         │
+│ inventory_products       │ supplier_id         │ uuid                     │
+│ inventory_products       │ category_id         │ uuid                     │
+│ inventory_products       │ stock_quantity      │ double precision         │
+│ inventory_products       │ updated_at          │ timestamp with time zone │
+│ inventory_products       │ deleted_at          │ timestamp with time zone │
+│ inventory_suppliers      │ id                  │ uuid                     │
+│ inventory_suppliers      │ owner_user_id       │ uuid                     │
+│ inventory_suppliers      │ name                │ text                     │
+│ inventory_suppliers      │ updated_at          │ timestamp with time zone │
+│ inventory_suppliers      │ deleted_at          │ timestamp with time zone │
+│ shared_sheet_sessions    │ remote_id           │ text                     │
+│ shared_sheet_sessions    │ payload_version     │ integer                  │
+│ shared_sheet_sessions    │ timestamp           │ text                     │
+│ shared_sheet_sessions    │ supplier            │ text                     │
+│ shared_sheet_sessions    │ category            │ text                     │
+│ shared_sheet_sessions    │ is_manual_entry     │ boolean                  │
+│ shared_sheet_sessions    │ data                │ jsonb                    │
+│ shared_sheet_sessions    │ updated_at          │ timestamp with time zone │
+│ shared_sheet_sessions    │ owner_user_id       │ uuid                     │
+│ shared_sheet_sessions    │ display_name        │ text                     │
+│ shared_sheet_sessions    │ session_overlay     │ jsonb                    │
+│ shared_sheet_sessions    │ deleted_at          │ timestamp with time zone │
+│ sync_events              │ id                  │ bigint                   │
+│ sync_events              │ owner_user_id       │ uuid                     │
+│ sync_events              │ store_id            │ uuid                     │
+│ sync_events              │ domain              │ text                     │
+│ sync_events              │ event_type          │ text                     │
+│ sync_events              │ source              │ text                     │
+│ sync_events              │ source_device_id    │ text                     │
+│ sync_events              │ batch_id            │ uuid                     │
+│ sync_events              │ client_event_id     │ text                     │
+│ sync_events              │ changed_count       │ integer                  │
+│ sync_events              │ entity_ids          │ jsonb                    │
+│ sync_events              │ created_at          │ timestamp with time zone │
+│ sync_events              │ expires_at          │ timestamp with time zone │
+│ sync_events              │ metadata            │ jsonb                    │
+└──────────────────────────┴─────────────────────┴──────────────────────────┘
+A new version of Supabase CLI is available: v2.107.0 (currently installed v2.106.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

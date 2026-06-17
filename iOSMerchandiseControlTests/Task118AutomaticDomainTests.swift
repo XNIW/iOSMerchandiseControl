@@ -254,6 +254,14 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertFalse(automaticRuntimeSources.contains(#"with: "<UUID>""#))
     }
 
+    func testBackgroundRunnerUsesDecisionEngineBeforeAutomaticRun() throws {
+        let background = try readSource("iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift")
+
+        XCTAssertTrue(background.contains("SyncDecisionInputProvider"))
+        XCTAssertTrue(background.contains("SyncDecisionEngine.decide"))
+        XCTAssertFalse(background.contains(".sequence([.pushPending, .drainEvents])"))
+    }
+
     func testOptionsStatusCardReadsAutomaticRunOutcome() throws {
         let options = try readSource("iOSMerchandiseControl/OptionsView.swift")
 

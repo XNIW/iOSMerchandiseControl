@@ -1,0 +1,27 @@
+2026-06-17 11:10:32.180 Df iOSMerchandiseControl[28246:1d9fe3] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async(1820) [C2:1][0x112605340] Performing external trust evaluation
+2026-06-17 11:10:32.181 Df iOSMerchandiseControl[28246:1d9fe3] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external(1805) [C2:1][0x112605340] Asyncing for external verify block
+2026-06-17 11:10:32.186 A  iOSMerchandiseControl[28246:1d9fe3] (Security) SecTrustEvaluateIfNecessaryFastAsync
+2026-06-17 11:10:32.186 Df iOSMerchandiseControl[28246:1d9fe3] [com.apple.securityd:trust] (Trust 0x60000350c4d0) Completed async eval kickoff
+2026-06-17 11:10:32.189 A  iOSMerchandiseControl[28246:1d9fe3] (Security) SecTrustEvaluateIfNecessaryFastAsync
+2026-06-17 11:10:32.189 Df iOSMerchandiseControl[28246:1d9fe3] [com.apple.securityd:trust] (Trust 0x600003524000) Completed async eval kickoff
+2026-06-17 11:10:32.191 Df iOSMerchandiseControl[28246:1d9fe3] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external_block_invoke_3(1760) [C2:1][0x112605340] Returning from external verify block with result: true
+2026-06-17 11:10:32.207 Df iOSMerchandiseControl[28246:1d9fe3] [com.apple.network:boringssl] boringssl_context_new_session_handler(1520) [C2:1][0x112605340] Asyncing for session update block
+2026-06-17 11:10:32.208 Df iOSMerchandiseControl[28246:1d9fe3] [com.apple.network:boringssl] boringssl_context_new_session_handler(1520) [C2:1][0x112605340] Asyncing for session update block
+2026-06-17 11:10:32.221 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.dt.xctest:Default] Registering for test daemon availability notify post.
+2026-06-17 11:10:32.287 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.287 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.288 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.288 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.289 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.379 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.381 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.485 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.702 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.777 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.777 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x112715120> (<uuid>)
+2026-06-17 11:10:32.863 Df iOSMerchandiseControl[28246:1d9fa4] [com.apple.BackgroundTasks:Framework] submitTaskRequest: <BGAppRefreshTaskRequest: com.niwcyber.iOSMerchandiseControl.sync.refresh, earliestBeginDate: 2026-06-17 15:25:32 +0000>
+2026-06-17 11:10:33.297 Df iOSMerchandiseControl[28246:1d9fe3] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async(1820) [C4.1.1:2][0x117407950] Performing external trust evaluation
+2026-06-17 11:10:33.297 Df iOSMerchandiseControl[28246:1d9fe3] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external(1805) [C4.1.1:2][0x117407950] Asyncing for external verify block
+2026-06-17 11:10:33.298 A  iOSMerchandiseControl[28246:1d9fec] (Security) SecTrustEvaluateIfNecessaryFastAsync
+2026-06-17 11:10:33.298 Df iOSMerchandiseControl[28246:1d9fec] [com.apple.securityd:trust] (Trust 0x600003510790) Completed async eval kickoff
+2026-06-17 11:10:33.307 Df iOSMerchandiseControl[28246:1d9fdb] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external_block_invoke_3(1760) [C4.1.1:2][0x117407950] Returning from external verify block with result: true

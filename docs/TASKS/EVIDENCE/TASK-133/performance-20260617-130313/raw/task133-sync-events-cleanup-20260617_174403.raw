@@ -1,0 +1,9 @@
+Using workdir /Users/minxiang/Desktop/MerchandiseControlSupabase
+Initialising login role...
+┌────────────────────────────┬───────┐
+│           metric           │ value │
+├────────────────────────────┼───────┤
+│ remaining_events_3036_3065 │ 0     │
+└────────────────────────────┴───────┘
+A new version of Supabase CLI is available: v2.107.0 (currently installed v2.106.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

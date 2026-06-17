@@ -1,0 +1,45 @@
+2026-06-17 12:03:36.713 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.BoardServices:XPCErrors] [C:2] Alloc com.apple.backboard.hid-services.xpc
+2026-06-17 12:03:37.117 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2 D77A927F-9150-4F4D-B90D-F06634935FBF Hostname#194aaada:443 quic-connection, url: https://jpgoimipbothfgkokyvm.supabase.co/rest/v1/sync_events, definite, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{CE27FA09-81D1-4D48-A7D3-A8D4ED2BCC12}{(null)}{Y}{2}{0x0} (private), proc: 84993067-3AF5-3E58-9DFA-8152899FF6EF, delegated upid: 0] start
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C3 C637F66E-BFAA-43CF-A766-18E65B4B1E47 IPv4#a1ec5642:443 quic-connection, url: https://jpgoimipbothfgkokyvm.supabase.co/rest/v1/sync_events, tls, definite, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{CE27FA09-81D1-4D48-A7D3-A8D4ED2BCC12}{(null)}{Y}{2}{0x0} (private), proc: 84993067-3AF5-3E58-9DFA-8152899FF6EF, delegated upid: 0] start
+2026-06-17 12:03:37.195 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async(1820) [C3:1][0x102d5e240] Performing external trust evaluation
+2026-06-17 12:03:37.195 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external(1805) [C3:1][0x102d5e240] Asyncing for external verify block
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> auth completion disp=1 cred=0x0
+2026-06-17 12:03:37.196 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecTrustEvaluateIfNecessaryFastAsync
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:trust] (Trust 0x60000351d290) Completed async eval kickoff
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async(1820) [C1.1.1:2][0x102eb22b0] Performing external trust evaluation
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external(1805) [C1.1.1:2][0x102eb22b0] Asyncing for external verify block
+2026-06-17 12:03:37.197 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <BB208C11-B6F5-49EC-A827-ACDFD17255CF>.<1> auth completion disp=1 cred=0x0
+2026-06-17 12:03:37.197 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecTrustEvaluateIfNecessaryFastAsync
+2026-06-17 12:03:37.197 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:trust] (Trust 0x600003520000) Completed async eval kickoff
+2026-06-17 12:03:37.198 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecTrustEvaluateIfNecessaryFastAsync
+2026-06-17 12:03:37.198 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:trust] (Trust 0x60000350e310) Completed async eval kickoff
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external_block_invoke_3(1760) [C1.1.1:2][0x102eb22b0] Returning from external verify block with result: true
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 1: connected successfully
+2026-06-17 12:03:37.205 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external_block_invoke_3(1760) [C3:1][0x102d5e240] Returning from external verify block with result: true
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 2: connected successfully
+2026-06-17 12:03:37.222 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_new_session_handler(1520) [C3:1][0x102d5e240] Asyncing for session update block
+2026-06-17 12:03:37.222 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_new_session_handler(1520) [C3:1][0x102d5e240] Asyncing for session update block
+2026-06-17 12:03:37.931 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> finished successfully
+2026-06-17 12:03:38.110 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <7CE8E092-2A14-42F5-9667-2AE270642498>.<4> finished successfully
+2026-06-17 12:03:38.110 Df iOSMerchandiseControl[88826:1fe6d7] [com.apple.CFNetwork:Default] Task <B90C253C-B141-4F8B-AB1B-3C7AF26922A9>.<6> finished successfully
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.CFNetwork:Default] Task <BD615690-BE0A-4023-AE4D-AFBD86BC602F>.<3> finished successfully
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.CFNetwork:Default] Task <6FF6E1B6-C857-48F9-BCD9-B6912B2C9AEB>.<5> finished successfully
+2026-06-17 12:03:38.221 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <442410B4-3970-45D7-931D-69F33019306C>.<2> finished successfully
+2026-06-17 12:04:08.692 Df iOSMerchandiseControl[88826:1feca4] [com.apple.CFNetwork:Default] Task <33F5A7C5-986E-4C4C-B839-78220A86E00B>.<7> finished successfully
+2026-06-17 12:04:08.806 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <E4424FC2-F847-4FC6-A7E8-65CBDF2C40AB>.<11> finished successfully
+2026-06-17 12:04:08.836 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <4ED44B8C-0555-4603-B406-A80BCC35FBC2>.<12> finished successfully
+2026-06-17 12:04:08.842 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <06E5794B-CF1F-4EE2-ABB8-D62C7AEA4477>.<10> finished successfully
+2026-06-17 12:04:08.854 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <470AC9EB-B820-4A50-92F9-60E6E690A877>.<9> finished successfully
+2026-06-17 12:04:08.861 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <5C8AD997-FBDE-4DED-9711-43AD9457BBDD>.<8> finished successfully
+2026-06-17 12:04:39.835 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <6ED178BD-5D5B-4295-9F6F-2A95642DC3D8>.<13> finished successfully
+2026-06-17 12:04:39.967 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <76268EF4-68BD-4FE6-81EE-DFAA09AA78FE>.<18> finished successfully
+2026-06-17 12:04:40.077 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <3172C237-CB7D-49EF-81E2-2C10404C492E>.<14> finished successfully
+2026-06-17 12:04:40.079 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <2AEF283B-56D4-4277-B6B8-03213C16B56C>.<16> finished successfully
+2026-06-17 12:04:40.080 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <E636D1C4-49CC-4E52-9B52-B2B662359154>.<17> finished successfully
+2026-06-17 12:04:40.080 Df iOSMerchandiseControl[88826:1feef1] [com.apple.CFNetwork:Default] Task <2D0B11F8-540A-4348-860E-F3687051C8E0>.<15> finished successfully
+2026-06-17 12:05:12.066 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <727C73F2-BEB0-4874-AAE1-A649C715C695>.<19> finished successfully
+2026-06-17 12:05:12.219 Df iOSMerchandiseControl[88826:1ff151] [com.apple.CFNetwork:Default] Task <8E27D0CF-75BC-49F3-A108-1473535F3916>.<22> finished successfully
+2026-06-17 12:05:12.220 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <F00BF302-C04B-4421-9BAD-900CD2150484>.<23> finished successfully
+2026-06-17 12:05:12.246 Df iOSMerchandiseControl[88826:1ff147] [com.apple.CFNetwork:Default] Task <6158C2B4-81D3-4CB9-8827-2C6A0DD84DAD>.<24> finished successfully
+2026-06-17 12:05:12.247 Df iOSMerchandiseControl[88826:1ff147] [com.apple.CFNetwork:Default] Task <1221E578-E039-486C-AFCF-58045173F926>.<21> finished successfully
+2026-06-17 12:05:12.276 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <2C66C8F3-AF03-4064-A9B6-1874F6C45BC9>.<20> finished successfully

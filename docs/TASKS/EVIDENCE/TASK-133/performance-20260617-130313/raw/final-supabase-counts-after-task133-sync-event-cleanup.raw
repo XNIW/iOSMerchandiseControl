@@ -1,0 +1,14 @@
+Using workdir /Users/minxiang/Desktop/MerchandiseControlSupabase
+Initialising login role...
+┌──────────────────────────┬───────┬────────┬───────────┐
+│        table_name        │ total │ active │ tombstone │
+├──────────────────────────┼───────┼────────┼───────────┤
+│ inventory_categories     │ 28    │ 28     │ 0         │
+│ inventory_product_prices │ 41109 │ 41109  │ 0         │
+│ inventory_products       │ 19696 │ 19695  │ 1         │
+│ inventory_suppliers      │ 59    │ 59     │ 0         │
+│ shared_sheet_sessions    │ 87    │ 35     │ 52        │
+│ sync_events              │ 1823  │ 1823   │ 0         │
+└──────────────────────────┴───────┴────────┴───────────┘
+A new version of Supabase CLI is available: v2.107.0 (currently installed v2.106.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

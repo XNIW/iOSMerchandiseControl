@@ -1,0 +1,10 @@
+  bash arg: -p
+  bash arg: com.example.merchandisecontrolsplitview
+  bash arg: 1
+args: [-p, com.example.merchandisecontrolsplitview, 1]
+ arg: "-p"
+ arg: "com.example.merchandisecontrolsplitview"
+ arg: "1"
+data="com.example.merchandisecontrolsplitview"
+Events injected: 1
+## Network stats: elapsed time=89ms (0ms mobile, 0ms wifi, 89ms not connected)

@@ -1,0 +1,79 @@
+=== mc-agent live task134-admin-web-update --prefix TASK134_FINAL_ ===
+{
+  "artifacts": {
+    "json": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-admin-web-update.json",
+    "markdown": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-admin-web-update.md",
+    "rawLog": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-admin-web-update.log"
+  },
+  "command": "task134-admin-web-update",
+  "completedAt": "2026-06-17T19:10:37Z",
+  "data": {
+    "cleanupEnd": {
+      "categories": 1,
+      "product_prices": 0,
+      "products": 1,
+      "suppliers": 1,
+      "sync_events": 1
+    },
+    "cleanupStart": {
+      "categories": 1,
+      "product_prices": 0,
+      "products": 1,
+      "suppliers": 1,
+      "sync_events": 1
+    },
+    "finalSnapshot": {
+      "barcode": "TASK134_FINAL_ADMIN_WEB_UPDATE_BARCODE_001",
+      "category_name": "TASK134_FINAL_ADMIN_WEB_UPDATE_CATEGORY_BASE",
+      "deleted_at": null,
+      "id": "b3dd3967-f8fb-41a6-9aa5-2a2efbcd5845",
+      "item_number": "TASK134_FINAL_ADMIN_WEB_UPDATE_ITEM_001",
+      "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+      "product_name": "TASK134_FINAL_ADMIN_WEB_UPDATE_ADMIN_WEB",
+      "purchase_price": 7.25,
+      "retail_price": 10.5,
+      "second_product_name": "TASK134_FINAL_ADMIN_WEB_UPDATE_ADMIN_WEB_SECOND",
+      "stock_quantity": 99,
+      "supplier_name": "TASK134_FINAL_ADMIN_WEB_UPDATE_SUPPLIER",
+      "updated_at": "2026-06-17 19:10:06.426704+00"
+    },
+    "scenarioPrefix": "TASK134_FINAL_ADMIN_WEB_UPDATE_",
+    "watermarkAfter": 3075,
+    "watermarkBefore": 3035
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "{\"barcode\": \"TASK134_FINAL_ADMIN_WEB_UPDATE_BARCODE_001\", \"category_name\": \"TASK134_FINAL_ADMIN_WEB_UPDATE_CATEGORY_BASE\", \"deleted_at\": null, \"id\": \"b3dd3967-f8fb-41a6-9aa5-2a2efbcd5845\", \"item_number\": \"TASK134_FINAL_ADMIN_WEB_UPDATE_ITEM_001\", \"owner_user_id\": \"6425adb0-33e3-4b6c-a9a7-ed3761e8257e\", \"product_name\": \"TASK134_FINAL_ADMIN_WEB_UPDATE_ADMIN_WEB\", \"purchase_price\": 7.25, \"retail_price\": 10.5, \"second_product_name\": \"TASK134_FINAL_ADMIN_WEB_UPDATE_ADMIN_WEB_SECOND\", \"stock_quantity\": 99, \"supplier_name\": \"TASK134_FINAL_ADMIN_WEB_UPDATE_SUPPLIER\", \"updated_at\": \"2026-06-17 19:10:06.426704+00\"}",
+      "name": "admin_web_update_visible",
+      "status": "PASS"
+    },
+    {
+      "evidence": "3035->3075",
+      "name": "watermark_updated",
+      "status": "PASS"
+    },
+    {
+      "evidence": "client_pushes=0",
+      "name": "no_accidental_ios_android_push",
+      "status": "PASS"
+    },
+    {
+      "evidence": "residue=0",
+      "name": "cleanup_residue_zero",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_FINAL_",
+  "residueCount": 0,
+  "rowsCreated": 4,
+  "rowsDeleted": 4,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:09:40Z",
+  "status": "PASS",
+  "summary": "Admin-web third-client update produced a targeted event without client push-back.",
+  "taskId": "TASK-134"
+}
+{"artifact": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-admin-web-update.json", "status": "PASS", "summary": "Admin-web third-client update produced a targeted event without client push-back."}

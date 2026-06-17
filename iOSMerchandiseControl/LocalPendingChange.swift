@@ -607,11 +607,18 @@ nonisolated final class LocalPendingChangeAccumulator {
 
     private func notifyActiveChangeIfNeeded(_ change: LocalPendingChange) {
         guard !change.status.isTerminal else { return }
-        Task { @MainActor in
+        if Thread.isMainThread {
             NotificationCenter.default.post(
                 name: .localPendingChangesDidChange,
                 object: nil
             )
+        } else {
+            Task { @MainActor in
+                NotificationCenter.default.post(
+                    name: .localPendingChangesDidChange,
+                    object: nil
+                )
+            }
         }
     }
 

@@ -1,0 +1,2 @@
+localPendingChange.status|acknowledged|4
+syncEventOutbox.status|sent|1

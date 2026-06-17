@@ -1,0 +1,3 @@
+-rw-r--r--@ 1 minxiang  staff   451M Jun 17 11:09 /Users/minxiang/Library/Developer/CoreSimulator/Devices/459C668B-7CE8-443B-BAB3-7D3D5FFC9143/data/Containers/Data/Application/7C0E9C1F-E75D-4465-A23E-CF4F2CEF13AE/Library/Application Support/default.store
+-rw-r--r--@ 1 minxiang  staff    32K Jun 17 11:09 /Users/minxiang/Library/Developer/CoreSimulator/Devices/459C668B-7CE8-443B-BAB3-7D3D5FFC9143/data/Containers/Data/Application/7C0E9C1F-E75D-4465-A23E-CF4F2CEF13AE/Library/Application Support/default.store-shm
+-rw-r--r--@ 1 minxiang  staff     0B Jun 17 11:09 /Users/minxiang/Library/Developer/CoreSimulator/Devices/459C668B-7CE8-443B-BAB3-7D3D5FFC9143/data/Containers/Data/Application/7C0E9C1F-E75D-4465-A23E-CF4F2CEF13AE/Library/Application Support/default.store-wal

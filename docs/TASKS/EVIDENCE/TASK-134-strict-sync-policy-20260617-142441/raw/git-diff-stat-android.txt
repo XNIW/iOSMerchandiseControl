@@ -1,0 +1,11 @@
+ .idea/deploymentTargetSelector.xml                 |  33 +++++
+ .../Task103CrossPlatformAcceptanceTest.kt          |   7 +-
+ .../data/CatalogAutoSyncCoordinator.kt             |  36 +++++-
+ .../data/CatalogSyncStateTracker.kt                |   2 +
+ .../data/HistorySessionPushCoordinator.kt          |  33 +++--
+ .../data/InventoryRepository.kt                    |   2 +-
+ .../data/CatalogAutoSyncCoordinatorTest.kt         | 144 +++++++++++++++++----
+ .../data/DefaultInventoryRepositoryTest.kt         |   8 ++
+ .../data/HistorySessionPushCoordinatorTest.kt      |  63 +++++++--
+ .../util/ImportAnalyzerTest.kt                     |  20 +++
+ 10 files changed, 301 insertions(+), 47 deletions(-)

@@ -4,6 +4,8 @@
 iOSMerchandiseControl — app iOS per controllo merce e inventario
 
 ## Obiettivo attuale
+**TASK-132 — DONE — CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED / TASK-132 final live strict closure (historical TASK-134 label)** *(2026-06-17 16:26 -0400: tracking canonicalization pass docs-only applicato. TASK-132 e' DONE. La closure storicamente etichettata TASK-134 e' parte del sotto-scope `TASK-132 final live strict closure`, non un task canonico separato; i riferimenti `TASK134_*` restano solo fixture/harness prefix storici e una futura TASK-134 canonica resta libera. La final live closure del 2026-06-17 15:44 resta invariata: Android UI `task134-ui-sync-state` rerun su OnePlus IN2013 reale con `PASS_REAL_SCREENSHOT`, performance strict rerun con split metrics `PASS_APP_LATENCY`, warning iOS Debug classificati `NO_NEW_TASK134_WARNINGS`, strict live audit PASS per Supabase + iOS SwiftData/runtime + Android Room scoped residue/pending zero; residue dei prefissi storici TASK133_/TASK134_ Supabase/iOS/Android 0, sync_events fixture 0. Build/check finali storici PASS: iOS Debug build, iOS targeted test con historical TASK-134 label 1/1, Android `assembleDebug`, `compileDebugAndroidTestKotlin`, `lintDebug`, unit test con historical TASK-134 label, iOS/Android `git diff --check`, secret scan evidence PASS. Evidence finale storica: `docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/TASK-134-FINAL-DONE.md` e sottofolder `final-caveat-closure/`. Responsabile attuale: **USER / Accepted hard DONE override**.)*
+
 **TASK-131 — ACTIVE / BLOCKED — PHYSICAL_REVIEW_ACCESSIBILITY_OPERATOR_EVIDENCE_REQUIRED / FULL_PHYSICAL_IOS_ANDROID_SCOPE / Physical-device Sync Policy UI/UX Acceptance iOS + Android** *(2026-05-29: review Codex severa su override utente completata con fix diretti, senza promozione a REVIEW/DONE. Core full physical gia' PASS e riconfermato: sync matrix `TASK131_POLICY_FIX9_` PASS con drift 0, pending 0, duplicate ProductPrice 0; offline/reconnect/restart/flap `TASK131_OFFLINE_FIX6_` PASS con solo `BLOCKED_EXTERNAL_IOS_SCHEDULER_POLICY`; account split rerun `TASK131_REVIEW_ACCOUNT_` PASS per same-account/auth fail-closed/owner mismatch/legacy/export/localDefaultStoreOnly, mentre C126-14/15/16/17/40 restano solo case-level `BLOCKED_EXTERNAL_SECOND_ACCOUNT`. Fix review applicati: redaction device/evidence, log Android ProductPrice senza ID raw, timeout Supabase `verify-schema`, classificazione blocker TASK-131, accessibility smoke non piu' FAIL tecnico per checklist mancante, checklist operator-assisted creata. Rerun build/test/scans PASS: iOS Debug/Release/sync/price/task131-harness, Android targeted/build/sync/price, Supabase linked schema/RLS/grants/RPC/realtime/price, cleanup/residue `TASK131_` Supabase PASS/0, Android cleanup PASS, sensitive/evidence/json/redaction/no-full-pull/no-cross-owner/no-service-role/no-RLS-bypass PASS. Resta non REVIEW/DONE perche' mancano evidence operator-assisted per Conflict/Review taps (`OPERATOR_CONFLICT_REVIEW_CHECKLIST_NOT_PROVIDED`) e VoiceOver/TalkBack/Dynamic Type (`OPERATOR_ACCESSIBILITY_CHECKLIST_NOT_PROVIDED`). TASK-131 resta `LOCAL_CANONICAL_AHEAD_OF_REMOTE`; nessun claim production-ready globale. Responsabile attuale: **Codex / Reviewer-Fixer su override utente, handoff a operatore/Claude**.)*
 
 **IDLE — ultimo completato TASK-130 DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES / Price contract + consolidated TASK-128 release hardening scope** *(2026-05-28: review/fix-to-DONE Codex completata su override utente. TASK-128 chiuso **DONE / CLOSED_BY_TASK130_CONSOLIDATED_REVIEW**; TASK-129 chiuso **DONE / ACCEPTED_WITH_BYTEBUDDY_QUARANTINE_NOTE**; TASK-130 chiuso **DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES**. Evidence finale **`docs/TASKS/EVIDENCE/TASK-130/final-review-done-closure.md`**. Price contract iOS/Android/Supabase PASS; iOS build/debug e price-contract PASS; Android build/debug, targeted sync e price-contract PASS; Android broad non verde e non dichiarata PASS piena, quarantena finale solo `BYTEBUDDY_ATTACH_ENV`; iOS simulator smoke PASS; iOS physical build + install/launch PASS; Android emulator smoke PASS; Android physical smoke PASS; offline non-live iOS/Android e Android L2 reconnect PASS. Golden corpus/performance/Options/scanner/accessibilita'/long background restano note accettate PASS_WITH_NOTES/PARTIAL. Warning Swift 6 app segnalati dall'utente corretti; restano solo warning tooling/test-target legacy non bloccanti. Repo locale **LOCAL_CANONICAL_AHEAD_OF_REMOTE** coerente; nessun conflitto Git reale. Nessun claim production-ready globale. Responsabile attuale: **USER / Accepted closure with notes**.)*
@@ -963,12 +965,12 @@ Il perimetro **TASK‑110** ha coperto audit/implementazione **Android + iOS + S
 > **2026-05-05 (review/close/user override):** **TASK-040** review tecnica completa eseguita da **Codex / Reviewer+Fixer** con esito **APPROVED_FIXED_DIRECTLY / DONE**: fix diretto limitato a conflitti `remoteID` per duplicati locali e supplier/category omonimi con UUID remoto diverso, piu' hardening apply anti-merge silenzioso. Build Debug PASS, build Release PASS, XCTest completo PASS, `git diff --check` PASS, localizzazioni PASS, anti-scope PASS. Nessuna scrittura Supabase, nessun push, nessun `record_sync_event`, nessun outbox/dirty, nessun ProductPrice apply remoto, nessun SQL/migration. **TASK-039 resta DONE**. Follow-up futuri registrati ma non attivati.
 
 ## Workflow task attivo
-- **Task attivo:** nessuno
-- **File task attivo:** n/a
-- **Stato globale progetto:** **IDLE**
+- **Task attivo:** TASK-132 — Cross-platform sync forensics, cleanup e policy hardening
+- **File task attivo:** `docs/TASKS/TASK-132-cross-platform-sync-forensics-cleanup-policy-hardening.md`
+- **Stato globale progetto:** **ACTIVE**
 - **Stato TASK-130:** **DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES**
-- **Responsabile attuale:** **USER / Accepted closure with notes**
-- **Ultimo aggiornamento task attivo:** 2026-05-28 — review/fix-to-DONE consolidata completata per TASK-128/129/130. Evidence finale `docs/TASKS/EVIDENCE/TASK-130/final-review-done-closure.md`; final scans sensitive/evidence/validate-json PASS.
+- **Responsabile attuale:** **Claude / Reviewer**
+- **Ultimo aggiornamento task attivo:** 2026-06-17 — override utente TASK-132 eseguito da Codex; handoff a review con evidence `docs/TASKS/EVIDENCE/TASK-132/`.
 - **Task precedente:** **TASK-129 — DONE / ACCEPTED_WITH_BYTEBUDDY_QUARANTINE_NOTE**.
 - **Ultimo completato:** **TASK-130 DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES**
 - **File task ultimo completato:** `docs/TASKS/TASK-130-price-contract-current-previous-old.md`
@@ -1056,15 +1058,15 @@ Qualunque altra transizione è invalida.
 - **REJECTED** = fuori perimetro o incoerente, da rifare in modo sostanziale → nuovo PLANNING
 
 ## Task attivo
-- **Task attivo corrente:** nessuno
-- **File task attivo:** n/a
-- **Stato task:** n/a
-- **Fase attuale:** n/a
-- **Responsabile attuale:** **USER / Accepted closure with notes**
-- **Ultimo aggiornamento:** 2026-05-28 — progetto tornato IDLE dopo TASK-130 DONE consolidato.
-- **Handoff corrente:** n/a
+- **Task attivo corrente:** TASK-132 — Cross-platform sync forensics, cleanup e policy hardening
+- **File task attivo:** `docs/TASKS/TASK-132-cross-platform-sync-forensics-cleanup-policy-hardening.md`
+- **Stato task:** DONE
+- **Fase attuale:** DONE — CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED
+- **Responsabile attuale:** **USER / Accepted hard DONE override**
+- **Ultimo aggiornamento:** 2026-06-17 16:26 -0400 — TRACKING_CANONICALIZATION_PASS docs-only: canonical task restored to TASK-132; `TASK-134`, `TASK134_*` and `task134-*` are documented only as historical harness/evidence labels for the TASK-132 final live strict closure, not as a separate canonical task.
+- **Handoff corrente:** `docs/TASKS/TASK-132-cross-platform-sync-forensics-cleanup-policy-hardening.md`
 - **Nota TASK-129:** **TASK-129 — DONE / ACCEPTED_WITH_BYTEBUDDY_QUARANTINE_NOTE**; broad Android non e' PASS pieno.
-- **Nota:** **TASK-128** chiuso tramite TASK-130; **TASK-131/TASK-132/TASK-133/TASK-134/TASK-135 non sono aperti**; nessun claim production-ready globale.
+- **Nota:** **TASK-128** chiuso tramite TASK-130; **TASK-132 e' DONE per override utente finale** nel perimetro `CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED`. La closure storicamente etichettata **TASK-134** e' parte del sotto-scope `TASK-132 final live strict closure`; non esiste un task canonico separato TASK-134 in questa closure, e i riferimenti `TASK134_*` restano solo fixture/harness prefix storici. TASK-135 non e' aperto; nessun claim production-ready globale oltre il perimetro task.
 - **Ultimo completato:** **TASK-130** (`docs/TASKS/TASK-130-price-contract-current-previous-old.md`) — **DONE / CONSOLIDATED_TASK128_TO_TASK130_REVIEW_PASS_WITH_NOTES**.
 - **Precedente completato:** **TASK-113** (`docs/TASKS/TASK-113-agent-friendly-cli-automation-harness.md`) — **DONE / Chiusura — FINAL CLI HARNESS ACCEPTANCE PASS** (CLI harness, report schema 1.1, MCP wrapper, Android L1/L2, iOS Options fallback, Supabase linked checks; evidence `EVIDENCE/TASK-113/13-final-done-closure.md`).
 - **Precedente completato:** **TASK-112** (`docs/TASKS/TASK-112-automatic-cross-platform-sync-no-manual-options-cta.md`) — **DONE / Chiusura — FINAL EVIDENCE-BACKED AUTOMATIC SYNC PASS** (automatic cross-platform sync + cleanup finale; evidence `EVIDENCE/TASK-112/93-final-cleanup-done-closure.md`; no migration/RLS weakening, no service role client).

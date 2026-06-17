@@ -1,0 +1,8 @@
+ACHANGE                         ZSUPABASECATALOGBASELINERECORD
+ATRANSACTION                    ZSUPABASECATALOGBASELINERUN   
+ATRANSACTIONSTRING              ZSUPPLIER                     
+ZHISTORYENTRY                   ZSYNCEVENTOUTBOXENTRY         
+ZLOCALPENDINGCHANGE             Z_METADATA                    
+ZPRODUCT                        Z_MODELCACHE                  
+ZPRODUCTCATEGORY                Z_PRIMARYKEY                  
+ZPRODUCTPRICE                 

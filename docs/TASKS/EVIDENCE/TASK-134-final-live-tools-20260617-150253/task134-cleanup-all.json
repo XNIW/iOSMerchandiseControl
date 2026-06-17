@@ -1,0 +1,43 @@
+{
+  "artifacts": {
+    "json": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-cleanup-all.json",
+    "markdown": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-cleanup-all.md",
+    "rawLog": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-cleanup-all.log"
+  },
+  "command": "task134-cleanup-all",
+  "completedAt": "2026-06-17T19:14:33Z",
+  "data": {
+    "cleanupPlan": {
+      "categories": 0,
+      "product_prices": 0,
+      "products": 0,
+      "suppliers": 0,
+      "sync_events": 0
+    },
+    "cleanupPrefix": "TASK134_"
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "{\"categories\": 0, \"product_prices\": 0, \"products\": 0, \"suppliers\": 0, \"sync_events\": 0}",
+      "name": "cleanup_plan_present",
+      "status": "PASS"
+    },
+    {
+      "evidence": "residue=0 dryRun=False",
+      "name": "final_residue_zero",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_",
+  "residueCount": 0,
+  "rowsCreated": 0,
+  "rowsDeleted": 0,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:14:24Z",
+  "status": "PASS",
+  "summary": "TASK-134 cleanup-all executed with final residue check.",
+  "taskId": "TASK-134"
+}

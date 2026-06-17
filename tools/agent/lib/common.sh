@@ -37,6 +37,8 @@ mc_agent_source_libs() {
   source "${MC_AGENT_ROOT}/lib/sync.sh"
   # shellcheck source=/dev/null
   source "${MC_AGENT_ROOT}/lib/task131_physical.sh"
+  # shellcheck source=/dev/null
+  source "${MC_AGENT_ROOT}/lib/task134.sh"
 }
 
 mc_load_config() {
@@ -754,6 +756,16 @@ mc_help_json() {
     {"name":"live task123-cold-restart","argv":["live","task123-cold-restart","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"live task123-noop","argv":["live","task123-noop","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true},
     {"name":"live task123-burst-10","argv":["live","task123-burst-10","--task","TASK-123","--prefix","TASK123_REVIEW_*"],"platform":"live","safety_level":"live-write","requires_live":true},
+    {"name":"live task134-field-merge","argv":["live","task134-field-merge","--prefix","TASK134_FINAL_"],"platform":"live","safety_level":"live-write","requires_live":true,"requires_cleanup":true,"description":"Historical alias for TASK-132 final live strict closure."},
+    {"name":"live task134-price-append","argv":["live","task134-price-append","--prefix","TASK134_FINAL_"],"platform":"live","safety_level":"live-write","requires_live":true,"requires_cleanup":true,"description":"Historical alias for TASK-132 final live strict closure."},
+    {"name":"live task134-price-conflict","argv":["live","task134-price-conflict","--prefix","TASK134_FINAL_"],"platform":"live","safety_level":"live-write","requires_live":true,"requires_cleanup":true,"description":"Historical alias for TASK-132 final live strict closure."},
+    {"name":"live task134-delete-edit-conflict","argv":["live","task134-delete-edit-conflict","--prefix","TASK134_FINAL_"],"platform":"live","safety_level":"live-write","requires_live":true,"requires_cleanup":true,"description":"Historical alias for TASK-132 final live strict closure."},
+    {"name":"live task134-dirty-protected","argv":["live","task134-dirty-protected","--prefix","TASK134_FINAL_"],"platform":"live","safety_level":"live-write","requires_live":true,"requires_cleanup":true,"description":"Historical alias for TASK-132 final live strict closure."},
+    {"name":"live task134-admin-web-update","argv":["live","task134-admin-web-update","--prefix","TASK134_FINAL_"],"platform":"live","safety_level":"live-write","requires_live":true,"requires_cleanup":true,"description":"Historical alias for TASK-132 final live strict closure."},
+    {"name":"live task134-ui-sync-state","argv":["live","task134-ui-sync-state","--prefix","TASK134_FINAL_"],"platform":"live","safety_level":"live-write","requires_live":true,"description":"Historical alias for TASK-132 final live strict closure."},
+    {"name":"live task134-performance-strict","argv":["live","task134-performance-strict","--prefix","TASK134_FINAL_"],"platform":"live","safety_level":"live-write","requires_live":true,"requires_cleanup":true,"description":"Historical alias for TASK-132 final live strict closure."},
+    {"name":"cleanup task134-all","argv":["cleanup","task134-all"],"platform":"live","safety_level":"cleanup-execute","requires_live":true,"requires_cleanup":true,"description":"Historical alias for TASK-132 final live strict closure."},
+    {"name":"report task134-final","argv":["report","task134-final"],"platform":"live","safety_level":"safe-readonly","description":"Historical alias for TASK-132 final live strict closure."},
     {"name":"preflight task125","argv":["preflight","--task","TASK-125"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"git head-consistency task125","argv":["git","head-consistency","--task","TASK-125"],"platform":"general","safety_level":"safe-readonly"},
     {"name":"report validate-json task125","argv":["report","validate-json","--task","TASK-125","--path","docs/TASKS/EVIDENCE/TASK-125/agent-runs"],"platform":"general","safety_level":"safe-readonly"},
@@ -1517,6 +1529,11 @@ PY
 }
 
 mc_cmd_report() {
+  if [[ "${1:-}" == "task134-final" ]]; then
+    shift
+    mc_cmd_task134_report_final "$@"
+    return $?
+  fi
   if [[ "${1:-}" == "validate-json" ]]; then
     shift
     mc_cmd_report_validate_json "$@"

@@ -34,6 +34,7 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
         productPriceProvider: (any SyncProductPriceSyncProviding)?,
         historySessionProvider: (any SyncHistorySessionPushProviding)?,
         incrementalPullProvider: (any SyncIncrementalPullProviding)?,
+        recoverySnapshotPullProvider: (any SyncRecoverySnapshotPullProviding)? = nil,
         activityRegistrationProvider: (any SyncActivityRegistrationProviding)?,
         defaults: UserDefaults = .standard,
         retryPolicy: AutomaticSyncRetryPolicy = AutomaticSyncRetryPolicy()
@@ -45,6 +46,7 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
             productPriceProvider: productPriceProvider,
             historySessionProvider: historySessionProvider,
             incrementalPullProvider: incrementalPullProvider,
+            recoverySnapshotPullProvider: recoverySnapshotPullProvider,
             activityRegistrationProvider: activityRegistrationProvider,
             defaults: defaults,
             retryPolicy: retryPolicy

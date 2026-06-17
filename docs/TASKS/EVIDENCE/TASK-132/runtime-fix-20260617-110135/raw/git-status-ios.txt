@@ -1,0 +1,9 @@
+ M docs/MASTER-PLAN.md
+ M iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift
+ M iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift
+ M iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift
+ M iOSMerchandiseControlTests/SyncDecisionEngineTests.swift
+ M iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift
+?? docs/TASKS/EVIDENCE/TASK-132/
+?? docs/TASKS/TASK-132-cross-platform-sync-forensics-cleanup-policy-hardening.md
+?? scripts/

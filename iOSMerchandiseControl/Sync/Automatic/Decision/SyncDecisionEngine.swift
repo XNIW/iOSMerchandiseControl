@@ -8,6 +8,7 @@ nonisolated struct SyncDecisionInput: Equatable, Sendable {
     var hasPendingLocalChanges: Bool
     var hasRemoteSyncEvent: Bool
     var hasRemoteVerificationDrift: Bool
+    var requestsLightReconcile: Bool
     var requiresBootstrap: Bool
     var requiresFullRecovery: Bool
     var fullRecoveryContext: SyncFullRecoveryContext
@@ -22,6 +23,7 @@ nonisolated struct SyncDecisionInput: Equatable, Sendable {
         hasPendingLocalChanges: Bool = false,
         hasRemoteSyncEvent: Bool = false,
         hasRemoteVerificationDrift: Bool = false,
+        requestsLightReconcile: Bool = false,
         requiresBootstrap: Bool = false,
         requiresFullRecovery: Bool = false,
         fullRecoveryContext: SyncFullRecoveryContext = .normalForeground,
@@ -35,6 +37,7 @@ nonisolated struct SyncDecisionInput: Equatable, Sendable {
         self.hasPendingLocalChanges = hasPendingLocalChanges
         self.hasRemoteSyncEvent = hasRemoteSyncEvent
         self.hasRemoteVerificationDrift = hasRemoteVerificationDrift
+        self.requestsLightReconcile = requestsLightReconcile
         self.requiresBootstrap = requiresBootstrap
         self.requiresFullRecovery = requiresFullRecovery
         self.fullRecoveryContext = fullRecoveryContext
@@ -115,16 +118,19 @@ nonisolated enum SyncDecisionEngine {
         if input.requiresFullRecovery {
             return input.fullRecoveryContext.allowsFullRecovery ? .fullRecovery : .requestRecovery
         }
+        if input.hasRemoteVerificationDrift {
+            return .lightReconcile
+        }
+        if input.hasRemoteSyncEvent || input.trigger == .remoteSyncEvent {
+            return .drainEvents
+        }
+        if input.requestsLightReconcile {
+            return .lightReconcile
+        }
 
         var actions: [SyncAction] = []
         if input.hasPendingLocalChanges {
             actions.append(.pushPending)
-        }
-        if input.hasRemoteSyncEvent || input.trigger == .remoteSyncEvent {
-            actions.append(.drainEvents)
-        }
-        if input.hasRemoteVerificationDrift {
-            actions.append(.lightReconcile)
         }
 
         switch actions.count {

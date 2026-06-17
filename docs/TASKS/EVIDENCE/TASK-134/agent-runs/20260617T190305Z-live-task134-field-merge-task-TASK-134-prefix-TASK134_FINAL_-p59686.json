@@ -1,0 +1,187 @@
+{
+  "NEXT_ACTION": "Continue TASK-134 final command sequence.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-134/agent-runs/20260617T190305Z-live-task134-field-merge-task-TASK-134-prefix-TASK134_FINAL_-p59686.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-134/agent-runs/20260617T190305Z-live-task134-field-merge-task-TASK-134-prefix-TASK134_FINAL_-p59686.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-134/agent-runs/20260617T190305Z-live-task134-field-merge-task-TASK-134-prefix-TASK134_FINAL_-p59686.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "TASK-134-F2",
+    "TASK-134-F3",
+    "TASK-134-F4",
+    "TASK-134-F5",
+    "TASK-134-F6",
+    "TASK-134-F7",
+    "TASK-134-F8",
+    "TASK-134-F9",
+    "TASK-134-F10"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live task134-field-merge --task TASK-134 --prefix TASK134_FINAL_",
+  "command_slug": "live-task134-field-merge-task-TASK-134-prefix-TASK134_FINAL_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": "<REDACTED>"
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 60661,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-134",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<REDACTED>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK134_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-134"
+  },
+  "exit_code": 0,
+  "git_sha": "98a01d19",
+  "next_action_recommended": "Continue TASK-134 final command sequence.",
+  "platform": "live",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "artifacts": {
+      "json": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134/task134-field-merge.json",
+      "markdown": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134/task134-field-merge.md",
+      "rawLog": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134/raw/task134-field-merge.log"
+    },
+    "command": "task134-field-merge",
+    "completedAt": "2026-06-17T19:04:06Z",
+    "data": {
+      "androidExpected": {
+        "barcode": "TASK134_FINAL_FIELD_MERGE_BARCODE_001",
+        "category_name": "TASK134_FINAL_FIELD_MERGE_CATEGORY_BASE",
+        "deleted_at": null,
+        "id": "0a091888-eee3-455b-bc7f-dbf367ba3edd",
+        "item_number": "TASK134_FINAL_FIELD_MERGE_ITEM_001",
+        "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+        "product_name": "TASK134_FINAL_FIELD_MERGE_ANDROID_NAME",
+        "purchase_price": 7.25,
+        "retail_price": 21.99,
+        "stock_quantity": 4,
+        "supplier_name": "TASK134_FINAL_FIELD_MERGE_SUPPLIER",
+        "updated_at": "2026-06-17 19:03:45.484736+00"
+      },
+      "cleanupEnd": {
+        "categories": 1,
+        "product_prices": 0,
+        "products": 1,
+        "suppliers": 1,
+        "sync_events": 2
+      },
+      "cleanupStart": {
+        "categories": 0,
+        "product_prices": 0,
+        "products": 0,
+        "suppliers": 0,
+        "sync_events": 0
+      },
+      "finalSnapshot": {
+        "barcode": "TASK134_FINAL_FIELD_MERGE_BARCODE_001",
+        "category_name": "TASK134_FINAL_FIELD_MERGE_CATEGORY_BASE",
+        "deleted_at": null,
+        "id": "0a091888-eee3-455b-bc7f-dbf367ba3edd",
+        "item_number": "TASK134_FINAL_FIELD_MERGE_ITEM_001",
+        "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+        "product_name": "TASK134_FINAL_FIELD_MERGE_ANDROID_NAME",
+        "purchase_price": 7.25,
+        "retail_price": 21.99,
+        "stock_quantity": 4,
+        "supplier_name": "TASK134_FINAL_FIELD_MERGE_SUPPLIER",
+        "updated_at": "2026-06-17 19:03:45.484736+00"
+      },
+      "iosExpected": {
+        "barcode": "TASK134_FINAL_FIELD_MERGE_BARCODE_001",
+        "category_name": "TASK134_FINAL_FIELD_MERGE_CATEGORY_BASE",
+        "deleted_at": null,
+        "id": "0a091888-eee3-455b-bc7f-dbf367ba3edd",
+        "item_number": "TASK134_FINAL_FIELD_MERGE_ITEM_001",
+        "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+        "product_name": "TASK134_FINAL_FIELD_MERGE_ANDROID_NAME",
+        "purchase_price": 7.25,
+        "retail_price": 21.99,
+        "stock_quantity": 4,
+        "supplier_name": "TASK134_FINAL_FIELD_MERGE_SUPPLIER",
+        "updated_at": "2026-06-17 19:03:45.484736+00"
+      },
+      "scenarioPrefix": "TASK134_FINAL_FIELD_MERGE_"
+    },
+    "dryRun": false,
+    "gates": [
+      {
+        "evidence": "TASK134_FINAL_FIELD_MERGE_ANDROID_NAME",
+        "name": "supabase_final_product_name",
+        "status": "PASS"
+      },
+      {
+        "evidence": "21.99",
+        "name": "supabase_final_retail_price",
+        "status": "PASS"
+      },
+      {
+        "evidence": "{\"android\": {\"changedFields\": [\"productName\"], \"productName\": \"TASK134_FINAL_FIELD_MERGE_ANDROID_NAME\"}, \"ios\": {\"changedFields\": [\"retailPrice\"], \"retailPrice\": 21.99}}",
+        "name": "payload_no_stale_purchase",
+        "status": "PASS"
+      },
+      {
+        "evidence": "disjoint field patches merged without conflict prompt",
+        "name": "zero_prompt_conflict",
+        "status": "PASS"
+      },
+      {
+        "evidence": "residue=0",
+        "name": "cleanup_residue_zero",
+        "status": "PASS"
+      }
+    ],
+    "mutationPerformed": true,
+    "nextAction": "Continue TASK-134 final command sequence.",
+    "prefix": "TASK134_FINAL_",
+    "residueCount": 0,
+    "rowsCreated": 5,
+    "rowsDeleted": 5,
+    "schemaVersion": "1.1",
+    "startedAt": "2026-06-17T19:03:06Z",
+    "status": "PASS",
+    "summary": "Field-level strict merge verified for Android productName plus iOS retailPrice.",
+    "taskId": "TASK-134"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": true,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 5,
+  "rows_deleted": 5,
+  "run_id": "20260617T190305Z-live-task134-field-merge-task-TASK-134-prefix-TASK134_FINAL_-p59686",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-134",
+  "test_prefix": "TASK134_FINAL_",
+  "timestamp_end": "2026-06-17T19:04:06Z",
+  "timestamp_start": "2026-06-17T19:03:05Z",
+  "warnings": []
+}

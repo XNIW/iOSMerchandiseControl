@@ -1,0 +1,85 @@
+{
+  "artifacts": {
+    "json": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-final.json",
+    "markdown": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-final.md",
+    "rawLog": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-final.log"
+  },
+  "command": "task134-final",
+  "completedAt": "2026-06-17T19:14:38Z",
+  "data": {
+    "cleanupResidue": 0,
+    "cleanupStatus": "PASS",
+    "doneLabel": "DONE - CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED",
+    "reports": {
+      "task134-admin-web-update": {
+        "residueCount": 0,
+        "status": "PASS",
+        "summary": "Admin-web third-client update produced a targeted event without client push-back."
+      },
+      "task134-delete-edit-conflict": {
+        "residueCount": 0,
+        "status": "PASS",
+        "summary": "Remote delete plus local edit conflict did not resurrect the product."
+      },
+      "task134-dirty-protected": {
+        "residueCount": 0,
+        "status": "PASS",
+        "summary": "Dirty protected stale push was blocked and remote state was retained."
+      },
+      "task134-field-merge": {
+        "residueCount": 0,
+        "status": "PASS",
+        "summary": "Field-level strict merge verified for Android productName plus iOS retailPrice."
+      },
+      "task134-performance-strict": {
+        "residueCount": 0,
+        "status": "PASS",
+        "summary": "Strict performance smoke completed with p95 under target."
+      },
+      "task134-price-append": {
+        "residueCount": 0,
+        "status": "PASS",
+        "summary": "Append-only product price history verified for T1/T2 effectiveAt rows."
+      },
+      "task134-price-conflict": {
+        "residueCount": 0,
+        "status": "PASS",
+        "summary": "Same effectiveAt price conflict rejected without silent overwrite."
+      },
+      "task134-ui-sync-state": {
+        "residueCount": 0,
+        "status": "PASS",
+        "summary": "UI sync state parity artifacts captured/redacted for iOS and Android."
+      }
+    }
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "missing=",
+      "name": "mandatory_live_commands",
+      "status": "PASS"
+    },
+    {
+      "evidence": "failing=",
+      "name": "all_scenarios_pass",
+      "status": "PASS"
+    },
+    {
+      "evidence": "cleanup_status=PASS residue=0",
+      "name": "cleanup_all_passed",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_",
+  "residueCount": 0,
+  "rowsCreated": 0,
+  "rowsDeleted": 0,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:14:38Z",
+  "status": "PASS",
+  "summary": "DONE - CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED",
+  "taskId": "TASK-134"
+}

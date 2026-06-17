@@ -34,6 +34,23 @@ enum SyncAutomaticRuntimeFactory {
                 remote: SyncEventRemoteSupabaseAdapter(remote: $0)
             )
         }
+        let recoverySnapshotPullProvider: (any SyncRecoverySnapshotPullProviding)? = supabaseTransportClient.map {
+            AutomaticRecoverySnapshotPullService(
+                modelContainer: modelContainer,
+                previewService: SupabasePullPreviewService(
+                    inventoryService: RecoveryRemoteSupabaseAdapter(remote: $0),
+                    pageSize: 1_000,
+                    catalogRowBudget: nil,
+                    productPricePreviewSampleLimit: 1_000
+                ),
+                productPriceApplyService: SupabaseProductPriceApplyService(
+                    fetcher: ProductPriceReleaseRemoteSupabaseAdapter(remote: $0),
+                    fetchOptions: ProductPriceApplyFetchOptions(replaceLocalSnapshot: true)
+                ),
+                historyRemote: HistorySessionRemoteSupabaseAdapter(remote: $0),
+                syncEventFetcher: SyncEventRemoteSupabaseAdapter(remote: $0)
+            )
+        }
         let activityRegistrationProvider: (any SyncActivityRegistrationProviding)? = SyncActivityRegistrationService(
             modelContainer: modelContainer,
             recorder: activityRecorder
@@ -44,6 +61,7 @@ enum SyncAutomaticRuntimeFactory {
             productPriceProvider: productPriceProvider,
             historySessionProvider: historySessionProvider,
             incrementalPullProvider: incrementalPullProvider,
+            recoverySnapshotPullProvider: recoverySnapshotPullProvider,
             activityRegistrationProvider: activityRegistrationProvider
         )
     }

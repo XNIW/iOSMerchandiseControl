@@ -1,0 +1,31 @@
+=== mc-agent live task134-admin-web-update --prefix TASK134_FINAL_ ===
+{
+  "artifacts": {
+    "json": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-admin-web-update.json",
+    "markdown": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-admin-web-update.md",
+    "rawLog": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-admin-web-update.log"
+  },
+  "command": "task134-admin-web-update",
+  "completedAt": "2026-06-17T19:09:19Z",
+  "data": {},
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "'second_product_name'",
+      "name": "command_exception",
+      "status": "FAIL"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Inspect TASK-134 raw logs and rerun after fixing the failing gate.",
+  "prefix": "TASK134_FINAL_",
+  "residueCount": 0,
+  "rowsCreated": 0,
+  "rowsDeleted": 0,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:08:36Z",
+  "status": "FAIL",
+  "summary": "task134-admin-web-update FAIL: 'second_product_name'",
+  "taskId": "TASK-134"
+}
+{"artifact": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-admin-web-update.json", "status": "FAIL", "summary": "task134-admin-web-update FAIL: 'second_product_name'"}

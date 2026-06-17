@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-133/performance-20260617-130313/agent-runs/agent-runs/20260617T170319Z-config-validate-p88038.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-133/performance-20260617-130313/agent-runs/agent-runs/20260617T170319Z-config-validate-p88038.json
+NEXT_ACTION Run preflight.

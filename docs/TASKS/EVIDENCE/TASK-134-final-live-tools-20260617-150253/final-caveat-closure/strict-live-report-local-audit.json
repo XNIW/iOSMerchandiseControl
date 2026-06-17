@@ -1,0 +1,227 @@
+{
+  "failures": [],
+  "gate": "STRICT_LIVE_REPORTS_CLOUD_IOS_ANDROID_LOCAL_ASSERTIONS",
+  "localEvidence": {
+    "androidRoomTask134": {
+      "dirtyAggregate": 0,
+      "duration_ms": 3223,
+      "localOnlyAggregate": 0,
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T193421Z-sync-counts-source-android-p49937.json",
+      "pendingAggregate": 0,
+      "scopedCounts": {
+        "categories": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        },
+        "history_entries": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 0
+        },
+        "product_prices": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        },
+        "products": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        },
+        "suppliers": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        }
+      },
+      "scopedResidueAggregate": 0,
+      "source": "android",
+      "status": "PASS"
+    },
+    "iosRuntimeTask134": {
+      "dirtyAggregate": 0,
+      "duration_ms": 70392,
+      "localOnlyAggregate": 0,
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T193421Z-ios-runtime-ui-counts-live-p49969.json",
+      "pendingAggregate": 0,
+      "scopedCounts": {
+        "categories": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "history_entries": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0,
+          "userVisible": 0
+        },
+        "product_prices": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "products": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "suppliers": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        }
+      },
+      "scopedResidueAggregate": 0,
+      "source": "ios.runtime-ui-counts",
+      "status": "PASS"
+    },
+    "iosSwiftDataTask134": {
+      "dirtyAggregate": 0,
+      "duration_ms": 710,
+      "localOnlyAggregate": 0,
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T193704Z-sync-counts-source-ios-p73754.json",
+      "pendingAggregate": 0,
+      "scopedCounts": {
+        "categories": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "history_entries": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0,
+          "userVisible": 0
+        },
+        "product_prices": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "products": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "suppliers": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        }
+      },
+      "scopedResidueAggregate": 0,
+      "source": "ios",
+      "status": "PASS"
+    },
+    "supabaseTask134": {
+      "counts": {
+        "categories": 0,
+        "product_prices": 0,
+        "products": 0,
+        "suppliers": 0,
+        "sync_events": 0
+      },
+      "prefix": "TASK134_%",
+      "source": "supabase.TASK134-scoped-counts",
+      "status": "PASS",
+      "watermark": 3035
+    }
+  },
+  "note": "Each strict scenario report is PASS with expected sync_events cleanup delta and residue=0; post-scenario local Room/SwiftData scoped counts for TASK134_ are zero with pending/outbox zero, proving no app-local fixture residue after cleanup/drain.",
+  "scenarios": [
+    {
+      "androidRoomLocalAssertion": "PASS",
+      "cleanupStatus": "PASS",
+      "expectedSyncEventsDelta": 2,
+      "iosSwiftDataLocalAssertion": "PASS",
+      "reportPath": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-field-merge.json",
+      "residueCount": 0,
+      "scenario": "task134-field-merge",
+      "scenarioPrefix": "TASK134_FINAL_FIELD_MERGE_",
+      "status": "PASS",
+      "strictReportStatus": "PASS",
+      "supabaseAssertion": "PASS",
+      "syncEventsDelta": 2,
+      "syncEventsDeltaStatus": "PASS"
+    },
+    {
+      "androidRoomLocalAssertion": "PASS",
+      "cleanupStatus": "PASS",
+      "expectedSyncEventsDelta": 2,
+      "iosSwiftDataLocalAssertion": "PASS",
+      "reportPath": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-price-append.json",
+      "residueCount": 0,
+      "scenario": "task134-price-append",
+      "scenarioPrefix": "TASK134_FINAL_PRICE_APPEND_",
+      "status": "PASS",
+      "strictReportStatus": "PASS",
+      "supabaseAssertion": "PASS",
+      "syncEventsDelta": 2,
+      "syncEventsDeltaStatus": "PASS"
+    },
+    {
+      "androidRoomLocalAssertion": "PASS",
+      "cleanupStatus": "PASS",
+      "expectedSyncEventsDelta": 1,
+      "iosSwiftDataLocalAssertion": "PASS",
+      "reportPath": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-price-conflict.json",
+      "residueCount": 0,
+      "scenario": "task134-price-conflict",
+      "scenarioPrefix": "TASK134_FINAL_PRICE_CONFLICT_",
+      "status": "PASS",
+      "strictReportStatus": "PASS",
+      "supabaseAssertion": "PASS",
+      "syncEventsDelta": 1,
+      "syncEventsDeltaStatus": "PASS"
+    },
+    {
+      "androidRoomLocalAssertion": "PASS",
+      "cleanupStatus": "PASS",
+      "expectedSyncEventsDelta": 1,
+      "iosSwiftDataLocalAssertion": "PASS",
+      "reportPath": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-delete-edit-conflict.json",
+      "residueCount": 0,
+      "scenario": "task134-delete-edit-conflict",
+      "scenarioPrefix": "TASK134_FINAL_DELETE_EDIT_CONFLICT_",
+      "status": "PASS",
+      "strictReportStatus": "PASS",
+      "supabaseAssertion": "PASS",
+      "syncEventsDelta": 1,
+      "syncEventsDeltaStatus": "PASS"
+    },
+    {
+      "androidRoomLocalAssertion": "PASS",
+      "cleanupStatus": "PASS",
+      "expectedSyncEventsDelta": 0,
+      "iosSwiftDataLocalAssertion": "PASS",
+      "reportPath": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-dirty-protected.json",
+      "residueCount": 0,
+      "scenario": "task134-dirty-protected",
+      "scenarioPrefix": "TASK134_FINAL_DIRTY_PROTECTED_",
+      "status": "PASS",
+      "strictReportStatus": "PASS",
+      "supabaseAssertion": "PASS",
+      "syncEventsDelta": 0,
+      "syncEventsDeltaStatus": "PASS"
+    },
+    {
+      "androidRoomLocalAssertion": "PASS",
+      "cleanupStatus": "PASS",
+      "expectedSyncEventsDelta": 1,
+      "iosSwiftDataLocalAssertion": "PASS",
+      "reportPath": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-admin-web-update.json",
+      "residueCount": 0,
+      "scenario": "task134-admin-web-update",
+      "scenarioPrefix": "TASK134_FINAL_ADMIN_WEB_UPDATE_",
+      "status": "PASS",
+      "strictReportStatus": "PASS",
+      "supabaseAssertion": "PASS",
+      "syncEventsDelta": 1,
+      "syncEventsDeltaStatus": "PASS"
+    }
+  ],
+  "status": "PASS"
+}

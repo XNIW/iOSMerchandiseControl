@@ -154,6 +154,71 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         let engineIsRunning = await engine.isRunning()
         XCTAssertFalse(engineIsRunning)
     }
+
+    func testAutomaticEngineRunsSnapshotRecoveryWhenIncrementalRequiresFullRecovery() async {
+        let incrementalProvider = Task132RecoveryRequiredIncrementalProvider()
+        let recoveryProvider = Task132SnapshotRecoveryProvider()
+        let engine = AutomaticSyncEngine(
+            catalogPushProvider: nil,
+            productPriceProvider: nil,
+            historySessionProvider: nil,
+            incrementalPullProvider: incrementalProvider,
+            recoverySnapshotPullProvider: recoveryProvider,
+            activityRegistrationProvider: nil,
+            defaults: UserDefaults(suiteName: "Task132-\(UUID().uuidString)")!
+        )
+
+        let result = await engine.run(action: .lightReconcile, source: .rootForeground, ownerUserID: UUID())
+        let recoveryCallCount = await recoveryProvider.callCount
+
+        XCTAssertEqual(result.status, .success)
+        XCTAssertTrue(result.didWork)
+        XCTAssertEqual(recoveryCallCount, 1)
+    }
+
+    func testAutomaticEngineDoesNotTreatRecoveryRequestAsNoWorkWhenProviderIsMissing() async {
+        let engine = AutomaticSyncEngine(
+            catalogPushProvider: nil,
+            productPriceProvider: nil,
+            historySessionProvider: nil,
+            incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: nil,
+            activityRegistrationProvider: nil,
+            defaults: UserDefaults(suiteName: "Task132-\(UUID().uuidString)")!
+        )
+
+        let result = await engine.run(action: .requestRecovery, source: .rootForeground, ownerUserID: UUID())
+
+        XCTAssertEqual(result.status, .failed)
+        XCTAssertFalse(result.didWork)
+    }
+
+    func testTask134CatalogUpdatePayloadOnlyIncludesChangedFields() {
+        let product = Product(
+            barcode: "TASK134-FIELD-MASK",
+            itemNumber: "STALE-ITEM",
+            productName: "STALE-NAME",
+            purchasePrice: 50,
+            retailPrice: 120,
+            stockQuantity: 7
+        )
+
+        let payload = CatalogPushService.makeProductUpdatePayload(
+            product,
+            changedFields: ["retailPrice"]
+        )
+
+        XCTAssertNil(payload.barcode)
+        XCTAssertNil(payload.itemNumber)
+        XCTAssertNil(payload.productName)
+        XCTAssertNil(payload.secondProductName)
+        XCTAssertNil(payload.purchasePrice)
+        XCTAssertEqual(payload.retailPrice, 120)
+        XCTAssertNil(payload.supplierID)
+        XCTAssertNil(payload.categoryID)
+        XCTAssertNil(payload.stockQuantity)
+        XCTAssertNil(payload.deletedAt)
+    }
 }
 
 private final class Task119BlockingCatalogProvider: SyncCatalogPushProviding {
@@ -182,6 +247,41 @@ private final class Task119BlockingCatalogProvider: SyncCatalogPushProviding {
 
     func callCount() async -> Int {
         await counter.value
+    }
+}
+
+private final class Task132RecoveryRequiredIncrementalProvider: SyncIncrementalPullProviding {
+    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SyncIncrementalPullSummary {
+        var summary = SyncIncrementalPullSummary(
+            syncType: .lightReconcile,
+            watermarkBefore: 10,
+            watermarkAfter: 12
+        )
+        summary.requiresFullRecoveryReason = "canonical_drift_detected"
+        return summary
+    }
+}
+
+private actor Task132SnapshotRecoveryProvider: SyncRecoverySnapshotPullProviding {
+    private(set) var callCount = 0
+
+    func recoverFromRemoteSnapshot(ownerUserID: UUID) async throws -> SyncRecoverySnapshotPullSummary {
+        callCount += 1
+        return SyncRecoverySnapshotPullSummary(
+            catalog: SupabasePullApplyResult(
+                inserted: 1,
+                updated: 0,
+                suppliersCreated: 1,
+                categoriesCreated: 1
+            ),
+            history: HistorySessionPullResult(),
+            productPrices: ProductPriceApplyResult(
+                inserted: 1,
+                skippedExisting: 0,
+                totalConsidered: 1
+            ),
+            watermarkAfter: 12
+        )
     }
 }
 

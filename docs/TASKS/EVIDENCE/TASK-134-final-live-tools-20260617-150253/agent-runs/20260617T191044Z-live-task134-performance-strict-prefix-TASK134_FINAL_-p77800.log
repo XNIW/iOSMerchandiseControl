@@ -1,0 +1,66 @@
+=== mc-agent live task134-performance-strict --prefix TASK134_FINAL_ ===
+{
+  "artifacts": {
+    "json": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-performance-strict.json",
+    "markdown": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-performance-strict.md",
+    "rawLog": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-performance-strict.log"
+  },
+  "command": "task134-performance-strict",
+  "completedAt": "2026-06-17T19:12:24Z",
+  "data": {
+    "cleanupEnd": {
+      "categories": 5,
+      "product_prices": 0,
+      "products": 5,
+      "suppliers": 5,
+      "sync_events": 0
+    },
+    "cleanupStart": {
+      "categories": 0,
+      "product_prices": 0,
+      "products": 0,
+      "suppliers": 0,
+      "sync_events": 0
+    },
+    "durationsMs": [
+      19671,
+      14693,
+      13362,
+      16550,
+      15141
+    ],
+    "p95Ms": 19671,
+    "scenarioPrefix": "TASK134_FINAL_PERFORMANCE_STRICT_",
+    "targetMs": 15000
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "p95=19671ms target=15000ms durations=[19671, 14693, 13362, 16550, 15141]",
+      "name": "strict_p95_within_target",
+      "status": "FAIL"
+    },
+    {
+      "evidence": "iterations=5",
+      "name": "all_iterations_completed",
+      "status": "PASS"
+    },
+    {
+      "evidence": "residue=0",
+      "name": "cleanup_residue_zero",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Inspect TASK-134 raw logs and rerun after fixing the failing gate.",
+  "prefix": "TASK134_FINAL_",
+  "residueCount": 0,
+  "rowsCreated": 15,
+  "rowsDeleted": 15,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:10:44Z",
+  "status": "FAIL",
+  "summary": "Strict performance smoke completed with p95 under target.",
+  "taskId": "TASK-134"
+}
+{"artifact": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-performance-strict.json", "status": "FAIL", "summary": "Strict performance smoke completed with p95 under target."}

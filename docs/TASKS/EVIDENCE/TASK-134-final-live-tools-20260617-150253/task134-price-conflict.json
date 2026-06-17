@@ -1,0 +1,69 @@
+{
+  "artifacts": {
+    "json": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-price-conflict.json",
+    "markdown": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-price-conflict.md",
+    "rawLog": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-price-conflict.log"
+  },
+  "command": "task134-price-conflict",
+  "completedAt": "2026-06-17T19:07:08Z",
+  "data": {
+    "cleanupEnd": {
+      "categories": 1,
+      "product_prices": 1,
+      "products": 1,
+      "suppliers": 1,
+      "sync_events": 1
+    },
+    "cleanupStart": {
+      "categories": 0,
+      "product_prices": 0,
+      "products": 0,
+      "suppliers": 0,
+      "sync_events": 0
+    },
+    "prices": [
+      {
+        "effective_at": "2026-06-17 12:00:00",
+        "id": "c258ba44-890e-40cb-b718-791464accd45",
+        "price": 41.1,
+        "source": "TASK134_FINAL_PRICE_CONFLICT_ANDROID_T1",
+        "type": "PURCHASE"
+      }
+    ],
+    "scenarioPrefix": "TASK134_FINAL_PRICE_CONFLICT_"
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "{\"insertedCount\": 0, \"id\": \"\"}",
+      "name": "same_effective_at_rejected",
+      "status": "PASS"
+    },
+    {
+      "evidence": "[{\"effective_at\": \"2026-06-17 12:00:00\", \"id\": \"c258ba44-890e-40cb-b718-791464accd45\", \"price\": 41.1, \"source\": \"TASK134_FINAL_PRICE_CONFLICT_ANDROID_T1\", \"type\": \"PURCHASE\"}]",
+      "name": "no_silent_overwrite",
+      "status": "PASS"
+    },
+    {
+      "evidence": "metadata protected=true; existing row retained",
+      "name": "conflict_review_protected_state",
+      "status": "PASS"
+    },
+    {
+      "evidence": "residue=0",
+      "name": "cleanup_residue_zero",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_FINAL_",
+  "residueCount": 0,
+  "rowsCreated": 5,
+  "rowsDeleted": 5,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:06:24Z",
+  "status": "PASS",
+  "summary": "Same effectiveAt price conflict rejected without silent overwrite.",
+  "taskId": "TASK-134"
+}

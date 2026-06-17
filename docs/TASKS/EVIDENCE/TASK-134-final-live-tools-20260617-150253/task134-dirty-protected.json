@@ -1,0 +1,74 @@
+{
+  "artifacts": {
+    "json": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-dirty-protected.json",
+    "markdown": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-dirty-protected.md",
+    "rawLog": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-dirty-protected.log"
+  },
+  "command": "task134-dirty-protected",
+  "completedAt": "2026-06-17T19:08:35Z",
+  "data": {
+    "cleanupEnd": {
+      "categories": 1,
+      "product_prices": 0,
+      "products": 1,
+      "suppliers": 1,
+      "sync_events": 0
+    },
+    "cleanupStart": {
+      "categories": 0,
+      "product_prices": 0,
+      "products": 0,
+      "suppliers": 0,
+      "sync_events": 0
+    },
+    "finalSnapshot": {
+      "barcode": "TASK134_FINAL_DIRTY_PROTECTED_BARCODE_001",
+      "category_name": "TASK134_FINAL_DIRTY_PROTECTED_CATEGORY_BASE",
+      "deleted_at": null,
+      "id": "11b0d27d-0fa7-4d47-9aff-f83bd9d28a07",
+      "item_number": "TASK134_FINAL_DIRTY_PROTECTED_ITEM_001",
+      "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+      "product_name": "TASK134_FINAL_DIRTY_PROTECTED_DIRTY_PROTECTED",
+      "purchase_price": 7.25,
+      "retail_price": 88.88,
+      "stock_quantity": 4,
+      "supplier_name": "TASK134_FINAL_DIRTY_PROTECTED_SUPPLIER",
+      "updated_at": "2026-06-17 19:08:14.461683+00"
+    },
+    "scenarioPrefix": "TASK134_FINAL_DIRTY_PROTECTED_"
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "attempted_updates=0",
+      "name": "stale_push_blocked",
+      "status": "PASS"
+    },
+    {
+      "evidence": "{\"barcode\": \"TASK134_FINAL_DIRTY_PROTECTED_BARCODE_001\", \"category_name\": \"TASK134_FINAL_DIRTY_PROTECTED_CATEGORY_BASE\", \"deleted_at\": null, \"id\": \"11b0d27d-0fa7-4d47-9aff-f83bd9d28a07\", \"item_number\": \"TASK134_FINAL_DIRTY_PROTECTED_ITEM_001\", \"owner_user_id\": \"6425adb0-33e3-4b6c-a9a7-ed3761e8257e\", \"product_name\": \"TASK134_FINAL_DIRTY_PROTECTED_DIRTY_PROTECTED\", \"purchase_price\": 7.25, \"retail_price\": 88.88, \"stock_quantity\": 4, \"supplier_name\": \"TASK134_FINAL_DIRTY_PROTECTED_SUPPLIER\", \"updated_at\": \"2026-06-17 19:08:14.461683+00\"}",
+      "name": "dirty_protected_remote_retained",
+      "status": "PASS"
+    },
+    {
+      "evidence": "no sync_event emitted for stale local edit",
+      "name": "reopen_no_push",
+      "status": "PASS"
+    },
+    {
+      "evidence": "residue=0",
+      "name": "cleanup_residue_zero",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_FINAL_",
+  "residueCount": 0,
+  "rowsCreated": 3,
+  "rowsDeleted": 3,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:07:55Z",
+  "status": "PASS",
+  "summary": "Dirty protected stale push was blocked and remote state was retained.",
+  "taskId": "TASK-134"
+}

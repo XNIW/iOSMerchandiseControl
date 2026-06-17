@@ -1,0 +1,9 @@
+06-17 12:23:39.537 I/Supabase-Core( 7023): SupabaseClient created! Please report any bugs you find.
+06-17 12:23:39.799 I/Supabase-Auth( 7023): Loading session from storage...
+06-17 12:23:39.807 I/HistorySessionSyncV2( 7023): cycle=push outcome=skip reason=skipped_signed_out
+06-17 12:23:39.809 I/CatalogCloudSync( 7023): cycle=catalog_auto outcome=skip reason=signed_out
+06-17 12:23:39.814 I/MerchandiseApp( 7023): Network: internet validato disponibile, pianifico sync cloud pending
+06-17 12:23:40.353 I/HistorySessionSyncV2( 7023): cycle=push outcome=skip reason=skipped_no_auth debounceMs=500 dirtySetMode=precise
+06-17 12:23:40.353 I/CatalogCloudSync( 7023): cycle=catalog_bootstrap outcome=skip reason=no_auth
+06-17 12:23:40.354 I/CatalogCloudSync( 7023): cycle=catalog_push outcome=skip reason=no_auth debounceMs=500
+06-17 12:23:40.357 I/CatalogCloudSync( 7023): cycle=sync_events_drain outcome=skip reason=no_auth

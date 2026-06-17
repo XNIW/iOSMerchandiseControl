@@ -1,0 +1,12 @@
+products_active|19695
+suppliers_active|59
+categories_active|28
+product_prices|41109
+history_active|35
+pending_active|0
+outbox_active|0
+task134_products|0
+task134_suppliers|0
+task134_categories|0
+task134_prices|0
+task134_history|0

@@ -1,0 +1,10 @@
+5000
+products|19698
+suppliers|61
+categories|30
+product_prices|41115
+history_entries|90
+pending_catalog_tombstones|0
+sync_event_outbox_total|0
+sync_event_watermarks|1
+sync_event_device_state|1

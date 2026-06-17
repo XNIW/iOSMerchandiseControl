@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-133/performance-20260617-130313/agent-runs/20260617T171130Z-live-task123-single-propagation-prefix-TASK133_PERF_20260617_130313_-p14983.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-133/performance-20260617-130313/agent-runs/20260617T171130Z-live-task123-single-propagation-prefix-TASK133_PERF_20260617_130313_-p14983.json
+NEXT_ACTION Run cold-ish, no-op, burst-10 and cleanup/residue.

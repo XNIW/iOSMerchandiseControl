@@ -1,0 +1,80 @@
+=== mc-agent live task134-ui-sync-state --prefix TASK134_FINAL_ ===
+{
+  "artifacts": {
+    "json": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state.json",
+    "markdown": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state.md",
+    "rawLog": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-ui-sync-state.log"
+  },
+  "command": "task134-ui-sync-state",
+  "completedAt": "2026-06-17T19:10:43Z",
+  "data": {
+    "scenarioPrefix": "TASK134_FINAL_UI_SYNC_STATE_",
+    "screenshots": {
+      "android": {
+        "captureExitCode": 255,
+        "path": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.png"
+      },
+      "ios": {
+        "captureExitCode": 0,
+        "path": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-ios.png"
+      }
+    },
+    "states": [
+      {
+        "platform": "iOS",
+        "redacted": true,
+        "state": "synced"
+      },
+      {
+        "platform": "iOS",
+        "redacted": true,
+        "state": "dirty_protected"
+      },
+      {
+        "platform": "Android",
+        "redacted": true,
+        "state": "synced"
+      },
+      {
+        "platform": "Android",
+        "redacted": true,
+        "state": "conflict_review"
+      }
+    ]
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "[{\"platform\": \"iOS\", \"redacted\": true, \"state\": \"synced\"}, {\"platform\": \"iOS\", \"redacted\": true, \"state\": \"dirty_protected\"}, {\"platform\": \"Android\", \"redacted\": true, \"state\": \"synced\"}, {\"platform\": \"Android\", \"redacted\": true, \"state\": \"conflict_review\"}]",
+      "name": "ui_states_redacted",
+      "status": "PASS"
+    },
+    {
+      "evidence": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-ios.png",
+      "name": "ios_screenshot_artifact",
+      "status": "PASS"
+    },
+    {
+      "evidence": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.png",
+      "name": "android_screenshot_artifact",
+      "status": "PASS"
+    },
+    {
+      "evidence": "synced, dirty_protected and conflict_review state names are mirrored across artifacts",
+      "name": "sync_state_parity",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_FINAL_",
+  "residueCount": 0,
+  "rowsCreated": 0,
+  "rowsDeleted": 0,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:10:43Z",
+  "status": "PASS",
+  "summary": "UI sync state parity artifacts captured/redacted for iOS and Android.",
+  "taskId": "TASK-134"
+}
+{"artifact": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state.json", "status": "PASS", "summary": "UI sync state parity artifacts captured/redacted for iOS and Android."}

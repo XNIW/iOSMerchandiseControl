@@ -665,6 +665,10 @@ mc_cmd_supabase() {
       MC_NEXT_ACTION="Use fewer repeated linked queries if pooler returns rate-limit/circuit-breaker."
       return "$MC_EXIT_PASS"
       ;;
+    task134-field-merge|task134-price-append|task134-price-conflict|task134-delete-edit-conflict|task134-dirty-protected|task134-admin-web-update|task134-ui-sync-state|task134-performance-strict)
+      mc_cmd_task134_live "$sub" "$@"
+      return $?
+      ;;
     *)
       MC_SUMMARY="Unknown supabase subcommand: ${sub}"
       return "$MC_EXIT_MISCONFIGURED"
@@ -1492,7 +1496,7 @@ mc_live_task123_single_propagation() {
     after="$MC_LIVE_WAIT_LAST_JSON"
     elapsed="$MC_LIVE_WAIT_ELAPSED_MS"
     polls="$MC_LIVE_WAIT_POLL_COUNT"
-    line="$(grep 'TASK123_IOS_SINGLE_PROPAGATION' "$MC_LOG_TMP" 2>/dev/null | tail -n 1 || true)"
+    line="$(grep '_IOS_SINGLE_PROPAGATION' "$MC_LOG_TMP" 2>/dev/null | tail -n 1 || true)"
     ITER="$i" DIRECTION="iosToAndroid" PREFIX="$ios_prefix" BEFORE="$before" AFTER="$after" ELAPSED="$elapsed" POLLS="$polls" LINE="$line" CODE="$code" python3 - >>"$iter_file" <<'PY'
 import json, os, re
 line = os.environ.get("LINE", "")
@@ -1708,7 +1712,7 @@ PY
     after="$MC_LIVE_WAIT_LAST_JSON"
     elapsed="$MC_LIVE_WAIT_ELAPSED_MS"
     polls="$MC_LIVE_WAIT_POLL_COUNT"
-    line="$(grep 'TASK123_IOS_SINGLE_PROPAGATION' "$MC_LOG_TMP" 2>/dev/null | tail -n 1 || true)"
+    line="$(grep '_IOS_SINGLE_PROPAGATION' "$MC_LOG_TMP" 2>/dev/null | tail -n 1 || true)"
     ITER="$i" DIRECTION="iosToAndroidAfterAndroidRestart" PREFIX="$ios_prefix" ELAPSED="$elapsed" POLLS="$polls" LINE="$line" CODE="$code" python3 - >>"$iter_file" <<'PY'
 import json, os, re
 line = os.environ.get("LINE", "")
@@ -2820,6 +2824,10 @@ PY
       ;;
     task123-burst-10)
       mc_live_task123_burst10 "$task_id" "$prefix"
+      ;;
+    task134-field-merge|task134-price-append|task134-price-conflict|task134-delete-edit-conflict|task134-dirty-protected|task134-admin-web-update|task134-ui-sync-state|task134-performance-strict)
+      mc_cmd_task134_live "$sub" "$@"
+      return $?
       ;;
     offline-reconnect-sync)
       mc_live_offline_reconnect_sync "$task_id" "$prefix"

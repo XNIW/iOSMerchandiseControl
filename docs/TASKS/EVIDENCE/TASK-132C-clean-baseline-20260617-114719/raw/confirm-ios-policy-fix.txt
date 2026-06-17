@@ -1,0 +1,56 @@
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:5:final class SyncDecisionEngineTests: XCTestCase {
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:9:        let action = SyncDecisionEngine.decide(
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:18:        XCTAssertEqual(action, .pushPending)
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:23:        let action = SyncDecisionEngine.decide(
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:32:        XCTAssertEqual(action, .drainEvents)
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:37:        let action = SyncDecisionEngine.decide(
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:47:        XCTAssertEqual(action, .drainEvents)
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:51:        let action = SyncDecisionEngine.decide(
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:65:        let action = SyncDecisionEngine.decide(
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:79:        let action = SyncDecisionEngine.decide(
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:94:        let action = SyncDecisionEngine.decide(
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:108:        let action = SyncDecisionEngine.decide(
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:113:                requiresFullRecovery: true,
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:118:        XCTAssertEqual(action, .requestRecovery)
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:123:        let action = SyncDecisionEngine.decide(
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:128:                requiresFullRecovery: true,
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:170:        XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .bootstrap)
+iOSMerchandiseControlTests/SyncDecisionEngineTests.swift:202:        XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .bootstrap)
+iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift:23:final class SyncNoopBackgroundTaskScheduler: SyncBackgroundTaskScheduling {
+iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift:28:final class SyncBackgroundTaskScheduler: SyncBackgroundTaskScheduling {
+iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift:29:    static let shared = SyncBackgroundTaskScheduler()
+iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift:94:            SyncBackgroundTaskScheduler.shared.schedule(reason: .periodicOpportunity)
+iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift:155:            let action = SyncDecisionEngine.decide(snapshot.input)
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:13:    var requiresFullRecovery: Bool
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:28:        requiresFullRecovery: Bool = false,
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:42:        self.requiresFullRecovery = requiresFullRecovery
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:75:    case pushPending
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:76:    case drainEvents
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:80:    case requestRecovery
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:91:        case .noOp, .pushPending, .drainEvents, .lightReconcile, .bootstrap,
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:92:             .requestRecovery, .retryAfterBusy, .blocked:
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:98:nonisolated enum SyncDecisionEngine {
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:118:        if input.requiresFullRecovery {
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:119:            return input.fullRecoveryContext.allowsFullRecovery ? .fullRecovery : .requestRecovery
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:125:            return .drainEvents
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift:133:            actions.append(.pushPending)
+iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift:26:        let action = SyncDecisionEngine.decide(
+iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift:177:            .pushPendingCatalog(ownerUserID: owner)
+iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift:232:            .pushPendingProductPrices(ownerUserID: owner)
+iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift:258:        let background = try readSource("iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift")
+iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift:261:        XCTAssertTrue(background.contains("SyncDecisionEngine.decide"))
+iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift:262:        XCTAssertFalse(background.contains(".sequence([.pushPending, .drainEvents])"))
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:13:    var requiresFullRecovery: Bool
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:42:            requiresFullRecovery: requiresFullRecovery,
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:91:        let baselineSummary = loadBaselineSummary(context: context, ownerUserID: ownerUserID)
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:99:            || baselineSummary.failed
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:116:                baselineSummary: baselineSummary.value,
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:121:            requiresFullRecovery: requiresFullRecovery(baselineSummary: baselineSummary.value),
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:122:            hasRecoveryDrift: hasRecoveryDrift(baselineSummary: baselineSummary.value),
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:225:        baselineSummary: SupabaseCatalogBaselineDebugSummary,
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:231:            && baselineSummary.status == .absent
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:235:    private func requiresFullRecovery(
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:236:        baselineSummary: SupabaseCatalogBaselineDebugSummary
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:238:        switch baselineSummary.status {
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:247:        baselineSummary: SupabaseCatalogBaselineDebugSummary
+iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift:249:        switch baselineSummary.status {

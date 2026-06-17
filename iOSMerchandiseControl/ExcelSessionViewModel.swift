@@ -20,6 +20,8 @@ enum ColumnStatus {
 /// (equivalente concettuale di ExcelViewModel su Android)
 @MainActor
 final class ExcelSessionViewModel: ObservableObject {
+    nonisolated deinit {}
+
     private struct LoadedWorkbook: Sendable {
         let originalHeader: [String]
         let normalizedHeader: [String]

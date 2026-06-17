@@ -1,0 +1,16 @@
+ docs/MASTER-PLAN.md                                | 28 +++++----
+ iOSMerchandiseControl/ExcelSessionViewModel.swift  |  2 +
+ iOSMerchandiseControl/LocalPendingChange.swift     |  9 ++-
+ .../Background/SyncBackgroundTaskScheduler.swift   | 13 +++-
+ .../Composition/AutomaticSyncRuntimeFactory.swift  | 18 ++++++
+ .../Sync/Automatic/Core/AutomaticSyncEngine.swift  | 48 +++++++++++++-
+ .../Core/AutomaticSyncRuntimeFacade.swift          |  2 +
+ .../Automatic/Decision/SyncDecisionEngine.swift    | 18 ++++--
+ .../Decision/SyncDecisionInputProvider.swift       | 39 ++++++++----
+ .../SyncDecisionEngineTests.swift                  | 43 ++++++++++---
+ .../Task103CrossPlatformAcceptanceTests.swift      |  7 ++-
+ .../Task118AutomaticDomainTests.swift              |  8 +++
+ .../Task119AutomaticArchitectureTests.swift        | 73 ++++++++++++++++++++++
+ tools/agent/lib/ios.sh                             |  6 +-
+ tools/agent/lib/supabase.sh                        |  4 +-
+ 15 files changed, 271 insertions(+), 47 deletions(-)

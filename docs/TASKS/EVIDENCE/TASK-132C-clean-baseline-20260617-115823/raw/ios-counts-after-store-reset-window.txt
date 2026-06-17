@@ -1,0 +1,9 @@
+products|0
+suppliers|0
+categories|0
+productPrices|0
+historySessions|0
+pendingLocalChanges|0
+pendingOutboxEntries|0
+baselineRuns|0
+baselineRecords|0

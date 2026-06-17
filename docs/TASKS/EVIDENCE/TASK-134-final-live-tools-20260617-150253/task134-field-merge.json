@@ -1,0 +1,107 @@
+{
+  "artifacts": {
+    "json": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-field-merge.json",
+    "markdown": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-field-merge.md",
+    "rawLog": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-field-merge.log"
+  },
+  "command": "task134-field-merge",
+  "completedAt": "2026-06-17T19:05:22Z",
+  "data": {
+    "androidExpected": {
+      "barcode": "TASK134_FINAL_FIELD_MERGE_BARCODE_001",
+      "category_name": "TASK134_FINAL_FIELD_MERGE_CATEGORY_BASE",
+      "deleted_at": null,
+      "id": "4bb85c0d-9736-4349-a4f3-a5b74166ba6e",
+      "item_number": "TASK134_FINAL_FIELD_MERGE_ITEM_001",
+      "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+      "product_name": "TASK134_FINAL_FIELD_MERGE_ANDROID_NAME",
+      "purchase_price": 7.25,
+      "retail_price": 21.99,
+      "stock_quantity": 4,
+      "supplier_name": "TASK134_FINAL_FIELD_MERGE_SUPPLIER",
+      "updated_at": "2026-06-17 19:04:56.834143+00"
+    },
+    "cleanupEnd": {
+      "categories": 1,
+      "product_prices": 0,
+      "products": 1,
+      "suppliers": 1,
+      "sync_events": 2
+    },
+    "cleanupStart": {
+      "categories": 0,
+      "product_prices": 0,
+      "products": 0,
+      "suppliers": 0,
+      "sync_events": 0
+    },
+    "finalSnapshot": {
+      "barcode": "TASK134_FINAL_FIELD_MERGE_BARCODE_001",
+      "category_name": "TASK134_FINAL_FIELD_MERGE_CATEGORY_BASE",
+      "deleted_at": null,
+      "id": "4bb85c0d-9736-4349-a4f3-a5b74166ba6e",
+      "item_number": "TASK134_FINAL_FIELD_MERGE_ITEM_001",
+      "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+      "product_name": "TASK134_FINAL_FIELD_MERGE_ANDROID_NAME",
+      "purchase_price": 7.25,
+      "retail_price": 21.99,
+      "stock_quantity": 4,
+      "supplier_name": "TASK134_FINAL_FIELD_MERGE_SUPPLIER",
+      "updated_at": "2026-06-17 19:04:56.834143+00"
+    },
+    "iosExpected": {
+      "barcode": "TASK134_FINAL_FIELD_MERGE_BARCODE_001",
+      "category_name": "TASK134_FINAL_FIELD_MERGE_CATEGORY_BASE",
+      "deleted_at": null,
+      "id": "4bb85c0d-9736-4349-a4f3-a5b74166ba6e",
+      "item_number": "TASK134_FINAL_FIELD_MERGE_ITEM_001",
+      "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+      "product_name": "TASK134_FINAL_FIELD_MERGE_ANDROID_NAME",
+      "purchase_price": 7.25,
+      "retail_price": 21.99,
+      "stock_quantity": 4,
+      "supplier_name": "TASK134_FINAL_FIELD_MERGE_SUPPLIER",
+      "updated_at": "2026-06-17 19:04:56.834143+00"
+    },
+    "scenarioPrefix": "TASK134_FINAL_FIELD_MERGE_"
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "TASK134_FINAL_FIELD_MERGE_ANDROID_NAME",
+      "name": "supabase_final_product_name",
+      "status": "PASS"
+    },
+    {
+      "evidence": "21.99",
+      "name": "supabase_final_retail_price",
+      "status": "PASS"
+    },
+    {
+      "evidence": "{\"android\": {\"changedFields\": [\"productName\"], \"productName\": \"TASK134_FINAL_FIELD_MERGE_ANDROID_NAME\"}, \"ios\": {\"changedFields\": [\"retailPrice\"], \"retailPrice\": 21.99}}",
+      "name": "payload_no_stale_purchase",
+      "status": "PASS"
+    },
+    {
+      "evidence": "disjoint field patches merged without conflict prompt",
+      "name": "zero_prompt_conflict",
+      "status": "PASS"
+    },
+    {
+      "evidence": "residue=0",
+      "name": "cleanup_residue_zero",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_FINAL_",
+  "residueCount": 0,
+  "rowsCreated": 5,
+  "rowsDeleted": 5,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:04:18Z",
+  "status": "PASS",
+  "summary": "Field-level strict merge verified for Android productName plus iOS retailPrice.",
+  "taskId": "TASK-134"
+}

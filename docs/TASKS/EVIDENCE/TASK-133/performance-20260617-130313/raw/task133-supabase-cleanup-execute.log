@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-133/performance-20260617-130313/agent-runs/20260617T172226Z-supabase-cleanup-prefix-TASK133_PERF_20260617_130313_-profile-linked-execute-cleanup-plan-id-cleanup-TASK-133-20260617T172205Z-TASK133_PERF_20260617_130313_-p57369.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-133/performance-20260617-130313/agent-runs/20260617T172226Z-supabase-cleanup-prefix-TASK133_PERF_20260617_130313_-profile-linked-execute-cleanup-plan-id-cleanup-TASK-133-20260617T172205Z-TASK133_PERF_20260617_130313_-p57369.json
+NEXT_ACTION Run residue-check for the same prefix/profile.

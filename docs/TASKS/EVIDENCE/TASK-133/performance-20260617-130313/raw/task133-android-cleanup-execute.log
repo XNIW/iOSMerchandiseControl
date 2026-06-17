@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-133/performance-20260617-130313/agent-runs/20260617T172334Z-android-cleanup-scoped-prefix-TASK133_PERF_20260617_130313_-execute-p63763.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-133/performance-20260617-130313/agent-runs/20260617T172334Z-android-cleanup-scoped-prefix-TASK133_PERF_20260617_130313_-execute-p63763.json
+NEXT_ACTION Continue Android live/device gate.

@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "parityResidueRecheck": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/final-caveat-closure/final-parity-residue-recheck.json",
+    "performanceSplit": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/final-caveat-closure/task134-performance-strict-split.json",
+    "secretScan": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/final-caveat-closure/evidence-secret-scan.json",
+    "strictLocalAudit": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/final-caveat-closure/strict-live-report-local-audit.json",
+    "uiRerun": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/final-caveat-closure/task134-ui-sync-state-rerun.json",
+    "warningClassification": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/final-caveat-closure/ios-warning-classification.json"
+  },
+  "caveats": [
+    {
+      "caveat": "Android UI placeholder / adb invisible",
+      "closure": "PASS real OnePlus IN2013 adb screenshot + redacted uiautomator XML",
+      "evidence": "PASS_REAL_SCREENSHOT path=/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.png bytes=131412 serial=8ac48ff0 exit=0"
+    },
+    {
+      "caveat": "Performance strict p95 25000ms mixed CLI overhead with app latency",
+      "closure": "PASS_APP_LATENCY with app_sync p95 <= 5000ms; CLI harness kept separate",
+      "evidence": "app_sync_p95=1313.7ms target=5000ms app_sync_ms=[1252, 482, 1314, 462, 1280, 461, 1145, 468, 1250, 470, 1241, 460, 1062, 455, 1079, 481, 1239, 451, 1308, 469]"
+    },
+    {
+      "caveat": "iOS warning newness not classified",
+      "closure": "NO_NEW_TASK134_WARNINGS",
+      "evidence": "totalWarnings=5 introducedByTask134=0"
+    },
+    {
+      "caveat": "Strict live commands looked SQL-only",
+      "closure": "PASS cloud + iOS SwiftData/runtime + Android Room scoped assertions",
+      "evidence": "strictAudit=PASS parity=PASS TASK133/TASK134 residue=0 pending=0 sync_events_fixture=0"
+    }
+  ],
+  "closedAt": "2026-06-17 15:44 -0400",
+  "doneLabel": "DONE - CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED",
+  "finalChecks": {
+    "androidAssembleDebug": "PASS exit 0",
+    "androidCompileDebugAndroidTestKotlin": "PASS exit 0",
+    "androidGitDiffCheck": "PASS exit 0",
+    "androidLintDebug": "PASS exit 0",
+    "androidTask134UnitTest": "PASS exit 0",
+    "evidenceSecretScan": "PASS",
+    "iosDebugBuild": "PASS exit 0",
+    "iosGitDiffCheck": "PASS exit 0",
+    "iosTask134TargetedTest": "PASS 1 test / 0 failures"
+  },
+  "status": "PASS"
+}

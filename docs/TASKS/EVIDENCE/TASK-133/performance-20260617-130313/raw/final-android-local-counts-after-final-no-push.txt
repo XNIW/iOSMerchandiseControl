@@ -1,0 +1,15 @@
+products|19695
+suppliers|59
+categories|28
+product_prices|41109
+history_active|35
+history_total|35
+sync_event_outbox|0
+pending_catalog_tombstones|0
+watermarks|1
+max_watermark|3065
+task_suppliers|0
+task_categories|0
+task_products|0
+task_prices|0
+task_history|0

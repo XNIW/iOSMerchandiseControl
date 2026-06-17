@@ -1,0 +1,6 @@
+metric                  value
+----------------------  -----
+suppliers_TASK_prefix   2    
+categories_TASK_prefix  2    
+products_TASK_prefix    3    
+history_TASK_contains   54   

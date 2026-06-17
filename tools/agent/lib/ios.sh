@@ -1534,6 +1534,10 @@ mc_ios_auth_preflight() {
       mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK112_IOS_AUTH_PREFLIGHT" "1" >>"$test_log" 2>&1
       mc_ios_xctestrun_set_env "$xctestrun" "TASK112_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
       mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK112_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
+      if [[ "${MC_TEST_PREFIX:-}" == TASK115_* || "${MC_TEST_PREFIX:-}" == TASK133_* || "${MC_TEST_PREFIX:-}" == TASK134_* ]]; then
+        mc_ios_xctestrun_set_env "$xctestrun" "TASK115_IOS_SIMULATOR_AUTH_FALLBACK" "1" >>"$test_log" 2>&1
+        mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK115_IOS_SIMULATOR_AUTH_FALLBACK" "1" >>"$test_log" 2>&1
+      fi
       (
         cd "$MC_IOS_REPO" || exit 3
         rm -rf "$bundle"
@@ -2005,7 +2009,7 @@ mc_ios_task114_matrix_step() {
       mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK114_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
       mc_ios_xctestrun_set_env "$xctestrun" "TASK114_RUN_PREFIX" "$prefix" >>"$test_log" 2>&1
       mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK114_RUN_PREFIX" "$prefix" >>"$test_log" 2>&1
-      if [[ "$prefix" == TASK115_* ]]; then
+      if [[ "$prefix" == TASK115_* || "$prefix" == TASK133_* || "$prefix" == TASK134_* ]]; then
         mc_ios_xctestrun_set_env "$xctestrun" "TASK115_IOS_SIMULATOR_AUTH_FALLBACK" "1" >>"$test_log" 2>&1
         mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK115_IOS_SIMULATOR_AUTH_FALLBACK" "1" >>"$test_log" 2>&1
 	      fi

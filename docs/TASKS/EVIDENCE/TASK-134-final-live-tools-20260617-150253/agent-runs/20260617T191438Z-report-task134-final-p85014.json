@@ -1,0 +1,155 @@
+{
+  "NEXT_ACTION": "Continue TASK-134 final command sequence.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T191438Z-report-task134-final-p85014.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T191438Z-report-task134-final-p85014.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T191438Z-report-task134-final-p85014.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [],
+  "cleanup_plan_id": null,
+  "command": "report task134-final",
+  "command_slug": "report-task134-final",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 476,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK134_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-134"
+  },
+  "exit_code": 0,
+  "git_sha": "98a01d19",
+  "next_action_recommended": "Continue TASK-134 final command sequence.",
+  "platform": "live",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "artifacts": {
+      "json": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-final.json",
+      "markdown": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-final.md",
+      "rawLog": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-final.log"
+    },
+    "command": "task134-final",
+    "completedAt": "2026-06-17T19:14:38Z",
+    "data": {
+      "cleanupResidue": 0,
+      "cleanupStatus": "PASS",
+      "doneLabel": "DONE - CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED",
+      "reports": {
+        "task134-admin-web-update": {
+          "residueCount": 0,
+          "status": "PASS",
+          "summary": "Admin-web third-client update produced a targeted event without client push-back."
+        },
+        "task134-delete-edit-conflict": {
+          "residueCount": 0,
+          "status": "PASS",
+          "summary": "Remote delete plus local edit conflict did not resurrect the product."
+        },
+        "task134-dirty-protected": {
+          "residueCount": 0,
+          "status": "PASS",
+          "summary": "Dirty protected stale push was blocked and remote state was retained."
+        },
+        "task134-field-merge": {
+          "residueCount": 0,
+          "status": "PASS",
+          "summary": "Field-level strict merge verified for Android productName plus iOS retailPrice."
+        },
+        "task134-performance-strict": {
+          "residueCount": 0,
+          "status": "PASS",
+          "summary": "Strict performance smoke completed with p95 under target."
+        },
+        "task134-price-append": {
+          "residueCount": 0,
+          "status": "PASS",
+          "summary": "Append-only product price history verified for T1/T2 effectiveAt rows."
+        },
+        "task134-price-conflict": {
+          "residueCount": 0,
+          "status": "PASS",
+          "summary": "Same effectiveAt price conflict rejected without silent overwrite."
+        },
+        "task134-ui-sync-state": {
+          "residueCount": 0,
+          "status": "PASS",
+          "summary": "UI sync state parity artifacts captured/redacted for iOS and Android."
+        }
+      }
+    },
+    "dryRun": false,
+    "gates": [
+      {
+        "evidence": "missing=",
+        "name": "mandatory_live_commands",
+        "status": "PASS"
+      },
+      {
+        "evidence": "failing=",
+        "name": "all_scenarios_pass",
+        "status": "PASS"
+      },
+      {
+        "evidence": "cleanup_status=PASS residue=0",
+        "name": "cleanup_all_passed",
+        "status": "PASS"
+      }
+    ],
+    "mutationPerformed": true,
+    "nextAction": "Continue TASK-134 final command sequence.",
+    "prefix": "TASK134_",
+    "residueCount": 0,
+    "rowsCreated": 0,
+    "rowsDeleted": 0,
+    "schemaVersion": "1.1",
+    "startedAt": "2026-06-17T19:14:38Z",
+    "status": "PASS",
+    "summary": "DONE - CROSS_PLATFORM_SYNC_POLICY_DATA_PARITY_AND_STRICT_RUNTIME_MERGE_VERIFIED",
+    "taskId": "TASK-134"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": false,
+  "requires_live": false,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260617T191438Z-report-task134-final-p85014",
+  "safety_level": "safe-readonly",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-134",
+  "test_prefix": "TASK134_",
+  "timestamp_end": "2026-06-17T19:14:38Z",
+  "timestamp_start": "2026-06-17T19:14:37Z",
+  "warnings": []
+}

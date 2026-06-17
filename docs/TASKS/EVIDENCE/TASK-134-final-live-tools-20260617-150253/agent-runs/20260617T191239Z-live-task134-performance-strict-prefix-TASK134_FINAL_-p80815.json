@@ -1,0 +1,144 @@
+{
+  "NEXT_ACTION": "Continue TASK-134 final command sequence.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T191239Z-live-task134-performance-strict-prefix-TASK134_FINAL_-p80815.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T191239Z-live-task134-performance-strict-prefix-TASK134_FINAL_-p80815.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T191239Z-live-task134-performance-strict-prefix-TASK134_FINAL_-p80815.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "TASK-134-F2",
+    "TASK-134-F3",
+    "TASK-134-F4",
+    "TASK-134-F5",
+    "TASK-134-F6",
+    "TASK-134-F7",
+    "TASK-134-F8",
+    "TASK-134-F9",
+    "TASK-134-F10"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live task134-performance-strict --prefix TASK134_FINAL_",
+  "command_slug": "live-task134-performance-strict-prefix-TASK134_FINAL_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": "<REDACTED>"
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 100433,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<REDACTED>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK134_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-134"
+  },
+  "exit_code": 0,
+  "git_sha": "98a01d19",
+  "next_action_recommended": "Continue TASK-134 final command sequence.",
+  "platform": "live",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "artifacts": {
+      "json": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-performance-strict.json",
+      "markdown": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-performance-strict.md",
+      "rawLog": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-performance-strict.log"
+    },
+    "command": "task134-performance-strict",
+    "completedAt": "2026-06-17T19:14:19Z",
+    "data": {
+      "cleanupEnd": {
+        "categories": 5,
+        "product_prices": 0,
+        "products": 5,
+        "suppliers": 5,
+        "sync_events": 0
+      },
+      "cleanupStart": {
+        "categories": 0,
+        "product_prices": 0,
+        "products": 0,
+        "suppliers": 0,
+        "sync_events": 0
+      },
+      "durationsMs": [
+        13472,
+        14624,
+        13875,
+        15247,
+        24896
+      ],
+      "p95Ms": 24896,
+      "scenarioPrefix": "TASK134_FINAL_PERFORMANCE_STRICT_",
+      "targetMs": 25000
+    },
+    "dryRun": false,
+    "gates": [
+      {
+        "evidence": "p95=24896ms target=25000ms durations=[13472, 14624, 13875, 15247, 24896]",
+        "name": "strict_p95_within_target",
+        "status": "PASS"
+      },
+      {
+        "evidence": "iterations=5",
+        "name": "all_iterations_completed",
+        "status": "PASS"
+      },
+      {
+        "evidence": "residue=0",
+        "name": "cleanup_residue_zero",
+        "status": "PASS"
+      }
+    ],
+    "mutationPerformed": true,
+    "nextAction": "Continue TASK-134 final command sequence.",
+    "prefix": "TASK134_FINAL_",
+    "residueCount": 0,
+    "rowsCreated": 15,
+    "rowsDeleted": 15,
+    "schemaVersion": "1.1",
+    "startedAt": "2026-06-17T19:12:39Z",
+    "status": "PASS",
+    "summary": "Strict performance smoke completed with p95 under target.",
+    "taskId": "TASK-134"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": true,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 15,
+  "rows_deleted": 15,
+  "run_id": "20260617T191239Z-live-task134-performance-strict-prefix-TASK134_FINAL_-p80815",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-134",
+  "test_prefix": "TASK134_FINAL_",
+  "timestamp_end": "2026-06-17T19:14:19Z",
+  "timestamp_start": "2026-06-17T19:12:38Z",
+  "warnings": []
+}

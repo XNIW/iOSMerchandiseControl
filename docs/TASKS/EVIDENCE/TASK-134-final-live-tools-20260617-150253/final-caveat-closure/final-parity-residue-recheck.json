@@ -1,0 +1,228 @@
+{
+  "androidRoom": {
+    "TASK133": {
+      "dirtyAggregate": 0,
+      "duration_ms": 2917,
+      "localOnlyAggregate": 0,
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T194048Z-sync-counts-source-android-p81909.json",
+      "pendingAggregate": 0,
+      "scopedCounts": {
+        "categories": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        },
+        "history_entries": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 0
+        },
+        "product_prices": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        },
+        "products": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        },
+        "suppliers": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        }
+      },
+      "scopedResidueAggregate": 0,
+      "source": "android",
+      "status": "PASS"
+    },
+    "TASK134": {
+      "dirtyAggregate": 0,
+      "duration_ms": 3223,
+      "localOnlyAggregate": 0,
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T193421Z-sync-counts-source-android-p49937.json",
+      "pendingAggregate": 0,
+      "scopedCounts": {
+        "categories": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        },
+        "history_entries": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 0
+        },
+        "product_prices": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        },
+        "products": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        },
+        "suppliers": {
+          "active": 0,
+          "localOnly": 0,
+          "pending": 0
+        }
+      },
+      "scopedResidueAggregate": 0,
+      "source": "android",
+      "status": "PASS"
+    }
+  },
+  "failures": [],
+  "gate": "TASK133_TASK134_SCOPED_PARITY_RESIDUE_PENDING_ZERO",
+  "iosRuntime": {
+    "dirtyAggregate": 0,
+    "duration_ms": 70392,
+    "localOnlyAggregate": 0,
+    "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T193421Z-ios-runtime-ui-counts-live-p49969.json",
+    "pendingAggregate": 0,
+    "scopedCounts": {
+      "categories": {
+        "active": 0,
+        "localOnly": null,
+        "pending": 0
+      },
+      "history_entries": {
+        "active": 0,
+        "localOnly": null,
+        "pending": 0,
+        "userVisible": 0
+      },
+      "product_prices": {
+        "active": 0,
+        "localOnly": null,
+        "pending": 0
+      },
+      "products": {
+        "active": 0,
+        "localOnly": null,
+        "pending": 0
+      },
+      "suppliers": {
+        "active": 0,
+        "localOnly": null,
+        "pending": 0
+      }
+    },
+    "scopedResidueAggregate": 0,
+    "source": "ios.runtime-ui-counts",
+    "status": "PASS"
+  },
+  "iosSwiftData": {
+    "TASK133": {
+      "dirtyAggregate": 0,
+      "duration_ms": 649,
+      "localOnlyAggregate": 0,
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T194048Z-sync-counts-source-ios-p81910.json",
+      "pendingAggregate": 0,
+      "scopedCounts": {
+        "categories": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "history_entries": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0,
+          "userVisible": 0
+        },
+        "product_prices": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "products": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "suppliers": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        }
+      },
+      "scopedResidueAggregate": 0,
+      "source": "ios",
+      "status": "PASS"
+    },
+    "TASK134": {
+      "dirtyAggregate": 0,
+      "duration_ms": 710,
+      "localOnlyAggregate": 0,
+      "path": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T193704Z-sync-counts-source-ios-p73754.json",
+      "pendingAggregate": 0,
+      "scopedCounts": {
+        "categories": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "history_entries": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0,
+          "userVisible": 0
+        },
+        "product_prices": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "products": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        },
+        "suppliers": {
+          "active": 0,
+          "localOnly": null,
+          "pending": 0
+        }
+      },
+      "scopedResidueAggregate": 0,
+      "source": "ios",
+      "status": "PASS"
+    }
+  },
+  "scopeNote": "Full-cache drift is intentionally not used as the TASK-134 parity gate; this closure verifies TASK133/TASK134 scoped residue and pending/outbox on Supabase, Android Room, and iOS SwiftData/runtime stores.",
+  "status": "PASS",
+  "supabase": {
+    "TASK133": {
+      "counts": {
+        "categories": 0,
+        "product_prices": 0,
+        "products": 0,
+        "suppliers": 0,
+        "sync_events": 0
+      },
+      "prefix": "TASK133_%",
+      "source": "supabase.TASK133-scoped-counts",
+      "status": "PASS",
+      "watermark": 3035
+    },
+    "TASK134": {
+      "counts": {
+        "categories": 0,
+        "product_prices": 0,
+        "products": 0,
+        "suppliers": 0,
+        "sync_events": 0
+      },
+      "prefix": "TASK134_%",
+      "source": "supabase.TASK134-scoped-counts",
+      "status": "PASS",
+      "watermark": 3035
+    }
+  }
+}

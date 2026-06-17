@@ -1,0 +1,33 @@
+ M docs/MASTER-PLAN.md
+ M iOSMerchandiseControl/ExcelSessionViewModel.swift
+ M iOSMerchandiseControl/LocalPendingChange.swift
+ M iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift
+ M iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift
+ M iOSMerchandiseControl/Sync/Automatic/Composition/AutomaticSyncRuntimeFactory.swift
+ M iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift
+ M iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift
+ M iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionEngine.swift
+ M iOSMerchandiseControl/Sync/Automatic/Decision/SyncDecisionInputProvider.swift
+ M iOSMerchandiseControlTests/SyncDecisionEngineTests.swift
+ M iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests.swift
+ M iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift
+ M iOSMerchandiseControlTests/Task119AutomaticArchitectureTests.swift
+ M tools/agent/lib/common.sh
+ M tools/agent/lib/ios.sh
+ M tools/agent/lib/supabase.sh
+ M tools/agent/mc-agent.sh
+?? docs/SYNC_POLICY.md
+?? docs/TASKS/EVIDENCE/TASK-132/
+?? docs/TASKS/EVIDENCE/TASK-132C-clean-baseline-20260617-114719/
+?? docs/TASKS/EVIDENCE/TASK-132C-clean-baseline-20260617-115823/
+?? docs/TASKS/EVIDENCE/TASK-133/
+?? docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/
+?? docs/TASKS/EVIDENCE/TASK-134-final-live-tools-latest.path
+?? docs/TASKS/EVIDENCE/TASK-134-latest.path
+?? docs/TASKS/EVIDENCE/TASK-134-strict-sync-policy-20260617-142441/
+?? docs/TASKS/EVIDENCE/TASK-134/
+?? docs/TASKS/TASK-132-cross-platform-sync-forensics-cleanup-policy-hardening.md
+?? iOSMerchandiseControl/Sync/Automatic/Recovery/
+?? scripts/
+?? tools/agent/lib/task134.sh
+?? tools/agent/lib/task134_live.py

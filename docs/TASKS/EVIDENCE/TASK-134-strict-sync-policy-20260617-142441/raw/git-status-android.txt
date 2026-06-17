@@ -1,0 +1,10 @@
+ M .idea/deploymentTargetSelector.xml
+ M app/src/androidTest/java/com/example/merchandisecontrolsplitview/Task103CrossPlatformAcceptanceTest.kt
+ M app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogAutoSyncCoordinator.kt
+ M app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogSyncStateTracker.kt
+ M app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt
+ M app/src/main/java/com/example/merchandisecontrolsplitview/data/InventoryRepository.kt
+ M app/src/test/java/com/example/merchandisecontrolsplitview/data/CatalogAutoSyncCoordinatorTest.kt
+ M app/src/test/java/com/example/merchandisecontrolsplitview/data/DefaultInventoryRepositoryTest.kt
+ M app/src/test/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinatorTest.kt
+ M app/src/test/java/com/example/merchandisecontrolsplitview/util/ImportAnalyzerTest.kt

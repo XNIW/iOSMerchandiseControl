@@ -169,6 +169,7 @@ main() {
     account) handler=(mc_cmd_account "${args[@]:1}") ;;
     safety) handler=(mc_cmd_safety "${args[@]:1}") ;;
     harness) handler=(mc_cmd_harness "${args[@]:1}") ;;
+    cleanup) handler=(mc_cmd_task134_cleanup "${args[@]:1}") ;;
     ios) handler=(mc_cmd_ios "${args[@]:1}") ;;
     android) handler=(mc_cmd_android "${args[@]:1}") ;;
     physical) handler=(mc_cmd_task131_physical "${args[@]:1}") ;;

@@ -5,6 +5,7 @@ actor AutomaticSyncEngine {
     private let productPriceProvider: (any SyncProductPriceSyncProviding)?
     private let historySessionProvider: (any SyncHistorySessionPushProviding)?
     private let incrementalPullProvider: (any SyncIncrementalPullProviding)?
+    private let recoverySnapshotPullProvider: (any SyncRecoverySnapshotPullProviding)?
     private let activityRegistrationProvider: (any SyncActivityRegistrationProviding)?
     private let defaults: UserDefaults
     private let singleFlight: AutomaticSyncSingleFlight
@@ -16,6 +17,7 @@ actor AutomaticSyncEngine {
         productPriceProvider: (any SyncProductPriceSyncProviding)?,
         historySessionProvider: (any SyncHistorySessionPushProviding)?,
         incrementalPullProvider: (any SyncIncrementalPullProviding)?,
+        recoverySnapshotPullProvider: (any SyncRecoverySnapshotPullProviding)? = nil,
         activityRegistrationProvider: (any SyncActivityRegistrationProviding)?,
         defaults: UserDefaults = .standard,
         singleFlight: AutomaticSyncSingleFlight = AutomaticSyncSingleFlight(),
@@ -26,6 +28,7 @@ actor AutomaticSyncEngine {
         self.productPriceProvider = productPriceProvider
         self.historySessionProvider = historySessionProvider
         self.incrementalPullProvider = incrementalPullProvider
+        self.recoverySnapshotPullProvider = recoverySnapshotPullProvider
         self.activityRegistrationProvider = activityRegistrationProvider
         self.defaults = defaults
         self.singleFlight = singleFlight
@@ -60,10 +63,15 @@ actor AutomaticSyncEngine {
                     return await complete(.blocked(reason))
                 case .pushPending:
                     didRun = try await pushPending(ownerUserID: ownerUserID, cancellationToken: cancellationToken) || didRun
-                case .drainEvents, .lightReconcile, .requestRecovery:
+                case .drainEvents, .lightReconcile:
                     didRun = try await drainRemoteEvents(
                         ownerUserID: ownerUserID,
                         source: source,
+                        cancellationToken: cancellationToken
+                    ) || didRun
+                case .requestRecovery:
+                    didRun = try await recoverRemoteSnapshot(
+                        ownerUserID: ownerUserID,
                         cancellationToken: cancellationToken
                     ) || didRun
                 case .bootstrap, .fullRecovery:
@@ -153,7 +161,28 @@ actor AutomaticSyncEngine {
         let summary = try await incrementalPullProvider.applyIncrementalRemoteChanges(ownerUserID: ownerUserID)
         try await cancellationPolicy.checkCancellation(token: cancellationToken)
         recordIncrementalSummary(summary, source: source)
+        if summary.requiresFullRecovery {
+            return try await recoverRemoteSnapshot(
+                ownerUserID: ownerUserID,
+                cancellationToken: cancellationToken
+            )
+        }
         return summary.eventsFetched > 0 || summary.totalApplied > 0 || summary.requiresFullRecovery
+    }
+
+    private func recoverRemoteSnapshot(
+        ownerUserID: UUID,
+        cancellationToken: Int
+    ) async throws -> Bool {
+        guard let recoverySnapshotPullProvider else {
+            recordDiagnostic("recovery.lastOutcome", "blocked_missing_provider")
+            throw AutomaticRecoverySnapshotPullError.providerMissing
+        }
+        recordDiagnostic("recovery.lastStartedAt", Date().timeIntervalSince1970)
+        let summary = try await recoverySnapshotPullProvider.recoverFromRemoteSnapshot(ownerUserID: ownerUserID)
+        try await cancellationPolicy.checkCancellation(token: cancellationToken)
+        recordRecoverySummary(summary)
+        return summary.didWork
     }
 
     private func recordAttempt(source: SyncAutomaticTriggerSource) {
@@ -186,6 +215,23 @@ actor AutomaticSyncEngine {
         defaults.set(summary.totalElapsedMs, forKey: "sync.runtime.incremental.lastTotalElapsedMs")
         defaults.set(summary.requiresFullRecovery, forKey: "sync.runtime.incremental.requiresFullRecovery")
         defaults.set(source.rawValue, forKey: "sync.runtime.incremental.lastCompletedSource")
+        #endif
+    }
+
+    private func recordRecoverySummary(_ summary: SyncRecoverySnapshotPullSummary) {
+        #if DEBUG
+        defaults.set("completed", forKey: "sync.runtime.automatic.recovery.lastOutcome")
+        defaults.set(summary.catalog.inserted, forKey: "sync.runtime.automatic.recovery.catalog.inserted")
+        defaults.set(summary.catalog.updated, forKey: "sync.runtime.automatic.recovery.catalog.updated")
+        defaults.set(summary.catalog.productPruned, forKey: "sync.runtime.automatic.recovery.catalog.pruned")
+        defaults.set(summary.history.insertedCount, forKey: "sync.runtime.automatic.recovery.history.inserted")
+        defaults.set(summary.history.updatedCount, forKey: "sync.runtime.automatic.recovery.history.updated")
+        defaults.set(summary.history.prunedMissingRemoteCount, forKey: "sync.runtime.automatic.recovery.history.pruned")
+        defaults.set(summary.productPrices.inserted, forKey: "sync.runtime.automatic.recovery.productPrices.inserted")
+        defaults.set(summary.productPrices.remoteIdentityLinked, forKey: "sync.runtime.automatic.recovery.productPrices.linked")
+        defaults.set(summary.productPrices.prunedLocal, forKey: "sync.runtime.automatic.recovery.productPrices.pruned")
+        defaults.set(Int(summary.watermarkAfter), forKey: "sync.runtime.automatic.recovery.watermarkAfter")
+        defaults.set(Date().timeIntervalSince1970, forKey: "sync.runtime.automatic.recovery.lastCompletedAt")
         #endif
     }
 

@@ -15,6 +15,7 @@ nonisolated struct SyncDecisionInputSnapshot: Equatable, Sendable {
     var hasRealtimeEvent: Bool
     var isSyncBusy: Bool
     var hasStateReadFailure: Bool
+    var requestsLightReconcile: Bool
 
     var isNetworkAvailable: Bool {
         networkStatus == .satisfied
@@ -35,7 +36,8 @@ nonisolated struct SyncDecisionInputSnapshot: Equatable, Sendable {
             requiresAccountDecision: !accountBindingMatches,
             hasPendingLocalChanges: hasPendingLocalChanges,
             hasRemoteSyncEvent: hasRealtimeEvent,
-            hasRemoteVerificationDrift: hasRecoveryDrift || triggerSource.requestsLightReconcile,
+            hasRemoteVerificationDrift: hasRecoveryDrift,
+            requestsLightReconcile: requestsLightReconcile,
             requiresBootstrap: requiresBootstrap,
             requiresFullRecovery: requiresFullRecovery,
             fullRecoveryContext: .normalForeground,
@@ -88,6 +90,10 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
         let outboxCount = loadPendingOutboxCount(context: context, ownerUserID: ownerUserID)
         let baselineSummary = loadBaselineSummary(context: context, ownerUserID: ownerUserID)
         let localCatalogIsEmpty = loadLocalCatalogIsEmpty(context: context)
+        let hasPendingLocalChanges = Self.hasPendingLocalChanges(
+            pendingChanges: pendingChanges.value,
+            pendingOutboxCount: outboxCount.value
+        )
         let stateReadFailed = pendingChanges.failed
             || outboxCount.failed
             || baselineSummary.failed
@@ -110,14 +116,25 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
                 baselineSummary: baselineSummary.value,
                 localCatalogIsEmpty: localCatalogIsEmpty.value,
                 isAuthenticated: isAuthenticated,
-                hasConfirmedAccountBinding: bindingState.hasConfirmedCurrentAccountBinding
+                hasPendingLocalChanges: hasPendingLocalChanges
             ),
             requiresFullRecovery: requiresFullRecovery(baselineSummary: baselineSummary.value),
             hasRecoveryDrift: hasRecoveryDrift(baselineSummary: baselineSummary.value),
             hasRealtimeEvent: realtimeEvent,
             isSyncBusy: isSyncBusy,
-            hasStateReadFailure: stateReadFailed
+            hasStateReadFailure: stateReadFailed,
+            requestsLightReconcile: triggerSource.requestsLightReconcile
         )
+    }
+
+    private nonisolated static func hasPendingLocalChanges(
+        pendingChanges: LocalPendingChangeSnapshot,
+        pendingOutboxCount: Int
+    ) -> Bool {
+        pendingChanges.pendingCatalogChangeCount > 0
+            || pendingChanges.pendingProductPriceChangeCount > 0
+            || pendingChanges.pendingHistorySessionChangeCount > 0
+            || pendingOutboxCount > 0
     }
 
     private struct ReadResult<Value> {
@@ -189,21 +206,18 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
 
     private struct AccountBindingState {
         var matches: Bool
-        var hasConfirmedCurrentAccountBinding: Bool
     }
 
     private func accountBindingState(ownerUserID: UUID?) -> AccountBindingState {
         guard let ownerUserID,
               let binding = AccountBindingStore().currentBinding else {
             return AccountBindingState(
-                matches: true,
-                hasConfirmedCurrentAccountBinding: false
+                matches: true
             )
         }
         let matchesCurrentAccount = binding.accountHash == AccountBindingStore.accountHash(for: ownerUserID)
         return AccountBindingState(
-            matches: matchesCurrentAccount,
-            hasConfirmedCurrentAccountBinding: matchesCurrentAccount
+            matches: matchesCurrentAccount
         )
     }
 
@@ -211,21 +225,20 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
         baselineSummary: SupabaseCatalogBaselineDebugSummary,
         localCatalogIsEmpty: Bool,
         isAuthenticated: Bool,
-        hasConfirmedAccountBinding: Bool
+        hasPendingLocalChanges: Bool
     ) -> Bool {
         isAuthenticated
             && baselineSummary.status == .absent
-            && !localCatalogIsEmpty
-            && !hasConfirmedAccountBinding
+            && (!localCatalogIsEmpty || hasPendingLocalChanges)
     }
 
     private func requiresFullRecovery(
         baselineSummary: SupabaseCatalogBaselineDebugSummary
     ) -> Bool {
         switch baselineSummary.status {
-        case .stale, .incomplete:
+        case .stale, .incomplete, .accountMismatch:
             return true
-        case .absent, .valid, .accountMismatch:
+        case .absent, .valid:
             return false
         }
     }

@@ -1,0 +1,6 @@
+ M .idea/deploymentTargetSelector.xml
+ M app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogAutoSyncCoordinator.kt
+ M app/src/main/java/com/example/merchandisecontrolsplitview/data/CatalogSyncStateTracker.kt
+ M app/src/main/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinator.kt
+ M app/src/test/java/com/example/merchandisecontrolsplitview/data/CatalogAutoSyncCoordinatorTest.kt
+ M app/src/test/java/com/example/merchandisecontrolsplitview/data/HistorySessionPushCoordinatorTest.kt

@@ -1,0 +1,764 @@
+getpwuid_r did not find a match for uid 501
+Filtering the log data using "process == "iOSMerchandiseControl""
+Timestamp               Ty Process[PID:TID]
+2026-06-17 12:03:36.646 A  iOSMerchandiseControl[88826:1fe6be] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-06-17 12:03:36.653 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.dt.xctest:Default] Registering for test daemon availability notify post.
+2026-06-17 12:03:36.653 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-06-17 12:03:36.653 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-06-17 12:03:36.653 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-06-17 12:03:36.653 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:Application] Deactivation reason added: 11; deactivation reasons: 1024 -> 3072; animating application lifecycle event: 0
+2026-06-17 12:03:36.655 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:Application] Deactivation reason removed: 10; deactivation reasons: 3072 -> 2048; animating application lifecycle event: 0
+2026-06-17 12:03:36.655 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:EventBus] Event Timing Profile for Touch: not found, path="/System/Library/EventTimingProfiles/Sim.Touch.plist"
+2026-06-17 12:03:36.655 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:EventBus] Event Timing Profile for Pencil: not found, path="/System/Library/EventTimingProfiles/Sim.Pencil.plist"
+2026-06-17 12:03:36.655 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:UpdateScheduler] Selected display: name=LCD (PurpleMain), id=1
+2026-06-17 12:03:36.657 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.xpc:connection] [0x102d18e00] activating connection: mach=true listener=false peer=false name=com.apple.lsd.mapdb
+2026-06-17 12:03:36.713 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.BoardServices:XPCErrors] [C:2] Alloc com.apple.backboard.hid-services.xpc
+2026-06-17 12:03:36.713 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.xpc:connection] [0x102b05780] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-06-17 12:03:36.714 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.BackBoard:EventDelivery] BKSHIDEventDeliveryManager - connection activation
+2026-06-17 12:03:36.715 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:Application] Deactivation reason added: 5; deactivation reasons: 2048 -> 2080; animating application lifecycle event: 1
+2026-06-17 12:03:36.715 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Should send trait collection or coordinate space update, interface style 2 -> 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:36.715 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:36.715 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:HomeAffordanceObservation] Initializing: <_UIHomeAffordanceSceneNotifier: 0x600002906060>; with scene: <UIWindowScene: 0x102b09ac0>
+2026-06-17 12:03:36.715 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.BacklightServices:scenes] 0x600000c03390 setDelegate:<0x600000c03420 _UIBacklightEnvironment> hasDelegate:YES for environment:sceneID:com.niwcyber.iOSMerchandiseControl-3BA2A8E7-7F14-4119-811B-CEA33185DC6F
+2026-06-17 12:03:36.716 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:36.716 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:EventDeferring] [0x600002906140] Initialized with scene: <UIWindowScene: 0x102b09ac0>; behavior: <_UIEventDeferringBehavior_iOS: 0x60000026cf60>; availableForProcess: 1, systemShellManagesKeyboardFocus: 1
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.BackBoard:EventDelivery] BKSHIDEventObserver - connection activation
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.BackBoard:EventDelivery] policyStatus:<BKSHIDEventDeliveryPolicyObserver: 0x600002600de0; process scope; status: target> was:none
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] Setting default evaluation strategy for UIUserInterfaceIdiomPhone to LastOneWins
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] Scene target of keyboard event deferring environment did change: 1; scene: UIWindowScene: 0x102b09ac0; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Acom.niwcyber.iOSMerchandiseControl-3BA2A8E7-7F14-4119-811B-CEA33185DC6F
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:EventDeferring] [0x600002906140] Scene target of event deferring environments did update: scene: 0x102b09ac0; current systemShellManagesKeyboardFocus: 1; systemShellManagesKeyboardFocusForScene: 1; eligibleForRecordRemoval: 1;
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x102b09ac0; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Acom.niwcyber.iOSMerchandiseControl-3BA2A8E7-7F14-4119-811B-CEA33185DC6F
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] Stack[KeyWindow] 0x600000c16a30: Taking no further action for migration from LastOneWins -> SystemShellManaged as there are no scenes
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] Setting default evaluation strategy for UIUserInterfaceIdiomPhone to SystemShellManaged
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] Key window needs update: 0; currentKeyWindowScene: 0x0; evaluatedKeyWindowScene: 0x102b09ac0; currentApplicationKeyWindow: 0x0; evaluatedApplicationKeyWindow: 0x0; reason: UIWindowScene: 0x102b09ac0: Window scene became target of keyboard environment
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:36.717 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:36.766 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Will add backgroundTask with taskName: CoreData: Adding persistent store, expirationHandler: <__NSMallocBlock__: 0x600000c6ab50>
+2026-06-17 12:03:36.766 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Reusing background assertion <BKSProcessAssertion: 0x60000211f070>
+2026-06-17 12:03:36.766 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Incrementing reference count for background assertion <BKSProcessAssertion: 0x60000211f070>
+2026-06-17 12:03:36.766 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Created background task <_UIBackgroundTaskInfo: 0x60000176bc80>: taskID = 2, taskName = CoreData: Adding persistent store, creationTime = 62736 (elapsed = 0).
+2026-06-17 12:03:36.771 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Ending background task with UIBackgroundTaskIdentifier: 2
+2026-06-17 12:03:36.771 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Ending task with identifier 2 and description: <_UIBackgroundTaskInfo: 0x60000176bc80>: taskID = 2, taskName = CoreData: Adding persistent store, creationTime = 62736 (elapsed = 1), _expireHandler: <__NSMallocBlock__: 0x600000c6abb0>
+2026-06-17 12:03:36.771 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Decrementing reference count for assertion <BKSProcessAssertion: 0x60000211f070> (used by background task with identifier 2: <_UIBackgroundTaskInfo: 0x60000176bc80>: taskID = 2, taskName = CoreData: Adding persistent store, creationTime = 62736 (elapsed = 1))
+2026-06-17 12:03:36.795 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:Orientation] <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F) Scene updated orientation preferences: none -> ( Pu Ll Lr )
+2026-06-17 12:03:36.796 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] Key window API is scene-level: YES
+2026-06-17 12:03:36.796 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] UIWindowScene: 0x102b09ac0: Window became key in scene: UIWindow: 0x102f143e0; contextId: 0xFF19FABE: reason: UIWindowScene: 0x102b09ac0: Window requested to become key in scene: 0x102f143e0
+2026-06-17 12:03:36.796 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] Key window needs update: 1; currentKeyWindowScene: 0x0; evaluatedKeyWindowScene: 0x102b09ac0; currentApplicationKeyWindow: 0x0; evaluatedApplicationKeyWindow: 0x102f143e0; reason: UIWindowScene: 0x102b09ac0: Window requested to become key in scene: 0x102f143e0
+2026-06-17 12:03:36.796 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] Window did become application key: UIWindow: 0x102f143e0; contextId: 0xFF19FABE; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Acom.niwcyber.iOSMerchandiseControl-3BA2A8E7-7F14-4119-811B-CEA33185DC6F
+2026-06-17 12:03:36.796 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:EventDeferring] [0x600002906140] Begin local event deferring requested for token: 0x600002601200; environments: 1; reason: UIWindowScene: 0x102b09ac0: Begin event deferring in keyboardFocus for window: 0x102f143e0
+2026-06-17 12:03:36.797 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:36.797 Df iOSMerchandiseControl[88826:1fe6ce] [com.apple.BackBoard:EventDelivery] policyStatus:<BKSHIDEventDeliveryPolicyObserver: 0x600002600de0; token: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Acom.niwcyber.iOSMerchandiseControl-3BA2A8E7-7F14-4119-811B-CEA33185DC6F; status: ancestor> was:target
+2026-06-17 12:03:36.797 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:com.niwcyber.iOSMerchandiseControl-3BA2A8E7-7F14-4119-811B-CEA33185DC6F  persistentID: 3BA2A8E7-7F14-4119-811B-CEA33185DC6F
+2026-06-17 12:03:36.798 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:Application] Ignoring already applied deactivation reason: 5; deactivation reasons: 2080
+2026-06-17 12:03:36.798 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:Application] Deactivation reason added: 12; deactivation reasons: 2080 -> 6176; animating application lifecycle event: 1
+2026-06-17 12:03:36.798 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:Application] Deactivation reason removed: 11; deactivation reasons: 6176 -> 4128; animating application lifecycle event: 1
+2026-06-17 12:03:36.798 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneIntelligenceSupportSettings> on FBSSceneSettings
+2026-06-17 12:03:36.798 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.UIIntelligenceSupport:xpc] establishing connection to agent
+2026-06-17 12:03:36.798 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:36.798 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.xpc:session] [0x6000021424e0] Session created.
+2026-06-17 12:03:36.798 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.xpc:session] [0x6000021424e0] Session created from connection [0x102f0f060]
+2026-06-17 12:03:36.798 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.xpc:connection] [0x102f0f060] activating connection: mach=true listener=false peer=false name=com.apple.uiintelligencesupport.agent
+2026-06-17 12:03:36.798 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.xpc:session] [0x6000021424e0] Session activated
+2026-06-17 12:03:36.800 A  iOSMerchandiseControl[88826:1fe69a] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-06-17 12:03:36.833 A  iOSMerchandiseControl[88826:1fe69a] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-06-17 12:03:36.858 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.xpc:connection] [0x102f16960] activating connection: mach=true listener=false peer=false name=com.apple.fontservicesd
+2026-06-17 12:03:36.868 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:36.954 Df iOSMerchandiseControl[88826:1fe69a] [PrototypeTools:domain] Not observing PTDefaults on customer install.
+2026-06-17 12:03:36.997 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.xpc:connection] [0x102eafc70] activating connection: mach=true listener=false peer=false name=com.apple.IOSurface.Remote
+2026-06-17 12:03:37.003 A  iOSMerchandiseControl[88826:1fe6ce] (RunningBoardServices) didChangeInheritances
+2026-06-17 12:03:37.003 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.network:activity] Create activity from XPC object <nw_activity 50:1 [F11FBBA5-5ABD-4F6E-912E-2647A041C0CC] (reporting strategy default)>
+2026-06-17 12:03:37.003 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.network:activity] Create activity from XPC object <nw_activity 50:2 [42F0799A-8BFD-45C1-9D0A-53D644F1B029] (reporting strategy default)>
+2026-06-17 12:03:37.003 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.network:activity] Set activity <nw_activity 50:1 [F11FBBA5-5ABD-4F6E-912E-2647A041C0CC] (reporting strategy default)> as the global parent
+2026-06-17 12:03:37.003 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Ending background task with UIBackgroundTaskIdentifier: 1
+2026-06-17 12:03:37.003 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Ending task with identifier 1 and description: <_UIBackgroundTaskInfo: 0x600001702580>: taskID = 1, taskName = Launch Background Task for Coalescing, creationTime = 62736 (elapsed = 1), _expireHandler: (null)
+2026-06-17 12:03:37.003 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Decrementing reference count for assertion <BKSProcessAssertion: 0x60000211f070> (used by background task with identifier 1: <_UIBackgroundTaskInfo: 0x600001702580>: taskID = 1, taskName = Launch Background Task for Coalescing, creationTime = 62736 (elapsed = 1))
+2026-06-17 12:03:37.003 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:BackgroundTask] Will invalidate assertion: <BKSProcessAssertion: 0x60000211f070> for task identifier: 1
+2026-06-17 12:03:37.004 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:UpdateScheduler] Target list changed: <CADisplay:LCD PurpleMain>
+2026-06-17 12:03:37.004 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:com.niwcyber.iOSMerchandiseControl-3BA2A8E7-7F14-4119-811B-CEA33185DC6F  persistentID: 3BA2A8E7-7F14-4119-811B-CEA33185DC6F
+2026-06-17 12:03:37.004 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:37.005 A  iOSMerchandiseControl[88826:1fe6c7] (RunningBoardServices) didChangeInheritances
+2026-06-17 12:03:37.050 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.BackgroundTasks:Framework] Handling app launch
+2026-06-17 12:03:37.053 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.Accessibility:AXCommon] Read Per-App on Init: Smart invert = (null)
+2026-06-17 12:03:37.056 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:EventDeferring] [0x600002906140] Scene target of event deferring environments did update: scene: 0x102b09ac0; current systemShellManagesKeyboardFocus: 1; systemShellManagesKeyboardFocusForScene: 1; eligibleForRecordRemoval: 1;
+2026-06-17 12:03:37.056 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x102b09ac0; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Acom.niwcyber.iOSMerchandiseControl-3BA2A8E7-7F14-4119-811B-CEA33185DC6F
+2026-06-17 12:03:37.057 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.BackBoard:Display] [FBSDisplaySource 1-1] silently connecting raw configuration: <FBSDisplayConfiguration: 0x600003d60000; Main; mode: "430x932@3x 60Hz p3 SDR">
+2026-06-17 12:03:37.058 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.network:path] nw_path_evaluator_start [8F80521D-CECF-4882-8F07-8A0B723A53D9 <NULL> generic, multipath service: handover, attribution: developer]
+	path: satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown
+2026-06-17 12:03:37.058 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.059 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.060 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.063 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.072 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.FrontBoard:SceneExtension] Realizing settings extension SBUISecureRenderingSettingsExtension on FBSSceneSettings
+2026-06-17 12:03:37.073 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:37.073 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 2, <UIWindowScene: 0x102b09ac0> (3BA2A8E7-7F14-4119-811B-CEA33185DC6F)
+2026-06-17 12:03:37.074 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:com.niwcyber.iOSMerchandiseControl-3BA2A8E7-7F14-4119-811B-CEA33185DC6F  persistentID: 3BA2A8E7-7F14-4119-811B-CEA33185DC6F
+2026-06-17 12:03:37.074 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:Application] Deactivation reason removed: 12; deactivation reasons: 4128 -> 32; animating application lifecycle event: 1
+2026-06-17 12:03:37.074 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.KeyboardArbiter:Client] Send setDeactivating: N (-DeactivationReason:SuspendedEventsOnly)
+2026-06-17 12:03:37.075 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:Application] Deactivation reason removed: 5; deactivation reasons: 32 -> 0; animating application lifecycle event: 0
+2026-06-17 12:03:37.081 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.082 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.082 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.083 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.090 A  iOSMerchandiseControl[88826:1fe6ce] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.090 Df iOSMerchandiseControl[88826:1fe6ce] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:03:37.091 A  iOSMerchandiseControl[88826:1fe6ce] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.092 A  iOSMerchandiseControl[88826:1fe6ce] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.092 A  iOSMerchandiseControl[88826:1fe6ce] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.092 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.KeyboardArbiter:Client] startConnection
+2026-06-17 12:03:37.093 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.xpc:connection] [0x102b097b0] activating connection: mach=true listener=false peer=false name=com.apple.UIKit.KeyboardManagement.hosted
+2026-06-17 12:03:37.093 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.093 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:03:37.094 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.094 Df iOSMerchandiseControl[88826:1fe6cd] [com.apple.CFNetwork:Default] Task <BB208C11-B6F5-49EC-A827-ACDFD17255CF>.<1> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:03:37.094 A  iOSMerchandiseControl[88826:1fe6cd] (CoreFoundation) Loading Preferences From User Session CFPrefsD
+2026-06-17 12:03:37.094 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.095 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.103 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Initializing NSHTTPCookieStorage singleton
+2026-06-17 12:03:37.103 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Initializing CFHTTPCookieStorage singleton
+2026-06-17 12:03:37.103 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Creating default cookie storage with process/bundle identifier
+2026-06-17 12:03:37.103 A  iOSMerchandiseControl[88826:1fe6c0] (libsystem_containermanager.dylib) container_system_group_path_for_identifier
+2026-06-17 12:03:37.103 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.containermanager:xpc] Requesting container lookup; class = 13, identifier = com.apple.nsurlsessiond, group_identifier = systemgroup.com.apple.nsurlstoragedresources, create = 1, temp = 0, euid = 501, uid = 501
+2026-06-17 12:03:37.103 A  iOSMerchandiseControl[88826:1fe6c0] (libsystem_containermanager.dylib) container_query_t
+2026-06-17 12:03:37.103 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.containermanager:xpc] Query; euid = 501, uid = 501, class = 13, identifier = [com.apple.nsurlsessiond](1), flags = 900000003
+2026-06-17 12:03:37.105 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.containermanager:unspecified] _container_query_get_result_at_index: success
+2026-06-17 12:03:37.105 A  iOSMerchandiseControl[88826:1fe6c0] (libsystem_containermanager.dylib) container_copy_object
+2026-06-17 12:03:37.105 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.containermanager:unspecified] container_system_group_path_for_identifier: success
+2026-06-17 12:03:37.105 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.KeyboardArbiter:Client] handleKeyboardChange: set currentKeyboard:N (wasKeyboard:N)
+2026-06-17 12:03:37.105 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Initializing AlternativeServices Storage singleton
+2026-06-17 12:03:37.105 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.FileURL:default] kExcludedFromBackupXattrName set on path: /Users/minxiang/Library/Developer/CoreSimulator/Devices/459C668B-7CE8-443B-BAB3-7D3D5FFC9143/data/Containers/Data/Application/7C0E9C1F-E75D-4465-A23E-CF4F2CEF13AE/Library/HTTPStorages/com.niwcyber.iOSMerchandiseControl
+2026-06-17 12:03:37.106 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.UIKit:KeyboardArbiterClientLog] isWritingToolsHandlingKeyboardTracking:Y (WT ready:Y, Arbiter ready:Y)
+2026-06-17 12:03:37.107 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Garbage collection for alternative services
+2026-06-17 12:03:37.108 A  iOSMerchandiseControl[88826:1fe6c8] (RunningBoardServices) didChangeInheritances
+2026-06-17 12:03:37.113 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.113 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:03:37.113 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 1: enabling TLS
+2026-06-17 12:03:37.113 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 1: starting, TC(0x0)
+2026-06-17 12:03:37.113 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.113 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1 D4765D83-C18F-48EC-90ED-A553B4C4FB0C Hostname#194aaada:443 tcp, url: wss://jpgoimipbothfgkokyvm.supabase.co/realtime/v1/websocket, tls, definite, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{3AEA63AA-C89C-4B86-B6C3-46AFEE4F2561}{(null)}{Y}{2}{0x0} (private), proc: 84993067-3AF5-3E58-9DFA-8152899FF6EF, delegated upid: 0] start
+2026-06-17 12:03:37.113 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1 Hostname#194aaada:443 initial parent-flow ((null))] event: path:start @0.000s
+2026-06-17 12:03:37.113 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.114 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1 Hostname#194aaada:443 waiting parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:satisfied @0.000s, uuid: 39BF379B-E9C0-4A87-AB4A-D54E4F7D651E
+2026-06-17 12:03:37.114 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.114 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1 Hostname#194aaada:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_connect @0.001s
+2026-06-17 12:03:37.114 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_connection_report_state_with_handler_on_nw_queue [C1] reporting state preparing
+2026-06-17 12:03:37.114 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1 Hostname#194aaada:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_child @0.001s
+2026-06-17 12:03:37.114 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1 Hostname#194aaada:443 initial path ((null))] event: path:start @0.001s
+2026-06-17 12:03:37.114 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1 Hostname#194aaada:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:satisfied @0.001s, uuid: 39BF379B-E9C0-4A87-AB4A-D54E4F7D651E
+2026-06-17 12:03:37.115 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: resolver:start_dns @0.001s
+2026-06-17 12:03:37.115 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <BB208C11-B6F5-49EC-A827-ACDFD17255CF>.<1> setting up Connection 1
+2026-06-17 12:03:37.115 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_endpoint_resolver_update [C1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Adding endpoint handler for IPv4#a1ec5642:443
+2026-06-17 12:03:37.115 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_endpoint_resolver_update [C1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Adding endpoint handler for IPv4#f23db837:443
+2026-06-17 12:03:37.115 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: resolver:receive_dns @0.002s
+2026-06-17 12:03:37.115 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1.1 IPv4#a1ec5642:443 initial path ((null))] event: path:start @0.002s
+2026-06-17 12:03:37.115 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1.1 IPv4#a1ec5642:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:satisfied @0.002s, uuid: 72AC81F6-5F88-4E9F-ADC8-F5070C24797C
+2026-06-17 12:03:37.115 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.115 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_connect @0.002s
+2026-06-17 12:03:37.115 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.116 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.116 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.116 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:03:37.117 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 0: creating secure tcp or quic connection
+2026-06-17 12:03:37.117 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 2: enabling TLS
+2026-06-17 12:03:37.117 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 2: starting, TC(0x0)
+2026-06-17 12:03:37.117 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2 D77A927F-9150-4F4D-B90D-F06634935FBF Hostname#194aaada:443 quic-connection, url: https://jpgoimipbothfgkokyvm.supabase.co/rest/v1/sync_events, definite, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{CE27FA09-81D1-4D48-A7D3-A8D4ED2BCC12}{(null)}{Y}{2}{0x0} (private), proc: 84993067-3AF5-3E58-9DFA-8152899FF6EF, delegated upid: 0] start
+2026-06-17 12:03:37.117 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2 Hostname#194aaada:443 initial parent-flow ((null))] event: path:start @0.000s
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2 Hostname#194aaada:443 waiting parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:satisfied @0.000s, uuid: D3738E56-FF92-482B-8ED3-FB2394E21443
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2 Hostname#194aaada:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_connect @0.000s
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_connection_report_state_with_handler_on_nw_queue [C2] reporting state preparing
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2 Hostname#194aaada:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_child @0.000s
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1 Hostname#194aaada:443 initial path ((null))] event: path:start @0.000s
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1 Hostname#194aaada:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:satisfied @0.000s, uuid: D3738E56-FF92-482B-8ED3-FB2394E21443
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1 Hostname#194aaada:443 in_progress transform (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: transform:start @0.000s
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1 Hostname#194aaada:443 initial path ((null))] event: path:start @0.000s
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1 Hostname#194aaada:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:satisfied @0.000s, uuid: 129CF785-4358-4C60-B4B3-FAA0F2642380
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: resolver:start_dns @0.000s
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> setting up Connection 2
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_endpoint_resolver_update [C2.1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Adding endpoint handler for IPv4#a1ec5642:443
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_endpoint_resolver_update [C2.1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Adding endpoint handler for IPv4#f23db837:443
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: resolver:receive_dns @0.000s
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1.1 IPv4#a1ec5642:443 initial path ((null))] event: path:start @0.000s
+2026-06-17 12:03:37.118 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1.1 IPv4#a1ec5642:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:satisfied @0.000s, uuid: 70A0C644-4065-45A5-B9C3-00EF92EC2F64
+2026-06-17 12:03:37.119 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_conn_initialize_inner [C2.1.1.1:2] [-d33d0304356909fd] created QUIC connection (spin bit enabled)
+2026-06-17 12:03:37.119 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_connect @0.001s
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_crypto_new_flow [C2.1.1.1:2] [-d33d0304356909fd] TLS stream is: [C3]
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C3 C637F66E-BFAA-43CF-A766-18E65B4B1E47 IPv4#a1ec5642:443 quic-connection, url: https://jpgoimipbothfgkokyvm.supabase.co/rest/v1/sync_events, tls, definite, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{CE27FA09-81D1-4D48-A7D3-A8D4ED2BCC12}{(null)}{Y}{2}{0x0} (private), proc: 84993067-3AF5-3E58-9DFA-8152899FF6EF, delegated upid: 0] start
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C3 IPv4#a1ec5642:443 initial socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:start @0.000s
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C3 IPv4#a1ec5642:443 waiting socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:satisfied @0.000s, uuid: 70A0C644-4065-45A5-B9C3-00EF92EC2F64
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C3 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_connect @0.000s
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_connection_report_state_with_handler_on_nw_queue [C3] reporting state preparing
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C3 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Transport protocol connected (quic-connection)
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C3 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:finish_transport @0.000s
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_session_apply_protocol_options_for_transport_block_invoke_2(2280) [C3:1][0x102d5e240] TLS configured [min_version(0x0304) max_version(0x0304) name(redacted) tickets(false) false_start(false) enforce_ev(false) enforce_ats(false) ats_non_pfs_ciphersuite_allowed(false) ech(false) pqtls(true), pake(false)]
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2377) [C3:1][0x102d5e240] Client handshake started
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS client enter_early_data
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS client read_server_hello
+2026-06-17 12:03:37.120 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_socket_handle_socket_event [C2.1.1.1:2] Socket received CONNECTED event
+2026-06-17 12:03:37.169 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.network:activity] <nw_activity 50:1 [F11FBBA5-5ABD-4F6E-912E-2647A041C0CC] (global parent) (reporting strategy default) complete (reason success)> complete with reason 2 (success), duration 1253ms
+2026-06-17 12:03:37.169 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.network:activity] <nw_activity 50:2 [42F0799A-8BFD-45C1-9D0A-53D644F1B029] (reporting strategy default) complete (reason success)> complete with reason 2 (success), duration 1253ms
+2026-06-17 12:03:37.169 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.network:activity] Unsetting the global parent activity <nw_activity 50:1 [F11FBBA5-5ABD-4F6E-912E-2647A041C0CC] (global parent) (reporting strategy default) complete (reason success)>
+2026-06-17 12:03:37.169 Df iOSMerchandiseControl[88826:1fe69a] [com.apple.network:activity] Unset the global parent activity
+2026-06-17 12:03:37.178 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_socket_handle_socket_event [C1.1.1:3] Socket received CONNECTED event
+2026-06-17 12:03:37.179 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Transport protocol connected (socket)
+2026-06-17 12:03:37.179 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:finish_transport @0.065s
+2026-06-17 12:03:37.179 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_session_apply_protocol_options_for_transport_block_invoke_2(2280) [C1.1.1:2][0x102eb22b0] TLS configured [min_version(0x0303) max_version(0x0304) name(redacted) tickets(false) false_start(false) enforce_ev(false) enforce_ats(false) ats_non_pfs_ciphersuite_allowed(false) ech(false) pqtls(true), pake(false)]
+2026-06-17 12:03:37.179 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2377) [C1.1.1:2][0x102eb22b0] Client handshake started
+2026-06-17 12:03:37.179 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS client enter_early_data
+2026-06-17 12:03:37.179 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS client read_server_hello
+2026-06-17 12:03:37.194 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client read_hello_retry_request
+2026-06-17 12:03:37.194 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client read_server_hello
+2026-06-17 12:03:37.195 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client read_encrypted_extensions
+2026-06-17 12:03:37.195 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client read_certificate_request
+2026-06-17 12:03:37.195 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client read_server_certificate
+2026-06-17 12:03:37.195 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client read_server_certificate_verify
+2026-06-17 12:03:37.195 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async(1820) [C3:1][0x102d5e240] Performing external trust evaluation
+2026-06-17 12:03:37.195 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.195 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyAttributes
+2026-06-17 12:03:37.195 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.195 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external(1805) [C3:1][0x102d5e240] Asyncing for external verify block
+2026-06-17 12:03:37.195 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 2: asked to evaluate TLS Trust
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> auth completion disp=1 cred=0x0
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:trust] (Trust 0x60000351d290) No pending evals, starting
+2026-06-17 12:03:37.196 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecTrustEvaluateIfNecessaryFastAsync
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.xpc:connection] [0x102d441d0] activating connection: mach=true listener=false peer=false name=com.apple.trustd
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.xpc:connection] [0x102d326d0] activating connection: mach=true listener=false peer=false name=com.apple.trustd
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:trust] (Trust 0x60000351d290) Completed async eval kickoff
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client read_hello_retry_request
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client read_server_hello
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client read_encrypted_extensions
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client read_certificate_request
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client read_server_certificate
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client read_server_certificate_verify
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async(1820) [C1.1.1:2][0x102eb22b0] Performing external trust evaluation
+2026-06-17 12:03:37.196 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.196 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecKeyCopyAttributes
+2026-06-17 12:03:37.196 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external(1805) [C1.1.1:2][0x102eb22b0] Asyncing for external verify block
+2026-06-17 12:03:37.196 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Connection 1: asked to evaluate TLS Trust
+2026-06-17 12:03:37.197 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <BB208C11-B6F5-49EC-A827-ACDFD17255CF>.<1> auth completion disp=1 cred=0x0
+2026-06-17 12:03:37.197 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:trust] (Trust 0x600003520000) No pending evals, starting
+2026-06-17 12:03:37.197 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecTrustEvaluateIfNecessaryFastAsync
+2026-06-17 12:03:37.197 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.xpc:connection] [0x102f42a60] activating connection: mach=true listener=false peer=false name=com.apple.trustd
+2026-06-17 12:03:37.197 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:trust] (Trust 0x600003520000) Completed async eval kickoff
+2026-06-17 12:03:37.198 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:trust] (Trust 0x60000351d290) trustd returned 4
+2026-06-17 12:03:37.198 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] System Trust Evaluation yielded status(0)
+2026-06-17 12:03:37.198 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:trust] (Trust 0x60000350e310) No pending evals, starting
+2026-06-17 12:03:37.198 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecTrustEvaluateIfNecessaryFastAsync
+2026-06-17 12:03:37.198 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.xpc:connection] [0x102f59ce0] activating connection: mach=true listener=false peer=false name=com.apple.trustd
+2026-06-17 12:03:37.198 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.securityd:trust] (Trust 0x60000350e310) Completed async eval kickoff
+2026-06-17 12:03:37.198 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.xpc:connection] [0x102d326d0] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.securityd:trust] (Trust 0x600003520000) trustd returned 4
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 1: TLS Trust result 0
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external_block_invoke_3(1760) [C1.1.1:2][0x102eb22b0] Returning from external verify block with result: true
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_certificate_verify_callback(2001) [C1.1.1:2][0x102eb22b0] Certificate verification result: OK
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client read_server_finished
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client send_end_of_early_data
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client send_client_encrypted_extensions
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client send_client_certificate
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client complete_second_flight
+2026-06-17 12:03:37.199 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS 1.3 client done
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS client finish_client_handshake
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C1.1.1:2][0x102eb22b0] Client handshake state: TLS client done
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2383) [C1.1.1:2][0x102eb22b0] Client handshake done
+2026-06-17 12:03:37.200 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.200 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyAttributes
+2026-06-17 12:03:37.200 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] nw_protocol_boringssl_signal_connected(895) [C1.1.1:2][0x102eb22b0] TLS connected [server(0) version(0x0304) ciphersuite(TLS_AES_256_GCM_SHA384) group(0x11ec) signature_alg(0x0403) alpn(http/1.1) resumed(0) offered_ticket(0) in_early_data(0) early_data_accepted(0) false_started(0) ocsp_received(1) sct_received(0) connect_time(21ms) flight_time(17ms) rtt(17ms) write_stalls(0) read_stalls(2) pake(0x0000)]
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Output protocol connected (CFNetworkConnection-89718887)
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1.1 IPv4#a1ec5642:443 ready socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:child_finish_connect @0.086s
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1 Hostname#194aaada:443 ready resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:child_finish_connect @0.086s
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C1 IPv4#a1ec5642:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Output protocol connected (endpoint_flow)
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1 IPv4#a1ec5642:443 ready parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:finish_connect @0.086s
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_connection_report_state_with_handler_on_nw_queue [C1] reporting state ready
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.xpc:connection] [0x102f42a60] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 1: connected successfully
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 1: TLS handshake complete
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 1: ready C(N) E(N)
+2026-06-17 12:03:37.200 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <BB208C11-B6F5-49EC-A827-ACDFD17255CF>.<1> now using Connection 1
+2026-06-17 12:03:37.205 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <BB208C11-B6F5-49EC-A827-ACDFD17255CF>.<1> sent request, body N 0
+2026-06-17 12:03:37.205 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.securityd:trust] (Trust 0x60000350e310) trustd returned 4
+2026-06-17 12:03:37.205 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 2: TLS Trust result 0
+2026-06-17 12:03:37.205 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_evaluate_trust_async_external_block_invoke_3(1760) [C3:1][0x102d5e240] Returning from external verify block with result: true
+2026-06-17 12:03:37.205 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_certificate_verify_callback(2001) [C3:1][0x102d5e240] Certificate verification result: OK
+2026-06-17 12:03:37.205 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client read_server_finished
+2026-06-17 12:03:37.205 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client send_end_of_early_data
+2026-06-17 12:03:37.205 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client send_client_encrypted_extensions
+2026-06-17 12:03:37.205 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client send_client_certificate
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client complete_second_flight
+2026-06-17 12:03:37.206 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.206 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyAttributes
+2026-06-17 12:03:37.206 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.206 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.206 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyAttributes
+2026-06-17 12:03:37.206 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS 1.3 client done
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS client finish_client_handshake
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2394) [C3:1][0x102d5e240] Client handshake state: TLS client done
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_info_handler(2383) [C3:1][0x102d5e240] Client handshake done
+2026-06-17 12:03:37.206 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.206 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyAttributes
+2026-06-17 12:03:37.206 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] nw_protocol_boringssl_signal_connected(895) [C3:1][0x102d5e240] TLS connected [server(0) version(0x0304) ciphersuite(TLS_AES_256_GCM_SHA384) group(0x11ec) signature_alg(0x0403) alpn(h3) resumed(0) offered_ticket(0) in_early_data(0) early_data_accepted(0) false_started(0) ocsp_received(1) sct_received(0) connect_time(86ms) flight_time(75ms) rtt(74ms) write_stalls(0) read_stalls(5) pake(0x0000)]
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C3 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Output protocol connected (tls)
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C3 IPv4#a1ec5642:443 ready socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:finish_connect @0.086s
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_connection_report_state_with_handler_on_nw_queue [C3] reporting state ready
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.xpc:connection] [0x102f59ce0] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_pmtud_restart [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] PMTUD enabled, max PMTU: 1500, header size: 28, current PMTU 1228
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_crypto_tls_ready_inner [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] QUIC connection established in 86.571 ms, RTT 59.842 ms
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C2.1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Transport protocol connected (quic-connection)
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:finish_transport @0.088s
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C2.1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Output protocol connected (CFNetworkConnection-89718887)
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1.1 IPv4#a1ec5642:443 ready socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:child_finish_connect @0.088s
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1 Hostname#194aaada:443 ready resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:child_finish_connect @0.088s
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1 Hostname#194aaada:443 ready transform (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:child_finish_connect @0.088s
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C2 IPv4#a1ec5642:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Output protocol connected (endpoint_flow)
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2 IPv4#a1ec5642:443 ready parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:finish_connect @0.088s
+2026-06-17 12:03:37.206 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_connection_report_state_with_handler_on_nw_queue [C2] reporting state ready
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_migration_path_event_block_invoke [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] path bd58e6416a8bd727 over en0 received event established
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_migration_evaluate_primary [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] promoted path 0x102d5d2e0 over en0 to primary
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:] nw_protocol_instance_report_ready [C2.1.1.1:2] Calling notify with interface en0 for flow_registration C2DF9C26-DE8C-4952-8B78-A063FBDB8396
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1.1 IPv4#a1ec5642:443 ready socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:migrated @0.089s, uuid: 70A0C644-4065-45A5-B9C3-00EF92EC2F64
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1.1 Hostname#194aaada:443 ready resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:migrated @0.089s, uuid: 129CF785-4358-4C60-B4B3-FAA0F2642380
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2.1 Hostname#194aaada:443 ready transform (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:migrated @0.089s, uuid: D3738E56-FF92-482B-8ED3-FB2394E21443
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2 IPv4#a1ec5642:443 ready parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: path:migrated @0.089s, uuid: D3738E56-FF92-482B-8ED3-FB2394E21443
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_migration_evaluate [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] evaluating path migration
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_migration_evaluate_block_invoke [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] path bd58e6416a8bd727 state validated (0), ifname en0, primary? 1, initial? 1, fallback? 0, preferred? 0 lossy? 0
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_migration_evaluate [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] current path is usable, no strong fallback or we are probing
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 2: connected successfully
+2026-06-17 12:03:37.207 E  iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_connection_copy_connected_local_endpoint_block_invoke [C2] Connection has no local endpoint
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 2: TLS handshake complete
+2026-06-17 12:03:37.207 E  iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_connection_copy_connected_local_endpoint_block_invoke [C2] Connection has no local endpoint
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Connection 2: ready C(N) E(N)
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2] event: client:connection_reused @0.089s
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> now using Connection 2
+2026-06-17 12:03:37.207 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.cfnetwork:h3stream] 0x102e3a7f8 ID=0 Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> sent request, body N 0
+2026-06-17 12:03:37.222 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.222 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyAttributes
+2026-06-17 12:03:37.222 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.222 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_new_session_handler(1520) [C3:1][0x102d5e240] Asyncing for session update block
+2026-06-17 12:03:37.222 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.222 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyAttributes
+2026-06-17 12:03:37.222 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:37.222 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_new_session_handler(1520) [C3:1][0x102d5e240] Asyncing for session update block
+2026-06-17 12:03:37.222 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] nw_protocol_boringssl_signal_connected(895) [C3:1][0x102d5e240] TLS connected [server(0) version(0x0304) ciphersuite(TLS_AES_256_GCM_SHA384) group(0x11ec) signature_alg(0x0403) alpn(h3) resumed(0) offered_ticket(0) in_early_data(0) early_data_accepted(0) false_started(0) ocsp_received(1) sct_received(0) connect_time(86ms) flight_time(75ms) rtt(74ms) write_stalls(0) read_stalls(5) pake(0x0000)]
+2026-06-17 12:03:37.222 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C3 IPv4#a1ec5642:443 ready socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Output protocol connected (tls)
+2026-06-17 12:03:37.222 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_stream_create_inbound [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] creating inbound stream 3
+2026-06-17 12:03:37.223 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_stream_create_inbound [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] creating inbound stream 7
+2026-06-17 12:03:37.223 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_stream_create_inbound [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] creating inbound stream 11
+2026-06-17 12:03:37.223 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:quic] quic_stream_create_inbound [C2.1.1.1:2] [-01971fd537738f4be7933ad5087387526024dfdd] creating inbound stream 15
+2026-06-17 12:03:37.223 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_new_session_handler_block_invoke(1523) [C3:1][0x102d5e240] Returning from session update block
+2026-06-17 12:03:37.223 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:boringssl] boringssl_context_new_session_handler_block_invoke(1523) [C3:1][0x102d5e240] Returning from session update block
+2026-06-17 12:03:37.446 A  iOSMerchandiseControl[88826:1fe6be] (RunningBoardServices) didChangeInheritances
+2026-06-17 12:03:37.929 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.cfnetwork:h3stream] 0x102e3a7f8 ID=0 Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> received response, status 200 content K
+2026-06-17 12:03:37.929 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecTrustEvaluateIfNecessary
+2026-06-17 12:03:37.929 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.xpc:connection] [0x102f568d0] activating connection: mach=true listener=false peer=false name=com.apple.trustd
+2026-06-17 12:03:37.931 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.xpc:connection] [0x102f568d0] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-06-17 12:03:37.931 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> response ended
+2026-06-17 12:03:37.931 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C2] event: client:connection_idle @0.813s
+2026-06-17 12:03:37.931 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> done using Connection 2
+2026-06-17 12:03:37.931 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Summary] Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> summary for task success {transaction_duration_ms=813, response_status=200, connection=2, protocol="h3", domain_lookup_duration_ms=0, connect_duration_ms=87, secure_connection_duration_ms=86, private_relay=false, request_start_ms=90, request_duration_ms=0, response_start_ms=811, response_duration_ms=2, request_bytes=1563, request_throughput_kbps=109718, response_bytes=832, response_throughput_kbps=2784, cache_hit=true}
+2026-06-17 12:03:37.931 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CoreAnalytics:client] No XPC connection in Simulator
+2026-06-17 12:03:37.931 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <4D595B4B-160E-4672-8EB8-C5273A6D65EA>.<1> finished successfully
+2026-06-17 12:03:37.934 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.934 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:03:37.935 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.936 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.939 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.941 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.941 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.941 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.942 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.942 A  iOSMerchandiseControl[88826:1fe6c7] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.942 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:03:37.942 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.CFNetwork:Default] Task <442410B4-3970-45D7-931D-69F33019306C>.<2> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:03:37.942 A  iOSMerchandiseControl[88826:1fe6c7] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.942 A  iOSMerchandiseControl[88826:1fe6c7] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.943 A  iOSMerchandiseControl[88826:1fe6c7] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.943 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.CFNetwork:Default] Task <BD615690-BE0A-4023-AE4D-AFBD86BC602F>.<3> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:03:37.943 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.943 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.943 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.network:connection] [C2] event: client:connection_reused @0.826s
+2026-06-17 12:03:37.944 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.CFNetwork:Default] Task <442410B4-3970-45D7-931D-69F33019306C>.<2> now using Connection 2
+2026-06-17 12:03:37.944 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.944 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.cfnetwork:h3stream] 0x102d50958 ID=4 Task <442410B4-3970-45D7-931D-69F33019306C>.<2> sent request, body N 0
+2026-06-17 12:03:37.944 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <BD615690-BE0A-4023-AE4D-AFBD86BC602F>.<3> now using Connection 2
+2026-06-17 12:03:37.944 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.944 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.cfnetwork:h3stream] 0x1058350c8 ID=8 Task <BD615690-BE0A-4023-AE4D-AFBD86BC602F>.<3> sent request, body N 0
+2026-06-17 12:03:37.944 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <7CE8E092-2A14-42F5-9667-2AE270642498>.<4> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:03:37.944 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.945 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.945 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.CFNetwork:Default] Task <7CE8E092-2A14-42F5-9667-2AE270642498>.<4> now using Connection 2
+2026-06-17 12:03:37.945 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.cfnetwork:h3stream] 0x10582c668 ID=12 Task <7CE8E092-2A14-42F5-9667-2AE270642498>.<4> sent request, body N 0
+2026-06-17 12:03:37.945 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.945 A  iOSMerchandiseControl[88826:1fe6c0] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.946 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <6FF6E1B6-C857-48F9-BCD9-B6912B2C9AEB>.<5> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:03:37.946 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.946 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.946 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <6FF6E1B6-C857-48F9-BCD9-B6912B2C9AEB>.<5> now using Connection 2
+2026-06-17 12:03:37.946 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.946 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.cfnetwork:h3stream] 0x102d57a38 ID=16 Task <6FF6E1B6-C857-48F9-BCD9-B6912B2C9AEB>.<5> sent request, body N 0
+2026-06-17 12:03:37.947 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:37.947 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.CFNetwork:Default] Task <B90C253C-B141-4F8B-AB1B-3C7AF26922A9>.<6> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:03:37.947 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.CFNetwork:Default] Task <B90C253C-B141-4F8B-AB1B-3C7AF26922A9>.<6> now using Connection 2
+2026-06-17 12:03:37.947 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.cfnetwork:h3stream] 0x102d587d8 ID=20 Task <B90C253C-B141-4F8B-AB1B-3C7AF26922A9>.<6> sent request, body N 0
+2026-06-17 12:03:38.007 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:38.007 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecKeyCopyAttributes
+2026-06-17 12:03:38.007 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:38.007 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:38.007 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecKeyCopyAttributes
+2026-06-17 12:03:38.007 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecKeyCopyPublicBytes
+2026-06-17 12:03:38.007 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.CFNetwork:Default] Task <BB208C11-B6F5-49EC-A827-ACDFD17255CF>.<1> received response, status 101 content U
+2026-06-17 12:03:38.008 A  iOSMerchandiseControl[88826:1fe6be] (Security) SecTrustEvaluateIfNecessary
+2026-06-17 12:03:38.008 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.xpc:connection] [0x10580bf70] activating connection: mach=true listener=false peer=false name=com.apple.trustd
+2026-06-17 12:03:38.009 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.xpc:connection] [0x10580bf70] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-06-17 12:03:38.009 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.CFNetwork:Default] Task <BB208C11-B6F5-49EC-A827-ACDFD17255CF>.<1> response ended
+2026-06-17 12:03:38.009 Df iOSMerchandiseControl[88826:1fe6be] [com.apple.CFNetwork:Default] Task <BB208C11-B6F5-49EC-A827-ACDFD17255CF>.<1> done using Connection 1
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_secondary_connect @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_secondary_connect @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1 IPv4#a1ec5642:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_secondary_connect @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_connection_report_state_with_handler_on_nw_queue [C1] reporting state preparing
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_connect @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_connect @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1 IPv4#a1ec5642:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:start_connect @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Transport protocol connected (socket)
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:finish_transport @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1 Hostname#194aaada:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:finish_transport @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1 IPv4#a1ec5642:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:finish_transport @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C1.1.1 IPv4#a1ec5642:443 in_progress socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Output protocol connected (CFNetworkConnection-89718887)
+2026-06-17 12:03:38.010 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1.1 IPv4#a1ec5642:443 ready socket-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:child_finish_connect @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1.1 Hostname#194aaada:443 ready resolver (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:child_finish_connect @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] [C1 IPv4#a1ec5642:443 ready parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] event: flow:finish_connect @0.896s
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_connection_report_state_with_handler_on_nw_queue [C1] reporting state ready
+2026-06-17 12:03:38.010 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.network:connection] nw_flow_connected [C1 IPv4#a1ec5642:443 ready parent-flow (satisfied (Path is satisfied), interface: en0[802.11], uses wifi, LQM: unknown)] Output protocol connected (endpoint_flow)
+2026-06-17 12:03:38.010 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:38.011 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:38.011 A  iOSMerchandiseControl[88826:1fe6c8] (Security) SecItemCopyMatching_ios
+2026-06-17 12:03:38.109 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.cfnetwork:h3stream] 0x10582c668 ID=12 Task <7CE8E092-2A14-42F5-9667-2AE270642498>.<4> received response, status 200 content U
+2026-06-17 12:03:38.109 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <7CE8E092-2A14-42F5-9667-2AE270642498>.<4> response ended
+2026-06-17 12:03:38.109 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <7CE8E092-2A14-42F5-9667-2AE270642498>.<4> done using Connection 2
+2026-06-17 12:03:38.110 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Summary] Task <7CE8E092-2A14-42F5-9667-2AE270642498>.<4> summary for task success {transaction_duration_ms=164, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=164, response_duration_ms=0, request_bytes=1446, request_throughput_kbps=156263, response_bytes=732, response_throughput_kbps=17432, cache_hit=false}
+2026-06-17 12:03:38.110 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.cfnetwork:h3stream] 0x102d587d8 ID=20 Task <B90C253C-B141-4F8B-AB1B-3C7AF26922A9>.<6> received response, status 200 content U
+2026-06-17 12:03:38.110 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <7CE8E092-2A14-42F5-9667-2AE270642498>.<4> finished successfully
+2026-06-17 12:03:38.110 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <B90C253C-B141-4F8B-AB1B-3C7AF26922A9>.<6> response ended
+2026-06-17 12:03:38.110 Df iOSMerchandiseControl[88826:1fe6c8] [com.apple.CFNetwork:Default] Task <B90C253C-B141-4F8B-AB1B-3C7AF26922A9>.<6> done using Connection 2
+2026-06-17 12:03:38.110 Df iOSMerchandiseControl[88826:1fe6d7] [com.apple.CFNetwork:Summary] Task <B90C253C-B141-4F8B-AB1B-3C7AF26922A9>.<6> summary for task success {transaction_duration_ms=162, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=162, response_duration_ms=0, request_bytes=1447, request_throughput_kbps=108136, response_bytes=731, response_throughput_kbps=34185, cache_hit=false}
+2026-06-17 12:03:38.110 Df iOSMerchandiseControl[88826:1fe6d7] [com.apple.CFNetwork:Default] Task <B90C253C-B141-4F8B-AB1B-3C7AF26922A9>.<6> finished successfully
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6d7] [com.apple.cfnetwork:h3stream] 0x1058350c8 ID=8 Task <BD615690-BE0A-4023-AE4D-AFBD86BC602F>.<3> received response, status 206 content U
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6d7] [com.apple.CFNetwork:Default] Task <BD615690-BE0A-4023-AE4D-AFBD86BC602F>.<3> response ended
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6d7] [com.apple.CFNetwork:Default] Task <BD615690-BE0A-4023-AE4D-AFBD86BC602F>.<3> done using Connection 2
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.CFNetwork:Summary] Task <BD615690-BE0A-4023-AE4D-AFBD86BC602F>.<3> summary for task success {transaction_duration_ms=172, response_status=206, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=172, response_duration_ms=0, request_bytes=1445, request_throughput_kbps=114489, response_bytes=735, response_throughput_kbps=26719, cache_hit=false}
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.CFNetwork:Default] Task <BD615690-BE0A-4023-AE4D-AFBD86BC602F>.<3> finished successfully
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6d7] [com.apple.cfnetwork:h3stream] 0x102d57a38 ID=16 Task <6FF6E1B6-C857-48F9-BCD9-B6912B2C9AEB>.<5> received response, status 200 content U
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6d7] [com.apple.CFNetwork:Default] Task <6FF6E1B6-C857-48F9-BCD9-B6912B2C9AEB>.<5> response ended
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6d7] [com.apple.CFNetwork:Default] Task <6FF6E1B6-C857-48F9-BCD9-B6912B2C9AEB>.<5> done using Connection 2
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.CFNetwork:Summary] Task <6FF6E1B6-C857-48F9-BCD9-B6912B2C9AEB>.<5> summary for task success {transaction_duration_ms=170, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=170, response_duration_ms=0, request_bytes=1446, request_throughput_kbps=152099, response_bytes=732, response_throughput_kbps=35290, cache_hit=false}
+2026-06-17 12:03:38.116 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.CFNetwork:Default] Task <6FF6E1B6-C857-48F9-BCD9-B6912B2C9AEB>.<5> finished successfully
+2026-06-17 12:03:38.220 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.cfnetwork:h3stream] 0x102d50958 ID=4 Task <442410B4-3970-45D7-931D-69F33019306C>.<2> received response, status 206 content U
+2026-06-17 12:03:38.221 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.CFNetwork:Default] Task <442410B4-3970-45D7-931D-69F33019306C>.<2> response ended
+2026-06-17 12:03:38.221 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.network:connection] [C2] event: client:connection_idle @1.103s
+2026-06-17 12:03:38.221 Df iOSMerchandiseControl[88826:1fe6c7] [com.apple.CFNetwork:Default] Task <442410B4-3970-45D7-931D-69F33019306C>.<2> done using Connection 2
+2026-06-17 12:03:38.221 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Summary] Task <442410B4-3970-45D7-931D-69F33019306C>.<2> summary for task success {transaction_duration_ms=279, response_status=206, connection=2, reused=1, reused_after_ms=12, request_start_ms=1, request_duration_ms=0, response_start_ms=277, response_duration_ms=1, request_bytes=1488, request_throughput_kbps=71276, response_bytes=776, response_throughput_kbps=5147, cache_hit=false}
+2026-06-17 12:03:38.221 Df iOSMerchandiseControl[88826:1fe6c0] [com.apple.CFNetwork:Default] Task <442410B4-3970-45D7-931D-69F33019306C>.<2> finished successfully
+2026-06-17 12:04:04.677 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:04.677 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:04:04.679 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:04.681 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:04.682 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.200 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.200 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:04:08.204 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.204 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.205 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.206 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.207 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.208 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.209 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.246 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.247 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.247 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.248 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.248 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.249 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.249 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.250 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.250 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <33F5A7C5-986E-4C4C-B839-78220A86E00B>.<7> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:08.250 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.network:connection] [C2] event: client:connection_reused @31.132s
+2026-06-17 12:04:08.250 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.CFNetwork:Default] Task <33F5A7C5-986E-4C4C-B839-78220A86E00B>.<7> now using Connection 2
+2026-06-17 12:04:08.251 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.cfnetwork:h3stream] 0x102c32c18 ID=24 Task <33F5A7C5-986E-4C4C-B839-78220A86E00B>.<7> sent request, body N 0
+2026-06-17 12:04:08.691 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.cfnetwork:h3stream] 0x102c32c18 ID=24 Task <33F5A7C5-986E-4C4C-B839-78220A86E00B>.<7> received response, status 200 content K
+2026-06-17 12:04:08.691 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.CFNetwork:Default] Task <33F5A7C5-986E-4C4C-B839-78220A86E00B>.<7> response ended
+2026-06-17 12:04:08.691 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.network:connection] [C2] event: client:connection_idle @31.574s
+2026-06-17 12:04:08.692 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.CFNetwork:Default] Task <33F5A7C5-986E-4C4C-B839-78220A86E00B>.<7> done using Connection 2
+2026-06-17 12:04:08.692 Df iOSMerchandiseControl[88826:1feca4] [com.apple.CFNetwork:Summary] Task <33F5A7C5-986E-4C4C-B839-78220A86E00B>.<7> summary for task success {transaction_duration_ms=441, response_status=200, connection=2, reused=1, reused_after_ms=30029, request_start_ms=0, request_duration_ms=0, response_start_ms=441, response_duration_ms=0, request_bytes=1563, request_throughput_kbps=56820, response_bytes=832, response_throughput_kbps=15736, cache_hit=true}
+2026-06-17 12:04:08.692 Df iOSMerchandiseControl[88826:1feca4] [com.apple.CFNetwork:Default] Task <33F5A7C5-986E-4C4C-B839-78220A86E00B>.<7> finished successfully
+2026-06-17 12:04:08.692 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.693 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.694 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.694 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.695 A  iOSMerchandiseControl[88826:1fe6da] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.695 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:04:08.695 A  iOSMerchandiseControl[88826:1fe6da] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.695 A  iOSMerchandiseControl[88826:1fe6da] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.695 A  iOSMerchandiseControl[88826:1fe6da] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.696 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.696 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.CFNetwork:Default] Task <5C8AD997-FBDE-4DED-9711-43AD9457BBDD>.<8> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:08.696 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.696 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.696 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.network:connection] [C2] event: client:connection_reused @31.579s
+2026-06-17 12:04:08.697 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.CFNetwork:Default] Task <5C8AD997-FBDE-4DED-9711-43AD9457BBDD>.<8> now using Connection 2
+2026-06-17 12:04:08.697 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.697 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.cfnetwork:h3stream] 0x102b2df58 ID=28 Task <5C8AD997-FBDE-4DED-9711-43AD9457BBDD>.<8> sent request, body N 0
+2026-06-17 12:04:08.697 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <470AC9EB-B820-4A50-92F9-60E6E690A877>.<9> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:08.697 A  iOSMerchandiseControl[88826:1fe6da] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.697 A  iOSMerchandiseControl[88826:1fe6da] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.697 A  iOSMerchandiseControl[88826:1fe6da] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.698 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <470AC9EB-B820-4A50-92F9-60E6E690A877>.<9> now using Connection 2
+2026-06-17 12:04:08.698 A  iOSMerchandiseControl[88826:1fe6da] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.698 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.cfnetwork:h3stream] 0x102d33658 ID=32 Task <470AC9EB-B820-4A50-92F9-60E6E690A877>.<9> sent request, body N 0
+2026-06-17 12:04:08.698 Df iOSMerchandiseControl[88826:1fe6da] [com.apple.CFNetwork:Default] Task <06E5794B-CF1F-4EE2-ABB8-D62C7AEA4477>.<10> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:08.698 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.698 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.698 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <06E5794B-CF1F-4EE2-ABB8-D62C7AEA4477>.<10> now using Connection 2
+2026-06-17 12:04:08.698 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.cfnetwork:h3stream] 0x102b09548 ID=36 Task <06E5794B-CF1F-4EE2-ABB8-D62C7AEA4477>.<10> sent request, body N 0
+2026-06-17 12:04:08.699 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.699 A  iOSMerchandiseControl[88826:1fec6b] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.699 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <E4424FC2-F847-4FC6-A7E8-65CBDF2C40AB>.<11> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:08.699 A  iOSMerchandiseControl[88826:1fecb9] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.699 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:04:08.699 A  iOSMerchandiseControl[88826:1fecb9] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.700 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <E4424FC2-F847-4FC6-A7E8-65CBDF2C40AB>.<11> now using Connection 2
+2026-06-17 12:04:08.700 A  iOSMerchandiseControl[88826:1fecb9] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.700 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.cfnetwork:h3stream] 0x10582c7a8 ID=40 Task <E4424FC2-F847-4FC6-A7E8-65CBDF2C40AB>.<11> sent request, body N 0
+2026-06-17 12:04:08.700 A  iOSMerchandiseControl[88826:1fecb9] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:08.700 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <4ED44B8C-0555-4603-B406-A80BCC35FBC2>.<12> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:08.701 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <4ED44B8C-0555-4603-B406-A80BCC35FBC2>.<12> now using Connection 2
+2026-06-17 12:04:08.701 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.cfnetwork:h3stream] 0x105812378 ID=44 Task <4ED44B8C-0555-4603-B406-A80BCC35FBC2>.<12> sent request, body N 0
+2026-06-17 12:04:08.806 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.cfnetwork:h3stream] 0x10582c7a8 ID=40 Task <E4424FC2-F847-4FC6-A7E8-65CBDF2C40AB>.<11> received response, status 200 content U
+2026-06-17 12:04:08.806 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <E4424FC2-F847-4FC6-A7E8-65CBDF2C40AB>.<11> response ended
+2026-06-17 12:04:08.806 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <E4424FC2-F847-4FC6-A7E8-65CBDF2C40AB>.<11> done using Connection 2
+2026-06-17 12:04:08.806 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Summary] Task <E4424FC2-F847-4FC6-A7E8-65CBDF2C40AB>.<11> summary for task success {transaction_duration_ms=106, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=106, response_duration_ms=0, request_bytes=1447, request_throughput_kbps=92658, response_bytes=731, response_throughput_kbps=9387, cache_hit=false}
+2026-06-17 12:04:08.806 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <E4424FC2-F847-4FC6-A7E8-65CBDF2C40AB>.<11> finished successfully
+2026-06-17 12:04:08.835 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.cfnetwork:h3stream] 0x105812378 ID=44 Task <4ED44B8C-0555-4603-B406-A80BCC35FBC2>.<12> received response, status 200 content U
+2026-06-17 12:04:08.836 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <4ED44B8C-0555-4603-B406-A80BCC35FBC2>.<12> response ended
+2026-06-17 12:04:08.836 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <4ED44B8C-0555-4603-B406-A80BCC35FBC2>.<12> done using Connection 2
+2026-06-17 12:04:08.836 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Summary] Task <4ED44B8C-0555-4603-B406-A80BCC35FBC2>.<12> summary for task success {transaction_duration_ms=135, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=134, response_duration_ms=0, request_bytes=1446, request_throughput_kbps=192921, response_bytes=732, response_throughput_kbps=10008, cache_hit=false}
+2026-06-17 12:04:08.836 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <4ED44B8C-0555-4603-B406-A80BCC35FBC2>.<12> finished successfully
+2026-06-17 12:04:08.842 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.cfnetwork:h3stream] 0x102b09548 ID=36 Task <06E5794B-CF1F-4EE2-ABB8-D62C7AEA4477>.<10> received response, status 200 content U
+2026-06-17 12:04:08.842 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <06E5794B-CF1F-4EE2-ABB8-D62C7AEA4477>.<10> response ended
+2026-06-17 12:04:08.842 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <06E5794B-CF1F-4EE2-ABB8-D62C7AEA4477>.<10> done using Connection 2
+2026-06-17 12:04:08.842 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Summary] Task <06E5794B-CF1F-4EE2-ABB8-D62C7AEA4477>.<10> summary for task success {transaction_duration_ms=144, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=143, response_duration_ms=0, request_bytes=1446, request_throughput_kbps=172668, response_bytes=732, response_throughput_kbps=10904, cache_hit=false}
+2026-06-17 12:04:08.842 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <06E5794B-CF1F-4EE2-ABB8-D62C7AEA4477>.<10> finished successfully
+2026-06-17 12:04:08.853 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.cfnetwork:h3stream] 0x102d33658 ID=32 Task <470AC9EB-B820-4A50-92F9-60E6E690A877>.<9> received response, status 206 content U
+2026-06-17 12:04:08.853 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <470AC9EB-B820-4A50-92F9-60E6E690A877>.<9> response ended
+2026-06-17 12:04:08.853 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <470AC9EB-B820-4A50-92F9-60E6E690A877>.<9> done using Connection 2
+2026-06-17 12:04:08.854 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Summary] Task <470AC9EB-B820-4A50-92F9-60E6E690A877>.<9> summary for task success {transaction_duration_ms=156, response_status=206, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=155, response_duration_ms=0, request_bytes=1445, request_throughput_kbps=121671, response_bytes=734, response_throughput_kbps=6247, cache_hit=false}
+2026-06-17 12:04:08.854 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <470AC9EB-B820-4A50-92F9-60E6E690A877>.<9> finished successfully
+2026-06-17 12:04:08.860 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.cfnetwork:h3stream] 0x102b2df58 ID=28 Task <5C8AD997-FBDE-4DED-9711-43AD9457BBDD>.<8> received response, status 206 content U
+2026-06-17 12:04:08.860 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <5C8AD997-FBDE-4DED-9711-43AD9457BBDD>.<8> response ended
+2026-06-17 12:04:08.860 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.network:connection] [C2] event: client:connection_idle @31.742s
+2026-06-17 12:04:08.860 Df iOSMerchandiseControl[88826:1fec6b] [com.apple.CFNetwork:Default] Task <5C8AD997-FBDE-4DED-9711-43AD9457BBDD>.<8> done using Connection 2
+2026-06-17 12:04:08.861 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Summary] Task <5C8AD997-FBDE-4DED-9711-43AD9457BBDD>.<8> summary for task success {transaction_duration_ms=164, response_status=206, connection=2, reused=1, reused_after_ms=5, request_start_ms=0, request_duration_ms=0, response_start_ms=163, response_duration_ms=0, request_bytes=1488, request_throughput_kbps=90862, response_bytes=778, response_throughput_kbps=9864, cache_hit=false}
+2026-06-17 12:04:08.861 Df iOSMerchandiseControl[88826:1fecb9] [com.apple.CFNetwork:Default] Task <5C8AD997-FBDE-4DED-9711-43AD9457BBDD>.<8> finished successfully
+2026-06-17 12:04:30.669 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:30.671 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:30.673 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:30.675 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.692 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.696 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.696 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.697 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.698 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.698 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.699 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.700 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.714 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.715 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.715 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.715 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.716 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.716 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.716 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.717 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.717 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <6ED178BD-5D5B-4295-9F6F-2A95642DC3D8>.<13> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:39.717 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.network:connection] [C2] event: client:connection_reused @62.600s
+2026-06-17 12:04:39.717 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <6ED178BD-5D5B-4295-9F6F-2A95642DC3D8>.<13> now using Connection 2
+2026-06-17 12:04:39.718 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.cfnetwork:h3stream] 0x102e26a18 ID=48 Task <6ED178BD-5D5B-4295-9F6F-2A95642DC3D8>.<13> sent request, body N 0
+2026-06-17 12:04:39.834 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.cfnetwork:h3stream] 0x102e26a18 ID=48 Task <6ED178BD-5D5B-4295-9F6F-2A95642DC3D8>.<13> received response, status 200 content K
+2026-06-17 12:04:39.834 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <6ED178BD-5D5B-4295-9F6F-2A95642DC3D8>.<13> response ended
+2026-06-17 12:04:39.835 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.network:connection] [C2] event: client:connection_idle @62.717s
+2026-06-17 12:04:39.835 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <6ED178BD-5D5B-4295-9F6F-2A95642DC3D8>.<13> done using Connection 2
+2026-06-17 12:04:39.835 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Summary] Task <6ED178BD-5D5B-4295-9F6F-2A95642DC3D8>.<13> summary for task success {transaction_duration_ms=118, response_status=200, connection=2, reused=1, reused_after_ms=30857, request_start_ms=0, request_duration_ms=0, response_start_ms=116, response_duration_ms=1, request_bytes=1563, request_throughput_kbps=76730, response_bytes=830, response_throughput_kbps=6014, cache_hit=true}
+2026-06-17 12:04:39.835 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <6ED178BD-5D5B-4295-9F6F-2A95642DC3D8>.<13> finished successfully
+2026-06-17 12:04:39.837 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.840 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.841 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.842 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.843 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.844 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.845 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.846 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.847 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <3172C237-CB7D-49EF-81E2-2C10404C492E>.<14> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:39.847 A  iOSMerchandiseControl[88826:1feeea] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.847 Df iOSMerchandiseControl[88826:1feeea] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:04:39.847 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.network:connection] [C2] event: client:connection_reused @62.729s
+2026-06-17 12:04:39.847 A  iOSMerchandiseControl[88826:1feeea] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.847 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.CFNetwork:Default] Task <3172C237-CB7D-49EF-81E2-2C10404C492E>.<14> now using Connection 2
+2026-06-17 12:04:39.847 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.cfnetwork:h3stream] 0x102d44b98 ID=52 Task <3172C237-CB7D-49EF-81E2-2C10404C492E>.<14> sent request, body N 0
+2026-06-17 12:04:39.847 A  iOSMerchandiseControl[88826:1feeea] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.848 A  iOSMerchandiseControl[88826:1feeea] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.848 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <2D0B11F8-540A-4348-860E-F3687051C8E0>.<15> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:39.848 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.848 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <2D0B11F8-540A-4348-860E-F3687051C8E0>.<15> now using Connection 2
+2026-06-17 12:04:39.848 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.848 Df iOSMerchandiseControl[88826:1feeea] [com.apple.cfnetwork:h3stream] 0x102d33658 ID=56 Task <2D0B11F8-540A-4348-860E-F3687051C8E0>.<15> sent request, body N 0
+2026-06-17 12:04:39.849 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.849 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.849 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <2AEF283B-56D4-4277-B6B8-03213C16B56C>.<16> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:39.849 A  iOSMerchandiseControl[88826:1feeea] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.850 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <2AEF283B-56D4-4277-B6B8-03213C16B56C>.<16> now using Connection 2
+2026-06-17 12:04:39.850 A  iOSMerchandiseControl[88826:1feeea] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.850 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.cfnetwork:h3stream] 0x102e1ba08 ID=60 Task <2AEF283B-56D4-4277-B6B8-03213C16B56C>.<16> sent request, body N 0
+2026-06-17 12:04:39.850 A  iOSMerchandiseControl[88826:1feeea] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.850 A  iOSMerchandiseControl[88826:1feeea] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.851 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.851 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <E636D1C4-49CC-4E52-9B52-B2B662359154>.<17> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:39.851 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.851 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <E636D1C4-49CC-4E52-9B52-B2B662359154>.<17> now using Connection 2
+2026-06-17 12:04:39.851 Df iOSMerchandiseControl[88826:1feeea] [com.apple.cfnetwork:h3stream] 0x1058492c8 ID=64 Task <E636D1C4-49CC-4E52-9B52-B2B662359154>.<17> sent request, body N 0
+2026-06-17 12:04:39.851 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.851 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:39.852 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <76268EF4-68BD-4FE6-81EE-DFAA09AA78FE>.<18> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:04:39.852 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <76268EF4-68BD-4FE6-81EE-DFAA09AA78FE>.<18> now using Connection 2
+2026-06-17 12:04:39.853 Df iOSMerchandiseControl[88826:1feeea] [com.apple.cfnetwork:h3stream] 0x102b39cf8 ID=68 Task <76268EF4-68BD-4FE6-81EE-DFAA09AA78FE>.<18> sent request, body N 0
+2026-06-17 12:04:39.966 Df iOSMerchandiseControl[88826:1feeea] [com.apple.cfnetwork:h3stream] 0x102b39cf8 ID=68 Task <76268EF4-68BD-4FE6-81EE-DFAA09AA78FE>.<18> received response, status 200 content U
+2026-06-17 12:04:39.966 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <76268EF4-68BD-4FE6-81EE-DFAA09AA78FE>.<18> response ended
+2026-06-17 12:04:39.966 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <76268EF4-68BD-4FE6-81EE-DFAA09AA78FE>.<18> done using Connection 2
+2026-06-17 12:04:39.967 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Summary] Task <76268EF4-68BD-4FE6-81EE-DFAA09AA78FE>.<18> summary for task success {transaction_duration_ms=114, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=113, response_duration_ms=0, request_bytes=1446, request_throughput_kbps=105134, response_bytes=729, response_throughput_kbps=6311, cache_hit=false}
+2026-06-17 12:04:39.967 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <76268EF4-68BD-4FE6-81EE-DFAA09AA78FE>.<18> finished successfully
+2026-06-17 12:04:40.076 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.cfnetwork:h3stream] 0x102d44b98 ID=52 Task <3172C237-CB7D-49EF-81E2-2C10404C492E>.<14> received response, status 206 content U
+2026-06-17 12:04:40.077 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.CFNetwork:Default] Task <3172C237-CB7D-49EF-81E2-2C10404C492E>.<14> response ended
+2026-06-17 12:04:40.077 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.CFNetwork:Default] Task <3172C237-CB7D-49EF-81E2-2C10404C492E>.<14> done using Connection 2
+2026-06-17 12:04:40.077 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Summary] Task <3172C237-CB7D-49EF-81E2-2C10404C492E>.<14> summary for task success {transaction_duration_ms=230, response_status=206, connection=2, reused=1, reused_after_ms=12, request_start_ms=0, request_duration_ms=0, response_start_ms=229, response_duration_ms=1, request_bytes=1488, request_throughput_kbps=71276, response_bytes=776, response_throughput_kbps=5356, cache_hit=false}
+2026-06-17 12:04:40.077 Df iOSMerchandiseControl[88826:1feeea] [com.apple.CFNetwork:Default] Task <3172C237-CB7D-49EF-81E2-2C10404C492E>.<14> finished successfully
+2026-06-17 12:04:40.077 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.cfnetwork:h3stream] 0x102e1ba08 ID=60 Task <2AEF283B-56D4-4277-B6B8-03213C16B56C>.<16> received response, status 200 content U
+2026-06-17 12:04:40.078 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.CFNetwork:Default] Task <2AEF283B-56D4-4277-B6B8-03213C16B56C>.<16> response ended
+2026-06-17 12:04:40.078 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.CFNetwork:Default] Task <2AEF283B-56D4-4277-B6B8-03213C16B56C>.<16> done using Connection 2
+2026-06-17 12:04:40.079 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.cfnetwork:h3stream] 0x1058492c8 ID=64 Task <E636D1C4-49CC-4E52-9B52-B2B662359154>.<17> received response, status 200 content U
+2026-06-17 12:04:40.079 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.CFNetwork:Default] Task <E636D1C4-49CC-4E52-9B52-B2B662359154>.<17> response ended
+2026-06-17 12:04:40.079 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.CFNetwork:Default] Task <E636D1C4-49CC-4E52-9B52-B2B662359154>.<17> done using Connection 2
+2026-06-17 12:04:40.079 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.cfnetwork:h3stream] 0x102d33658 ID=56 Task <2D0B11F8-540A-4348-860E-F3687051C8E0>.<15> received response, status 206 content U
+2026-06-17 12:04:40.079 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Summary] Task <2AEF283B-56D4-4277-B6B8-03213C16B56C>.<16> summary for task success {transaction_duration_ms=230, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=227, response_duration_ms=1, request_bytes=1446, request_throughput_kbps=148151, response_bytes=735, response_throughput_kbps=4030, cache_hit=false}
+2026-06-17 12:04:40.079 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <2AEF283B-56D4-4277-B6B8-03213C16B56C>.<16> finished successfully
+2026-06-17 12:04:40.080 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Summary] Task <E636D1C4-49CC-4E52-9B52-B2B662359154>.<17> summary for task success {transaction_duration_ms=228, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=228, response_duration_ms=0, request_bytes=1447, request_throughput_kbps=87091, response_bytes=731, response_throughput_kbps=13756, cache_hit=false}
+2026-06-17 12:04:40.080 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.CFNetwork:Default] Task <2D0B11F8-540A-4348-860E-F3687051C8E0>.<15> response ended
+2026-06-17 12:04:40.080 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <E636D1C4-49CC-4E52-9B52-B2B662359154>.<17> finished successfully
+2026-06-17 12:04:40.080 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.network:connection] [C2] event: client:connection_idle @62.962s
+2026-06-17 12:04:40.080 Df iOSMerchandiseControl[88826:1feeeb] [com.apple.CFNetwork:Default] Task <2D0B11F8-540A-4348-860E-F3687051C8E0>.<15> done using Connection 2
+2026-06-17 12:04:40.080 Df iOSMerchandiseControl[88826:1feef1] [com.apple.CFNetwork:Summary] Task <2D0B11F8-540A-4348-860E-F3687051C8E0>.<15> summary for task success {transaction_duration_ms=232, response_status=206, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=231, response_duration_ms=0, request_bytes=1445, request_throughput_kbps=156155, response_bytes=734, response_throughput_kbps=7240, cache_hit=false}
+2026-06-17 12:04:40.080 Df iOSMerchandiseControl[88826:1feef1] [com.apple.CFNetwork:Default] Task <2D0B11F8-540A-4348-860E-F3687051C8E0>.<15> finished successfully
+2026-06-17 12:04:56.673 A  iOSMerchandiseControl[88826:1ff018] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:56.673 Df iOSMerchandiseControl[88826:1ff018] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:04:56.675 A  iOSMerchandiseControl[88826:1ff018] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:56.677 A  iOSMerchandiseControl[88826:1ff018] (Security) SecItemCopyMatching_ios
+2026-06-17 12:04:56.679 A  iOSMerchandiseControl[88826:1ff018] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.500 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.506 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.507 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.507 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.509 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.510 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.511 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.512 A  iOSMerchandiseControl[88826:1fe69a] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.543 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.543 Df iOSMerchandiseControl[88826:1ff146] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:05:11.543 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.544 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.544 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.545 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.545 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.546 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.546 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:11.547 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <727C73F2-BEB0-4874-AAE1-A649C715C695>.<19> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:05:11.547 Df iOSMerchandiseControl[88826:1ff146] [com.apple.network:connection] [C2] event: client:connection_reused @94.429s
+2026-06-17 12:05:11.547 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <727C73F2-BEB0-4874-AAE1-A649C715C695>.<19> now using Connection 2
+2026-06-17 12:05:11.547 Df iOSMerchandiseControl[88826:1ff146] [com.apple.cfnetwork:h3stream] 0x102f27858 ID=72 Task <727C73F2-BEB0-4874-AAE1-A649C715C695>.<19> sent request, body N 0
+2026-06-17 12:05:12.064 Df iOSMerchandiseControl[88826:1ff146] [com.apple.cfnetwork:h3stream] 0x102f27858 ID=72 Task <727C73F2-BEB0-4874-AAE1-A649C715C695>.<19> received response, status 200 content K
+2026-06-17 12:05:12.065 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <727C73F2-BEB0-4874-AAE1-A649C715C695>.<19> response ended
+2026-06-17 12:05:12.065 Df iOSMerchandiseControl[88826:1ff146] [com.apple.network:connection] [C2] event: client:connection_idle @94.947s
+2026-06-17 12:05:12.065 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <727C73F2-BEB0-4874-AAE1-A649C715C695>.<19> done using Connection 2
+2026-06-17 12:05:12.066 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Summary] Task <727C73F2-BEB0-4874-AAE1-A649C715C695>.<19> summary for task success {transaction_duration_ms=518, response_status=200, connection=2, reused=1, reused_after_ms=31467, request_start_ms=0, request_duration_ms=0, response_start_ms=516, response_duration_ms=1, request_bytes=1563, request_throughput_kbps=60983, response_bytes=832, response_throughput_kbps=3564, cache_hit=true}
+2026-06-17 12:05:12.066 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <727C73F2-BEB0-4874-AAE1-A649C715C695>.<19> finished successfully
+2026-06-17 12:05:12.069 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.073 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.075 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.076 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.077 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.078 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.078 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.079 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.080 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.080 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <2C66C8F3-AF03-4064-A9B6-1874F6C45BC9>.<20> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:05:12.080 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.081 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.081 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.network:connection] [C2] event: client:connection_reused @94.963s
+2026-06-17 12:05:12.081 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <2C66C8F3-AF03-4064-A9B6-1874F6C45BC9>.<20> now using Connection 2
+2026-06-17 12:05:12.081 A  iOSMerchandiseControl[88826:1ff146] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.081 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.cfnetwork:h3stream] 0x102e2cae8 ID=76 Task <2C66C8F3-AF03-4064-A9B6-1874F6C45BC9>.<20> sent request, body N 0
+2026-06-17 12:05:12.082 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.082 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <1221E578-E039-486C-AFCF-58045173F926>.<21> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:05:12.082 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.083 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.083 Df iOSMerchandiseControl[88826:1ff147] [com.apple.CFNetwork:Default] Task <1221E578-E039-486C-AFCF-58045173F926>.<21> now using Connection 2
+2026-06-17 12:05:12.083 Df iOSMerchandiseControl[88826:1ff147] [com.apple.cfnetwork:h3stream] 0x102b39cf8 ID=80 Task <1221E578-E039-486C-AFCF-58045173F926>.<21> sent request, body N 0
+2026-06-17 12:05:12.083 A  iOSMerchandiseControl[88826:1fec6c] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.084 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <8E27D0CF-75BC-49F3-A108-1473535F3916>.<22> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:05:12.084 A  iOSMerchandiseControl[88826:1ff147] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.084 Df iOSMerchandiseControl[88826:1ff147] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:05:12.084 A  iOSMerchandiseControl[88826:1ff147] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.084 Df iOSMerchandiseControl[88826:1ff151] [com.apple.CFNetwork:Default] Task <8E27D0CF-75BC-49F3-A108-1473535F3916>.<22> now using Connection 2
+2026-06-17 12:05:12.085 A  iOSMerchandiseControl[88826:1ff147] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.085 Df iOSMerchandiseControl[88826:1ff151] [com.apple.cfnetwork:h3stream] 0x102c25e68 ID=84 Task <8E27D0CF-75BC-49F3-A108-1473535F3916>.<22> sent request, body N 0
+2026-06-17 12:05:12.085 A  iOSMerchandiseControl[88826:1ff147] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.086 Df iOSMerchandiseControl[88826:1ff147] [com.apple.CFNetwork:Default] Task <F00BF302-C04B-4421-9BAD-900CD2150484>.<23> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:05:12.086 A  iOSMerchandiseControl[88826:1ff151] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.086 Df iOSMerchandiseControl[88826:1ff151] [com.apple.securityd:thread-local-client-debug] SecSecurityClientGet new thread!
+2026-06-17 12:05:12.086 Df iOSMerchandiseControl[88826:1ff147] [com.apple.CFNetwork:Default] Task <F00BF302-C04B-4421-9BAD-900CD2150484>.<23> now using Connection 2
+2026-06-17 12:05:12.086 A  iOSMerchandiseControl[88826:1ff151] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.086 Df iOSMerchandiseControl[88826:1ff147] [com.apple.cfnetwork:h3stream] 0x102f59b68 ID=88 Task <F00BF302-C04B-4421-9BAD-900CD2150484>.<23> sent request, body N 0
+2026-06-17 12:05:12.087 A  iOSMerchandiseControl[88826:1ff151] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.087 A  iOSMerchandiseControl[88826:1ff151] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:12.088 Df iOSMerchandiseControl[88826:1ff151] [com.apple.CFNetwork:Default] Task <6158C2B4-81D3-4CB9-8827-2C6A0DD84DAD>.<24> resuming, timeouts(60.0, 604800.0) qos(0x19) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+2026-06-17 12:05:12.088 Df iOSMerchandiseControl[88826:1ff151] [com.apple.CFNetwork:Default] Task <6158C2B4-81D3-4CB9-8827-2C6A0DD84DAD>.<24> now using Connection 2
+2026-06-17 12:05:12.088 Df iOSMerchandiseControl[88826:1ff151] [com.apple.cfnetwork:h3stream] 0x102f57f48 ID=92 Task <6158C2B4-81D3-4CB9-8827-2C6A0DD84DAD>.<24> sent request, body N 0
+2026-06-17 12:05:12.218 Df iOSMerchandiseControl[88826:1ff151] [com.apple.cfnetwork:h3stream] 0x102c25e68 ID=84 Task <8E27D0CF-75BC-49F3-A108-1473535F3916>.<22> received response, status 200 content U
+2026-06-17 12:05:12.218 Df iOSMerchandiseControl[88826:1ff151] [com.apple.CFNetwork:Default] Task <8E27D0CF-75BC-49F3-A108-1473535F3916>.<22> response ended
+2026-06-17 12:05:12.219 Df iOSMerchandiseControl[88826:1ff151] [com.apple.CFNetwork:Default] Task <8E27D0CF-75BC-49F3-A108-1473535F3916>.<22> done using Connection 2
+2026-06-17 12:05:12.219 Df iOSMerchandiseControl[88826:1ff151] [com.apple.CFNetwork:Summary] Task <8E27D0CF-75BC-49F3-A108-1473535F3916>.<22> summary for task success {transaction_duration_ms=134, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=133, response_duration_ms=1, request_bytes=1446, request_throughput_kbps=68434, response_bytes=732, response_throughput_kbps=4024, cache_hit=false}
+2026-06-17 12:05:12.219 Df iOSMerchandiseControl[88826:1ff151] [com.apple.CFNetwork:Default] Task <8E27D0CF-75BC-49F3-A108-1473535F3916>.<22> finished successfully
+2026-06-17 12:05:12.219 Df iOSMerchandiseControl[88826:1ff146] [com.apple.cfnetwork:h3stream] 0x102f59b68 ID=88 Task <F00BF302-C04B-4421-9BAD-900CD2150484>.<23> received response, status 200 content U
+2026-06-17 12:05:12.220 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <F00BF302-C04B-4421-9BAD-900CD2150484>.<23> response ended
+2026-06-17 12:05:12.220 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <F00BF302-C04B-4421-9BAD-900CD2150484>.<23> done using Connection 2
+2026-06-17 12:05:12.220 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Summary] Task <F00BF302-C04B-4421-9BAD-900CD2150484>.<23> summary for task success {transaction_duration_ms=134, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=133, response_duration_ms=0, request_bytes=1446, request_throughput_kbps=76109, response_bytes=730, response_throughput_kbps=8549, cache_hit=false}
+2026-06-17 12:05:12.220 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <F00BF302-C04B-4421-9BAD-900CD2150484>.<23> finished successfully
+2026-06-17 12:05:12.245 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.cfnetwork:h3stream] 0x102f57f48 ID=92 Task <6158C2B4-81D3-4CB9-8827-2C6A0DD84DAD>.<24> received response, status 200 content U
+2026-06-17 12:05:12.246 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <6158C2B4-81D3-4CB9-8827-2C6A0DD84DAD>.<24> response ended
+2026-06-17 12:05:12.246 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <6158C2B4-81D3-4CB9-8827-2C6A0DD84DAD>.<24> done using Connection 2
+2026-06-17 12:05:12.246 Df iOSMerchandiseControl[88826:1ff147] [com.apple.CFNetwork:Summary] Task <6158C2B4-81D3-4CB9-8827-2C6A0DD84DAD>.<24> summary for task success {transaction_duration_ms=158, response_status=200, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=156, response_duration_ms=1, request_bytes=1447, request_throughput_kbps=68481, response_bytes=732, response_throughput_kbps=3989, cache_hit=false}
+2026-06-17 12:05:12.246 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.cfnetwork:h3stream] 0x102b39cf8 ID=80 Task <1221E578-E039-486C-AFCF-58045173F926>.<21> received response, status 206 content U
+2026-06-17 12:05:12.246 Df iOSMerchandiseControl[88826:1ff147] [com.apple.CFNetwork:Default] Task <6158C2B4-81D3-4CB9-8827-2C6A0DD84DAD>.<24> finished successfully
+2026-06-17 12:05:12.246 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <1221E578-E039-486C-AFCF-58045173F926>.<21> response ended
+2026-06-17 12:05:12.247 Df iOSMerchandiseControl[88826:1fec6c] [com.apple.CFNetwork:Default] Task <1221E578-E039-486C-AFCF-58045173F926>.<21> done using Connection 2
+2026-06-17 12:05:12.247 Df iOSMerchandiseControl[88826:1ff147] [com.apple.CFNetwork:Summary] Task <1221E578-E039-486C-AFCF-58045173F926>.<21> summary for task success {transaction_duration_ms=164, response_status=206, connection=2, reused=1, reused_after_ms=0, request_start_ms=0, request_duration_ms=0, response_start_ms=163, response_duration_ms=0, request_bytes=1445, request_throughput_kbps=57516, response_bytes=733, response_throughput_kbps=7808, cache_hit=false}
+2026-06-17 12:05:12.247 Df iOSMerchandiseControl[88826:1ff147] [com.apple.CFNetwork:Default] Task <1221E578-E039-486C-AFCF-58045173F926>.<21> finished successfully
+2026-06-17 12:05:12.274 Df iOSMerchandiseControl[88826:1ff146] [com.apple.cfnetwork:h3stream] 0x102e2cae8 ID=76 Task <2C66C8F3-AF03-4064-A9B6-1874F6C45BC9>.<20> received response, status 206 content U
+2026-06-17 12:05:12.274 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <2C66C8F3-AF03-4064-A9B6-1874F6C45BC9>.<20> response ended
+2026-06-17 12:05:12.274 Df iOSMerchandiseControl[88826:1ff146] [com.apple.network:connection] [C2] event: client:connection_idle @95.157s
+2026-06-17 12:05:12.275 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <2C66C8F3-AF03-4064-A9B6-1874F6C45BC9>.<20> done using Connection 2
+2026-06-17 12:05:12.275 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Summary] Task <2C66C8F3-AF03-4064-A9B6-1874F6C45BC9>.<20> summary for task success {transaction_duration_ms=195, response_status=206, connection=2, reused=1, reused_after_ms=16, request_start_ms=1, request_duration_ms=0, response_start_ms=193, response_duration_ms=2, request_bytes=1488, request_throughput_kbps=39283, response_bytes=775, response_throughput_kbps=2957, cache_hit=false}
+2026-06-17 12:05:12.276 Df iOSMerchandiseControl[88826:1ff146] [com.apple.CFNetwork:Default] Task <2C66C8F3-AF03-4064-A9B6-1874F6C45BC9>.<20> finished successfully
+2026-06-17 12:05:22.672 A  iOSMerchandiseControl[88826:1ff151] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:22.674 A  iOSMerchandiseControl[88826:1ff151] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:22.676 A  iOSMerchandiseControl[88826:1ff151] (Security) SecItemCopyMatching_ios
+2026-06-17 12:05:22.677 A  iOSMerchandiseControl[88826:1ff151] (Security) SecItemCopyMatching_ios
+Child process terminated with signal 15: Terminated

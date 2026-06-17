@@ -1,0 +1,174 @@
+{
+  "NEXT_ACTION": "Continue TASK-134 final command sequence.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T193319Z-live-task134-ui-sync-state-prefix-TASK134_FINAL_UI_RERUN_-p31937.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T193319Z-live-task134-ui-sync-state-prefix-TASK134_FINAL_UI_RERUN_-p31937.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/agent-runs/20260617T193319Z-live-task134-ui-sync-state-prefix-TASK134_FINAL_UI_RERUN_-p31937.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "TASK-134-F2",
+    "TASK-134-F3",
+    "TASK-134-F4",
+    "TASK-134-F5",
+    "TASK-134-F6",
+    "TASK-134-F7",
+    "TASK-134-F8",
+    "TASK-134-F9",
+    "TASK-134-F10"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live task134-ui-sync-state --prefix TASK134_FINAL_UI_RERUN_",
+  "command_slug": "live-task134-ui-sync-state-prefix-TASK134_FINAL_UI_RERUN_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 3726,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK134_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-134"
+  },
+  "exit_code": 0,
+  "git_sha": "98a01d19",
+  "next_action_recommended": "Continue TASK-134 final command sequence.",
+  "platform": "live",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "artifacts": {
+      "json": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state.json",
+      "markdown": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state.md",
+      "rawLog": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-ui-sync-state.log"
+    },
+    "command": "task134-ui-sync-state",
+    "completedAt": "2026-06-17T19:33:22Z",
+    "data": {
+      "scenarioPrefix": "TASK134_FINAL_UI_RERUN_UI_SYNC_STATE_",
+      "screenshots": {
+        "android": {
+          "bytes": 131254,
+          "captureExitCode": 0,
+          "path": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.png",
+          "serial": "<REDACTED_SERIAL>",
+          "serialMetadata": {
+            "devicesOutput": "",
+            "source": "env"
+          },
+          "uiautomatorCatExitCode": 0,
+          "uiautomatorDumpExitCode": 0,
+          "uiautomatorXml": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.xml",
+          "uiautomatorXmlBytes": 23104
+        },
+        "ios": {
+          "bytes": 2556257,
+          "captureExitCode": 0,
+          "path": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-ios.png"
+        }
+      },
+      "states": [
+        {
+          "platform": "iOS",
+          "redacted": true,
+          "state": "synced"
+        },
+        {
+          "platform": "iOS",
+          "redacted": true,
+          "state": "dirty_protected"
+        },
+        {
+          "platform": "Android",
+          "redacted": true,
+          "state": "synced"
+        },
+        {
+          "platform": "Android",
+          "redacted": true,
+          "state": "conflict_review"
+        }
+      ]
+    },
+    "dryRun": false,
+    "gates": [
+      {
+        "evidence": "[{\"platform\": \"iOS\", \"redacted\": true, \"state\": \"synced\"}, {\"platform\": \"iOS\", \"redacted\": true, \"state\": \"dirty_protected\"}, {\"platform\": \"Android\", \"redacted\": true, \"state\": \"synced\"}, {\"platform\": \"Android\", \"redacted\": true, \"state\": \"conflict_review\"}]",
+        "name": "ui_states_redacted",
+        "status": "PASS"
+      },
+      {
+        "evidence": "path=<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-ios.png bytes=2556257 exit=0",
+        "name": "ios_screenshot_artifact",
+        "status": "PASS"
+      },
+      {
+        "evidence": "PASS_REAL_SCREENSHOT path=<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.png bytes=131254 serial=<REDACTED_SERIAL> exit=0",
+        "name": "android_real_screenshot_artifact",
+        "status": "PASS"
+      },
+      {
+        "evidence": "path=<HOME_REDACTED>/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-ui-sync-state-android.xml bytes=23104 options_visible=True",
+        "name": "android_uiautomator_xml_redacted",
+        "status": "PASS"
+      },
+      {
+        "evidence": "synced, dirty_protected and conflict_review state names are mirrored across artifacts",
+        "name": "sync_state_parity",
+        "status": "PASS"
+      }
+    ],
+    "mutationPerformed": true,
+    "nextAction": "Continue TASK-134 final command sequence.",
+    "prefix": "TASK134_FINAL_UI_RERUN_",
+    "residueCount": 0,
+    "rowsCreated": 0,
+    "rowsDeleted": 0,
+    "schemaVersion": "1.1",
+    "startedAt": "2026-06-17T19:33:19Z",
+    "status": "PASS",
+    "summary": "UI sync state parity artifacts captured/redacted for iOS and Android.",
+    "taskId": "TASK-134"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+  "requires_cleanup": true,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "PASS",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260617T193319Z-live-task134-ui-sync-state-prefix-TASK134_FINAL_UI_RERUN_-p31937",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "PASS",
+  "task_id": "TASK-134",
+  "test_prefix": "TASK134_FINAL_UI_RERUN_",
+  "timestamp_end": "2026-06-17T19:33:23Z",
+  "timestamp_start": "2026-06-17T19:33:19Z",
+  "warnings": []
+}

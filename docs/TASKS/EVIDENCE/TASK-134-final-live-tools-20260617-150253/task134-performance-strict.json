@@ -1,0 +1,126 @@
+{
+  "artifacts": {
+    "json": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-performance-strict.json",
+    "markdown": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/task134-performance-strict.md",
+    "rawLog": "/Users/minxiang/Desktop/iOSMerchandiseControl/docs/TASKS/EVIDENCE/TASK-134-final-live-tools-20260617-150253/raw/task134-performance-strict.log"
+  },
+  "command": "task134-performance-strict",
+  "completedAt": "2026-06-17T19:39:27Z",
+  "data": {
+    "cleanupEnd": {
+      "categories": 5,
+      "product_prices": 0,
+      "products": 5,
+      "suppliers": 5,
+      "sync_events": 0
+    },
+    "cleanupStart": {
+      "categories": 0,
+      "product_prices": 0,
+      "products": 0,
+      "suppliers": 0,
+      "sync_events": 0
+    },
+    "duplicates": 0,
+    "scenarioPrefix": "TASK134_FINAL_PERF_RERUN_PERFORMANCE_STRICT_",
+    "splitMetrics": {
+      "app_sync_ms": [
+        1252,
+        482,
+        1314,
+        462,
+        1280,
+        461,
+        1145,
+        468,
+        1250,
+        470,
+        1241,
+        460,
+        1062,
+        455,
+        1079,
+        481,
+        1239,
+        451,
+        1308,
+        469
+      ],
+      "app_sync_p95_ms": 1313.7,
+      "app_sync_target_ms": 5000,
+      "cli_harness_p95_ms": 17518,
+      "cli_harness_target_ms": 25000,
+      "local_db_visible_ms": [
+        710,
+        3223
+      ],
+      "local_db_visible_p95_ms": 3223,
+      "remote_apply_ms": [
+        17182,
+        14956,
+        13979,
+        17518,
+        13315
+      ],
+      "supabase_cli_ms": [
+        17182,
+        14956,
+        13979,
+        17518,
+        13315
+      ],
+      "total_harness_ms": [
+        17182,
+        14956,
+        13979,
+        17518,
+        13315
+      ]
+    },
+    "unexpectedSyncEvents": 0
+  },
+  "dryRun": false,
+  "gates": [
+    {
+      "evidence": "supabase_cli_p95=17518ms target=25000ms total_harness_ms=[17182, 14956, 13979, 17518, 13315]",
+      "name": "PASS_CLI_HARNESS",
+      "status": "PASS"
+    },
+    {
+      "evidence": "app_sync_p95=1313.7ms target=5000ms app_sync_ms=[1252, 482, 1314, 462, 1280, 461, 1145, 468, 1250, 470, 1241, 460, 1062, 455, 1079, 481, 1239, 451, 1308, 469]",
+      "name": "PASS_APP_LATENCY",
+      "status": "PASS"
+    },
+    {
+      "evidence": "iterations=5",
+      "name": "all_iterations_completed",
+      "status": "PASS"
+    },
+    {
+      "evidence": "duplicates=0",
+      "name": "duplicates_zero",
+      "status": "PASS"
+    },
+    {
+      "evidence": "unexpected_sync_events=0",
+      "name": "unexpected_sync_events_zero",
+      "status": "PASS"
+    },
+    {
+      "evidence": "residue=0",
+      "name": "cleanup_residue_zero",
+      "status": "PASS"
+    }
+  ],
+  "mutationPerformed": true,
+  "nextAction": "Continue TASK-134 final command sequence.",
+  "prefix": "TASK134_FINAL_PERF_RERUN_",
+  "residueCount": 0,
+  "rowsCreated": 15,
+  "rowsDeleted": 15,
+  "schemaVersion": "1.1",
+  "startedAt": "2026-06-17T19:37:39Z",
+  "status": "PASS",
+  "summary": "Strict performance smoke completed with app latency split from Supabase CLI overhead.",
+  "taskId": "TASK-134"
+}
