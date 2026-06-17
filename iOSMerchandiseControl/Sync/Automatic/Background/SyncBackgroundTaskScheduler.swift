@@ -137,6 +137,21 @@ nonisolated enum SyncBackgroundTaskRunner {
                     modelContainer: modelContainer,
                     remote: SyncEventRemoteSupabaseAdapter(remote: transport)
                 ),
+                recoverySnapshotPullProvider: AutomaticRecoverySnapshotPullService(
+                    modelContainer: modelContainer,
+                    previewService: SupabasePullPreviewService(
+                        inventoryService: RecoveryRemoteSupabaseAdapter(remote: transport),
+                        pageSize: 1_000,
+                        catalogRowBudget: nil,
+                        productPricePreviewSampleLimit: 1_000
+                    ),
+                    productPriceApplyService: SupabaseProductPriceApplyService(
+                        fetcher: ProductPriceReleaseRemoteSupabaseAdapter(remote: transport),
+                        fetchOptions: ProductPriceApplyFetchOptions(replaceLocalSnapshot: true)
+                    ),
+                    historyRemote: HistorySessionRemoteSupabaseAdapter(remote: transport),
+                    syncEventFetcher: SyncEventRemoteSupabaseAdapter(remote: transport)
+                ),
                 activityRegistrationProvider: SyncActivityRegistrationService(
                     modelContainer: modelContainer,
                     recorder: recorder

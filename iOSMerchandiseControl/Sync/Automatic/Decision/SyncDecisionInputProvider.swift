@@ -114,9 +114,7 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
             pendingOutboxCount: outboxCount.value,
             requiresBootstrap: requiresBootstrap(
                 baselineSummary: baselineSummary.value,
-                localCatalogIsEmpty: localCatalogIsEmpty.value,
-                isAuthenticated: isAuthenticated,
-                hasPendingLocalChanges: hasPendingLocalChanges
+                isAuthenticated: isAuthenticated
             ),
             requiresFullRecovery: requiresFullRecovery(baselineSummary: baselineSummary.value),
             hasRecoveryDrift: hasRecoveryDrift(baselineSummary: baselineSummary.value),
@@ -223,13 +221,10 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
 
     private func requiresBootstrap(
         baselineSummary: SupabaseCatalogBaselineDebugSummary,
-        localCatalogIsEmpty: Bool,
-        isAuthenticated: Bool,
-        hasPendingLocalChanges: Bool
+        isAuthenticated: Bool
     ) -> Bool {
         isAuthenticated
             && baselineSummary.status == .absent
-            && (!localCatalogIsEmpty || hasPendingLocalChanges)
     }
 
     private func requiresFullRecovery(

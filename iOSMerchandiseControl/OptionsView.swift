@@ -755,9 +755,9 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             return L("options.supabase.automaticSync.busy.detail")
         case .cancelled:
             return L("options.supabase.automaticSync.cancelled.detail")
-        case .noWork:
+        case .noWork where baselineSummary.status == .valid:
             return L("options.supabase.automaticSync.noWork.detail")
-        case .succeeded, .none:
+        case .noWork, .succeeded, .none:
             break
         }
         if pendingCount > 0 {
@@ -858,9 +858,9 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             return L("options.supabase.automaticSync.badge.busy")
         case .cancelled:
             return L("options.supabase.automaticSync.badge.cancelled")
-        case .noWork:
+        case .noWork where baselineSummary.status == .valid:
             return L("options.supabase.automaticSync.badge.noWork")
-        case .succeeded, .none:
+        case .noWork, .succeeded, .none:
             break
         }
         if pendingCount > 0 {
@@ -894,9 +894,9 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             return "hourglass"
         case .cancelled:
             return "xmark.circle"
-        case .noWork:
+        case .noWork where baselineSummary.status == .valid:
             return "checkmark.circle"
-        case .succeeded, .none:
+        case .noWork, .succeeded, .none:
             break
         }
         if pendingCount > 0 {

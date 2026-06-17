@@ -69,14 +69,11 @@ actor AutomaticSyncEngine {
                         source: source,
                         cancellationToken: cancellationToken
                     ) || didRun
-                case .requestRecovery:
+                case .bootstrap, .fullRecovery, .requestRecovery:
                     didRun = try await recoverRemoteSnapshot(
                         ownerUserID: ownerUserID,
                         cancellationToken: cancellationToken
                     ) || didRun
-                case .bootstrap, .fullRecovery:
-                    recordDiagnostic("lastOutcome", "blocked_full_pull_requires_explicit_context")
-                    return await complete(.blocked(.accountDecisionRequired))
                 case .retryAfterBusy:
                     let decision = retryPolicy.decisionForBusy(attempt: 0, isBackground: false)
                     switch decision.action {

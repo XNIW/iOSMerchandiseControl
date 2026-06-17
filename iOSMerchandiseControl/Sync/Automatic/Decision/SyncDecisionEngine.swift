@@ -119,18 +119,25 @@ nonisolated enum SyncDecisionEngine {
             return input.fullRecoveryContext.allowsFullRecovery ? .fullRecovery : .requestRecovery
         }
         if input.hasRemoteVerificationDrift {
-            return .lightReconcile
+            return input.hasPendingLocalChanges
+                ? .sequence([.lightReconcile, .pushPending, .drainEvents])
+                : .lightReconcile
         }
         if input.hasRemoteSyncEvent || input.trigger == .remoteSyncEvent {
-            return .drainEvents
+            return input.hasPendingLocalChanges
+                ? .sequence([.drainEvents, .pushPending, .drainEvents])
+                : .drainEvents
         }
         if input.requestsLightReconcile {
-            return .lightReconcile
+            return input.hasPendingLocalChanges
+                ? .sequence([.lightReconcile, .pushPending, .drainEvents])
+                : .lightReconcile
         }
 
         var actions: [SyncAction] = []
         if input.hasPendingLocalChanges {
             actions.append(.pushPending)
+            actions.append(.drainEvents)
         }
 
         switch actions.count {

@@ -1223,7 +1223,7 @@
 "options.supabase.automaticSync.noWork.detail" = "上次检查没有发现需要发送的本地更改。";
 "options.supabase.automaticSync.pending.detail" = "更改已保存在此设备上。重新联网后会自动发送。";
 "options.supabase.automaticSync.bootstrap.detail" = "登录后，App 会自动准备共享数据库。";
-"options.supabase.automaticSync.actionNeeded.detail" = "同步需要更新 App 或服务。";
+"options.supabase.automaticSync.actionNeeded.detail" = "正在准备自动重新对齐。若仍有冲突，应用会要求你明确选择。";
 "options.supabase.automaticSync.pending" = "待发送本地更改";
 "options.supabase.automaticSync.lastSuccess" = "上次成功同步";
 "options.supabase.automaticSync.lastSuccess.none" = "尚不可用";

@@ -246,18 +246,12 @@ final class SyncOrchestrator: ObservableObject {
                 recordRuntimeDiagnostic("foreground.outcome", "deferred_decision_busy")
                 completeForegroundTask(runDeferred: false)
                 return
-            case .fullRecovery, .bootstrap:
-                recordRuntimeDiagnostic("foreground.outcome", "blocked_full_recovery_requires_explicit_context")
-                stateStore.updatePhase(.recoveryRequired)
-                stateStore.recordRunResult(.blocked(.accountDecisionRequired))
-                completeForegroundTask()
-                return
             case .noOp:
                 stateStore.recordRunResult(.noWork())
                 recordRuntimeDiagnostic("foreground.outcome", "decision_noop")
                 completeForegroundTask()
                 return
-            case .pushPending, .drainEvents, .lightReconcile, .requestRecovery, .sequence:
+            case .pushPending, .drainEvents, .lightReconcile, .bootstrap, .fullRecovery, .requestRecovery, .sequence:
                 stateStore.updatePhase(action.runningPhase)
             }
             recordRuntimeDiagnostic("foreground.outcome", action.diagnosticsScheduleName)
@@ -446,13 +440,13 @@ private extension SyncAction {
         case .sequence:
             return "scheduled_sequence_via_sync_runtime"
         case .bootstrap:
-            return "blocked_bootstrap_requires_explicit_context"
+            return "scheduled_bootstrap_recovery_via_sync_runtime"
         case .requestRecovery:
             return "scheduled_recovery_request_via_sync_runtime"
         case .noOp:
             return "decision_noop"
         case .fullRecovery:
-            return "blocked_full_recovery_requires_explicit_context"
+            return "scheduled_full_recovery_via_sync_runtime"
         case .retryAfterBusy:
             return "deferred_decision_busy"
         case .blocked(let reason):
@@ -466,12 +460,10 @@ private extension SyncAction {
             return .pushing
         case .drainEvents:
             return .pullingEvents
-        case .lightReconcile, .requestRecovery:
+        case .lightReconcile, .bootstrap, .fullRecovery, .requestRecovery:
             return .reconciling
         case .sequence(let actions):
             return actions.first?.runningPhase ?? .checking
-        case .bootstrap, .fullRecovery:
-            return .recoveryRequired
         case .noOp, .retryAfterBusy, .blocked:
             return .checking
         }

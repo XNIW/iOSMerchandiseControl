@@ -1,0 +1,3 @@
+iOSMerchandiseControl/SupabaseConfig.swift:62:        if lowercased.hasPrefix("sb_secret_")
+iOSMerchandiseControl/SupabaseConfig.swift:63:            || lowercased.contains("service_role")
+iOSMerchandiseControl/SupabaseConfig.swift:68:        return decodedJWTRole(value) == "service_role"

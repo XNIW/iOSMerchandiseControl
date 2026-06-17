@@ -15,7 +15,7 @@ final class SyncDecisionEngineTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(action, .pushPending)
+        XCTAssertEqual(action, .sequence([.pushPending, .drainEvents]))
         XCTAssertFalse(action.containsFullRecovery)
     }
 
@@ -44,7 +44,7 @@ final class SyncDecisionEngineTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(action, .drainEvents)
+        XCTAssertEqual(action, .sequence([.drainEvents, .pushPending, .drainEvents]))
     }
 
     func testRemoteVerificationDriftBlocksPendingPush() {
@@ -58,7 +58,7 @@ final class SyncDecisionEngineTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(action, .lightReconcile)
+        XCTAssertEqual(action, .sequence([.lightReconcile, .pushPending, .drainEvents]))
     }
 
     func testPendingWithRequestedLightReconcileDoesNotPushBeforeReconcile() {
@@ -72,7 +72,34 @@ final class SyncDecisionEngineTests: XCTestCase {
             )
         )
 
+        XCTAssertEqual(action, .sequence([.lightReconcile, .pushPending, .drainEvents]))
+    }
+
+    func testTask132DRequestedLightReconcileWithoutPendingDoesNotNoOp() {
+        let action = SyncDecisionEngine.decide(
+            SyncDecisionInput(
+                trigger: .appForeground,
+                isAuthenticated: true,
+                isNetworkAvailable: true,
+                requestsLightReconcile: true
+            )
+        )
+
         XCTAssertEqual(action, .lightReconcile)
+    }
+
+    func testTask132DBaselineAbsentWithPendingBootstrapsBeforePush() {
+        let action = SyncDecisionEngine.decide(
+            SyncDecisionInput(
+                trigger: .networkAvailable,
+                isAuthenticated: true,
+                isNetworkAvailable: true,
+                hasPendingLocalChanges: true,
+                requiresBootstrap: true
+            )
+        )
+
+        XCTAssertEqual(action, .bootstrap)
     }
 
     func testAccountDecisionBlocksBeforePushOrDrain() {
@@ -189,6 +216,33 @@ final class SyncDecisionEngineTests: XCTestCase {
 
         let provider = SyncDecisionInputProvider(
             modelContainer: container,
+            initialNetworkStatus: .satisfied
+        )
+        let snapshot = await provider.makeSnapshot(
+            triggerSource: .rootForeground,
+            isAuthenticated: true,
+            ownerUserID: UUID(),
+            isSyncBusy: false
+        )
+
+        XCTAssertTrue(snapshot.requiresBootstrap)
+        XCTAssertEqual(SyncDecisionEngine.decide(snapshot.input), .bootstrap)
+    }
+
+    @MainActor
+    func testTask132DEmptyCatalogStillRequiresBootstrapWhenBaselineIsAbsent() async throws {
+        let originalBinding = UserDefaults.standard.data(forKey: "sync.accountBinding.v1")
+        UserDefaults.standard.removeObject(forKey: "sync.accountBinding.v1")
+        defer {
+            if let originalBinding {
+                UserDefaults.standard.set(originalBinding, forKey: "sync.accountBinding.v1")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "sync.accountBinding.v1")
+            }
+        }
+
+        let provider = SyncDecisionInputProvider(
+            modelContainer: try makeContainer(),
             initialNetworkStatus: .satisfied
         )
         let snapshot = await provider.makeSnapshot(

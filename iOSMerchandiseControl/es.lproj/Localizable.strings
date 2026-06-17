@@ -1223,7 +1223,7 @@
 "options.supabase.automaticSync.noWork.detail" = "La última revisión no encontró cambios locales para enviar.";
 "options.supabase.automaticSync.pending.detail" = "Los cambios están guardados en este dispositivo. Se enviarán cuando vuelvas a estar en línea.";
 "options.supabase.automaticSync.bootstrap.detail" = "La app preparará automáticamente la base compartida después de iniciar sesión.";
-"options.supabase.automaticSync.actionNeeded.detail" = "La sincronización requiere actualizar la app o el servicio.";
+"options.supabase.automaticSync.actionNeeded.detail" = "La reconciliacion automatica se esta preparando. Si queda un conflicto, la app pedira una eleccion explicita.";
 "options.supabase.automaticSync.pending" = "Cambios locales pendientes";
 "options.supabase.automaticSync.lastSuccess" = "Última sync correcta";
 "options.supabase.automaticSync.lastSuccess.none" = "Aún no disponible";

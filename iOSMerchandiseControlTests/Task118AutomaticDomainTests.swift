@@ -259,6 +259,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
         XCTAssertTrue(background.contains("SyncDecisionInputProvider"))
         XCTAssertTrue(background.contains("SyncDecisionEngine.decide"))
+        XCTAssertTrue(background.contains("recoverySnapshotPullProvider: AutomaticRecoverySnapshotPullService"))
         XCTAssertFalse(background.contains(".sequence([.pushPending, .drainEvents])"))
     }
 
@@ -267,6 +268,7 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
         XCTAssertTrue(options.contains("syncState.lastOutcome"))
         XCTAssertTrue(options.contains("options.supabase.automaticSync.failed.detail"))
+        XCTAssertTrue(options.contains("case .noWork where baselineSummary.status == .valid"))
         XCTAssertTrue(options.contains("options.supabase.automaticSync.noWork.detail"))
         XCTAssertTrue(options.contains("options.supabase.automaticSync.badge.retry"))
     }

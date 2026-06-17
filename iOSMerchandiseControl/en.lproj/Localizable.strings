@@ -1223,7 +1223,7 @@
 "options.supabase.automaticSync.noWork.detail" = "The last check found no local changes to send.";
 "options.supabase.automaticSync.pending.detail" = "Changes are saved on this device. They will be sent when you are back online.";
 "options.supabase.automaticSync.bootstrap.detail" = "The app will prepare the shared database automatically after sign-in.";
-"options.supabase.automaticSync.actionNeeded.detail" = "Sync requires an app or service update.";
+"options.supabase.automaticSync.actionNeeded.detail" = "Automatic reconciliation is being prepared. If a conflict remains, the app will ask for an explicit choice.";
 "options.supabase.automaticSync.pending" = "Pending local changes";
 "options.supabase.automaticSync.lastSuccess" = "Last successful sync";
 "options.supabase.automaticSync.lastSuccess.none" = "Not available yet";

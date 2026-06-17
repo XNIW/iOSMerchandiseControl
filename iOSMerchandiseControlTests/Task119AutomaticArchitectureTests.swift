@@ -176,6 +176,55 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertEqual(recoveryCallCount, 1)
     }
 
+    func testTask132DAutomaticEngineRunsSnapshotRecoveryForBootstrapAction() async {
+        let recoveryProvider = Task132SnapshotRecoveryProvider()
+        let engine = AutomaticSyncEngine(
+            catalogPushProvider: nil,
+            productPriceProvider: nil,
+            historySessionProvider: nil,
+            incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: recoveryProvider,
+            activityRegistrationProvider: nil,
+            defaults: UserDefaults(suiteName: "Task132D-\(UUID().uuidString)")!
+        )
+
+        let result = await engine.run(action: .bootstrap, source: .rootForeground, ownerUserID: UUID())
+        let recoveryCallCount = await recoveryProvider.callCount
+
+        XCTAssertEqual(result.status, .success)
+        XCTAssertTrue(result.didWork)
+        XCTAssertEqual(recoveryCallCount, 1)
+    }
+
+    func testTask132DAutomaticEngineRunsSnapshotRecoveryForFullRecoveryAction() async {
+        let recoveryProvider = Task132SnapshotRecoveryProvider()
+        let engine = AutomaticSyncEngine(
+            catalogPushProvider: nil,
+            productPriceProvider: nil,
+            historySessionProvider: nil,
+            incrementalPullProvider: nil,
+            recoverySnapshotPullProvider: recoveryProvider,
+            activityRegistrationProvider: nil,
+            defaults: UserDefaults(suiteName: "Task132D-\(UUID().uuidString)")!
+        )
+
+        let result = await engine.run(action: .fullRecovery, source: .rootForeground, ownerUserID: UUID())
+        let recoveryCallCount = await recoveryProvider.callCount
+
+        XCTAssertEqual(result.status, .success)
+        XCTAssertTrue(result.didWork)
+        XCTAssertEqual(recoveryCallCount, 1)
+    }
+
+    func testTask132DOrchestratorSchedulesRecoveryActionsThroughRuntime() throws {
+        let orchestrator = try source("iOSMerchandiseControl/Sync/SyncOrchestrator.swift")
+
+        XCTAssertTrue(orchestrator.contains("scheduled_bootstrap_recovery_via_sync_runtime"))
+        XCTAssertTrue(orchestrator.contains("scheduled_full_recovery_via_sync_runtime"))
+        XCTAssertFalse(orchestrator.contains("blocked_bootstrap_requires_explicit_context"))
+        XCTAssertFalse(orchestrator.contains("blocked_full_recovery_requires_explicit_context"))
+    }
+
     func testAutomaticEngineDoesNotTreatRecoveryRequestAsNoWorkWhenProviderIsMissing() async {
         let engine = AutomaticSyncEngine(
             catalogPushProvider: nil,
