@@ -4,14 +4,17 @@
 - Task ID: TASK-135
 - Workstream alias: TASK-132D
 - Parent: TASK-132 DONE
-- Stato task: ACTIVE
-- Fase attuale: REVIEW
-- Responsabile attuale: Claude / Reviewer
-- Ultimo aggiornamento: 2026-06-18 14:55 -0400
-- Ultimo agente: Codex / Final review self-fix verifier
+- Stato task: DONE
+- Fase attuale: CLOSED_BY_USER_ACCEPTANCE
+- Responsabile attuale: USER / Accepted closure
+- Ultimo aggiornamento: 2026-06-18 15:07 -0400
+- Ultimo agente: Codex / User-accepted DONE closer
 
 ## User Override
 TASK-132 e' gia' DONE nel tracking storico. Questo hotfix e' stato eseguito su istruzione esplicita utente come workstream post-DONE, senza riscrivere la storia di TASK-132 e senza riusare TASK-134 come task canonico.
+
+## Chiusura utente
+2026-06-18 15:07 -0400: l'utente ha richiesto esplicitamente "Mettilo in DONE e poi fai commit push". TASK-135 viene quindi marcato DONE per accettazione utente, senza nuovi refactor e senza modifiche runtime in questo passaggio di chiusura. La evidence finale resta `docs/TASKS/EVIDENCE/TASK-135-final-review-20260618-135046/REPORT.md`.
 
 ## Scopo
 Sbloccare la sync automatica quando account/rete sono validi e ci sono baseline assente/stale, drift/parity, remote events o delta locali trusted. "Blocked" non deve significare waiting/no-op: deve restare solo per auth/rete/permessi/account o conflitti reali che richiedono scelta utente.
@@ -259,7 +262,6 @@ Check non eseguiti:
 - Nessun physical device in questo giro: NON ESEGUITO, fuori dallo scope richiesto per TASK-135 corrente.
 
 ## Rischi rimasti
-- DONE non marcato per policy locale: serve accettazione/review utente o Claude.
 - La UI completa `SyncResolutionPrompt` field-by-field resta follow-up se i conflitti reali devono essere presentati in un nuovo sheet dedicato invece delle superfici TASK-126 esistenti.
 - Android `PriceBackfillWorker` resta legacy; ora e' guardato per prodotti cloud-linked, ma una revisione futura potrebbe rimuovere definitivamente il backfill one-shot o legarlo solo a import locali storici.
 - XcodeBuildMCP nel run finale ha usato un simulatore diverso dai defaults per `build_run_sim`; il binario risultante e' stato installato/lanciato manualmente sul simulatore 240F per screenshot e snapshot finali.
