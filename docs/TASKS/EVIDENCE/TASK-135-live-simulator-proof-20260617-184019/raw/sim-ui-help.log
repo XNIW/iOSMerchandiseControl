@@ -1,0 +1,26 @@
+sim_ui.sh — Wrapper universale per automazione UI nel Simulator iOS.
+
+Usage:
+  ./tools/sim_ui.sh show
+  ./tools/sim_ui.sh launch [bundle-id]
+  ./tools/sim_ui.sh terminate [bundle-id]
+  ./tools/sim_ui.sh tap-name <fragment> [role] [timeout]
+  ./tools/sim_ui.sh wait-for <fragment> [timeout]
+  ./tools/sim_ui.sh type <text>
+  ./tools/sim_ui.sh clear-field
+  ./tools/sim_ui.sh capture <output.png>
+  ./tools/sim_ui.sh wait <seconds>
+  ./tools/sim_ui.sh dump-names [filter]
+  ./tools/sim_ui.sh tap-relative <relX> <relY>
+  ./tools/sim_ui.sh replace-field <relX> <relY> <value>
+  ./tools/sim_ui.sh batch  (reads actions from stdin)
+
+Exit codes:
+  0  Successo
+  1  Fallimento operativo (elemento non trovato, timeout)
+  2  Errore di configurazione / ambiente (no Simulator booted, AX non disponibile, device richiesto non presente)
+
+Environment:
+  SIM_UI_BUNDLE_ID    Bundle ID dell'app (default: com.niwcyber.iOSMerchandiseControl)
+  SIM_UI_DEVICE_ID    Device ID del Simulator (default: booted)
+  SIM_UI_JXA_TIMEOUT  Timeout JXA in secondi (default: 30)

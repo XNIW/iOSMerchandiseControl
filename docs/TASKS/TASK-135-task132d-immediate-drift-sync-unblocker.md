@@ -7,8 +7,8 @@
 - Stato task: ACTIVE
 - Fase attuale: REVIEW
 - Responsabile attuale: Claude / Reviewer
-- Ultimo aggiornamento: 2026-06-17 18:30 -0400
-- Ultimo agente: Codex / Hotfix executor
+- Ultimo aggiornamento: 2026-06-17 19:55 -0400
+- Ultimo agente: Codex / Live verifier-fixer
 
 ## User Override
 TASK-132 e' gia' DONE nel tracking storico. Questo hotfix e' stato eseguito su istruzione esplicita utente come workstream post-DONE, senza riscrivere la storia di TASK-132 e senza riusare TASK-134 come task canonico.
@@ -43,19 +43,30 @@ Codex ha applicato il fix minimo in:
 - Android autosync/UI:
   - `CatalogAutoSyncCoordinator.kt`
   - `CatalogSyncViewModel.kt`
+- Android clean reopen/ProductPrice backfill:
+  - `ProductPriceDao.kt`
+  - `PriceBackfillWorker.kt`
 - Android tests:
   - `CatalogAutoSyncCoordinatorTest.kt`
   - `CatalogSyncViewModelTest.kt`
+  - `DefaultInventoryRepositoryTest.kt`
+- Agent tooling:
+  - `tools/agent/lib/supabase.sh`
+  - `tools/agent/lib/sync.sh`
+
+Override utente 2026-06-17: completata anche la prova live cross-platform su simulator/emulator senza dichiarare DONE. Durante il gate clean reopen Android e' emerso un falso pending ProductPrice: due righe `BACKFILL_CURR` generate dal backfill legacy per un prodotto cloud-linked arrivato da iOS non avevano `product_price_remote_refs`, producendo `Waiting to sync` nonostante catalog parity. Fix minimo: il backfill legacy ora salta i prodotti gia' cloud-linked e rimuove solo righe `BACKFILL_CURR` cloud-linked prive di remote bridge; il tooling counts Android include i ProductPrice local-only nel pending aggregate.
+
+Micro-fix UX finale richiesto dall'utente: iOS Options, card `Stato database locale`, rinomina la precedente label pull-specifica in label generica di sync: IT `Ultima sincronizzazione`, EN `Last sync`, ES `Última sincronización`, zh-Hans `上次同步`. Nessuna logica runtime modificata.
 
 ## Handoff post-fix
 Reviewer deve verificare soprattutto:
 - iOS recovery con pending locali attivi: `replaceLocalCatalogWithRemoteSnapshot` continua a proteggere pending non classificabili; il follow-up UI field-by-field resta necessario per conflitti reali.
 - Android pull-only reconcile su foreground/network/auth e' guardato da `BOOTSTRAP_RETRY_GUARD_MS`, ma puo' comunque essere costoso su cataloghi grandi.
-- Live runtime non ancora eseguito in questo giro: serve conferma iOS device/simulator autenticato + Android device + Supabase counts/screenshot.
+- Live runtime simulator/emulator e' ora eseguito con evidence corrente: iOS->Android PASS, Android->iOS PASS, ProductPrice append-only PASS, History/session PASS, clean reopen/no false push PASS, Options iOS/Android pulite, counts finali coerenti. TASK resta ACTIVE / REVIEW per policy: Codex non marca DONE.
 
 ## Evidence
 Evidence root:
-`docs/TASKS/EVIDENCE/TASK-132D-hotfix-20260617-182515/`
+`docs/TASKS/EVIDENCE/TASK-135-live-simulator-proof-20260617-184019/`
 
 Check eseguiti:
 - iOS targeted tests: PASS, 39 tests / 0 failures.
@@ -65,13 +76,32 @@ Check eseguiti:
 - iOS git diff check: PASS.
 - Android git diff check: PASS.
 - service_role/bypass scan: PASS_WITH_NOTE, solo guard di rifiuto in `SupabaseConfig.swift`.
+- iOS Options stale cloud-check targeted tests: PASS.
+- iOS build/test after Options fix: PASS.
+- Android `DefaultInventoryRepositoryTest` targeted backfill cleanup: PASS.
+- Android assembleDebug + assembleDebugAndroidTest after backfill cleanup: PASS.
+- Live mutation near-realtime matrix: PASS; ProductPrice targeted price ids iOS->Android 13 / Android->iOS 9; History targeted session ids 5 each direction; no full pull.
+- Canonical catalog iOS -> Supabase -> Android single prefix `TASK135_IOS_CROSS_20260617_193032_`: PASS.
+- Canonical catalog Android -> Supabase -> iOS single prefix `TASK135_ANDROID_CROSS_20260617_193207_`: PASS.
+- Clean reopen/no false push: PASS; `sync_events` before/after count `1848`, max id `3100`.
+- Final active/user-visible counts parity: Supabase/iOS/Android `products=19704`, `suppliers=66`, `categories=35`, `product_prices=41131`, `history_sessions=39`.
+- iOS Options screenshot: PASS; no `Local database needs a cloud check`, pending 0, local DB up to date.
+- Android Options screenshot: PASS; no `Waiting to sync`, pending 0, local DB ready.
+- Final iOS Debug build after evidence: PASS (`raw/ios-final-debug-build-after-clean-reopen.log`).
+- Final iOS Options targeted tests after evidence: PASS, 10 tests / 0 failures (`raw/ios-final-options-tests-after-clean-reopen.log`).
+- Final Android targeted backfill cleanup test: PASS (`raw/android-final-backfill-cleanup-targeted-test.log`).
+- Final tooling syntax + iOS/Android `git diff --check`: PASS.
+- Final forbidden copy scan: PASS (`raw/final-forbidden-copy-scan.txt` empty after headings).
+- Post-label localization `plutil -lint`: PASS (`raw/ios-localizations-plutil-after-last-sync-label.log`).
+- Post-label iOS Debug build: PASS (`raw/ios-debug-build-after-last-sync-label.log`).
+- Post-label iOS Options screenshot/runtime snapshot: PASS (`screenshots/ios-options-last-sync-label-final.jpg`, `raw/ios-options-last-sync-label-runtime-snapshot.txt`).
+- Post-label clean reopen invariant: PASS; `sync_events` remains count `1848`, max id `3100` (`counts/sync-events-after-last-sync-label.json`).
+- Post-label counts parity: PASS; final active/user-visible counts unchanged and iOS/Android pending aggregate 0 (`counts/final-after-last-sync-label-*.json`).
 
 Check non eseguiti:
-- Live iOS runtime con account reale: NON ESEGUITO in questo giro.
-- Live Android runtime con account reale: NON ESEGUITO in questo giro.
-- Supabase live count parity e cleanup: NON ESEGUITO in questo giro.
-- Screenshot Options iOS/Android post-fix: NON ESEGUITO in questo giro.
+- Nessun physical device in questo giro: NON ESEGUITO, fuori dallo scope richiesto per TASK-135 corrente.
 
 ## Rischi rimasti
-- DONE non dichiarabile senza i criteri live del chiarimento TASK-132D.
+- DONE non marcato per policy locale: serve accettazione/review utente o Claude.
 - La UI completa `SyncResolutionPrompt` field-by-field resta follow-up se i conflitti reali devono essere presentati in un nuovo sheet dedicato invece delle superfici TASK-126 esistenti.
+- Android `PriceBackfillWorker` resta legacy; ora e' guardato per prodotti cloud-linked, ma una revisione futura potrebbe rimuovere definitivamente il backfill one-shot o legarlo solo a import locali storici.

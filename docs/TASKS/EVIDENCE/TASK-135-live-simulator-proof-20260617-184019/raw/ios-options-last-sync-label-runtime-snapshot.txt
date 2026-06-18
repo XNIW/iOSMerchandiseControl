@@ -1,0 +1,19 @@
+Runtime snapshot: XcodeBuildMCP rs/1, simulator 240F400E-5EFA-486A-9137-FFBBE70F604D, 2026-06-17 19:54 -0400.
+
+Observed updated label:
+- Ultima sincronizzazione
+- Ultima sincronizzazione, 17 giu 2026, 17:58
+
+Clean state still visible:
+- Sincronizzazione automatica attiva
+- Nessuna modifica
+- Modifiche locali in attesa, 0
+- Database locale aggiornato
+- Questo dispositivo coincide con il cloud.
+- Prodotti, 19704
+- Fornitori, 66
+- Categorie, 35
+- Storico prezzi, 41131
+- Sessioni cronologia, 39
+
+Legacy pull-specific labels absent in the observed UI.

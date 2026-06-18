@@ -1,0 +1,25 @@
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: TASK123_ANDROID_SINGLE_PROPAGATION=TASK123_ANDROID_SINGLE_PROPAGATION kind=catalog_product_create owner_hash=ad3d747e936c localSaveMs=59 localOutboxEnqueueMs=59 sourceAutoPushStartDelayMs=500 remotePushMs=32042 syncEventAvailableMs=32042 watermarkAfter=3080 totalSourceMs=32107 syncType=EVENT_INCREMENTAL fullPull=false
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 32.13
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1

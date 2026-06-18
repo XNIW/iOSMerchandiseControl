@@ -1,0 +1,83 @@
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest:
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: TASK-114 task123 android single catalog create auto push did not complete through EVENT_INCREMENTAL within 35s
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.waitForCatalogAutoPush(Task103CrossPlatformAcceptanceTest.kt:885)
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.access$waitForCatalogAutoPush(Task103CrossPlatformAcceptanceTest.kt:48)
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest$waitForCatalogAutoPush$1.invokeSuspend(Task103CrossPlatformAcceptanceTest.kt:15)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:35)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:98)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)
+	at kotlinx.coroutines.BuildersKt.runBlockingImpl(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)
+	at kotlinx.coroutines.BuildersKt.runBlockingK(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)
+	at kotlinx.coroutines.BuildersKt.runBlockingK$default(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.test123AndroidSingleCatalogCreatePropagation(Task103CrossPlatformAcceptanceTest.kt:357)
+
+INSTRUMENTATION_STATUS: stream=
+Error in test123AndroidSingleCatalogCreatePropagation(com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest):
+java.lang.AssertionError: TASK-114 task123 android single catalog create auto push did not complete through EVENT_INCREMENTAL within 35s
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.waitForCatalogAutoPush(Task103CrossPlatformAcceptanceTest.kt:885)
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.access$waitForCatalogAutoPush(Task103CrossPlatformAcceptanceTest.kt:48)
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest$waitForCatalogAutoPush$1.invokeSuspend(Task103CrossPlatformAcceptanceTest.kt:15)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:35)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:98)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)
+	at kotlinx.coroutines.BuildersKt.runBlockingImpl(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)
+	at kotlinx.coroutines.BuildersKt.runBlockingK(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)
+	at kotlinx.coroutines.BuildersKt.runBlockingK$default(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.test123AndroidSingleCatalogCreatePropagation(Task103CrossPlatformAcceptanceTest.kt:357)
+
+INSTRUMENTATION_STATUS: test=test123AndroidSingleCatalogCreatePropagation
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_RESULT: stream=
+
+Time: 35.082
+There was 1 failure:
+1) test123AndroidSingleCatalogCreatePropagation(com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest)
+java.lang.AssertionError: TASK-114 task123 android single catalog create auto push did not complete through EVENT_INCREMENTAL within 35s
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.waitForCatalogAutoPush(Task103CrossPlatformAcceptanceTest.kt:885)
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.access$waitForCatalogAutoPush(Task103CrossPlatformAcceptanceTest.kt:48)
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest$waitForCatalogAutoPush$1.invokeSuspend(Task103CrossPlatformAcceptanceTest.kt:15)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:35)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:98)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)
+	at kotlinx.coroutines.BuildersKt.runBlockingImpl(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)
+	at kotlinx.coroutines.BuildersKt.runBlockingK(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)
+	at kotlinx.coroutines.BuildersKt.runBlockingK$default(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.test123AndroidSingleCatalogCreatePropagation(Task103CrossPlatformAcceptanceTest.kt:357)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1

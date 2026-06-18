@@ -1,0 +1,108 @@
+2:06-17 19:21:32.765   465   465 I adbd    : adbd service requested 'shell,v2,TERM=dumb,raw:am instrument -w -r -e task114LiveAcceptance true -e task114RunPrefix TASK135_ANDROID_DIAG_20260617_192133_ -e class com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#test123AndroidSingleCatalogCreatePropagation com.example.merchandisecontrolsplitview.test/androidx.test.runner.AndroidJUnitRunner'
+54:06-17 19:21:33.738 29586 29608 I CatalogCloudSync: cycle=catalog_auto outcome=skip reason=signed_out
+65:06-17 19:21:33.752 29586 29601 I TestRunner: run started: 1 tests
+66:06-17 19:21:33.752 29586 29601 I TestRunner: started: test123AndroidSingleCatalogCreatePropagation(com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest)
+73:06-17 19:21:34.270 29586 29607 I CatalogCloudSync: tracker busy=true stage=SYNC_EVENTS_DRAIN status=RUNNING
+74:06-17 19:21:34.278 29586 29603 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=sync_busy
+76:06-17 19:21:34.315 29586 29608 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+81:06-17 19:21:35.034 29586 29603 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=sync_busy
+82:06-17 19:21:35.084 29586 29612 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+84:06-17 19:21:35.448 29586 29603 I CatalogCloudSync: sync_event_outbox_retry_summary pendingBefore=0 pendingAfter=0 retryLoaded=0 retryEligible=0 retrySkippedMaxAttempts=0 retrySucceeded=0 retryFailed=0 retryDeletedOnSuccess=0
+85:06-17 19:21:35.547 29586 29604 I CatalogCloudSync: sync_events_summary phase=drain syncEventsAvailable=true recordSyncEventAvailable=true realtimeSyncEventsAvailable=true syncEventOutboxPending=0 syncEventOutboxPendingBefore=0 syncEventOutboxPendingAfter=0 syncEventOutboxRetried=0 syncEventOutboxRetryLoaded=0 syncEventOutboxRetryEligible=0 syncEventOutboxRetrySkippedMaxAttempts=0 syncEventOutboxRetrySucceeded=0 syncEventOutboxRetryFailed=0 syncEventOutboxRetryDeletedOnSuccess=0 syncEventOutboxInserted=0 catalogEventEmitted=false priceEventEmitted=false catalogEventOutcome=no_op priceEventOutcome=no_op syncEventsFetched=0 syncEventsProcessed=0 syncEventsSkippedSelf=0 syncEventsSkippedDirtyLocal=0 syncEventsSkippedProtectedLocalCommit=0 syncEventsWatermarkBefore=3078 syncEventsWatermarkAfter=3078 syncEventsTooLarge=false syncEventsGapDetected=false manualFullSyncRequired=false targetedProductsFetched=0 targetedPricesFetched=0 fullCatalogFetch=false fullPriceFetch=false
+86:06-17 19:21:35.547 29586 29604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=auth_signed_in durationMs=1277 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+87:06-17 19:21:35.547 29586 29604 I CatalogCloudSync: tracker busy=false stage=COMPLETED status=COMPLETED
+92:06-17 19:21:35.789 29586 29603 I CatalogCloudSync: tracker busy=true stage=PULL_CATALOG status=RUNNING
+93:06-17 19:21:35.838 29586 29603 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+94:06-17 19:21:35.945 29586 29615 I SyncEventsRealtime: sync_events realtime subscribed
+157:06-17 19:21:36.593 29586 29607 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+160:06-17 19:21:37.351 29586 29608 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+161:06-17 19:21:38.127 29586 29615 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+163:06-17 19:21:38.885 29586 29614 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+165:06-17 19:21:39.640 29586 29614 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+167:06-17 19:21:40.406 29586 29615 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+169:06-17 19:21:41.169 29586 29614 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+170:06-17 19:21:41.924 29586 29615 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+172:06-17 19:21:42.682 29586 29608 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+173:06-17 19:21:43.438 29586 29608 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=sync_busy dirtyHints=1
+174:06-17 19:21:43.796 29586 29608 I CatalogCloudSync: catalog_prune suppliers=1 categories=1 products=1
+175:06-17 19:21:43.799 29586 29608 I CatalogCloudSync: phase_metrics syncDomain=CATALOG phase=PULL_CATALOG remoteSuppliers=61 remoteCategories=30 remoteProducts=19698 remoteActiveProducts=19697 pulledSuppliers=0 pulledCategories=0 pulledProducts=0 prunedProducts=1 prunedSuppliers=1 prunedCategories=1 fetchMs=7092 applyMs=915
+216:06-17 19:21:44.223 29586 29608 I CatalogCloudSync: cycle=catalog_push outcome=skip reason=no_pending_catalog_work originalReason=local_commit_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy debounceMs=500
+323:06-17 19:21:49.261 29586 29602 I CatalogCloudSync: cycle=sync_events_drain outcome=skip reason=sync_busy
+324:06-17 19:21:50.020 29586 29607 I CatalogCloudSync: cycle=sync_events_drain outcome=skip reason=sync_busy
+366:06-17 19:21:50.776 29586 29604 I CatalogCloudSync: cycle=sync_events_drain outcome=skip reason=sync_busy
+367:06-17 19:21:51.533 29586 29607 I CatalogCloudSync: cycle=sync_events_drain outcome=skip reason=sync_busy
+368:06-17 19:21:52.288 29586 29614 I CatalogCloudSync: cycle=sync_events_drain outcome=skip reason=sync_busy
+369:06-17 19:21:53.042 29586 29602 I CatalogCloudSync: cycle=sync_events_drain outcome=skip reason=sync_busy
+371:06-17 19:21:53.793 29586 29602 I CatalogCloudSync: cycle=sync_events_drain outcome=skip reason=sync_busy
+372:06-17 19:21:54.549 29586 29608 I CatalogCloudSync: cycle=sync_events_drain outcome=skip reason=sync_busy
+373:06-17 19:21:55.304 29586 29607 I CatalogCloudSync: cycle=sync_events_drain outcome=skip reason=sync_busy
+374:06-17 19:21:55.893 29586 29604 I CatalogCloudSync: phase_metrics syncDomain=PRICES phase=SYNC_PRICES_PULL mode=paged remotePricesEvaluated=41111 pricesPulled=0 pricesSkippedNoProductRef=0 pageSize=900 pageCount=46
+375:06-17 19:21:55.893 29586 29604 I CatalogCloudSync: sync_phase_durations ok=true syncDomain=MIXED realignMs=null pushSuppliersMs=null pushCategoriesMs=null pushProductsMs=null pullCatalogMs=8010 syncPricesMs=12094 priceSyncFailed=false
+376:06-17 19:21:55.893 29586 29604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=ok reason=auth_signed_in_retry_after_busy_retry_after_busy durationMs=20104 bootstrapRequired=false pullOnly=true productsPulled=0 suppliersPulled=0 categoriesPulled=0 pricesPulled=0 priceSyncFailed=false
+377:06-17 19:21:55.893 29586 29604 I CatalogCloudSync: tracker busy=false stage=COMPLETED status=COMPLETED
+378:06-17 19:21:56.066 29586 29602 I CatalogCloudSync: tracker busy=true stage=SYNC_EVENTS_DRAIN status=RUNNING
+379:06-17 19:21:56.179 29586 29604 I CatalogCloudSync: sync_event_outbox_retry_summary pendingBefore=0 pendingAfter=0 retryLoaded=0 retryEligible=0 retrySkippedMaxAttempts=0 retrySucceeded=0 retryFailed=0 retryDeletedOnSuccess=0
+418:06-17 19:21:56.401 29586 29602 I CatalogCloudSync: sync_events_summary phase=drain syncEventsAvailable=true recordSyncEventAvailable=true realtimeSyncEventsAvailable=true syncEventOutboxPending=0 syncEventOutboxPendingBefore=0 syncEventOutboxPendingAfter=0 syncEventOutboxRetried=0 syncEventOutboxRetryLoaded=0 syncEventOutboxRetryEligible=0 syncEventOutboxRetrySkippedMaxAttempts=0 syncEventOutboxRetrySucceeded=0 syncEventOutboxRetryFailed=0 syncEventOutboxRetryDeletedOnSuccess=0 syncEventOutboxInserted=0 catalogEventEmitted=false priceEventEmitted=false catalogEventOutcome=no_op priceEventOutcome=no_op syncEventsFetched=0 syncEventsProcessed=0 syncEventsSkippedSelf=0 syncEventsSkippedDirtyLocal=0 syncEventsSkippedProtectedLocalCommit=0 syncEventsWatermarkBefore=3078 syncEventsWatermarkAfter=3078 syncEventsTooLarge=false syncEventsGapDetected=false manualFullSyncRequired=false targetedProductsFetched=0 targetedPricesFetched=0 fullCatalogFetch=false fullPriceFetch=false
+419:06-17 19:21:56.402 29586 29602 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=foreground_interval_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy_retry_after_busy durationMs=334 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+420:06-17 19:21:56.402 29586 29602 I CatalogCloudSync: tracker busy=false stage=COMPLETED status=COMPLETED
+512:06-17 19:22:04.265 29586 29608 I CatalogCloudSync: tracker busy=true stage=SYNC_EVENTS_DRAIN status=RUNNING
+513:06-17 19:22:04.367 29586 29608 I CatalogCloudSync: sync_event_outbox_retry_summary pendingBefore=0 pendingAfter=0 retryLoaded=0 retryEligible=0 retrySkippedMaxAttempts=0 retrySucceeded=0 retryFailed=0 retryDeletedOnSuccess=0
+514:06-17 19:22:04.475 29586 29602 I CatalogCloudSync: sync_events_summary phase=drain syncEventsAvailable=true recordSyncEventAvailable=true realtimeSyncEventsAvailable=true syncEventOutboxPending=0 syncEventOutboxPendingBefore=0 syncEventOutboxPendingAfter=0 syncEventOutboxRetried=0 syncEventOutboxRetryLoaded=0 syncEventOutboxRetryEligible=0 syncEventOutboxRetrySkippedMaxAttempts=0 syncEventOutboxRetrySucceeded=0 syncEventOutboxRetryFailed=0 syncEventOutboxRetryDeletedOnSuccess=0 syncEventOutboxInserted=0 catalogEventEmitted=false priceEventEmitted=false catalogEventOutcome=no_op priceEventOutcome=no_op syncEventsFetched=0 syncEventsProcessed=0 syncEventsSkippedSelf=0 syncEventsSkippedDirtyLocal=0 syncEventsSkippedProtectedLocalCommit=0 syncEventsWatermarkBefore=3078 syncEventsWatermarkAfter=3078 syncEventsTooLarge=false syncEventsGapDetected=false manualFullSyncRequired=false targetedProductsFetched=0 targetedPricesFetched=0 fullCatalogFetch=false fullPriceFetch=false
+515:06-17 19:22:04.475 29586 29602 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=foreground_interval durationMs=210 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+516:06-17 19:22:04.476 29586 29602 I CatalogCloudSync: tracker busy=false stage=COMPLETED status=COMPLETED
+585:06-17 19:22:08.820 29586 29601 E TestRunner: failed: test123AndroidSingleCatalogCreatePropagation(com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest)
+586:06-17 19:22:08.825 29586 29601 E TestRunner: ----- begin exception -----
+587:06-17 19:22:08.825 29586 29601 E TestRunner: java.lang.AssertionError: TASK-114 task123 android single catalog create auto push did not complete through EVENT_INCREMENTAL within 35s
+588:06-17 19:22:08.825 29586 29601 E TestRunner: 	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.waitForCatalogAutoPush(Task103CrossPlatformAcceptanceTest.kt:885)
+589:06-17 19:22:08.825 29586 29601 E TestRunner: 	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.access$waitForCatalogAutoPush(Task103CrossPlatformAcceptanceTest.kt:48)
+590:06-17 19:22:08.825 29586 29601 E TestRunner: 	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest$waitForCatalogAutoPush$1.invokeSuspend(Task103CrossPlatformAcceptanceTest.kt:15)
+591:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+592:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:35)
+593:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+594:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+595:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:98)
+596:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)
+597:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)
+598:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)
+599:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.BuildersKt.runBlockingImpl(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+600:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)
+601:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.BuildersKt.runBlockingK(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+602:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)
+603:06-17 19:22:08.825 29586 29601 E TestRunner: 	at kotlinx.coroutines.BuildersKt.runBlockingK$default(dex-id-df75864b5c50bc2db3dedd0812241340d5cae472:1)
+604:06-17 19:22:08.825 29586 29601 E TestRunner: 	at com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest.test123AndroidSingleCatalogCreatePropagation(Task103CrossPlatformAcceptanceTest.kt:357)
+605:06-17 19:22:08.825 29586 29601 E TestRunner: 	at java.lang.reflect.Method.invoke(Native Method)
+606:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+607:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+608:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+609:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+610:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+611:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+612:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+613:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+614:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+615:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+616:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+617:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+618:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+619:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+620:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+621:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+622:06-17 19:22:08.825 29586 29601 E TestRunner: 	at androidx.test.ext.junit.runners.AndroidJUnit4.run(AndroidJUnit4.java:162)
+623:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.Suite.runChild(Suite.java:128)
+624:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.Suite.runChild(Suite.java:27)
+625:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+626:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+627:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+628:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+629:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+630:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+631:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+632:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+633:06-17 19:22:08.825 29586 29601 E TestRunner: 	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+634:06-17 19:22:08.825 29586 29601 E TestRunner: 	at androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)
+635:06-17 19:22:08.825 29586 29601 E TestRunner: 	at androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)
+636:06-17 19:22:08.825 29586 29601 E TestRunner: 	at androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:467)
+637:06-17 19:22:08.825 29586 29601 E TestRunner: 	at android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2594)
+638:06-17 19:22:08.825 29586 29601 E TestRunner: ----- end exception -----
+639:06-17 19:22:08.828 29586 29601 I TestRunner: finished: test123AndroidSingleCatalogCreatePropagation(com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest)
+640:06-17 19:22:08.834 29586 29601 I TestRunner: run finished: 1 tests, 1 failed, 0 ignored

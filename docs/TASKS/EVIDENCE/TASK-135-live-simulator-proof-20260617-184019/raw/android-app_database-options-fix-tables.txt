@@ -1,0 +1,9 @@
+android_metadata            product_remote_refs
+categories                  products
+category_remote_refs        room_master_table
+history_entries             supplier_remote_refs
+history_entry_remote_refs   suppliers
+pending_catalog_tombstones  sync_event_device_state
+product_price_remote_refs   sync_event_outbox
+product_price_summary       sync_event_watermarks
+product_prices

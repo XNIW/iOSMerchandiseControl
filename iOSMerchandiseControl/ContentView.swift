@@ -312,6 +312,12 @@ private struct AppSyncRootHost<Content: View>: View {
             .onReceive(NotificationCenter.default.publisher(for: .localPendingChangesDidChange)) { _ in
                 syncOrchestrator.handleLocalPendingChanges()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .automaticCloudCheckRequested)) { _ in
+                syncOrchestrator.submitForegroundTrigger(
+                    source: .rootForeground,
+                    forceIncremental: true
+                )
+            }
             .onDisappear {
                 syncOrchestrator.stop()
             }

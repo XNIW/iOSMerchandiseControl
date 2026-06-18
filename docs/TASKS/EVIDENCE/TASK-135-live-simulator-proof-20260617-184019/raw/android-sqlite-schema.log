@@ -1,0 +1,23 @@
+.tables
+android_metadata            product_remote_refs
+categories                  products
+category_remote_refs        room_master_table
+history_entries             supplier_remote_refs
+history_entry_remote_refs   suppliers
+pending_catalog_tombstones  sync_event_device_state
+product_price_remote_refs   sync_event_outbox
+product_price_summary       sync_event_watermarks
+product_prices
+products columns
+0|id|INTEGER|1||1
+1|barcode|TEXT|1||0
+2|itemNumber|TEXT|0||0
+3|productName|TEXT|0||0
+4|secondProductName|TEXT|0||0
+5|purchasePrice|REAL|0||0
+6|retailPrice|REAL|0||0
+7|oldPurchasePrice|REAL|0||0
+8|oldRetailPrice|REAL|0||0
+9|supplierId|INTEGER|0||0
+10|categoryId|INTEGER|0||0
+11|stockQuantity|REAL|0||0

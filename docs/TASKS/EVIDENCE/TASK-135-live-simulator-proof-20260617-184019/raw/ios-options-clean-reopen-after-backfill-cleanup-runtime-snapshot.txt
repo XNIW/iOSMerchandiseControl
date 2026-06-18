@@ -1,0 +1,18 @@
+Runtime snapshot: XcodeBuildMCP rs/1, simulator 240F400E-5EFA-486A-9137-FFBBE70F604D, 2026-06-17 19:47 -0400.
+
+Observed texts:
+- Sincronizzazione automatica attiva
+- Nessuna modifica
+- Modifiche locali in attesa, 0
+- Stato database locale
+- Database locale aggiornato
+- Questo dispositivo coincide con il cloud.
+- Prodotti, 19704
+- Fornitori, 66
+- Categorie, 35
+- Storico prezzi, 41131
+- Sessioni cronologia, 39
+
+Forbidden copy absent:
+- Local database needs a cloud check
+- needs a cloud check

@@ -81,10 +81,12 @@ final class OptionsSyncSummaryProviderTests: XCTestCase {
         try await waitForSummary(provider)
         XCTAssertEqual(provider.localDatabaseSummary.products, 1)
         XCTAssertNil(provider.syncCountDriftReport)
+        XCTAssertTrue(provider.isCheckingRemoteCounts)
 
         await remote.release()
         try await waitForDrift(provider)
         XCTAssertEqual(provider.syncCountDriftReport?.mismatches, [.products])
+        XCTAssertFalse(provider.isCheckingRemoteCounts)
     }
 
     private func waitForSummary(_ provider: OptionsSyncSummaryProvider) async throws {

@@ -22,6 +22,7 @@ struct OptionsView: View {
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     private let accountSyncChoiceBindingApplier: AccountSyncChoiceBindingApplier
+    private let requestAutomaticCloudCheck: (() -> Void)?
 
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var supabaseAuthViewModel: SupabaseAuthViewModel
@@ -30,6 +31,8 @@ struct OptionsView: View {
     @ObservedObject private var syncStateStore: SyncStateStore
     @StateObject private var syncSummaryProvider = OptionsSyncSummaryProvider()
     @State private var isAccountDecisionSheetPresented = false
+    @State private var cloudCheckRequestTask: Task<Void, Never>?
+    @State private var lastAutomaticCloudCheckRequestedAt: Date?
 
     @MainActor
     init(
@@ -37,13 +40,15 @@ struct OptionsView: View {
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         syncStateStore: SyncStateStore,
         syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil,
-        accountSyncChoiceBindingApplier: AccountSyncChoiceBindingApplier = AccountSyncChoiceBindingApplier()
+        accountSyncChoiceBindingApplier: AccountSyncChoiceBindingApplier = AccountSyncChoiceBindingApplier(),
+        requestAutomaticCloudCheck: (() -> Void)? = nil
     ) {
         self.remoteCountFetcher = remoteCountFetcher
         self.supabasePullPreviewService = supabasePullPreviewService
         _syncStateStore = ObservedObject(wrappedValue: syncStateStore)
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         self.accountSyncChoiceBindingApplier = accountSyncChoiceBindingApplier
+        self.requestAutomaticCloudCheck = requestAutomaticCloudCheck
     }
 
     // Opzioni tema (equivalenti alle scelte Android)
@@ -175,8 +180,15 @@ struct OptionsView: View {
         .onAppear {
             refreshOptionsSummaryProvider()
         }
+        .onDisappear {
+            cloudCheckRequestTask?.cancel()
+            cloudCheckRequestTask = nil
+        }
         .task(id: supabaseAuthViewModel.sessionInfo?.userID) {
             refreshOptionsSummaryProvider()
+        }
+        .onChange(of: localDatabaseStatus) { _, _ in
+            scheduleAutomaticCloudCheckIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: .historySessionsDidChange)) { _ in
             refreshOptionsSummaryProvider()
@@ -429,98 +441,99 @@ struct OptionsView: View {
         syncSummaryProvider.hasSyncCountDrift
     }
 
+    private var localDatabaseStatus: LocalDatabaseCloudStatus {
+        LocalDatabaseCloudStatusResolver.resolve(
+            LocalDatabaseCloudStatusInput(
+                isSignedIn: supabaseAuthViewModel.isSignedIn,
+                isAuthFailed: cloudAuthHasFailed,
+                isLoading: syncSummaryProvider.isLoading,
+                localSummary: syncSummaryProvider.localDatabaseSummary,
+                pendingCount: syncSummaryProvider.localPendingAttentionCount,
+                baselineStatus: syncSummaryProvider.supabaseBaselineSummary.status,
+                hasAccountDecision: syncSummaryProvider.accountSyncDecision != nil,
+                hasAlignedCounts: syncSummaryProvider.syncCountDriftReport?.isAligned == true,
+                hasCountDrift: hasSyncCountDrift,
+                syncCountDriftCheckFailed: syncSummaryProvider.syncCountDriftCheckFailed,
+                needsRemoteCountVerification: syncSummaryProvider.needsRemoteCountVerification,
+                isCheckingRemoteCounts: syncSummaryProvider.isCheckingRemoteCounts,
+                syncPhase: syncStateStore.state.phase,
+                lastOutcome: syncStateStore.state.lastOutcome
+            )
+        )
+    }
+
     private var localDatabaseTitle: String {
-        if syncSummaryProvider.isLoading {
-            return L("options.localDatabase.loading.title")
-        }
-        if syncSummaryProvider.localDatabaseSummary.isCatalogEmpty {
-            return L("options.localDatabase.empty.title")
-        }
-        if syncSummaryProvider.localPendingAttentionCount > 0 {
-            return L("options.localDatabase.pending.title")
-        }
-        if hasSyncCountDrift {
-            return L("options.localDatabase.reconcile.title")
-        }
-        if syncSummaryProvider.needsRemoteCountVerification {
-            return L("options.localDatabase.needsCheck.title")
-        }
-        switch syncSummaryProvider.supabaseBaselineSummary.status {
-        case .absent:
-            return L("options.localDatabase.needsDownload.title")
-        case .valid:
-            return L("options.localDatabase.ready.title")
-        case .stale, .accountMismatch, .incomplete:
-            return L("options.localDatabase.needsCheck.title")
-        }
+        L(localDatabaseStatus.titleKey)
     }
 
     private var localDatabaseDetail: String {
-        if syncSummaryProvider.isLoading {
-            return L("options.localDatabase.loading.detail")
-        }
-        if syncSummaryProvider.localDatabaseSummary.isCatalogEmpty {
-            return L("options.localDatabase.empty.detail")
-        }
-        if syncSummaryProvider.localPendingAttentionCount > 0 {
-            return L("options.localDatabase.pending.detail")
-        }
-        if hasSyncCountDrift {
-            return L("options.localDatabase.reconcile.detail")
-        }
-        if syncSummaryProvider.needsRemoteCountVerification {
-            return L("options.localDatabase.needsCheck.detail")
-        }
-        switch syncSummaryProvider.supabaseBaselineSummary.status {
-        case .absent:
-            return L("options.localDatabase.needsDownload.detail")
-        case .valid:
-            return L("options.localDatabase.ready.detail")
-        case .stale, .accountMismatch, .incomplete:
-            return L("options.localDatabase.needsCheck.detail")
-        }
+        L(localDatabaseStatus.detailKey)
     }
 
     private var localDatabaseSystemImage: String {
-        if syncSummaryProvider.localDatabaseSummary.isCatalogEmpty {
+        switch localDatabaseStatus {
+        case .empty:
             return "tray"
-        }
-        if hasSyncCountDrift {
-            return "exclamationmark.arrow.triangle.2.circlepath"
-        }
-        if syncSummaryProvider.needsRemoteCountVerification {
-            return "exclamationmark.triangle.fill"
-        }
-        switch syncSummaryProvider.supabaseBaselineSummary.status {
-        case .valid where syncSummaryProvider.localPendingAttentionCount == 0:
+        case .loading, .checkingCloud:
+            return "arrow.triangle.2.circlepath.icloud"
+        case .reconciling:
+            return "arrow.triangle.2.circlepath"
+        case .upToDate:
             return "checkmark.seal.fill"
-        case .absent:
+        case .needsDownload:
             return "arrow.down.circle.fill"
-        case .stale, .accountMismatch, .incomplete:
+        case .offlineCloudCheckPending:
+            return "wifi.slash"
+        case .requiresUserAction:
             return "exclamationmark.triangle.fill"
-        case .valid:
+        case .pendingLocalChanges:
             return "paperplane.circle.fill"
         }
     }
 
     private var localDatabaseColor: Color {
-        if syncSummaryProvider.localDatabaseSummary.isCatalogEmpty {
+        switch localDatabaseStatus {
+        case .empty, .needsDownload:
             return .secondary
-        }
-        if syncSummaryProvider.localPendingAttentionCount > 0 || hasSyncCountDrift {
-            return .orange
-        }
-        if syncSummaryProvider.needsRemoteCountVerification {
-            return .orange
-        }
-        switch syncSummaryProvider.supabaseBaselineSummary.status {
-        case .valid:
+        case .loading:
+            return .secondary
+        case .checkingCloud, .reconciling:
+            return .accentColor
+        case .upToDate:
             return .green
-        case .absent:
-            return .secondary
-        case .stale, .accountMismatch, .incomplete:
+        case .pendingLocalChanges, .offlineCloudCheckPending:
             return .orange
+        case .requiresUserAction:
+            return .red
         }
+    }
+
+    private var shouldRequestAutomaticCloudCheck: Bool {
+        LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(
+            LocalDatabaseCloudStatusInput(
+                isSignedIn: supabaseAuthViewModel.isSignedIn,
+                isAuthFailed: cloudAuthHasFailed,
+                isLoading: syncSummaryProvider.isLoading,
+                localSummary: syncSummaryProvider.localDatabaseSummary,
+                pendingCount: syncSummaryProvider.localPendingAttentionCount,
+                baselineStatus: syncSummaryProvider.supabaseBaselineSummary.status,
+                hasAccountDecision: syncSummaryProvider.accountSyncDecision != nil,
+                hasAlignedCounts: syncSummaryProvider.syncCountDriftReport?.isAligned == true,
+                hasCountDrift: hasSyncCountDrift,
+                syncCountDriftCheckFailed: syncSummaryProvider.syncCountDriftCheckFailed,
+                needsRemoteCountVerification: syncSummaryProvider.needsRemoteCountVerification,
+                isCheckingRemoteCounts: syncSummaryProvider.isCheckingRemoteCounts,
+                syncPhase: syncStateStore.state.phase,
+                lastOutcome: syncStateStore.state.lastOutcome
+            )
+        )
+    }
+
+    private var cloudAuthHasFailed: Bool {
+        if case .failed = supabaseAuthViewModel.state {
+            return true
+        }
+        return false
     }
 
     private func handleAccountSyncChoice(_ choice: AccountSyncUserChoice) {
@@ -550,6 +563,31 @@ struct OptionsView: View {
         )
         if syncSummaryProvider.accountSyncDecision == nil {
             isAccountDecisionSheetPresented = false
+        }
+        scheduleAutomaticCloudCheckIfNeeded()
+    }
+
+    private func scheduleAutomaticCloudCheckIfNeeded() {
+        cloudCheckRequestTask?.cancel()
+        cloudCheckRequestTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            requestAutomaticCloudCheckIfNeeded()
+        }
+    }
+
+    private func requestAutomaticCloudCheckIfNeeded(now: Date = Date()) {
+        guard shouldRequestAutomaticCloudCheck else {
+            return
+        }
+        if let lastAutomaticCloudCheckRequestedAt,
+           now.timeIntervalSince(lastAutomaticCloudCheckRequestedAt) < 2 {
+            return
+        }
+        lastAutomaticCloudCheckRequestedAt = now
+        if let requestAutomaticCloudCheck {
+            requestAutomaticCloudCheck()
+        } else {
+            NotificationCenter.default.post(name: .automaticCloudCheckRequested, object: nil)
         }
     }
 
@@ -605,6 +643,255 @@ struct LocalDatabasePublicSummary: Equatable {
             productPrices: snapshot.productPrices,
             historySessions: snapshot.historySessions
         )
+    }
+}
+
+enum LocalDatabaseCloudStatus: Equatable {
+    case loading
+    case empty
+    case pendingLocalChanges
+    case checkingCloud
+    case reconciling
+    case upToDate
+    case needsDownload
+    case offlineCloudCheckPending
+    case requiresUserAction(LocalDatabaseUserActionReason)
+
+    var titleKey: String {
+        switch self {
+        case .loading:
+            return "options.localDatabase.loading.title"
+        case .empty:
+            return "options.localDatabase.empty.title"
+        case .pendingLocalChanges:
+            return "options.localDatabase.pending.title"
+        case .checkingCloud:
+            return "options.localDatabase.checking.title"
+        case .reconciling:
+            return "options.localDatabase.reconciling.title"
+        case .upToDate:
+            return "options.localDatabase.ready.title"
+        case .needsDownload:
+            return "options.localDatabase.needsDownload.title"
+        case .offlineCloudCheckPending:
+            return "options.localDatabase.offline.title"
+        case .requiresUserAction(let reason):
+            return reason.titleKey
+        }
+    }
+
+    var detailKey: String {
+        switch self {
+        case .loading:
+            return "options.localDatabase.loading.detail"
+        case .empty:
+            return "options.localDatabase.empty.detail"
+        case .pendingLocalChanges:
+            return "options.localDatabase.pending.detail"
+        case .checkingCloud:
+            return "options.localDatabase.checking.detail"
+        case .reconciling:
+            return "options.localDatabase.reconciling.detail"
+        case .upToDate:
+            return "options.localDatabase.ready.detail"
+        case .needsDownload:
+            return "options.localDatabase.needsDownload.detail"
+        case .offlineCloudCheckPending:
+            return "options.localDatabase.offline.detail"
+        case .requiresUserAction(let reason):
+            return reason.detailKey
+        }
+    }
+}
+
+enum LocalDatabaseUserActionReason: Equatable {
+    case signInRequired
+    case cloudPermissionProblem
+    case accountMismatch
+    case localStateUnavailable
+    case requiresChoice
+
+    var titleKey: String {
+        switch self {
+        case .signInRequired:
+            return "options.localDatabase.signInRequired.title"
+        case .cloudPermissionProblem:
+            return "options.localDatabase.permissionProblem.title"
+        case .accountMismatch:
+            return "options.localDatabase.accountMismatch.title"
+        case .localStateUnavailable:
+            return "options.localDatabase.localStateProblem.title"
+        case .requiresChoice:
+            return "options.localDatabase.conflictReview.title"
+        }
+    }
+
+    var detailKey: String {
+        switch self {
+        case .signInRequired:
+            return "options.localDatabase.signInRequired.detail"
+        case .cloudPermissionProblem:
+            return "options.localDatabase.permissionProblem.detail"
+        case .accountMismatch:
+            return "options.localDatabase.accountMismatch.detail"
+        case .localStateUnavailable:
+            return "options.localDatabase.localStateProblem.detail"
+        case .requiresChoice:
+            return "options.localDatabase.conflictReview.detail"
+        }
+    }
+}
+
+struct LocalDatabaseCloudStatusInput: Equatable {
+    var isSignedIn: Bool
+    var isAuthFailed: Bool
+    var isLoading: Bool
+    var localSummary: LocalDatabasePublicSummary
+    var pendingCount: Int
+    var baselineStatus: SupabaseCatalogBaselineDebugStatus
+    var hasAccountDecision: Bool
+    var hasAlignedCounts: Bool
+    var hasCountDrift: Bool
+    var syncCountDriftCheckFailed: Bool
+    var needsRemoteCountVerification: Bool
+    var isCheckingRemoteCounts: Bool
+    var syncPhase: SyncPhase
+    var lastOutcome: SyncOutcome?
+}
+
+enum LocalDatabaseCloudStatusResolver {
+    static func resolve(_ input: LocalDatabaseCloudStatusInput) -> LocalDatabaseCloudStatus {
+        if input.isLoading {
+            return .loading
+        }
+        if input.localSummary.isCatalogEmpty {
+            return .empty
+        }
+        if !input.isSignedIn {
+            return .requiresUserAction(.signInRequired)
+        }
+        if input.isAuthFailed {
+            return .requiresUserAction(.cloudPermissionProblem)
+        }
+        if input.isNetworkBlocked {
+            return .offlineCloudCheckPending
+        }
+        if input.hasAccountDecision {
+            return .requiresUserAction(.requiresChoice)
+        }
+        if input.baselineStatus == .accountMismatch {
+            return .requiresUserAction(.accountMismatch)
+        }
+        if let blockingReason = input.blockingReason {
+            return .requiresUserAction(userActionReason(for: blockingReason))
+        }
+        if input.isAutomaticWorkActive {
+            return input.syncPhase == .checking ? .checkingCloud : .reconciling
+        }
+        if input.syncPhase == .failed || input.lastOutcome == .failed || input.syncCountDriftCheckFailed {
+            return .requiresUserAction(.cloudPermissionProblem)
+        }
+        if input.pendingCount > 0 {
+            return .pendingLocalChanges
+        }
+        if input.hasCountDrift {
+            return .reconciling
+        }
+        if input.isCheckingRemoteCounts {
+            return .checkingCloud
+        }
+        if input.baselineStatus == .valid
+            && (input.hasAlignedCounts
+                || input.lastOutcome == .noWork
+                || input.lastOutcome == .succeeded
+                || !input.needsRemoteCountVerification) {
+            return .upToDate
+        }
+        if input.baselineStatus == .stale || input.baselineStatus == .incomplete {
+            return .reconciling
+        }
+        if input.needsRemoteCountVerification {
+            return .checkingCloud
+        }
+
+        switch input.baselineStatus {
+        case .valid:
+            return .upToDate
+        case .absent:
+            return .checkingCloud
+        case .stale, .incomplete:
+            return .reconciling
+        case .accountMismatch:
+            return .requiresUserAction(.accountMismatch)
+        }
+    }
+
+    static func shouldRequestAutomaticCloudCheck(_ input: LocalDatabaseCloudStatusInput) -> Bool {
+        guard input.isSignedIn,
+              !input.isAuthFailed,
+              !input.localSummary.isCatalogEmpty,
+              input.pendingCount == 0,
+              !input.hasAccountDecision,
+              !input.isNetworkBlocked,
+              !input.isAutomaticWorkActive,
+              input.blockingReason == nil,
+              input.syncPhase != .failed,
+              input.lastOutcome != .failed,
+              !input.isCheckingRemoteCounts,
+              !input.syncCountDriftCheckFailed else {
+            return false
+        }
+        if input.baselineStatus == .valid && (input.hasAlignedCounts || input.lastOutcome == .noWork || input.lastOutcome == .succeeded) {
+            return false
+        }
+        if input.hasCountDrift {
+            return true
+        }
+        switch input.baselineStatus {
+        case .absent, .stale, .incomplete:
+            return true
+        case .valid, .accountMismatch:
+            return false
+        }
+    }
+
+    private static func userActionReason(for blockReason: SyncBlockReason) -> LocalDatabaseUserActionReason {
+        switch blockReason {
+        case .authRequired:
+            return .signInRequired
+        case .networkUnavailable:
+            return .cloudPermissionProblem
+        case .accountDecisionRequired:
+            return .requiresChoice
+        case .localStateUnavailable:
+            return .localStateUnavailable
+        }
+    }
+}
+
+private extension LocalDatabaseCloudStatusInput {
+    var isAutomaticWorkActive: Bool {
+        syncPhase.isAutomaticWorkActive
+    }
+
+    var isNetworkBlocked: Bool {
+        if case .blocked(.networkUnavailable) = syncPhase {
+            return true
+        }
+        if case .blocked(.networkUnavailable)? = lastOutcome {
+            return true
+        }
+        return false
+    }
+
+    var blockingReason: SyncBlockReason? {
+        if case .blocked(let reason) = syncPhase {
+            return reason == .networkUnavailable ? nil : reason
+        }
+        if case .blocked(let reason)? = lastOutcome {
+            return reason == .networkUnavailable ? nil : reason
+        }
+        return nil
     }
 }
 

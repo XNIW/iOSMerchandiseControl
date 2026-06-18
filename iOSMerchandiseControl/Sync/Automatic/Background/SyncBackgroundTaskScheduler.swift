@@ -157,10 +157,12 @@ nonisolated enum SyncBackgroundTaskRunner {
                     recorder: recorder
                 )
             )
-            let decisionInputProvider = SyncDecisionInputProvider(
-                modelContainer: modelContainer,
-                initialNetworkStatus: .satisfied
-            )
+            let decisionInputProvider = await MainActor.run {
+                SyncDecisionInputProvider(
+                    modelContainer: modelContainer,
+                    initialNetworkStatus: .satisfied
+                )
+            }
             let snapshot = await decisionInputProvider.makeSnapshot(
                 triggerSource: .backgroundRefresh,
                 isAuthenticated: true,

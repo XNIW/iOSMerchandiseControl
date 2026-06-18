@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.1",
+  "taskId": "TASK-135",
+  "sources": {
+    "iosToAndroid": "fixture-presence-ios-cross-supabase.json",
+    "androidToIos": "fixture-presence-android-cross-supabase.json"
+  },
+  "rows": [
+    {
+      "id": "19788d6a-7b00-44e0-b904-9252b0bbdec3",
+      "key": "TASK135_IOS_CROSS_20260617_193032_SINGLE_CAT_IOS",
+      "table_name": "categories",
+      "value": null
+    },
+    {
+      "id": "e685108e-c9e0-447c-abae-83c5238d1c2b",
+      "key": "TASK135_IOS_CROSS_20260617_193032_SINGLE_IOS_CREATE",
+      "table_name": "products",
+      "value": "TASK135_IOS_CROSS_20260617_193032_SINGLE_IOS_PRODUCT_CREATE"
+    },
+    {
+      "id": "c270913e-4b25-4498-91fc-744b3aa4d3e1",
+      "key": "TASK135_IOS_CROSS_20260617_193032_SINGLE_SUP_IOS",
+      "table_name": "suppliers",
+      "value": null
+    },
+    {
+      "id": "78cb80d7-627a-47ba-93b3-811482af3021",
+      "key": "TASK135_ANDROID_CROSS_20260617_193207_SINGLE_CAT_ANDROID",
+      "table_name": "categories",
+      "value": null
+    },
+    {
+      "id": "f48d4174-4d95-4823-9847-3c4f7a698940",
+      "key": "TASK135_ANDROID_CROSS_20260617_193207_SINGLE_ANDROID_CREATE",
+      "table_name": "products",
+      "value": "TASK135_ANDROID_CROSS_20260617_193207_SINGLE_ANDROID_PRODUCT_CREATE"
+    },
+    {
+      "id": "59b7c9ef-b98c-4e3f-bc9f-18e087051e70",
+      "key": "TASK135_ANDROID_CROSS_20260617_193207_SINGLE_SUP_ANDROID",
+      "table_name": "suppliers",
+      "value": null
+    }
+  ]
+}

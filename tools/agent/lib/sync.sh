@@ -396,6 +396,7 @@ SELECT
   (SELECT count(*) FROM supplier_remote_refs WHERE localChangeRevision > lastSyncedLocalRevision) +
   (SELECT count(*) FROM category_remote_refs WHERE localChangeRevision > lastSyncedLocalRevision) +
   (SELECT count(*) FROM product_remote_refs WHERE localChangeRevision > lastSyncedLocalRevision) +
+  (SELECT count(*) FROM product_prices pp LEFT JOIN product_price_remote_refs r ON r.productPriceId = pp.id WHERE r.remoteId IS NULL) +
   (SELECT count(*) FROM history_entry_remote_refs WHERE localChangeRevision > lastSyncedLocalRevision) +
   (SELECT count(*) FROM pending_catalog_tombstones)
 """

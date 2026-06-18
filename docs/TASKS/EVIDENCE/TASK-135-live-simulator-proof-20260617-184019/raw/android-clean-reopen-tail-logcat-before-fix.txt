@@ -1,0 +1,300 @@
+06-17 19:40:56.436   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002e/dl-Appsearch.optional_261733100400.apk has no usable artifacts
+06-17 19:40:56.436   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000030/dl-MlkitOcrCommon.optional_261933100400.apk has no usable artifacts
+06-17 19:40:56.436   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000015/dl-PlayCloudSearch.optional_261464100000.apk has no usable artifacts
+06-17 19:40:56.436   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001e/dl-Appsearch.optional_261631100400.apk has no usable artifacts
+06-17 19:40:56.436   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000013/dl-MlkitOcrCommon.optional_261464100400.apk has no usable artifacts
+06-17 19:40:56.436   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000032/dl-MlkitBarcodeUi.optional_261933100400.apk has no usable artifacts
+06-17 19:40:56.436   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/754BEC187BC4F26BBC31300F93DBF9B7506C1861/the.apk has no usable artifacts
+06-17 19:40:56.436   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000007/MeasurementDynamite.apk has no usable artifacts
+06-17 19:40:56.436   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002c/dl-IdentityCredentialsPlatform.optional_261733100400.apk has no usable artifacts
+06-17 19:40:56.436   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002b/dl-PlayCloudSearch.optional_261733100000.apk has no usable artifacts
+06-17 19:40:56.436   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000033/dl-PlayCloudSearch.optional_261933100000.apk has no usable artifacts
+06-17 19:40:56.436   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001c/dl-VisionOcr.optional_261631100000.apk has no usable artifacts
+06-17 19:40:56.436   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000011/dl-MlkitBarcodeUi.optional_261464100400.apk has no usable artifacts
+06-17 19:40:56.437   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000049/dl-VisionOcr.optional_262333100000.apk has no usable artifacts
+06-17 19:40:56.437   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+06-17 19:40:56.437   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000010/dl-TfliteDynamiteDynamite.integ_260580502100400.apk has no usable artifacts
+06-17 19:40:56.437   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/9D5BCED7935D64431BF672B8BBD597199833CA19/the.apk has no usable artifacts
+06-17 19:40:56.437   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000009/dl-TfliteDynamiteDynamite.integ_252130102100400.apk has no usable artifacts
+06-17 19:40:56.437   727  3904 I artd    : GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/5833371D1ACC412507A92815B074897510CCCEDD/oat/arm64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:40:56.437   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001b/dl-PlayCloudSearch.optional_261631100000.apk has no usable artifacts
+06-17 19:40:56.438   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000027/dl-IdentityCredentialsPlatform.optional_261631100400.apk has no usable artifacts
+06-17 19:40:56.438   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/86153AA318A3F208A8C511836585279D8C7E8D94/the.apk has no usable artifacts
+06-17 19:40:56.438   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001d/dl-IdentityCredentialsPlatform.optional_261631100400.apk has no usable artifacts
+06-17 19:40:56.438   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002d/dl-VisionOcr.optional_261733100000.apk has no usable artifacts
+06-17 19:40:56.438   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000e/dl-PlayCloudSearch.optional_242335100000.apk has no usable artifacts
+06-17 19:40:56.438   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000004a/dl-Appsearch.optional_262333100400.apk has no usable artifacts
+06-17 19:40:56.438   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001a/dl-MlkitBarcodeUi.optional_261631100400.apk has no usable artifacts
+06-17 19:40:56.439   727 25035 I artd    : GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/10FF5D5C646CC9E2F04BD9D73A072BD012EF1A7A/oat/arm64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:40:56.439   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000036/dl-Appsearch.optional_261933100400.apk has no usable artifacts
+06-17 19:40:56.439   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/21A90BF1C1C388089206DCE215FB60D7882BFA18/the.apk has no usable artifacts
+06-17 19:40:56.439   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001f/dl-IdentityCredentialsPlacebo.optional_261631100400.apk has no usable artifacts
+06-17 19:40:56.439   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000034/dl-IdentityCredentialsPlatform.optional_261933100400.apk has no usable artifacts
+06-17 19:40:56.439   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000019/dl-MlkitOcrCommon.optional_261631100400.apk has no usable artifacts
+06-17 19:40:56.439   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/A8F89F306FD1BA172E06F6F2B9F79826D0309BB6/the.apk has no usable artifacts
+06-17 19:40:56.439   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/707FFD883BF2A7896692338F9625CA52336E933B/the.apk has no usable artifacts
+06-17 19:40:57.303  1144 31729 I NearbyMediums: No BLE Fast/GATT advertisements found in the latest cycle.
+06-17 19:40:57.303  1144 31729 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing, NearbyConnections.TxAdvertisement}
+06-17 19:40:57.322   851   851 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS
+06-17 19:40:59.008   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:40:59.014   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:40:59.018   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:40:59.067  1144  1144 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.scheduler.ACTION_PROXY_SCHEDULE_SINGLE_USER dat=chimera-action:/... cmp=com.google.android.gms/.chimera.PersistentSingleUserInternalApiService }
+06-17 19:40:59.497   605  2704 W IPCThreadState: Sending oneway calls to frozen process.
+06-17 19:40:59.547   889  1015 D EGL_emulation: app_time_stats: avg=29988.44ms min=29988.44ms max=29988.44ms count=1
+06-17 19:41:00.004  1403  1601 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+06-17 19:41:00.004  1403  1601 I AiAiEcho: EchoTargets:
+06-17 19:41:00.004  1403  1601 I AiAiEcho: Filtered by AiAi flag check:
+06-17 19:41:00.004  1403  1601 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+06-17 19:41:00.004  1403  1601 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+06-17 19:41:00.005  1403  1601 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+06-17 19:41:00.005  1403  1601 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+06-17 19:41:00.005  1403  1601 I AiAiEcho: EchoTargets:
+06-17 19:41:00.005  1403  1601 I AiAiEcho: Filtered by AiAi flag check:
+06-17 19:41:00.005  1403  1601 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+06-17 19:41:00.005  1403  1601 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+06-17 19:41:00.005  1403  1601 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+06-17 19:41:00.005  1403  1601 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+06-17 19:41:00.005  1403  1601 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+06-17 19:41:00.005   889   889 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+06-17 19:41:00.006  1200  1200 D SsBaseTemplateCard: No text view can be set up
+06-17 19:41:00.006  1200  1200 D SsBaseTemplateCard: Passed-in item info is null
+06-17 19:41:00.006  1200  1200 D SsBaseTemplateCard: Passed-in item info is null
+06-17 19:41:00.006  1200  1200 D SsBaseTemplateCard: Passed-in item info is null
+06-17 19:41:00.006  1200  1200 I SsBaseTemplateCard: Secondary card pane is null
+06-17 19:41:01.862   889   889 D ZenModeController: Added callback class com.android.systemui.qs.tiles.DndTile$3
+06-17 19:41:01.868   889   889 D ZenModeController: Removed callback class com.android.systemui.qs.tiles.DndTile$3
+06-17 19:41:02.016   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:02.707 31366 31389 I CatalogCloudSync: tracker busy=true stage=SYNC_EVENTS_DRAIN status=RUNNING
+06-17 19:41:02.840 31366 31389 I CatalogCloudSync: sync_event_outbox_retry_summary pendingBefore=0 pendingAfter=0 retryLoaded=0 retryEligible=0 retrySkippedMaxAttempts=0 retrySucceeded=0 retryFailed=0 retryDeletedOnSuccess=0
+06-17 19:41:03.006 31366 31389 I CatalogCloudSync: sync_events_summary phase=drain syncEventsAvailable=true recordSyncEventAvailable=true realtimeSyncEventsAvailable=true syncEventOutboxPending=0 syncEventOutboxPendingBefore=0 syncEventOutboxPendingAfter=0 syncEventOutboxRetried=0 syncEventOutboxRetryLoaded=0 syncEventOutboxRetryEligible=0 syncEventOutboxRetrySkippedMaxAttempts=0 syncEventOutboxRetrySucceeded=0 syncEventOutboxRetryFailed=0 syncEventOutboxRetryDeletedOnSuccess=0 syncEventOutboxInserted=0 catalogEventEmitted=false priceEventEmitted=false catalogEventOutcome=no_op priceEventOutcome=no_op syncEventsFetched=0 syncEventsProcessed=0 syncEventsSkippedSelf=0 syncEventsSkippedDirtyLocal=0 syncEventsSkippedProtectedLocalCommit=0 syncEventsWatermarkBefore=3100 syncEventsWatermarkAfter=3100 syncEventsTooLarge=false syncEventsGapDetected=false manualFullSyncRequired=false targetedProductsFetched=0 targetedPricesFetched=0 fullCatalogFetch=false fullPriceFetch=false
+06-17 19:41:03.006 31366 31389 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=foreground_interval durationMs=298 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-17 19:41:03.007 31366 31389 I CatalogCloudSync: tracker busy=false stage=COMPLETED status=COMPLETED
+06-17 19:41:05.022   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:05.026   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:41:05.034   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:41:05.516   851   851 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS
+06-17 19:41:06.418   465   465 I adbd    : adbd service requested 'shell,v2,raw:dumpsys package com.google.android.gms'
+06-17 19:41:06.468   727  3904 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/base.odex) is kOatBootImageOutOfDate with filter 'speed-profile' executable 'false': Image checksum mismatch, expected i;28/6d8ebc32 to start with i;28/fd0aebae
+06-17 19:41:06.469   727  3904 I artd    : GetBestInfo: vdex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/base.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.470   727 25035 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_AdsDynamite_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.470   727  3904 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/split_CronetDynamite_installtime.odex) is kOatBootImageOutOfDate with filter 'speed-profile' executable 'false': Image checksum mismatch, expected i;28/6d8ebc32 to start with i;28/fd0aebae
+06-17 19:41:06.471   727  3904 I artd    : GetBestInfo: vdex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/split_CronetDynamite_installtime.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.471   727  3904 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_DynamiteLoader_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.471   727 25035 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_DynamiteModulesA_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.472   727  3904 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_DynamiteModulesC_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.472   727 25035 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_GoogleCertificates_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.473   727  3904 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_MapsDynamite_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.473   727 25035 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_MeasurementDynamite_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002a/dl-MlkitBarcodeUi.optional_261733100400.apk has no usable artifacts
+06-17 19:41:06.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000035/dl-VisionOcr.optional_261933100000.apk has no usable artifacts
+06-17 19:41:06.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000001/CronetDynamite.uncompressed.apk has no usable artifacts
+06-17 19:41:06.474   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000047/dl-PlayCloudSearch.optional_262333100000.apk has no usable artifacts
+06-17 19:41:06.474   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000016/dl-IdentityCredentialsPlatform.optional_261464100400.apk has no usable artifacts
+06-17 19:41:06.474   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000046/dl-MlkitOcrCommon.optional_262333100400.apk has no usable artifacts
+06-17 19:41:06.474   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000014/dl-VisionOcr.optional_261464100000.apk has no usable artifacts
+06-17 19:41:06.474   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000017/dl-Appsearch.optional_261464100400.apk has no usable artifacts
+06-17 19:41:06.474   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000004b/dl-MlkitBarcodeUi.optional_262333100400.apk has no usable artifacts
+06-17 19:41:06.475   727 25035 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/87E7746227FF4E457A2EB56043B95E41006DE49F/the.apk has no usable artifacts
+06-17 19:41:06.475   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000048/dl-IdentityCredentialsPlatform.optional_262333100400.apk has no usable artifacts
+06-17 19:41:06.476   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000a/dl-MlkitBarcodeUi.optional_242335100400.apk has no usable artifacts
+06-17 19:41:06.476   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000029/dl-MlkitOcrCommon.optional_261733100400.apk has no usable artifacts
+06-17 19:41:06.476   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000002/DynamiteLoader.uncompressed.apk has no usable artifacts
+06-17 19:41:06.476   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002e/dl-Appsearch.optional_261733100400.apk has no usable artifacts
+06-17 19:41:06.476   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000030/dl-MlkitOcrCommon.optional_261933100400.apk has no usable artifacts
+06-17 19:41:06.476   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000015/dl-PlayCloudSearch.optional_261464100000.apk has no usable artifacts
+06-17 19:41:06.476   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001e/dl-Appsearch.optional_261631100400.apk has no usable artifacts
+06-17 19:41:06.476   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000013/dl-MlkitOcrCommon.optional_261464100400.apk has no usable artifacts
+06-17 19:41:06.476   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000032/dl-MlkitBarcodeUi.optional_261933100400.apk has no usable artifacts
+06-17 19:41:06.476   727 25035 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/754BEC187BC4F26BBC31300F93DBF9B7506C1861/the.apk has no usable artifacts
+06-17 19:41:06.476   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000007/MeasurementDynamite.apk has no usable artifacts
+06-17 19:41:06.476   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002c/dl-IdentityCredentialsPlatform.optional_261733100400.apk has no usable artifacts
+06-17 19:41:06.476   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002b/dl-PlayCloudSearch.optional_261733100000.apk has no usable artifacts
+06-17 19:41:06.476   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000033/dl-PlayCloudSearch.optional_261933100000.apk has no usable artifacts
+06-17 19:41:06.476   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001c/dl-VisionOcr.optional_261631100000.apk has no usable artifacts
+06-17 19:41:06.476   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000011/dl-MlkitBarcodeUi.optional_261464100400.apk has no usable artifacts
+06-17 19:41:06.476   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000049/dl-VisionOcr.optional_262333100000.apk has no usable artifacts
+06-17 19:41:06.476   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+06-17 19:41:06.477   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000010/dl-TfliteDynamiteDynamite.integ_260580502100400.apk has no usable artifacts
+06-17 19:41:06.477   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/9D5BCED7935D64431BF672B8BBD597199833CA19/the.apk has no usable artifacts
+06-17 19:41:06.477   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000009/dl-TfliteDynamiteDynamite.integ_252130102100400.apk has no usable artifacts
+06-17 19:41:06.477   727   733 I artd    : GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/5833371D1ACC412507A92815B074897510CCCEDD/oat/arm64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.477   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001b/dl-PlayCloudSearch.optional_261631100000.apk has no usable artifacts
+06-17 19:41:06.477   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000027/dl-IdentityCredentialsPlatform.optional_261631100400.apk has no usable artifacts
+06-17 19:41:06.477   727 25035 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/86153AA318A3F208A8C511836585279D8C7E8D94/the.apk has no usable artifacts
+06-17 19:41:06.477   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001d/dl-IdentityCredentialsPlatform.optional_261631100400.apk has no usable artifacts
+06-17 19:41:06.478   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002d/dl-VisionOcr.optional_261733100000.apk has no usable artifacts
+06-17 19:41:06.478   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000e/dl-PlayCloudSearch.optional_242335100000.apk has no usable artifacts
+06-17 19:41:06.478   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000004a/dl-Appsearch.optional_262333100400.apk has no usable artifacts
+06-17 19:41:06.478   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001a/dl-MlkitBarcodeUi.optional_261631100400.apk has no usable artifacts
+06-17 19:41:06.479   727 25035 I artd    : GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/10FF5D5C646CC9E2F04BD9D73A072BD012EF1A7A/oat/arm64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:06.479   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000036/dl-Appsearch.optional_261933100400.apk has no usable artifacts
+06-17 19:41:06.479   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/21A90BF1C1C388089206DCE215FB60D7882BFA18/the.apk has no usable artifacts
+06-17 19:41:06.479   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001f/dl-IdentityCredentialsPlacebo.optional_261631100400.apk has no usable artifacts
+06-17 19:41:06.479   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000034/dl-IdentityCredentialsPlatform.optional_261933100400.apk has no usable artifacts
+06-17 19:41:06.479   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000019/dl-MlkitOcrCommon.optional_261631100400.apk has no usable artifacts
+06-17 19:41:06.479   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/A8F89F306FD1BA172E06F6F2B9F79826D0309BB6/the.apk has no usable artifacts
+06-17 19:41:06.479   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/707FFD883BF2A7896692338F9625CA52336E933B/the.apk has no usable artifacts
+06-17 19:41:07.304  1144 31729 I NearbyMediums: No BLE Fast/GATT advertisements found in the latest cycle.
+06-17 19:41:07.304  1144 31729 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing, NearbyConnections.TxAdvertisement}
+06-17 19:41:08.031   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:09.500   605  1922 W IPCThreadState: Sending oneway calls to frozen process.
+06-17 19:41:11.035   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:11.038   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:41:11.044   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:41:13.449   851   851 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS
+06-17 19:41:14.038   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:16.416   465   465 I adbd    : adbd service requested 'shell,v2,raw:dumpsys package com.google.android.gms'
+06-17 19:41:16.466   727   733 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/base.odex) is kOatBootImageOutOfDate with filter 'speed-profile' executable 'false': Image checksum mismatch, expected i;28/6d8ebc32 to start with i;28/fd0aebae
+06-17 19:41:16.467   727   733 I artd    : GetBestInfo: vdex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/base.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.467   727   733 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_AdsDynamite_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.468   727 25035 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/split_CronetDynamite_installtime.odex) is kOatBootImageOutOfDate with filter 'speed-profile' executable 'false': Image checksum mismatch, expected i;28/6d8ebc32 to start with i;28/fd0aebae
+06-17 19:41:16.468   727 25035 I artd    : GetBestInfo: vdex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/split_CronetDynamite_installtime.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.468   727   733 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_DynamiteLoader_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.469   727 25035 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_DynamiteModulesA_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.469   727   733 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_DynamiteModulesC_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.470   727 25035 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_GoogleCertificates_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.470   727   733 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_MapsDynamite_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.471   727 25035 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_MeasurementDynamite_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.471   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002a/dl-MlkitBarcodeUi.optional_261733100400.apk has no usable artifacts
+06-17 19:41:16.471   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000035/dl-VisionOcr.optional_261933100000.apk has no usable artifacts
+06-17 19:41:16.471   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000001/CronetDynamite.uncompressed.apk has no usable artifacts
+06-17 19:41:16.471   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000047/dl-PlayCloudSearch.optional_262333100000.apk has no usable artifacts
+06-17 19:41:16.471   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000016/dl-IdentityCredentialsPlatform.optional_261464100400.apk has no usable artifacts
+06-17 19:41:16.471   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000046/dl-MlkitOcrCommon.optional_262333100400.apk has no usable artifacts
+06-17 19:41:16.471   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000014/dl-VisionOcr.optional_261464100000.apk has no usable artifacts
+06-17 19:41:16.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000017/dl-Appsearch.optional_261464100400.apk has no usable artifacts
+06-17 19:41:16.472   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000004b/dl-MlkitBarcodeUi.optional_262333100400.apk has no usable artifacts
+06-17 19:41:16.472   727 25035 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/87E7746227FF4E457A2EB56043B95E41006DE49F/the.apk has no usable artifacts
+06-17 19:41:16.472   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000048/dl-IdentityCredentialsPlatform.optional_262333100400.apk has no usable artifacts
+06-17 19:41:16.473   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000a/dl-MlkitBarcodeUi.optional_242335100400.apk has no usable artifacts
+06-17 19:41:16.473   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000029/dl-MlkitOcrCommon.optional_261733100400.apk has no usable artifacts
+06-17 19:41:16.473   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000002/DynamiteLoader.uncompressed.apk has no usable artifacts
+06-17 19:41:16.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002e/dl-Appsearch.optional_261733100400.apk has no usable artifacts
+06-17 19:41:16.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000030/dl-MlkitOcrCommon.optional_261933100400.apk has no usable artifacts
+06-17 19:41:16.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000015/dl-PlayCloudSearch.optional_261464100000.apk has no usable artifacts
+06-17 19:41:16.473   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001e/dl-Appsearch.optional_261631100400.apk has no usable artifacts
+06-17 19:41:16.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000013/dl-MlkitOcrCommon.optional_261464100400.apk has no usable artifacts
+06-17 19:41:16.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000032/dl-MlkitBarcodeUi.optional_261933100400.apk has no usable artifacts
+06-17 19:41:16.473   727  3904 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/754BEC187BC4F26BBC31300F93DBF9B7506C1861/the.apk has no usable artifacts
+06-17 19:41:16.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000007/MeasurementDynamite.apk has no usable artifacts
+06-17 19:41:16.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002c/dl-IdentityCredentialsPlatform.optional_261733100400.apk has no usable artifacts
+06-17 19:41:16.473   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002b/dl-PlayCloudSearch.optional_261733100000.apk has no usable artifacts
+06-17 19:41:16.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000033/dl-PlayCloudSearch.optional_261933100000.apk has no usable artifacts
+06-17 19:41:16.473   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001c/dl-VisionOcr.optional_261631100000.apk has no usable artifacts
+06-17 19:41:16.473   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000011/dl-MlkitBarcodeUi.optional_261464100400.apk has no usable artifacts
+06-17 19:41:16.474   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000049/dl-VisionOcr.optional_262333100000.apk has no usable artifacts
+06-17 19:41:16.474   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+06-17 19:41:16.474   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000010/dl-TfliteDynamiteDynamite.integ_260580502100400.apk has no usable artifacts
+06-17 19:41:16.474   727 25035 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/9D5BCED7935D64431BF672B8BBD597199833CA19/the.apk has no usable artifacts
+06-17 19:41:16.474   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000009/dl-TfliteDynamiteDynamite.integ_252130102100400.apk has no usable artifacts
+06-17 19:41:16.475   727  3904 I artd    : GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/5833371D1ACC412507A92815B074897510CCCEDD/oat/arm64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.475   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001b/dl-PlayCloudSearch.optional_261631100000.apk has no usable artifacts
+06-17 19:41:16.475   727 20072 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000027/dl-IdentityCredentialsPlatform.optional_261631100400.apk has no usable artifacts
+06-17 19:41:16.475   727 25034 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/86153AA318A3F208A8C511836585279D8C7E8D94/the.apk has no usable artifacts
+06-17 19:41:16.475   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001d/dl-IdentityCredentialsPlatform.optional_261631100400.apk has no usable artifacts
+06-17 19:41:16.475   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002d/dl-VisionOcr.optional_261733100000.apk has no usable artifacts
+06-17 19:41:16.475   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000e/dl-PlayCloudSearch.optional_242335100000.apk has no usable artifacts
+06-17 19:41:16.476   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000004a/dl-Appsearch.optional_262333100400.apk has no usable artifacts
+06-17 19:41:16.476   727  3904 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001a/dl-MlkitBarcodeUi.optional_261631100400.apk has no usable artifacts
+06-17 19:41:16.476   727 25035 I artd    : GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/10FF5D5C646CC9E2F04BD9D73A072BD012EF1A7A/oat/arm64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:16.476   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000036/dl-Appsearch.optional_261933100400.apk has no usable artifacts
+06-17 19:41:16.476   727   733 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/21A90BF1C1C388089206DCE215FB60D7882BFA18/the.apk has no usable artifacts
+06-17 19:41:16.476   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001f/dl-IdentityCredentialsPlacebo.optional_261631100400.apk has no usable artifacts
+06-17 19:41:16.476   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000034/dl-IdentityCredentialsPlatform.optional_261933100400.apk has no usable artifacts
+06-17 19:41:16.476   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000019/dl-MlkitOcrCommon.optional_261631100400.apk has no usable artifacts
+06-17 19:41:16.476   727 25034 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/A8F89F306FD1BA172E06F6F2B9F79826D0309BB6/the.apk has no usable artifacts
+06-17 19:41:16.476   727 25034 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/707FFD883BF2A7896692338F9625CA52336E933B/the.apk has no usable artifacts
+06-17 19:41:17.045   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:17.047   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:41:17.050   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:41:17.312  1144 31729 I NearbyMediums: No BLE Fast/GATT advertisements found in the latest cycle.
+06-17 19:41:17.312  1144 31729 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing, NearbyConnections.TxAdvertisement}
+06-17 19:41:17.707 31366 31381 I CatalogCloudSync: tracker busy=true stage=SYNC_EVENTS_DRAIN status=RUNNING
+06-17 19:41:17.826 31366 31389 I CatalogCloudSync: sync_event_outbox_retry_summary pendingBefore=0 pendingAfter=0 retryLoaded=0 retryEligible=0 retrySkippedMaxAttempts=0 retrySucceeded=0 retryFailed=0 retryDeletedOnSuccess=0
+06-17 19:41:17.942 31366 31382 I CatalogCloudSync: sync_events_summary phase=drain syncEventsAvailable=true recordSyncEventAvailable=true realtimeSyncEventsAvailable=true syncEventOutboxPending=0 syncEventOutboxPendingBefore=0 syncEventOutboxPendingAfter=0 syncEventOutboxRetried=0 syncEventOutboxRetryLoaded=0 syncEventOutboxRetryEligible=0 syncEventOutboxRetrySkippedMaxAttempts=0 syncEventOutboxRetrySucceeded=0 syncEventOutboxRetryFailed=0 syncEventOutboxRetryDeletedOnSuccess=0 syncEventOutboxInserted=0 catalogEventEmitted=false priceEventEmitted=false catalogEventOutcome=no_op priceEventOutcome=no_op syncEventsFetched=0 syncEventsProcessed=0 syncEventsSkippedSelf=0 syncEventsSkippedDirtyLocal=0 syncEventsSkippedProtectedLocalCommit=0 syncEventsWatermarkBefore=3100 syncEventsWatermarkAfter=3100 syncEventsTooLarge=false syncEventsGapDetected=false manualFullSyncRequired=false targetedProductsFetched=0 targetedPricesFetched=0 fullCatalogFetch=false fullPriceFetch=false
+06-17 19:41:17.943 31366 31382 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=foreground_interval durationMs=232 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-17 19:41:17.944 31366 31382 I CatalogCloudSync: tracker busy=false stage=COMPLETED status=COMPLETED
+06-17 19:41:19.504   605  2704 W IPCThreadState: Sending oneway calls to frozen process.
+06-17 19:41:20.051   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:21.386   851   851 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS
+06-17 19:41:23.054   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:23.057   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:41:23.074   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:41:26.064   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:26.222   605  2704 D WifiNl80211Manager: Scan result ready event
+06-17 19:41:26.222   605  2704 D WifiNative: Scan result ready event
+06-17 19:41:26.223  1144  1650 I WifiScanner: onFullResults
+06-17 19:41:26.223  1144  1650 I WifiScanner: onFullResults
+06-17 19:41:26.224   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:26.416   465   465 I adbd    : adbd service requested 'shell,v2,raw:dumpsys package com.google.android.gms'
+06-17 19:41:26.464   727 25035 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/base.odex) is kOatBootImageOutOfDate with filter 'speed-profile' executable 'false': Image checksum mismatch, expected i;28/6d8ebc32 to start with i;28/fd0aebae
+06-17 19:41:26.465   727 25035 I artd    : GetBestInfo: vdex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/base.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.466   727   733 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_AdsDynamite_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.466   727 25035 I artd    : GetBestInfo: odex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/split_CronetDynamite_installtime.odex) is kOatBootImageOutOfDate with filter 'speed-profile' executable 'false': Image checksum mismatch, expected i;28/6d8ebc32 to start with i;28/fd0aebae
+06-17 19:41:26.466   727 25035 I artd    : GetBestInfo: vdex next to the dex file (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/oat/arm64/split_CronetDynamite_installtime.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.467   727   733 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_DynamiteLoader_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.467   727 25035 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_DynamiteModulesA_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.468   727   733 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_DynamiteModulesC_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.468   727 25035 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_GoogleCertificates_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.469   727   733 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_MapsDynamite_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.469   727 25035 I artd    : GetBestInfo: dm (/data/app/~~RBqLWa4IHxAvM1EDn2acWA==/com.google.android.gms--6rwsmYaGwERs-rlQ1V3rA==/split_MeasurementDynamite_installtime.dm) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.469   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002a/dl-MlkitBarcodeUi.optional_261733100400.apk has no usable artifacts
+06-17 19:41:26.469   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000035/dl-VisionOcr.optional_261933100000.apk has no usable artifacts
+06-17 19:41:26.469   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000001/CronetDynamite.uncompressed.apk has no usable artifacts
+06-17 19:41:26.470   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000047/dl-PlayCloudSearch.optional_262333100000.apk has no usable artifacts
+06-17 19:41:26.470   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000016/dl-IdentityCredentialsPlatform.optional_261464100400.apk has no usable artifacts
+06-17 19:41:26.470   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000046/dl-MlkitOcrCommon.optional_262333100400.apk has no usable artifacts
+06-17 19:41:26.470   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000014/dl-VisionOcr.optional_261464100000.apk has no usable artifacts
+06-17 19:41:26.470   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000017/dl-Appsearch.optional_261464100400.apk has no usable artifacts
+06-17 19:41:26.471   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000004b/dl-MlkitBarcodeUi.optional_262333100400.apk has no usable artifacts
+06-17 19:41:26.471   727 25035 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/87E7746227FF4E457A2EB56043B95E41006DE49F/the.apk has no usable artifacts
+06-17 19:41:26.471   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000048/dl-IdentityCredentialsPlatform.optional_262333100400.apk has no usable artifacts
+06-17 19:41:26.472   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000a/dl-MlkitBarcodeUi.optional_242335100400.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000029/dl-MlkitOcrCommon.optional_261733100400.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000002/DynamiteLoader.uncompressed.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002e/dl-Appsearch.optional_261733100400.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000030/dl-MlkitOcrCommon.optional_261933100400.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000015/dl-PlayCloudSearch.optional_261464100000.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001e/dl-Appsearch.optional_261631100400.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000013/dl-MlkitOcrCommon.optional_261464100400.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000032/dl-MlkitBarcodeUi.optional_261933100400.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/754BEC187BC4F26BBC31300F93DBF9B7506C1861/the.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000007/MeasurementDynamite.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002c/dl-IdentityCredentialsPlatform.optional_261733100400.apk has no usable artifacts
+06-17 19:41:26.472   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002b/dl-PlayCloudSearch.optional_261733100000.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000033/dl-PlayCloudSearch.optional_261933100000.apk has no usable artifacts
+06-17 19:41:26.472   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001c/dl-VisionOcr.optional_261631100000.apk has no usable artifacts
+06-17 19:41:26.472   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000011/dl-MlkitBarcodeUi.optional_261464100400.apk has no usable artifacts
+06-17 19:41:26.473   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000049/dl-VisionOcr.optional_262333100000.apk has no usable artifacts
+06-17 19:41:26.473   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+06-17 19:41:26.473   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000010/dl-TfliteDynamiteDynamite.integ_260580502100400.apk has no usable artifacts
+06-17 19:41:26.473   727   733 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/9D5BCED7935D64431BF672B8BBD597199833CA19/the.apk has no usable artifacts
+06-17 19:41:26.473   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000009/dl-TfliteDynamiteDynamite.integ_252130102100400.apk has no usable artifacts
+06-17 19:41:26.474   727   733 I artd    : GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/5833371D1ACC412507A92815B074897510CCCEDD/oat/arm64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.474   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001b/dl-PlayCloudSearch.optional_261631100000.apk has no usable artifacts
+06-17 19:41:26.474   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000027/dl-IdentityCredentialsPlatform.optional_261631100400.apk has no usable artifacts
+06-17 19:41:26.474   727 25035 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/86153AA318A3F208A8C511836585279D8C7E8D94/the.apk has no usable artifacts
+06-17 19:41:26.474   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001d/dl-IdentityCredentialsPlatform.optional_261631100400.apk has no usable artifacts
+06-17 19:41:26.474   727 25034 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000002d/dl-VisionOcr.optional_261733100000.apk has no usable artifacts
+06-17 19:41:26.474   727 25034 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000e/dl-PlayCloudSearch.optional_242335100000.apk has no usable artifacts
+06-17 19:41:26.475   727   733 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000004a/dl-Appsearch.optional_262333100400.apk has no usable artifacts
+06-17 19:41:26.475   727 25035 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001a/dl-MlkitBarcodeUi.optional_261631100400.apk has no usable artifacts
+06-17 19:41:26.475   727  3904 I artd    : GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/10FF5D5C646CC9E2F04BD9D73A072BD012EF1A7A/oat/arm64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+06-17 19:41:26.475   727 25034 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000036/dl-Appsearch.optional_261933100400.apk has no usable artifacts
+06-17 19:41:26.475   727 25034 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/21A90BF1C1C388089206DCE215FB60D7882BFA18/the.apk has no usable artifacts
+06-17 19:41:26.475   727 25034 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/0000001f/dl-IdentityCredentialsPlacebo.optional_261631100400.apk has no usable artifacts
+06-17 19:41:26.475   727 25034 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000034/dl-IdentityCredentialsPlatform.optional_261933100400.apk has no usable artifacts
+06-17 19:41:26.475   727 25034 I artd    : GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000019/dl-MlkitOcrCommon.optional_261631100400.apk has no usable artifacts
+06-17 19:41:26.475   727 25034 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/A8F89F306FD1BA172E06F6F2B9F79826D0309BB6/the.apk has no usable artifacts
+06-17 19:41:26.475   727 25034 I artd    : GetBestInfo: /data/user/0/com.google.android.gms/app_dg_cache/707FFD883BF2A7896692338F9625CA52336E933B/the.apk has no usable artifacts
+06-17 19:41:27.315  1144 31737 I NearbyMediums: No BLE Fast/GATT advertisements found in the latest cycle.
+06-17 19:41:27.315  1144 31737 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing, NearbyConnections.TxAdvertisement}
+06-17 19:41:29.070   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:29.071   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:41:29.074   996  1124 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+06-17 19:41:29.507   605  1922 W IPCThreadState: Sending oneway calls to frozen process.
+06-17 19:41:32.078   605   772 I HalDevMgr: bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+06-17 19:41:32.582   465   465 I adbd    : adbd service requested 'shell,v2,TERM=dumb,raw:run-as com.example.merchandisecontrolsplitview cp databases/app_database /sdcard/Download/task135_app_database_latest.db'
+06-17 19:41:32.587   465   465 I adbd    : adbd service requested 'shell,v2,TERM=dumb:export ANDROID_LOG_TAGS=''; exec logcat '-d''
+06-17 19:41:32.646   465   465 I adbd    : adbd service requested 'shell,v2,TERM=dumb,raw:run-as com.example.merchandisecontrolsplitview cp databases/app_database-wal /sdcard/Download/task135_app_database_latest.db-wal'

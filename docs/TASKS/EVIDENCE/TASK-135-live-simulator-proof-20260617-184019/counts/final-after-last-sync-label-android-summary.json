@@ -1,0 +1,53 @@
+{
+  "categories": {
+    "active": 35,
+    "all": 35,
+    "deleted": 0,
+    "dirty": 0,
+    "localOnly": 0,
+    "pending": 0,
+    "userVisible": null
+  },
+  "history_entries": {
+    "active": 39,
+    "all": 41,
+    "deleted": 2,
+    "dirty": 0,
+    "localOnly": 0,
+    "pending": 0,
+    "userVisible": 39
+  },
+  "product_prices": {
+    "active": 41131,
+    "all": 41131,
+    "deleted": 0,
+    "dirty": 0,
+    "localOnly": 0,
+    "pending": 0,
+    "userVisible": null
+  },
+  "products": {
+    "active": 19704,
+    "all": 19704,
+    "deleted": 0,
+    "dirty": 0,
+    "localOnly": 0,
+    "pending": 0,
+    "userVisible": null
+  },
+  "suppliers": {
+    "active": 66,
+    "all": 66,
+    "deleted": 0,
+    "dirty": 0,
+    "localOnly": 0,
+    "pending": 0,
+    "userVisible": null
+  }
+}
+{
+  "local": {
+    "pendingAggregate": 0
+  },
+  "remote": null
+}

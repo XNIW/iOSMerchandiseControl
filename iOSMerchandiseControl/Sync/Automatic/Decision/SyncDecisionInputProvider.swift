@@ -90,10 +90,6 @@ actor SyncDecisionInputProvider: SyncDecisionInputProviding {
         let outboxCount = loadPendingOutboxCount(context: context, ownerUserID: ownerUserID)
         let baselineSummary = loadBaselineSummary(context: context, ownerUserID: ownerUserID)
         let localCatalogIsEmpty = loadLocalCatalogIsEmpty(context: context)
-        let hasPendingLocalChanges = Self.hasPendingLocalChanges(
-            pendingChanges: pendingChanges.value,
-            pendingOutboxCount: outboxCount.value
-        )
         let stateReadFailed = pendingChanges.failed
             || outboxCount.failed
             || baselineSummary.failed

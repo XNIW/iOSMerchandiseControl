@@ -1,0 +1,5 @@
+prices_pending_bridge|0
+product_prices_total|41131
+price_refs_total|41131
+sync_outbox_pending|0
+tombstones|0

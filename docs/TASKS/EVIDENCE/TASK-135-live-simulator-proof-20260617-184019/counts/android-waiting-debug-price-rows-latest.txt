@@ -1,0 +1,12 @@
+products_missing_ref|0
+product_refs_pending|0
+suppliers_pending|0
+categories_pending|0
+prices_pending_bridge|2
+prices_without_product_remote|0
+outbox_pending|0
+tombstones|0
+price_missing_ref_row|41178|19728|PURCHASE|44.1|2026-06-17 19:34:05|BACKFILL_CURR||2026-06-17 19:34:05|TASK135_IOS_CROSS_20260617_193032_SINGLE_IOS_PRODUCT_CREATE|TASK135_IOS_CROSS_20260617_193032_SINGLE_IOS_CREATE|e685108e-c9e0-447c-abae-83c5238d1c2b
+price_missing_ref_row|41179|19728|RETAIL|55.2|2026-06-17 19:34:05|BACKFILL_CURR||2026-06-17 19:34:05|TASK135_IOS_CROSS_20260617_193032_SINGLE_IOS_PRODUCT_CREATE|TASK135_IOS_CROSS_20260617_193032_SINGLE_IOS_CREATE|e685108e-c9e0-447c-abae-83c5238d1c2b
+price_remote_refs_total|41131
+product_prices_total|41133

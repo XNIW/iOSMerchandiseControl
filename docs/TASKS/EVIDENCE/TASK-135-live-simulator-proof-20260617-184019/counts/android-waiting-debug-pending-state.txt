@@ -1,0 +1,7 @@
+products_missing_ref|0
+product_refs_pending|0
+suppliers_pending|0
+categories_pending|0
+prices_pending|2
+outbox_pending|0
+tombstones|0

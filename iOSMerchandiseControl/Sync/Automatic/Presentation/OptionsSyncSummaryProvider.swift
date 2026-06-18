@@ -17,6 +17,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
     @Published private(set) var localDatabaseSummary: LocalDatabasePublicSummary = .empty
     @Published private(set) var syncCountDriftReport: SyncCountDriftReport?
     @Published private(set) var syncCountDriftCheckFailed = false
+    @Published private(set) var isCheckingRemoteCounts = false
     @Published private(set) var lastSyncCountDriftCheckedAt: Date?
     @Published private(set) var accountSyncDecision: AccountSyncDecision?
     @Published private(set) var localPendingAttentionCount = 0
@@ -307,6 +308,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
         let taskID = UUID()
         driftTaskID = taskID
         isRemoteCountVerificationInFlight = true
+        isCheckingRemoteCounts = true
         driftTask = Task { @MainActor [weak self] in
             do {
                 let remote = try await service.fetchReconciliationRemoteCounts()
@@ -322,12 +324,14 @@ final class OptionsSyncSummaryProvider: ObservableObject {
                 self?.syncCountDriftCheckFailed = false
                 self?.lastSyncCountDriftCheckedAt = self?.now()
                 self?.isRemoteCountVerificationInFlight = false
+                self?.isCheckingRemoteCounts = false
                 self?.driftTask = nil
                 self?.driftTaskID = nil
                 self?.refreshAccountSyncDecision()
             } catch is CancellationError {
                 if self?.driftTaskID == taskID {
                     self?.isRemoteCountVerificationInFlight = false
+                    self?.isCheckingRemoteCounts = false
                     self?.driftTask = nil
                     self?.driftTaskID = nil
                 }
@@ -342,6 +346,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
                 self?.syncCountDriftCheckFailed = true
                 self?.lastSyncCountDriftCheckedAt = self?.now()
                 self?.isRemoteCountVerificationInFlight = false
+                self?.isCheckingRemoteCounts = false
                 self?.driftTask = nil
                 self?.driftTaskID = nil
                 self?.refreshAccountSyncDecision()
@@ -372,6 +377,7 @@ final class OptionsSyncSummaryProvider: ObservableObject {
         driftTask = nil
         driftTaskID = nil
         isRemoteCountVerificationInFlight = false
+        isCheckingRemoteCounts = false
         lastRemoteCountSnapshot = nil
         lastSyncCountDriftCheckedAt = nil
         if clearFailure {

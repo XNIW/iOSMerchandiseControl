@@ -1536,8 +1536,13 @@ PY
     code=$?
     mc_report_log "$(mc_redact_text "$(tail -n 120 "$instrument_log")")"
     line="$(grep 'TASK123_ANDROID_SINGLE_PROPAGATION' "$instrument_log" 2>/dev/null | tail -n 1 || true)"
+    if ! { [[ "$code" -eq 0 ]] \
+      && grep -q "OK (" "$instrument_log" \
+      && ! grep -Eq "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2" "$instrument_log"; }; then
+      rm -f "$instrument_log" "$iter_file"
+      return "$MC_EXIT_FAIL"
+    fi
     rm -f "$instrument_log"
-    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$MC_EXIT_FAIL"; }
     MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
     mc_live_wait_counts_delta ios "$before" 1 0 0 "$timeout_seconds" "task123_android_to_ios_single"; code=$?
     after="$MC_LIVE_WAIT_LAST_JSON"
@@ -1671,8 +1676,13 @@ mc_live_task123_cold_restart() {
     code=$?
     mc_report_log "$(mc_redact_text "$(tail -n 120 "$instrument_log")")"
     line="$(grep 'TASK123_ANDROID_SINGLE_PROPAGATION' "$instrument_log" 2>/dev/null | tail -n 1 || true)"
+    if ! { [[ "$code" -eq 0 ]] \
+      && grep -q "OK (" "$instrument_log" \
+      && ! grep -Eq "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2" "$instrument_log"; }; then
+      rm -f "$instrument_log" "$iter_file"
+      return "$MC_EXIT_FAIL"
+    fi
     rm -f "$instrument_log"
-    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$MC_EXIT_FAIL"; }
     MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
     mc_live_wait_counts_delta ios "$before" 1 0 0 "$timeout_seconds" "task123_cold_ios_restart_android_to_ios"; code=$?
     after="$MC_LIVE_WAIT_LAST_JSON"
@@ -1929,8 +1939,13 @@ PY
       com.example.merchandisecontrolsplitview.test/androidx.test.runner.AndroidJUnitRunner >"$instrument_log" 2>&1
     code=$?
     mc_report_log "$(mc_redact_text "$(tail -n 40 "$instrument_log")")"
+    if ! { [[ "$code" -eq 0 ]] \
+      && grep -q "OK (" "$instrument_log" \
+      && ! grep -Eq "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2" "$instrument_log"; }; then
+      rm -f "$instrument_log" "$iter_file"
+      return "$MC_EXIT_FAIL"
+    fi
     rm -f "$instrument_log"
-    [[ "$code" -eq 0 ]] || { rm -f "$iter_file"; return "$MC_EXIT_FAIL"; }
   done
   source_ms=$(( $(mc_now_ms) - burst_started_ms ))
   MC_IOS_RUNTIME_FOREGROUND_ONLY=1 MC_IOS_RUNTIME_WAIT_SECONDS=0 mc_ios_runtime_ui_counts || return $?
