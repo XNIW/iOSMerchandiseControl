@@ -1,0 +1,50 @@
+{
+  "android": {
+    "fingerprints": [
+      "899a0e296f681613ba93a242119494eea338c02e128f76112b4a12dce9928d9a"
+    ],
+    "localIds": [
+      "43"
+    ],
+    "matches": 1,
+    "payloadHashes": [
+      "99d0d724d20006a48d55cb3f5375f8c0230ad4efeddebf542b53425f38ae8611"
+    ],
+    "remoteIds": [
+      "854d45bf-920b-4b9a-82ef-55355d7f9bac"
+    ],
+    "shown": 1
+  },
+  "ios": {
+    "fingerprints": [
+      "899a0e296f681613ba93a242119494eea338c02e128f76112b4a12dce9928d9a"
+    ],
+    "localIds": [
+      "854d45bf-920b-4b9a-82ef-55355d7f9bac"
+    ],
+    "matches": 1,
+    "payloadHashes": [
+      "99d0d724d20006a48d55cb3f5375f8c0230ad4efeddebf542b53425f38ae8611"
+    ],
+    "remoteIds": [
+      "854d45bf-920b-4b9a-82ef-55355d7f9bac"
+    ],
+    "shown": 1
+  },
+  "supabase": {
+    "fingerprints": [
+      "899a0e296f681613ba93a242119494eea338c02e128f76112b4a12dce9928d9a"
+    ],
+    "localIds": [
+      ""
+    ],
+    "matches": 1,
+    "payloadHashes": [
+      "99d0d724d20006a48d55cb3f5375f8c0230ad4efeddebf542b53425f38ae8611"
+    ],
+    "remoteIds": [
+      "854d45bf-920b-4b9a-82ef-55355d7f9bac"
+    ],
+    "shown": 1
+  }
+}

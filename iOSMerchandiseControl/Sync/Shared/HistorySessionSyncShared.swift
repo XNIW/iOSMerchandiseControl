@@ -189,6 +189,38 @@ nonisolated enum HistorySessionPayloadCodec {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 
+    static func logicalFingerprintHash(for snapshot: HistorySessionLocalPayloadSnapshot) -> String {
+        let canonical = [
+            "\(snapshot.payloadVersion)",
+            normalize(snapshot.displayName),
+            formatTimestamp(snapshot.timestamp),
+            normalize(snapshot.supplier),
+            normalize(snapshot.category),
+            snapshot.isManualEntry ? "1" : "0",
+            canonicalJSONString(snapshot.data),
+            canonicalJSONString(snapshot.editable),
+            canonicalJSONString(snapshot.complete),
+            snapshot.deletedAt.map(formatTimestamp) ?? ""
+        ].joined(separator: "|")
+        return sha256Hex(canonical)
+    }
+
+    static func logicalFingerprintHash(for row: RemoteSharedSheetSessionRow) -> String {
+        let canonical = [
+            "\(row.payloadVersion)",
+            normalize(row.displayName),
+            normalizedTimestamp(row.timestamp),
+            normalize(row.supplier),
+            normalize(row.category),
+            row.isManualEntry ? "1" : "0",
+            canonicalJSONString(row.data),
+            canonicalJSONString(row.sessionOverlay?.editable ?? []),
+            canonicalJSONString(row.sessionOverlay?.complete ?? []),
+            row.deletedAt.map(normalizedTimestamp) ?? ""
+        ].joined(separator: "|")
+        return sha256Hex(canonical)
+    }
+
     static func formatTimestamp(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -239,6 +271,11 @@ nonisolated enum HistorySessionPayloadCodec {
             return ""
         }
         return string
+    }
+
+    private static func sha256Hex(_ value: String) -> String {
+        let digest = SHA256.hash(data: Data(value.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }
 

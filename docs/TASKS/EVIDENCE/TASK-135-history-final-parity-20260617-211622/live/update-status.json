@@ -1,0 +1,68 @@
+{
+  "android": {
+    "fingerprints": [
+      "79568555c54e98902d0b5f1c773504f81b60e56f7e63d714c781a13fe6780adb"
+    ],
+    "localIds": [
+      "42"
+    ],
+    "matches": 1,
+    "missingItems": [
+      "0"
+    ],
+    "payloadHashes": [
+      "995bc9df0060d592ae779b7e589501c3be71b7e7a105dbb06f12d8ca4231f7e4"
+    ],
+    "shown": 1,
+    "supplier": [
+      "TASK135 final iOS supplier UPDATED"
+    ],
+    "totalItems": [
+      "2"
+    ]
+  },
+  "ios": {
+    "fingerprints": [
+      "79568555c54e98902d0b5f1c773504f81b60e56f7e63d714c781a13fe6780adb"
+    ],
+    "localIds": [
+      "TASK135_HISTORY_FINAL_IOS_20260618T142841Z"
+    ],
+    "matches": 1,
+    "missingItems": [
+      "None"
+    ],
+    "payloadHashes": [
+      "995bc9df0060d592ae779b7e589501c3be71b7e7a105dbb06f12d8ca4231f7e4"
+    ],
+    "shown": 1,
+    "supplier": [
+      "TASK135 final iOS supplier UPDATED"
+    ],
+    "totalItems": [
+      "2"
+    ]
+  },
+  "supabase": {
+    "fingerprints": [
+      "79568555c54e98902d0b5f1c773504f81b60e56f7e63d714c781a13fe6780adb"
+    ],
+    "localIds": [
+      ""
+    ],
+    "matches": 1,
+    "missingItems": [
+      "None"
+    ],
+    "payloadHashes": [
+      "995bc9df0060d592ae779b7e589501c3be71b7e7a105dbb06f12d8ca4231f7e4"
+    ],
+    "shown": 1,
+    "supplier": [
+      "TASK135 final iOS supplier UPDATED"
+    ],
+    "totalItems": [
+      "2"
+    ]
+  }
+}

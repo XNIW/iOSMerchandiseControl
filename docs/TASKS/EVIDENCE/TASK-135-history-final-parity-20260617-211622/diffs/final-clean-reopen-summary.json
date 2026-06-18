@@ -1,0 +1,174 @@
+{
+  "after-clean-reopen": {
+    "android": {
+      "active": 39,
+      "duplicateRemoteIds": 0,
+      "finalFixtures": [
+        {
+          "fingerprint": "0279d36cf9dce0b8abb62820ae0ee13edb63aac3fbb8c23e2d3379c8d6c6045b",
+          "isShownInHistoryList": false,
+          "payloadHash": "99d0d724d20006a48d55cb3f5375f8c0230ad4efeddebf542b53425f38ae8611",
+          "reasonHidden": "tombstone",
+          "remote_id": "854d45bf-920b-4b9a-82ef-55355d7f9bac",
+          "title": "TASK135_HISTORY_FINAL_ANDROID_20260618T143328Z",
+          "tombstone": true,
+          "updatedAt": ""
+        },
+        {
+          "fingerprint": "ee27ab9bb14297d46a3624953aeb26f3ffb25d525fd4b32e8b60046024022cc7",
+          "isShownInHistoryList": false,
+          "payloadHash": "995bc9df0060d592ae779b7e589501c3be71b7e7a105dbb06f12d8ca4231f7e4",
+          "reasonHidden": "tombstone",
+          "remote_id": "87670182-d266-4c2c-bb08-368211909e9d",
+          "title": "TASK135_HISTORY_FINAL_IOS_20260618T142841Z",
+          "tombstone": true,
+          "updatedAt": ""
+        }
+      ],
+      "rows": 43,
+      "shown": 35
+    },
+    "ios": {
+      "active": 39,
+      "duplicateRemoteIds": 0,
+      "finalFixtures": [
+        {
+          "fingerprint": "ee27ab9bb14297d46a3624953aeb26f3ffb25d525fd4b32e8b60046024022cc7",
+          "isShownInHistoryList": false,
+          "payloadHash": "995bc9df0060d592ae779b7e589501c3be71b7e7a105dbb06f12d8ca4231f7e4",
+          "reasonHidden": "tombstone",
+          "remote_id": "87670182-d266-4c2c-bb08-368211909e9d",
+          "title": "TASK135_HISTORY_FINAL_IOS_20260618T142841Z",
+          "tombstone": true,
+          "updatedAt": "2026-06-18 14:35:43"
+        },
+        {
+          "fingerprint": "0279d36cf9dce0b8abb62820ae0ee13edb63aac3fbb8c23e2d3379c8d6c6045b",
+          "isShownInHistoryList": false,
+          "payloadHash": "99d0d724d20006a48d55cb3f5375f8c0230ad4efeddebf542b53425f38ae8611",
+          "reasonHidden": "tombstone",
+          "remote_id": "854d45bf-920b-4b9a-82ef-55355d7f9bac",
+          "title": "TASK135_HISTORY_FINAL_ANDROID_20260618T143328Z",
+          "tombstone": true,
+          "updatedAt": "2026-06-18 14:37:25"
+        }
+      ],
+      "rows": 96,
+      "shown": 35
+    },
+    "supabase": {
+      "active": 39,
+      "duplicateRemoteIds": 0,
+      "finalFixtures": [
+        {
+          "fingerprint": "4a9e6aa28cfa1fcb8f3538260231bb00cf7fdf85b2f2c5c907fa988906fcb409",
+          "isShownInHistoryList": false,
+          "payloadHash": "99d0d724d20006a48d55cb3f5375f8c0230ad4efeddebf542b53425f38ae8611",
+          "reasonHidden": "tombstone",
+          "remote_id": "854d45bf-920b-4b9a-82ef-55355d7f9bac",
+          "title": "TASK135_HISTORY_FINAL_ANDROID_20260618T143328Z",
+          "tombstone": true,
+          "updatedAt": "2026-06-18 14:37:25.224951+00"
+        },
+        {
+          "fingerprint": "649a195f137cf1efa09e3c91c55e017f12cbf31a7a72eaa727a0f10cf7a0490d",
+          "isShownInHistoryList": false,
+          "payloadHash": "995bc9df0060d592ae779b7e589501c3be71b7e7a105dbb06f12d8ca4231f7e4",
+          "reasonHidden": "tombstone",
+          "remote_id": "87670182-d266-4c2c-bb08-368211909e9d",
+          "title": "TASK135_HISTORY_FINAL_IOS_20260618T142841Z",
+          "tombstone": true,
+          "updatedAt": "2026-06-18 14:35:43.281763+00"
+        }
+      ],
+      "rows": 95,
+      "shown": 35
+    }
+  },
+  "before-clean-reopen": {
+    "android": {
+      "active": 39,
+      "duplicateRemoteIds": 0,
+      "finalFixtures": [
+        {
+          "fingerprint": "0279d36cf9dce0b8abb62820ae0ee13edb63aac3fbb8c23e2d3379c8d6c6045b",
+          "isShownInHistoryList": false,
+          "payloadHash": "99d0d724d20006a48d55cb3f5375f8c0230ad4efeddebf542b53425f38ae8611",
+          "reasonHidden": "tombstone",
+          "remote_id": "854d45bf-920b-4b9a-82ef-55355d7f9bac",
+          "title": "TASK135_HISTORY_FINAL_ANDROID_20260618T143328Z",
+          "tombstone": true,
+          "updatedAt": ""
+        },
+        {
+          "fingerprint": "ee27ab9bb14297d46a3624953aeb26f3ffb25d525fd4b32e8b60046024022cc7",
+          "isShownInHistoryList": false,
+          "payloadHash": "995bc9df0060d592ae779b7e589501c3be71b7e7a105dbb06f12d8ca4231f7e4",
+          "reasonHidden": "tombstone",
+          "remote_id": "87670182-d266-4c2c-bb08-368211909e9d",
+          "title": "TASK135_HISTORY_FINAL_IOS_20260618T142841Z",
+          "tombstone": true,
+          "updatedAt": ""
+        }
+      ],
+      "rows": 43,
+      "shown": 35
+    },
+    "ios": {
+      "active": 39,
+      "duplicateRemoteIds": 0,
+      "finalFixtures": [
+        {
+          "fingerprint": "ee27ab9bb14297d46a3624953aeb26f3ffb25d525fd4b32e8b60046024022cc7",
+          "isShownInHistoryList": false,
+          "payloadHash": "995bc9df0060d592ae779b7e589501c3be71b7e7a105dbb06f12d8ca4231f7e4",
+          "reasonHidden": "tombstone",
+          "remote_id": "87670182-d266-4c2c-bb08-368211909e9d",
+          "title": "TASK135_HISTORY_FINAL_IOS_20260618T142841Z",
+          "tombstone": true,
+          "updatedAt": "2026-06-18 14:35:43"
+        },
+        {
+          "fingerprint": "0279d36cf9dce0b8abb62820ae0ee13edb63aac3fbb8c23e2d3379c8d6c6045b",
+          "isShownInHistoryList": false,
+          "payloadHash": "99d0d724d20006a48d55cb3f5375f8c0230ad4efeddebf542b53425f38ae8611",
+          "reasonHidden": "tombstone",
+          "remote_id": "854d45bf-920b-4b9a-82ef-55355d7f9bac",
+          "title": "TASK135_HISTORY_FINAL_ANDROID_20260618T143328Z",
+          "tombstone": true,
+          "updatedAt": "2026-06-18 14:37:25"
+        }
+      ],
+      "rows": 96,
+      "shown": 35
+    },
+    "supabase": {
+      "active": 39,
+      "duplicateRemoteIds": 0,
+      "finalFixtures": [
+        {
+          "fingerprint": "4a9e6aa28cfa1fcb8f3538260231bb00cf7fdf85b2f2c5c907fa988906fcb409",
+          "isShownInHistoryList": false,
+          "payloadHash": "99d0d724d20006a48d55cb3f5375f8c0230ad4efeddebf542b53425f38ae8611",
+          "reasonHidden": "tombstone",
+          "remote_id": "854d45bf-920b-4b9a-82ef-55355d7f9bac",
+          "title": "TASK135_HISTORY_FINAL_ANDROID_20260618T143328Z",
+          "tombstone": true,
+          "updatedAt": "2026-06-18 14:37:25.224951+00"
+        },
+        {
+          "fingerprint": "649a195f137cf1efa09e3c91c55e017f12cbf31a7a72eaa727a0f10cf7a0490d",
+          "isShownInHistoryList": false,
+          "payloadHash": "995bc9df0060d592ae779b7e589501c3be71b7e7a105dbb06f12d8ca4231f7e4",
+          "reasonHidden": "tombstone",
+          "remote_id": "87670182-d266-4c2c-bb08-368211909e9d",
+          "title": "TASK135_HISTORY_FINAL_IOS_20260618T142841Z",
+          "tombstone": true,
+          "updatedAt": "2026-06-18 14:35:43.281763+00"
+        }
+      ],
+      "rows": 95,
+      "shown": 35
+    }
+  }
+}

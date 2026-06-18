@@ -6,15 +6,26 @@ import XCTest
 final class OptionsLocalDatabaseSummaryTests: XCTestCase {
     private static var retainedContainers: [ModelContainer] = []
 
-    func testLocalDatabaseSummaryUsesFetchCountForHistorySessions() throws {
+    func testLocalDatabaseSummaryCountsUserVisibleHistorySessions() throws {
         let context = try makeContext()
         context.insert(HistoryEntry(id: "history-1"))
         context.insert(HistoryEntry(id: "history-2"))
+        let finalFixture = HistoryEntry(id: "TASK135_HISTORY_FINAL_VISIBLE")
+        finalFixture.title = "TASK135_HISTORY_FINAL_VISIBLE"
+        context.insert(finalFixture)
+        let fixture = HistoryEntry(id: "TASK135_MATRIX_LOCAL")
+        fixture.title = "TASK135_MATRIX_LOCAL"
+        context.insert(fixture)
+        context.insert(HistoryEntry(id: "deleted-history", remoteDeletedAt: Date()))
+        let pendingDelete = HistoryEntry(id: "pending-delete", remoteDeletedAt: Date())
+        pendingDelete.localChangeRevision = 1
+        pendingDelete.lastSyncedLocalRevision = 0
+        context.insert(pendingDelete)
         try context.save()
 
         let summary = try LocalDatabasePublicSummary.make(context: context)
 
-        XCTAssertEqual(summary.historySessions, 2)
+        XCTAssertEqual(summary.historySessions, 4)
         XCTAssertEqual(summary.products, 0)
         XCTAssertEqual(summary.suppliers, 0)
         XCTAssertEqual(summary.categories, 0)

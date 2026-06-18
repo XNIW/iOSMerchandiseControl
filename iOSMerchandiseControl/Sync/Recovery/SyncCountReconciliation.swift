@@ -58,10 +58,16 @@ nonisolated enum LocalHistorySessionCounting {
         return remoteDeletedAt == nil
     }
 
+    static func isShownInHistoryList(_ entry: HistoryEntry) -> Bool {
+        guard HistorySessionDisplayFormatter.isUserFacingIdentifier(entry.id),
+              HistorySessionDisplayFormatter.isUserFacingIdentifier(entry.title) else {
+            return false
+        }
+        return entry.remoteDeletedAt == nil || entry.isHistorySessionDeletedPendingCloud
+    }
+
     static func countUserVisible(in entries: [HistoryEntry]) -> Int {
-        entries.filter {
-            isUserVisibleSession(id: $0.id, title: $0.title, remoteDeletedAt: $0.remoteDeletedAt)
-        }.count
+        entries.filter(isShownInHistoryList).count
     }
 
     static func fetchUserVisibleCount(context: ModelContext) throws -> Int {
@@ -86,7 +92,7 @@ nonisolated enum HistorySessionDisplayFormatter {
         if uppercased.hasPrefix("APPLY_IMPORT_") || uppercased.hasPrefix("FULL_IMPORT_") {
             return false
         }
-        if uppercased.hasPrefix("TASK") {
+        if uppercased.hasPrefix("TASK135_MATRIX_") {
             return false
         }
         return true
@@ -219,9 +225,7 @@ extension LocalDatabasePublicSummary {
                     price.product != nil && price.product?.remoteDeletedAt == nil
                 }
             )),
-            historySessions: try context.fetchCount(FetchDescriptor<HistoryEntry>(
-                predicate: #Predicate<HistoryEntry> { $0.remoteDeletedAt == nil }
-            ))
+            historySessions: try LocalHistorySessionCounting.fetchUserVisibleCount(context: context)
         )
     }
 }

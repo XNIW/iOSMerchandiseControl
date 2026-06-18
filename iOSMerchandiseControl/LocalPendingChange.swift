@@ -425,16 +425,29 @@ nonisolated final class LocalPendingChangeAccumulator {
         )
     }
 
-    func acknowledgeHistorySessionChange(entry: HistoryEntry) throws {
-        let key = LocalPendingChangeLogicalKey.historySession(
-            remoteID: entry.remoteID,
-            uid: entry.uid
-        )
+    func acknowledgeHistorySessionChange(
+        entry: HistoryEntry,
+        previousRemoteID: UUID? = nil
+    ) throws {
+        let keys = Set([
+            LocalPendingChangeLogicalKey.historySession(
+                remoteID: entry.remoteID,
+                uid: entry.uid
+            ),
+            previousRemoteID.map {
+                LocalPendingChangeLogicalKey.historySession(
+                    remoteID: $0,
+                    uid: entry.uid
+                )
+            }
+        ].compactMap { $0 })
         let timestamp = now()
-        for change in try fetchChanges(entityKind: .historySession, logicalKey: key)
-            where !change.status.isTerminal {
-            change.status = .acknowledged
-            change.updatedAt = timestamp
+        for key in keys {
+            for change in try fetchChanges(entityKind: .historySession, logicalKey: key)
+                where !change.status.isTerminal {
+                change.status = .acknowledged
+                change.updatedAt = timestamp
+            }
         }
     }
 

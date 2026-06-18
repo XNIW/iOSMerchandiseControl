@@ -143,6 +143,8 @@ nonisolated final class HistorySessionSyncService {
             }
             byUID[entry.uid] = entry
         }
+        var byLogicalFingerprint = logicalFingerprintMap(for: entries)
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
 
         for row in rows {
             guard row.ownerUserID == ownerUserID else {
@@ -150,8 +152,11 @@ nonisolated final class HistorySessionSyncService {
             }
 
             let remoteFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: row)
+            let logicalFingerprint = HistorySessionPayloadCodec.logicalFingerprintHash(for: row)
             let remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
-            if let existing = byRemoteID[row.remoteID] ?? byUID[row.remoteID] {
+            let identityMatch = byRemoteID[row.remoteID] ?? byUID[row.remoteID]
+            let logicalMatch = identityMatch == nil ? byLogicalFingerprint[logicalFingerprint] : nil
+            if let existing = identityMatch ?? logicalMatch {
                 if remoteDeletedAt != nil {
                     if shouldProtectDirtyLocalEntryFromRemoteTombstone(existing) {
                         result.skippedDirtyLocalCount += 1
@@ -159,6 +164,20 @@ nonisolated final class HistorySessionSyncService {
                         applyRemoteTombstone(row: row, to: existing, fingerprint: remoteFingerprint)
                         result.updatedCount += 1
                     }
+                    continue
+                }
+
+                if logicalMatch != nil {
+                    let previousRemoteID = existing.remoteID
+                    apply(row: row, to: existing, fingerprint: remoteFingerprint)
+                    try accumulator.acknowledgeHistorySessionChange(
+                        entry: existing,
+                        previousRemoteID: previousRemoteID
+                    )
+                    byRemoteID[row.remoteID] = existing
+                    byUID[existing.uid] = existing
+                    byLogicalFingerprint[logicalFingerprint] = existing
+                    result.updatedCount += 1
                     continue
                 }
 
@@ -184,6 +203,7 @@ nonisolated final class HistorySessionSyncService {
                 context.insert(inserted)
                 byRemoteID[row.remoteID] = inserted
                 byUID[inserted.uid] = inserted
+                byLogicalFingerprint[logicalFingerprint] = inserted
                 result.insertedCount += 1
             }
         }
@@ -209,6 +229,8 @@ nonisolated final class HistorySessionSyncService {
             }
             byUID[entry.uid] = entry
         }
+        var byLogicalFingerprint = logicalFingerprintMap(for: entries)
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: ownerUserID)
 
         var mutationsSinceSave = 0
         let batchSize = max(1, pageSize)
@@ -222,8 +244,11 @@ nonisolated final class HistorySessionSyncService {
             }
 
             let remoteFingerprint = HistorySessionPayloadCodec.fingerprintHash(for: row)
+            let logicalFingerprint = HistorySessionPayloadCodec.logicalFingerprintHash(for: row)
             let remoteDeletedAt = HistorySessionPayloadCodec.parseUpdatedAt(row.deletedAt)
-            if let existing = byRemoteID[row.remoteID] ?? byUID[row.remoteID] {
+            let identityMatch = byRemoteID[row.remoteID] ?? byUID[row.remoteID]
+            let logicalMatch = identityMatch == nil ? byLogicalFingerprint[logicalFingerprint] : nil
+            if let existing = identityMatch ?? logicalMatch {
                 if remoteDeletedAt != nil {
                     if shouldProtectDirtyLocalEntryFromRemoteTombstone(existing) {
                         result.skippedDirtyLocalCount += 1
@@ -232,6 +257,18 @@ nonisolated final class HistorySessionSyncService {
                         result.updatedCount += 1
                         mutationsSinceSave += 1
                     }
+                } else if logicalMatch != nil {
+                    let previousRemoteID = existing.remoteID
+                    apply(row: row, to: existing, fingerprint: remoteFingerprint)
+                    try accumulator.acknowledgeHistorySessionChange(
+                        entry: existing,
+                        previousRemoteID: previousRemoteID
+                    )
+                    byRemoteID[row.remoteID] = existing
+                    byUID[existing.uid] = existing
+                    byLogicalFingerprint[logicalFingerprint] = existing
+                    result.updatedCount += 1
+                    mutationsSinceSave += 1
                 } else if existing.remotePayloadFingerprint == remoteFingerprint {
                     result.skippedCleanCount += 1
                 } else if existing.localChangeRevision > existing.lastSyncedLocalRevision {
@@ -252,6 +289,7 @@ nonisolated final class HistorySessionSyncService {
                 context.insert(inserted)
                 byRemoteID[row.remoteID] = inserted
                 byUID[inserted.uid] = inserted
+                byLogicalFingerprint[logicalFingerprint] = inserted
                 result.insertedCount += 1
                 mutationsSinceSave += 1
             }
@@ -278,6 +316,16 @@ nonisolated final class HistorySessionSyncService {
 
     private func shouldProtectDirtyLocalEntryFromRemoteTombstone(_ entry: HistoryEntry) -> Bool {
         entry.remoteDeletedAt == nil && entry.localChangeRevision > entry.lastSyncedLocalRevision
+    }
+
+    private func logicalFingerprintMap(for entries: [HistoryEntry]) -> [String: HistoryEntry] {
+        var result: [String: HistoryEntry] = [:]
+        for entry in entries where entry.remoteDeletedAt == nil {
+            let snapshot = HistorySessionPayloadSnapshotFactory.snapshot(for: entry, ensureRemoteID: false)
+            let fingerprint = HistorySessionPayloadCodec.logicalFingerprintHash(for: snapshot)
+            result[fingerprint] = result[fingerprint] ?? entry
+        }
+        return result
     }
 
     private func pruneCleanRemoteLinkedEntriesMissingFromFullSnapshot(

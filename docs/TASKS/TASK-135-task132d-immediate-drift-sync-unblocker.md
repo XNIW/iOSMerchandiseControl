@@ -7,8 +7,8 @@
 - Stato task: ACTIVE
 - Fase attuale: REVIEW
 - Responsabile attuale: Claude / Reviewer
-- Ultimo aggiornamento: 2026-06-17 20:45 -0400
-- Ultimo agente: Codex / UX polish verifier-fixer
+- Ultimo aggiornamento: 2026-06-18 10:50 -0400
+- Ultimo agente: Codex / History final safety gate fixer
 
 ## User Override
 TASK-132 e' gia' DONE nel tracking storico. Questo hotfix e' stato eseguito su istruzione esplicita utente come workstream post-DONE, senza riscrivere la storia di TASK-132 e senza riusare TASK-134 come task canonico.
@@ -63,11 +63,84 @@ Polish UX pubblico finale richiesto dall'utente, senza modifiche runtime sync:
 - Android Options: card account e sync automatica fuse in una sola card compatta; rimossa la card separata `Sincronizzazione automatica`, rimossa la testata ridondante della card unificata nello stato signed-in, email mascherata (`x***@gmail.com`), azione `Esci` compatta, nessuna riga pubblica `Cambios locales pendientes` / `Cuenta cloud`.
 - Pending locali e account state restano disponibili internamente per runtime/test/harness/evidence; nessuna modifica a Supabase schema, auth flow o core sync.
 
+## Fix
+
+Continuation History parity richiesta dall'utente il 2026-06-17, eseguita come override operativo rispetto allo stato precedente `REVIEW` senza marcare DONE.
+
+Fix iOS applicato:
+- `HistorySessionPayloadCodec` ora espone una fingerprint logica History senza `remoteID`, stabile per payload/timestamp/supplier/category/overlay.
+- `HistorySessionSyncService` full pull/recovery collega una local-only equivalente alla row remota invece di inserire duplicati.
+- `HistoryIncrementalApplyService` applica la stessa dedupe/linking nel drain automatico da `sync_events`.
+- `LocalPendingChangeAccumulator.acknowledgeHistorySessionChange` riconosce anche la previous remote/local key quando una sessione viene relinkata.
+- `LocalDatabasePublicSummary.makeReconciliationAware` conta History come active user-visible non-tombstoned, allineato alla History UI.
+- `OptionsRemoteCountSupabaseAdapter` conta `shared_sheet_sessions` active user-visible filtrando i campi minimi lato client, invece di usare solo count active grezzo.
+
+Test iOS aggiunti:
+- local-only History con stesso payload logico di una row remota diversa non duplica, relinka `remoteID` e ack pending.
+- Options/local database summary esclude fixture tecniche `TASK135_MATRIX_*` e tombstone dal count History pubblico, mantenendo visibili le fixture live finali finche' attive.
+
+Continuation History final parity richiesta dall'utente il 2026-06-17 21:22 -0400, eseguita come FIX su override esplicito prima di qualsiasi DONE.
+
+Mismatch iOS 39 vs 35 risolto:
+- Tool obbligatori usati: `tools/agent/history_snapshot_ios.sh`, `tools/agent/history_snapshot_android.sh`, `tools/agent/history_snapshot_supabase.sh`, `tools/agent/history_diff.py`.
+- La tabella row-level iOS 240F delle 39 righe attive locali e' in `docs/TASKS/EVIDENCE/TASK-135-history-final-parity-20260617-211622/diffs/ios-240F-history-39-visibility-table.md`.
+- Root cause del mismatch: Options contava 39 righe active grezze, mentre History UI mostra 35 righe user-visible. Le 4 righe extra sono fixture tecniche TASK135, non tombstone e non entry utente.
+- Righe iOS contate prima da Options ma non mostrate da History UI:
+  - `560da308-71a5-43f2-9bf3-4c92502c0f8a` / remote `560da308-71a5-43f2-9bf3-4c92502c0f8a`, title `TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_CREATE`, timestamp `2026-05-13 19:20:00`, reasonHidden `title technical/TASK`.
+  - `7be52c5a-2e8b-4090-a43f-7845c49bb13b` / remote `7be52c5a-2e8b-4090-a43f-7845c49bb13b`, title `TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_IOS_HISTORY_UPDATE_FINAL`, timestamp `2026-05-13 19:20:00`, reasonHidden `title technical/TASK`.
+  - `53d91b99-1a32-4711-bfdc-6636a7cce6c1` / remote `53d91b99-1a32-4711-bfdc-6636a7cce6c1`, title `TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_CREATE`, timestamp `2026-05-21 18:00:00`, reasonHidden `title technical/TASK`.
+  - `7b22539f-95b4-4165-a3b6-869bfedc27b4` / remote `7b22539f-95b4-4165-a3b6-869bfedc27b4`, title `TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_ANDROID_HISTORY_UPDATE_FINAL`, timestamp `2026-05-21 18:00:00`, reasonHidden `title technical/TASK`.
+- Options iOS ora usa la stessa predicate logica della History UI: id/title user-facing, fixture tecniche `TASK135_MATRIX_*` escluse, tombstone escluse salvo pending-delete locale visibile alla UI. Il count pubblico diventa 35; le fixture live finali `TASK135_HISTORY_FINAL_*` restano user-visible finche' attive.
+- Android e' stato allineato alla stessa predicate: 39 active, 35 user-visible/shown, stesse 4 fixture `TASK135_MATRIX_*` escluse. In piu', Android normalizza i displayName UUID-only nel formatter UI e nella fingerprint/payload History per evitare drift artificiale con iOS.
+- Supabase linked snapshot e row-level visible diff confermano 35 righe visibili su iOS, Android e Supabase, con 35 fingerprint presenti su tutte le sorgenti, zero only-source, zero duplicati e zero mismatch.
+
+Continuation History final safety gate richiesta dall'utente il 2026-06-18, eseguita prima di qualsiasi DONE:
+- Predicate finale confermata con i tool obbligatori: `history_snapshot_ios.sh`, `history_snapshot_android.sh`, `history_snapshot_supabase.sh`, `history_diff.py --visible-only`.
+- Snapshot Android corretto per copiare anche `app_database-wal` e `app_database-shm`; senza WAL lo snapshot perdeva temporaneamente la fixture creata da iOS pur applicata dal runtime Android.
+- Owner scope delle 4 righe hidden PASS: tutte appartengono allo stesso owner linked selezionato e sono fixture tecniche `TASK135_MATRIX_*`, non entry utente.
+- Live create iOS -> Android PASS: `TASK135_HISTORY_FINAL_IOS_20260618T142841Z` visibile su iOS, Supabase e Android con remote `87670182-d266-4c2c-bb08-368211909e9d` prima della cleanup.
+- Live create Android -> iOS PASS: `TASK135_HISTORY_FINAL_ANDROID_20260618T143328Z` visibile su Android, Supabase e iOS con remote `854d45bf-920b-4b9a-82ef-55355d7f9bac` prima della cleanup.
+- Live update PASS: aggiornamento della fixture iOS mantiene lo stesso remote_id e converge su fingerprint `79568555c54e98902d0b5f1c773504f81b60e56f7e63d714c781a13fe6780adb` e payloadHash `995bc9df0060d592ae779b7e589501c3be71b7e7a105dbb06f12d8ca4231f7e4` su iOS/Android/Supabase.
+- Tombstone cleanup PASS: le due fixture `TASK135_HISTORY_FINAL_*` sono tombstoned e hidden su iOS/Android/Supabase; residue finale visibile `0`, active residue `0`.
+- Clean reopen finale PASS: iOS, Android e Supabase restano in parity row-level visibile 35/35/35 con History active 39 e shown/userVisible 35.
+
 ## Handoff post-fix
 Reviewer deve verificare soprattutto:
 - iOS recovery con pending locali attivi: `replaceLocalCatalogWithRemoteSnapshot` continua a proteggere pending non classificabili; il follow-up UI field-by-field resta necessario per conflitti reali.
 - Android pull-only reconcile su foreground/network/auth e' guardato da `BOOTSTRAP_RETRY_GUARD_MS`, ma puo' comunque essere costoso su cataloghi grandi.
 - Live runtime simulator/emulator e' ora eseguito con evidence corrente: iOS->Android PASS, Android->iOS PASS, ProductPrice append-only PASS, History/session PASS, clean reopen/no false push PASS, Options iOS/Android pulite, counts finali coerenti. TASK resta ACTIVE / REVIEW per policy: Codex non marca DONE.
+
+Continuation History parity 2026-06-17 21:06 -0400:
+- Prossima fase: REVIEW.
+- Prossimo agente: Claude / Reviewer.
+- Evidence nuova: `docs/TASKS/EVIDENCE/TASK-135-history-parity-20260617-205651/`.
+- Check iOS PASS: targeted History/Options tests 18/18, Debug build XcodeBuildMCP PASS, `git diff --check` PASS.
+- Android/Supabase live NOT RUN/BLOCKED in questo workspace: Android repo/ADB non disponibili; `supabase status` fallisce per container locale mancante. Quindi non dichiarare row-level parity finale iOS+Android+Supabase da questo pass.
+- Reviewer deve verificare prioritariamente che la dedupe iOS per fingerprint logica sia accettabile come bridge cross-platform e poi rieseguire la live matrix con Android/Supabase disponibili.
+
+Continuation History final parity 2026-06-17 22:06 -0400:
+- Prossima fase: REVIEW.
+- Prossimo agente: Claude / Reviewer.
+- Evidence nuova: `docs/TASKS/EVIDENCE/TASK-135-history-final-parity-20260617-211622/`.
+- Gate mismatch iOS risolto: iOS simulator 240F ha 39 History active locali, 35 user-visible/shown. Le 4 righe non visibili sono fixture tecniche `TASK135_MATRIX_*`, non entry utente.
+- Tabella richiesta delle 39 righe iOS: `diffs/ios-240F-history-39-visibility-table.md`.
+- Android repeat check: `diffs/android-history-39-visibility-table.md`, 39 active, 35 user-visible/shown, stesse 4 fixture TASK135 escluse.
+- Supabase/iOS/Android visible row-level parity: `diffs/history-visible-ios-android-supabase-row-level-diff.md`, 35 fingerprint su tutte le sorgenti, zero missing, zero duplicati, zero mismatch, zero TASK135 residue visibile.
+- Count finali: `diffs/final-count-parity-summary.md` riporta products `19704`, suppliers `66`, categories `35`, product_prices `41131`, History active `39`, History shown/userVisible `35`; pending aggregate iOS/Android `0`.
+- Screenshot/evidence UI: Android Options mostra `Sessioni cronologia 35` in `screenshots/android-options-history-count-35.png`; Android History list in `screenshots/android-history-list-visible-35.png`; iOS 240F screenshot Options disponibili in `screenshots/ios-240F-options-history-count-35*.png`.
+- TASK resta ACTIVE / REVIEW per policy. Non marcare DONE senza accettazione/review.
+
+Final safety gate 2026-06-18 10:50 -0400:
+- Prossima fase: REVIEW.
+- Prossimo agente: Claude / Reviewer.
+- Evidence finale: `docs/TASKS/EVIDENCE/TASK-135-history-final-parity-20260617-211622/`.
+- Tabelle finali richieste: `diffs/final-ios-history-39-visibility-table.md` e `diffs/final-android-history-39-visibility-table.md`.
+- Row-level diff finale: `diffs/final-history-row-level-diff.md`, visible rows iOS/Android/Supabase `35/35/35`, `present_on_all=35`, zero only-source, zero duplicate remote/fingerprint, zero payload/fingerprint mismatch.
+- Clean reopen summary: `diffs/final-clean-reopen-summary.json`, History active `39` e shown/userVisible `35` su iOS, Android e Supabase; residue `TASK135_HISTORY_FINAL_*` visibile `0`, active `0`.
+- Live gate evidence: `live/ios-to-android-visible-diff.md`, `live/android-to-ios-visible-diff.md`, `live/update-visible-diff.md`, `live/tombstone-ios-status.json`, `live/tombstone-android-status.json`.
+- Screenshot finali: `screenshots/options-ios-history-count-35-final.png`, `screenshots/history-ios-visible-list-final.png`, `screenshots/options-android-history-count-35-final.png`, `screenshots/history-android-visible-list-final.png`.
+- Tooling snapshot allineato: `history_snapshot_android.sh` include WAL/SHM; predicate fixture tecnica ristretta a `TASK135_MATRIX_*` su tool, iOS e Android.
+- TASK resta ACTIVE / REVIEW per policy. Non marcare DONE senza accettazione/review.
 
 ## Evidence
 Evidence root:
@@ -107,6 +180,18 @@ Check eseguiti:
 - Final Android public UX screenshot: PASS; `screenshots/android-options-final-unified-no-header-20260617-2044.png` shows one compact account/sync card with no redundant header, masked email, no public pending/account implementation rows, no `Waiting to sync`.
 - Final post-polish counts parity: PASS; `counts/final-after-unified-no-header-*.json` all report products `19704`, suppliers `66`, categories `35`, product_prices `41131`, history_sessions `39`; iOS/Android pending aggregate 0.
 - Final post-polish clean reopen/no false push invariant: PASS; `counts/sync-events-after-unified-no-header.json` remains count `1848`, max id `3100`.
+- History final parity tooling syntax: PASS; `bash -n tools/agent/history_snapshot_ios.sh tools/agent/history_snapshot_android.sh tools/agent/history_snapshot_supabase.sh tools/agent/history_fixture_live.sh tools/agent/lib/sync.sh` e `python3 -m py_compile tools/agent/history_diff.py`.
+- History final iOS targeted tests/build: PASS; targeted History/Options tests 18/18 e XcodeBuildMCP Debug build PASS; nessun warning nuovo introdotto nei check diagnostici mirati.
+- History final Android targeted tests: PASS; `DefaultInventoryRepositoryTest` + `OptionsScreenPublicUxTest`.
+- History final Android assembleDebug: PASS.
+- History mismatch gate iOS: PASS; iOS 240F local History active `39`, userVisible/shown `35`; 4 hidden rows identificate come fixture tecniche TASK135 in `diffs/ios-240F-history-39-visibility-table.md`.
+- History mismatch gate Android: PASS; Android local History active `39`, userVisible/shown `35`; stesse 4 fixture tecniche TASK135 in `diffs/android-history-39-visibility-table.md`.
+- History final visible row-level parity Supabase/iOS/Android: PASS; `diffs/history-visible-ios-android-supabase-row-level-diff.md` riporta `present_on_all=35`, no only-source, no duplicates, no mismatches.
+- History final counts parity Supabase/iOS/Android: PASS; `diffs/final-count-parity-summary.md` riporta products `19704`, suppliers `66`, categories `35`, product_prices `41131`, History active `39`, History shown/userVisible `35`.
+- History final safety live create/update/delete: PASS; iOS->Android create, Android->iOS create, update same remote_id/hash, tombstone bidirezionali e cleanup residue `0`.
+- History final clean reopen row-level parity: PASS; `diffs/final-history-row-level-diff.md` riporta 35 visible rows su iOS/Android/Supabase e nessun mismatch.
+- History final screenshots: PASS; iOS e Android hanno screenshot finali Options con `Sessioni cronologia 35` e screenshot Cronologia senza residue `TASK135_MATRIX`/`TASK135_HISTORY_FINAL`.
+- Android lintDebug post-fix: PASS.
 
 Check non eseguiti:
 - Nessun physical device in questo giro: NON ESEGUITO, fuori dallo scope richiesto per TASK-135 corrente.
@@ -115,3 +200,4 @@ Check non eseguiti:
 - DONE non marcato per policy locale: serve accettazione/review utente o Claude.
 - La UI completa `SyncResolutionPrompt` field-by-field resta follow-up se i conflitti reali devono essere presentati in un nuovo sheet dedicato invece delle superfici TASK-126 esistenti.
 - Android `PriceBackfillWorker` resta legacy; ora e' guardato per prodotti cloud-linked, ma una revisione futura potrebbe rimuovere definitivamente il backfill one-shot o legarlo solo a import locali storici.
+- XcodeBuildMCP nel run finale ha usato un simulatore diverso dai defaults per `build_run_sim`; il binario risultante e' stato installato/lanciato manualmente sul simulatore 240F per screenshot e snapshot finali.

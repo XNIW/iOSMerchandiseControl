@@ -51,7 +51,17 @@ SELECT json_build_object(
     'dirty', 0,
     'pending', 0,
     'localOnly', 0,
-    'userVisible', (SELECT count(*) FROM shared_sheet_sessions WHERE deleted_at IS NULL)
+    'userVisible', (
+      SELECT count(*)
+      FROM shared_sheet_sessions
+      WHERE deleted_at IS NULL
+        AND remote_id::text NOT ILIKE 'APPLY_IMPORT_%'
+        AND remote_id::text NOT ILIKE 'FULL_IMPORT_%'
+        AND remote_id::text NOT ILIKE 'TASK135_MATRIX_%'
+        AND coalesce(display_name, '') NOT ILIKE 'APPLY_IMPORT_%'
+        AND coalesce(display_name, '') NOT ILIKE 'FULL_IMPORT_%'
+        AND coalesce(display_name, '') NOT ILIKE 'TASK135_MATRIX_%'
+    )
   )
 )::text AS task114_counts_json;
 SQL
@@ -366,6 +376,8 @@ history_user_visible = """
 SELECT count(*) FROM history_entries
 WHERE id NOT LIKE 'APPLY_IMPORT_%'
   AND id NOT LIKE 'FULL_IMPORT_%'
+  AND UPPER(id) NOT LIKE 'TASK135_MATRIX_%'
+  AND UPPER(COALESCE(displayName, '')) NOT LIKE 'TASK135_MATRIX_%'
   AND (deletedAt IS NULL OR syncStatus = 'NOT_ATTEMPTED')
 """
 history_user_visible_pending = """
@@ -373,6 +385,8 @@ SELECT count(*) FROM history_entries h
 LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid
 WHERE h.id NOT LIKE 'APPLY_IMPORT_%'
   AND h.id NOT LIKE 'FULL_IMPORT_%'
+  AND UPPER(h.id) NOT LIKE 'TASK135_MATRIX_%'
+  AND UPPER(COALESCE(h.displayName, '')) NOT LIKE 'TASK135_MATRIX_%'
   AND (
     r.historyEntryUid IS NULL
     OR r.localChangeRevision > r.lastSyncedLocalRevision
@@ -383,12 +397,20 @@ SELECT count(*) FROM history_entries h
 LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid
 WHERE h.id NOT LIKE 'APPLY_IMPORT_%'
   AND h.id NOT LIKE 'FULL_IMPORT_%'
+  AND UPPER(h.id) NOT LIKE 'TASK135_MATRIX_%'
+  AND UPPER(COALESCE(h.displayName, '')) NOT LIKE 'TASK135_MATRIX_%'
+  AND (h.deletedAt IS NULL OR h.syncStatus = 'NOT_ATTEMPTED')
   AND r.remoteId IS NULL
 """
 history_technical_local_only = """
 SELECT count(*) FROM history_entries h
 LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid
-WHERE (h.id LIKE 'APPLY_IMPORT_%' OR h.id LIKE 'FULL_IMPORT_%')
+WHERE (
+    h.id LIKE 'APPLY_IMPORT_%'
+    OR h.id LIKE 'FULL_IMPORT_%'
+    OR UPPER(h.id) LIKE 'TASK135_MATRIX_%'
+    OR UPPER(COALESCE(h.displayName, '')) LIKE 'TASK135_MATRIX_%'
+  )
   AND r.remoteId IS NULL
 """
 pending_refs = """
@@ -517,6 +539,7 @@ if scoped_prefix:
             ),
             "userVisible": q_params(
                 "SELECT count(*) FROM history_entries WHERE id NOT LIKE 'APPLY_IMPORT_%' AND id NOT LIKE 'FULL_IMPORT_%' "
+                "AND UPPER(id) NOT LIKE 'TASK135_MATRIX_%' AND UPPER(COALESCE(displayName, '')) NOT LIKE 'TASK135_MATRIX_%' "
                 "AND (deletedAt IS NULL OR syncStatus = 'NOT_ATTEMPTED') AND "
                 "(id LIKE ? OR displayName LIKE ? OR supplier LIKE ? OR category LIKE ?)",
                 (like, like, like, like),
@@ -524,13 +547,17 @@ if scoped_prefix:
             "pending": q_params(
                 "SELECT count(*) FROM history_entries h LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid "
                 "WHERE h.id NOT LIKE 'APPLY_IMPORT_%' AND h.id NOT LIKE 'FULL_IMPORT_%' "
+                "AND UPPER(h.id) NOT LIKE 'TASK135_MATRIX_%' AND UPPER(COALESCE(h.displayName, '')) NOT LIKE 'TASK135_MATRIX_%' "
                 "AND (r.historyEntryUid IS NULL OR r.localChangeRevision > r.lastSyncedLocalRevision) "
                 "AND (h.id LIKE ? OR h.displayName LIKE ? OR h.supplier LIKE ? OR h.category LIKE ?)",
                 (like, like, like, like),
             ),
             "localOnly": q_params(
                 "SELECT count(*) FROM history_entries h LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid "
-                "WHERE r.remoteId IS NULL AND (h.id LIKE ? OR h.displayName LIKE ? OR h.supplier LIKE ? OR h.category LIKE ?)",
+                "WHERE h.id NOT LIKE 'APPLY_IMPORT_%' AND h.id NOT LIKE 'FULL_IMPORT_%' "
+                "AND UPPER(h.id) NOT LIKE 'TASK135_MATRIX_%' AND UPPER(COALESCE(h.displayName, '')) NOT LIKE 'TASK135_MATRIX_%' "
+                "AND (h.deletedAt IS NULL OR h.syncStatus = 'NOT_ATTEMPTED') "
+                "AND r.remoteId IS NULL AND (h.id LIKE ? OR h.displayName LIKE ? OR h.supplier LIKE ? OR h.category LIKE ?)",
                 (like, like, like, like),
             ),
         },
@@ -573,7 +600,7 @@ payload = {
         "historySessionActiveAllTombstone": [{"active": counts["history_entries"]["active"], "all": counts["history_entries"]["all"], "tombstone": counts["history_entries"]["deleted"]}],
         "localOnlyNotPrunable": (
             sample("SELECT 'product', p.id FROM products p LEFT JOIN product_remote_refs r ON r.productId = p.id WHERE r.remoteId IS NULL LIMIT 5") +
-            sample("SELECT 'history_technical', h.id FROM history_entries h LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid WHERE (h.id LIKE 'APPLY_IMPORT_%' OR h.id LIKE 'FULL_IMPORT_%') AND r.remoteId IS NULL LIMIT 5")
+            sample("SELECT 'history_technical', h.id FROM history_entries h LEFT JOIN history_entry_remote_refs r ON r.historyEntryUid = h.uid WHERE (h.id LIKE 'APPLY_IMPORT_%' OR h.id LIKE 'FULL_IMPORT_%' OR UPPER(h.id) LIKE 'TASK135_MATRIX_%' OR UPPER(COALESCE(h.displayName, '')) LIKE 'TASK135_MATRIX_%') AND r.remoteId IS NULL LIMIT 5")
         ),
     },
     "status": "PASS"
@@ -792,6 +819,34 @@ if scoped_prefix:
     supplier_active_cond = and_conditions(supplier_cond, remote_deleted_where(supplier_table))
     category_active_cond = and_conditions(category_cond, remote_deleted_where(category_table))
     history_active_cond = and_conditions(history_cond, remote_deleted_where(history_table))
+    history_visible_parts = [history_cond]
+    if history_table:
+        history_cols = cols(history_table)
+        history_id = history_cols.get("ZID")
+        history_title = history_cols.get("ZDISPLAYNAME") or history_cols.get("ZTITLE")
+        history_deleted = history_cols.get("ZREMOTEDELETEDAT")
+        history_local_revision = history_cols.get("ZLOCALCHANGEREVISION")
+        history_last_synced = history_cols.get("ZLASTSYNCEDLOCALREVISION")
+        if history_id:
+            history_visible_parts.extend([
+                f"{history_id} NOT LIKE 'APPLY_IMPORT_%'",
+                f"{history_id} NOT LIKE 'FULL_IMPORT_%'",
+                f"UPPER({history_id}) NOT LIKE 'TASK135_MATRIX_%'",
+            ])
+        if history_title:
+            history_visible_parts.extend([
+                f"{history_title} NOT LIKE 'APPLY_IMPORT_%'",
+                f"{history_title} NOT LIKE 'FULL_IMPORT_%'",
+                f"UPPER(COALESCE({history_title}, '')) NOT LIKE 'TASK135_MATRIX_%'",
+            ])
+        if history_deleted:
+            if history_local_revision and history_last_synced:
+                history_visible_parts.append(
+                    f"({history_deleted} IS NULL OR COALESCE({history_local_revision}, 0) > COALESCE({history_last_synced}, 0))"
+                )
+            else:
+                history_visible_parts.append(f"{history_deleted} IS NULL")
+    history_visible_cond = and_conditions(*history_visible_parts)
     scoped_counts = {
         "products": {
             "active": q_params(f"SELECT count(*) FROM {product_table} WHERE {product_active_cond}", product_params) if product_active_cond else None,
@@ -815,7 +870,7 @@ if scoped_prefix:
         },
         "history_entries": {
             "active": q_params(f"SELECT count(*) FROM {history_table} WHERE {history_active_cond}", history_params) if history_active_cond else None,
-            "userVisible": q_params(f"SELECT count(*) FROM {history_table} WHERE {history_active_cond}", history_params) if history_active_cond else None,
+            "userVisible": q_params(f"SELECT count(*) FROM {history_table} WHERE {history_visible_cond}", history_params) if history_visible_cond else None,
             "pending": 0,
             "localOnly": None,
         },
@@ -839,13 +894,26 @@ history = entity_tables["history_entries"]
 if history:
     c = cols(history)
     id_col = c.get("ZID")
+    title_col = c.get("ZDISPLAYNAME") or c.get("ZTITLE")
     deleted_col = c.get("ZREMOTEDELETEDAT")
+    local_revision_col = c.get("ZLOCALCHANGEREVISION")
+    last_synced_revision_col = c.get("ZLASTSYNCEDLOCALREVISION")
     where = []
     if id_col:
         where.append(f"{id_col} NOT LIKE 'APPLY_IMPORT_%'")
         where.append(f"{id_col} NOT LIKE 'FULL_IMPORT_%'")
+        where.append(f"UPPER({id_col}) NOT LIKE 'TASK135_MATRIX_%'")
+    if title_col:
+        where.append(f"{title_col} NOT LIKE 'APPLY_IMPORT_%'")
+        where.append(f"{title_col} NOT LIKE 'FULL_IMPORT_%'")
+        where.append(f"UPPER(COALESCE({title_col}, '')) NOT LIKE 'TASK135_MATRIX_%'")
     if deleted_col:
-        where.append(f"{deleted_col} IS NULL")
+        if local_revision_col and last_synced_revision_col:
+            where.append(
+                f"({deleted_col} IS NULL OR COALESCE({local_revision_col}, 0) > COALESCE({last_synced_revision_col}, 0))"
+            )
+        else:
+            where.append(f"{deleted_col} IS NULL")
     counts["history_entries"]["userVisible"] = count(history, " AND ".join(where)) if where else counts["history_entries"]["active"]
 
 outbox = entity_tables["outbox"]

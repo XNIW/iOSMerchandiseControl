@@ -1,0 +1,50 @@
+{
+  "android": [
+    {
+      "category": "TASK135 final iOS category",
+      "fingerprint": "d0962eda2e9bafc6a67a65863ac172445ef311823b37ca3a534ddf6993b4688a",
+      "isShownInHistoryList": true,
+      "local_id": "42",
+      "payloadHash": "82b6776b7f3dd5fb28f3b32e33aea2dcc920eadc10da322721cece7e76b50595",
+      "remote_id": "87670182-d266-4c2c-bb08-368211909e9d",
+      "rowCount": 3,
+      "supplier": "TASK135 final iOS supplier",
+      "timestamp": "2026-06-18 14:28:41",
+      "title": "TASK135_HISTORY_FINAL_IOS_20260618T142841Z",
+      "tombstone": false,
+      "totalItems": 2
+    }
+  ],
+  "ios": [
+    {
+      "category": "TASK135 final iOS category",
+      "fingerprint": "d0962eda2e9bafc6a67a65863ac172445ef311823b37ca3a534ddf6993b4688a",
+      "isShownInHistoryList": true,
+      "local_id": "TASK135_HISTORY_FINAL_IOS_20260618T142841Z",
+      "payloadHash": "82b6776b7f3dd5fb28f3b32e33aea2dcc920eadc10da322721cece7e76b50595",
+      "remote_id": "87670182-d266-4c2c-bb08-368211909e9d",
+      "rowCount": 3,
+      "supplier": "TASK135 final iOS supplier",
+      "timestamp": "2026-06-18 14:28:41",
+      "title": "TASK135_HISTORY_FINAL_IOS_20260618T142841Z",
+      "tombstone": false,
+      "totalItems": 2
+    }
+  ],
+  "supabase": [
+    {
+      "category": "TASK135 final iOS category",
+      "fingerprint": "d0962eda2e9bafc6a67a65863ac172445ef311823b37ca3a534ddf6993b4688a",
+      "isShownInHistoryList": true,
+      "local_id": "",
+      "payloadHash": "82b6776b7f3dd5fb28f3b32e33aea2dcc920eadc10da322721cece7e76b50595",
+      "remote_id": "87670182-d266-4c2c-bb08-368211909e9d",
+      "rowCount": 3,
+      "supplier": "TASK135 final iOS supplier",
+      "timestamp": "2026-06-18 14:28:41",
+      "title": "TASK135_HISTORY_FINAL_IOS_20260618T142841Z",
+      "tombstone": false,
+      "totalItems": 2
+    }
+  ]
+}

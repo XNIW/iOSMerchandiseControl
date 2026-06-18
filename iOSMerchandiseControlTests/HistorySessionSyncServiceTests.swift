@@ -196,6 +196,56 @@ final class HistorySessionSyncServiceTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<HistoryEntry>()), 1)
     }
 
+    func testPullLinksMatchingLocalOnlyHistorySessionInsteadOfDuplicating() async throws {
+        let context = try makeContext()
+        let localID = UUID(uuidString: "18181818-1818-4818-8818-181818181818")!
+        let remoteID = UUID(uuidString: "19191919-1919-4919-8919-191919191919")!
+        let entry = HistoryEntry(
+            id: "Manual",
+            timestamp: HistorySessionPayloadCodec.parseTimestamp("2026-05-13 12:00:00"),
+            data: [["barcode", "quantity"], ["HISTORY_PARITY_BAR", "4"]],
+            editable: [[""], ["4"]],
+            complete: [false, true],
+            supplier: "TASK108_HISTORY_SUP",
+            category: "TASK108_HISTORY_CAT",
+            uid: localID
+        )
+        entry.title = "Manual"
+        context.insert(entry)
+        entry.markHistorySessionLocalMutation()
+        let previousRemoteID = entry.remoteID
+        try LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
+            .recordHistorySessionChange(
+                entry: entry,
+                operation: .upsert,
+                changedFields: ["data"]
+            )
+        try context.save()
+
+        let row = remoteRow(
+            remoteID: remoteID,
+            displayName: "Manual",
+            data: [["barcode", "quantity"], ["HISTORY_PARITY_BAR", "4"]],
+            editable: [[""], ["4"]],
+            complete: [false, true]
+        )
+        let service = HistorySessionSyncService(remote: FakeHistorySessionRemote(ownerUserID: owner, rows: [row]))
+
+        let result = try await service.pullHistorySessionsFromCloud(ownerUserID: owner, context: context)
+
+        XCTAssertEqual(result.insertedCount, 0)
+        XCTAssertEqual(result.updatedCount, 1)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<HistoryEntry>()), 1)
+        XCTAssertEqual(entry.uid, localID)
+        XCTAssertEqual(entry.remoteID, remoteID)
+        XCTAssertNotEqual(previousRemoteID, remoteID)
+        XCTAssertEqual(entry.lastSyncedLocalRevision, entry.localChangeRevision)
+        XCTAssertFalse(entry.isHistorySessionDirtyForCloud)
+        let changes = try context.fetch(FetchDescriptor<LocalPendingChange>())
+        XCTAssertEqual(changes.count, 1)
+        XCTAssertEqual(changes.first?.status, .acknowledged)
+    }
+
     func testFullPullPrunesCleanRemoteLinkedHistorySessionMissingFromRemoteSnapshot() async throws {
         let context = try makeContext()
         let staleRemoteID = UUID(uuidString: "16161616-1616-4616-8616-161616161616")!
