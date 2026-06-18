@@ -1,0 +1,5 @@
+RESULT PASS_WITH_NOTES
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260618T181650Z-live-cleanup-and-verify-task-TASK-114-prefix-TASK135_REVIEW_MATRIX_20260618T181308Z_-p67587.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-114/agent-runs/20260618T181650Z-live-cleanup-and-verify-task-TASK-114-prefix-TASK135_REVIEW_MATRIX_20260618T181308Z_-p67587.json
+NEXT_ACTION Set MC_ALLOW_CLEANUP=1 and run supabase cleanup --execute with cleanup_plan_id, then residue-check.

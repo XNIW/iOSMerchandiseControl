@@ -3648,6 +3648,7 @@ struct DatabaseView: View {
                     changedFields: ["tombstone"],
                     baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(product)
                 )
+                try accumulator.supersedeProductPriceChanges(for: product)
                 context.delete(product)
             }
             try context.save()

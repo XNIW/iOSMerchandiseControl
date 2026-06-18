@@ -1,0 +1,5 @@
+RESULT BLOCKED_EXTERNAL
+EXIT_CODE 2
+REPORT_MD docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T181105Z-live-sync-matrix-task-TASK-135-prefix-TASK135_REVIEW_-p49695.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T181105Z-live-sync-matrix-task-TASK-135-prefix-TASK135_REVIEW_-p49695.json
+NEXT_ACTION Resolve device/auth/Supabase blockers and retry.

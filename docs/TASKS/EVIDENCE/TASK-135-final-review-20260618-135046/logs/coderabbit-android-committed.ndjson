@@ -1,0 +1,7 @@
+{"type":"review_context","reviewType":"committed","currentBranch":"main","baseBranch":"main","baseCommit":"cae42cfbf49cd681682b18a01b3b8e352e3d4ff9","workingDirectory":"/Users/minxiang/AndroidStudioProjects/MerchandiseControlSplitView"}
+{"type":"status","phase":"connecting","status":"connecting_to_review_service"}
+{"type":"status","phase":"analyzing","status":"setting_up","message":"XNIW/MerchandiseControlSplitView is not connected to a CodeRabbit organization you can access, so this review will use the free CLI allowance.\n\nIf you expected an org plan here, check your signed-in account with coderabbit auth status, or install CodeRabbit for XNIW/MerchandiseControlSplitView at https://app.coderabbit.ai"}
+{"type":"status","phase":"setup","status":"setting_up"}
+{"type":"status","phase":"analyzing","status":"summarizing"}
+{"type":"status","phase":"analyzing","status":"reviewing"}
+{"type":"complete","status":"review_completed","findings":0}

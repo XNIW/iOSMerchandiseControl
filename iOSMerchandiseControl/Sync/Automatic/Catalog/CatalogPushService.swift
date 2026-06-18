@@ -86,6 +86,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
         var categoryIDs: [UUID] = []
         var productIDs: [UUID] = []
         var productTombstoneIDs: [UUID] = []
+        var changeIDs: [String] = []
     }
 
     nonisolated private static func push(
@@ -118,9 +119,11 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 outcome.result.supplierCreates += 1
                 outcome.supplierIDs.append(row.id)
                 acknowledgedChangeIDs.append(change.changeID)
+                outcome.changeIDs.append(change.changeID)
                 continue
             }
             acknowledgedChangeIDs.append(change.changeID)
+            outcome.changeIDs.append(change.changeID)
         }
 
         for change in changes where change.entityKind == .productCategory {
@@ -143,9 +146,11 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 outcome.result.categoryCreates += 1
                 outcome.categoryIDs.append(row.id)
                 acknowledgedChangeIDs.append(change.changeID)
+                outcome.changeIDs.append(change.changeID)
                 continue
             }
             acknowledgedChangeIDs.append(change.changeID)
+            outcome.changeIDs.append(change.changeID)
         }
 
         for change in changes where change.entityKind == .product {
@@ -153,6 +158,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 guard let remoteID = change.entityRemoteID ?? remoteIDFromLogicalKey(change.logicalKey) else {
                     if change.logicalKey.hasPrefix("product:local:") {
                         acknowledgedChangeIDs.append(change.changeID)
+                        outcome.changeIDs.append(change.changeID)
                     }
                     continue
                 }
@@ -167,6 +173,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 outcome.productIDs.append(row.id)
                 outcome.productTombstoneIDs.append(row.id)
                 acknowledgedChangeIDs.append(change.changeID)
+                outcome.changeIDs.append(change.changeID)
                 continue
             }
 
@@ -189,6 +196,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 outcome.productIDs.append(row.id)
             }
             acknowledgedChangeIDs.append(change.changeID)
+            outcome.changeIDs.append(change.changeID)
         }
 
         acknowledge(changeIDs: acknowledgedChangeIDs, changes: changes)
@@ -229,8 +237,30 @@ final class CatalogPushService: SyncCatalogPushProviding {
             source: "ios_catalog_automatic_push",
             entityIDsShape: "supplier_ids:count=\(outcome.supplierIDs.count);category_ids:count=\(outcome.categoryIDs.count);product_ids:count=\(outcome.productIDs.count)",
             metadataShape: "source=ios_catalog_automatic_push;suppliers=\(outcome.result.supplierCreates + outcome.result.supplierUpdates);categories=\(outcome.result.categoryCreates + outcome.result.categoryUpdates);products=\(outcome.result.productCreates + outcome.result.productUpdates);productTombstones=\(outcome.productTombstoneIDs.count)",
-            clientEventFingerprint: outcome.result.plan?.idempotencyKey ?? UUID().uuidString
+            clientEventFingerprint: catalogEventFingerprint(
+                eventType: eventType,
+                outcome: outcome
+            )
         )
+    }
+
+    nonisolated private static func catalogEventFingerprint(
+        eventType: String,
+        outcome: CatalogPushOutcome
+    ) -> String {
+        [
+            outcome.result.plan?.idempotencyKey ?? "catalog:unknown",
+            "event:\(eventType)",
+            "changes:\(outcome.changeIDs.sorted().joined(separator: ","))",
+            "suppliers:\(fingerprintIDs(outcome.supplierIDs))",
+            "categories:\(fingerprintIDs(outcome.categoryIDs))",
+            "products:\(fingerprintIDs(outcome.productIDs))",
+            "productTombstones:\(fingerprintIDs(outcome.productTombstoneIDs))"
+        ].joined(separator: "|")
+    }
+
+    nonisolated private static func fingerprintIDs(_ ids: [UUID]) -> String {
+        ids.map { $0.uuidString.lowercased() }.sorted().joined(separator: ",")
     }
 
     nonisolated private static func findSupplier(for change: LocalPendingChange, context: ModelContext) throws -> Supplier? {

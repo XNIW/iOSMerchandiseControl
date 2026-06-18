@@ -1,0 +1,3 @@
+List of devices attached
+8ac48ff0	device
+emulator-5554	device

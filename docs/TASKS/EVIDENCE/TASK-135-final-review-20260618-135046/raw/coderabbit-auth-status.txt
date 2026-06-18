@@ -1,0 +1,1 @@
+{"type":"status","phase":"auth","status":"not_authenticated","authenticated":false}

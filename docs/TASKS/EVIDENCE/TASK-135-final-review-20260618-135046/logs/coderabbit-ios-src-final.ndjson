@@ -1,0 +1,11 @@
+{"type":"review_context","reviewType":"uncommitted","currentBranch":"main","baseBranch":"main","workingDirectory":"/Users/minxiang/Desktop/iOSMerchandiseControl/iOSMerchandiseControl"}
+{"type":"status","phase":"connecting","status":"connecting_to_review_service"}
+{"type":"status","phase":"analyzing","status":"setting_up","message":"XNIW/iOSMerchandiseControl is not connected to a CodeRabbit organization you can access, so this review will use the free CLI allowance.\n\nIf you expected an org plan here, check your signed-in account with coderabbit auth status, or install CodeRabbit for XNIW/iOSMerchandiseControl at https://app.coderabbit.ai"}
+{"type":"status","phase":"setup","status":"setting_up"}
+{"type":"status","phase":"analyzing","status":"summarizing"}
+{"type":"status","phase":"analyzing","status":"reviewing"}
+{"type":"heartbeat","status":"reviewing"}
+{"type":"heartbeat","status":"reviewing"}
+{"type":"heartbeat","status":"reviewing"}
+{"type":"finding","severity":"major","fileName":"iOSMerchandiseControl/LocalPendingChange.swift","codegenInstructions":"Verify each finding against current code. Fix only still-valid issues, skip the rest with a brief reason, keep changes minimal, and validate.\n\nIn @iOSMerchandiseControl/LocalPendingChange.swift around lines 454 - 479, The supersedeProductPriceChanges method marks changes as terminal by setting their status to .superseded, but it does not invalidate the cachedActiveCount. After the loop where changes are marked as superseded completes, add code to invalidate or reset the cachedActiveCount so that subsequent calls to recordChange on the same accumulator will recalculate the actual number of active changes instead of relying on the stale cached value that no longer reflects the reduced count of active changes.","suggestions":[]}
+{"type":"complete","status":"review_completed","findings":1}

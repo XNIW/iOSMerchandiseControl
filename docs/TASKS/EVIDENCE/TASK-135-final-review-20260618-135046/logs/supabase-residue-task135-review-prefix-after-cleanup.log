@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T182502Z-supabase-residue-check-task-TASK-135-prefix-TASK135_REVIEW_-profile-linked-p98031.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T182502Z-supabase-residue-check-task-TASK-135-prefix-TASK135_REVIEW_-profile-linked-p98031.json
+NEXT_ACTION Continue or close live cleanup evidence.

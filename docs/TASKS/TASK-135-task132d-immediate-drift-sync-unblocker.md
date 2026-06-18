@@ -7,8 +7,8 @@
 - Stato task: ACTIVE
 - Fase attuale: REVIEW
 - Responsabile attuale: Claude / Reviewer
-- Ultimo aggiornamento: 2026-06-18 12:45 -0400
-- Ultimo agente: Codex / Catalog delete architecture fixer
+- Ultimo aggiornamento: 2026-06-18 14:55 -0400
+- Ultimo agente: Codex / Final review self-fix verifier
 
 ## User Override
 TASK-132 e' gia' DONE nel tracking storico. Questo hotfix e' stato eseguito su istruzione esplicita utente come workstream post-DONE, senza riscrivere la storia di TASK-132 e senza riusare TASK-134 come task canonico.
@@ -116,6 +116,18 @@ Final Catalog/Product delete architecture fix richiesta dall'utente il 2026-06-1
 - Cleanup prefissi `TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_` e `TASK135_DELETE_PRODUCT_ANDROID_FIX_20260618T162703Z_` PASS su Supabase e Android locale; clean reopen non incrementa `sync_events` (`1869`/max `3121` before=after).
 - History regression post-cleanup PASS: visible row-level parity iOS/Android/Supabase `35/35/35`, `present_on_all=35`, zero missing/duplicates/mismatch, zero TASK135 visible residue.
 
+Final acceptance review + self-fix loop richiesta dall'utente il 2026-06-18 13:50 -0400, eseguita senza refactor e senza DONE:
+- Evidence principale: `docs/TASKS/EVIDENCE/TASK-135-final-review-20260618-135046/REPORT.md`.
+- CodeRabbit autenticato e rieseguito su iOS sorgente scoped: primo run 1 major valido su `LocalPendingChangeAccumulator.supersedeProductPriceChanges(for:)` per cache `cachedActiveCount` stale; fix minimo applicato invalidando la cache quando almeno un pending ProductPrice viene superseded; rerun CodeRabbit PASS con 0 issues.
+- Test iOS mirati post-fix CodeRabbit PASS: 5/5 su event fingerprint catalog, Product tombstone hard-delete/local-only e ProductPrice pending supersede/link.
+- iOS Debug build post-fix CodeRabbit PASS; iOS `git diff --check` PASS.
+- Screenshot live correnti acquisiti: iOS Options `Sessioni cronologia 35`, Android Options `Sessioni cronologia 35`, iOS History e Android History senza `TASK135_MATRIX`.
+- Row-level History post-reopen confermata con tool obbligatori: iOS/Android/Supabase active `39`, userVisible/shown `35`, hidden active `4`, visible parity `35/35/35`, zero missing/duplicates/payload mismatch.
+- Catalog post-reopen stabile: iOS/Android/Supabase products `19704`, suppliers `66`, categories `35`, product_prices `41131`; pending aggregate iOS/Android `0`.
+- Clean reopen/no false push finale PASS: `sync_events` count `1886`, max id `3138` invariati before/after.
+- Supabase hardening backup TASK-108 applicato live via linked SQL e verificato; il workspace Supabase locale non ha `.git`, quindi non c'e' commit/push Supabase da questo ambiente.
+- TASK resta ACTIVE / REVIEW per policy. Stato consigliato: READY_FOR_USER_ACCEPTANCE / DONE candidate.
+
 ## Handoff post-fix
 Reviewer deve verificare soprattutto:
 - iOS recovery con pending locali attivi: `replaceLocalCatalogWithRemoteSnapshot` continua a proteggere pending non classificabili; il follow-up UI field-by-field resta necessario per conflitti reali.
@@ -166,6 +178,16 @@ Final Catalog/Product delete architecture fix 2026-06-18 12:45 -0400:
 - Build/test/check finali PASS: iOS Catalog delete tests, iOS History/Options 39/39, iOS Debug build, Android Catalog delete tests, Android History tests, Android assembleDebug, Android lintDebug, iOS/Android `git diff --check`, tooling syntax, evidence hygiene.
 - Screenshot finali post-clean-reopen: `screenshots/ios-final-post-delete-clean-reopen.png`, `screenshots/android-final-post-delete-clean-reopen.png`.
 - TASK resta ACTIVE / REVIEW per policy. Non marcare DONE senza accettazione/review; stato consigliato: READY_FOR_USER_ACCEPTANCE / DONE candidate.
+
+Final acceptance review + self-fix loop 2026-06-18 14:55 -0400:
+- Prossima fase: REVIEW / user acceptance.
+- Prossimo agente: Claude / Reviewer oppure utente per accettazione.
+- Evidence principale: `docs/TASKS/EVIDENCE/TASK-135-final-review-20260618-135046/REPORT.md`.
+- CodeRabbit finale iOS source scoped: 0 issues dopo fix cache; Android committed review: 0 issues.
+- Catalog e History risultano entrambi stabili: Catalog counts parity `19704/66/35/41131`, pending iOS/Android `0`, clean reopen no false push; History visible row-level parity `35/35/35`, active fisiche `39` con 4 fixture tecniche `TASK135_MATRIX_*` hidden owner-scoped.
+- Screenshot correnti richiesti: `screenshots/ios-options-history-count-35-current.png`, `screenshots/android-options-history-count-35-current.png`, `screenshots/ios-history-visible-current.png`, `screenshots/android-history-visible-current.png`.
+- Build/test/check finali PASS: iOS targeted new-fix tests 5/5, iOS targeted History/Options PASS, iOS Debug build PASS, Android targeted History/Catalog PASS, Android assembleDebug + lintDebug PASS, iOS/Android `git diff --check` PASS.
+- TASK resta ACTIVE / REVIEW per policy. Non marcare DONE; pronto come READY_FOR_USER_ACCEPTANCE / DONE candidate.
 
 ## Evidence
 Evidence root:

@@ -1,0 +1,185 @@
+3d1ac950 Fix TASK-135 catalog product tombstone sync
+ docs/MASTER-PLAN.md                                |     2 +
+ .../REPORT.md                                      |   128 +
+ ...135-ios-write-product-delete-matrix-p72293.json |    73 +
+ ...k135-ios-write-product-delete-matrix-p72293.log |    81 +
+ ...sk135-ios-write-product-delete-matrix-p72293.md |    39 +
+ ...roid-pull-ios-product-delete-matrix-p79057.json |   113 +
+ ...droid-pull-ios-product-delete-matrix-p79057.log |   111 +
+ ...ndroid-pull-ios-product-delete-matrix-p79057.md |    50 +
+ ...android-write-product-delete-matrix-p82305.json |   113 +
+ ...-android-write-product-delete-matrix-p82305.log |   113 +
+ ...5-android-write-product-delete-matrix-p82305.md |    50 +
+ ...-pull-android-product-delete-matrix-p85344.json |    73 +
+ ...s-pull-android-product-delete-matrix-p85344.log |    81 +
+ ...os-pull-android-product-delete-matrix-p85344.md |    39 +
+ .../counts/clean-reopen-sync-events-after.json     |    10 +
+ .../counts/clean-reopen-sync-events-before.json    |    10 +
+ .../diffs/catalog-delete-architecture-audit.md     |    44 +
+ .../diffs/catalog-delete-target-architecture.md    |    51 +
+ ...ry-visible-diff-after-catalog-delete-cleanup.md |    32 +
+ .../logs/android-assemble-lint-debug.log           |    60 +
+ .../logs/android-history-targeted-tests.log        |    42 +
+ ...android-targeted-catalog-delete-tests-rerun.log |    41 +
+ .../logs/android-targeted-catalog-delete-tests.log |    41 +
+ .../catalog-delete-state-dump-baseline-rerun.log   |     0
+ .../logs/catalog-delete-state-dump-baseline.log    |     0
+ .../logs/catalog-delete-state-dump-bash-n.txt      |     1 +
+ .../logs/ios-debug-build.log                       |   274 +
+ .../ios-history-options-targeted-tests-rerun.log   |   428 +
+ .../logs/ios-history-options-targeted-tests.log    |   337 +
+ .../logs/ios-targeted-catalog-delete-suite.log     |   303 +
+ .../ios-targeted-catalog-delete-tests-rerun.log    |   948 +
+ .../logs/ios-targeted-catalog-delete-tests.log     |   979 +
+ .../raw/android-adb-devices-preflight.txt          |     3 +
+ .../raw/android-git-fetch-preflight.txt            |     0
+ .../raw/android-git-head-origin-preflight.txt      |     2 +
+ .../raw/android-git-log-preflight.txt              |     1 +
+ .../raw/android-git-status-preflight.txt           |     2 +
+ ...story-android-after-catalog-delete-cleanup.json | 28735 +++++++++++++++++
+ .../history-ios-after-catalog-delete-cleanup.json  | 31671 +++++++++++++++++++
+ ...tory-supabase-after-catalog-delete-cleanup.json | 31268 ++++++++++++++++++
+ .../raw/ios-booted-simulators-preflight.txt        |     8 +
+ .../raw/ios-git-fetch-preflight.txt                |     0
+ .../raw/ios-git-head-origin-preflight.txt          |     2 +
+ .../raw/ios-git-log-preflight.txt                  |     1 +
+ .../raw/ios-git-status-preflight.txt               |    70 +
+ .../raw/supabase-rls-grants-smoke.txt              |    49 +
+ .../raw/supabase-schema-preflight.txt              |    69 +
+ .../raw/supabase-version-preflight.txt             |     0
+ .../android-final-post-delete-clean-reopen.png     |   Bin 0 -> 126201 bytes
+ .../ios-final-post-delete-clean-reopen.png         |   Bin 0 -> 3151398 bytes
+ .../android-db-copy.stderr                         |     0
+ .../android-products.tsv                           |     3 +
+ .../android-tombstones.tsv                         |     1 +
+ .../ios-pending.tsv                                |     1 +
+ .../ios-products.tsv                               |     1 +
+ .../android-live-after-cross-pull-v2/metadata.txt  |     2 +
+ .../android-live-after-cross-pull-v2/summary.json  |    17 +
+ .../supabase-products.json                         |     0
+ .../supabase-products.stderr                       |     2 +
+ .../supabase-sync-events.json                      |     0
+ .../supabase-sync-events.stderr                    |     2 +
+ .../android-db-copy.stderr                         |     0
+ .../android-products.tsv                           |     3 +
+ .../android-tombstones.tsv                         |     1 +
+ .../ios-pending.tsv                                |     1 +
+ .../ios-products.tsv                               |     1 +
+ .../android-live-after-cross-pull-v3/metadata.txt  |     2 +
+ .../android-live-after-cross-pull-v3/summary.json  |    17 +
+ .../supabase-products.json                         |     9 +
+ .../supabase-products.stderr                       |     3 +
+ .../supabase-sync-events.json                      |     9 +
+ .../supabase-sync-events.stderr                    |     3 +
+ .../android-db-copy.stderr                         |     0
+ .../android-products.tsv                           |     3 +
+ .../android-tombstones.tsv                         |     1 +
+ .../android-live-after-cross-pull/ios-pending.tsv  |     1 +
+ .../android-live-after-cross-pull/ios-products.tsv |     1 +
+ .../android-live-after-cross-pull/metadata.txt     |     2 +
+ .../android-live-after-cross-pull/summary.json     |    17 +
+ .../supabase-products.json                         |     0
+ .../supabase-products.stderr                       |     2 +
+ .../supabase-sync-events.json                      |     0
+ .../supabase-sync-events.stderr                    |     2 +
+ .../state/android-live-prefix.txt                  |     1 +
+ .../state/baseline-rerun/android-db-copy.stderr    |     0
+ .../state/baseline-rerun/android-products.tsv      |     1 +
+ .../state/baseline-rerun/android-tombstones.tsv    |     1 +
+ .../state/baseline-rerun/ios-pending.tsv           |     1 +
+ .../state/baseline-rerun/ios-products.tsv          |     1 +
+ .../state/baseline-rerun/metadata.txt              |     2 +
+ .../state/baseline-rerun/summary.json              |    17 +
+ .../state/baseline-rerun/supabase-products.json    |     9 +
+ .../state/baseline-rerun/supabase-products.stderr  |     3 +
+ .../state/baseline-rerun/supabase-sync-events.json |     9 +
+ .../baseline-rerun/supabase-sync-events.stderr     |     3 +
+ .../state/baseline/android-db-copy.stderr          |     0
+ .../state/baseline/android-products.tsv            |     1 +
+ .../state/baseline/android-tombstones.tsv          |     1 +
+ .../state/baseline/ios-pending.tsv                 |     1 +
+ .../state/baseline/ios-products.tsv                |     1 +
+ .../state/baseline/metadata.txt                    |     2 +
+ .../state/baseline/summary.json                    |    17 +
+ .../state/baseline/supabase-products.json          |     0
+ .../state/baseline/supabase-products.stderr        |     2 +
+ .../state/baseline/supabase-sync-events.json       |     0
+ .../state/baseline/supabase-sync-events.stderr     |     2 +
+ .../android-db-copy.stderr                         |     0
+ .../android-products.tsv                           |     3 +
+ .../android-tombstones.tsv                         |     1 +
+ .../ios-live-after-cross-pull-v2/ios-pending.tsv   |     1 +
+ .../ios-live-after-cross-pull-v2/ios-products.tsv  |     1 +
+ .../ios-live-after-cross-pull-v2/metadata.txt      |     2 +
+ .../ios-live-after-cross-pull-v2/summary.json      |    17 +
+ .../supabase-products.json                         |     0
+ .../supabase-products.stderr                       |     2 +
+ .../supabase-sync-events.json                      |     0
+ .../supabase-sync-events.stderr                    |     2 +
+ .../android-db-copy.stderr                         |     0
+ .../android-products.tsv                           |     3 +
+ .../android-tombstones.tsv                         |     1 +
+ .../ios-live-after-cross-pull-v3/ios-pending.tsv   |     1 +
+ .../ios-live-after-cross-pull-v3/ios-products.tsv  |     1 +
+ .../ios-live-after-cross-pull-v3/metadata.txt      |     2 +
+ .../ios-live-after-cross-pull-v3/summary.json      |    17 +
+ .../supabase-products.json                         |     0
+ .../supabase-products.stderr                       |     9 +
+ .../supabase-sync-events.json                      |     9 +
+ .../supabase-sync-events.stderr                    |     3 +
+ .../android-db-copy.stderr                         |     0
+ .../ios-live-after-cross-pull/android-products.tsv |     3 +
+ .../android-tombstones.tsv                         |     1 +
+ .../ios-live-after-cross-pull/ios-pending.tsv      |     1 +
+ .../ios-live-after-cross-pull/ios-products.tsv     |     1 +
+ .../state/ios-live-after-cross-pull/metadata.txt   |     2 +
+ .../state/ios-live-after-cross-pull/summary.json   |    17 +
+ .../supabase-products.json                         |     0
+ .../supabase-products.stderr                       |     2 +
+ .../supabase-sync-events.json                      |     0
+ .../supabase-sync-events.stderr                    |     2 +
+ .../state/ios-live-prefix.txt                      |     1 +
+ .../supabase-timeout-queries/android-products.json |    29 +
+ .../supabase-timeout-queries/ios-products.json     |    29 +
+ ...0618T162539Z_-profile-linked-dry-run-p4157.json |    75 +
+ ...60618T162539Z_-profile-linked-dry-run-p4157.log |    34 +
+ ...260618T162539Z_-profile-linked-dry-run-p4157.md |    39 +
+ ...TE_PRODUCT_IOS_FIX_20260618T162539Z_-p5641.json |    75 +
+ ...ETE_PRODUCT_IOS_FIX_20260618T162539Z_-p5641.log |     9 +
+ ...LETE_PRODUCT_IOS_FIX_20260618T162539Z_-p5641.md |    39 +
+ ...FIX_20260618T162539Z_-profile-linked-p7091.json |    74 +
+ ..._FIX_20260618T162539Z_-profile-linked-p7091.log |    34 +
+ ...S_FIX_20260618T162539Z_-profile-linked-p7091.md |    39 +
+ ...0618T162703Z_-profile-linked-dry-run-p8518.json |    75 +
+ ...60618T162703Z_-profile-linked-dry-run-p8518.log |    34 +
+ ...260618T162703Z_-profile-linked-dry-run-p8518.md |    39 +
+ ...ODUCT_ANDROID_FIX_20260618T162703Z_-p10003.json |    75 +
+ ...RODUCT_ANDROID_FIX_20260618T162703Z_-p10003.log |     9 +
+ ...PRODUCT_ANDROID_FIX_20260618T162703Z_-p10003.md |    39 +
+ ...IX_20260618T162703Z_-profile-linked-p11504.json |    74 +
+ ...FIX_20260618T162703Z_-profile-linked-p11504.log |    34 +
+ ..._FIX_20260618T162703Z_-profile-linked-p11504.md |    39 +
+ ...T_IOS_FIX_20260618T162539Z_-execute-p12975.json |   113 +
+ ...CT_IOS_FIX_20260618T162539Z_-execute-p12975.log |   113 +
+ ...UCT_IOS_FIX_20260618T162539Z_-execute-p12975.md |    50 +
+ ...DROID_FIX_20260618T162703Z_-execute-p15420.json |   113 +
+ ...NDROID_FIX_20260618T162703Z_-execute-p15420.log |   113 +
+ ...ANDROID_FIX_20260618T162703Z_-execute-p15420.md |    50 +
+ ...counts-task-TASK-135-source-android-p18146.json |   174 +
+ ...-counts-task-TASK-135-source-android-p18146.log |     2 +
+ ...c-counts-task-TASK-135-source-android-p18146.md |    52 +
+ ...ync-counts-task-TASK-135-source-ios-p18142.json |   174 +
+ ...sync-counts-task-TASK-135-source-ios-p18142.log |     2 +
+ ...-sync-counts-task-TASK-135-source-ios-p18142.md |    52 +
+ ...-135-source-supabase-profile-linked-p18176.json |   172 +
+ ...K-135-source-supabase-profile-linked-p18176.log |     2 +
+ ...SK-135-source-supabase-profile-linked-p18176.md |    52 +
+ ...5_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_.json |    22 +
+ ...LETE_PRODUCT_ANDROID_FIX_20260618T162703Z_.json |    22 +
+ ...-135-task132d-immediate-drift-sync-unblocker.md |    45 +-
+ .../Automatic/Catalog/CatalogPushService.swift     |    62 +-
+ .../SyncCountReconciliationTests.swift             |    20 +-
+ .../SyncEventLiveRecorderTests.swift               |    26 +
+ .../Task118AutomaticDomainTests.swift              |   120 +-
+ tools/agent/catalog_delete_state_dump.sh           |   249 +
+ 183 files changed, 99497 insertions(+), 32 deletions(-)

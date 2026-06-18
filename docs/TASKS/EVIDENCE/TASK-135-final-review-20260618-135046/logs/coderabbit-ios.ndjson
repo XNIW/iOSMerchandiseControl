@@ -1,0 +1,3 @@
+{"type":"review_context","reviewType":"all","currentBranch":"main","baseBranch":"main","baseCommit":"d75f0ac48313052a5c1f3caa78d37fe3def25611","workingDirectory":"/Users/minxiang/Desktop/iOSMerchandiseControl"}
+{"type":"status","phase":"connecting","status":"connecting_to_review_service"}
+{"type":"error","errorType":"payload_too_large","message":"Review failed: diff too large. Try rebasing onto your base branch to reduce the number of changed files, or split the diff into smaller chunks.","recoverable":false,"details":{"cause":{"isTrusted":true},"name":"TRPCClientError"}}

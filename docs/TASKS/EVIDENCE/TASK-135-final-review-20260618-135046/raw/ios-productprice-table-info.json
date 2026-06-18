@@ -1,0 +1,11 @@
+[{"cid":0,"name":"Z_PK","type":"INTEGER","notnull":0,"dflt_value":null,"pk":1},
+{"cid":1,"name":"Z_ENT","type":"INTEGER","notnull":0,"dflt_value":null,"pk":0},
+{"cid":2,"name":"Z_OPT","type":"INTEGER","notnull":0,"dflt_value":null,"pk":0},
+{"cid":3,"name":"ZPRODUCT","type":"INTEGER","notnull":0,"dflt_value":null,"pk":0},
+{"cid":4,"name":"ZCREATEDAT","type":"TIMESTAMP","notnull":0,"dflt_value":null,"pk":0},
+{"cid":5,"name":"ZEFFECTIVEAT","type":"TIMESTAMP","notnull":0,"dflt_value":null,"pk":0},
+{"cid":6,"name":"ZPRICE","type":"FLOAT","notnull":0,"dflt_value":null,"pk":0},
+{"cid":7,"name":"ZNOTE","type":"VARCHAR","notnull":0,"dflt_value":null,"pk":0},
+{"cid":8,"name":"ZSOURCE","type":"VARCHAR","notnull":0,"dflt_value":null,"pk":0},
+{"cid":9,"name":"ZTYPE","type":"VARCHAR","notnull":0,"dflt_value":null,"pk":0},
+{"cid":10,"name":"ZREMOTEID","type":"BLOB","notnull":0,"dflt_value":null,"pk":0}]

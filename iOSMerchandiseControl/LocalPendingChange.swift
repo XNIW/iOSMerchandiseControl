@@ -451,6 +451,38 @@ nonisolated final class LocalPendingChangeAccumulator {
         }
     }
 
+    func supersedeProductPriceChanges(for product: Product) throws {
+        let timestamp = now()
+        var didSupersede = false
+        let keys = Set(product.priceHistory.flatMap { price in
+            [
+                LocalPendingChangeLogicalKey.productPrice(
+                    productRemoteID: product.remoteID,
+                    productBarcode: product.barcode,
+                    type: price.type,
+                    effectiveAt: price.effectiveAt
+                ),
+                LocalPendingChangeLogicalKey.productPrice(
+                    productRemoteID: nil,
+                    productBarcode: product.barcode,
+                    type: price.type,
+                    effectiveAt: price.effectiveAt
+                )
+            ]
+        })
+        for key in keys {
+            for change in try fetchChanges(entityKind: .productPrice, logicalKey: key)
+                where !change.status.isTerminal {
+                change.status = .superseded
+                change.updatedAt = timestamp
+                didSupersede = true
+            }
+        }
+        if didSupersede {
+            cachedActiveCount = nil
+        }
+    }
+
     @discardableResult
     func recordImportBatch(
         logicalKeys: [String],

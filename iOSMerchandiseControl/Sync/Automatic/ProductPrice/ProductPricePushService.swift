@@ -106,6 +106,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
     nonisolated private struct ProductPricePushOutcome: Sendable {
         var result: SyncProductPricePushResult
         var priceIDs: [UUID] = []
+        var insertedChangeIDs: [String] = []
     }
 
     nonisolated private static func push(
@@ -116,25 +117,38 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
         plan: SyncProductPricePushPlan
     ) async throws -> ProductPricePushOutcome {
         var outcome = ProductPricePushOutcome(result: SyncProductPricePushResult(plan: plan))
-        let pairs = try changes.compactMap { change -> (LocalPendingChange, ProductPrice)? in
-            guard change.operation != .delete,
-                  let price = try findPrice(for: change, context: context),
-                  price.remoteID == nil,
-                  price.product?.remoteID != nil else {
-                return nil
+        var acknowledged: [String] = []
+        var superseded: [String] = []
+        var pairs: [(LocalPendingChange, ProductPrice)] = []
+        for change in changes {
+            guard change.operation != .delete else {
+                superseded.append(change.changeID)
+                continue
             }
-            return (change, price)
+            guard let price = try findPrice(for: change, context: context) else {
+                superseded.append(change.changeID)
+                continue
+            }
+            if price.remoteID != nil {
+                acknowledged.append(change.changeID)
+                continue
+            }
+            guard price.product?.remoteID != nil else {
+                continue
+            }
+            pairs.append((change, price))
         }
         let payloads = pairs.compactMap { _, price in
             makePayload(price: price, ownerUserID: ownerUserID)
         }
         guard !payloads.isEmpty else {
-            outcome.result.orphanedCount = max(0, changes.count)
+            markTerminal(changeIDs: acknowledged, changes: changes, status: .acknowledged)
+            markTerminal(changeIDs: superseded, changes: changes, status: .superseded)
+            outcome.result.orphanedCount = max(0, changes.count - acknowledged.count - superseded.count)
             return outcome
         }
         let rows = try await remote.insertProductPrices(payloads)
         let rowsByID = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0) })
-        var acknowledged: [String] = []
         for (change, price) in pairs {
             guard let expectedID = makePayload(price: price, ownerUserID: ownerUserID)?.id,
                   let row = rowsByID[expectedID] else {
@@ -142,11 +156,13 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
             }
             price.remoteID = row.id
             acknowledged.append(change.changeID)
+            outcome.insertedChangeIDs.append(change.changeID)
             outcome.priceIDs.append(row.id)
         }
-        acknowledge(changeIDs: acknowledged, changes: changes)
-        outcome.result.insertedCount = acknowledged.count
-        outcome.result.orphanedCount = max(0, changes.count - acknowledged.count)
+        markTerminal(changeIDs: acknowledged, changes: changes, status: .acknowledged)
+        markTerminal(changeIDs: superseded, changes: changes, status: .superseded)
+        outcome.result.insertedCount = outcome.insertedChangeIDs.count
+        outcome.result.orphanedCount = max(0, changes.count - acknowledged.count - superseded.count)
         return outcome
     }
 
@@ -172,7 +188,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
             source: "ios_prices_automatic_push",
             entityIDsShape: "price_ids:count=\(outcome.priceIDs.count)",
             metadataShape: "source=ios_prices_automatic_push;prices=\(outcome.result.insertedCount);orphaned=\(outcome.result.orphanedCount);tombstoned=\(outcome.result.tombstonedCount)",
-            clientEventFingerprint: outcome.result.plan?.idempotencyKey ?? UUID().uuidString
+            clientEventFingerprint: productPriceEventFingerprint(outcome)
         )
     }
 
@@ -256,11 +272,23 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
         ))
     }
 
-    nonisolated private static func acknowledge(changeIDs: [String], changes: [LocalPendingChange]) {
+    nonisolated private static func productPriceEventFingerprint(_ outcome: ProductPricePushOutcome) -> String {
+        [
+            outcome.result.plan?.idempotencyKey ?? "product-price:unknown",
+            "changes:\(outcome.insertedChangeIDs.sorted().joined(separator: ","))",
+            "prices:\(outcome.priceIDs.map { $0.uuidString.lowercased() }.sorted().joined(separator: ","))"
+        ].joined(separator: "|")
+    }
+
+    nonisolated private static func markTerminal(
+        changeIDs: [String],
+        changes: [LocalPendingChange],
+        status: LocalPendingChangeStatus
+    ) {
         let ids = Set(changeIDs)
         let timestamp = Date()
         for change in changes where ids.contains(change.changeID) {
-            change.status = .acknowledged
+            change.status = status
             change.updatedAt = timestamp
         }
     }

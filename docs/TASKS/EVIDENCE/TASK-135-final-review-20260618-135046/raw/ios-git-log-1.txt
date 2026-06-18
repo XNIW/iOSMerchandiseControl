@@ -1,0 +1,1 @@
+3d1ac950 Fix TASK-135 catalog product tombstone sync

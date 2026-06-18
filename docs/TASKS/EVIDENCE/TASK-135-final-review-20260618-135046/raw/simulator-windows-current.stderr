@@ -1,0 +1,26 @@
+[
+  {
+    "index": 0,
+    "name": "iPhone 17 Pro – iOS 26.4",
+    "position": [
+      396,
+      33
+    ],
+    "size": [
+      503,
+      1064
+    ]
+  },
+  {
+    "index": 1,
+    "name": "iPhone 17 Pro – iOS 26.5",
+    "position": [
+      885,
+      33
+    ],
+    "size": [
+      453,
+      966
+    ]
+  }
+]

@@ -1,0 +1,408 @@
+diff --git a/iOSMerchandiseControl/DatabaseView.swift b/iOSMerchandiseControl/DatabaseView.swift
+index b8217d9b..e6601312 100644
+--- a/iOSMerchandiseControl/DatabaseView.swift
++++ b/iOSMerchandiseControl/DatabaseView.swift
+@@ -3648,6 +3648,7 @@ struct DatabaseView: View {
+                     changedFields: ["tombstone"],
+                     baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(product)
+                 )
++                try accumulator.supersedeProductPriceChanges(for: product)
+                 context.delete(product)
+             }
+             try context.save()
+diff --git a/iOSMerchandiseControl/LocalPendingChange.swift b/iOSMerchandiseControl/LocalPendingChange.swift
+index ad6981cc..27106c85 100644
+--- a/iOSMerchandiseControl/LocalPendingChange.swift
++++ b/iOSMerchandiseControl/LocalPendingChange.swift
+@@ -451,6 +451,33 @@ nonisolated final class LocalPendingChangeAccumulator {
+         }
+     }
+
++    func supersedeProductPriceChanges(for product: Product) throws {
++        let timestamp = now()
++        let keys = Set(product.priceHistory.flatMap { price in
++            [
++                LocalPendingChangeLogicalKey.productPrice(
++                    productRemoteID: product.remoteID,
++                    productBarcode: product.barcode,
++                    type: price.type,
++                    effectiveAt: price.effectiveAt
++                ),
++                LocalPendingChangeLogicalKey.productPrice(
++                    productRemoteID: nil,
++                    productBarcode: product.barcode,
++                    type: price.type,
++                    effectiveAt: price.effectiveAt
++                )
++            ]
++        })
++        for key in keys {
++            for change in try fetchChanges(entityKind: .productPrice, logicalKey: key)
++                where !change.status.isTerminal {
++                change.status = .superseded
++                change.updatedAt = timestamp
++            }
++        }
++    }
++
+     @discardableResult
+     func recordImportBatch(
+         logicalKeys: [String],
+diff --git a/iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift b/iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift
+index 6522646c..9225e98c 100644
+--- a/iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift
++++ b/iOSMerchandiseControl/Sync/Automatic/Catalog/CatalogPushService.swift
+@@ -86,6 +86,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
+         var categoryIDs: [UUID] = []
+         var productIDs: [UUID] = []
+         var productTombstoneIDs: [UUID] = []
++        var changeIDs: [String] = []
+     }
+
+     nonisolated private static func push(
+@@ -118,9 +119,11 @@ final class CatalogPushService: SyncCatalogPushProviding {
+                 outcome.result.supplierCreates += 1
+                 outcome.supplierIDs.append(row.id)
+                 acknowledgedChangeIDs.append(change.changeID)
++                outcome.changeIDs.append(change.changeID)
+                 continue
+             }
+             acknowledgedChangeIDs.append(change.changeID)
++            outcome.changeIDs.append(change.changeID)
+         }
+
+         for change in changes where change.entityKind == .productCategory {
+@@ -143,9 +146,11 @@ final class CatalogPushService: SyncCatalogPushProviding {
+                 outcome.result.categoryCreates += 1
+                 outcome.categoryIDs.append(row.id)
+                 acknowledgedChangeIDs.append(change.changeID)
++                outcome.changeIDs.append(change.changeID)
+                 continue
+             }
+             acknowledgedChangeIDs.append(change.changeID)
++            outcome.changeIDs.append(change.changeID)
+         }
+
+         for change in changes where change.entityKind == .product {
+@@ -153,6 +158,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
+                 guard let remoteID = change.entityRemoteID ?? remoteIDFromLogicalKey(change.logicalKey) else {
+                     if change.logicalKey.hasPrefix("product:local:") {
+                         acknowledgedChangeIDs.append(change.changeID)
++                        outcome.changeIDs.append(change.changeID)
+                     }
+                     continue
+                 }
+@@ -167,6 +173,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
+                 outcome.productIDs.append(row.id)
+                 outcome.productTombstoneIDs.append(row.id)
+                 acknowledgedChangeIDs.append(change.changeID)
++                outcome.changeIDs.append(change.changeID)
+                 continue
+             }
+
+@@ -189,6 +196,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
+                 outcome.productIDs.append(row.id)
+             }
+             acknowledgedChangeIDs.append(change.changeID)
++            outcome.changeIDs.append(change.changeID)
+         }
+
+         acknowledge(changeIDs: acknowledgedChangeIDs, changes: changes)
+@@ -229,10 +237,32 @@ final class CatalogPushService: SyncCatalogPushProviding {
+             source: "ios_catalog_automatic_push",
+             entityIDsShape: "supplier_ids:count=\(outcome.supplierIDs.count);category_ids:count=\(outcome.categoryIDs.count);product_ids:count=\(outcome.productIDs.count)",
+             metadataShape: "source=ios_catalog_automatic_push;suppliers=\(outcome.result.supplierCreates + outcome.result.supplierUpdates);categories=\(outcome.result.categoryCreates + outcome.result.categoryUpdates);products=\(outcome.result.productCreates + outcome.result.productUpdates);productTombstones=\(outcome.productTombstoneIDs.count)",
+-            clientEventFingerprint: outcome.result.plan?.idempotencyKey ?? UUID().uuidString
++            clientEventFingerprint: catalogEventFingerprint(
++                eventType: eventType,
++                outcome: outcome
++            )
+         )
+     }
+
++    nonisolated private static func catalogEventFingerprint(
++        eventType: String,
++        outcome: CatalogPushOutcome
++    ) -> String {
++        [
++            outcome.result.plan?.idempotencyKey ?? "catalog:unknown",
++            "event:\(eventType)",
++            "changes:\(outcome.changeIDs.sorted().joined(separator: ","))",
++            "suppliers:\(fingerprintIDs(outcome.supplierIDs))",
++            "categories:\(fingerprintIDs(outcome.categoryIDs))",
++            "products:\(fingerprintIDs(outcome.productIDs))",
++            "productTombstones:\(fingerprintIDs(outcome.productTombstoneIDs))"
++        ].joined(separator: "|")
++    }
++
++    nonisolated private static func fingerprintIDs(_ ids: [UUID]) -> String {
++        ids.map { $0.uuidString.lowercased() }.sorted().joined(separator: ",")
++    }
++
+     nonisolated private static func findSupplier(for change: LocalPendingChange, context: ModelContext) throws -> Supplier? {
+         if let remoteID = change.entityRemoteID ?? remoteIDFromLogicalKey(change.logicalKey) {
+             return try fetchSupplier(remoteID: remoteID, context: context)
+diff --git a/iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift b/iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift
+index 1b4382ee..8dc79fe7 100644
+--- a/iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift
++++ b/iOSMerchandiseControl/Sync/Automatic/ProductPrice/ProductPricePushService.swift
+@@ -106,6 +106,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
+     nonisolated private struct ProductPricePushOutcome: Sendable {
+         var result: SyncProductPricePushResult
+         var priceIDs: [UUID] = []
++        var insertedChangeIDs: [String] = []
+     }
+
+     nonisolated private static func push(
+@@ -116,25 +117,38 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
+         plan: SyncProductPricePushPlan
+     ) async throws -> ProductPricePushOutcome {
+         var outcome = ProductPricePushOutcome(result: SyncProductPricePushResult(plan: plan))
+-        let pairs = try changes.compactMap { change -> (LocalPendingChange, ProductPrice)? in
+-            guard change.operation != .delete,
+-                  let price = try findPrice(for: change, context: context),
+-                  price.remoteID == nil,
+-                  price.product?.remoteID != nil else {
+-                return nil
++        var acknowledged: [String] = []
++        var superseded: [String] = []
++        var pairs: [(LocalPendingChange, ProductPrice)] = []
++        for change in changes {
++            guard change.operation != .delete else {
++                superseded.append(change.changeID)
++                continue
++            }
++            guard let price = try findPrice(for: change, context: context) else {
++                superseded.append(change.changeID)
++                continue
++            }
++            if price.remoteID != nil {
++                acknowledged.append(change.changeID)
++                continue
++            }
++            guard price.product?.remoteID != nil else {
++                continue
+             }
+-            return (change, price)
++            pairs.append((change, price))
+         }
+         let payloads = pairs.compactMap { _, price in
+             makePayload(price: price, ownerUserID: ownerUserID)
+         }
+         guard !payloads.isEmpty else {
+-            outcome.result.orphanedCount = max(0, changes.count)
++            markTerminal(changeIDs: acknowledged, changes: changes, status: .acknowledged)
++            markTerminal(changeIDs: superseded, changes: changes, status: .superseded)
++            outcome.result.orphanedCount = max(0, changes.count - acknowledged.count - superseded.count)
+             return outcome
+         }
+         let rows = try await remote.insertProductPrices(payloads)
+         let rowsByID = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0) })
+-        var acknowledged: [String] = []
+         for (change, price) in pairs {
+             guard let expectedID = makePayload(price: price, ownerUserID: ownerUserID)?.id,
+                   let row = rowsByID[expectedID] else {
+@@ -142,11 +156,13 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
+             }
+             price.remoteID = row.id
+             acknowledged.append(change.changeID)
++            outcome.insertedChangeIDs.append(change.changeID)
+             outcome.priceIDs.append(row.id)
+         }
+-        acknowledge(changeIDs: acknowledged, changes: changes)
+-        outcome.result.insertedCount = acknowledged.count
+-        outcome.result.orphanedCount = max(0, changes.count - acknowledged.count)
++        markTerminal(changeIDs: acknowledged, changes: changes, status: .acknowledged)
++        markTerminal(changeIDs: superseded, changes: changes, status: .superseded)
++        outcome.result.insertedCount = outcome.insertedChangeIDs.count
++        outcome.result.orphanedCount = max(0, changes.count - acknowledged.count - superseded.count)
+         return outcome
+     }
+
+@@ -172,7 +188,7 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
+             source: "ios_prices_automatic_push",
+             entityIDsShape: "price_ids:count=\(outcome.priceIDs.count)",
+             metadataShape: "source=ios_prices_automatic_push;prices=\(outcome.result.insertedCount);orphaned=\(outcome.result.orphanedCount);tombstoned=\(outcome.result.tombstonedCount)",
+-            clientEventFingerprint: outcome.result.plan?.idempotencyKey ?? UUID().uuidString
++            clientEventFingerprint: productPriceEventFingerprint(outcome)
+         )
+     }
+
+@@ -256,11 +272,23 @@ final class ProductPricePushService: SyncProductPriceSyncProviding {
+         ))
+     }
+
+-    nonisolated private static func acknowledge(changeIDs: [String], changes: [LocalPendingChange]) {
++    nonisolated private static func productPriceEventFingerprint(_ outcome: ProductPricePushOutcome) -> String {
++        [
++            outcome.result.plan?.idempotencyKey ?? "product-price:unknown",
++            "changes:\(outcome.insertedChangeIDs.sorted().joined(separator: ","))",
++            "prices:\(outcome.priceIDs.map { $0.uuidString.lowercased() }.sorted().joined(separator: ","))"
++        ].joined(separator: "|")
++    }
++
++    nonisolated private static func markTerminal(
++        changeIDs: [String],
++        changes: [LocalPendingChange],
++        status: LocalPendingChangeStatus
++    ) {
+         let ids = Set(changeIDs)
+         let timestamp = Date()
+         for change in changes where ids.contains(change.changeID) {
+-            change.status = .acknowledged
++            change.status = status
+             change.updatedAt = timestamp
+         }
+     }
+diff --git a/iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift b/iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift
+index 015123e7..66723ee6 100644
+--- a/iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift
++++ b/iOSMerchandiseControlTests/Task118AutomaticDomainTests.swift
+@@ -289,6 +289,60 @@ final class Task118AutomaticDomainTests: XCTestCase {
+         XCTAssertNil(try fetchOutboxEntry(context: verifyContext, ownerUserID: owner, domain: "catalog"))
+     }
+
++    @MainActor
++    func testCatalogPushServiceUsesDistinctSyncEventIDsForLaterSingleChange() async throws {
++        let container = try makeContainer()
++        let owner = UUID()
++        let remoteID = UUID()
++        let context = ModelContext(container)
++        let product = Product(
++            barcode: "TASK135_EVENT_ID_REUSE",
++            remoteID: remoteID,
++            productName: "TASK135 Event ID Reuse"
++        )
++        context.insert(product)
++        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
++        product.productName = "TASK135 Event ID Reuse Updated"
++        try accumulator.recordProductChange(
++            product: product,
++            operation: .update,
++            origin: .manualCatalogSave,
++            changedFields: ["productName"],
++            baselineFingerprintHash: nil
++        )
++        try context.save()
++
++        let remote = Task118CatalogRemote()
++        let first = try await CatalogPushService(modelContainer: container, remote: remote)
++            .pushPendingCatalog(ownerUserID: owner)
++        XCTAssertEqual(first.totalChanged, 1)
++
++        let deleteContext = ModelContext(container)
++        let productToDelete = try XCTUnwrap(fetchProduct(barcode: "TASK135_EVENT_ID_REUSE", context: deleteContext))
++        let deleteAccumulator = LocalPendingChangeAccumulator(context: deleteContext, ownerUserID: owner)
++        try deleteAccumulator.recordProductChange(
++            product: productToDelete,
++            operation: .delete,
++            origin: .manualCatalogSave,
++            changedFields: ["tombstone"],
++            baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(productToDelete)
++        )
++        try deleteAccumulator.supersedeProductPriceChanges(for: productToDelete)
++        deleteContext.delete(productToDelete)
++        try deleteContext.save()
++
++        let second = try await CatalogPushService(modelContainer: container, remote: remote)
++            .pushPendingCatalog(ownerUserID: owner)
++        XCTAssertEqual(second.totalChanged, 1)
++
++        let verifyContext = ModelContext(container)
++        let entries = try fetchOutboxEntries(context: verifyContext, ownerUserID: owner, domain: "catalog")
++        XCTAssertEqual(entries.count, 2)
++        XCTAssertEqual(Set(entries.map(\.clientEventID)).count, 2)
++        XCTAssertTrue(entries.contains { $0.eventType == "catalog_changed" })
++        XCTAssertTrue(entries.contains { $0.eventType == "catalog_tombstone" })
++    }
++
+     @MainActor
+     func testProductPricePushServiceWritesLinksAndAcknowledgesPendingPrice() async throws {
+         let container = try makeContainer()
+@@ -344,6 +398,44 @@ final class Task118AutomaticDomainTests: XCTestCase {
+         XCTAssertEqual(event?.status, .pending)
+     }
+
++    @MainActor
++    func testProductPricePushServiceSupersedesPendingPriceAfterProductCascadeDelete() async throws {
++        let container = try makeContainer()
++        let owner = UUID()
++        let context = ModelContext(container)
++        let product = Product(
++            barcode: "TASK135_PRICE_CASCADE_DELETE",
++            remoteID: UUID(),
++            productName: "TASK135 Price Cascade Delete"
++        )
++        let price = ProductPrice(
++            type: .retail,
++            price: 9.99,
++            effectiveAt: Date(timeIntervalSince1970: 1_700_000_100),
++            product: product
++        )
++        context.insert(product)
++        context.insert(price)
++        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
++        try accumulator.recordProductPriceChange(price: price, origin: .productPriceSave)
++        context.delete(product)
++        try context.save()
++
++        let remote = Task118ProductPriceRemote()
++        let result = try await ProductPricePushService(modelContainer: container, remote: remote)
++            .pushPendingProductPrices(ownerUserID: owner)
++
++        XCTAssertEqual(result.insertedCount, 0)
++        XCTAssertEqual(result.orphanedCount, 0)
++        let insertCallCount = await remote.insertCallCount()
++        XCTAssertEqual(insertCallCount, 0)
++        let verifyContext = ModelContext(container)
++        XCTAssertEqual(try activeChangeCount(context: verifyContext, ownerUserID: owner), 0)
++        let snapshot = try LocalPendingChangeSnapshotProvider(context: verifyContext)
++            .loadSnapshot(ownerUserID: owner)
++        XCTAssertEqual(snapshot.pendingProductPriceChangeCount, 0)
++    }
++
+     func testAutomaticRuntimeErrorDiagnosticsUseSharedRedaction() throws {
+         let runtime = try readSource("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift")
+         let engine = try readSource("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncEngine.swift")
+@@ -429,14 +521,22 @@ final class Task118AutomaticDomainTests: XCTestCase {
+         ownerUserID: UUID,
+         domain: String
+     ) throws -> SyncEventOutboxEntry? {
++        try fetchOutboxEntries(context: context, ownerUserID: ownerUserID, domain: domain).first
++    }
++
++    private func fetchOutboxEntries(
++        context: ModelContext,
++        ownerUserID: UUID,
++        domain: String
++    ) throws -> [SyncEventOutboxEntry] {
+         let owner = ownerUserID.uuidString.lowercased()
+-        var descriptor = FetchDescriptor<SyncEventOutboxEntry>(
++        let descriptor = FetchDescriptor<SyncEventOutboxEntry>(
+             predicate: #Predicate<SyncEventOutboxEntry> { entry in
+                 entry.ownerUserID == owner && entry.domain == domain
+-            }
++            },
++            sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+         )
+-        descriptor.fetchLimit = 1
+-        return try context.fetch(descriptor).first
++        return try context.fetch(descriptor)
+     }
+ }
+
+@@ -542,7 +642,14 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
+ }
+
+ private actor Task118ProductPriceRemote: SyncAutomaticProductPriceRemoteWriting {
++    private var insertCalls = 0
++
++    func insertCallCount() -> Int {
++        insertCalls
++    }
++
+     func insertProductPrices(_ payloads: [SyncAutomaticProductPricePayload]) async throws -> [RemoteInventoryProductPriceRow] {
++        insertCalls += 1
+         payloads.map {
+             RemoteInventoryProductPriceRow(
+                 id: $0.id,

@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T182432Z-supabase-cleanup-task-TASK-135-prefix-TASK135_REVIEW_-profile-linked-dry-run-p95105.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T182432Z-supabase-cleanup-task-TASK-135-prefix-TASK135_REVIEW_-profile-linked-dry-run-p95105.json
+NEXT_ACTION For execute, set MC_ALLOW_CLEANUP=1 and pass --cleanup-plan-id cleanup-TASK-135-20260618T182432Z-TASK135_REVIEW_.

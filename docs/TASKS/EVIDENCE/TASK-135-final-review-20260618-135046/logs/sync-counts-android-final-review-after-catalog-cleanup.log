@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T182646Z-sync-counts-task-TASK-135-source-android-profile-linked-p3797.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T182646Z-sync-counts-task-TASK-135-source-android-profile-linked-p3797.json
+NEXT_ACTION Run remaining sync counts or live reconcile-counts.

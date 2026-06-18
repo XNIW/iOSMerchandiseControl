@@ -1,0 +1,10 @@
+Initialising login role...
+Connecting to remote database...
+Skipping migration README.md... (file name must match pattern "<timestamp>_name.sql")
+Remote migration versions not found in local migrations directory.
+
+Make sure your local git repo is up-to-date. If the error persists, try repairing the migration history table:
+supabase migration repair --status reverted 20260530041048 20260530120000 20260531050837 20260531171726 20260531190000 20260531210000 20260531230000 20260531233000 20260531234500 20260531235000 20260531235500 20260531235900 20260601000500 20260601120000 20260601160000 20260604035308 20260604120000 20260604214112
+
+And update local migrations to match remote database:
+supabase db pull

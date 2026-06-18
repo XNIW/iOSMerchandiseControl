@@ -290,6 +290,60 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     @MainActor
+    func testCatalogPushServiceUsesDistinctSyncEventIDsForLaterSingleChange() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let remoteID = UUID()
+        let context = ModelContext(container)
+        let product = Product(
+            barcode: "TASK135_EVENT_ID_REUSE",
+            remoteID: remoteID,
+            productName: "TASK135 Event ID Reuse"
+        )
+        context.insert(product)
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
+        product.productName = "TASK135 Event ID Reuse Updated"
+        try accumulator.recordProductChange(
+            product: product,
+            operation: .update,
+            origin: .manualCatalogSave,
+            changedFields: ["productName"],
+            baselineFingerprintHash: nil
+        )
+        try context.save()
+
+        let remote = Task118CatalogRemote()
+        let first = try await CatalogPushService(modelContainer: container, remote: remote)
+            .pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(first.totalChanged, 1)
+
+        let deleteContext = ModelContext(container)
+        let productToDelete = try XCTUnwrap(fetchProduct(barcode: "TASK135_EVENT_ID_REUSE", context: deleteContext))
+        let deleteAccumulator = LocalPendingChangeAccumulator(context: deleteContext, ownerUserID: owner)
+        try deleteAccumulator.recordProductChange(
+            product: productToDelete,
+            operation: .delete,
+            origin: .manualCatalogSave,
+            changedFields: ["tombstone"],
+            baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(productToDelete)
+        )
+        try deleteAccumulator.supersedeProductPriceChanges(for: productToDelete)
+        deleteContext.delete(productToDelete)
+        try deleteContext.save()
+
+        let second = try await CatalogPushService(modelContainer: container, remote: remote)
+            .pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(second.totalChanged, 1)
+
+        let verifyContext = ModelContext(container)
+        let entries = try fetchOutboxEntries(context: verifyContext, ownerUserID: owner, domain: "catalog")
+        XCTAssertEqual(entries.count, 2)
+        XCTAssertEqual(Set(entries.map(\.clientEventID)).count, 2)
+        XCTAssertTrue(entries.contains { $0.eventType == "catalog_changed" })
+        XCTAssertTrue(entries.contains { $0.eventType == "catalog_tombstone" })
+    }
+
+    @MainActor
     func testProductPricePushServiceWritesLinksAndAcknowledgesPendingPrice() async throws {
         let container = try makeContainer()
         let owner = UUID()
@@ -342,6 +396,44 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(event?.eventType, "prices_changed")
         XCTAssertEqual(event?.changedCount, 1)
         XCTAssertEqual(event?.status, .pending)
+    }
+
+    @MainActor
+    func testProductPricePushServiceSupersedesPendingPriceAfterProductCascadeDelete() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let context = ModelContext(container)
+        let product = Product(
+            barcode: "TASK135_PRICE_CASCADE_DELETE",
+            remoteID: UUID(),
+            productName: "TASK135 Price Cascade Delete"
+        )
+        let price = ProductPrice(
+            type: .retail,
+            price: 9.99,
+            effectiveAt: Date(timeIntervalSince1970: 1_700_000_100),
+            product: product
+        )
+        context.insert(product)
+        context.insert(price)
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
+        try accumulator.recordProductPriceChange(price: price, origin: .productPriceSave)
+        context.delete(product)
+        try context.save()
+
+        let remote = Task118ProductPriceRemote()
+        let result = try await ProductPricePushService(modelContainer: container, remote: remote)
+            .pushPendingProductPrices(ownerUserID: owner)
+
+        XCTAssertEqual(result.insertedCount, 0)
+        XCTAssertEqual(result.orphanedCount, 0)
+        let insertCallCount = await remote.insertCallCount()
+        XCTAssertEqual(insertCallCount, 0)
+        let verifyContext = ModelContext(container)
+        XCTAssertEqual(try activeChangeCount(context: verifyContext, ownerUserID: owner), 0)
+        let snapshot = try LocalPendingChangeSnapshotProvider(context: verifyContext)
+            .loadSnapshot(ownerUserID: owner)
+        XCTAssertEqual(snapshot.pendingProductPriceChangeCount, 0)
     }
 
     func testAutomaticRuntimeErrorDiagnosticsUseSharedRedaction() throws {
@@ -429,14 +521,22 @@ final class Task118AutomaticDomainTests: XCTestCase {
         ownerUserID: UUID,
         domain: String
     ) throws -> SyncEventOutboxEntry? {
+        try fetchOutboxEntries(context: context, ownerUserID: ownerUserID, domain: domain).first
+    }
+
+    private func fetchOutboxEntries(
+        context: ModelContext,
+        ownerUserID: UUID,
+        domain: String
+    ) throws -> [SyncEventOutboxEntry] {
         let owner = ownerUserID.uuidString.lowercased()
-        var descriptor = FetchDescriptor<SyncEventOutboxEntry>(
+        let descriptor = FetchDescriptor<SyncEventOutboxEntry>(
             predicate: #Predicate<SyncEventOutboxEntry> { entry in
                 entry.ownerUserID == owner && entry.domain == domain
-            }
+            },
+            sortBy: [SortDescriptor(\.createdAt, order: .forward)]
         )
-        descriptor.fetchLimit = 1
-        return try context.fetch(descriptor).first
+        return try context.fetch(descriptor)
     }
 }
 
@@ -542,8 +642,15 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
 }
 
 private actor Task118ProductPriceRemote: SyncAutomaticProductPriceRemoteWriting {
+    private var insertCalls = 0
+
+    func insertCallCount() -> Int {
+        insertCalls
+    }
+
     func insertProductPrices(_ payloads: [SyncAutomaticProductPricePayload]) async throws -> [RemoteInventoryProductPriceRow] {
-        payloads.map {
+        insertCalls += 1
+        return payloads.map {
             RemoteInventoryProductPriceRow(
                 id: $0.id,
                 ownerUserID: $0.ownerUserID,

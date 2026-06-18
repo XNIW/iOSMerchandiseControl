@@ -1,0 +1,5 @@
+{"type":"status","phase":"auth","status":"starting_login"}
+{"type":"status","phase":"auth","status":"awaiting_browser_auth","authUrl":"https://app.coderabbit.ai/login?<REDACTED_AUTH_URL>","fallbackAuthUrl":"https://app.coderabbit.ai/login?<REDACTED_AUTH_URL>"}
+{"type":"status","phase":"auth","status":"processing_callback"}
+{"type":"status","phase":"auth","status":"fetching_user"}
+{"type":"complete","phase":"auth","status":"authenticated","userName":"XNIW","provider":"github"}

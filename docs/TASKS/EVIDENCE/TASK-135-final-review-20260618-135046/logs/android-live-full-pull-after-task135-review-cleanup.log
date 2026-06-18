@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T182550Z-android-live-full-pull-live-p1105.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-135/agent-runs/20260618T182550Z-android-live-full-pull-live-p1105.json
+NEXT_ACTION Continue Android live/device gate.
