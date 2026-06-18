@@ -7,8 +7,8 @@
 - Stato task: ACTIVE
 - Fase attuale: REVIEW
 - Responsabile attuale: Claude / Reviewer
-- Ultimo aggiornamento: 2026-06-17 19:55 -0400
-- Ultimo agente: Codex / Live verifier-fixer
+- Ultimo aggiornamento: 2026-06-17 20:45 -0400
+- Ultimo agente: Codex / UX polish verifier-fixer
 
 ## User Override
 TASK-132 e' gia' DONE nel tracking storico. Questo hotfix e' stato eseguito su istruzione esplicita utente come workstream post-DONE, senza riscrivere la storia di TASK-132 e senza riusare TASK-134 come task canonico.
@@ -58,6 +58,11 @@ Override utente 2026-06-17: completata anche la prova live cross-platform su sim
 
 Micro-fix UX finale richiesto dall'utente: iOS Options, card `Stato database locale`, rinomina la precedente label pull-specifica in label generica di sync: IT `Ultima sincronizzazione`, EN `Last sync`, ES `Última sincronización`, zh-Hans `上次同步`. Nessuna logica runtime modificata.
 
+Polish UX pubblico finale richiesto dall'utente, senza modifiche runtime sync:
+- iOS Options: rimosse le righe pubbliche `Modifiche locali in attesa` dalla card account/sync e dalla card `Stato database locale`; rimosso anche il box finale `Suggerimento`.
+- Android Options: card account e sync automatica fuse in una sola card compatta; rimossa la card separata `Sincronizzazione automatica`, rimossa la testata ridondante della card unificata nello stato signed-in, email mascherata (`x***@gmail.com`), azione `Esci` compatta, nessuna riga pubblica `Cambios locales pendientes` / `Cuenta cloud`.
+- Pending locali e account state restano disponibili internamente per runtime/test/harness/evidence; nessuna modifica a Supabase schema, auth flow o core sync.
+
 ## Handoff post-fix
 Reviewer deve verificare soprattutto:
 - iOS recovery con pending locali attivi: `replaceLocalCatalogWithRemoteSnapshot` continua a proteggere pending non classificabili; il follow-up UI field-by-field resta necessario per conflitti reali.
@@ -97,6 +102,11 @@ Check eseguiti:
 - Post-label iOS Options screenshot/runtime snapshot: PASS (`screenshots/ios-options-last-sync-label-final.jpg`, `raw/ios-options-last-sync-label-runtime-snapshot.txt`).
 - Post-label clean reopen invariant: PASS; `sync_events` remains count `1848`, max id `3100` (`counts/sync-events-after-last-sync-label.json`).
 - Post-label counts parity: PASS; final active/user-visible counts unchanged and iOS/Android pending aggregate 0 (`counts/final-after-last-sync-label-*.json`).
+- Public UX polish tests/builds: PASS; iOS `plutil -lint`, iOS Options targeted tests 9/9, iOS Debug build, Android `CatalogSyncViewModelTest` + `OptionsScreenPublicUxTest`, Android `assembleDebug`, iOS/Android `git diff --check`.
+- Final iOS public UX screenshot: PASS; `screenshots/ios-options-final-no-tip-public-ux-20260617-2042.jpg` shows no `Suggerimento`, no public pending row, `Ultima sincronizzazione`, clean local DB counts.
+- Final Android public UX screenshot: PASS; `screenshots/android-options-final-unified-no-header-20260617-2044.png` shows one compact account/sync card with no redundant header, masked email, no public pending/account implementation rows, no `Waiting to sync`.
+- Final post-polish counts parity: PASS; `counts/final-after-unified-no-header-*.json` all report products `19704`, suppliers `66`, categories `35`, product_prices `41131`, history_sessions `39`; iOS/Android pending aggregate 0.
+- Final post-polish clean reopen/no false push invariant: PASS; `counts/sync-events-after-unified-no-header.json` remains count `1848`, max id `3100`.
 
 Check non eseguiti:
 - Nessun physical device in questo giro: NON ESEGUITO, fuori dallo scope richiesto per TASK-135 corrente.

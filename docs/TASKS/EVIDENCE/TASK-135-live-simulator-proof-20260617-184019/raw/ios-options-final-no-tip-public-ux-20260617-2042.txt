@@ -1,0 +1,8 @@
+iOS runtime snapshot final public UX polish:
+- Account cloud collegato present
+- Sincronizzazione automatica attiva present
+- Stato database locale present
+- Database locale aggiornato present
+- Ultima sincronizzazione present
+- Counts visible: products 19704, suppliers 66, categories 35, product_prices 41131, history_sessions 39
+- Forbidden/removed text absent: Suggerimento, options tip card, Modifiche locali in attesa public row, Local database needs a cloud check

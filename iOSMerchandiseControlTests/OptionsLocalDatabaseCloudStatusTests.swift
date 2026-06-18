@@ -77,6 +77,34 @@ final class OptionsLocalDatabaseCloudStatusTests: XCTestCase {
         XCTAssertNotEqual(status.titleKey, "options.localDatabase.needsCheck.title")
     }
 
+    func testOfflineAndConflictStatesUseSpecificPublicCopy() {
+        let offlineStatus = LocalDatabaseCloudStatusResolver.resolve(makeInput(
+            baselineStatus: .stale,
+            syncPhase: .blocked(.networkUnavailable),
+            lastOutcome: .blocked(.networkUnavailable)
+        ))
+        let conflictStatus = LocalDatabaseCloudStatusResolver.resolve(makeInput(
+            hasAccountDecision: true
+        ))
+
+        XCTAssertEqual(offlineStatus.titleKey, "options.localDatabase.offline.title")
+        XCTAssertEqual(offlineStatus.detailKey, "options.localDatabase.offline.detail")
+        XCTAssertEqual(conflictStatus.titleKey, "options.localDatabase.conflictReview.title")
+        XCTAssertNotEqual(offlineStatus.titleKey, "options.localDatabase.needsCheck.title")
+        XCTAssertNotEqual(conflictStatus.titleKey, "options.localDatabase.needsCheck.title")
+    }
+
+    func testOptionsPublicCardsDoNotRenderPendingRows() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("iOSMerchandiseControl/OptionsView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertFalse(source.contains("L(\"options.localDatabase.pending\")"))
+        XCTAssertFalse(source.contains("L(\"options.supabase.automaticSync.pending\")"))
+    }
+
     private func makeInput(
         isSignedIn: Bool = true,
         isAuthFailed: Bool = false,

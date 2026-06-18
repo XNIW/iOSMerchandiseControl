@@ -162,19 +162,6 @@ struct OptionsView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-
-            // Piccola sezione di “aiuto” in fondo
-            Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(L("options.tip.header"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    Text(L("options.tip.body"))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-            }
         }
         .navigationTitle(L("options.title"))
         .onAppear {
@@ -354,13 +341,6 @@ struct OptionsView: View {
                 LabeledContent(L("options.localDatabase.categories"), value: "\(syncSummaryProvider.localDatabaseSummary.categories)")
                 LabeledContent(L("options.localDatabase.prices"), value: "\(syncSummaryProvider.localDatabaseSummary.productPrices)")
                 LabeledContent(L("options.localDatabase.historySessions"), value: "\(syncSummaryProvider.localDatabaseSummary.historySessions)")
-
-                if syncSummaryProvider.localPendingAttentionCount > 0 {
-                    LabeledContent(
-                        L("options.localDatabase.pending"),
-                        value: "\(syncSummaryProvider.localPendingAttentionCount)"
-                    )
-                }
 
                 if let appliedAt = syncSummaryProvider.supabaseBaselineSummary.appliedAt {
                     LabeledContent(
@@ -962,11 +942,6 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                LabeledContent(
-                    L("options.supabase.automaticSync.pending"),
-                    value: "\(pendingCount)"
-                )
-
                 LabeledContent(
                     L("options.supabase.automaticSync.lastSuccess"),
                     value: lastSuccessText
