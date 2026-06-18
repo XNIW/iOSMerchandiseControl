@@ -1,0 +1,10 @@
+{
+  "returncode": 0,
+  "rows": [
+    {
+      "count": 1869,
+      "max_id": 3121
+    }
+  ],
+  "stderr": "Initialising login role...\nA new version of Supabase CLI is available: v2.107.0 (currently installed v2.106.0)\nWe recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli\n"
+}

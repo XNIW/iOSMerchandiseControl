@@ -1,0 +1,29 @@
+{
+  "cmd": "supabase db query --linked -o json <sql>",
+  "prefix": "TASK135_DELETE_PRODUCT_ANDROID_FIX_20260618T162703Z_",
+  "returncode": 0,
+  "rows": [
+    {
+      "barcode": "TASK135_DELETE_PRODUCT_ANDROID_FIX_20260618T162703Z_MATRIX_ANDROID_CREATE",
+      "deleted_at": null,
+      "id": "8d93c223-29d2-4558-b2bf-2beaa5024927",
+      "product_name": "TASK135_DELETE_PRODUCT_ANDROID_FIX_20260618T162703Z_MATRIX_ANDROID_PRODUCT_CREATE",
+      "updated_at": "2026-06-18 16:27:31.659744+00"
+    },
+    {
+      "barcode": "TASK135_DELETE_PRODUCT_ANDROID_FIX_20260618T162703Z_MATRIX_ANDROID_TOMBSTONE",
+      "deleted_at": "2026-06-18 16:27:35.022981+00",
+      "id": "510114b1-ea64-4e0f-b520-b8aa00fe67e3",
+      "product_name": "TASK135_DELETE_PRODUCT_ANDROID_FIX_20260618T162703Z_MATRIX_ANDROID_PRODUCT_TOMBSTONE",
+      "updated_at": "2026-06-18 16:27:35.49886+00"
+    },
+    {
+      "barcode": "TASK135_DELETE_PRODUCT_ANDROID_FIX_20260618T162703Z_MATRIX_ANDROID_UPDATE",
+      "deleted_at": null,
+      "id": "0bd13343-c9ab-404d-a824-575d15674a68",
+      "product_name": "TASK135_DELETE_PRODUCT_ANDROID_FIX_20260618T162703Z_MATRIX_ANDROID_PRODUCT_UPDATE_FINAL",
+      "updated_at": "2026-06-18 16:27:33.621071+00"
+    }
+  ],
+  "stderr": "Initialising login role...\nA new version of Supabase CLI is available: v2.107.0 (currently installed v2.106.0)\nWe recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli\n"
+}

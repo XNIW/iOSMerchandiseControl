@@ -1,0 +1,29 @@
+{
+  "cmd": "supabase db query --linked -o json <sql>",
+  "prefix": "TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_",
+  "returncode": 0,
+  "rows": [
+    {
+      "barcode": "TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_MATRIX_IOS_CREATE",
+      "deleted_at": null,
+      "id": "e6cfa55c-fcbc-49b2-930e-0443fa1f71fe",
+      "product_name": "TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_MATRIX_IOS_PRODUCT_CREATE",
+      "updated_at": "2026-06-18 16:26:19.847283+00"
+    },
+    {
+      "barcode": "TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_MATRIX_IOS_TOMBSTONE",
+      "deleted_at": "2026-06-18 16:26:23.218+00",
+      "id": "35bc3604-0c66-4a29-84f6-bba5274ac90e",
+      "product_name": "TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_MATRIX_IOS_PRODUCT_TOMBSTONE",
+      "updated_at": "2026-06-18 16:26:23.388582+00"
+    },
+    {
+      "barcode": "TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_MATRIX_IOS_UPDATE",
+      "deleted_at": null,
+      "id": "dfb58216-ade8-4077-8c06-e638aed3ce7b",
+      "product_name": "TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_MATRIX_IOS_PRODUCT_UPDATE_FINAL",
+      "updated_at": "2026-06-18 16:26:22.345109+00"
+    }
+  ],
+  "stderr": "Initialising login role...\nA new version of Supabase CLI is available: v2.107.0 (currently installed v2.106.0)\nWe recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli\n"
+}

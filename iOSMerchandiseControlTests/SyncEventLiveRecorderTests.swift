@@ -32,6 +32,32 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         XCTAssertEqual(call.params.pMetadata, .object(["source": .string("ios")]))
     }
 
+    func testCatalogTombstoneEventMapsToRPCParams() async throws {
+        let productID = UUID(uuidString: "00000000-0000-4000-8000-000000001350")!
+        let transport = FakeRPCTransport(.json(fixtureRow(id: 58)))
+        let recorder = makeRecorder(transport: transport)
+
+        let result = try await recorder.record(
+            validRequest(
+                eventType: "catalog_tombstone",
+                entityIDs: .object(["product_ids": .array([.string(productID.uuidString)])]),
+                metadata: .object(["product_tombstone_count": .number(1)])
+            )
+        )
+
+        guard case .recorded(let row) = result else {
+            return XCTFail("Expected recorded result.")
+        }
+        XCTAssertEqual(row.id, 58)
+        let lastCall = await transport.lastCall()
+        let call = try XCTUnwrap(lastCall)
+        XCTAssertEqual(call.params.pDomain, "catalog")
+        XCTAssertEqual(call.params.pEventType, "catalog_tombstone")
+        XCTAssertEqual(call.params.pChangedCount, 1)
+        XCTAssertEqual(call.params.pEntityIDs, .object(["product_ids": .array([.string(productID.uuidString)])]))
+        XCTAssertEqual(call.params.pMetadata, .object(["product_tombstone_count": .number(1)]))
+    }
+
     func testChangedCountAboveThousandReturnsContractWithoutTransportCall() async {
         let transport = FakeRPCTransport(.json(fixtureRow(id: 2)))
         let recorder = makeRecorder(transport: transport)

@@ -1,0 +1,17 @@
+{
+  "files": [
+    "android-db-copy.stderr",
+    "android-products.tsv",
+    "android-tombstones.tsv",
+    "ios-pending.tsv",
+    "ios-products.tsv",
+    "metadata.txt",
+    "summary.json",
+    "supabase-products.json",
+    "supabase-products.stderr",
+    "supabase-sync-events.json",
+    "supabase-sync-events.stderr"
+  ],
+  "prefix": "TASK135_DELETE_",
+  "status": "PASS_WITH_NOTES"
+}

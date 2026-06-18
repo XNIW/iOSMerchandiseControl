@@ -7,8 +7,8 @@
 - Stato task: ACTIVE
 - Fase attuale: REVIEW
 - Responsabile attuale: Claude / Reviewer
-- Ultimo aggiornamento: 2026-06-18 10:50 -0400
-- Ultimo agente: Codex / History final safety gate fixer
+- Ultimo aggiornamento: 2026-06-18 12:45 -0400
+- Ultimo agente: Codex / Catalog delete architecture fixer
 
 ## User Override
 TASK-132 e' gia' DONE nel tracking storico. Questo hotfix e' stato eseguito su istruzione esplicita utente come workstream post-DONE, senza riscrivere la storia di TASK-132 e senza riusare TASK-134 come task canonico.
@@ -104,6 +104,18 @@ Continuation History final safety gate richiesta dall'utente il 2026-06-18, eseg
 - Tombstone cleanup PASS: le due fixture `TASK135_HISTORY_FINAL_*` sono tombstoned e hidden su iOS/Android/Supabase; residue finale visibile `0`, active residue `0`.
 - Clean reopen finale PASS: iOS, Android e Supabase restano in parity row-level visibile 35/35/35 con History active 39 e shown/userVisible 35.
 
+Final Catalog/Product delete architecture fix richiesta dall'utente il 2026-06-18 12:45 -0400, eseguita come FIX su override esplicito senza refactor:
+- Audit architettura documentato in `docs/TASKS/EVIDENCE/TASK-135-catalog-delete-architecture-20260618-120948/diffs/catalog-delete-architecture-audit.md`.
+- Target architecture documentata in `docs/TASKS/EVIDENCE/TASK-135-catalog-delete-architecture-20260618-120948/diffs/catalog-delete-target-architecture.md`.
+- Root cause confermata: iOS registra pending Product delete/tombstone e poi fa hard delete SwiftData; `CatalogPushService` cercava ancora il `Product` locale prima di inviare il tombstone, quindi il remote `deleted_at` poteva restare null.
+- Fix iOS minimo: `CatalogPushService` gestisce `.delete` prima di `findProduct`, usa `entityRemoteID`/logical key, invia `deleted_at`, ack pending al successo, non ricrea Product hard-deleted e ack-a delete local-only senza remote call.
+- Fix Android minimo: `InventoryRepository.pushDirtyCatalogDeltaToRemote(...)` drena `pending_catalog_tombstones` nel fallback quick-sync/realign prima degli upsert active, allineando il path fallback al path normale.
+- Nuovo tool evidence read-only: `tools/agent/catalog_delete_state_dump.sh`, con snapshot iOS SwiftData pending/products, Android Room products/tombstones e Supabase product/sync_events scoped per prefisso.
+- ProductPrice resta append-only/historical; active count esclude Product tombstoned e nessun pending falso viene creato dopo Product delete.
+- Live Product delete PASS con harness valido, non DB seed: iOS write/delete -> Supabase tombstone -> Android hidden PASS; Android write/delete -> Supabase tombstone -> iOS hidden PASS.
+- Cleanup prefissi `TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_` e `TASK135_DELETE_PRODUCT_ANDROID_FIX_20260618T162703Z_` PASS su Supabase e Android locale; clean reopen non incrementa `sync_events` (`1869`/max `3121` before=after).
+- History regression post-cleanup PASS: visible row-level parity iOS/Android/Supabase `35/35/35`, `present_on_all=35`, zero missing/duplicates/mismatch, zero TASK135 visible residue.
+
 ## Handoff post-fix
 Reviewer deve verificare soprattutto:
 - iOS recovery con pending locali attivi: `replaceLocalCatalogWithRemoteSnapshot` continua a proteggere pending non classificabili; il follow-up UI field-by-field resta necessario per conflitti reali.
@@ -141,6 +153,19 @@ Final safety gate 2026-06-18 10:50 -0400:
 - Screenshot finali: `screenshots/options-ios-history-count-35-final.png`, `screenshots/history-ios-visible-list-final.png`, `screenshots/options-android-history-count-35-final.png`, `screenshots/history-android-visible-list-final.png`.
 - Tooling snapshot allineato: `history_snapshot_android.sh` include WAL/SHM; predicate fixture tecnica ristretta a `TASK135_MATRIX_*` su tool, iOS e Android.
 - TASK resta ACTIVE / REVIEW per policy. Non marcare DONE senza accettazione/review.
+
+Final Catalog/Product delete architecture fix 2026-06-18 12:45 -0400:
+- Prossima fase: REVIEW.
+- Prossimo agente: Claude / Reviewer.
+- Evidence principale: `docs/TASKS/EVIDENCE/TASK-135-catalog-delete-architecture-20260618-120948/REPORT.md`.
+- Product delete/tombstone iOS -> Android: PASS con prefisso `TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_`.
+- Product delete/tombstone Android -> iOS: PASS con prefisso `TASK135_DELETE_PRODUCT_ANDROID_FIX_20260618T162703Z_`.
+- Catalog stable: final active counts Supabase/iOS/Android products `19704`, suppliers `66`, categories `35`, product_prices `41131`, pending iOS/Android `0`.
+- History stable: active `39`, userVisible/shown `35` su iOS/Android/Supabase; 39 fisiche = 35 visibili per le 4 fixture tecniche `TASK135_MATRIX_*` owner-scoped e non user-visible.
+- Clean reopen/no false push: PASS; `sync_events` invariato count `1869`, max id `3121`.
+- Build/test/check finali PASS: iOS Catalog delete tests, iOS History/Options 39/39, iOS Debug build, Android Catalog delete tests, Android History tests, Android assembleDebug, Android lintDebug, iOS/Android `git diff --check`, tooling syntax, evidence hygiene.
+- Screenshot finali post-clean-reopen: `screenshots/ios-final-post-delete-clean-reopen.png`, `screenshots/android-final-post-delete-clean-reopen.png`.
+- TASK resta ACTIVE / REVIEW per policy. Non marcare DONE senza accettazione/review; stato consigliato: READY_FOR_USER_ACCEPTANCE / DONE candidate.
 
 ## Evidence
 Evidence root:
@@ -192,6 +217,21 @@ Check eseguiti:
 - History final clean reopen row-level parity: PASS; `diffs/final-history-row-level-diff.md` riporta 35 visible rows su iOS/Android/Supabase e nessun mismatch.
 - History final screenshots: PASS; iOS e Android hanno screenshot finali Options con `Sessioni cronologia 35` e screenshot Cronologia senza residue `TASK135_MATRIX`/`TASK135_HISTORY_FINAL`.
 - Android lintDebug post-fix: PASS.
+- Catalog/Product delete architecture audit: PASS; documenti `catalog-delete-architecture-audit.md` e `catalog-delete-target-architecture.md`.
+- iOS targeted Catalog delete tests: PASS; hard-deleted pending Product tombstone, local-only Product delete ack, `catalog_tombstone` RPC mapping.
+- Android targeted Catalog delete tests: PASS; fallback quick-sync/realign drena pending Product tombstone senza Product row residua, piu' regressioni tombstone esistenti.
+- Live Product delete iOS -> Android: PASS; Supabase tombstone `35bc3604-0c66-4a29-84f6-bba5274ac90e` osservato con `deleted_at`, Android receiver non mostra il Product.
+- Live Product delete Android -> iOS: PASS; Supabase tombstone `510114b1-ea64-4e0f-b520-b8aa00fe67e3` osservato con `deleted_at`, iOS receiver non mostra il Product.
+- Cleanup Product delete fixture: PASS; Supabase dry-run/execute/residue e Android scoped cleanup seriale PASS per entrambi i prefissi.
+- Clean reopen Product delete/no false push: PASS; `counts/clean-reopen-sync-events-before.json` e `counts/clean-reopen-sync-events-after.json` riportano `sync_events` count `1869`, max id `3121` invariati.
+- Final Catalog counts parity: PASS; iOS/Android/Supabase products active `19704`, suppliers `66`, categories `35`, product_prices active `41131`; pending iOS/Android `0`.
+- Final History row-level visible parity after Catalog delete cleanup: PASS; `diffs/history-visible-diff-after-catalog-delete-cleanup.md` riporta rows `35/35/35`, `present_on_all=35`, zero duplicates/mismatch/TASK135 visible residue.
+- iOS targeted History/Options tests post-fix: PASS; 39 tests / 0 failures.
+- iOS Debug build post-fix: PASS.
+- Android History targeted tests post-fix: PASS.
+- Android assembleDebug + lintDebug post-fix: PASS.
+- Tooling syntax post-fix: PASS; `bash -n` per `catalog_delete_state_dump.sh` e history snapshot scripts, `python3 -m py_compile tools/agent/history_diff.py`.
+- Final evidence hygiene scan: PASS_WITH_NOTE; nessun DB/store raw, nessun file evidence >5MB, nessun `.idea`; unico match `service_role` e' testo documentale "nessun service_role", non segreto.
 
 Check non eseguiti:
 - Nessun physical device in questo giro: NON ESEGUITO, fuori dallo scope richiesto per TASK-135 corrente.
@@ -201,3 +241,4 @@ Check non eseguiti:
 - La UI completa `SyncResolutionPrompt` field-by-field resta follow-up se i conflitti reali devono essere presentati in un nuovo sheet dedicato invece delle superfici TASK-126 esistenti.
 - Android `PriceBackfillWorker` resta legacy; ora e' guardato per prodotti cloud-linked, ma una revisione futura potrebbe rimuovere definitivamente il backfill one-shot o legarlo solo a import locali storici.
 - XcodeBuildMCP nel run finale ha usato un simulatore diverso dai defaults per `build_run_sim`; il binario risultante e' stato installato/lanciato manualmente sul simulatore 240F per screenshot e snapshot finali.
+- Gli screenshot del pass Catalog/Product delete sono finali post-clean-reopen; il before/after row-level del prodotto e' coperto dai report harness, query Supabase, state dump SwiftData/Room e conteggi `sync_events` before/after.

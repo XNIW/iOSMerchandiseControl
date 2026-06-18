@@ -85,6 +85,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
         var supplierIDs: [UUID] = []
         var categoryIDs: [UUID] = []
         var productIDs: [UUID] = []
+        var productTombstoneIDs: [UUID] = []
     }
 
     nonisolated private static func push(
@@ -148,28 +149,29 @@ final class CatalogPushService: SyncCatalogPushProviding {
         }
 
         for change in changes where change.entityKind == .product {
-            guard let product = try findProduct(for: change, context: context) else { continue }
             if change.operation == .delete {
-                guard let remoteID = product.remoteID ?? change.entityRemoteID ?? remoteIDFromLogicalKey(change.logicalKey) else { continue }
+                guard let remoteID = change.entityRemoteID ?? remoteIDFromLogicalKey(change.logicalKey) else {
+                    if change.logicalKey.hasPrefix("product:local:") {
+                        acknowledgedChangeIDs.append(change.changeID)
+                    }
+                    continue
+                }
                 let row = try await remote.updateProduct(
                     id: remoteID,
-                    payload: SyncAutomaticProductUpdatePayload(
-                        barcode: nil,
-                        itemNumber: nil,
-                        productName: nil,
-                        secondProductName: nil,
-                        purchasePrice: nil,
-                        retailPrice: nil,
-                        supplierID: nil,
-                        categoryID: nil,
-                        stockQuantity: nil,
-                        deletedAt: Self.timestamp(Date())
-                    )
+                    payload: makeProductTombstonePayload()
                 )
-                apply(row, to: product)
+                if let product = try findProduct(for: change, context: context) {
+                    apply(row, to: product)
+                }
                 outcome.result.productUpdates += 1
                 outcome.productIDs.append(row.id)
-            } else if let remoteID = product.remoteID {
+                outcome.productTombstoneIDs.append(row.id)
+                acknowledgedChangeIDs.append(change.changeID)
+                continue
+            }
+
+            guard let product = try findProduct(for: change, context: context) else { continue }
+            if let remoteID = product.remoteID {
                 let row = try await remote.updateProduct(
                     id: remoteID,
                     payload: makeProductUpdatePayload(product, changedFields: change.changedFields)
@@ -199,6 +201,12 @@ final class CatalogPushService: SyncCatalogPushProviding {
         outcome: CatalogPushOutcome
     ) throws {
         guard outcome.result.totalChanged > 0 else { return }
+        let tombstoneIDs = Set(outcome.productTombstoneIDs)
+        let nonTombstoneProductIDs = outcome.productIDs.filter { !tombstoneIDs.contains($0) }
+        let eventType = outcome.supplierIDs.isEmpty &&
+            outcome.categoryIDs.isEmpty &&
+            nonTombstoneProductIDs.isEmpty &&
+            !outcome.productTombstoneIDs.isEmpty ? "catalog_tombstone" : "catalog_changed"
         let entityIDs = AutomaticSyncEventOutboxWriter.entityIDs([
             "supplier_ids": outcome.supplierIDs,
             "category_ids": outcome.categoryIDs,
@@ -208,18 +216,19 @@ final class CatalogPushService: SyncCatalogPushProviding {
             context: context,
             ownerUserID: ownerUserID,
             domain: "catalog",
-            eventType: "catalog_changed",
+            eventType: eventType,
             changedCount: outcome.result.totalChanged,
             entityIDs: entityIDs,
             metadata: .object([
                 "source": .string("ios_catalog_automatic_push"),
                 "supplier_count": .number(Double(outcome.result.supplierCreates + outcome.result.supplierUpdates)),
                 "category_count": .number(Double(outcome.result.categoryCreates + outcome.result.categoryUpdates)),
-                "product_count": .number(Double(outcome.result.productCreates + outcome.result.productUpdates))
+                "product_count": .number(Double(outcome.result.productCreates + outcome.result.productUpdates)),
+                "product_tombstone_count": .number(Double(outcome.productTombstoneIDs.count))
             ]),
             source: "ios_catalog_automatic_push",
             entityIDsShape: "supplier_ids:count=\(outcome.supplierIDs.count);category_ids:count=\(outcome.categoryIDs.count);product_ids:count=\(outcome.productIDs.count)",
-            metadataShape: "source=ios_catalog_automatic_push;suppliers=\(outcome.result.supplierCreates + outcome.result.supplierUpdates);categories=\(outcome.result.categoryCreates + outcome.result.categoryUpdates);products=\(outcome.result.productCreates + outcome.result.productUpdates)",
+            metadataShape: "source=ios_catalog_automatic_push;suppliers=\(outcome.result.supplierCreates + outcome.result.supplierUpdates);categories=\(outcome.result.categoryCreates + outcome.result.categoryUpdates);products=\(outcome.result.productCreates + outcome.result.productUpdates);productTombstones=\(outcome.productTombstoneIDs.count)",
             clientEventFingerprint: outcome.result.plan?.idempotencyKey ?? UUID().uuidString
         )
     }
@@ -284,6 +293,21 @@ final class CatalogPushService: SyncCatalogPushProviding {
             supplierID: product.supplier?.remoteID,
             categoryID: product.category?.remoteID,
             stockQuantity: product.stockQuantity
+        )
+    }
+
+    nonisolated private static func makeProductTombstonePayload() -> SyncAutomaticProductUpdatePayload {
+        SyncAutomaticProductUpdatePayload(
+            barcode: nil,
+            itemNumber: nil,
+            productName: nil,
+            secondProductName: nil,
+            purchasePrice: nil,
+            retailPrice: nil,
+            supplierID: nil,
+            categoryID: nil,
+            stockQuantity: nil,
+            deletedAt: Self.timestamp(Date())
         )
     }
 

@@ -191,6 +191,105 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     @MainActor
+    func testCatalogPushServiceTombstonesHardDeletedProductFromPendingRemoteID() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let remoteID = UUID()
+        let context = ModelContext(container)
+        let product = Product(
+            barcode: "TASK135_DELETE_REMOTE",
+            remoteID: remoteID,
+            productName: "TASK135 Delete Remote"
+        )
+        let price = ProductPrice(
+            remoteID: UUID(),
+            type: .retail,
+            price: 12.34,
+            product: product
+        )
+        context.insert(product)
+        context.insert(price)
+
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
+        try accumulator.recordProductChange(
+            product: product,
+            operation: .delete,
+            origin: .manualCatalogSave,
+            changedFields: ["tombstone"],
+            baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(product)
+        )
+        context.delete(product)
+        try context.save()
+
+        let remote = Task118CatalogRemote()
+        let result = try await CatalogPushService(modelContainer: container, remote: remote)
+            .pushPendingCatalog(ownerUserID: owner)
+
+        XCTAssertEqual(result.productUpdates, 1)
+        XCTAssertEqual(result.productCreates, 0)
+        XCTAssertEqual(result.totalChanged, 1)
+        let updatedProductIDs = await remote.updatedProductIDs()
+        let createdProductPayloadCount = await remote.createdProductPayloadCount()
+        XCTAssertEqual(updatedProductIDs, [remoteID])
+        XCTAssertEqual(createdProductPayloadCount, 0)
+        let payloads = await remote.productUpdatePayloads()
+        XCTAssertEqual(payloads.count, 1)
+        XCTAssertNotNil(payloads.first?.deletedAt)
+
+        let verifyContext = ModelContext(container)
+        XCTAssertNil(try fetchProduct(barcode: "TASK135_DELETE_REMOTE", context: verifyContext))
+        XCTAssertEqual(try activeChangeCount(context: verifyContext, ownerUserID: owner), 0)
+        let snapshot = try LocalPendingChangeSnapshotProvider(context: verifyContext)
+            .loadSnapshot(ownerUserID: owner)
+        XCTAssertEqual(snapshot.pendingProductPriceChangeCount, 0)
+        let event = try fetchOutboxEntry(context: verifyContext, ownerUserID: owner, domain: "catalog")
+        XCTAssertEqual(event?.eventType, "catalog_tombstone")
+        XCTAssertEqual(event?.changedCount, 1)
+
+        let repeatResult = try await CatalogPushService(modelContainer: container, remote: remote)
+            .pushPendingCatalog(ownerUserID: owner)
+        XCTAssertEqual(repeatResult.totalChanged, 0)
+        let repeatedUpdatedProductIDs = await remote.updatedProductIDs()
+        XCTAssertEqual(repeatedUpdatedProductIDs, [remoteID])
+        XCTAssertNil(try fetchProduct(barcode: "TASK135_DELETE_REMOTE", context: ModelContext(container)))
+    }
+
+    @MainActor
+    func testCatalogPushServiceAcknowledgesLocalOnlyProductDeleteWithoutRemoteCall() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let context = ModelContext(container)
+        context.insert(
+            LocalPendingChange(
+                ownerUserID: owner,
+                entityKind: .product,
+                operation: .delete,
+                origin: .manualCatalogSave,
+                logicalKey: LocalPendingChangeLogicalKey.product(
+                    remoteID: nil,
+                    barcode: "TASK135_DELETE_LOCAL_ONLY"
+                ),
+                changedFields: ["tombstone"],
+                entityRemoteID: nil
+            )
+        )
+        try context.save()
+
+        let remote = Task118CatalogRemote()
+        let result = try await CatalogPushService(modelContainer: container, remote: remote)
+            .pushPendingCatalog(ownerUserID: owner)
+
+        XCTAssertEqual(result.totalChanged, 0)
+        let updatedProductIDs = await remote.updatedProductIDs()
+        let createdProductPayloadCount = await remote.createdProductPayloadCount()
+        XCTAssertTrue(updatedProductIDs.isEmpty)
+        XCTAssertEqual(createdProductPayloadCount, 0)
+        let verifyContext = ModelContext(container)
+        XCTAssertEqual(try activeChangeCount(context: verifyContext, ownerUserID: owner), 0)
+        XCTAssertNil(try fetchOutboxEntry(context: verifyContext, ownerUserID: owner, domain: "catalog"))
+    }
+
+    @MainActor
     func testProductPricePushServiceWritesLinksAndAcknowledgesPendingPrice() async throws {
         let container = try makeContainer()
         let owner = UUID()
@@ -342,6 +441,21 @@ final class Task118AutomaticDomainTests: XCTestCase {
 }
 
 private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
+    private var createdProductPayloads: [SyncAutomaticProductCreatePayload] = []
+    private var productUpdateRequests: [(UUID, SyncAutomaticProductUpdatePayload)] = []
+
+    func createdProductPayloadCount() -> Int {
+        createdProductPayloads.count
+    }
+
+    func updatedProductIDs() -> [UUID] {
+        productUpdateRequests.map(\.0)
+    }
+
+    func productUpdatePayloads() -> [SyncAutomaticProductUpdatePayload] {
+        productUpdateRequests.map(\.1)
+    }
+
     func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
         payloads.map {
             RemoteInventorySupplierRow(
@@ -387,7 +501,8 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     }
 
     func createProducts(_ payloads: [SyncAutomaticProductCreatePayload]) async throws -> [RemoteInventoryProductRow] {
-        payloads.map {
+        createdProductPayloads.append(contentsOf: payloads)
+        return payloads.map {
             RemoteInventoryProductRow(
                 id: UUID(),
                 ownerUserID: $0.ownerUserID,
@@ -407,7 +522,8 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     }
 
     func updateProduct(id: UUID, payload: SyncAutomaticProductUpdatePayload) async throws -> RemoteInventoryProductRow {
-        RemoteInventoryProductRow(
+        productUpdateRequests.append((id, payload))
+        return RemoteInventoryProductRow(
             id: id,
             ownerUserID: UUID(),
             barcode: payload.barcode ?? "TASK118-BAR",

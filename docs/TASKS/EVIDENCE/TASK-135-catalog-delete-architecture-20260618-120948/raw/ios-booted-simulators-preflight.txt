@@ -1,0 +1,8 @@
+== Devices ==
+-- iOS 26.1 --
+-- iOS 26.2 --
+-- iOS 26.4 --
+-- iOS 26.4 --
+    iPhone 17 Pro (AC6FBFC3-A97F-412C-BEC0-F88B9956107B) (Booted)
+-- iOS 26.5 --
+    iPhone 17 Pro (240F400E-5EFA-486A-9137-FFBBE70F604D) (Booted)

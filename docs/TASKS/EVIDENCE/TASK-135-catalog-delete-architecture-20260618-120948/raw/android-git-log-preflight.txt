@@ -1,0 +1,1 @@
+cae42cf Fix TASK-135 history parity predicate

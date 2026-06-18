@@ -1,0 +1,22 @@
+{
+  "cleanup_plan_id": "cleanup-TASK-135-20260618T163546Z-TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_",
+  "created_at": "2026-06-18T16:35:52Z",
+  "forbidden": [
+    "auth.users",
+    "truncate",
+    "reset db",
+    "global delete"
+  ],
+  "prefix": "TASK135_DELETE_PRODUCT_IOS_FIX_20260618T162539Z_",
+  "profile": "linked",
+  "schema_version": "1.1",
+  "scope": [
+    "inventory_product_prices",
+    "inventory_products",
+    "inventory_suppliers",
+    "inventory_categories",
+    "shared_sheet_sessions",
+    "sync_events"
+  ],
+  "task_id": "TASK-135"
+}

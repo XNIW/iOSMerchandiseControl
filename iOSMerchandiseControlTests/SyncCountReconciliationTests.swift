@@ -24,7 +24,7 @@ final class SyncCountReconciliationTests: XCTestCase {
         XCTAssertEqual(report.mismatches, [.products])
     }
 
-    func testHistoryUserVisibleCountExcludesImportAndTombstone() throws {
+    func testHistoryUserVisibleCountExcludesImportRemoteTombstoneAndKeepsPendingDeleteVisible() throws {
         let schema = Schema([HistoryEntry.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
@@ -32,30 +32,32 @@ final class SyncCountReconciliationTests: XCTestCase {
 
         context.insert(HistoryEntry(id: "visible-1"))
         context.insert(HistoryEntry(id: "APPLY_IMPORT_x"))
-        let tombstoned = HistoryEntry(id: "tombstone-1")
-        tombstoned.markHistorySessionLocalDeletion()
-        context.insert(tombstoned)
+        context.insert(HistoryEntry(id: "remote-tombstone-1", remoteDeletedAt: Date()))
+        let pendingDelete = HistoryEntry(id: "pending-delete-1")
+        pendingDelete.markHistorySessionLocalDeletion()
+        context.insert(pendingDelete)
         try context.save()
 
         let count = try LocalHistorySessionCounting.fetchUserVisibleCount(context: context)
-        XCTAssertEqual(count, 1)
+        XCTAssertEqual(count, 2)
     }
 
-    func testHistoryUserVisibleCountExcludesTaskTechnicalEntries() throws {
+    func testHistoryUserVisibleCountExcludesTask135MatrixTechnicalEntries() throws {
         let schema = Schema([HistoryEntry.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         let context = ModelContext(container)
 
         context.insert(HistoryEntry(id: "visible-1", supplier: "Pinmark"))
-        context.insert(HistoryEntry(id: "TASK109_REVIEW_HISTORY_20260521"))
+        context.insert(HistoryEntry(id: "TASK135_HISTORY_FINAL_VISIBLE"))
+        context.insert(HistoryEntry(id: "TASK135_MATRIX_LOCAL"))
         let titledTechnical = HistoryEntry(id: UUID().uuidString)
-        titledTechnical.title = "TASK114_RUNTIME_CHECK"
+        titledTechnical.title = "TASK135_MATRIX_TITLE"
         context.insert(titledTechnical)
         try context.save()
 
         let count = try LocalHistorySessionCounting.fetchUserVisibleCount(context: context)
-        XCTAssertEqual(count, 1)
+        XCTAssertEqual(count, 2)
     }
 
     func testHistoryUUIDTitleFallsBackToFriendlySupplierTitle() {

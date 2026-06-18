@@ -1,0 +1,81 @@
+=== mc-agent task135-ios-write-product-delete-matrix ===
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260618T162539Z-1781799939530-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260618T162539Z-1781799939530-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260618T162539Z-1781799939530-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260618T162539Z-1781799939530-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260618T162539Z-1781799939530-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260618T162539Z-1781799939530-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260618T162539Z-1781799939530-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260618T162539Z-1781799939530-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260618T162539Z-1781799939530-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-20260618T162539Z-1781799939530-DerivedData/Build/Products/task114-test114IOSWriteProductHistoryMatrix.xctestrun -destination "platform=iOS Simulator,id=<REDACTED_DEVICE_ID>" -resultBundlePath /tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-1781799939530-20260618T162539Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task103CrossPlatformAcceptanceTests/test114IOSWriteProductHistoryMatrix"
+
+2026-06-18 12:26:14.632 xcodebuild[76083:6012851] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-1781799939530-20260618T162539Z.xcresult
+
+2026-06-18 12:26:14.638 xcodebuild[76083:6012851] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-06-18 12:26:15.337 xcodebuild[76083:6012851] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-06-18 12:26:18.176.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-06-18 12:26:18.176.
+Test Suite 'Task103CrossPlatformAcceptanceTests' started at 2026-06-18 12:26:18.176.
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSWriteProductHistoryMatrix]' started.
+2026-06-18 12:26:18.265605-0400 iOSMerchandiseControl[76229:6013516] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x1073dcc00:socket
+2026-06-18 12:26:18.265916-0400 iOSMerchandiseControl[76229:6013516] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-06-18 12:26:18.266003-0400 iOSMerchandiseControl[76229:6013516] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[76229]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10c3a8310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x1088e0398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=5 suppliers=1 categories=1 products=3
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK114_CATALOG_GENERATED_PRICE_SYNC_EVENT_ENQUEUE kind=skippedNoOp entryStatus=nil error=nil products=3
+TASK114_PRICE_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil prices=8
+TASK114_PRICE_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=1 suppliers=0 categories=0 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK114_CATALOG_GENERATED_PRICE_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil products=1
+TASK114_CATALOG_GENERATED_PRICE_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK114_PRICE_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil prices=1
+TASK114_PRICE_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK114_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=1 suppliers=0 categories=0 products=1
+TASK114_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK114_CATALOG_GENERATED_PRICE_SYNC_EVENT_ENQUEUE kind=skippedNoOp entryStatus=nil error=nil products=1
+TASK114_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL sessions=3 fullPull=false
+TASK114_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL sessions=1 fullPull=false
+TASK114_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL sessions=1 fullPull=false
+TASK135_IOS_WRITE_MATRIX owner_hash=ad3d747e936c product_create=pass product_update=pass product_tombstone=pass product_price_create=pass product_price_correction=pass product_price_tombstone=not_supported_append_only history_create=pass history_update=pass history_tombstone=pass
+TASK135_IOS_WRITE_TIMINGS localCatalogSaveMs=18 catalogPushAndEventsMs=4597 pricePushAndEventsMs=875 localHistorySaveMs=23 historyPushAndEventsMs=749 totalMatrixMs=7672 syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task103CrossPlatformAcceptanceTests test114IOSWriteProductHistoryMatrix]' passed (7.676 seconds).
+Test Suite 'Task103CrossPlatformAcceptanceTests' passed at 2026-06-18 12:26:25.854.
+	 Executed 1 test, with 0 failures (0 unexpected) in 7.676 (7.677) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-06-18 12:26:25.854.
+	 Executed 1 test, with 0 failures (0 unexpected) in 7.676 (7.678) seconds
+Test Suite 'Selected tests' passed at 2026-06-18 12:26:25.855.
+	 Executed 1 test, with 0 failures (0 unexpected) in 7.676 (7.679) seconds
+2026-06-18 12:26:26.136 xcodebuild[76083:6012851] [MT] IDETestOperationsObserverDebug: 10.795 elapsed -- Testing started completed.
+2026-06-18 12:26:26.136 xcodebuild[76083:6012851] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-06-18 12:26:26.136 xcodebuild[76083:6012851] [MT] IDETestOperationsObserverDebug: 10.795 sec, +10.795 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-1781799939530-20260618T162539Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
