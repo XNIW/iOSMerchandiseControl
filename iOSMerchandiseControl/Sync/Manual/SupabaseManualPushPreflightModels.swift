@@ -394,7 +394,7 @@ nonisolated struct PushCandidate: Identifiable, Sendable, Equatable {
 }
 
 nonisolated struct ManualPushPlan: Sendable, Equatable {
-    static let futureEventSplitThreshold = 1_000
+    static let futureEventSplitThreshold = 100_000
 
     let generatedAt: Date
     let baselineRunID: UUID?

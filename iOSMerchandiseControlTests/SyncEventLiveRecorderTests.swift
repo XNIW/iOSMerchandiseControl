@@ -58,12 +58,12 @@ final class SyncEventLiveRecorderTests: XCTestCase {
         XCTAssertEqual(call.params.pMetadata, .object(["product_tombstone_count": .number(1)]))
     }
 
-    func testChangedCountAboveThousandReturnsContractWithoutTransportCall() async {
+    func testChangedCountAboveContractLimitReturnsContractWithoutTransportCall() async {
         let transport = FakeRPCTransport(.json(fixtureRow(id: 2)))
         let recorder = makeRecorder(transport: transport)
 
         await assertRecordError(
-            try await recorder.record(validRequest(changedCount: 1_001)),
+            try await recorder.record(validRequest(changedCount: 100_001)),
             kind: .contract,
             code: "changed_count_limit"
         )
@@ -413,11 +413,11 @@ final class SyncEventLiveRecorderTests: XCTestCase {
     }
 
     func testProductionFilesKeepSwiftDataAndTransportBoundaries() throws {
-        let mapper = try productionSource(named: "SyncEventRPCRequestMapper.swift")
-        let recorder = try productionSource(named: "SupabaseSyncEventLiveRecorder.swift")
-        let transport = try productionSource(named: "SupabaseSyncEventRPCTransport.swift")
-        let validator = try productionSource(named: "SyncEventRecording.swift")
-        let outbox = try productionSource(named: "SyncEventOutboxEntry.swift")
+        let mapper = try productionSource(relativePath: "Sync/Remote/SyncEventRPCRequestMapper.swift")
+        let recorder = try productionSource(relativePath: "Sync/Remote/SupabaseSyncEventLiveRecorder.swift")
+        let transport = try productionSource(relativePath: "Sync/Remote/SupabaseSyncEventRPCTransport.swift")
+        let validator = try productionSource(relativePath: "Sync/Remote/SyncEventRecording.swift")
+        let outbox = try productionSource(relativePath: "Sync/Outbox/SyncEventOutboxEntry.swift")
         let enqueue = try productionSource(relativePath: "Sync/Outbox/SyncEventOutboxEnqueueService.swift")
         let testSource = try testSource(named: "SyncEventLiveRecorderTests.swift")
 

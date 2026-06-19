@@ -218,13 +218,13 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
     func testChangedCountAboveContractBlocksBeforeRecorderCall() async throws {
         let context = try makeContext()
         let entry = SyncEventOutboxEntry(
-            id: "entry-count-1001",
+            id: "entry-count-100001",
             ownerUserID: ownerID,
-            clientEventID: "client-count-1001",
+            clientEventID: "client-count-100001",
             domain: "catalog",
             eventType: "catalog_changed",
-            changedCount: 1_001,
-            entityIDsShape: "product_ids:count=1001",
+            changedCount: 100_001,
+            entityIDsShape: "product_ids:count=100001",
             metadataShape: "source=ios_catalog_manual_push",
             entityIDsPayloadJSON: "null",
             metadataPayloadJSON: #"{"source":"ios_catalog_manual_push"}"#,
@@ -235,7 +235,7 @@ final class SyncEventOutboxDrainServiceTests: XCTestCase {
             sourceDeviceID: "device-g2"
         )
         try insert([entry], in: context)
-        let recorder = FakeDrainRecorder([.success(try row(id: 4, clientEventID: "client-count-1001"))])
+        let recorder = FakeDrainRecorder([.success(try row(id: 4, clientEventID: "client-count-100001"))])
         let service = makeService(context: context, recorder: recorder)
 
         let outcome = try await service.drainOnce(ownerUserID: ownerID, limit: 5)

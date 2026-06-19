@@ -43,15 +43,15 @@ final class SyncEventOutboxStateTests: XCTestCase {
         XCTAssertEqual(entry.status, .failedRetryable)
     }
 
-    func testChangedCountThousandIsAccepted() throws {
-        let entry = try makeEntry(changedCount: 1_000)
+    func testChangedCountContractLimitIsAccepted() throws {
+        let entry = try makeEntry(changedCount: 100_000)
 
-        XCTAssertEqual(entry.changedCount, 1_000)
+        XCTAssertEqual(entry.changedCount, 100_000)
         XCTAssertEqual(entry.status, .pending)
     }
 
-    func testChangedCountAboveThousandBlocksContract() throws {
-        let entry = try makeEntry(changedCount: 1_001)
+    func testChangedCountAboveContractLimitBlocksContract() throws {
+        let entry = try makeEntry(changedCount: 100_001)
 
         XCTAssertEqual(entry.status, .blockedContract)
         XCTAssertEqual(entry.lastErrorKind, .contract)

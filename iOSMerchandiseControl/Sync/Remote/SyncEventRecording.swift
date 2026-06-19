@@ -226,6 +226,7 @@ nonisolated struct SyncEventRecordValidationPolicy: Sendable, Equatable {
 }
 
 nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
+    private static let maxChangedCount = 100_000
     private static let maxClientEventIDLength = 160
     private static let maxSourceDeviceIDLength = 160
 
@@ -244,8 +245,8 @@ nonisolated struct SyncEventRecordValidator: Sendable, Equatable {
             throw contract("missing_event_type", "eventType is required.")
         }
 
-        guard (0...1_000).contains(request.changedCount) else {
-            throw contract("changed_count_limit", "changedCount must be between 0 and 1000.")
+        guard (0...Self.maxChangedCount).contains(request.changedCount) else {
+            throw contract("changed_count_limit", "changedCount must be between 0 and 100000.")
         }
 
         guard !trimmed(request.clientEventID).isEmpty else {

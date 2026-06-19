@@ -359,17 +359,17 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertTrue(try allEntries(in: context).isEmpty)
     }
 
-    func testChangedCountAboveThousandCreatesBlockedContractNotPendingRetryable() throws {
+    func testChangedCountAboveContractLimitCreatesBlockedContractNotPendingRetryable() throws {
         let context = try makeContext()
         let service = makeService(context: context)
         let result = service.enqueue(
-            pricesOutcome(rows: 1_001, clientEventID: "client-large-prices")
+            pricesOutcome(rows: 100_001, clientEventID: "client-large-prices")
         )
 
         let entry = try onlyEntry(in: context)
         XCTAssertEqual(result.kind, .blockedContract)
         XCTAssertEqual(entry.status, .blockedContract)
-        XCTAssertEqual(entry.changedCount, 1_001)
+        XCTAssertEqual(entry.changedCount, 100_001)
         XCTAssertNil(entry.entityIDsPayloadJSON)
         XCTAssertNil(entry.metadataPayloadJSON)
         XCTAssertEqual(entry.lastErrorKind, .contract)
@@ -500,16 +500,16 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
         XCTAssertFalse(entry.metadataShape.contains("sensitive-name"))
     }
 
-    func testChangedCountThousandPersistsPayloadForReplay() throws {
+    func testChangedCountContractLimitPersistsPayloadForReplay() throws {
         let context = try makeContext()
         let service = makeService(context: context)
 
-        let result = service.enqueue(pricesOutcome(rows: 1_000, clientEventID: "client-thousand-prices"))
+        let result = service.enqueue(pricesOutcome(rows: 100_000, clientEventID: "client-limit-prices"))
 
         let entry = try onlyEntry(in: context)
         XCTAssertEqual(result.kind, .enqueued)
         XCTAssertEqual(entry.status, .pending)
-        XCTAssertEqual(entry.changedCount, 1_000)
+        XCTAssertEqual(entry.changedCount, 100_000)
         XCTAssertEqual(entry.entityIDsPayloadJSON, "null")
         XCTAssertNotNil(entry.metadataPayloadJSON)
         XCTAssertNoThrow(try entry.makeRecordRequestForReplay())
@@ -520,8 +520,8 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
             ownerUserID: ownerID,
             domain: "prices",
             eventType: "prices_changed",
-            changedCount: 1_001,
-            entityIDsShape: "price_rows:count=1001",
+            changedCount: 100_001,
+            entityIDsShape: "price_rows:count=100001",
             metadataShape: "source=ios_prices_manual_push",
             entityIDsPayloadJSON: "null",
             metadataPayloadJSON: #"{"source":"ios_prices_manual_push"}"#,
@@ -552,7 +552,7 @@ final class SyncEventOutboxEnqueueServiceTests: XCTestCase {
     func testSameBlockedContractOutcomeTwiceCreatesOneBlockedEntryThenDuplicateNoOp() throws {
         let context = try makeContext()
         let service = makeService(context: context)
-        let outcome = pricesOutcome(rows: 1_001, clientEventID: "client-duplicate-blocked")
+        let outcome = pricesOutcome(rows: 100_001, clientEventID: "client-duplicate-blocked")
 
         let first = service.enqueue(outcome)
         let second = service.enqueue(outcome)

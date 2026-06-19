@@ -268,6 +268,27 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertNil(payload.stockQuantity)
         XCTAssertNil(payload.deletedAt)
     }
+
+    func testTask069CatalogUpdatePayloadAcceptsRelationNameAliases() {
+        let supplierID = UUID()
+        let categoryID = UUID()
+        let product = Product(
+            barcode: "TASK069-FIELD-ALIASES",
+            productName: "Alias Product",
+            supplier: Supplier(name: "Alias Supplier", remoteID: supplierID),
+            category: ProductCategory(name: "Alias Category", remoteID: categoryID)
+        )
+
+        let payload = CatalogPushService.makeProductUpdatePayload(
+            product,
+            changedFields: ["supplierName", "categoryName"]
+        )
+
+        XCTAssertEqual(payload.supplierID, supplierID)
+        XCTAssertEqual(payload.categoryID, categoryID)
+        XCTAssertNil(payload.productName)
+        XCTAssertNil(payload.deletedAt)
+    }
 }
 
 private final class Task119BlockingCatalogProvider: SyncCatalogPushProviding {

@@ -334,7 +334,7 @@ final class SyncEventOutboxEntry {
 }
 
 nonisolated enum SyncEventOutboxFactory {
-    static let changedCountContractLimit = 1_000
+    static let changedCountContractLimit = 100_000
 
     static func makeEntry(
         ownerUserID: String,

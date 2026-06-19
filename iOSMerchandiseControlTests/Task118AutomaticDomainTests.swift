@@ -290,6 +290,61 @@ final class Task118AutomaticDomainTests: XCTestCase {
     }
 
     @MainActor
+    func testCatalogPushServiceTombstonesHardDeletedSupplierAndCategoryFromPendingRemoteIDs() async throws {
+        let container = try makeContainer()
+        let owner = UUID()
+        let supplierRemoteID = UUID()
+        let categoryRemoteID = UUID()
+        let context = ModelContext(container)
+        let supplier = Supplier(name: "TASK069 Supplier Delete", remoteID: supplierRemoteID)
+        let category = ProductCategory(name: "TASK069 Category Delete", remoteID: categoryRemoteID)
+        context.insert(supplier)
+        context.insert(category)
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: owner)
+        try accumulator.recordSupplierChange(
+            supplier: supplier,
+            operation: .delete,
+            origin: .manualCatalogSave,
+            changedFields: ["tombstone"],
+            baselineFingerprintHash: LocalPendingChangeLogicalKey.supplierFingerprintHash(supplier)
+        )
+        try accumulator.recordCategoryChange(
+            category: category,
+            operation: .delete,
+            origin: .manualCatalogSave,
+            changedFields: ["tombstone"],
+            baselineFingerprintHash: LocalPendingChangeLogicalKey.categoryFingerprintHash(category)
+        )
+        context.delete(supplier)
+        context.delete(category)
+        try context.save()
+
+        let remote = Task118CatalogRemote()
+        let result = try await CatalogPushService(modelContainer: container, remote: remote)
+            .pushPendingCatalog(ownerUserID: owner)
+
+        XCTAssertEqual(result.supplierUpdates, 1)
+        XCTAssertEqual(result.categoryUpdates, 1)
+        XCTAssertEqual(result.totalChanged, 2)
+        let updatedSupplierIDs = await remote.updatedSupplierIDs()
+        let updatedCategoryIDs = await remote.updatedCategoryIDs()
+        let supplierPayloads = await remote.supplierUpdatePayloads()
+        let categoryPayloads = await remote.categoryUpdatePayloads()
+        XCTAssertEqual(updatedSupplierIDs, [supplierRemoteID])
+        XCTAssertEqual(updatedCategoryIDs, [categoryRemoteID])
+        XCTAssertNotNil(supplierPayloads.first?.deletedAt)
+        XCTAssertNotNil(categoryPayloads.first?.deletedAt)
+
+        let verifyContext = ModelContext(container)
+        XCTAssertNil(try fetchSupplier(remoteID: supplierRemoteID, context: verifyContext))
+        XCTAssertNil(try fetchCategory(remoteID: categoryRemoteID, context: verifyContext))
+        XCTAssertEqual(try activeChangeCount(context: verifyContext, ownerUserID: owner), 0)
+        let event = try fetchOutboxEntry(context: verifyContext, ownerUserID: owner, domain: "catalog")
+        XCTAssertEqual(event?.eventType, "catalog_tombstone")
+        XCTAssertEqual(event?.changedCount, 2)
+    }
+
+    @MainActor
     func testCatalogPushServiceUsesDistinctSyncEventIDsForLaterSingleChange() async throws {
         let container = try makeContainer()
         let owner = UUID()
@@ -516,6 +571,18 @@ final class Task118AutomaticDomainTests: XCTestCase {
         }
     }
 
+    private func fetchSupplier(remoteID: UUID, context: ModelContext) throws -> Supplier? {
+        try context.fetch(FetchDescriptor<Supplier>()).first {
+            $0.remoteID == remoteID
+        }
+    }
+
+    private func fetchCategory(remoteID: UUID, context: ModelContext) throws -> ProductCategory? {
+        try context.fetch(FetchDescriptor<ProductCategory>()).first {
+            $0.remoteID == remoteID
+        }
+    }
+
     private func fetchOutboxEntry(
         context: ModelContext,
         ownerUserID: UUID,
@@ -542,6 +609,8 @@ final class Task118AutomaticDomainTests: XCTestCase {
 
 private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     private var createdProductPayloads: [SyncAutomaticProductCreatePayload] = []
+    private var supplierUpdateRequests: [(UUID, SyncAutomaticSupplierUpdatePayload)] = []
+    private var categoryUpdateRequests: [(UUID, SyncAutomaticCategoryUpdatePayload)] = []
     private var productUpdateRequests: [(UUID, SyncAutomaticProductUpdatePayload)] = []
 
     func createdProductPayloadCount() -> Int {
@@ -554,6 +623,22 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
 
     func productUpdatePayloads() -> [SyncAutomaticProductUpdatePayload] {
         productUpdateRequests.map(\.1)
+    }
+
+    func updatedSupplierIDs() -> [UUID] {
+        supplierUpdateRequests.map(\.0)
+    }
+
+    func supplierUpdatePayloads() -> [SyncAutomaticSupplierUpdatePayload] {
+        supplierUpdateRequests.map(\.1)
+    }
+
+    func updatedCategoryIDs() -> [UUID] {
+        categoryUpdateRequests.map(\.0)
+    }
+
+    func categoryUpdatePayloads() -> [SyncAutomaticCategoryUpdatePayload] {
+        categoryUpdateRequests.map(\.1)
     }
 
     func createSuppliers(_ payloads: [SyncAutomaticSupplierCreatePayload]) async throws -> [RemoteInventorySupplierRow] {
@@ -569,12 +654,13 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     }
 
     func updateSupplier(id: UUID, payload: SyncAutomaticSupplierUpdatePayload) async throws -> RemoteInventorySupplierRow {
-        RemoteInventorySupplierRow(
+        supplierUpdateRequests.append((id, payload))
+        return RemoteInventorySupplierRow(
             id: id,
             ownerUserID: UUID(),
-            name: payload.name,
+            name: payload.name ?? "Deleted Supplier",
             updatedAt: "2026-05-24T00:00:00Z",
-            deletedAt: nil
+            deletedAt: payload.deletedAt
         )
     }
 
@@ -591,12 +677,13 @@ private actor Task118CatalogRemote: SyncAutomaticCatalogRemoteWriting {
     }
 
     func updateCategory(id: UUID, payload: SyncAutomaticCategoryUpdatePayload) async throws -> RemoteInventoryCategoryRow {
-        RemoteInventoryCategoryRow(
+        categoryUpdateRequests.append((id, payload))
+        return RemoteInventoryCategoryRow(
             id: id,
             ownerUserID: UUID(),
-            name: payload.name,
+            name: payload.name ?? "Deleted Category",
             updatedAt: "2026-05-24T00:00:00Z",
-            deletedAt: nil
+            deletedAt: payload.deletedAt
         )
     }
 

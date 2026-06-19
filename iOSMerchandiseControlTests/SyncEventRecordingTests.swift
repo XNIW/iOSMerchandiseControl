@@ -27,13 +27,13 @@ final class SyncEventRecordingTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(SyncEventJSONValue.self, from: data), value)
     }
 
-    func testChangedCountThousandIsAccepted() throws {
-        XCTAssertNoThrow(try validator.validate(validRequest(changedCount: 1_000)))
+    func testChangedCountContractLimitIsAccepted() throws {
+        XCTAssertNoThrow(try validator.validate(validRequest(changedCount: 100_000)))
     }
 
-    func testChangedCountAboveThousandIsContractError() {
+    func testChangedCountAboveContractLimitIsContractError() {
         assertRecordError(
-            try validator.validate(validRequest(changedCount: 1_001)),
+            try validator.validate(validRequest(changedCount: 100_001)),
             kind: .contract,
             code: "changed_count_limit"
         )
@@ -427,7 +427,7 @@ final class SyncEventRecordingTests: XCTestCase {
     }
 
     func testDryRunProductionSourceHasNoLiveTransportDependencies() throws {
-        let source = try productionSource(named: "SyncEventRecording.swift")
+        let source = try productionSource(named: "Sync/Remote/SyncEventRecording.swift")
         let forbiddenTokens: [String] = [
             joined("Supabase", "Client"),
             joined(".", "rpc", "("),

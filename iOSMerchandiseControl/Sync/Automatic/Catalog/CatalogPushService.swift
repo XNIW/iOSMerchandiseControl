@@ -85,6 +85,8 @@ final class CatalogPushService: SyncCatalogPushProviding {
         var supplierIDs: [UUID] = []
         var categoryIDs: [UUID] = []
         var productIDs: [UUID] = []
+        var supplierTombstoneIDs: [UUID] = []
+        var categoryTombstoneIDs: [UUID] = []
         var productTombstoneIDs: [UUID] = []
         var changeIDs: [String] = []
     }
@@ -100,8 +102,30 @@ final class CatalogPushService: SyncCatalogPushProviding {
         var acknowledgedChangeIDs: [String] = []
 
         for change in changes where change.entityKind == .supplier {
-            guard change.operation != .delete,
-                  let supplier = try findSupplier(for: change, context: context) else { continue }
+            if change.operation == .delete {
+                guard let remoteID = change.entityRemoteID ?? remoteIDFromLogicalKey(change.logicalKey) else {
+                    if change.logicalKey.hasPrefix("supplier:local:") {
+                        acknowledgedChangeIDs.append(change.changeID)
+                        outcome.changeIDs.append(change.changeID)
+                    }
+                    continue
+                }
+                let row = try await remote.updateSupplier(
+                    id: remoteID,
+                    payload: SyncAutomaticSupplierUpdatePayload(deletedAt: Self.timestamp(Date()))
+                )
+                if let supplier = try findSupplier(for: change, context: context) {
+                    apply(row, to: supplier)
+                }
+                outcome.result.supplierUpdates += 1
+                outcome.supplierIDs.append(row.id)
+                outcome.supplierTombstoneIDs.append(row.id)
+                acknowledgedChangeIDs.append(change.changeID)
+                outcome.changeIDs.append(change.changeID)
+                continue
+            }
+
+            guard let supplier = try findSupplier(for: change, context: context) else { continue }
             if let remoteID = supplier.remoteID {
                 let row = try await remote.updateSupplier(
                     id: remoteID,
@@ -127,8 +151,30 @@ final class CatalogPushService: SyncCatalogPushProviding {
         }
 
         for change in changes where change.entityKind == .productCategory {
-            guard change.operation != .delete,
-                  let category = try findCategory(for: change, context: context) else { continue }
+            if change.operation == .delete {
+                guard let remoteID = change.entityRemoteID ?? remoteIDFromLogicalKey(change.logicalKey) else {
+                    if change.logicalKey.hasPrefix("category:local:") {
+                        acknowledgedChangeIDs.append(change.changeID)
+                        outcome.changeIDs.append(change.changeID)
+                    }
+                    continue
+                }
+                let row = try await remote.updateCategory(
+                    id: remoteID,
+                    payload: SyncAutomaticCategoryUpdatePayload(deletedAt: Self.timestamp(Date()))
+                )
+                if let category = try findCategory(for: change, context: context) {
+                    apply(row, to: category)
+                }
+                outcome.result.categoryUpdates += 1
+                outcome.categoryIDs.append(row.id)
+                outcome.categoryTombstoneIDs.append(row.id)
+                acknowledgedChangeIDs.append(change.changeID)
+                outcome.changeIDs.append(change.changeID)
+                continue
+            }
+
+            guard let category = try findCategory(for: change, context: context) else { continue }
             if let remoteID = category.remoteID {
                 let row = try await remote.updateCategory(
                     id: remoteID,
@@ -209,12 +255,18 @@ final class CatalogPushService: SyncCatalogPushProviding {
         outcome: CatalogPushOutcome
     ) throws {
         guard outcome.result.totalChanged > 0 else { return }
+        let supplierTombstoneIDs = Set(outcome.supplierTombstoneIDs)
+        let categoryTombstoneIDs = Set(outcome.categoryTombstoneIDs)
         let tombstoneIDs = Set(outcome.productTombstoneIDs)
+        let nonTombstoneSupplierIDs = outcome.supplierIDs.filter { !supplierTombstoneIDs.contains($0) }
+        let nonTombstoneCategoryIDs = outcome.categoryIDs.filter { !categoryTombstoneIDs.contains($0) }
         let nonTombstoneProductIDs = outcome.productIDs.filter { !tombstoneIDs.contains($0) }
-        let eventType = outcome.supplierIDs.isEmpty &&
-            outcome.categoryIDs.isEmpty &&
+        let eventType = nonTombstoneSupplierIDs.isEmpty &&
+            nonTombstoneCategoryIDs.isEmpty &&
             nonTombstoneProductIDs.isEmpty &&
-            !outcome.productTombstoneIDs.isEmpty ? "catalog_tombstone" : "catalog_changed"
+            (!outcome.supplierTombstoneIDs.isEmpty ||
+                !outcome.categoryTombstoneIDs.isEmpty ||
+                !outcome.productTombstoneIDs.isEmpty) ? "catalog_tombstone" : "catalog_changed"
         let entityIDs = AutomaticSyncEventOutboxWriter.entityIDs([
             "supplier_ids": outcome.supplierIDs,
             "category_ids": outcome.categoryIDs,
@@ -232,11 +284,13 @@ final class CatalogPushService: SyncCatalogPushProviding {
                 "supplier_count": .number(Double(outcome.result.supplierCreates + outcome.result.supplierUpdates)),
                 "category_count": .number(Double(outcome.result.categoryCreates + outcome.result.categoryUpdates)),
                 "product_count": .number(Double(outcome.result.productCreates + outcome.result.productUpdates)),
+                "supplier_tombstone_count": .number(Double(outcome.supplierTombstoneIDs.count)),
+                "category_tombstone_count": .number(Double(outcome.categoryTombstoneIDs.count)),
                 "product_tombstone_count": .number(Double(outcome.productTombstoneIDs.count))
             ]),
             source: "ios_catalog_automatic_push",
             entityIDsShape: "supplier_ids:count=\(outcome.supplierIDs.count);category_ids:count=\(outcome.categoryIDs.count);product_ids:count=\(outcome.productIDs.count)",
-            metadataShape: "source=ios_catalog_automatic_push;suppliers=\(outcome.result.supplierCreates + outcome.result.supplierUpdates);categories=\(outcome.result.categoryCreates + outcome.result.categoryUpdates);products=\(outcome.result.productCreates + outcome.result.productUpdates);productTombstones=\(outcome.productTombstoneIDs.count)",
+            metadataShape: "source=ios_catalog_automatic_push;suppliers=\(outcome.result.supplierCreates + outcome.result.supplierUpdates);categories=\(outcome.result.categoryCreates + outcome.result.categoryUpdates);products=\(outcome.result.productCreates + outcome.result.productUpdates);supplierTombstones=\(outcome.supplierTombstoneIDs.count);categoryTombstones=\(outcome.categoryTombstoneIDs.count);productTombstones=\(outcome.productTombstoneIDs.count)",
             clientEventFingerprint: catalogEventFingerprint(
                 eventType: eventType,
                 outcome: outcome
@@ -255,6 +309,8 @@ final class CatalogPushService: SyncCatalogPushProviding {
             "suppliers:\(fingerprintIDs(outcome.supplierIDs))",
             "categories:\(fingerprintIDs(outcome.categoryIDs))",
             "products:\(fingerprintIDs(outcome.productIDs))",
+            "supplierTombstones:\(fingerprintIDs(outcome.supplierTombstoneIDs))",
+            "categoryTombstones:\(fingerprintIDs(outcome.categoryTombstoneIDs))",
             "productTombstones:\(fingerprintIDs(outcome.productTombstoneIDs))"
         ].joined(separator: "|")
     }
@@ -345,7 +401,7 @@ final class CatalogPushService: SyncCatalogPushProviding {
         _ product: Product,
         changedFields: [String]
     ) -> SyncAutomaticProductUpdatePayload {
-        let fields = Set(changedFields.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+        let fields = Set(changedFields.map(normalizedProductChangedField))
         return SyncAutomaticProductUpdatePayload(
             barcode: fields.contains("barcode") ? product.barcode : nil,
             itemNumber: fields.contains("itemnumber") ? product.itemNumber : nil,
@@ -358,6 +414,17 @@ final class CatalogPushService: SyncCatalogPushProviding {
             stockQuantity: fields.contains("stockquantity") ? product.stockQuantity : nil,
             deletedAt: fields.contains("tombstone") ? product.remoteDeletedAt.map(timestamp) : nil
         )
+    }
+
+    nonisolated private static func normalizedProductChangedField(_ field: String) -> String {
+        switch field.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "suppliername":
+            return "supplier"
+        case "categoryname":
+            return "category"
+        default:
+            return field.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
     }
 
     nonisolated private static func pendingKeys(for supplier: Supplier) -> Set<String> {

@@ -11,7 +11,18 @@ nonisolated struct SyncAutomaticSupplierCreatePayload: Encodable, Equatable, Sen
 }
 
 nonisolated struct SyncAutomaticSupplierUpdatePayload: Encodable, Equatable, Sendable {
-    let name: String
+    let name: String?
+    let deletedAt: String?
+
+    init(name: String? = nil, deletedAt: String? = nil) {
+        self.name = name
+        self.deletedAt = deletedAt
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case deletedAt = "deleted_at"
+    }
 }
 
 nonisolated struct SyncAutomaticCategoryCreatePayload: Encodable, Equatable, Sendable {
@@ -25,7 +36,18 @@ nonisolated struct SyncAutomaticCategoryCreatePayload: Encodable, Equatable, Sen
 }
 
 nonisolated struct SyncAutomaticCategoryUpdatePayload: Encodable, Equatable, Sendable {
-    let name: String
+    let name: String?
+    let deletedAt: String?
+
+    init(name: String? = nil, deletedAt: String? = nil) {
+        self.name = name
+        self.deletedAt = deletedAt
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case deletedAt = "deleted_at"
+    }
 }
 
 nonisolated struct SyncAutomaticProductCreatePayload: Encodable, Equatable, Sendable {
