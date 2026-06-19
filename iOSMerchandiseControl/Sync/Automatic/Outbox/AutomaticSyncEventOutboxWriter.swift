@@ -44,6 +44,7 @@ nonisolated enum AutomaticSyncEventOutboxWriter {
             entityIDs: entityIDs,
             metadata: metadata,
             source: source,
+            sourceDeviceID: DeviceInstallIDStore().deviceInstallID,
             clientEventID: clientEventID
         )
         let payloadJSON = try? SyncEventOutboxPayloadCodec.makePayloadJSON(
@@ -59,7 +60,7 @@ nonisolated enum AutomaticSyncEventOutboxWriter {
             metadataShape: metadataShape,
             entityIDsPayloadJSON: payloadJSON?.entityIDsPayloadJSON,
             metadataPayloadJSON: payloadJSON?.metadataPayloadJSON,
-            sourceDeviceID: nil,
+            sourceDeviceID: DeviceInstallIDStore().deviceInstallID,
             batchID: nil,
             clientEventID: clientEventID
         )

@@ -25,6 +25,7 @@ final class SyncNoopAutomaticRuntime: SyncAutomaticRuntimeProviding {
 final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
     private let authViewModel: SupabaseAuthViewModel
     private let engine: AutomaticSyncEngine
+    private let deviceAuthorization: (any ShopDeviceAuthorizationChecking)?
     private let retryPolicy: AutomaticSyncRetryPolicy
     private var facadeIsRunning = false
 
@@ -36,10 +37,12 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
         incrementalPullProvider: (any SyncIncrementalPullProviding)?,
         recoverySnapshotPullProvider: (any SyncRecoverySnapshotPullProviding)? = nil,
         activityRegistrationProvider: (any SyncActivityRegistrationProviding)?,
+        deviceAuthorization: (any ShopDeviceAuthorizationChecking)? = nil,
         defaults: UserDefaults = .standard,
         retryPolicy: AutomaticSyncRetryPolicy = AutomaticSyncRetryPolicy()
     ) {
         self.authViewModel = authViewModel
+        self.deviceAuthorization = deviceAuthorization
         self.retryPolicy = retryPolicy
         self.engine = AutomaticSyncEngine(
             catalogPushProvider: catalogPushProvider,
@@ -63,6 +66,15 @@ final class AutomaticSyncRuntimeFacade: SyncAutomaticRuntimeProviding {
             await engine.recordAuthBlocked()
             _ = retryPolicy.decisionForAuthBlocked()
             return .blocked(.authRequired)
+        }
+        if let deviceAuthorization {
+            do {
+                _ = try await deviceAuthorization.ensureActiveForCloudWrite(
+                    reason: "automatic_\(source.rawValue)"
+                )
+            } catch {
+                return .blocked(.deviceNotActive)
+            }
         }
         facadeIsRunning = true
         defer {

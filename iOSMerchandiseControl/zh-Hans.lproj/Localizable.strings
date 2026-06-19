@@ -1261,6 +1261,8 @@
 "options.supabase.automaticSync.root.auth.detail" = "访问有效前，自动检查会暂停。";
 "options.supabase.automaticSync.root.error.title" = "云端检查失败";
 "options.supabase.automaticSync.root.error.detail" = "你可以随时重试。";
+"options.supabase.automaticSync.root.deviceBlocked.title" = "设备访问已阻止";
+"options.supabase.automaticSync.root.deviceBlocked.detail" = "此设备已被撤销或正在等待授权。请联系店铺管理员。";
 "options.supabase.automaticSync.root.action.signIn" = "登录";
 "options.supabase.automaticSync.root.action.retry" = "重试";
 "options.supabase.manualSync.state.idle.title" = "云端同步";

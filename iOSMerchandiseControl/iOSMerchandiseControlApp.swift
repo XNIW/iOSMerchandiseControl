@@ -8,6 +8,7 @@ struct iOSMerchandiseControlApp: App {
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
+    private let shopDeviceRegistrationService: ShopDeviceRegistrationService?
 
     init() {
         let dependencies = Self.isRunningHostedXCTest
@@ -18,6 +19,7 @@ struct iOSMerchandiseControlApp: App {
         supabasePullPreviewService = dependencies.pullPreviewService
         syncEventOutboxDrainRecorder = dependencies.syncEventOutboxDrainRecorder
         syncEventSignalWatcher = dependencies.syncEventSignalWatcher
+        shopDeviceRegistrationService = dependencies.shopDeviceRegistrationService
         SyncBackgroundTaskScheduler.shared.register()
         SyncBackgroundTaskScheduler.shared.schedule(reason: .appLaunch)
     }
@@ -33,7 +35,8 @@ struct iOSMerchandiseControlApp: App {
                     supabaseTransportClient: supabaseTransportClient,
                     supabasePullPreviewService: supabasePullPreviewService,
                     syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
-                    syncEventSignalWatcher: syncEventSignalWatcher
+                    syncEventSignalWatcher: syncEventSignalWatcher,
+                    shopDeviceRegistrationService: shopDeviceRegistrationService
                 )
                 .environmentObject(supabaseAuthViewModel)
                 .onOpenURL { url in
@@ -75,7 +78,8 @@ struct iOSMerchandiseControlApp: App {
             supabaseTransportClient: nil,
             pullPreviewService: nil,
             syncEventOutboxDrainRecorder: nil,
-            syncEventSignalWatcher: nil
+            syncEventSignalWatcher: nil,
+            shopDeviceRegistrationService: nil
         )
     }
 
@@ -84,6 +88,7 @@ struct iOSMerchandiseControlApp: App {
             let config = try SupabaseConfig.load()
             let provider = SupabaseClientProvider(config: config)
             let authService = SupabaseAuthService(provider: provider)
+            let shopDeviceRegistrationService = ShopDeviceRegistrationService(clientProvider: provider)
             let supabaseTransportClient = SupabaseTransportClient(clientProvider: provider)
             let previewService = SupabasePullPreviewService(
                 inventoryService: RecoveryRemoteSupabaseAdapter(remote: supabaseTransportClient),
@@ -98,11 +103,15 @@ struct iOSMerchandiseControlApp: App {
             )
             let syncEventSignalWatcher = SupabaseSyncEventSignalWatcher(clientProvider: provider)
             return SupabaseAppDependencies(
-                authViewModel: SupabaseAuthViewModel(authService: authService),
+                authViewModel: SupabaseAuthViewModel(
+                    authService: authService,
+                    shopDeviceRegistrationService: shopDeviceRegistrationService
+                ),
                 supabaseTransportClient: supabaseTransportClient,
                 pullPreviewService: previewService,
                 syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
-                syncEventSignalWatcher: syncEventSignalWatcher
+                syncEventSignalWatcher: syncEventSignalWatcher,
+                shopDeviceRegistrationService: shopDeviceRegistrationService
             )
         } catch SupabaseConfigError.configMissing {
             return SupabaseAppDependencies(
@@ -110,7 +119,8 @@ struct iOSMerchandiseControlApp: App {
                 supabaseTransportClient: nil,
                 pullPreviewService: nil,
                 syncEventOutboxDrainRecorder: nil,
-                syncEventSignalWatcher: nil
+                syncEventSignalWatcher: nil,
+                shopDeviceRegistrationService: nil
             )
         } catch SupabaseConfigError.invalidConfig {
             return SupabaseAppDependencies(
@@ -118,7 +128,8 @@ struct iOSMerchandiseControlApp: App {
                 supabaseTransportClient: nil,
                 pullPreviewService: nil,
                 syncEventOutboxDrainRecorder: nil,
-                syncEventSignalWatcher: nil
+                syncEventSignalWatcher: nil,
+                shopDeviceRegistrationService: nil
             )
         } catch {
             return SupabaseAppDependencies(
@@ -126,7 +137,8 @@ struct iOSMerchandiseControlApp: App {
                 supabaseTransportClient: nil,
                 pullPreviewService: nil,
                 syncEventOutboxDrainRecorder: nil,
-                syncEventSignalWatcher: nil
+                syncEventSignalWatcher: nil,
+                shopDeviceRegistrationService: nil
             )
         }
     }
@@ -145,4 +157,5 @@ private struct SupabaseAppDependencies {
     let pullPreviewService: SupabasePullPreviewService?
     let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
     let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
+    let shopDeviceRegistrationService: ShopDeviceRegistrationService?
 }

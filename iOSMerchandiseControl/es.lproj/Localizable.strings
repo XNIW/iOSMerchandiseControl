@@ -1261,6 +1261,8 @@
 "options.supabase.automaticSync.root.auth.detail" = "La comprobación automática queda pausada hasta que el acceso sea válido.";
 "options.supabase.automaticSync.root.error.title" = "La comprobación de la nube falló";
 "options.supabase.automaticSync.root.error.detail" = "Puedes reintentar cuando quieras.";
+"options.supabase.automaticSync.root.deviceBlocked.title" = "Acceso del dispositivo bloqueado";
+"options.supabase.automaticSync.root.deviceBlocked.detail" = "Este dispositivo está revocado o pendiente de autorización. Contacta a un administrador de la tienda.";
 "options.supabase.automaticSync.root.action.signIn" = "Iniciar sesión";
 "options.supabase.automaticSync.root.action.retry" = "Reintentar";
 "options.supabase.manualSync.state.idle.title" = "Sincronización en la nube";

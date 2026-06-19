@@ -1,0 +1,103 @@
+{
+  "NEXT_ACTION": "Inspect instrumentation output/logcat and rerun after fixing the reported failure.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-072/agent-runs/20260619T184412Z-android-auth-preflight-live-p16117.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-072/agent-runs/20260619T184412Z-android-auth-preflight-live-p16117.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-072/agent-runs/20260619T184412Z-android-auth-preflight-live-p16117.md",
+    "screenshot": null,
+    "xcresult": null
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-113-07",
+    "CA-113-19",
+    "CA-113-30"
+  ],
+  "cleanup_plan_id": null,
+  "command": "android auth-preflight --live",
+  "command_slug": "android-auth-preflight-live",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "emulator",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 14462,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-072",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK072_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-072"
+  },
+  "exit_code": 1,
+  "git_sha": "7f408d2",
+  "next_action_recommended": "Inspect instrumentation output/logcat and rerun after fixing the reported failure.",
+  "platform": "android",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "adbState": "device",
+    "appInstalled": true,
+    "availableAdbDevices": [
+      {
+        "device": "<REDACTED_DEVICE_MODEL>",
+        "deviceHash": "fb9f32f61a9f",
+        "model": "<REDACTED_DEVICE_MODEL>",
+        "modelHash": "fa140d8db36f",
+        "serial": "<REDACTED>",
+        "serialHash": "04ab3fc382bf",
+        "status": "device",
+        "targetType": "emulator",
+        "transport": "<REDACTED_TRANSPORT_ID>"
+      }
+    ],
+    "bootCompleted": "1",
+    "foregroundAppMatches": false,
+    "foregroundPackage": null,
+    "lockState": {
+      "locked": false,
+      "screenOn": true,
+      "unlocked": true
+    },
+    "schemaVersion": "1.1",
+    "selectedSerial": "<REDACTED>",
+    "selectedTargetType": "emulator",
+    "source": "android.live-preflight"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260619T184412Z-android-auth-preflight-live-p16117",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-072",
+  "test_prefix": null,
+  "timestamp_end": "2026-06-19T18:44:26Z",
+  "timestamp_start": "2026-06-19T18:44:12Z",
+  "warnings": []
+}

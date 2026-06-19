@@ -1,0 +1,121 @@
+=== mc-agent ios task072d-session-export --live --output /tmp/task072d-android-session-20260619T184318Z.json --prefix TASK072D_IOS_SESSION_20260619T184318Z_ ===
+Copy /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/ZIPFoundation_ZIPFoundation.bundle /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.bundle (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/ZIPFoundation_ZIPFoundation.bundle /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CpResource /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/README.md <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Fixtures/TASK-111/README.md (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks <HOME_REDACTED>/Desktop/iOSMerchandiseControl/iOSMerchandiseControlTests/Fixtures/TASK-111/README.md /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+ProcessInfoPlistFile /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-infoPlistUtility /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/empty-iOSMerchandiseControlTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/ZIPFoundation_ZIPFoundation.bundle -scanforprivacyfile /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/swift-crypto_Crypto.bundle -o /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist
+
+CopySwiftLibs /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/iOSMerchandiseControlTests --scan-folder /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Frameworks --scan-folder /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/PlugIns --scan-folder /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/SystemExtensions --scan-folder /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ExtractAppIntentsMetadata (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name iOSMerchandiseControlTests --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --xcode-version 17F42 --platform-family iOS --deployment-target 26.1 --bundle-identifier com.niwcyber.iOSMerchandiseControlTests --output /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest --target-triple arm64-apple-ios26.1-simulator --binary-file /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/iOSMerchandiseControlTests --dependency-file /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests_dependency_info.dat --stringsdata-file /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.SwiftFileList --metadata-file-list /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests.DependencyMetadataFileList --static-metadata-file-list /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests.DependencyStaticMetadataFileList --swift-const-vals-list /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/Objects-normal/arm64/iOSMerchandiseControlTests.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-06-19 14:43:52.033 appintentsmetadataprocessor[14114:10758097] Starting appintentsmetadataprocessor export
+2026-06-19 14:43:52.035 appintentsmetadataprocessor[14114:10758097] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+AppIntentsSSUTraining (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist --temp-dir-path /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/ssu --bundle-id com.niwcyber.iOSMerchandiseControlTests --product-path /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest --extracted-metadata-path /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Metadata.appintents --metadata-file-list /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests.DependencyMetadataFileList --source-file /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist --archive-ssu-assets
+2026-06-19 14:43:52.048 appintentsnltrainingprocessor[14115:10758098] Parsing options for appintentsnltrainingprocessor
+2026-06-19 14:43:52.048 appintentsnltrainingprocessor[14115:10758098] Starting AppIntents SSU YAML Generation
+2026-06-19 14:43:52.048 appintentsnltrainingprocessor[14115:10758098] No AppShortcuts found - Skipping.
+
+CodeSign /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-20260619T184318Z-1781894598704-DerivedData/Build/Products/task072d-testTask072DExportSessionForAndroidImport.xctestrun -destination "platform=iOS Simulator,id=<REDACTED_DEVICE_ID>" -resultBundlePath /tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-1781894598704-20260619T184318Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task072DLiveAcceptanceHarnessTests/testTask072DExportSessionForAndroidImport"
+
+2026-06-19 14:43:53.044 xcodebuild[14150:10758213] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-1781894598704-20260619T184318Z.xcresult
+
+2026-06-19 14:43:53.096 xcodebuild[14150:10758213] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-06-19 14:43:53.868 xcodebuild[14150:10758213] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-06-19 14:43:54.211 xcodebuild[14150:10758213] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-06-19 14:43:56.549.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-06-19 14:43:56.550.
+Test Suite 'Task072DLiveAcceptanceHarnessTests' started at 2026-06-19 14:43:56.550.
+Test Case '-[iOSMerchandiseControlTests.Task072DLiveAcceptanceHarnessTests testTask072DExportSessionForAndroidImport]' started.
+2026-06-19 14:43:56.737543-0400 iOSMerchandiseControl[14341:10758867] [connection] nw_connection_copy_protocol_metadata_internal_block_invoke [C3] Client called nw_connection_copy_protocol_metadata_internal on unconnected nw_connection
+2026-06-19 14:43:56.737590-0400 iOSMerchandiseControl[14341:10758867] [connection] nw_connection_copy_protocol_metadata_internal_block_invoke [C3] Client called nw_connection_copy_protocol_metadata_internal on unconnected nw_connection
+2026-06-19 14:43:56.737624-0400 iOSMerchandiseControl[14341:10758867] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C3] Client called nw_connection_copy_connected_local_endpoint on unconnected nw_connection
+2026-06-19 14:43:56.737650-0400 iOSMerchandiseControl[14341:10758867] [connection] nw_connection_copy_connected_remote_endpoint_block_invoke [C3] Client called nw_connection_copy_connected_remote_endpoint on unconnected nw_connection
+2026-06-19 14:43:56.737977-0400 iOSMerchandiseControl[14341:10758867] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x106205000:socket
+2026-06-19 14:43:56.745341-0400 iOSMerchandiseControl[14341:10758867] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-06-19 14:43:56.745447-0400 iOSMerchandiseControl[14341:10758867] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[14341]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10a7b8310) and /Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10a4ec398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK072D_IOS_SESSION_EXPORT owner_hash=ad3d747e936c project_hash=42a5d0119a30 path_hash=494a777b1b24 bytes=1396 status=written
+Test Case '-[iOSMerchandiseControlTests.Task072DLiveAcceptanceHarnessTests testTask072DExportSessionForAndroidImport]' passed (0.862 seconds).
+Test Suite 'Task072DLiveAcceptanceHarnessTests' passed at 2026-06-19 14:43:57.413.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.862 (0.863) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-06-19 14:43:57.413.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.862 (0.863) seconds
+Test Suite 'Selected tests' passed at 2026-06-19 14:43:57.413.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.862 (0.864) seconds
+2026-06-19 14:43:57.708 xcodebuild[14150:10758213] [MT] IDETestOperationsObserverDebug: 3.825 elapsed -- Testing started completed.
+2026-06-19 14:43:57.708 xcodebuild[14150:10758213] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-06-19 14:43:57.708 xcodebuild[14150:10758213] [MT] IDETestOperationsObserverDebug: 3.825 sec, +3.825 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task072d-testTask072DExportSessionForAndroidImport-1781894598704-20260619T184318Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

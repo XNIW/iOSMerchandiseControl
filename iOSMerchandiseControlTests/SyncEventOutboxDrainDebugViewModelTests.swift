@@ -182,8 +182,12 @@ final class SyncEventOutboxDrainDebugViewModelTests: XCTestCase {
         )
         let viewModel = SyncEventOutboxDrainDebugViewModel(
             clock: { self.now },
-            fetchCounts: fake.fetchCounts(ownerUserID:now:),
-            drainOnce: fake.drainOnce(ownerUserID:limit:fetchScanLimit:)
+            fetchCounts: { @MainActor @Sendable ownerUserID, now in
+                try await fake.fetchCounts(ownerUserID: ownerUserID, now: now)
+            },
+            drainOnce: { @MainActor @Sendable ownerUserID, limit, fetchScanLimit in
+                try await fake.drainOnce(ownerUserID: ownerUserID, limit: limit, fetchScanLimit: fetchScanLimit)
+            }
         )
 
         await viewModel.refreshCounts(isAuthenticated: true, ownerUserID: ownerA)
@@ -259,7 +263,7 @@ final class SyncEventOutboxDrainDebugViewModelTests: XCTestCase {
     }
 
     func testProductionViewModelKeepsAntiScopeBoundaries() throws {
-        let source = try productionSource(named: "SyncEventOutboxDrainDebugViewModel.swift")
+        let source = try productionSource(named: "Sync/Manual/SyncEventOutboxDrainDebugViewModel.swift")
         let forbiddenTokens = [
             joined("Supabase", "Client"),
             joined(".", "rpc", "("),
@@ -286,8 +290,12 @@ final class SyncEventOutboxDrainDebugViewModelTests: XCTestCase {
     private func makeViewModel(_ fake: FakeDrainDebugDependencies) -> SyncEventOutboxDrainDebugViewModel {
         SyncEventOutboxDrainDebugViewModel(
             clock: { self.now },
-            fetchCounts: fake.fetchCounts(ownerUserID:now:),
-            drainOnce: fake.drainOnce(ownerUserID:limit:fetchScanLimit:)
+            fetchCounts: { @MainActor @Sendable ownerUserID, now in
+                try await fake.fetchCounts(ownerUserID: ownerUserID, now: now)
+            },
+            drainOnce: { @MainActor @Sendable ownerUserID, limit, fetchScanLimit in
+                try await fake.drainOnce(ownerUserID: ownerUserID, limit: limit, fetchScanLimit: fetchScanLimit)
+            }
         )
     }
 

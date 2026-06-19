@@ -1261,6 +1261,8 @@
 "options.supabase.automaticSync.root.auth.detail" = "Automatic checks stay paused until access is valid.";
 "options.supabase.automaticSync.root.error.title" = "Cloud check failed";
 "options.supabase.automaticSync.root.error.detail" = "You can retry whenever you want.";
+"options.supabase.automaticSync.root.deviceBlocked.title" = "Device access blocked";
+"options.supabase.automaticSync.root.deviceBlocked.detail" = "This device is revoked or waiting for authorization. Contact a shop admin.";
 "options.supabase.automaticSync.root.action.signIn" = "Sign in";
 "options.supabase.automaticSync.root.action.retry" = "Retry";
 "options.supabase.manualSync.state.idle.title" = "Cloud synchronization";

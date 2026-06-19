@@ -1260,6 +1260,8 @@
 "options.supabase.automaticSync.root.auth.detail" = "Il controllo automatico resta sospeso finché l’accesso non è valido.";
 "options.supabase.automaticSync.root.error.title" = "Controllo cloud non riuscito";
 "options.supabase.automaticSync.root.error.detail" = "Puoi riprovare quando vuoi.";
+"options.supabase.automaticSync.root.deviceBlocked.title" = "Accesso dispositivo bloccato";
+"options.supabase.automaticSync.root.deviceBlocked.detail" = "Questo dispositivo è revocato o in attesa di autorizzazione. Contatta un admin dello shop.";
 "options.supabase.automaticSync.root.action.signIn" = "Accedi";
 "options.supabase.automaticSync.root.action.retry" = "Riprova";
 "options.supabase.manualSync.state.idle.title" = "Sincronizzazione cloud";

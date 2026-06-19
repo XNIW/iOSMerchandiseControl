@@ -396,8 +396,17 @@ mc_android_auth_preflight() {
   MC_REQUIRES_LIVE="true"
   MC_CA_REFS="CA-113-07,CA-113-19,CA-113-30"
   mc_require_live || return $?
-  mc_android_instrument 'com.example.merchandisecontrolsplitview.Task103AuthPreflightTest#authSessionOwnerHashWhenEnabled' \
-    -e task112AuthPreflight true
+  local session_args=()
+  if [[ -n "${MC_ANDROID_TASK072_SESSION_FILE:-}" ]]; then
+    session_args=(-e task072SessionFile "$MC_ANDROID_TASK072_SESSION_FILE" -e task072DSessionFile "$MC_ANDROID_TASK072_SESSION_FILE")
+  fi
+  if [[ "${#session_args[@]}" -gt 0 ]]; then
+    mc_android_instrument 'com.example.merchandisecontrolsplitview.Task103AuthPreflightTest#authSessionOwnerHashWhenEnabled' \
+      -e task112AuthPreflight true "${session_args[@]}"
+  else
+    mc_android_instrument 'com.example.merchandisecontrolsplitview.Task103AuthPreflightTest#authSessionOwnerHashWhenEnabled' \
+      -e task112AuthPreflight true
+  fi
   local code=$?
   if [[ "$code" -eq 0 ]]; then
     MC_SUMMARY="Android auth-preflight PASS on ${MC_ANDROID_TARGET_TYPE:-unknown} target."
@@ -472,8 +481,53 @@ mc_android_task114_matrix_step() {
   mc_validate_task_prefix "$prefix" || return $?
   mc_require_live || return $?
   MC_TEST_PREFIX="$prefix"
-  mc_android_instrument "com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#${method}" \
-    -e task114LiveAcceptance true -e task114RunPrefix "$prefix"
+  local session_args=()
+  if [[ -n "${MC_ANDROID_TASK072_SESSION_FILE:-}" && -f "${MC_ANDROID_TASK072_SESSION_FILE:-}" ]]; then
+    session_args=(-e task072SessionFile "$MC_ANDROID_TASK072_SESSION_FILE" -e task072DSessionFile "$MC_ANDROID_TASK072_SESSION_FILE")
+  fi
+  if [[ "${#session_args[@]}" -gt 0 ]]; then
+    mc_android_instrument "com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#${method}" \
+      -e task114LiveAcceptance true -e task114RunPrefix "$prefix" "${session_args[@]}"
+  else
+    mc_android_instrument "com.example.merchandisecontrolsplitview.Task103CrossPlatformAcceptanceTest#${method}" \
+      -e task114LiveAcceptance true -e task114RunPrefix "$prefix"
+  fi
+}
+
+mc_android_task072d_harness() {
+  local prefix="$1"
+  local admin_prefix="${2:-}"
+  local ios_prefix="${3:-}"
+  MC_PLATFORM="android"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="TASK-072D"
+  mc_validate_task_prefix "$prefix" || return $?
+  if [[ "$prefix" != TASK072D_ANDROID_* || "$prefix" != *_ ]]; then
+    MC_SUMMARY="Android TASK-072D harness prefix must be TASK072D_ANDROID_<run>_."
+    MC_NEXT_ACTION="Retry with --prefix TASK072D_ANDROID_YYYYMMDDHHMMSS_."
+    return "$MC_EXIT_REFUSED"
+  fi
+  if [[ -n "$admin_prefix" ]]; then
+    mc_validate_task_prefix "$admin_prefix" || return $?
+  fi
+  if [[ -n "$ios_prefix" ]]; then
+    mc_validate_task_prefix "$ios_prefix" || return $?
+  fi
+  mc_require_live || return $?
+  MC_TEST_PREFIX="$prefix"
+  local args=(-e task072DLiveHarness true -e task072DRunPrefix "$prefix")
+  if [[ -n "${MC_ANDROID_TASK072_SESSION_FILE:-}" && -f "${MC_ANDROID_TASK072_SESSION_FILE:-}" ]]; then
+    args+=(-e task072DSessionFile "$MC_ANDROID_TASK072_SESSION_FILE")
+  fi
+  if [[ -n "$admin_prefix" ]]; then
+    args+=(-e task072DAdminRunPrefix "$admin_prefix")
+  fi
+  if [[ -n "$ios_prefix" ]]; then
+    args+=(-e task072DIOSRunPrefix "$ios_prefix")
+  fi
+  mc_android_instrument 'com.example.merchandisecontrolsplitview.Task072DAndroidReceiverHarnessTest#androidReceiverCatalogHistoryMatrixDbSnapshotAndOutbox' \
+    "${args[@]}"
 }
 
 mc_android_offline_l1() {
@@ -1186,6 +1240,14 @@ mc_cmd_android() {
     live-full-pull)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
       mc_android_live_full_pull
+      ;;
+    task072d-harness)
+      local prefix admin_prefix ios_prefix
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      prefix="$(mc_parse_opt --prefix "$@")" || { mc_missing_prefix; return "$MC_EXIT_REFUSED"; }
+      admin_prefix="$(mc_parse_opt --admin-prefix "$@" || true)"
+      ios_prefix="$(mc_parse_opt --ios-prefix "$@" || true)"
+      mc_android_task072d_harness "$prefix" "$admin_prefix" "$ios_prefix"
       ;;
     offline-tier-status)
       mc_android_offline_tier_status

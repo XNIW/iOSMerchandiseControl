@@ -2049,6 +2049,125 @@ mc_ios_task114_matrix_step() {
   return "$MC_EXIT_FAIL"
 }
 
+mc_ios_task072d_harness_step() {
+  local method="$1"
+  local prefix="$2"
+  MC_PLATFORM="ios"
+  MC_SAFETY_LEVEL="live-write"
+  MC_REQUIRES_LIVE="true"
+  MC_CA_REFS="TASK-072D"
+  mc_validate_task_prefix "$prefix" || return $?
+  mc_require_live || return $?
+  MC_TEST_PREFIX="$prefix"
+  local dest bundle code test_log derived_data xctestrun generated_xctestrun skipped store_path build_timeout test_timeout invocation_id
+  dest="$(mc_ios_destination)"
+  invocation_id="$(mc_now_ms)"
+  bundle="$(mc_ios_result_bundle "task072d-${method}-${invocation_id}")"
+  test_log="$(mktemp -t "mc-agent-ios-task072d-${method}")"
+  derived_data="/tmp/mc-agent-ios-task072d-${method}-${MC_TIMESTAMP}-${invocation_id}-DerivedData"
+  xctestrun="${derived_data}/Build/Products/task072d-${method}.xctestrun"
+  build_timeout="${MC_IOS_XCODEBUILD_BUILD_TIMEOUT_SECONDS:-240}"
+  test_timeout="${MC_IOS_XCODEBUILD_TEST_TIMEOUT_SECONDS:-180}"
+  MC_ARTIFACT_XCRESULT="$bundle"
+  mc_git_context "$MC_IOS_REPO"
+  store_path="$(mc_sync_ios_container | { read -r container && mc_sync_ios_store_path "$container"; } 2>/dev/null || true)"
+  if [[ -n "$store_path" ]]; then
+    mc_ios_store_runtime_guard "$store_path" || return $?
+  fi
+  mc_ios_acquire_xcode_lock || return $?
+  (
+    cd "$MC_IOS_REPO" || exit 3
+    mc_ios_xcodebuild_timed "$build_timeout" build-for-testing -project iOSMerchandiseControl.xcodeproj \
+      -scheme "${MC_IOS_SCHEME}" -configuration Debug \
+      -destination "$dest" -derivedDataPath "$derived_data" \
+      -parallel-testing-enabled NO \
+      "-only-testing:iOSMerchandiseControlTests/Task072DLiveAcceptanceHarnessTests/${method}"
+  ) >"$test_log" 2>&1
+  code=$?
+  if [[ "$code" -eq 142 ]]; then
+    printf '\nTASK072D_IOS_HARNESS_BUILD_TIMEOUT method=%s timeoutSeconds=%s\n' "$method" "$build_timeout" >>"$test_log"
+  fi
+  if [[ "$code" -eq 0 ]]; then
+    generated_xctestrun="$(find "$derived_data/Build/Products" -name '*.xctestrun' 2>/dev/null | sort | head -1)"
+    if [[ -z "$generated_xctestrun" ]]; then
+      code=2
+      printf '\nTASK072D_IOS_HARNESS_XCTESTRUN_MISSING method=%s\n' "$method" >>"$test_log"
+    else
+      mkdir -p "$(dirname "$xctestrun")"
+      cp "$generated_xctestrun" "$xctestrun"
+      mc_ios_xctestrun_set_env "$xctestrun" "TASK072D_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
+      mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK072D_LIVE_ACCEPTANCE" "1" >>"$test_log" 2>&1
+      mc_ios_xctestrun_set_env "$xctestrun" "TASK072D_RUN_PREFIX" "$prefix" >>"$test_log" 2>&1
+      mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK072D_RUN_PREFIX" "$prefix" >>"$test_log" 2>&1
+      if [[ -n "${MC_IOS_TASK072D_SESSION_EXPORT_PATH:-}" ]]; then
+        mc_ios_xctestrun_set_env "$xctestrun" "TASK072D_SESSION_EXPORT_PATH" "$MC_IOS_TASK072D_SESSION_EXPORT_PATH" >>"$test_log" 2>&1
+        mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK072D_SESSION_EXPORT_PATH" "$MC_IOS_TASK072D_SESSION_EXPORT_PATH" >>"$test_log" 2>&1
+      fi
+      if [[ -n "${MC_IOS_TASK072D_ADMIN_PREFIX:-}" ]]; then
+        mc_ios_xctestrun_set_env "$xctestrun" "TASK072D_ADMIN_RUN_PREFIX" "$MC_IOS_TASK072D_ADMIN_PREFIX" >>"$test_log" 2>&1
+        mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK072D_ADMIN_RUN_PREFIX" "$MC_IOS_TASK072D_ADMIN_PREFIX" >>"$test_log" 2>&1
+      fi
+      if [[ -n "${MC_IOS_TASK072D_ANDROID_PREFIX:-}" ]]; then
+        mc_ios_xctestrun_set_env "$xctestrun" "TASK072D_ANDROID_RUN_PREFIX" "$MC_IOS_TASK072D_ANDROID_PREFIX" >>"$test_log" 2>&1
+        mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK072D_ANDROID_RUN_PREFIX" "$MC_IOS_TASK072D_ANDROID_PREFIX" >>"$test_log" 2>&1
+      fi
+      if [[ "${MC_IOS_TASK072D_REQUIRE_EXTERNAL_RECEIVE:-0}" == "1" ]]; then
+        mc_ios_xctestrun_set_env "$xctestrun" "TASK072D_REQUIRE_EXTERNAL_RECEIVE" "1" >>"$test_log" 2>&1
+        mc_ios_xctestrun_set_env "$xctestrun" "TEST_RUNNER_TASK072D_REQUIRE_EXTERNAL_RECEIVE" "1" >>"$test_log" 2>&1
+      fi
+      rm -rf "$bundle"
+      (
+        cd "$MC_IOS_REPO" || exit 3
+        mc_ios_xcodebuild_timed "$test_timeout" test-without-building -xctestrun "$xctestrun" \
+          -destination "$dest" -resultBundlePath "$bundle" \
+          "-only-testing:iOSMerchandiseControlTests/Task072DLiveAcceptanceHarnessTests/${method}"
+      ) >>"$test_log" 2>&1
+      code=$?
+      if [[ "$code" -eq 142 ]]; then
+        printf '\nTASK072D_IOS_HARNESS_TEST_TIMEOUT method=%s timeoutSeconds=%s\n' "$method" "$test_timeout" >>"$test_log"
+      fi
+    fi
+  fi
+  mc_ios_release_xcode_lock
+  skipped=0
+  if grep -q "Test skipped" "$test_log"; then
+    skipped=1
+  fi
+  mc_report_log "$(mc_redact_text "$(tail -n 120 "$test_log")")"
+  rm -f "$test_log"
+  rm -rf "$derived_data"
+  if [[ "$code" -eq 0 && "$skipped" -eq 0 ]]; then
+    MC_SUMMARY="iOS TASK-072D harness ${method} PASS for prefix ${prefix}. xcresult=${bundle}"
+    MC_NEXT_ACTION="Continue TASK-072D runtime matrix and cleanup."
+    return "$MC_EXIT_PASS"
+  fi
+  if [[ "$skipped" -eq 1 ]]; then
+    MC_SUMMARY="iOS TASK-072D harness ${method} BLOCKED/SKIPPED for prefix ${prefix}. xcresult=${bundle}"
+    MC_NEXT_ACTION="Inspect TASK072D xctestrun environment injection."
+    return "$MC_EXIT_BLOCKED"
+  fi
+  MC_SUMMARY="iOS TASK-072D harness ${method} FAIL/BLOCKED for prefix ${prefix}. xcresult=${bundle}"
+  MC_NEXT_ACTION="Inspect xcresult/log; verify app-auth session, RLS and scoped remote rows."
+  return "$MC_EXIT_FAIL"
+}
+
+mc_ios_task072d_session_export() {
+  local output_path="$1"
+  local prefix="$2"
+  if [[ -z "$output_path" ]]; then
+    MC_SUMMARY="TASK-072D iOS session export requires --output /tmp/file.json."
+    MC_NEXT_ACTION="Retry with --output pointing outside the repository."
+    return "$MC_EXIT_REFUSED"
+  fi
+  if [[ "$output_path" != /tmp/* && "$output_path" != /var/folders/* ]]; then
+    MC_SUMMARY="TASK-072D iOS session export refused non-ephemeral output path."
+    MC_NEXT_ACTION="Use /tmp/task072d-android-session.json or a /var/folders temporary path."
+    return "$MC_EXIT_REFUSED"
+  fi
+  MC_IOS_TASK072D_SESSION_EXPORT_PATH="$output_path" \
+    mc_ios_task072d_harness_step testTask072DExportSessionForAndroidImport "$prefix"
+}
+
 mc_ios_cleanup_scoped() {
   local prefix="$1"
   local dry="$2"
@@ -2120,6 +2239,30 @@ mc_cmd_ios() {
     auth-preflight)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
       mc_ios_auth_preflight
+      ;;
+    task072d-session-export)
+      local output_path prefix
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      output_path="$(mc_parse_opt --output "$@")" || { MC_SUMMARY="--output required"; return "$MC_EXIT_REFUSED"; }
+      prefix="$(mc_parse_opt --prefix "$@" || true)"
+      prefix="${prefix:-TASK072D_IOS_SESSION_${MC_TIMESTAMP}_}"
+      mc_ios_task072d_session_export "$output_path" "$prefix"
+      ;;
+    task072d-harness)
+      local prefix admin_prefix android_prefix
+      mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }
+      prefix="$(mc_parse_opt --prefix "$@")" || { mc_missing_prefix; return "$MC_EXIT_REFUSED"; }
+      admin_prefix="$(mc_parse_opt --admin-prefix "$@" || true)"
+      android_prefix="$(mc_parse_opt --android-prefix "$@" || true)"
+      if [[ -n "$admin_prefix" ]]; then
+        mc_validate_task_prefix "$admin_prefix" || return $?
+      fi
+      if [[ -n "$android_prefix" ]]; then
+        mc_validate_task_prefix "$android_prefix" || return $?
+      fi
+      MC_IOS_TASK072D_ADMIN_PREFIX="$admin_prefix" \
+      MC_IOS_TASK072D_ANDROID_PREFIX="$android_prefix" \
+        mc_ios_task072d_harness_step testTask072DIOSCreateUpdateTombstoneHistoryHarness "$prefix"
       ;;
     device-auth-preflight)
       mc_parse_flag --live "$@" || { MC_SUMMARY="--live required"; return "$MC_EXIT_MISCONFIGURED"; }

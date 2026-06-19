@@ -17,43 +17,89 @@ enum SupabaseManualSyncReleaseFactory {
         incrementalRemote: (any SyncAutomaticIncrementalRemote)? = nil,
         pullPreviewService: SupabasePullPreviewService? = nil,
         manualPushService: SupabaseManualPushService? = nil,
-        activityRecorder: (any SyncEventRecording)? = nil
+        activityRecorder: (any SyncEventRecording)? = nil,
+        deviceAuthorization: (any ShopDeviceAuthorizationChecking)? = nil
     ) -> SupabaseManualSyncViewModel {
         let modelContainer = context.container
         let remotePreviewAdapter = pullPreviewService.map {
             SupabaseManualSyncPullPreviewAdapter(service: $0, modelContainer: modelContainer)
         }
         let remotePreviewProvider: (any SupabaseManualSyncRemotePreviewProviding)? = remotePreviewAdapter.map { $0 }
-        let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = manualPushService.map {
+        let rawCatalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = manualPushService.map {
             SyncCatalogPushAdapter(
                 context: context,
                 manualPushService: $0,
                 generatedPriceRemote: productPriceRemote
             )
         }
-        let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = productPriceRemote.map {
+        let catalogPushProvider: (any SupabaseManualSyncCatalogPushProviding)? = if let rawCatalogPushProvider,
+                                                                                   let deviceAuthorization {
+            DeviceGuardedManualCatalogPushProvider(
+                delegate: rawCatalogPushProvider,
+                deviceAuthorization: deviceAuthorization
+            )
+        } else {
+            rawCatalogPushProvider
+        }
+        let rawProductPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = productPriceRemote.map {
             SyncProductPriceAdapter(
                 modelContainer: modelContainer,
                 remote: $0
             )
         }
-        let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = activityRecorder.map {
+        let productPriceProvider: (any SupabaseManualSyncProductPriceSyncProviding)? = if let rawProductPriceProvider,
+                                                                                        let deviceAuthorization {
+            DeviceGuardedManualProductPriceProvider(
+                delegate: rawProductPriceProvider,
+                deviceAuthorization: deviceAuthorization
+            )
+        } else {
+            rawProductPriceProvider
+        }
+        let rawActivityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = activityRecorder.map {
             SyncActivityRegistrationAdapter(context: context, recorder: $0)
         }
-        let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = historyRemote.map {
+        let activityRegistrationProvider: (any SupabaseManualSyncActivityRegistrationProviding)? = if let rawActivityRegistrationProvider,
+                                                                                                     let deviceAuthorization {
+            DeviceGuardedManualActivityRegistrationProvider(
+                delegate: rawActivityRegistrationProvider,
+                deviceAuthorization: deviceAuthorization
+            )
+        } else {
+            rawActivityRegistrationProvider
+        }
+        let rawHistorySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = historyRemote.map {
             SyncHistorySessionPushAdapter(
                 modelContainer: modelContainer,
                 remote: $0,
                 recorder: activityRecorder
             )
         }
-        let incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)? = incrementalRemote.map {
+        let historySessionProvider: (any SupabaseManualSyncHistorySessionSyncProviding)? = if let rawHistorySessionProvider,
+                                                                                             let deviceAuthorization {
+            DeviceGuardedManualHistorySessionProvider(
+                delegate: rawHistorySessionProvider,
+                deviceAuthorization: deviceAuthorization
+            )
+        } else {
+            rawHistorySessionProvider
+        }
+        let rawIncrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)? = incrementalRemote.map {
             ManualSyncIncrementalPullAdapter(
                 service: SyncEventIncrementalPullService(
                     modelContainer: modelContainer,
                     remote: $0
                 )
             )
+        }
+        let incrementalPullProvider: (any SupabaseManualSyncIncrementalPullProviding)? = if let rawIncrementalPullProvider,
+                                                                                           let deviceAuthorization {
+            DeviceGuardedManualIncrementalPullProvider(
+                delegate: rawIncrementalPullProvider,
+                deviceAuthorization: deviceAuthorization
+            )
+        } else {
+            rawIncrementalPullProvider
         }
         let localPendingChangeCounter = LocalPendingChangePendingAdapter(context: context)
 
@@ -109,6 +155,146 @@ enum SupabaseManualSyncReleaseFactory {
                 }
             }
         )
+    }
+}
+
+@MainActor
+private final class DeviceGuardedManualCatalogPushProvider: SupabaseManualSyncCatalogPushProviding {
+    private let delegate: any SupabaseManualSyncCatalogPushProviding
+    private let deviceAuthorization: any ShopDeviceAuthorizationChecking
+
+    init(
+        delegate: any SupabaseManualSyncCatalogPushProviding,
+        deviceAuthorization: any ShopDeviceAuthorizationChecking
+    ) {
+        self.delegate = delegate
+        self.deviceAuthorization = deviceAuthorization
+    }
+
+    func makePushPlan(ownerUserID: UUID) async throws -> ManualPushPlan {
+        _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "manual_catalog_plan")
+        return try await delegate.makePushPlan(ownerUserID: ownerUserID)
+    }
+
+    func execute(plan: ManualPushPlan, ownerUserID: UUID) async -> SupabaseManualPushResult {
+        do {
+            _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "manual_catalog_execute")
+        } catch {
+            return .blocked(message: "Device access blocked. Contact a shop admin.")
+        }
+        return await delegate.execute(plan: plan, ownerUserID: ownerUserID)
+    }
+}
+
+@MainActor
+private final class DeviceGuardedManualProductPriceProvider: SupabaseManualSyncProductPriceSyncProviding {
+    private let delegate: any SupabaseManualSyncProductPriceSyncProviding
+    private let deviceAuthorization: any ShopDeviceAuthorizationChecking
+
+    init(
+        delegate: any SupabaseManualSyncProductPriceSyncProviding,
+        deviceAuthorization: any ShopDeviceAuthorizationChecking
+    ) {
+        self.delegate = delegate
+        self.deviceAuthorization = deviceAuthorization
+    }
+
+    func makeApplyPlan(ownerUserID: UUID) async throws -> ProductPriceApplyPlan {
+        _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "manual_price_apply_plan")
+        return try await delegate.makeApplyPlan(ownerUserID: ownerUserID)
+    }
+
+    func apply(plan: ProductPriceApplyPlan, ownerUserID: UUID) async throws -> ProductPriceApplyResult {
+        _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "manual_price_apply")
+        return try await delegate.apply(plan: plan, ownerUserID: ownerUserID)
+    }
+
+    func apply(
+        plan: ProductPriceApplyPlan,
+        ownerUserID: UUID,
+        onProgress: @escaping @MainActor @Sendable (ProductPricePagedApplyProgress) -> Void
+    ) async throws -> ProductPriceApplyResult {
+        _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "manual_price_apply_paged")
+        return try await delegate.apply(plan: plan, ownerUserID: ownerUserID, onProgress: onProgress)
+    }
+
+    func makePushPlan(ownerUserID: UUID) async throws -> ProductPricePushDryRunPlan {
+        _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "manual_price_push_plan")
+        return try await delegate.makePushPlan(ownerUserID: ownerUserID)
+    }
+
+    func push(plan: ProductPricePushDryRunPlan, ownerUserID: UUID) async throws -> ProductPriceManualPushResult {
+        _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "manual_price_push")
+        return try await delegate.push(plan: plan, ownerUserID: ownerUserID)
+    }
+}
+
+@MainActor
+private final class DeviceGuardedManualActivityRegistrationProvider: SupabaseManualSyncActivityRegistrationProviding {
+    private let delegate: any SupabaseManualSyncActivityRegistrationProviding
+    private let deviceAuthorization: any ShopDeviceAuthorizationChecking
+
+    init(
+        delegate: any SupabaseManualSyncActivityRegistrationProviding,
+        deviceAuthorization: any ShopDeviceAuthorizationChecking
+    ) {
+        self.delegate = delegate
+        self.deviceAuthorization = deviceAuthorization
+    }
+
+    func loadActivityRegistrationSnapshot(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationSnapshot {
+        try await delegate.loadActivityRegistrationSnapshot(ownerUserID: ownerUserID)
+    }
+
+    func registerActivities(ownerUserID: UUID) async throws -> SupabaseManualSyncActivityRegistrationResult {
+        _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "manual_activity_register")
+        return try await delegate.registerActivities(ownerUserID: ownerUserID)
+    }
+}
+
+@MainActor
+private final class DeviceGuardedManualHistorySessionProvider: SupabaseManualSyncHistorySessionSyncProviding {
+    private let delegate: any SupabaseManualSyncHistorySessionSyncProviding
+    private let deviceAuthorization: any ShopDeviceAuthorizationChecking
+
+    init(
+        delegate: any SupabaseManualSyncHistorySessionSyncProviding,
+        deviceAuthorization: any ShopDeviceAuthorizationChecking
+    ) {
+        self.delegate = delegate
+        self.deviceAuthorization = deviceAuthorization
+    }
+
+    func syncHistorySessions(
+        ownerUserID: UUID,
+        mode: SupabaseManualSyncHistorySessionMode,
+        onProgress: @escaping @MainActor @Sendable (HistorySessionSyncProgress) -> Void
+    ) async throws -> SupabaseManualSyncHistorySessionSummary {
+        _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "manual_history_sync")
+        return try await delegate.syncHistorySessions(
+            ownerUserID: ownerUserID,
+            mode: mode,
+            onProgress: onProgress
+        )
+    }
+}
+
+@MainActor
+private final class DeviceGuardedManualIncrementalPullProvider: SupabaseManualSyncIncrementalPullProviding {
+    private let delegate: any SupabaseManualSyncIncrementalPullProviding
+    private let deviceAuthorization: any ShopDeviceAuthorizationChecking
+
+    init(
+        delegate: any SupabaseManualSyncIncrementalPullProviding,
+        deviceAuthorization: any ShopDeviceAuthorizationChecking
+    ) {
+        self.delegate = delegate
+        self.deviceAuthorization = deviceAuthorization
+    }
+
+    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SupabaseSyncEventIncrementalApplySummary {
+        _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "manual_incremental_pull")
+        return try await delegate.applyIncrementalRemoteChanges(ownerUserID: ownerUserID)
     }
 }
 
@@ -240,7 +426,7 @@ final class SyncHistorySessionPushAdapter: SupabaseManualSyncHistorySessionSyncP
                 "uploaded_count": .number(Double(sortedIDs.count))
             ]),
             source: "ios_history_session_push",
-            sourceDeviceID: nil,
+            sourceDeviceID: DeviceInstallIDStore().deviceInstallID,
             batchID: UUID(),
             clientEventID: "ios-history-\(ownerUserID.uuidString.lowercased())-\(UUID().uuidString.lowercased())"
         )

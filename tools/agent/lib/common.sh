@@ -257,9 +257,9 @@ mc_validate_task_prefix() {
     MC_NEXT_ACTION="Use TASKNNN_* scoped test data only."
     return "$MC_EXIT_REFUSED"
   fi
-  if [[ ! "$prefix" =~ ^TASK[0-9]{3,}_[A-Za-z0-9_.*-]*$ ]]; then
+  if [[ ! "$prefix" =~ ^TASK[0-9]{3,}[A-Za-z]?_[A-Za-z0-9_.*-]*$ ]]; then
     MC_SUMMARY="Prefix must match TASKNNN_* scoped pattern."
-    MC_NEXT_ACTION="Example: --prefix TASK115_DRYRUN_ or --prefix 'TASK115_*'."
+    MC_NEXT_ACTION="Example: --prefix TASK115_DRYRUN_, TASK072D_RUN_ or --prefix 'TASK115_*'."
     return "$MC_EXIT_REFUSED"
   fi
   if [[ "$require_offline" == "1" && "$prefix" != *OFFLINE* ]]; then
@@ -317,7 +317,11 @@ mc_acquire_live_lock() {
   if ( set -o noclobber; printf 'pid=%s command=%s timestamp=%s\n' "$$" "${MC_COMMAND:-unknown}" "$(mc_now_iso)" > "$lock" ) 2>/dev/null; then
     MC_LOCK_HELD=1
     MC_LOCK_FILE="$lock"
-    trap mc_release_live_lock EXIT INT TERM
+    if [[ "${MC_IN_WRAPPER:-0}" == "1" ]]; then
+      trap mc_release_live_lock INT TERM
+    else
+      trap mc_release_live_lock EXIT INT TERM
+    fi
     return "$MC_EXIT_PASS"
   fi
   MC_SUMMARY="Live/cleanup lock is already held for ${task}."
@@ -393,10 +397,20 @@ mc_run_wrapped() {
   mc_report_init_paths
   mc_report_log "=== mc-agent ${MC_COMMAND} ==="
 
-  local raw_tmp exit_code end_ms duration_ms
+  local raw_tmp raw_status exit_code end_ms duration_ms had_errexit
   raw_tmp="$(mktemp)"
+  had_errexit=0
+  case "$-" in
+    *e*) had_errexit=1; set +e ;;
+  esac
+  MC_IN_WRAPPER=1
   "$@" > "$raw_tmp" 2>&1
-  exit_code="$(mc_normalize_exit "$?")"
+  raw_status="$?"
+  MC_IN_WRAPPER=0
+  if [[ "$had_errexit" == "1" ]]; then
+    set -e
+  fi
+  exit_code="$(mc_normalize_exit "$raw_status")"
   if [[ -s "$raw_tmp" ]]; then
     mc_redact_file_to_stdout "$raw_tmp" >> "$MC_LOG_TMP"
   fi

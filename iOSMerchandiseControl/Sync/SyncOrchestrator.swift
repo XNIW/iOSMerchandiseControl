@@ -6,6 +6,7 @@ nonisolated enum SyncRootPresentationKind: Equatable, Sendable {
     case hidden
     case checking
     case blockedAuth
+    case deviceBlocked
     case recoverableError
 }
 
@@ -57,6 +58,15 @@ nonisolated struct SyncRootPresentationState: Equatable, Sendable {
         primaryActionTitleKey: "options.supabase.automaticSync.root.action.retry",
         primaryActionID: .retry,
         systemImage: "exclamationmark.icloud"
+    )
+
+    static let deviceBlocked = SyncRootPresentationState(
+        kind: .deviceBlocked,
+        titleKey: "options.supabase.automaticSync.root.deviceBlocked.title",
+        detailKey: "options.supabase.automaticSync.root.deviceBlocked.detail",
+        primaryActionTitleKey: "options.supabase.automaticSync.root.action.retry",
+        primaryActionID: .retry,
+        systemImage: "iphone.slash"
     )
 }
 
@@ -112,6 +122,8 @@ final class SyncOrchestrator: ObservableObject {
             return .recoverableError
         case .blocked(.authRequired):
             return .blockedAuth
+        case .blocked(.deviceNotActive):
+            return .deviceBlocked
         case .checking, .pushing, .pullingEvents, .reconciling:
             return .checking
         case .idle, .blocked:

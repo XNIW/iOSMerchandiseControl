@@ -21,6 +21,7 @@ struct OptionsView: View {
     private let remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?
     private let supabasePullPreviewService: SupabasePullPreviewService?
     private let syncEventOutboxDrainRecorder: (any SyncEventRecording)?
+    private let deviceAuthorization: (any ShopDeviceAuthorizationChecking)?
     private let accountSyncChoiceBindingApplier: AccountSyncChoiceBindingApplier
     private let requestAutomaticCloudCheck: (() -> Void)?
 
@@ -40,6 +41,7 @@ struct OptionsView: View {
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         syncStateStore: SyncStateStore,
         syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil,
+        deviceAuthorization: (any ShopDeviceAuthorizationChecking)? = nil,
         accountSyncChoiceBindingApplier: AccountSyncChoiceBindingApplier = AccountSyncChoiceBindingApplier(),
         requestAutomaticCloudCheck: (() -> Void)? = nil
     ) {
@@ -47,6 +49,7 @@ struct OptionsView: View {
         self.supabasePullPreviewService = supabasePullPreviewService
         _syncStateStore = ObservedObject(wrappedValue: syncStateStore)
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
+        self.deviceAuthorization = deviceAuthorization
         self.accountSyncChoiceBindingApplier = accountSyncChoiceBindingApplier
         self.requestAutomaticCloudCheck = requestAutomaticCloudCheck
     }
@@ -845,6 +848,8 @@ enum LocalDatabaseCloudStatusResolver {
             return .requiresChoice
         case .localStateUnavailable:
             return .localStateUnavailable
+        case .deviceNotActive:
+            return .cloudPermissionProblem
         }
     }
 }

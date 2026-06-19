@@ -1,0 +1,134 @@
+{
+  "NEXT_ACTION": "Inspect failing matrix step evidence/log, fix root cause, then rerun sync-matrix and cleanup scoped data.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-072/agent-runs/20260619T185250Z-live-sync-matrix-task-TASK-072-prefix-TASK072D_-p47765.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-072/agent-runs/20260619T185250Z-live-sync-matrix-task-TASK-072-prefix-TASK072D_-p47765.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-072/agent-runs/20260619T185250Z-live-sync-matrix-task-TASK-072-prefix-TASK072D_-p47765.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-1781895308818-20260619T185250Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-114-06",
+    "T-06"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live sync-matrix --task TASK-072 --prefix TASK072D_",
+  "command_slug": "live-sync-matrix-task-TASK-072-prefix-TASK072D_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "emulator",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": "<REDACTED>"
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 192107,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-072",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<REDACTED>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK072_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-072"
+  },
+  "exit_code": 1,
+  "git_sha": "7f408d2",
+  "next_action_recommended": "Inspect failing matrix step evidence/log, fix root cause, then rerun sync-matrix and cleanup scoped data.",
+  "platform": "android",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "covered_legs": [
+      "Android -> Supabase -> iOS product create",
+      "Android -> Supabase -> iOS product update",
+      "Android -> Supabase -> iOS product tombstone/delete",
+      "iOS -> Supabase -> Android product create",
+      "iOS -> Supabase -> Android product update",
+      "iOS -> Supabase -> Android product tombstone/delete",
+      "Android -> Supabase -> iOS history create",
+      "Android -> Supabase -> iOS history update/rename",
+      "Android -> Supabase -> iOS history tombstone/delete",
+      "iOS -> Supabase -> Android history create",
+      "iOS -> Supabase -> Android history update/rename",
+      "iOS -> Supabase -> Android history tombstone/delete"
+    ],
+    "matrix_prefix": "TASK072D_MATRIX_20260619T185250Z_",
+    "status": "FAIL",
+    "steps": [
+      {
+        "exit_code": 0,
+        "name": "preflight",
+        "status": "pass"
+      },
+      {
+        "exit_code": 0,
+        "name": "supabase_residue_readonly",
+        "status": "pass"
+      },
+      {
+        "exit_code": 0,
+        "name": "ios_auth_preflight",
+        "status": "pass"
+      },
+      {
+        "exit_code": 0,
+        "name": "android_auth_preflight",
+        "status": "pass"
+      },
+      {
+        "exit_code": 1,
+        "name": "android_write_product_history_create_update_tombstone",
+        "status": "fail"
+      },
+      {
+        "exit_code": 1,
+        "name": "ios_pull_android_product_history_create_update_tombstone",
+        "status": "fail"
+      },
+      {
+        "exit_code": 0,
+        "name": "ios_write_product_history_create_update_tombstone",
+        "status": "pass"
+      },
+      {
+        "exit_code": 0,
+        "name": "android_pull_ios_product_history_create_update_tombstone",
+        "status": "pass"
+      }
+    ],
+    "task": "TASK-072"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260619T185250Z-live-sync-matrix-task-TASK-072-prefix-TASK072D_-p47765",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-072",
+  "test_prefix": "TASK072D_MATRIX_20260619T185250Z_",
+  "timestamp_end": "2026-06-19T18:56:02Z",
+  "timestamp_start": "2026-06-19T18:52:50Z",
+  "warnings": []
+}

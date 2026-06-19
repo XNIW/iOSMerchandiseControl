@@ -17,11 +17,17 @@ final class SupabaseAuthViewModel: ObservableObject {
     @Published private(set) var sessionInfo: SupabaseAuthSessionInfo?
 
     private let authService: SupabaseAuthService?
+    private let shopDeviceRegistrationService: ShopDeviceRegistrationService?
     private var authEventsTask: Task<Void, Never>?
 
-    init(authService: SupabaseAuthService?, initialError: SupabaseAuthServiceError? = nil) {
+    init(
+        authService: SupabaseAuthService?,
+        initialError: SupabaseAuthServiceError? = nil,
+        shopDeviceRegistrationService: ShopDeviceRegistrationService? = nil
+    ) {
         let initialSessionInfo = authService?.currentSession
         self.authService = authService
+        self.shopDeviceRegistrationService = shopDeviceRegistrationService
         self.sessionInfo = initialSessionInfo
 
         if authService == nil {
@@ -35,6 +41,7 @@ final class SupabaseAuthViewModel: ObservableObject {
         }
 
         startAuthListener()
+        registerShopDeviceIfReady(reason: "auth_initial")
     }
 
     deinit {
@@ -93,6 +100,9 @@ final class SupabaseAuthViewModel: ObservableObject {
                 let info = try await authService.signInWithGoogle()
                 sessionInfo = info
                 state = info.isExpired ? .signedOut : .signedIn
+                if !info.isExpired {
+                    registerShopDeviceIfReady(reason: "auth_sign_in")
+                }
             } catch let error as SupabaseAuthServiceError {
                 await applySignInFailure(error, authService: authService)
             } catch {
@@ -145,12 +155,16 @@ final class SupabaseAuthViewModel: ObservableObject {
             sessionInfo = info
             if let info, !info.isExpired {
                 state = .signedIn
+                registerShopDeviceIfReady(reason: "auth_event")
             } else if !isTransitioning {
                 state = .signedOut
             }
         case .signedIn(let info):
             sessionInfo = info
             state = info.isExpired ? .signedOut : .signedIn
+            if !info.isExpired {
+                registerShopDeviceIfReady(reason: "auth_signed_in")
+            }
         case .signedOut:
             sessionInfo = nil
             state = .signedOut
@@ -164,6 +178,7 @@ final class SupabaseAuthViewModel: ObservableObject {
         if let currentSession = await recoveredSessionAfterSignInFailure(error, authService: authService) {
             sessionInfo = currentSession
             state = .signedIn
+            registerShopDeviceIfReady(reason: "auth_recovered")
             return
         }
 
@@ -203,6 +218,13 @@ final class SupabaseAuthViewModel: ObservableObject {
             return true
         case .configMissing, .invalidConfig, .oauthCancelled:
             return false
+        }
+    }
+
+    private func registerShopDeviceIfReady(reason: String) {
+        guard isSignedIn, let shopDeviceRegistrationService else { return }
+        Task {
+            await shopDeviceRegistrationService.registerHeartbeatAndCheck(reason: reason)
         }
     }
 }

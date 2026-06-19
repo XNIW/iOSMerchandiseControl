@@ -104,6 +104,7 @@ struct ContentView: View {
     private let syncEventSignalWatcher: SupabaseSyncEventSignalWatcher?
     private let historySessionSyncService: HistorySessionSyncService?
     private let remoteCountFetcher: (any OptionsSyncRemoteCountFetching)?
+    private let shopDeviceRegistrationService: ShopDeviceRegistrationService?
 
     @AppStorage("appTheme") private var appTheme: String = "system"
     @AppStorage("appLanguage") private var appLanguage: String = "system"
@@ -118,12 +119,14 @@ struct ContentView: View {
         supabaseTransportClient: SupabaseTransportClient? = nil,
         supabasePullPreviewService: SupabasePullPreviewService? = nil,
         syncEventOutboxDrainRecorder: (any SyncEventRecording)? = nil,
-        syncEventSignalWatcher: SupabaseSyncEventSignalWatcher? = nil
+        syncEventSignalWatcher: SupabaseSyncEventSignalWatcher? = nil,
+        shopDeviceRegistrationService: ShopDeviceRegistrationService? = nil
     ) {
         self.supabaseTransportClient = supabaseTransportClient
         self.supabasePullPreviewService = supabasePullPreviewService
         self.syncEventOutboxDrainRecorder = syncEventOutboxDrainRecorder
         self.syncEventSignalWatcher = syncEventSignalWatcher
+        self.shopDeviceRegistrationService = shopDeviceRegistrationService
         self.historySessionSyncService = supabaseTransportClient.map {
             HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: $0))
         }
@@ -166,7 +169,8 @@ struct ContentView: View {
             syncEventSignalWatcher: syncEventSignalWatcher,
             syncStateStore: syncStateStore,
             selectedTab: $selectedTab,
-            activityCenter: foregroundActivityCenter
+            activityCenter: foregroundActivityCenter,
+            shopDeviceRegistrationService: shopDeviceRegistrationService
         ) {
             tabContent()
         }
@@ -229,7 +233,8 @@ struct ContentView: View {
                     remoteCountFetcher: remoteCountFetcher,
                     supabasePullPreviewService: supabasePullPreviewService,
                     syncStateStore: syncStateStore,
-                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder
+                    syncEventOutboxDrainRecorder: syncEventOutboxDrainRecorder,
+                    deviceAuthorization: shopDeviceRegistrationService
                 )
             }
             .tabItem {
@@ -249,6 +254,7 @@ private struct AppSyncRootHost<Content: View>: View {
     @StateObject private var syncOrchestrator: SyncOrchestrator
     @Binding private var selectedTab: Int
 
+    private let shopDeviceRegistrationService: ShopDeviceRegistrationService?
     private let content: () -> Content
 
     init(
@@ -260,6 +266,7 @@ private struct AppSyncRootHost<Content: View>: View {
         syncStateStore: SyncStateStore,
         selectedTab: Binding<Int>,
         activityCenter: ForegroundCloudWorkflowActivityCenter,
+        shopDeviceRegistrationService: ShopDeviceRegistrationService?,
         @ViewBuilder content: @escaping () -> Content
     ) {
         _syncOrchestrator = StateObject(
@@ -268,7 +275,8 @@ private struct AppSyncRootHost<Content: View>: View {
                     modelContainer: context.container,
                     authViewModel: authViewModel,
                     supabaseTransportClient: supabaseTransportClient,
-                    activityRecorder: activityRecorder
+                    activityRecorder: activityRecorder,
+                    deviceAuthorization: shopDeviceRegistrationService
                 ),
                 authViewModel: authViewModel,
                 activityCenter: activityCenter,
@@ -280,6 +288,7 @@ private struct AppSyncRootHost<Content: View>: View {
         _selectedTab = selectedTab
         _activityCenter = ObservedObject(wrappedValue: activityCenter)
         _authViewModel = ObservedObject(wrappedValue: authViewModel)
+        self.shopDeviceRegistrationService = shopDeviceRegistrationService
         self.content = content
     }
 
@@ -289,10 +298,16 @@ private struct AppSyncRootHost<Content: View>: View {
                 rootBanner
             }
             .task {
+                if authViewModel.isSignedIn {
+                    await shopDeviceRegistrationService?.registerHeartbeatAndCheck(reason: "app_sync_bootstrap")
+                }
                 await syncOrchestrator.bootstrap(scenePhase: scenePhase)
             }
             .onChange(of: scenePhase) { _, phase in
                 syncOrchestrator.handleScenePhaseChanged(phase)
+                if phase == .active {
+                    registerShopDevice(reason: "foreground")
+                }
             }
             .onChange(of: authViewModel.isTransitioning) { _, _ in
                 syncOrchestrator.handleAuthPresentationChanged()
@@ -313,10 +328,22 @@ private struct AppSyncRootHost<Content: View>: View {
                 syncOrchestrator.handleLocalPendingChanges()
             }
             .onReceive(NotificationCenter.default.publisher(for: .automaticCloudCheckRequested)) { _ in
-                syncOrchestrator.submitForegroundTrigger(
-                    source: .rootForeground,
-                    forceIncremental: true
-                )
+                Task { @MainActor in
+                    if authViewModel.isSignedIn {
+                        await shopDeviceRegistrationService?.registerCurrentOwnerDevice(
+                            reason: "automatic_sync",
+                            force: true
+                        )
+                        _ = await shopDeviceRegistrationService?.currentOwnerDeviceStatus(
+                            reason: "automatic_sync",
+                            force: true
+                        )
+                    }
+                    syncOrchestrator.submitForegroundTrigger(
+                        source: .rootForeground,
+                        forceIncremental: true
+                    )
+                }
             }
             .onDisappear {
                 syncOrchestrator.stop()
@@ -351,6 +378,13 @@ private struct AppSyncRootHost<Content: View>: View {
             syncOrchestrator.retryRootActionIfPossible()
         case .none:
             break
+        }
+    }
+
+    private func registerShopDevice(reason: String) {
+        guard authViewModel.isSignedIn, let shopDeviceRegistrationService else { return }
+        Task {
+            await shopDeviceRegistrationService.registerHeartbeatAndCheck(reason: reason)
         }
     }
 }
@@ -430,7 +464,7 @@ private struct SyncRootForegroundBanner: View {
             return .secondary
         case .checking:
             return .accentColor
-        case .blockedAuth, .recoverableError:
+        case .blockedAuth, .deviceBlocked, .recoverableError:
             return .orange
         }
     }

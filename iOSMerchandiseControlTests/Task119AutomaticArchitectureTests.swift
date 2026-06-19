@@ -87,6 +87,24 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertTrue(engine.contains("AutomaticSyncCancellationPolicy"))
     }
 
+    func testTask072DeviceAuthorizationGateCoversAutomaticManualAndBackgroundSync() throws {
+        let registration = try source("iOSMerchandiseControl/ShopDeviceRegistrationService.swift")
+        let runtime = try source("iOSMerchandiseControl/Sync/Automatic/Core/AutomaticSyncRuntimeFacade.swift")
+        let factory = try source("iOSMerchandiseControl/Sync/Manual/SupabaseManualSyncReleaseFactory.swift")
+        let background = try source("iOSMerchandiseControl/Sync/Automatic/Background/SyncBackgroundTaskScheduler.swift")
+        let orchestrator = try source("iOSMerchandiseControl/Sync/SyncOrchestrator.swift")
+
+        XCTAssertTrue(registration.contains("shop_device_status_current_owner"))
+        XCTAssertTrue(registration.contains("ensureActiveForCloudWrite"))
+        XCTAssertTrue(registration.contains("network_error"))
+        XCTAssertTrue(runtime.contains("deviceAuthorization"))
+        XCTAssertTrue(runtime.contains(".blocked(.deviceNotActive)"))
+        XCTAssertTrue(factory.contains("DeviceGuardedManualCatalogPushProvider"))
+        XCTAssertTrue(factory.contains("DeviceGuardedManualHistorySessionProvider"))
+        XCTAssertTrue(background.contains("blocked_device_status"))
+        XCTAssertTrue(orchestrator.contains("deviceBlocked"))
+    }
+
     func testSingleFlightStaysClosedDuringCooperativeCancellation() async {
         let singleFlight = AutomaticSyncSingleFlight()
 

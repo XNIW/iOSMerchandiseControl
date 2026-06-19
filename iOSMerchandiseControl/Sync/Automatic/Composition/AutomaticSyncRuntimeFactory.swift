@@ -7,7 +7,8 @@ enum SyncAutomaticRuntimeFactory {
         modelContainer: ModelContainer,
         authViewModel: SupabaseAuthViewModel,
         supabaseTransportClient: SupabaseTransportClient?,
-        activityRecorder: (any SyncEventRecording)?
+        activityRecorder: (any SyncEventRecording)?,
+        deviceAuthorization: (any ShopDeviceAuthorizationChecking)? = nil
     ) -> any SyncAutomaticRuntimeProviding {
         let catalogPushProvider: (any SyncCatalogPushProviding)? = supabaseTransportClient.map {
             CatalogPushService(
@@ -62,7 +63,8 @@ enum SyncAutomaticRuntimeFactory {
             historySessionProvider: historySessionProvider,
             incrementalPullProvider: incrementalPullProvider,
             recoverySnapshotPullProvider: recoverySnapshotPullProvider,
-            activityRegistrationProvider: activityRegistrationProvider
+            activityRegistrationProvider: activityRegistrationProvider,
+            deviceAuthorization: deviceAuthorization
         )
     }
 }

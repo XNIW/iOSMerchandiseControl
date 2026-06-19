@@ -2854,7 +2854,7 @@ PY
       mc_live_sync_performance_budget "$task_id" "$prefix"
       ;;
     sync-matrix)
-      if [[ "$task_id" == "TASK-114" ]]; then
+      if [[ "$task_id" == "TASK-114" || "$task_id" == "TASK-072" ]]; then
         local run_prefix steps_file steps fails blocked
         run_prefix="${prefix//\*/}"
         run_prefix="${run_prefix%_}_MATRIX_${MC_TIMESTAMP}_"
@@ -2902,8 +2902,8 @@ PY
         mc_task114_matrix_step "android_pull_ios_product_history_create_update_tombstone" \
           mc_android_task114_matrix_step test114AndroidPullIOSProductHistoryMatrix "$run_prefix" || true
 
-        MC_RECONCILIATION_JSON="$(python3 - "$steps_file" "$run_prefix" <<'PY'
-import json, sys
+        MC_RECONCILIATION_JSON="$(TASK_ID="$task_id" python3 - "$steps_file" "$run_prefix" <<'PY'
+import json, os, sys
 path, prefix = sys.argv[1:3]
 steps = []
 with open(path, encoding="utf-8") as fh:
@@ -2929,7 +2929,7 @@ status = "PASS" if steps and all(s["status"] == "pass" for s in steps) else (
     "BLOCKED" if any(s["status"] == "blocked" for s in steps) and not any(s["status"] == "fail" for s in steps) else "FAIL"
 )
 print(json.dumps({
-    "task": "TASK-114",
+    "task": os.environ.get("TASK_ID", "TASK-114"),
     "matrix_prefix": prefix,
     "status": status,
     "steps": steps,
@@ -2946,11 +2946,11 @@ PY
         fi
         if [[ "$blocked" -gt 0 ]]; then
           MC_SUMMARY="Live sync-matrix BLOCKED for ${run_prefix}: steps=${steps} blocked=${blocked}."
-          MC_NEXT_ACTION="Resolve device/auth/Supabase blocker and rerun TASK-114 sync-matrix."
+          MC_NEXT_ACTION="Resolve device/auth/Supabase blocker and rerun ${task_id} sync-matrix."
           return "$MC_EXIT_BLOCKED"
         fi
         MC_SUMMARY="Live sync-matrix PASS for ${run_prefix}: Product + History create/update/tombstone covered both directions."
-        MC_NEXT_ACTION="Run TASK-114 cleanup-and-verify/residue, reconcile-counts and evidence scans."
+        MC_NEXT_ACTION="Run ${task_id} cleanup-and-verify/residue, reconcile-counts and evidence scans."
         return "$MC_EXIT_PASS"
       fi
       local steps=0 fails=0 blocked=0

@@ -68,6 +68,7 @@ nonisolated enum SyncBlockReason: Equatable, Sendable, Hashable {
     case networkUnavailable
     case accountDecisionRequired
     case localStateUnavailable
+    case deviceNotActive
 }
 
 nonisolated indirect enum SyncAction: Equatable, Sendable {

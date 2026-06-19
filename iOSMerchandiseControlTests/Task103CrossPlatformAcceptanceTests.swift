@@ -11,6 +11,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let prefix: String
         let tolerance = 0.005
         var isTask104Pass2: Bool { prefix.hasPrefix("TASK104_PASS2_") }
+        var isTask072C: Bool { prefix.hasPrefix("TASK072C_") }
+        var isTask072D: Bool { prefix.hasPrefix("TASK072D_") }
         var isTask112: Bool { prefix.hasPrefix("TASK112_") }
         var isTask114: Bool { prefix.hasPrefix("TASK114_") }
         var isTask115: Bool { prefix.hasPrefix("TASK115_") }
@@ -23,6 +25,12 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var logPrefix: String {
             if isTask135 {
                 return "TASK135"
+            }
+            if isTask072C {
+                return "TASK072C"
+            }
+            if isTask072D {
+                return "TASK072D"
             }
             if isTask133 {
                 return "TASK133"
@@ -94,6 +102,24 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var singleCategoryAndroid: String { "\(prefix)SINGLE_CAT_ANDROID" }
         var singleBarcodeAndroidCreate: String { "\(prefix)SINGLE_ANDROID_CREATE" }
 
+        var task072CSupplierUpdateInitial: String { "\(prefix)SUPPLIER_UPDATE_INITIAL" }
+        var task072CSupplierUpdateFinal: String { "\(prefix)SUPPLIER_UPDATE_FINAL" }
+        var task072CSupplierTombstone: String { "\(prefix)SUPPLIER_TOMBSTONE" }
+        var task072CCategoryUpdateInitial: String { "\(prefix)CATEGORY_UPDATE_INITIAL" }
+        var task072CCategoryUpdateFinal: String { "\(prefix)CATEGORY_UPDATE_FINAL" }
+        var task072CCategoryTombstone: String { "\(prefix)CATEGORY_TOMBSTONE" }
+        var task072CBarcodeCreate: String { "\(prefix)PRODUCT_CREATE" }
+        var task072CBarcodeUpdate: String { "\(prefix)PRODUCT_UPDATE" }
+        var task072CBarcodeTombstone: String { "\(prefix)PRODUCT_TOMBSTONE" }
+        var task072CProductCreate: String { "\(prefix)PRODUCT_CREATE_NAME" }
+        var task072CProductUpdateInitial: String { "\(prefix)PRODUCT_UPDATE_INITIAL" }
+        var task072CProductUpdateFinal: String { "\(prefix)PRODUCT_UPDATE_FINAL" }
+        var task072CProductTombstone: String { "\(prefix)PRODUCT_TOMBSTONE_NAME" }
+        var task072CHistoryCreate: String { "\(prefix)HISTORY_CREATE" }
+        var task072CHistoryUpdateInitial: String { "\(prefix)HISTORY_UPDATE_INITIAL" }
+        var task072CHistoryUpdateFinal: String { "\(prefix)HISTORY_UPDATE_FINAL" }
+        var task072CHistoryTombstone: String { "\(prefix)HISTORY_TOMBSTONE" }
+
         var mediumSuppliers: [String] { (1...5).map { "\(prefix)SUP_MEDIUM_\($0.padded3)" } }
         var mediumCategories: [String] { (1...5).map { "\(prefix)CAT_MEDIUM_\($0.padded3)" } }
         var mediumBarcodes: [String] { (1...50).map { mediumBarcode($0) } }
@@ -130,7 +156,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 supplierIOS, supplierAndroid, supplierConflictCatalog, supplierConflictPrice, supplierOffline,
                 matrixSupplierIOS, matrixSupplierAndroid,
                 supplierOfflineIOSSeed, supplierOfflineIOSTombstone, supplierOfflineIOS,
-                singleSupplierIOS, singleSupplierAndroid
+                singleSupplierIOS, singleSupplierAndroid,
+                task072CSupplierUpdateInitial, task072CSupplierUpdateFinal, task072CSupplierTombstone
             ] + mediumSuppliers
         }
 
@@ -139,7 +166,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 categoryIOS, categoryAndroid, categoryConflictCatalog, categoryConflictPrice, categoryOffline,
                 matrixCategoryIOS, matrixCategoryAndroid,
                 categoryOfflineIOSSeed, categoryOfflineIOSTombstone, categoryOfflineIOS,
-                singleCategoryIOS, singleCategoryAndroid
+                singleCategoryIOS, singleCategoryAndroid,
+                task072CCategoryUpdateInitial, task072CCategoryUpdateFinal, task072CCategoryTombstone
             ] + mediumCategories
         }
 
@@ -149,7 +177,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 matrixBarcodeIOSCreate, matrixBarcodeIOSUpdate, matrixBarcodeIOSTombstone,
                 matrixBarcodeAndroidCreate, matrixBarcodeAndroidUpdate, matrixBarcodeAndroidTombstone,
                 barcodeOfflineIOSCreate, barcodeOfflineIOSUpdate, barcodeOfflineIOSTombstone,
-                singleBarcodeIOSCreate, singleBarcodeAndroidCreate
+                singleBarcodeIOSCreate, singleBarcodeAndroidCreate,
+                task072CBarcodeCreate, task072CBarcodeUpdate, task072CBarcodeTombstone
             ] + mediumBarcodes
         }
 
@@ -685,6 +714,208 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             "historyPushAndEventsMs=\(initialHistoryPushMs + updateHistoryPushMs + tombstoneHistoryPushMs) " +
             "totalMatrixMs=\(Int(Date().timeIntervalSince(matrixStarted) * 1000)) " +
             "syncType=EVENT_INCREMENTAL fullPull=false"
+        )
+    }
+
+    func test072CIOSCreateUpdateTombstoneHistoryHarness() async throws {
+        try requireLiveAcceptanceEnabled()
+        let fixture = try makeFixture()
+        guard fixture.isTask072C, fixture.prefix.hasPrefix("TASK072C_IOS_") else {
+            throw XCTSkip("TASK072C harness requires TASK072C_RUN_PREFIX=TASK072C_IOS_<run>_.")
+        }
+
+        let runtime = try await makeRuntime()
+        let context = try makeTask072CContext()
+        let runStarted = Date()
+        let before = try task072CLocalStoreSnapshot(
+            context: context,
+            ownerUserID: runtime.session.userID,
+            prefix: fixture.prefix,
+            runStarted: nil
+        )
+        print(
+            "\(fixture.logPrefix)_IOS_STORE_BEFORE owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "prefix_hash=\(hash(fixture.prefix)) \(before.summaryLine)"
+        )
+        XCTAssertEqual(before.prefixedActiveProducts + before.prefixedTombstonedProducts, 0)
+        XCTAssertEqual(before.prefixedActiveSuppliers + before.prefixedTombstonedSuppliers, 0)
+        XCTAssertEqual(before.prefixedActiveCategories + before.prefixedTombstonedCategories, 0)
+        XCTAssertEqual(before.prefixedActiveHistory + before.prefixedTombstonedHistory, 0)
+
+        let remoteBefore = try await fetchRemoteSnapshot(runtime, fixture: fixture)
+        let sessionsBefore = try await fetchFixtureSessions(runtime, fixture: fixture)
+        XCTAssertTrue(remoteBefore.suppliers.isEmpty)
+        XCTAssertTrue(remoteBefore.categories.isEmpty)
+        XCTAssertTrue(remoteBefore.products.isEmpty)
+        XCTAssertTrue(remoteBefore.prices.isEmpty)
+        XCTAssertTrue(sessionsBefore.isEmpty)
+
+        _ = try SupabaseCatalogBaselineWriter().commitLatestBaseline(
+            context: context,
+            ownerUserUUID: runtime.session.userID
+        )
+
+        let supplier = Supplier(name: fixture.task072CSupplierUpdateInitial)
+        let category = ProductCategory(name: fixture.task072CCategoryUpdateInitial)
+        context.insert(supplier)
+        context.insert(category)
+
+        let accumulator = LocalPendingChangeAccumulator(context: context, ownerUserID: runtime.session.userID)
+        try accumulator.recordSupplierChange(supplier: supplier, operation: .create, origin: .manualCatalogSave)
+        try accumulator.recordCategoryChange(category: category, operation: .create, origin: .manualCatalogSave)
+
+        let createProduct = matrixProduct(
+            barcode: fixture.task072CBarcodeCreate,
+            name: fixture.task072CProductCreate,
+            supplier: supplier,
+            category: category
+        )
+        let updateProduct = matrixProduct(
+            barcode: fixture.task072CBarcodeUpdate,
+            name: fixture.task072CProductUpdateInitial,
+            supplier: supplier,
+            category: category
+        )
+        let tombstoneProduct = matrixProduct(
+            barcode: fixture.task072CBarcodeTombstone,
+            name: fixture.task072CProductTombstone,
+            supplier: supplier,
+            category: category
+        )
+        for product in [createProduct, updateProduct, tombstoneProduct] {
+            context.insert(product)
+            try accumulator.recordProductChange(
+                product: product,
+                operation: .create,
+                origin: .manualCatalogSave,
+                changedFields: ["barcode", "productName", "supplier", "category", "purchasePrice", "retailPrice", "stockQuantity"]
+            )
+        }
+        try context.save()
+
+        let createCatalogPush = try await pushPendingCatalog(
+            context: context,
+            runtime: runtime,
+            expectedReadyCandidatesAtLeast: 5,
+            logPrefix: fixture.logPrefix
+        )
+        XCTAssertEqual(createCatalogPush.status, .completed)
+
+        supplier.name = fixture.task072CSupplierUpdateFinal
+        category.name = fixture.task072CCategoryUpdateFinal
+        updateProduct.productName = fixture.task072CProductUpdateFinal
+        try accumulator.recordSupplierChange(supplier: supplier, operation: .update, origin: .manualCatalogSave)
+        try accumulator.recordCategoryChange(category: category, operation: .update, origin: .manualCatalogSave)
+        try accumulator.recordProductChange(
+            product: updateProduct,
+            operation: .update,
+            origin: .manualCatalogSave,
+            changedFields: ["productName"]
+        )
+        try context.save()
+        let updateCatalogPush = try await pushPendingCatalog(
+            context: context,
+            runtime: runtime,
+            expectedReadyCandidatesAtLeast: 3,
+            logPrefix: fixture.logPrefix
+        )
+        XCTAssertEqual(updateCatalogPush.status, .completed)
+
+        try accumulator.recordProductChange(
+            product: tombstoneProduct,
+            operation: .delete,
+            origin: .manualCatalogSave,
+            changedFields: ["tombstone"],
+            baselineFingerprintHash: LocalPendingChangeLogicalKey.productFingerprintHash(tombstoneProduct)
+        )
+        context.delete(tombstoneProduct)
+        try context.save()
+        let tombstoneCatalogPush = try await pushPendingCatalog(
+            context: context,
+            runtime: runtime,
+            expectedReadyCandidatesAtLeast: 1,
+            logPrefix: fixture.logPrefix
+        )
+        XCTAssertEqual(tombstoneCatalogPush.status, .completed)
+
+        let historyCreate = task072CHistoryEntry(
+            title: fixture.task072CHistoryCreate,
+            supplier: fixture.task072CSupplierUpdateFinal,
+            category: fixture.task072CCategoryUpdateFinal
+        )
+        let historyUpdate = task072CHistoryEntry(
+            title: fixture.task072CHistoryUpdateInitial,
+            supplier: fixture.task072CSupplierUpdateFinal,
+            category: fixture.task072CCategoryUpdateFinal
+        )
+        let historyTombstone = task072CHistoryEntry(
+            title: fixture.task072CHistoryTombstone,
+            supplier: fixture.task072CSupplierUpdateFinal,
+            category: fixture.task072CCategoryUpdateFinal
+        )
+        for entry in [historyCreate, historyUpdate, historyTombstone] {
+            context.insert(entry)
+            entry.markHistorySessionLocalMutation()
+            try accumulator.recordHistorySessionChange(entry: entry, operation: .upsert, changedFields: ["create"])
+        }
+        try context.save()
+        let createHistoryPush = try await pushPendingHistory(
+            [historyCreate, historyUpdate, historyTombstone],
+            context: context,
+            runtime: runtime,
+            logPrefix: fixture.logPrefix
+        )
+        XCTAssertEqual(createHistoryPush.uploadedCount, 3)
+
+        historyUpdate.title = fixture.task072CHistoryUpdateFinal
+        historyUpdate.markHistorySessionLocalMutation()
+        try accumulator.recordHistorySessionChange(entry: historyUpdate, operation: .upsert, changedFields: ["displayName"])
+        try context.save()
+        let updateHistoryPush = try await pushPendingHistory([historyUpdate], context: context, runtime: runtime, logPrefix: fixture.logPrefix)
+        XCTAssertEqual(updateHistoryPush.uploadedCount, 1)
+
+        historyTombstone.markHistorySessionLocalDeletion()
+        try accumulator.recordHistorySessionChange(entry: historyTombstone, operation: .delete, changedFields: ["tombstone"])
+        try context.save()
+        let tombstoneHistoryPush = try await pushPendingHistory([historyTombstone], context: context, runtime: runtime, logPrefix: fixture.logPrefix)
+        XCTAssertEqual(tombstoneHistoryPush.uploadedCount, 1)
+
+        let readBack = try await fetchRemoteSnapshot(runtime, fixture: fixture)
+        XCTAssertNotNil(singleActiveProduct(in: readBack, barcode: fixture.task072CBarcodeCreate))
+        XCTAssertEqual(try XCTUnwrap(singleActiveProduct(in: readBack, barcode: fixture.task072CBarcodeUpdate)).productName, fixture.task072CProductUpdateFinal)
+        XCTAssertNotNil(try XCTUnwrap(product(in: readBack, barcode: fixture.task072CBarcodeTombstone)).deletedAt)
+        XCTAssertNil(try XCTUnwrap(remoteSupplier(in: readBack, name: fixture.task072CSupplierUpdateFinal)).deletedAt)
+        XCTAssertNil(try XCTUnwrap(remoteCategory(in: readBack, name: fixture.task072CCategoryUpdateFinal)).deletedAt)
+
+        let sessions = try await fetchFixtureSessions(runtime, fixture: fixture)
+        XCTAssertNotNil(session(in: sessions, displayName: fixture.task072CHistoryCreate))
+        XCTAssertNotNil(session(in: sessions, displayName: fixture.task072CHistoryUpdateFinal))
+        XCTAssertNotNil(try XCTUnwrap(session(in: sessions, displayName: fixture.task072CHistoryTombstone)).deletedAt)
+
+        let pendingAfter = try LocalPendingChangeSnapshotProvider(context: context)
+            .loadSnapshot(ownerUserID: runtime.session.userID)
+        XCTAssertEqual(pendingAfter.pendingCatalogChangeCount, 0)
+        XCTAssertEqual(pendingAfter.pendingProductPriceChangeCount, 0)
+        XCTAssertEqual(pendingAfter.pendingHistorySessionChangeCount, 0)
+
+        let after = try task072CLocalStoreSnapshot(
+            context: context,
+            ownerUserID: runtime.session.userID,
+            prefix: fixture.prefix,
+            runStarted: runStarted
+        )
+        XCTAssertEqual(after.outboxLocalOnly, before.outboxLocalOnly)
+        print(
+            "\(fixture.logPrefix)_IOS_STORE_AFTER owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "prefix_hash=\(hash(fixture.prefix)) \(after.summaryLine)"
+        )
+        print(
+            "\(fixture.logPrefix)_IOS_WRITE_VERIFY owner_hash=\(ownerHash(runtime.session.userID)) " +
+            "prefix_hash=\(hash(fixture.prefix)) catalog_create=pass catalog_update=pass catalog_tombstone=pass " +
+            "supplier_create_update=pass category_create_update=pass supplier_category_tombstone=not_supported_harness_gap " +
+            "history_create=pass history_update=pass history_tombstone=pass " +
+            "catalog_restore=not_supported history_restore=not_supported " +
+            "preexisting_outbox_localOnly=\(before.outboxLocalOnly) run_outbox=\(after.runOutboxSummary)"
         )
     }
 
@@ -1400,7 +1631,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
     private func pushPendingCatalog(
         context: ModelContext,
         runtime: Runtime,
-        expectedReadyCandidatesAtLeast: Int
+        expectedReadyCandidatesAtLeast: Int,
+        logPrefix: String = "TASK114"
     ) async throws -> SupabaseManualPushResult {
         let aggregated = try await LocalPendingAggregatedPushPlanner(
             context: context,
@@ -1431,7 +1663,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             context: context,
             runtime: runtime,
             result: push,
-            planFingerprint: batch.plan.planFingerprint
+            planFingerprint: batch.plan.planFingerprint,
+            logPrefix: logPrefix
         )
         return push
     }
@@ -1440,7 +1673,8 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         context: ModelContext,
         runtime: Runtime,
         result: SupabaseManualPushResult,
-        planFingerprint: String
+        planFingerprint: String,
+        logPrefix: String
     ) async throws {
         let enqueue = SyncEventOutboxEnqueueService(context: context).enqueue(
             .catalogManualPush(
@@ -1455,7 +1689,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             + result.categoryCreates + result.categoryUpdates + result.categoryLinks
             + result.productCreates + result.productUpdates + result.productLinks
         print(
-            "TASK114_SYNC_EVENT_ENQUEUE kind=\(enqueue.kind.rawValue) " +
+            "\(logPrefix)_SYNC_EVENT_ENQUEUE kind=\(enqueue.kind.rawValue) " +
             "entryStatus=\(enqueue.entryStatus?.rawValue ?? "nil") " +
             "error=\(enqueue.errorCode ?? "nil") " +
             "confirmed=\(confirmedCatalogChangeCount) " +
@@ -1474,7 +1708,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let drain = try await SyncEventOutboxDrainService(context: context, recorder: recorder)
             .drainOnce(ownerUserID: runtime.session.userID.uuidString, limit: 25)
         print(
-            "TASK114_SYNC_EVENT_DRAIN status=\(drain.status.rawValue) attempted=\(drain.attempted) " +
+            "\(logPrefix)_SYNC_EVENT_DRAIN status=\(drain.status.rawValue) attempted=\(drain.attempted) " +
             "sent=\(drain.sent) retry=\(drain.retryScheduled) blocked=\(drain.blocked) " +
             "dead=\(drain.dead) skipped=\(drain.skippedIneligible)"
         )
@@ -1499,7 +1733,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             planFingerprint: planFingerprint
         )
         print(
-            "TASK114_CATALOG_GENERATED_PRICE_SYNC_EVENT_ENQUEUE kind=\(generatedPriceEnqueue.kind.rawValue) " +
+            "\(logPrefix)_CATALOG_GENERATED_PRICE_SYNC_EVENT_ENQUEUE kind=\(generatedPriceEnqueue.kind.rawValue) " +
             "entryStatus=\(generatedPriceEnqueue.entryStatus?.rawValue ?? "nil") " +
             "error=\(generatedPriceEnqueue.errorCode ?? "nil") " +
             "products=\(result.touchedIDs.products.count)"
@@ -1513,7 +1747,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             let priceDrain = try await SyncEventOutboxDrainService(context: context, recorder: recorder)
                 .drainOnce(ownerUserID: runtime.session.userID.uuidString, limit: 25)
             print(
-                "TASK114_CATALOG_GENERATED_PRICE_SYNC_EVENT_DRAIN status=\(priceDrain.status.rawValue) " +
+                "\(logPrefix)_CATALOG_GENERATED_PRICE_SYNC_EVENT_DRAIN status=\(priceDrain.status.rawValue) " +
                 "attempted=\(priceDrain.attempted) sent=\(priceDrain.sent) " +
                 "retry=\(priceDrain.retryScheduled) blocked=\(priceDrain.blocked) " +
                 "dead=\(priceDrain.dead) skipped=\(priceDrain.skippedIneligible)"
@@ -1608,20 +1842,22 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
     private func pushPendingHistory(
         _ entries: [HistoryEntry],
         context: ModelContext,
-        runtime: Runtime
+        runtime: Runtime,
+        logPrefix: String = "TASK114"
     ) async throws -> HistorySessionPushResult {
         let result = try await HistorySessionSyncService(remote: HistorySessionRemoteSupabaseAdapter(remote: runtime.inventory)).pushPendingHistorySessions(
             entries: entries,
             ownerUserID: runtime.session.userID,
             context: context
         )
-        try await recordHistorySyncEvent(runtime: runtime, result: result)
+        try await recordHistorySyncEvent(runtime: runtime, result: result, logPrefix: logPrefix)
         return result
     }
 
     private func recordHistorySyncEvent(
         runtime: Runtime,
-        result: HistorySessionPushResult
+        result: HistorySessionPushResult,
+        logPrefix: String
     ) async throws {
         guard result.uploadedCount > 0, result.pushedRemoteIDs.isEmpty == false else { return }
         let sortedIDs = result.pushedRemoteIDs.sorted { $0.uuidString < $1.uuidString }
@@ -1644,11 +1880,11 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             source: "ios_history_session_push",
             sourceDeviceID: nil,
             batchID: UUID(),
-            clientEventID: "task114-ios-history-\(runtime.session.userID.uuidString.lowercased())-\(UUID().uuidString.lowercased())"
+            clientEventID: "\(logPrefix.lowercased())-ios-history-\(runtime.session.userID.uuidString.lowercased())-\(UUID().uuidString.lowercased())"
         )
         _ = try await recorder.record(request)
         print(
-            "TASK114_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL " +
+            "\(logPrefix)_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL " +
             "sessions=\(sortedIDs.count) fullPull=false"
         )
     }
@@ -1683,6 +1919,28 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             category: fixture.matrixCategoryIOS,
             totalItems: 1,
             paymentTotal: 2,
+            missingItems: 0
+        )
+        entry.title = title
+        return entry
+    }
+
+    private func task072CHistoryEntry(
+        title: String,
+        supplier: String,
+        category: String
+    ) -> HistoryEntry {
+        let entry = HistoryEntry(
+            id: title,
+            timestamp: Date(timeIntervalSince1970: 1_779_840_000),
+            isManualEntry: true,
+            data: [["barcode", "count"], [title, "1"]],
+            editable: [["", ""], ["", "1"]],
+            complete: [false, true],
+            supplier: supplier,
+            category: category,
+            totalItems: 1,
+            paymentTotal: 1,
             missingItems: 0
         )
         entry.title = title
@@ -2145,11 +2403,13 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let task104Value = (environment["TASK104_PASS2_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK104_PASS2_LIVE_ACCEPTANCE"])?.lowercased()
         let task112Value = (environment["TASK112_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK112_LIVE_ACCEPTANCE"])?.lowercased()
         let task114Value = (environment["TASK114_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK114_LIVE_ACCEPTANCE"])?.lowercased()
+        let task072CValue = (environment["TASK072C_LIVE_ACCEPTANCE"] ?? environment["TEST_RUNNER_TASK072C_LIVE_ACCEPTANCE"])?.lowercased()
         guard task103Value == "1" || task103Value == "true"
             || task104Value == "1" || task104Value == "true"
             || task112Value == "1" || task112Value == "true"
-            || task114Value == "1" || task114Value == "true" else {
-            throw XCTSkip("Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1 or TASK114_LIVE_ACCEPTANCE=1 in the xctestrun environment.")
+            || task114Value == "1" || task114Value == "true"
+            || task072CValue == "1" || task072CValue == "true" else {
+            throw XCTSkip("Live acceptance is gated. Set TASK103_LIVE_ACCEPTANCE=1, TASK104_PASS2_LIVE_ACCEPTANCE=1, TASK112_LIVE_ACCEPTANCE=1, TASK114_LIVE_ACCEPTANCE=1 or TASK072C_LIVE_ACCEPTANCE=1 in the xctestrun environment.")
         }
     }
 
@@ -2171,7 +2431,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
 
     private func makeFixture() throws -> Fixture {
         let environment = ProcessInfo.processInfo.environment
-        guard let prefix = environment["TASK104_PASS2_RUN_PREFIX"]
+        guard let prefix = environment["TASK072C_RUN_PREFIX"]
+            ?? environment["TEST_RUNNER_TASK072C_RUN_PREFIX"]
+            ?? environment["TASK104_PASS2_RUN_PREFIX"]
             ?? environment["TEST_RUNNER_TASK104_PASS2_RUN_PREFIX"]
             ?? environment["TASK103_RUN_PREFIX"]
             ?? environment["TEST_RUNNER_TASK103_RUN_PREFIX"]
@@ -2179,13 +2441,15 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
             ?? environment["TEST_RUNNER_TASK112_RUN_PREFIX"]
             ?? environment["TASK114_RUN_PREFIX"]
             ?? environment["TEST_RUNNER_TASK114_RUN_PREFIX"] else {
-            throw XCTSkip("TASK104_PASS2_RUN_PREFIX, TASK103_RUN_PREFIX, TASK112_RUN_PREFIX or TASK114_RUN_PREFIX must be explicitly set for live acceptance.")
+            throw XCTSkip("TASK104_PASS2_RUN_PREFIX, TASK103_RUN_PREFIX, TASK112_RUN_PREFIX, TASK114_RUN_PREFIX or TASK072C_RUN_PREFIX must be explicitly set for live acceptance.")
         }
         guard (
             prefix.hasPrefix("TASK103_REAL_R")
                 || prefix.hasPrefix("TASK104_PASS2_")
                 || prefix.hasPrefix("TASK112_")
                 || prefix.hasPrefix("TASK114_")
+                || prefix.hasPrefix("TASK072C_")
+                || prefix.hasPrefix("TASK072D_")
                 || prefix.hasPrefix("TASK115_")
                 || prefix.hasPrefix("TASK123_")
                 || prefix.hasPrefix("TASK124_")
@@ -2194,7 +2458,7 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 || prefix.hasPrefix("TASK133_")
                 || prefix.hasPrefix("TASK135_")
         ), prefix.hasSuffix("_") else {
-            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._, TASK115_..._, TASK123_..._, TASK124_..._, TASK125_..._, TASK131_..._, TASK133_..._ or TASK135_..._.")
+            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._, TASK072C_..._, TASK072D_..._, TASK115_..._, TASK123_..._, TASK124_..._, TASK125_..._, TASK131_..._, TASK133_..._ or TASK135_..._.")
         }
         return Fixture(prefix: prefix)
     }
@@ -2550,6 +2814,16 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         return matches.count == 1 ? matches[0] : nil
     }
 
+    private func remoteSupplier(in snapshot: RemoteSnapshot, name: String) -> RemoteInventorySupplierRow? {
+        let matches = snapshot.suppliers.filter { $0.name == name }
+        return matches.count == 1 ? matches[0] : nil
+    }
+
+    private func remoteCategory(in snapshot: RemoteSnapshot, name: String) -> RemoteInventoryCategoryRow? {
+        let matches = snapshot.categories.filter { $0.name == name }
+        return matches.count == 1 ? matches[0] : nil
+    }
+
     private func session(in sessions: [RemoteSharedSheetSessionRow], displayName: String) -> RemoteSharedSheetSessionRow? {
         let matches = sessions.filter { $0.displayName == displayName }
         return matches.count == 1 ? matches[0] : nil
@@ -2613,6 +2887,128 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         let context = ModelContext(container)
         Self.retainedContexts.append(context)
         return context
+    }
+
+    private func makeTask072CContext() throws -> ModelContext {
+        guard let storePath = ProcessInfo.processInfo.environment["TASK072C_IOS_STORE_PATH"],
+              !storePath.isEmpty else {
+            return try makeContext()
+        }
+
+        let schema = Schema([
+            Product.self,
+            Supplier.self,
+            ProductCategory.self,
+            HistoryEntry.self,
+            ProductPrice.self,
+            SupabaseCatalogBaselineRun.self,
+            SupabaseCatalogBaselineRecord.self,
+            SyncEventOutboxEntry.self,
+            LocalPendingChange.self
+        ])
+        let configuration = ModelConfiguration(
+            "Task072CAppStore",
+            schema: schema,
+            url: URL(fileURLWithPath: storePath),
+            allowsSave: true,
+            cloudKitDatabase: .none
+        )
+        let container = try ModelContainer(for: schema, configurations: [configuration])
+        Self.retainedContainers.append(container)
+        let context = ModelContext(container)
+        Self.retainedContexts.append(context)
+        return context
+    }
+
+    private struct Task072CLocalStoreSnapshot {
+        let pending: LocalPendingChangeSnapshot
+        let outboxByStatus: [SyncEventOutboxStatus: Int]
+        let runOutboxByStatus: [SyncEventOutboxStatus: Int]
+        let prefixedActiveProducts: Int
+        let prefixedTombstonedProducts: Int
+        let prefixedActiveSuppliers: Int
+        let prefixedTombstonedSuppliers: Int
+        let prefixedActiveCategories: Int
+        let prefixedTombstonedCategories: Int
+        let prefixedActiveHistory: Int
+        let prefixedTombstonedHistory: Int
+
+        var outboxLocalOnly: Int {
+            outboxByStatus[.localOnly, default: 0]
+        }
+
+        var runOutboxSummary: String {
+            Self.statusSummary(runOutboxByStatus)
+        }
+
+        var summaryLine: String {
+            [
+                "pendingCatalog=\(pending.pendingCatalogChangeCount)",
+                "pendingPrices=\(pending.pendingProductPriceChangeCount)",
+                "pendingHistory=\(pending.pendingHistorySessionChangeCount)",
+                "outboxAll={\(Self.statusSummary(outboxByStatus))}",
+                "outboxRun={\(runOutboxSummary)}",
+                "productsActive=\(prefixedActiveProducts)",
+                "productsTombstoned=\(prefixedTombstonedProducts)",
+                "suppliersActive=\(prefixedActiveSuppliers)",
+                "suppliersTombstoned=\(prefixedTombstonedSuppliers)",
+                "categoriesActive=\(prefixedActiveCategories)",
+                "categoriesTombstoned=\(prefixedTombstonedCategories)",
+                "historyActive=\(prefixedActiveHistory)",
+                "historyTombstoned=\(prefixedTombstonedHistory)"
+            ].joined(separator: " ")
+        }
+
+        private static func statusSummary(_ counts: [SyncEventOutboxStatus: Int]) -> String {
+            SyncEventOutboxStatus.allCases
+                .map { "\($0.rawValue)=\(counts[$0, default: 0])" }
+                .joined(separator: ",")
+        }
+    }
+
+    private func task072CLocalStoreSnapshot(
+        context: ModelContext,
+        ownerUserID: UUID,
+        prefix: String,
+        runStarted: Date?
+    ) throws -> Task072CLocalStoreSnapshot {
+        let owner = ownerUserID.uuidString.lowercased()
+        let pending = try LocalPendingChangeSnapshotProvider(context: context)
+            .loadSnapshot(ownerUserID: ownerUserID)
+        let outboxEntries = try context.fetch(FetchDescriptor<SyncEventOutboxEntry>())
+            .filter { $0.ownerUserID == owner }
+        let runOutboxEntries = outboxEntries.filter { entry in
+            guard let runStarted else { return false }
+            return entry.createdAt >= runStarted
+        }
+        let products = try context.fetch(FetchDescriptor<Product>())
+            .filter { $0.barcode.hasPrefix(prefix) }
+        let suppliers = try context.fetch(FetchDescriptor<Supplier>())
+            .filter { $0.name.hasPrefix(prefix) }
+        let categories = try context.fetch(FetchDescriptor<ProductCategory>())
+            .filter { $0.name.hasPrefix(prefix) }
+        let history = try context.fetch(FetchDescriptor<HistoryEntry>())
+            .filter { $0.title.hasPrefix(prefix) || $0.id.hasPrefix(prefix) }
+
+        return Task072CLocalStoreSnapshot(
+            pending: pending,
+            outboxByStatus: outboxStatusCounts(outboxEntries),
+            runOutboxByStatus: outboxStatusCounts(runOutboxEntries),
+            prefixedActiveProducts: products.filter { $0.remoteDeletedAt == nil }.count,
+            prefixedTombstonedProducts: products.filter { $0.remoteDeletedAt != nil }.count,
+            prefixedActiveSuppliers: suppliers.filter { $0.remoteDeletedAt == nil }.count,
+            prefixedTombstonedSuppliers: suppliers.filter { $0.remoteDeletedAt != nil }.count,
+            prefixedActiveCategories: categories.filter { $0.remoteDeletedAt == nil }.count,
+            prefixedTombstonedCategories: categories.filter { $0.remoteDeletedAt != nil }.count,
+            prefixedActiveHistory: history.filter { $0.remoteDeletedAt == nil }.count,
+            prefixedTombstonedHistory: history.filter { $0.remoteDeletedAt != nil }.count
+        )
+    }
+
+    private func outboxStatusCounts(_ entries: [SyncEventOutboxEntry]) -> [SyncEventOutboxStatus: Int] {
+        entries.reduce(into: [:]) { counts, entry in
+            counts[entry.status, default: 0] += 1
+        }
     }
 
     private struct Task114LocalCounts {

@@ -1,0 +1,121 @@
+=== mc-agent ios task072d-harness --live --prefix TASK072D_IOS_20260619T192903Z_ --admin-prefix TASK072D_ADMIN_20260619T185924Z_ --android-prefix TASK072D_ANDROID_20260619T192615Z_ ===
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist --temp-dir-path /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/ssu --bundle-id com.niwcyber.iOSMerchandiseControlTests --product-path /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest --extracted-metadata-path /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Metadata.appintents --metadata-file-list /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Intermediates.noindex/iOSMerchandiseControl.build/Debug-iphonesimulator/iOSMerchandiseControlTests.build/iOSMerchandiseControlTests.DependencyMetadataFileList --source-file /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest/Info.plist --archive-ssu-assets
+2026-06-19 15:29:50.596 appintentsnltrainingprocessor[2075:10962668] Parsing options for appintentsnltrainingprocessor
+2026-06-19 15:29:50.596 appintentsnltrainingprocessor[2075:10962668] Starting AppIntents SSU YAML Generation
+2026-06-19 15:29:50.596 appintentsnltrainingprocessor[2075:10962668] No AppShortcuts found - Skipping.
+
+CodeSign /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+Touch /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest (in target 'iOSMerchandiseControlTests' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/PlugIns/iOSMerchandiseControlTests.xctest
+
+CodeSign /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/iOSMerchandiseControl.debug.dylib
+
+CodeSign /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app/__preview.dylib
+
+CodeSign /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+
+    Signing Identity:     "Sign to Run Locally"
+
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+RegisterExecutionPolicyException /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-RegisterExecutionPolicyException /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+Validate /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    builtin-validationUtility /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+    cd <HOME_REDACTED>/Desktop/iOSMerchandiseControl
+    /usr/bin/touch -c /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/Debug-iphonesimulator/iOSMerchandiseControl.app
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'iOSMerchandiseControl' from project 'iOSMerchandiseControl')
+** TEST BUILD SUCCEEDED **
+
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-20260619T192914Z-1781897355038-DerivedData/Build/Products/task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness.xctestrun -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5" -resultBundlePath /tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-1781897355038-20260619T192914Z.xcresult "-only-testing:iOSMerchandiseControlTests/Task072DLiveAcceptanceHarnessTests/testTask072DIOSCreateUpdateTombstoneHistoryHarness"
+
+2026-06-19 15:29:51.571 xcodebuild[2121:10962811] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-1781897355038-20260619T192914Z.xcresult
+
+2026-06-19 15:29:51.630 xcodebuild[2121:10962811] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-06-19 15:29:52.334 xcodebuild[2121:10962811] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-06-19 15:29:52.655 xcodebuild[2121:10962811] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Test Suite 'Selected tests' started at 2026-06-19 15:30:00.498.
+Test Suite 'iOSMerchandiseControlTests.xctest' started at 2026-06-19 15:30:00.499.
+Test Suite 'Task072DLiveAcceptanceHarnessTests' started at 2026-06-19 15:30:00.499.
+Test Case '-[iOSMerchandiseControlTests.Task072DLiveAcceptanceHarnessTests testTask072DIOSCreateUpdateTombstoneHistoryHarness]' started.
+TASK072D_IOS_STORE_BEFORE owner_hash=ad3d747e936c prefix_hash=862fea92d190 pendingCatalog=0 pendingPrices=0 pendingHistory=0 runPendingLocalChanges=0 outboxAll={pending=0,sending=0,sent=0,failedRetryable=0,blockedContract=0,blockedAuth=0,blockedSchema=0,dead=0,localOnly=0} outboxRun={pending=0,sending=0,sent=0,failedRetryable=0,blockedContract=0,blockedAuth=0,blockedSchema=0,dead=0,localOnly=0} productsActive=0 productsTombstoned=0 suppliersActive=0 suppliersTombstoned=0 categoriesActive=0 categoriesTombstoned=0 historyActive=0 historyTombstoned=0
+2026-06-19 15:30:00.654367-0400 iOSMerchandiseControl[2151:10963592] [] nw_protocol_instance_set_output_handler Not calling remove_input_handler on 0x102cf2600:socket
+2026-06-19 15:30:00.654649-0400 iOSMerchandiseControl[2151:10963592] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+2026-06-19 15:30:00.654752-0400 iOSMerchandiseControl[2151:10963592] [connection] nw_connection_copy_connected_local_endpoint_block_invoke [C1] Connection has no local endpoint
+objc[2151]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10864c310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x1077bc398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+TASK072D_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=5 suppliers=1 categories=1 products=3
+TASK072D_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK072D_CATALOG_GENERATED_PRICE_SYNC_EVENT_ENQUEUE kind=skippedNoOp entryStatus=nil error=nil products=3
+TASK072D_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=3 suppliers=1 categories=1 products=1
+TASK072D_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK072D_CATALOG_GENERATED_PRICE_SYNC_EVENT_ENQUEUE kind=skippedNoOp entryStatus=nil error=nil products=1
+TASK072D_SYNC_EVENT_ENQUEUE kind=enqueued entryStatus=pending error=nil confirmed=1 suppliers=0 categories=0 products=1
+TASK072D_SYNC_EVENT_DRAIN status=drained attempted=1 sent=1 retry=0 blocked=0 dead=0 skipped=0
+TASK072D_CATALOG_GENERATED_PRICE_SYNC_EVENT_ENQUEUE kind=skippedNoOp entryStatus=nil error=nil products=1
+TASK072D_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL sessions=3 fullPull=false
+TASK072D_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL sessions=1 fullPull=false
+TASK072D_HISTORY_SYNC_EVENT_RECORD syncType=EVENT_INCREMENTAL sessions=1 fullPull=false
+TASK072D_IOS_EXTERNAL_RECEIVE source=admin status=available prefix_hash=787532de4a04 product_applies=0 history_applies=1
+"[InventorySnapshot] start products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=8 products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] start products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] start products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=1 products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] start products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] start products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] start products=2 suppliers=1 categories=1 prices=0"
+"[InventorySnapshot] done elapsedMs=0 products=2 suppliers=1 categories=1 prices=0"
+TASK072D_IOS_EXTERNAL_RECEIVE source=android status=available prefix_hash=1e665400a55e product_applies=3 history_applies=3
+TASK072D_IOS_STORE_AFTER owner_hash=ad3d747e936c prefix_hash=862fea92d190 pendingCatalog=0 pendingPrices=0 pendingHistory=0 runPendingLocalChanges=0 outboxAll={pending=0,sending=0,sent=3,failedRetryable=0,blockedContract=0,blockedAuth=0,blockedSchema=0,dead=0,localOnly=0} outboxRun={pending=0,sending=0,sent=3,failedRetryable=0,blockedContract=0,blockedAuth=0,blockedSchema=0,dead=0,localOnly=0} productsActive=0 productsTombstoned=0 suppliersActive=1 suppliersTombstoned=0 categoriesActive=1 categoriesTombstoned=0 historyActive=2 historyTombstoned=1
+TASK072D_IOS_WRITE_VERIFY owner_hash=ad3d747e936c prefix_hash=862fea92d190 catalog_create=pass catalog_update=pass catalog_tombstone=pass history_create=pass history_update=pass history_tombstone=pass remote_product_hashes={create=db7bb6a355dc,update=a7037aae20dd,tombstone=ed7d8525da11} admin_receive=admin:applied_products_0_history_1 android_receive=android:applied_products_3_history_3 task072d_outbox_pending=0 preexisting_outbox_localOnly=0 run_outbox={pending=0,sending=0,sent=3,failedRetryable=0,blockedContract=0,blockedAuth=0,blockedSchema=0,dead=0,localOnly=0} syncType=EVENT_INCREMENTAL fullPull=false
+Test Case '-[iOSMerchandiseControlTests.Task072DLiveAcceptanceHarnessTests testTask072DIOSCreateUpdateTombstoneHistoryHarness]' passed (9.861 seconds).
+Test Suite 'Task072DLiveAcceptanceHarnessTests' passed at 2026-06-19 15:30:10.364.
+	 Executed 1 test, with 0 failures (0 unexpected) in 9.861 (9.866) seconds
+Test Suite 'iOSMerchandiseControlTests.xctest' passed at 2026-06-19 15:30:10.365.
+	 Executed 1 test, with 0 failures (0 unexpected) in 9.861 (9.866) seconds
+Test Suite 'Selected tests' passed at 2026-06-19 15:30:10.365.
+	 Executed 1 test, with 0 failures (0 unexpected) in 9.861 (9.867) seconds
+2026-06-19 15:30:10.656 xcodebuild[2121:10962811] [MT] IDETestOperationsObserverDebug: 18.308 elapsed -- Testing started completed.
+2026-06-19 15:30:10.656 xcodebuild[2121:10962811] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-06-19 15:30:10.656 xcodebuild[2121:10962811] [MT] IDETestOperationsObserverDebug: 18.308 sec, +18.308 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/mc-agent-ios-task072d-testTask072DIOSCreateUpdateTombstoneHistoryHarness-1781897355038-20260619T192914Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

@@ -96,7 +96,7 @@ final class SupabaseManualPushServiceTests: XCTestCase {
 
         XCTAssertEqual(result.status, .completed)
         XCTAssertEqual(result.productUpdates, 1)
-        XCTAssertNil(result.baselineRunID)
+        XCTAssertNotNil(result.baselineRunID)
         XCTAssertEqual(gateway.productUpdatePayloads.count, 1)
         XCTAssertNotNil(gateway.productUpdatePayloads.first?.deletedAt)
     }

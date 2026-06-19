@@ -131,6 +131,7 @@ private extension SyncBlockReason {
         case .networkUnavailable: "networkUnavailable"
         case .accountDecisionRequired: "accountDecisionRequired"
         case .localStateUnavailable: "localStateUnavailable"
+        case .deviceNotActive: "deviceNotActive"
         }
     }
 }

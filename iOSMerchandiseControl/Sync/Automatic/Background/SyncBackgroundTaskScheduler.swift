@@ -108,6 +108,17 @@ nonisolated enum SyncBackgroundTaskRunner {
                 return false
             }
 
+            let deviceAuthorization = await MainActor.run {
+                ShopDeviceRegistrationService(clientProvider: provider)
+            }
+            do {
+                _ = try await deviceAuthorization.ensureActiveForCloudWrite(reason: "background_refresh")
+            } catch {
+                UserDefaults.standard.set("blocked_device_status", forKey: "sync.runtime.background.lastOutcome")
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "sync.runtime.background.lastBlockedDeviceAt")
+                return false
+            }
+
             let modelContainer = try makeModelContainer()
             let transport = await MainActor.run {
                 SupabaseTransportClient(clientProvider: provider)
