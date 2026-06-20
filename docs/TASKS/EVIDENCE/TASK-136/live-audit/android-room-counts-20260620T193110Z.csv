@@ -1,0 +1,3 @@
+table_name,all_count,active_count,remote_count,notes
+product_prices,41137,41137,41137,"no deletedAt column"
+history_entries,45,45,45,""

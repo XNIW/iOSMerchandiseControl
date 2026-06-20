@@ -1,0 +1,33 @@
+iOS Options sync-state UI snapshot after TASK-136 state fix
+
+Simulator:
+- UDID: 240F400E-5EFA-486A-9137-FFBBE70F604D
+- Bundle: com.niwcyber.iOSMerchandiseControl
+- Screenshot: docs/TASKS/EVIDENCE/TASK-136/screenshots/ios-options-sync-state-final-expanded-20260620T2025.jpg
+
+Observed visible UI text:
+- Sincronizzazione automatica attiva
+- Il catalogo locale e' aggiornato, ma il controllo eventi cloud non e' stato completato. Riprova quando la rete e' disponibile.
+- Ultimo sync riuscito: 20 giu 2026, 16:25
+- Fase: Completata
+- Outbox pending: 0
+- Avvio: 20 giu 2026, 16:25:45
+- Ultimo progresso: 20 giu 2026, 16:25:47
+- Hash account: b454f82c5857...
+- Stato dispositivo: active / can write
+- Eventi cloud: Catalogo locale allineato; eventi incompleti
+- Shop/source: Sync owner-scope (shop/source non richiesto)
+- Store scope: anonymous
+- Retry count: 2
+- Ultimo errore: networkError(statusCode: nil, message: Optional("La connessione a internet sembr...
+- Stato database locale: Database locale aggiornato
+- Prodotti: 19710
+- Fornitori: 70
+- Categorie: 39
+- Storico prezzi: 41137
+- Sessioni cronologia: 41
+
+Interpretation:
+- The UI no longer remains in an indefinite "in progress" state after relaunch/run.
+- Last successful sync is sourced from a verified automatic run timestamp, not from the local baseline.
+- Local catalog parity is visible separately from the incomplete cloud-events check.

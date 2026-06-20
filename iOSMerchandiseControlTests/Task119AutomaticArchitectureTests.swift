@@ -194,6 +194,23 @@ final class Task119AutomaticArchitectureTests: XCTestCase {
         XCTAssertEqual(recoveryCallCount, 1)
     }
 
+    func testAutomaticEngineTreatsCompletedNoChangeDrainAsVerifiedSuccess() async {
+        let incrementalProvider = Task136NoWorkIncrementalProvider()
+        let engine = AutomaticSyncEngine(
+            catalogPushProvider: nil,
+            productPriceProvider: nil,
+            historySessionProvider: nil,
+            incrementalPullProvider: incrementalProvider,
+            activityRegistrationProvider: nil,
+            defaults: UserDefaults(suiteName: "Task136-\(UUID().uuidString)")!
+        )
+
+        let result = await engine.run(action: .drainEvents, source: .rootForeground, ownerUserID: UUID())
+
+        XCTAssertEqual(result.status, .success)
+        XCTAssertFalse(result.didWork)
+    }
+
     func testTask132DAutomaticEngineRunsSnapshotRecoveryForBootstrapAction() async {
         let recoveryProvider = Task132SnapshotRecoveryProvider()
         let engine = AutomaticSyncEngine(
@@ -347,6 +364,12 @@ private final class Task132RecoveryRequiredIncrementalProvider: SyncIncrementalP
         )
         summary.requiresFullRecoveryReason = "canonical_drift_detected"
         return summary
+    }
+}
+
+private final class Task136NoWorkIncrementalProvider: SyncIncrementalPullProviding {
+    func applyIncrementalRemoteChanges(ownerUserID: UUID) async throws -> SyncIncrementalPullSummary {
+        .noWork(watermark: 136)
     }
 }
 

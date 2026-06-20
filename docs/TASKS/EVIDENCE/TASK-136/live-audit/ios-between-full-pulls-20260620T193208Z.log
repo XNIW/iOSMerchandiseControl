@@ -1,0 +1,33 @@
+     1	"[ProductPriceSync] page_apply_done index=46 applyMs=250 mutations=717"
+     2	"[ProductPriceSync] page_save index=46 mutations=717 total=41218 saveMs=143"
+     3	"[ProductPriceSync] paged_apply_complete inserted=41137 linked=0 pruned=0 skipped=81 total=41218 elapsedMs=44126"
+     4	"[ProductPriceSync] paged_apply_exit cancelled=false pages=45 total=41218"
+     5	"[InventorySnapshot] start products=19710 suppliers=69 categories=38 prices=41137"
+     6	"[InventorySnapshot] done elapsedMs=3104 products=19710 suppliers=69 categories=38 prices=41137"
+     7	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 2386 checkpointed: 2386
+     8	CoreData: debug: PostSaveMaintenance: fileSize 9830352 greater than prune threshold
+     9	CoreData: debug: PostSaveMaintenance: incremental_vacuum with freelist_count - 1142 and pages_to_free 228
+    10	CoreData: annotation: PostSaveMaintenance: wal_checkpoint(TRUNCATE)
+    11	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 0 checkpointed: 0
+    12	"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+    13	"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+    14	"[InventorySnapshot] start products=0 suppliers=0 categories=0 prices=0"
+    15	"[InventorySnapshot] done elapsedMs=0 products=0 suppliers=0 categories=0 prices=0"
+    16	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1043 checkpointed: 1043
+    17	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1019 checkpointed: 1019
+    18	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1032 checkpointed: 1032
+    19	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1257 checkpointed: 1257
+    20	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1317 checkpointed: 1317
+    21	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1431 checkpointed: 1431
+    22	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1089 checkpointed: 1089
+    23	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1197 checkpointed: 1197
+    24	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1293 checkpointed: 1293
+    25	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1396 checkpointed: 1396
+    26	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1438 checkpointed: 1438
+    27	"[ProductPriceSync] paged_apply_start total=41218 pageSize=900 mode=keyset"
+    28	"[ProductPriceSync] tombstoned_products count=45"
+    29	"[ProductPriceSync] page_request index=1 offset=0 after=nil"
+    30	"[ProductPriceSync] page_fetch_done index=1 fetchMs=274"
+    31	"[ProductPriceSync] page_return index=1 count=900 first=000078D9-redacted last=057EBEB4-redacted"
+    32	"[ProductPriceSync] page_apply_done index=1 applyMs=189 mutations=900"
+    33	CoreData: debug: WAL checkpoint: Database did checkpoint. Log size: 1192 checkpointed: 1192

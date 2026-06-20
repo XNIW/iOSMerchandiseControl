@@ -158,7 +158,7 @@ nonisolated enum SyncBackgroundTaskRunner {
                     ),
                     productPriceApplyService: SupabaseProductPriceApplyService(
                         fetcher: ProductPriceReleaseRemoteSupabaseAdapter(remote: transport),
-                        fetchOptions: ProductPriceApplyFetchOptions(replaceLocalSnapshot: true)
+                        fetchOptions: ProductPriceApplyFetchOptions(replaceLocalSnapshot: false)
                     ),
                     historyRemote: HistorySessionRemoteSupabaseAdapter(remote: transport),
                     syncEventFetcher: SyncEventRemoteSupabaseAdapter(remote: transport)

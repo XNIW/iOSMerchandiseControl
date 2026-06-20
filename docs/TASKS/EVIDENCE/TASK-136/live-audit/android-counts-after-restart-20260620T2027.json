@@ -1,0 +1,5 @@
+RESULT PASS
+EXIT_CODE 0
+REPORT_MD docs/TASKS/EVIDENCE/TASK-136/agent-runs/20260620T202929Z-sync-counts-task-TASK-136-source-android-p42893.md
+REPORT_JSON docs/TASKS/EVIDENCE/TASK-136/agent-runs/20260620T202929Z-sync-counts-task-TASK-136-source-android-p42893.json
+NEXT_ACTION Run remaining sync counts or live reconcile-counts.

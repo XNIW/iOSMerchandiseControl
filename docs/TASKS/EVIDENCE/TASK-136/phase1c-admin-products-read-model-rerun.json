@@ -1,0 +1,158 @@
+{
+  "generated_at": "2026-06-20T18:39:16.923Z",
+  "runtime_env": {
+    "project_ref": "jpgo...yvm",
+    "env_source": "/Users/minxiang/Projects/merchandise-control-admin-web/.env.local"
+  },
+  "admin_browser_route": "/shop/products?shop_id=<selected_admin_shop>",
+  "selected_shop": {
+    "shop_hash": "da11551e7968",
+    "shop_code": "TASK068E_260618231325",
+    "shop_name": "TASK068E REHEARSAL 260618231325",
+    "shop_status": "active"
+  },
+  "mapping": {
+    "shop_hash": "da11551e7968",
+    "owner_hash": "bf727712f2b9",
+    "mapping_state": "mapped",
+    "source_kind": "mobile_owner",
+    "disabled": false
+  },
+  "route_logic": {
+    "function": "getShopInventoryProductsPage",
+    "includeExactTotals": false,
+    "preferMappedMobileOwnerBridge": true,
+    "legacyOwnerOnlySchema": true,
+    "useLegacyOwnerBridge": true,
+    "catalogScope": "legacy_owner_bridge",
+    "query_shape": "inventory_products WHERE owner_user_id = mapped owner AND deleted_at IS NULL ORDER BY updated_at DESC, id ASC RANGE 0..10"
+  },
+  "first_paint_lower_bound": {
+    "fetched_rows_for_has_next": 11,
+    "current_page_rows": 10,
+    "page_size": 10,
+    "has_next_page": true,
+    "ui_total_products_label": "11+",
+    "ui_filtered_rows_label": "11+",
+    "row_scope_summary": {
+      "selected_shop": 6,
+      "legacy_shop_null": 5,
+      "other_shop": 0
+    },
+    "rows": [
+      {
+        "remote_hash": "c12951322bee",
+        "owner_hash": "bf727712f2b9",
+        "shop_hash": "da11551e7968",
+        "shop_is_selected_admin_shop": true,
+        "shop_is_null": false,
+        "updated_at": "2026-06-20T17:49:33.171051+00:00",
+        "barcode_prefix": "TASK072C_IOS_20260619T17",
+        "product_name_prefix": "TASK072C_IOS_20260619T175420Z_PRODUC"
+      },
+      {
+        "remote_hash": "73fd718577ab",
+        "owner_hash": "bf727712f2b9",
+        "shop_hash": "20533d99ceb7",
+        "shop_is_selected_admin_shop": false,
+        "shop_is_null": true,
+        "updated_at": "2026-06-19T17:53:03.715782+00:00",
+        "barcode_prefix": "TASK072C_IOS_20260619T17",
+        "product_name_prefix": "TASK072C_IOS_20260619T175420Z_PRODUC"
+      },
+      {
+        "remote_hash": "59a49a4d3b97",
+        "owner_hash": "bf727712f2b9",
+        "shop_hash": "20533d99ceb7",
+        "shop_is_selected_admin_shop": false,
+        "shop_is_null": true,
+        "updated_at": "2026-06-19T17:48:48.81093+00:00",
+        "barcode_prefix": "TASK072C_IOS_20260619T17",
+        "product_name_prefix": "TASK072C_IOS_20260619T174023Z_PRODUC"
+      },
+      {
+        "remote_hash": "d06ed4a07b8e",
+        "owner_hash": "bf727712f2b9",
+        "shop_hash": "20533d99ceb7",
+        "shop_is_selected_admin_shop": false,
+        "shop_is_null": true,
+        "updated_at": "2026-06-19T17:48:46.255313+00:00",
+        "barcode_prefix": "TASK072C_IOS_20260619T17",
+        "product_name_prefix": "TASK072C_IOS_20260619T174023Z_PRODUC"
+      },
+      {
+        "remote_hash": "55ae5edfb1f2",
+        "owner_hash": "bf727712f2b9",
+        "shop_hash": "20533d99ceb7",
+        "shop_is_selected_admin_shop": false,
+        "shop_is_null": true,
+        "updated_at": "2026-06-19T17:43:48.392958+00:00",
+        "barcode_prefix": "TASK072C_ANDROID_R202606",
+        "product_name_prefix": "TASK072C_ANDROID_R20260619_1345_PROD"
+      },
+      {
+        "remote_hash": "24381b908e4c",
+        "owner_hash": "bf727712f2b9",
+        "shop_hash": "20533d99ceb7",
+        "shop_is_selected_admin_shop": false,
+        "shop_is_null": true,
+        "updated_at": "2026-06-19T17:43:44.968501+00:00",
+        "barcode_prefix": "TASK072C_ANDROID_R202606",
+        "product_name_prefix": "TASK072C_ANDROID_R20260619_1345_PROD"
+      },
+      {
+        "remote_hash": "ec337023f8d2",
+        "owner_hash": "bf727712f2b9",
+        "shop_hash": "da11551e7968",
+        "shop_is_selected_admin_shop": true,
+        "shop_is_null": false,
+        "updated_at": "2026-06-19T15:35:12.683153+00:00",
+        "barcode_prefix": "6926393301064",
+        "product_name_prefix": "3f094dd835a2"
+      },
+      {
+        "remote_hash": "e5c7e6e72470",
+        "owner_hash": "bf727712f2b9",
+        "shop_hash": "da11551e7968",
+        "shop_is_selected_admin_shop": true,
+        "shop_is_null": false,
+        "updated_at": "2026-06-19T15:35:12.683153+00:00",
+        "barcode_prefix": "5602023038074",
+        "product_name_prefix": "27f5756c0b44"
+      },
+      {
+        "remote_hash": "beefa0157731",
+        "owner_hash": "bf727712f2b9",
+        "shop_hash": "da11551e7968",
+        "shop_is_selected_admin_shop": true,
+        "shop_is_null": false,
+        "updated_at": "2026-06-19T15:35:12.683153+00:00",
+        "barcode_prefix": "5680160009751",
+        "product_name_prefix": "9ea04af77bff"
+      },
+      {
+        "remote_hash": "17e447489644",
+        "owner_hash": "bf727712f2b9",
+        "shop_hash": "da11551e7968",
+        "shop_is_selected_admin_shop": true,
+        "shop_is_null": false,
+        "updated_at": "2026-06-19T15:35:12.683153+00:00",
+        "barcode_prefix": "6871128206919",
+        "product_name_prefix": "98c538bdbde1"
+      }
+    ]
+  },
+  "exact_counts_if_not_deferred": {
+    "admin_read_model_owner_only_active": 19710,
+    "admin_read_model_owner_only_deleted": 45,
+    "admin_read_model_owner_only_price_history": 41218,
+    "supabase_canonical_selected_shop_active": 19705,
+    "supabase_canonical_selected_shop_deleted": 6,
+    "supabase_canonical_selected_shop_price_history": 41133,
+    "legacy_shop_id_null_by_owner_active": 5
+  },
+  "comparison_targets": {
+    "android_room_live_products": 11,
+    "ios_swiftdata_products_observed": 19710
+  }
+}

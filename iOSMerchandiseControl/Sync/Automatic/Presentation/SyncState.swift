@@ -25,17 +25,23 @@ struct SyncState: Equatable {
     var progress: SyncProgress?
     var lastVerifiedAt: Date?
     var lastOutcome: SyncOutcome?
+    var startedAt: Date?
+    var lastProgressAt: Date?
 
     init(
         phase: SyncPhase = .idle,
         progress: SyncProgress? = nil,
         lastVerifiedAt: Date? = nil,
-        lastOutcome: SyncOutcome? = nil
+        lastOutcome: SyncOutcome? = nil,
+        startedAt: Date? = nil,
+        lastProgressAt: Date? = nil
     ) {
         self.phase = phase
         self.progress = progress
         self.lastVerifiedAt = lastVerifiedAt
         self.lastOutcome = lastOutcome
+        self.startedAt = startedAt
+        self.lastProgressAt = lastProgressAt
     }
 
     var isProgressVisible: Bool {

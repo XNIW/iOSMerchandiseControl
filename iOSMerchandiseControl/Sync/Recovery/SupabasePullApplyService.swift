@@ -694,35 +694,25 @@ nonisolated struct SupabasePullApplyService: Sendable {
         try validateCatalogReplacementPayloads(replacementPreview, options: replacementOptions)
         try validateNoActiveLocalPendingChanges(context: context)
 
-        let deletedCounts = try deleteLocalCatalogAndPricesForReplacement(context: context)
         do {
             let plan = try prepareApplyPlan(
-                preview: replacementPreview,
+                preview: preview,
                 context: context,
                 options: replacementOptions,
                 isAuthenticated: isAuthenticated,
                 accountGuard: accountGuard
             )
-            let applied = try await applyBatched(
+            return try await applyBatched(
                 plan: plan,
                 context: context,
                 onProgress: onProgress
-            )
-            return SupabasePullApplyResult(
-                inserted: applied.inserted,
-                updated: applied.updated,
-                suppliersCreated: applied.suppliersCreated,
-                categoriesCreated: applied.categoriesCreated,
-                productTombstoned: applied.productTombstoned,
-                productPruned: deletedCounts.products
             )
         } catch let error as SupabasePullApplyError where error == .noApplicableChanges {
             return SupabasePullApplyResult(
                 inserted: 0,
                 updated: 0,
                 suppliersCreated: 0,
-                categoriesCreated: 0,
-                productPruned: deletedCounts.products
+                categoriesCreated: 0
             )
         }
     }
@@ -822,42 +812,6 @@ nonisolated struct SupabasePullApplyService: Sendable {
         guard !changes.contains(where: { !$0.status.isTerminal }) else {
             throw SupabasePullApplyError.invalidLocalData
         }
-    }
-
-    private func deleteLocalCatalogAndPricesForReplacement(
-        context: ModelContext
-    ) throws -> (products: Int, productPrices: Int, suppliers: Int, categories: Int) {
-        let prices = try context.fetch(FetchDescriptor<ProductPrice>())
-        let products = try context.fetch(FetchDescriptor<Product>())
-        let suppliers = try context.fetch(FetchDescriptor<Supplier>())
-        let categories = try context.fetch(FetchDescriptor<ProductCategory>())
-
-        for price in prices {
-            context.delete(price)
-        }
-        for product in products {
-            context.delete(product)
-        }
-        for supplier in suppliers {
-            context.delete(supplier)
-        }
-        for category in categories {
-            context.delete(category)
-        }
-
-        do {
-            try context.save()
-        } catch {
-            context.rollback()
-            throw SupabasePullApplyError.saveFailed(message: String(describing: error))
-        }
-
-        return (
-            products: products.count,
-            productPrices: prices.count,
-            suppliers: suppliers.count,
-            categories: categories.count
-        )
     }
 
     private func pendingProductChanges(

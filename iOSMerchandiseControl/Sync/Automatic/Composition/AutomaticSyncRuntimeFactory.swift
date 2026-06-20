@@ -46,7 +46,7 @@ enum SyncAutomaticRuntimeFactory {
                 ),
                 productPriceApplyService: SupabaseProductPriceApplyService(
                     fetcher: ProductPriceReleaseRemoteSupabaseAdapter(remote: $0),
-                    fetchOptions: ProductPriceApplyFetchOptions(replaceLocalSnapshot: true)
+                    fetchOptions: ProductPriceApplyFetchOptions(replaceLocalSnapshot: false)
                 ),
                 historyRemote: HistorySessionRemoteSupabaseAdapter(remote: $0),
                 syncEventFetcher: SyncEventRemoteSupabaseAdapter(remote: $0)

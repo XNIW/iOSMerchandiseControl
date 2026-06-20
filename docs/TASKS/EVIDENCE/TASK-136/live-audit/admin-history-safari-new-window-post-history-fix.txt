@@ -1,0 +1,79 @@
+http://127.0.0.1:3055/shop/history?shop_id=bc01ea8e-0ae5-4b7a-abbc-4863a1be5b8d
+Mobile History | MerchandiseControl Admin Web
+complete
+Skip to shop content
+MC
+TASK068E REHEARSAL 260618231325
+WORKSPACE
+Overview
+CATALOG
+Products
+Categories
+Suppliers
+History Entries
+ACCESS
+Members
+Roles
+POS / STAFF
+Staff
+POS Live
+Devices
+DATA
+Sync Center
+Audit
+SETTINGS
+Settings
+SHOP SAFETY
+Shared guardrails
+Android / iOS History Entries
+CATALOG
+Single shop workspace
+LANGUAGE
+
+Shop Owner
+Server verified
+Logout
+Entry name
+Supplier
+Category
+Rows
+Complete rows
+Create History Entry
+History entries
+126
+Exact shared_sheet_sessions total
+Loaded rows
+126
+Light list cap 126/200
+Active entries
+45
+Rows without deleted_at
+Deleted entries
+81
+Rows with deleted_at
+Mobile visible
+41
+Active entries excluding 4 technical rows
+Fallback
+Mapped
+Lightweight mobile history list loaded with legacy owner fallback.
+Android / iOS History Entries
+Real mobile history entries from shared_sheet_sessions. Technical sync events and payload diagnostics are opened from Detail.
+Client-side filters apply only to visible rows. Rows and diagnostics load when opening Detail.
+Search history
+
+Month
+
+All time
+This month
+Last 3 months
+Active + issues
+Active
+Issues
+Technical
+Deleted
+All
+VISIBLE ENTRIES: 41
+giugno 2026
+41
+Active: 41 · Issues: 0 · Technical: 0 · Deleted: 0

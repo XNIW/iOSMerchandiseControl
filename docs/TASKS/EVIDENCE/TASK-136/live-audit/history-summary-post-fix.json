@@ -1,0 +1,32 @@
+{
+  "android": {
+    "active": 45,
+    "all": 45,
+    "deleted": 0,
+    "pendingDelete": 0,
+    "shownInHistoryList": 41,
+    "technicalHidden": 4,
+    "tombstoneHidden": 0,
+    "userVisible": 41
+  },
+  "ios": {
+    "active": 45,
+    "all": 105,
+    "deleted": 60,
+    "pendingDelete": 0,
+    "shownInHistoryList": 41,
+    "technicalHidden": 5,
+    "tombstoneHidden": 60,
+    "userVisible": 41
+  },
+  "supabase": {
+    "active": 45,
+    "all": 126,
+    "deleted": 81,
+    "pendingDelete": 0,
+    "shownInHistoryList": 41,
+    "technicalHidden": 6,
+    "tombstoneHidden": 81,
+    "userVisible": 41
+  }
+}

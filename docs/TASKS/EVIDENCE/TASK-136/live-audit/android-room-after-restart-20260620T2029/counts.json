@@ -1,0 +1,19 @@
+{
+  "copiedFiles": [
+    "app_database",
+    "app_database-wal",
+    "app_database-shm"
+  ],
+  "counts": {
+    "categories": 39,
+    "history_active": 45,
+    "history_all": 45,
+    "history_deleted": 0,
+    "history_mobile_visible": 41,
+    "product_prices": 41137,
+    "products": 19710,
+    "suppliers": 70
+  },
+  "dbPath": "docs/TASKS/EVIDENCE/TASK-136/live-audit/android-room-after-restart-20260620T2029/app_database",
+  "source": "android-room-main-wal-shm-after-restart"
+}

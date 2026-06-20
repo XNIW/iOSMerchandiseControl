@@ -22,7 +22,11 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
         var isTask131: Bool { prefix.hasPrefix("TASK131_") }
         var isTask133: Bool { prefix.hasPrefix("TASK133_") }
         var isTask135: Bool { prefix.hasPrefix("TASK135_") }
+        var isTask136: Bool { prefix.hasPrefix("TASK136_") }
         var logPrefix: String {
+            if isTask136 {
+                return "TASK136"
+            }
             if isTask135 {
                 return "TASK135"
             }
@@ -2457,8 +2461,9 @@ final class Task103CrossPlatformAcceptanceTests: XCTestCase {
                 || prefix.hasPrefix("TASK131_")
                 || prefix.hasPrefix("TASK133_")
                 || prefix.hasPrefix("TASK135_")
+                || prefix.hasPrefix("TASK136_")
         ), prefix.hasSuffix("_") else {
-            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._, TASK072C_..._, TASK072D_..._, TASK115_..._, TASK123_..._, TASK124_..._, TASK125_..._, TASK131_..._, TASK133_..._ or TASK135_..._.")
+            throw XCTSkip("Run prefix must be run-scoped TASK103_REAL_R..._, TASK104_PASS2_..._, TASK112_..._, TASK114_..._, TASK072C_..._, TASK072D_..._, TASK115_..._, TASK123_..._, TASK124_..._, TASK125_..._, TASK131_..._, TASK133_..._, TASK135_..._ or TASK136_..._.")
         }
         return Fixture(prefix: prefix)
     }

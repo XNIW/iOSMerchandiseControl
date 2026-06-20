@@ -1,0 +1,214 @@
+06-20 14:34:40.841 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:34:40.957 21536 21613 I ShopDeviceRegistry: device status skipped reason=history_push:resume_tick errClass=JobCancellationException
+06-20 14:34:41.153 21536 21605 I ShopDeviceRegistry: device status skipped reason=sync_events_drain:foreground errClass=JobCancellationException
+06-20 14:34:41.250 21536 21604 I ShopDeviceRegistry: device status skipped reason=catalog_bootstrap:foreground errClass=JobCancellationException
+06-20 14:34:41.425 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:34:41.813 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct
+06-20 14:34:41.898 21536 21611 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct
+06-20 14:34:42.899 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:43.019 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:44.014 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:44.135 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:45.138 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:45.229 21536 21612 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:46.229 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:46.466 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:47.450 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:47.631 21536 21617 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:48.583 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:48.777 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:49.728 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:49.880 21536 21612 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:50.848 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:50.968 21536 21605 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:51.948 21536 21612 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:52.061 21536 21612 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:53.061 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:53.211 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:54.335 21536 21613 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:54.527 21536 21605 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:55.517 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:55.629 21536 21605 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:55.874 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:34:56.246 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct
+06-20 14:34:56.434 21536 21612 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct
+06-20 14:34:56.665 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:56.764 21536 21612 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:56.854 21536 21604 I CatalogCloudSync: phase_metrics syncDomain=CATALOG phase=PULL_CATALOG remoteSuppliers=94 remoteCategories=63 remoteProducts=19755 remoteActiveProducts=19710 pulledSuppliers=0 pulledCategories=0 pulledProducts=0 prunedProducts=0 prunedSuppliers=0 prunedCategories=0 fetchMs=13037 applyMs=2268
+06-20 14:34:57.797 21536 21612 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:57.933 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:58.981 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:34:59.162 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:00.103 21536 21611 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:00.249 21536 21614 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:01.203 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:01.497 21536 21614 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:02.296 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:02.646 21536 21615 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:03.399 21536 21611 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:03.763 21536 21612 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:04.483 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:04.851 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:05.569 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:05.947 21536 21605 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:06.681 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:07.035 21536 21611 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:07.886 21536 21615 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:08.119 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:09.003 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:09.216 21536 21611 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:10.097 21536 21611 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:10.312 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:35:10.908 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:35:10.916 21536 21617 I CatalogCloudSync: phase_metrics syncDomain=PRICES phase=SYNC_PRICES_PULL mode=paged remotePricesEvaluated=41218 pricesPulled=0 pricesSkippedNoProductRef=81 pageSize=900 pageCount=46
+06-20 14:35:10.916 21536 21613 I CatalogCloudSync: cycle=catalog_bootstrap outcome=ok reason=device_active_direct durationMs=29371 bootstrapRequired=false pullOnly=true productsPulled=0 suppliersPulled=0 categoriesPulled=0 pricesPulled=0 priceSyncFailed=false
+06-20 14:35:11.027 21536 21611 I CatalogCloudSync: cycle=sync_events_drain outcome=drained_after_busy reason=device_active_direct
+06-20 14:35:11.099 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:35:11.165 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:35:11.220 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=193 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:35:11.551 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=255 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:35:25.918 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:35:26.172 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:35:26.585 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=263 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:35:40.923 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:35:41.176 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:35:41.645 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=351 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:35:55.935 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:35:56.189 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:35:56.646 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=310 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:36:10.943 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:36:11.197 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:36:11.553 21536 21615 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=218 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:36:25.959 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:36:26.212 21536 21613 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:36:26.632 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=278 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:36:40.973 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:36:41.234 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:36:41.601 21536 21615 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=194 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:36:55.979 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:36:56.231 21536 21613 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:36:56.616 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=189 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:37:10.991 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:37:11.245 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:37:11.613 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=229 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:37:25.995 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:37:26.246 21536 21615 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:37:26.646 21536 21617 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=196 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:37:40.997 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:37:41.252 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:37:41.582 21536 21617 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=200 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:37:56.007 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:37:56.259 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:37:56.846 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=352 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:38:11.015 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:38:11.267 21536 21613 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:38:11.615 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=199 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:38:26.023 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:38:26.275 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:38:26.728 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=309 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:38:41.039 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:38:41.290 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:38:41.627 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=202 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:38:56.045 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:38:56.298 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:38:56.668 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=192 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:39:11.061 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:39:11.313 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:39:11.777 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=300 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:39:26.073 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:39:26.327 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:39:26.696 21536 21617 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=214 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:39:41.074 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:39:41.327 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:39:41.679 21536 21617 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=235 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:39:56.078 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:39:56.331 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:39:56.946 21536 21617 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=397 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:40:11.088 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:40:11.581 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=drained_after_busy reason=device_active_direct
+06-20 14:40:25.346 21536 21606 I CatalogCloudSync: phase_metrics syncDomain=CATALOG phase=PULL_CATALOG remoteSuppliers=94 remoteCategories=63 remoteProducts=19755 remoteActiveProducts=19710 pulledSuppliers=0 pulledCategories=0 pulledProducts=0 prunedProducts=0 prunedSuppliers=0 prunedCategories=0 fetchMs=12507 applyMs=1248
+06-20 14:40:26.091 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:40:26.470 21536 21615 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct
+06-20 14:40:26.657 21536 21615 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct
+06-20 14:40:27.603 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:27.777 21536 21617 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:28.751 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:28.882 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:29.977 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:30.065 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:31.066 21536 21615 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:31.219 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:32.198 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:32.311 21536 21605 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:33.280 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:33.470 21536 21611 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:34.367 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:34.627 21536 21611 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:35.464 21536 21613 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:35.710 21536 21617 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:36.624 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:36.831 21536 21605 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:37.744 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:37.913 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=queued_after_busy reason=sync_busy originalReason=device_active_direct_retry_after_busy
+06-20 14:40:38.287 21536 21613 I CatalogCloudSync: phase_metrics syncDomain=PRICES phase=SYNC_PRICES_PULL mode=paged remotePricesEvaluated=41218 pricesPulled=0 pricesSkippedNoProductRef=81 pageSize=900 pageCount=46
+06-20 14:40:38.287 21536 21613 I CatalogCloudSync: cycle=catalog_bootstrap outcome=ok reason=device_active_direct durationMs=26705 bootstrapRequired=false pullOnly=true productsPulled=0 suppliersPulled=0 categoriesPulled=0 pricesPulled=0 priceSyncFailed=false
+06-20 14:40:38.434 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=drained_after_busy reason=device_active_direct
+06-20 14:40:38.731 21536 21615 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=297 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:40:38.749 21536 21615 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:40:41.126 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:40:41.379 21536 21615 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:40:41.680 21536 21611 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=199 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:40:56.145 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:40:56.399 21536 21611 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:40:57.329 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=769 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:41:11.148 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:41:11.401 21536 21613 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:41:13.854 21536 21605 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=1048 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:41:26.160 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:41:26.413 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:41:26.948 21536 21615 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=306 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:41:41.175 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:41:41.427 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:41:41.863 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=223 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:41:56.194 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:41:56.446 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:41:56.836 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=234 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:42:11.209 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:42:11.463 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:42:11.812 21536 21605 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=212 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:42:26.222 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:42:26.475 21536 21615 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:42:26.916 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=294 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:42:41.234 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:42:41.487 21536 21615 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:42:41.802 21536 21615 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=190 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:42:56.240 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:42:56.491 21536 21606 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:42:56.963 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=221 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:43:11.255 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:43:11.509 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:43:11.805 21536 21617 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=199 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:43:26.257 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:43:26.508 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:43:27.063 21536 21615 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=402 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:43:41.275 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:43:41.529 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:43:41.950 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=297 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:43:56.292 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:43:56.544 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:43:57.048 21536 21611 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=389 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:44:11.306 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:44:11.561 21536 21613 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:44:12.146 21536 21606 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=344 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:44:26.317 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:44:26.569 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:44:27.044 21536 21604 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=199 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:44:41.321 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:44:41.573 21536 21604 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:44:42.033 21536 21617 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=305 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:44:56.323 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:44:56.576 21536 21605 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:44:57.041 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=279 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false
+06-20 14:45:11.326 21536 21536 I CatalogCloudSync: cycle=device_status_active outcome=schedule
+06-20 14:45:11.581 21536 21617 I CatalogCloudSync: cycle=catalog_bootstrap outcome=skip reason=bootstrap_retry_guard
+06-20 14:45:12.033 21536 21613 I CatalogCloudSync: cycle=sync_events_drain outcome=ok reason=device_active_direct durationMs=277 eventsFetched=0 eventsProcessed=0 skippedSelf=0 outboxPending=0 manualFullSyncRequired=false syncEventsGapDetected=false syncEventsTooLarge=false syncEventOutboxRetried=0 targetedProductsFetched=0 targetedPricesFetched=0 targetedHistoryFetched=0 remoteHistoryUpdatesApplied=0 fullCatalogFetch=false fullPriceFetch=false

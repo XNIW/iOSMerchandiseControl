@@ -282,6 +282,9 @@ final class SyncOrchestrator: ObservableObject {
         automaticRuntime.cancel()
         foregroundTask?.cancel()
         foregroundTask = nil
+        if stateStore.state.phase.isAutomaticWorkActive {
+            stateStore.recordRunResult(.cancelled())
+        }
         objectWillChange.send()
     }
 

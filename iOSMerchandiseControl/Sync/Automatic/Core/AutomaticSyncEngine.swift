@@ -89,7 +89,7 @@ actor AutomaticSyncEngine {
                 }
             }
             recordDiagnostic("lastOutcome", didRun ? "completed" : "no_work")
-            return await complete(didRun ? .success(didWork: true) : .noWork())
+            return await complete(.success(didWork: didRun))
         } catch is CancellationError {
             recordDiagnostic("lastOutcome", "cancelled")
             return await complete(.cancelled())

@@ -1,0 +1,86 @@
+{
+  "generated_at": "2026-06-20T18:38:35.911Z",
+  "runtime": "Safari localhost:3055 authenticated tab",
+  "pages": {
+    "page1": {
+      "page": 1,
+      "query": null,
+      "url_redacted": "http://localhost:3055/shop/products?shop_id=bc01ea8e...",
+      "contains": {
+        "exact_total_label": false,
+        "calculating_label": false,
+        "filtered_exact_total_label": false,
+        "loaded_lower_bound_label": false,
+        "current_page_label": false,
+        "search_scope_server_side": false,
+        "range_at_least": false,
+        "task072c_result_visible": false
+      },
+      "line_count": 33,
+      "lines": [
+        "Products",
+        "Products"
+      ]
+    },
+    "page5": {
+      "page": 5,
+      "query": null,
+      "url_redacted": "http://localhost:3055/shop/products?shop_id=bc01ea8e...&page=5",
+      "contains": {
+        "exact_total_label": false,
+        "calculating_label": false,
+        "filtered_exact_total_label": false,
+        "loaded_lower_bound_label": false,
+        "current_page_label": false,
+        "search_scope_server_side": false,
+        "range_at_least": false,
+        "task072c_result_visible": false
+      },
+      "line_count": 33,
+      "lines": [
+        "Products",
+        "Products"
+      ]
+    },
+    "page7": {
+      "page": 7,
+      "query": null,
+      "url_redacted": "http://localhost:3055/shop/products?shop_id=bc01ea8e...&page=7",
+      "contains": {
+        "exact_total_label": false,
+        "calculating_label": false,
+        "filtered_exact_total_label": false,
+        "loaded_lower_bound_label": false,
+        "current_page_label": false,
+        "search_scope_server_side": false,
+        "range_at_least": false,
+        "task072c_result_visible": false
+      },
+      "line_count": 33,
+      "lines": [
+        "Products",
+        "Products"
+      ]
+    },
+    "search": {
+      "page": 1,
+      "query": "TASK072C",
+      "url_redacted": "http://localhost:3055/shop/products?shop_id=bc01ea8e...&q=TASK072C",
+      "contains": {
+        "exact_total_label": false,
+        "calculating_label": false,
+        "filtered_exact_total_label": false,
+        "loaded_lower_bound_label": false,
+        "current_page_label": false,
+        "search_scope_server_side": false,
+        "range_at_least": false,
+        "task072c_result_visible": false
+      },
+      "line_count": 33,
+      "lines": [
+        "Products",
+        "Products"
+      ]
+    }
+  }
+}

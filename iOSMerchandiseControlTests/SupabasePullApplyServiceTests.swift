@@ -81,34 +81,32 @@ final class SupabasePullApplyServiceTests: XCTestCase {
         try assertPrepareThrows(.invalidLocalData, preview: preview, context: context)
     }
 
-    func testExplicitReplacementReplacesInvalidLocalCatalogWithRemoteSnapshot() async throws {
+    func testExplicitReplacementPreservesPriceHistoryForProductsKeptInRemoteSnapshot() async throws {
         let context = try makeContext()
-        let duplicateRemoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000201")!
-        let staleProduct = try insertProduct(
+        let staleRemoteID = UUID(uuidString: "D8200000-0000-4000-8000-000000000201")!
+        _ = try insertProduct(
             context: context,
             barcode: "STALE-LOCAL-1",
             productName: "Stale local one",
-            supplierName: "Stale Supplier",
-            categoryName: "Stale Category",
-            remoteID: duplicateRemoteID
+            remoteID: staleRemoteID
         )
-        try insertProduct(
+        let remoteProductID = UUID(uuidString: "D8200000-0000-4000-8000-000000000202")!
+        let canonicalProduct = try insertProduct(
             context: context,
-            barcode: "STALE-LOCAL-2",
-            productName: "Stale local two",
-            remoteID: duplicateRemoteID
+            barcode: "REMOTE-ONLY-1",
+            productName: "Local canonical",
+            remoteID: remoteProductID
         )
         context.insert(
             ProductPrice(
                 type: .purchase,
-                price: 1.25,
+                price: 9.25,
                 effectiveAt: Date(timeIntervalSince1970: 1_777_777_701),
-                product: staleProduct
+                product: canonicalProduct
             )
         )
         try context.save()
 
-        let remoteProductID = UUID(uuidString: "D8200000-0000-4000-8000-000000000202")!
         let supplierID = UUID(uuidString: "D8200000-0000-4000-8000-000000000203")!
         let categoryID = UUID(uuidString: "D8200000-0000-4000-8000-000000000204")!
         let preview = makePreview(
@@ -135,7 +133,9 @@ final class SupabasePullApplyServiceTests: XCTestCase {
             remoteProductIDs: [remoteProductID]
         )
 
-        try assertPrepareThrows(.invalidLocalData, preview: preview, context: context)
+        let plan = try service.prepareApplyPlan(preview: preview, context: context, isAuthenticated: true)
+        XCTAssertEqual(plan.productUpdates.count, 1)
+        XCTAssertEqual(plan.productPrunes.count, 1)
 
         let result = try await service.replaceLocalCatalogWithRemoteSnapshot(
             preview: preview,
@@ -143,9 +143,12 @@ final class SupabasePullApplyServiceTests: XCTestCase {
             isAuthenticated: true
         )
 
-        XCTAssertEqual(result.inserted, 1)
-        XCTAssertEqual(result.productPruned, 2)
-        XCTAssertEqual(try context.fetch(FetchDescriptor<ProductPrice>()).count, 0)
+        XCTAssertEqual(result.inserted, 0)
+        XCTAssertEqual(result.updated, 1)
+        XCTAssertEqual(result.productPruned, 1)
+        let prices = try context.fetch(FetchDescriptor<ProductPrice>())
+        XCTAssertEqual(prices.count, 1)
+        XCTAssertEqual(prices.first?.product?.remoteID, remoteProductID)
         let products = try context.fetch(FetchDescriptor<Product>())
         XCTAssertEqual(products.count, 1)
         XCTAssertEqual(products.first?.barcode, "REMOTE-ONLY-1")

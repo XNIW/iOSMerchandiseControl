@@ -1,0 +1,71 @@
+kind,local_id,name,remoteId
+suppliers,64,ABC,9548a694-1c61-5d5a-b8d3-355d24e2a902
+suppliers,37,Amanda,218619bb-6b29-5fa0-93f8-c6c682f81f40
+suppliers,36,Ante,133d8bb1-8c68-5985-abd5-bb2aff26e187
+suppliers,60,Baima,8c505ff2-64cf-590f-9600-6b5e0cc7317a
+suppliers,70,Bambi,a1b6c3c0-678e-5afa-9be4-c4ae97ab9ec2
+suppliers,56,Belina,84cf1c51-99cf-59d6-80cd-d0cdc871da8d
+suppliers,51,Bochacha,739cc1fe-6b24-546e-bb49-6d5b5073442e
+suppliers,84,"Buen amigo",e79679c7-24a0-553e-9b66-12ad15ef7b53
+suppliers,73,"Buena familia",b5811889-6815-5d30-9b8a-a902a822f403
+suppliers,35,"Buenos amogos",0e21d457-db03-538e-a9a5-f3c696352841
+suppliers,62,"Casa suerte",8fc3d6c2-a71c-5513-91c3-414aebf77909
+suppliers,75,Cherimoya,bcfba6c1-9114-5177-9802-a4927b29f9e9
+suppliers,65,Cosmemart,975a3536-5bd5-5816-9993-ebc8c4de718f
+suppliers,53,"Ding li",7a57cff5-80b1-50e0-ba41-2329bbca11b3
+suppliers,76,"Dream diy",bff1b3cd-5c6f-5acb-afbd-be739ea72c9a
+suppliers,50,Exlin,72451861-8946-56a5-be7d-ec7bfe0d5863
+suppliers,81,"Feliz group",dcefcdda-8140-5d62-a1f3-2ec9a7ab716c
+suppliers,41,Fenix,47bd773a-dd4d-5acb-b8dc-68063d236f61
+suppliers,39,"Grand ocean",314b2ef5-ece7-5aaa-8aeb-ad7ee1ed5f4e
+suppliers,46,Homey,6609fea5-a102-5a21-8229-417d8713884c
+suppliers,66,"Hyper asia",97ddf63d-93b3-5528-bda7-191159e47307
+suppliers,52,"Inno DIY",76ad746b-f9f6-5669-a1b7-96ca0669b19c
+suppliers,88,"Jiang nan",f3ea9f3a-5080-5e39-9194-dfeda070a17e
+suppliers,85,Keke,eb49edee-4243-5f90-b203-6c73738d0dcc
+suppliers,77,Lida,cc68c2cc-c930-5b3a-a430-415158119b37
+suppliers,74,Manuale,bcf88ba5-4e17-599b-89ad-126fa189cd5f
+suppliers,89,"Max belleza",f75c1ae9-bb8b-500e-a0ba-fbf9bbf42e0a
+suppliers,86,MaxBelleza,eec8f190-c3d7-5f8f-a5cb-e4f88881e393
+suppliers,43,"Mei de Moda",5209f5a2-d9ec-5374-a37e-51b75a553160
+suppliers,34,"Mei duo",067fa9b3-6a73-5b25-962d-a8f554e7036c
+suppliers,48,"Mi única",67ea1bee-8bec-5df2-8f93-03ad3cc594fd
+suppliers,54,Mile,7ed872ec-3acd-5870-a678-6c14fca5795e
+suppliers,90,"Moda lina",f7dde6ff-0f4e-57a6-aebe-4d38c25a9cf7
+suppliers,87,Motarro,f10bd1f1-f6f5-5a78-9b61-da07899413ee
+suppliers,44,"Motarro DIY",563f410d-b41c-50d5-a75c-8fc29745206c
+suppliers,40,"Nueva era",400158ae-5b36-5e04-9f11-9938bd8fea91
+suppliers,47,OMAS,67c8234c-ffdd-5984-a53c-b13aec474519
+suppliers,83,Pinmark,de7e752c-c1bf-5e24-8e62-f9847b10ed0b
+suppliers,11,"prova fornitore",4352b906-18f1-4788-9071-c9047e68bdb6
+suppliers,82,"Qiao xiang",dd2bf7c4-be49-5d54-b827-a20f6656fb55
+suppliers,67,"River Richer",99845d2b-898b-59e8-90a5-76da9aab642b
+suppliers,78,Rosasol,cdf074d2-d53a-5da7-8e55-f46ce0fba406
+suppliers,92,"Shopping hogar",fea9ba2f-04ab-5afa-ada4-40ae757f7f0d
+suppliers,21,TASK072C_ANDROID_R20260619_1345_PRODUCT_SUPPLIER,875bd913-56c9-4a91-a05f-a6bebd2bfd19
+suppliers,22,TASK072C_IOS_20260619T174023Z_SUPPLIER_TOMBSTONE,64f9cf43-ac00-4961-b6ce-3ccdc9c305f7
+suppliers,23,TASK072C_IOS_20260619T174023Z_SUPPLIER_UPDATE_FINAL,697bb202-ff24-49a9-8cf9-83f2b8553672
+suppliers,24,TASK072C_IOS_20260619T175420Z_SUPPLIER_UPDATE_FINAL,82f6b051-1ebb-461e-8759-4a3475380d16
+suppliers,38,TASK135_ANDROID_AFTER_PRUNE_20260617_192425_SINGLE_SUP_ANDROID,2737e841-8a70-41aa-8e22-df5fdcfe88d5
+suppliers,20,TASK135_ANDROID_CROSS_20260617_193207_SINGLE_SUP_ANDROID,59b7c9ef-b98c-4e3f-bc9f-18e087051e70
+suppliers,19,TASK135_IOS_CROSS_20260617_193032_SINGLE_SUP_IOS,c270913e-4b25-4498-91fc-744b3aa4d3e1
+suppliers,69,TASK135_IOS_LIVE_20260617_1849_SINGLE_20260617T224849Z_IOS_1_SINGLE_SUP_IOS,9d043cee-524f-4a89-8bc6-ced1f3584fc1
+suppliers,17,TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_ANDROID_MATRIX_SUP_ANDROID,062fe9cb-9299-416b-8457-78e8d4afc153
+suppliers,42,TASK135_MATRIX_20260617_192636_RT_20260617T232636Z_IOS_MATRIX_SUP_IOS,4fe1a22e-b30e-4a26-9146-25137bdc4e04
+suppliers,18,TASK135_OPTIONS_FIX_20260617_1912_SINGLE_20260617T231229Z_IOS_1_SINGLE_SUP_IOS,f64f7f3e-ccb7-49e3-acef-5832abd4b5d1
+suppliers,33,"Tian Bao",0214e27d-e125-530a-af8b-c5c3d6c03c3a
+suppliers,71,Weilisena,aa2be7bb-1b23-5e96-b08c-35b0490c47ab
+suppliers,68,Wenzo,9ac92308-1d20-5fd6-8eef-b46abbf88297
+suppliers,72,Woox,aa52b6e8-ab1c-5ce6-896d-8d12046f6ba5
+suppliers,61,"xiang zu",8f096873-65bd-5653-be33-65ca7d778c32
+suppliers,58,Xianzhu,8a9a9c13-5de0-5693-a6fa-fbfc93d28d3d
+suppliers,63,"Xing Xing",950e5a52-b0eb-55f0-afb4-851145470461
+suppliers,55,Yuecaohuayi,84c4fd54-584d-5e85-9fc4-48029144f8ce
+suppliers,80,"Zebra king",d822fa41-97b6-5d23-a073-738bf2c92061
+suppliers,45,"Zheng chang",565ef5f7-e2bd-5588-8487-2b706f9eba7c
+suppliers,59,"华夏",8b6bc275-1f9a-53d2-aa30-f0214fcf0dac
+suppliers,49,"吴晗香水",6e994185-9184-57dc-af33-7248a7fe0cc0
+suppliers,79,"太阳手工",d5b39bce-d322-529f-996b-673bcf387b4a
+suppliers,91,"新欧文具",fafa21f9-c053-5436-8349-42aef3da5a1e
+suppliers,57,"未来化妆",868953db-749f-52ab-bc35-7d7d4ee4da08
+suppliers,12,"百茂",f8aec176-aeed-4d2f-afa9-b8ece62a0e48

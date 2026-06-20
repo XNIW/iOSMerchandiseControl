@@ -984,6 +984,11 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
 
         if let remoteTotalRows, remoteTotalRows == totalConsidered {
             let pruneContext = ModelContext(context.container)
+            if fetchOptions.replaceLocalSnapshot,
+               remoteTotalRows == 0,
+               try countLocalProductPrices(context: pruneContext) > 0 {
+                throw ProductPriceApplyError.remoteFetchFailed(message: "empty_price_snapshot_refused")
+            }
             prunedLocal = try prunePricesMissingFromCompleteSnapshot(
                 remotePriceIDs: completeRemotePriceIDs,
                 includeLocalOnly: fetchOptions.replaceLocalSnapshot,
@@ -1055,6 +1060,10 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
         return pruned
     }
 
+    private func countLocalProductPrices(context: ModelContext) throws -> Int {
+        try context.fetchCount(FetchDescriptor<ProductPrice>())
+    }
+
     private func fetchActiveProductPricePendingState(
         context: ModelContext
     ) throws -> (remoteIDs: Set<UUID>, logicalKeys: Set<String>) {
@@ -1108,6 +1117,10 @@ nonisolated struct SupabaseProductPriceApplyService: Sendable {
         onProgress: @escaping @MainActor @Sendable (ProductPricePagedApplyProgress) -> Void
     ) async {
         await MainActor.run {
+            UserDefaults.standard.set(
+                Date().timeIntervalSince1970,
+                forKey: "sync.runtime.orchestrator.lastProgressAt"
+            )
             onProgress(progress)
         }
     }

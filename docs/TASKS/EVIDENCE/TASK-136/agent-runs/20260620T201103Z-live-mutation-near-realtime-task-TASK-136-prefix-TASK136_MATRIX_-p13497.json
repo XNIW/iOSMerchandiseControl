@@ -1,0 +1,102 @@
+{
+  "NEXT_ACTION": "Inspect Android write matrix step and rerun mutation-near-realtime.",
+  "android_offline_tier": "none",
+  "artifact_paths": {
+    "json": "docs/TASKS/EVIDENCE/TASK-136/agent-runs/20260620T201103Z-live-mutation-near-realtime-task-TASK-136-prefix-TASK136_MATRIX_-p13497.json",
+    "log": "docs/TASKS/EVIDENCE/TASK-136/agent-runs/20260620T201103Z-live-mutation-near-realtime-task-TASK-136-prefix-TASK136_MATRIX_-p13497.log",
+    "markdown": "docs/TASKS/EVIDENCE/TASK-136/agent-runs/20260620T201103Z-live-mutation-near-realtime-task-TASK-136-prefix-TASK136_MATRIX_-p13497.md",
+    "screenshot": null,
+    "xcresult": "/tmp/mc-agent-ios-task114-test114IOSWriteProductHistoryMatrix-1781986378901-20260620T201103Z.xcresult"
+  },
+  "branch": "main",
+  "ca_refs": [
+    "CA-114-06",
+    "T-06"
+  ],
+  "cleanup_plan_id": null,
+  "command": "live mutation-near-realtime --task TASK-136 --prefix TASK136_MATRIX_",
+  "command_slug": "live-mutation-near-realtime-task-TASK-136-prefix-TASK136_MATRIX_",
+  "device_simulator_redacted": {
+    "android_selected_serial": "<REDACTED>",
+    "android_serial": "<REDACTED>",
+    "android_target_type": "emulator",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5",
+    "ios_simulator": "iPhone 17 Pro",
+    "ios_simulator_id": ""
+  },
+  "dirty_state": "dirty",
+  "duration_ms": 220013,
+  "env_redacted": {
+    "MC_ALLOW_CLEANUP": "0",
+    "MC_ALLOW_LIVE": "1",
+    "MC_ANDROID_DEVICE_SERIAL": "<REDACTED>",
+    "MC_ANDROID_REPO": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+    "MC_EVIDENCE_DIR": "docs/TASKS/EVIDENCE/TASK-136",
+    "MC_IOS_REPO": "<HOME_REDACTED>/Desktop/iOSMerchandiseControl",
+    "MC_IOS_SCHEME": "iOSMerchandiseControl",
+    "MC_IOS_SIMULATOR_ID": "<unset>",
+    "MC_IOS_SIMULATOR_NAME": "iPhone 17 Pro",
+    "MC_IOS_SIMULATOR_OS": "26.5",
+    "MC_IOS_SIMULATOR_UDID": "<unset>",
+    "MC_RUN_PREFIX": "TASK136_RUN_",
+    "MC_SUPABASE_PROFILE": "linked",
+    "MC_SUPABASE_REPO": "<HOME_REDACTED>/Desktop/MerchandiseControlSupabase",
+    "MC_TASK_ID": "TASK-136"
+  },
+  "exit_code": 1,
+  "git_sha": "d2043c4",
+  "next_action_recommended": "Inspect Android write matrix step and rerun mutation-near-realtime.",
+  "platform": "android",
+  "profile": "null",
+  "raw_log_redacted": true,
+  "reconciliation": {
+    "adbState": "device",
+    "appInstalled": true,
+    "availableAdbDevices": [
+      {
+        "device": "<REDACTED_DEVICE_MODEL>",
+        "deviceHash": "fb9f32f61a9f",
+        "model": "<REDACTED_DEVICE_MODEL>",
+        "modelHash": "fa140d8db36f",
+        "serial": "<REDACTED>",
+        "serialHash": "04ab3fc382bf",
+        "status": "device",
+        "targetType": "emulator",
+        "transport": "<REDACTED_TRANSPORT_ID>"
+      }
+    ],
+    "bootCompleted": "1",
+    "foregroundAppMatches": false,
+    "foregroundPackage": null,
+    "lockState": {
+      "locked": false,
+      "screenOn": true,
+      "unlocked": true
+    },
+    "schemaVersion": "1.1",
+    "selectedSerial": "<REDACTED>",
+    "selectedTargetType": "emulator",
+    "source": "android.live-preflight"
+  },
+  "redaction_summary": {
+    "emails_redacted": true,
+    "paths_redacted": true,
+    "raw_log_redacted": true
+  },
+  "repo": "<HOME_REDACTED>/AndroidStudioProjects/MerchandiseControlSplitView",
+  "requires_cleanup": false,
+  "requires_live": true,
+  "residue_count": 0,
+  "result": "FAIL",
+  "rows_created": 0,
+  "rows_deleted": 0,
+  "run_id": "20260620T201103Z-live-mutation-near-realtime-task-TASK-136-prefix-TASK136_MATRIX_-p13497",
+  "safety_level": "live-write",
+  "schema_version": "1.1",
+  "status": "FAIL",
+  "task_id": "TASK-136",
+  "test_prefix": "TASK136_MATRIX_RT_20260620T201103Z_ANDROID_",
+  "timestamp_end": "2026-06-20T20:14:43Z",
+  "timestamp_start": "2026-06-20T20:11:03Z",
+  "warnings": []
+}

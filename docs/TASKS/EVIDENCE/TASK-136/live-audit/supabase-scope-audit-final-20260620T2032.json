@@ -1,0 +1,151 @@
+{
+  "generated_at": "2026-06-20T20:32:05.339Z",
+  "runtime_env": {
+    "project_ref": "jpgo...yvm",
+    "env_source": "/Users/minxiang/Projects/merchandise-control-admin-web/.env.local"
+  },
+  "selected_shop": {
+    "shop_hash": "da11551e7968",
+    "shop_code": "TASK068E_260618231325",
+    "shop_name": "TASK068E REHEARSAL 260618231325",
+    "shop_status": "active"
+  },
+  "mappings": [
+    {
+      "shop_hash": "da11551e7968",
+      "owner_hash": "bf727712f2b9",
+      "mapping_state": "mapped",
+      "source_kind": "mobile_owner",
+      "disabled": false
+    }
+  ],
+  "counts": [
+    {
+      "scope": "selected_shop_id",
+      "products": {
+        "active": 19705,
+        "deleted": 6,
+        "total": 19711,
+        "errors": []
+      },
+      "suppliers": {
+        "active": 66,
+        "deleted": 2,
+        "total": 68,
+        "errors": []
+      },
+      "categories": {
+        "active": 35,
+        "deleted": 2,
+        "total": 37,
+        "errors": []
+      },
+      "price_history": {
+        "active": 41133,
+        "deleted": null,
+        "total": 41133,
+        "via": "inventory_product_prices direct filters"
+      },
+      "history_sessions": {
+        "active": 39,
+        "deleted": 60,
+        "total": 99,
+        "errors": []
+      }
+    },
+    {
+      "scope": "mapped_owner_user_id",
+      "products": {
+        "active": 19710,
+        "deleted": 45,
+        "total": 19755,
+        "errors": []
+      },
+      "suppliers": {
+        "active": 70,
+        "deleted": 24,
+        "total": 94,
+        "errors": []
+      },
+      "categories": {
+        "active": 39,
+        "deleted": 24,
+        "total": 63,
+        "errors": []
+      },
+      "price_history": {
+        "active": 41218,
+        "deleted": null,
+        "total": 41218,
+        "via": "inventory_product_prices direct filters"
+      },
+      "history_sessions": {
+        "active": 45,
+        "deleted": 81,
+        "total": 126,
+        "errors": []
+      }
+    },
+    {
+      "scope": "legacy_shop_id_null_by_owner",
+      "products": {
+        "active": 5,
+        "deleted": 39,
+        "total": 44,
+        "errors": []
+      },
+      "suppliers": {
+        "active": 4,
+        "deleted": 22,
+        "total": 26,
+        "errors": []
+      },
+      "categories": {
+        "active": 4,
+        "deleted": 22,
+        "total": 26,
+        "errors": []
+      },
+      "price_history": {
+        "active": 85,
+        "deleted": null,
+        "total": 85,
+        "via": "inventory_product_prices direct filters"
+      },
+      "history_sessions": {
+        "active": 6,
+        "deleted": 21,
+        "total": 27,
+        "errors": []
+      }
+    }
+  ],
+  "product_owner_shop_scopes": [
+    {
+      "owner_hash": "bf727712f2b9",
+      "shop_hash": "da11551e7968",
+      "shop_is_null": false,
+      "active": 19705,
+      "deleted": 6,
+      "total": 19711
+    },
+    {
+      "owner_hash": "e8cf061dd32d",
+      "shop_hash": "20533d99ceb7",
+      "shop_is_null": true,
+      "active": 121,
+      "deleted": 0,
+      "total": 121
+    },
+    {
+      "owner_hash": "bf727712f2b9",
+      "shop_hash": "20533d99ceb7",
+      "shop_is_null": true,
+      "active": 5,
+      "deleted": 39,
+      "total": 44
+    }
+  ],
+  "product_scopes_with_11ish_active": [],
+  "android_remote_ref_probe": null
+}

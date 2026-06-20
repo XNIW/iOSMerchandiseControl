@@ -1,0 +1,6 @@
+table_name,all_count,active_count,remote_count,notes
+products,19710,19710,19710,""
+suppliers,69,69,69,""
+categories,38,38,38,""
+product_prices,39525,39525,39525,"no remoteDeletedAt column"
+history_entries,105,45,105,""

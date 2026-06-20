@@ -47,10 +47,12 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertEqual(store.state.phase, .idle)
         XCTAssertEqual(store.state.lastOutcome, .succeeded)
         XCTAssertNotNil(store.state.lastVerifiedAt)
+        let verifiedAfterSuccess = store.state.lastVerifiedAt
 
         store.recordRunResult(.noWork())
         XCTAssertEqual(store.state.phase, .idle)
         XCTAssertEqual(store.state.lastOutcome, .noWork)
+        XCTAssertEqual(store.state.lastVerifiedAt, verifiedAfterSuccess)
 
         store.recordRunResult(.blocked(.networkUnavailable))
         XCTAssertEqual(store.state.phase, .blocked(.networkUnavailable))
@@ -71,6 +73,45 @@ final class Task118AutomaticDomainTests: XCTestCase {
         store.recordRunResult(.scheduledRetry())
         XCTAssertEqual(store.state.phase, .checking)
         XCTAssertEqual(store.state.lastOutcome, .scheduledRetry)
+    }
+
+    @MainActor
+    func testStateStoreDoesNotPromoteDecisionNoWorkToVerifiedSuccess() {
+        let suiteName = "Task136NoWork-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task136")
+
+        store.recordRunResult(.failed(errorCode: "networkError(redacted)"))
+        XCTAssertEqual(defaults.string(forKey: "task136.lastRunErrorCode"), "networkError(redacted)")
+
+        store.recordRunResult(.noWork())
+        XCTAssertEqual(store.state.phase, .idle)
+        XCTAssertEqual(store.state.lastOutcome, .noWork)
+        XCTAssertNil(store.state.lastVerifiedAt)
+        XCTAssertNil(defaults.string(forKey: "task136.lastRunErrorCode"))
+        XCTAssertNil(defaults.string(forKey: "task136.lastRunBlockReason"))
+    }
+
+    @MainActor
+    func testStateStoreHydratesPersistedNetworkFailureWithoutRestoringActivePhase() {
+        let suiteName = "Task136Hydrate-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("pullingEvents", forKey: "task136.phase")
+        defaults.set("noWork", forKey: "task136.lastRunStatus")
+        defaults.set("networkUnavailable", forKey: "task136.lastRunBlockReason")
+        defaults.set("networkError(redacted)", forKey: "task136.lastRunErrorCode")
+        defaults.set(Date(timeIntervalSince1970: 100).timeIntervalSince1970, forKey: "task136.activeStartedAt")
+        defaults.set(Date(timeIntervalSince1970: 120).timeIntervalSince1970, forKey: "task136.lastProgressAt")
+
+        let store = SyncStateStore(defaults: defaults, keyPrefix: "task136")
+
+        XCTAssertEqual(store.state.phase, .blocked(.networkUnavailable))
+        XCTAssertEqual(store.state.lastOutcome, .blocked(.networkUnavailable))
+        XCTAssertNil(store.state.startedAt)
     }
 
     func testAutomaticRuntimeSourceDoesNotExposeManualPushBoundary() throws {
