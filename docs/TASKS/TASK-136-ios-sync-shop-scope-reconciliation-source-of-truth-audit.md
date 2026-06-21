@@ -4,11 +4,11 @@
 - **Task ID**: TASK-136
 - **Titolo**: iOS Sync Shop-Scope Reconciliation + Source-of-Truth Audit
 - **File task**: `docs/TASKS/TASK-136-ios-sync-shop-scope-reconciliation-source-of-truth-audit.md`
-- **Stato**: ACTIVE
-- **Fase attuale**: REVIEW
-- **Responsabile attuale**: CLAUDE
+- **Stato**: DONE
+- **Fase attuale**: USER_APPROVED_FINAL_DONE
+- **Responsabile attuale**: USER
 - **Data creazione**: 2026-06-20
-- **Ultimo aggiornamento**: 2026-06-20 20:20 -0400
+- **Ultimo aggiornamento**: 2026-06-20 20:32 -0400
 - **Ultimo agente che ha operato**: CODEX
 
 ## Dipendenze
@@ -44,18 +44,18 @@ TASK-135 ha chiuso e accettato come baseline il dataset grande owner-scoped (~19
 
 ## Criteri di accettazione
 Questi criteri sono il contratto del task. Execution e review lavorano contro di essi.
-- [ ] **CA-136-1 Source-of-truth audit**: produrre una tabella redatta ma confrontabile per Admin Web runtime, Android runtime, iOS runtime e Supabase direct con project ref, shop hash, owner hash, mapping/source, products, suppliers, categories, price history, history sessions, active/deleted/archive/tombstone.
-- [ ] **CA-136-2 Runtime reale**: verificare runtime/env effettivi, non solo file `.env` o plist statici, includendo browser/Admin, app Android installata e app iOS installata.
-- [ ] **CA-136-3 Caso reale deciso**: classificare esplicitamente CASO A (shop corretto da ~11, iOS over-scoped) oppure CASO B (catalogo corretto da ~19704, Admin/Android filtrano o puntano a runtime/shop errato), con evidenza.
-- [ ] **CA-136-4 Fix minimo in base al caso**: applicare solo le modifiche necessarie sul lato incoerente, senza nuove dipendenze non richieste, senza refactor opportunistici e senza modifiche distruttive cloud.
-- [ ] **CA-136-5 Convergenza conteggi**: dimostrare prima/dopo conteggi Admin Web, Android, iOS e Supabase sullo stesso account/shop/source.
-- [ ] **CA-136-6 Test create/update/delete catalogo**: verificare create, update e archive/delete/tombstone Admin Web -> Android/iOS e iOS -> Android/Admin Web.
-- [ ] **CA-136-7 Fornitori/categorie**: verificare create/update/delete o archive, inclusi prodotti collegati e lookup/fallback coerenti.
-- [ ] **CA-136-8 Price history**: verificare update prezzo, nuova riga storico e conteggio coerente sui lati coinvolti.
-- [ ] **CA-136-9 History entries**: verificare lista, dettaglio, conteggio e create/import/delete/archive/tombstone se supportati nello scope.
-- [ ] **CA-136-10 Build/test/check finali**: eseguire iOS `xcodebuild`, Android Gradle build/test se Android coinvolto, Admin npm verify/typecheck/lint/build se Admin coinvolto, `git diff --check` e `git status`.
-- [ ] **CA-136-11 Evidence completa**: salvare evidenza e report finale in `docs/TASKS/EVIDENCE/TASK-136/`.
-- [ ] **CA-136-12 Nessun DONE improprio**: dichiarare DONE solo se i tre lati convergono nello stesso scope senza reset manuale; altrimenti documentare stato, blocco o rischi residui reali.
+- [x] **CA-136-1 Source-of-truth audit**: produrre una tabella redatta ma confrontabile per Admin Web runtime, Android runtime, iOS runtime e Supabase direct con project ref, shop hash, owner hash, mapping/source, products, suppliers, categories, price history, history sessions, active/deleted/archive/tombstone.
+- [x] **CA-136-2 Runtime reale**: verificare runtime/env effettivi, non solo file `.env` o plist statici, includendo browser/Admin, app Android installata e app iOS installata.
+- [x] **CA-136-3 Caso reale deciso**: classificare esplicitamente CASO A (shop corretto da ~11, iOS over-scoped) oppure CASO B (catalogo corretto da ~19704, Admin/Android filtrano o puntano a runtime/shop errato), con evidenza.
+- [x] **CA-136-4 Fix minimo in base al caso**: applicare solo le modifiche necessarie sul lato incoerente, senza nuove dipendenze non richieste, senza refactor opportunistici e senza modifiche distruttive cloud.
+- [x] **CA-136-5 Convergenza conteggi**: dimostrare prima/dopo conteggi Admin Web, Android, iOS e Supabase sullo stesso account/shop/source.
+- [x] **CA-136-6 Test create/update/delete catalogo**: verificare create, update e archive/delete/tombstone Admin Web -> Android/iOS e iOS -> Android/Admin Web.
+- [x] **CA-136-7 Fornitori/categorie**: verificare create/update/delete o archive, inclusi prodotti collegati e lookup/fallback coerenti.
+- [x] **CA-136-8 Price history**: verificare update prezzo, nuova riga storico e conteggio coerente sui lati coinvolti.
+- [x] **CA-136-9 History entries**: verificare lista, dettaglio, conteggio e create/import/delete/archive/tombstone se supportati nello scope.
+- [x] **CA-136-10 Build/test/check finali**: eseguire iOS `xcodebuild`, Android Gradle build/test se Android coinvolto, Admin npm verify/typecheck/lint/build se Admin coinvolto, `git diff --check` e `git status`.
+- [x] **CA-136-11 Evidence completa**: salvare evidenza e report finale in `docs/TASKS/EVIDENCE/TASK-136/`.
+- [x] **CA-136-12 Nessun DONE improprio**: dichiarare DONE solo se i tre lati convergono nello stesso scope senza reset manuale; altrimenti documentare stato, blocco o rischi residui reali.
 
 ## Test case obbligatori
 | Test | Tipo | Descrizione |
@@ -227,25 +227,25 @@ Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO
 - [x] Supabase scoped audit: ✅ ESEGUITO — evidence `docs/TASKS/EVIDENCE/TASK-136/final-gates/supabase-scoped-audit-active-products-orchestrated-review.json`, mapped owner scoped `19710/70/39/41137`, History active `45`, deleted `81`, mobile visible `41`; global count escluso dal gate.
 - [x] Screenshot iOS Options/History: ✅ ESEGUITO — `ios-options-status-technical-note-collapsed-orchestrated-review.jpg`, `ios-options-status-technical-note-diagnostics-orchestrated-review.jpg`, `ios-history-month-groups-default-orchestrated-review.jpg`, `ios-history-month-groups-errors-filter-orchestrated-review.jpg`.
 - [x] Fix coerenti con review: ✅ ESEGUITO — patch limitate ai finding reali dei reviewer, senza riaprire source-of-truth, Admin lower-bound, Supabase scope o History 41 vs 126.
-- [x] Criteri di accettazione ancora soddisfatti: ✅ ESEGUITO — live matrix finale verde, cleanup/residue verde, scoped counts finali verdi. Per policy AGENTS il task viene riconsegnato a REVIEW, non marcato DONE da Codex.
+- [x] Criteri di accettazione ancora soddisfatti: ✅ ESEGUITO — live matrix finale verde, cleanup/residue verde, scoped counts finali verdi. Dopo approvazione finale esplicita dell'utente del 2026-06-20 20:32 -0400, TASK-136 viene marcato DONE con commit documentale dedicato.
 
 ### Handoff -> Review finale
-- **Prossima fase**: REVIEW
-- **Prossimo agente**: CLAUDE
-- **Azione consigliata**: review finale della chiusura orchestrata. Se accettata dall'utente, TASK-136 puo' essere chiusa come DONE lato prodotto; Codex non modifica autonomamente lo stato a DONE.
+- **Prossima fase**: DONE
+- **Prossimo agente**: USER
+- **Azione consigliata**: nessuna azione operativa richiesta; chiusura approvata dall'utente dopo verifica remota finale.
 
 ---
 
 ## Chiusura
 
 ### Conferma utente
-- [ ] Utente ha confermato il completamento.
+- [x] Utente ha confermato il completamento.
 
 ### Follow-up candidate
-Da compilare.
+- Nessun follow-up bloccante per TASK-136. File fuori scope rimasti nei worktree non sono inclusi nella chiusura.
 
 ### Riepilogo finale
-Da compilare.
+TASK-136 chiuso come DONE su approvazione finale esplicita dell'utente dopo verifica read-only dei tre repo e delle evidence committate. I commit finali sono presenti su `origin/main`: iOS `33888c40`, Android `8644eed`, Admin `a42e4444`; `main...origin/main` e' `0 0` nei tre repo. Evidence finale: live mutation matrix `TASK136_FINALREVIEW_` PASS; Android Room main/WAL/SHM post-restart `19710/70/39/41137`, History mobile visible `41`, outbox `0`; iOS 3-poll stability `19710/70/39/41137`, History visible `41`, pending `0`; Supabase scoped audit PASS con global count escluso dal gate; cleanup/residue Supabase e Android PASS. Admin Products exact total `19,710`, iOS Options non bloccante e iOS History month grouping sono documentati da screenshot/evidence TASK-136.
 
 ### Data completamento
-N/A
+2026-06-20 20:32 -0400
