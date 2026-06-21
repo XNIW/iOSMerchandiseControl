@@ -586,6 +586,8 @@
 "history.empty.body" = "When you generate inventory files, you will see them here.";
 "history.empty.filtered_title" = "No sessions for this filter";
 "history.empty.filtered_body" = "Change the period or turn off the errors filter.";
+"history.section.no_date" = "No date";
+"history.section.count" = "%d entries";
 "history.toggle.errors_only" = "Show only entries with errors";
 "history.action.select_period" = "Select period";
 "history.title" = "History";
@@ -1230,7 +1232,8 @@
 "options.supabase.automaticSync.failed.detail" = "The last automatic run failed. The app will keep the local changes and retry when conditions improve.";
 "options.supabase.automaticSync.blocked.title" = "Automatic sync is blocked";
 "options.supabase.automaticSync.blocked.detail" = "The app needs account, network, or recovery conditions to be resolved before syncing again.";
-"options.supabase.automaticSync.cloudEventsIncomplete.detail" = "Local catalog is up to date, but the cloud events check did not complete. Retry when the network is available.";
+"options.supabase.automaticSync.cloudEventsIncomplete.title" = "Catalog updated";
+"options.supabase.automaticSync.cloudEventsIncomplete.detail" = "Catalog, prices, and history are updated on this device. The technical cloud event check will retry automatically.";
 "options.supabase.automaticSync.retry.title" = "Automatic sync retry scheduled";
 "options.supabase.automaticSync.retry.detail" = "Another sync attempt is queued after the current busy window clears.";
 "options.supabase.automaticSync.busy.title" = "Automatic sync is already running";
@@ -1243,7 +1246,10 @@
 "options.supabase.automaticSync.actionNeeded.detail" = "Automatic reconciliation is being prepared. If a conflict remains, the app will ask for an explicit choice.";
 "options.supabase.automaticSync.pending" = "Local changes";
 "options.supabase.automaticSync.lastSuccess" = "Last successful sync";
+"options.supabase.automaticSync.lastDataSync" = "Last data sync";
 "options.supabase.automaticSync.lastSuccess.none" = "Not available yet";
+"options.supabase.automaticSync.cloudEventCheck" = "Cloud event check";
+"options.supabase.automaticSync.cloudEventCheck.pending" = "Pending";
 "options.supabase.automaticSync.phase" = "Phase";
 "options.supabase.automaticSync.phase.resolvingAccount" = "Resolving account";
 "options.supabase.automaticSync.phase.resolvingDevice" = "Resolving shop/source/device";
@@ -1255,6 +1261,8 @@
 "options.supabase.automaticSync.phase.blocked" = "Blocked";
 "options.supabase.automaticSync.phase.failed" = "Failed";
 "options.supabase.automaticSync.phase.completed" = "Completed";
+"options.supabase.automaticSync.phase.completedWithWarnings" = "Completed with warnings";
+"options.supabase.automaticSync.phase.stalled" = "Stalled";
 "options.supabase.automaticSync.progress.detail" = "Automatic sync keeps local work available while this phase runs.";
 "options.supabase.automaticSync.pendingOutbox" = "Pending outbox";
 "options.supabase.automaticSync.stalled.title" = "Automatic sync stalled";
@@ -1270,13 +1278,17 @@
 "options.supabase.automaticSync.diagnostics.account" = "Account hash";
 "options.supabase.automaticSync.diagnostics.deviceStatus" = "Device status";
 "options.supabase.automaticSync.diagnostics.cloudEvents" = "Cloud events";
-"options.supabase.automaticSync.diagnostics.cloudEvents.incompleteAligned" = "Local catalog aligned; events incomplete";
+"options.supabase.automaticSync.diagnostics.cloudEvents.incompleteAligned" = "Check pending; local catalog updated";
 "options.supabase.automaticSync.diagnostics.cloudEvents.ok" = "No incomplete event check";
 "options.supabase.automaticSync.diagnostics.shopSource" = "Shop/source";
 "options.supabase.automaticSync.diagnostics.ownerScope" = "Owner-scope sync (shop/source not required)";
 "options.supabase.automaticSync.diagnostics.storeScope" = "Store scope";
 "options.supabase.automaticSync.diagnostics.retryCount" = "Retry count";
 "options.supabase.automaticSync.diagnostics.lastError" = "Last error";
+"options.supabase.automaticSync.diagnostics.previousLastError" = "Previous last error";
+"options.supabase.automaticSync.diagnostics.errorObserved" = "%@, %@";
+"options.supabase.automaticSync.diagnostics.note" = "Note";
+"options.supabase.automaticSync.diagnostics.previousErrorNonBlocking" = "Previous error does not block the updated local catalog.";
 "options.supabase.automaticSync.diagnostics.unavailable" = "Not available";
 "options.supabase.automaticSync.diagnostics.none" = "None";
 "options.supabase.automaticSync.badge.active" = "Active";
@@ -1292,6 +1304,7 @@
 "options.supabase.automaticSync.badge.cancelled" = "Cancelled";
 "options.supabase.automaticSync.badge.noWork" = "No changes";
 "options.supabase.automaticSync.badge.stalled" = "Stalled";
+"options.supabase.automaticSync.badge.cloudEventsIncomplete" = "Cloud check pending";
 "options.supabase.automaticSync.root.checking.title" = "Checking for updates…";
 "options.supabase.automaticSync.root.checking.detail" = "You can keep using the app.";
 "options.supabase.automaticSync.root.auth.title" = "Sign in again to check the cloud";

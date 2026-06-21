@@ -8,7 +8,7 @@
 - **Fase attuale**: REVIEW
 - **Responsabile attuale**: CLAUDE
 - **Data creazione**: 2026-06-20
-- **Ultimo aggiornamento**: 2026-06-20 16:35 -0400
+- **Ultimo aggiornamento**: 2026-06-20 20:20 -0400
 - **Ultimo agente che ha operato**: CODEX
 
 ## Dipendenze
@@ -206,18 +206,33 @@ Esito: [APPROVED | CHANGES_REQUIRED | REJECTED]
 ## Fix (Codex) <- solo Codex aggiorna questa sezione
 
 ### Fix applicati
-- [ ] Da compilare.
+- [x] Review orchestrata completata con 5 reviewer read-only: iOS UI/UX, iOS Architecture/Test, Android Sync, Admin/Supabase, Evidence/Git Hygiene. Nessun sub-agent ha modificato codice.
+- [x] iOS Options: rimosso il warning pubblico "sync bloccata" quando catalogo/prezzi/cronologia sono allineati, outbox 0 e device `active / can write`; l'errore `policyBlocked` precedente resta solo in Diagnostica come "Ultimo errore precedente".
+- [x] iOS Options: `LocalDatabaseCloudStatusResolver` ora lascia prevalere lo stato allineato/non bloccante anche se esiste una stale `AccountSyncDecision` o un `lastOutcome.failed` precedente.
+- [x] iOS History: aggiunto helper puro/testabile `HistoryMonthGrouping` e rendering SwiftUI Apple-like per sezioni mese/anno; filtro "solo errori" non mostra sezioni vuote.
+- [x] Android: `CatalogAutoSyncCoordinator` e `HistorySessionPushCoordinator` mantengono il retry immediato dopo device-status retryable, ma lo limitano a 4 tentativi con backoff massimo 2s e poi attendono un vero segnale rete/device-active, evitando loop infiniti.
+- [x] Android: cleanup scoped locale aggiornato per rimuovere anche history residue legate al prefisso via supplier/category, non solo id/displayName.
+- [x] Admin: nessuna nuova modifica runtime oltre al fix gia' presente `includeExactTotals: true`; `npm run verify` finale PASS.
+- [x] Evidence scarti identificati: screenshot Admin Products `*-safari-final.png` e `*-after-next-fix.png` sono da lasciare fuori dallo staging; usare evidence valida page1/search precedente e audit finale.
 
 ### Check post-fix
 Per ogni check: ✅ ESEGUITO | ⚠️ NON ESEGUIBILE (motivo) | ❌ NON ESEGUITO (motivo)
-- [ ] Build compila: ❌ NON ESEGUITO
-- [ ] Fix coerenti con review: ❌ NON ESEGUITO
-- [ ] Criteri di accettazione ancora soddisfatti: ❌ NON ESEGUITO
+- [x] Build compila: ✅ ESEGUITO — iOS XcodeBuildMCP `build_run_sim` PASS (`build_run_sim_2026-06-21T00-02-00Z`), Android `./gradlew assembleDebug installDebug --console=plain` PASS, Android `assembleDebugAndroidTest installDebugAndroidTest` PASS, Admin `npm run verify` PASS.
+- [x] Test mirati iOS Options/History: ✅ ESEGUITO — `xcodebuild test` PASS 5/5 per `HistoryMonthGroupingTests`, `OptionsLocalDatabaseCloudStatusTests/testPreviousFailedOutcomeWithAlignedCountsStaysUpToDate`, `OptionsLocalDatabaseCloudStatusTests/testStaleAccountDecisionWithAlignedCountsStaysNonBlocking`, `Task118AutomaticDomainTests/testOptionsDiagnosticsStayCollapsedAndLabelCloudEventWarnings`.
+- [x] Test mirati Android coordinator: ✅ ESEGUITO — `./gradlew testDebugUnitTest --tests CatalogAutoSyncCoordinatorTest --tests HistorySessionPushCoordinatorTest` PASS, includendo i casi retry persistent device-status suppressed.
+- [x] Live mutation matrix finale: ✅ ESEGUITO — `MC_ALLOW_LIVE=1 MC_ANDROID_DEVICE_SERIAL=emulator-5554 ./tools/agent/mc-agent.sh live mutation-near-realtime --task TASK-136 --prefix TASK136_FINALREVIEW_` PASS; evidence `docs/TASKS/EVIDENCE/TASK-136/agent-runs/20260621T000419Z-live-mutation-near-realtime-task-TASK-136-prefix-TASK136_FINALREVIEW_-p21946.json`.
+- [x] Cleanup/residue finale: ✅ ESEGUITO — Supabase cleanup dry-run/execute/residue PASS per `TASK136_FINALREVIEW_`; Android cleanup scoped execute PASS dopo patch harness; residue prefisso locale finale 0.
+- [x] Android post-restart Room main/WAL/SHM: ✅ ESEGUITO — evidence `docs/TASKS/EVIDENCE/TASK-136/final-gates/android-post-restart-room-count-orchestrated-review.json`, counts `19710/70/39/41137`, History mobile visible `41`, outbox `0`, prefix residue `0`.
+- [x] iOS stability 3-poll: ✅ ESEGUITO — evidence `docs/TASKS/EVIDENCE/TASK-136/final-gates/ios-stability-3poll-orchestrated-review.json`, tre poll PASS con `19710/70/39/41137`, History visible `41`, pending `0`.
+- [x] Supabase scoped audit: ✅ ESEGUITO — evidence `docs/TASKS/EVIDENCE/TASK-136/final-gates/supabase-scoped-audit-active-products-orchestrated-review.json`, mapped owner scoped `19710/70/39/41137`, History active `45`, deleted `81`, mobile visible `41`; global count escluso dal gate.
+- [x] Screenshot iOS Options/History: ✅ ESEGUITO — `ios-options-status-technical-note-collapsed-orchestrated-review.jpg`, `ios-options-status-technical-note-diagnostics-orchestrated-review.jpg`, `ios-history-month-groups-default-orchestrated-review.jpg`, `ios-history-month-groups-errors-filter-orchestrated-review.jpg`.
+- [x] Fix coerenti con review: ✅ ESEGUITO — patch limitate ai finding reali dei reviewer, senza riaprire source-of-truth, Admin lower-bound, Supabase scope o History 41 vs 126.
+- [x] Criteri di accettazione ancora soddisfatti: ✅ ESEGUITO — live matrix finale verde, cleanup/residue verde, scoped counts finali verdi. Per policy AGENTS il task viene riconsegnato a REVIEW, non marcato DONE da Codex.
 
 ### Handoff -> Review finale
 - **Prossima fase**: REVIEW
 - **Prossimo agente**: CLAUDE
-- **Azione consigliata**: Verificare i fix applicati.
+- **Azione consigliata**: review finale della chiusura orchestrata. Se accettata dall'utente, TASK-136 puo' essere chiusa come DONE lato prodotto; Codex non modifica autonomamente lo stato a DONE.
 
 ---
 

@@ -560,6 +560,18 @@ final class Task118AutomaticDomainTests: XCTestCase {
         XCTAssertTrue(options.contains("options.supabase.automaticSync.badge.retry"))
     }
 
+    func testOptionsDiagnosticsStayCollapsedAndLabelCloudEventWarnings() throws {
+        let options = try readSource("iOSMerchandiseControl/OptionsView.swift")
+
+        XCTAssertTrue(options.contains("if isDiagnosticsExpanded {"))
+        XCTAssertFalse(options.contains("if isDiagnosticsExpanded || isStalled {"))
+        XCTAssertTrue(options.contains("options.supabase.automaticSync.cloudEventCheck.pending"))
+        XCTAssertTrue(options.contains("options.supabase.automaticSync.badge.cloudEventsIncomplete"))
+        XCTAssertTrue(options.contains("options.supabase.automaticSync.diagnostics.previousLastError"))
+        XCTAssertTrue(options.contains("options.supabase.automaticSync.diagnostics.previousErrorNonBlocking"))
+        XCTAssertTrue(options.contains("isTechnicalCloudEventNote"))
+    }
+
     private func readSource(_ relativePath: String) throws -> String {
         let url = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

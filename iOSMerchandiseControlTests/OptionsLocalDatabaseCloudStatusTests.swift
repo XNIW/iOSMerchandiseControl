@@ -43,6 +43,32 @@ final class OptionsLocalDatabaseCloudStatusTests: XCTestCase {
         XCTAssertFalse(LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(input))
     }
 
+    func testPreviousFailedOutcomeWithAlignedCountsStaysUpToDate() {
+        let input = makeInput(
+            baselineStatus: .valid,
+            hasAlignedCounts: true,
+            needsRemoteCountVerification: false,
+            lastOutcome: .failed
+        )
+
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .upToDate)
+        XCTAssertFalse(LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(input))
+    }
+
+    func testStaleAccountDecisionWithAlignedCountsStaysNonBlocking() {
+        let input = makeInput(
+            baselineStatus: .valid,
+            hasAccountDecision: true,
+            hasAlignedCounts: true,
+            needsRemoteCountVerification: false,
+            lastOutcome: .failed
+        )
+
+        XCTAssertEqual(LocalDatabaseCloudStatusResolver.resolve(input), .upToDate)
+        XCTAssertTrue(LocalDatabaseCloudStatusResolver.isAlignedWithNonBlockingCloudEvent(input))
+        XCTAssertFalse(LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(input))
+    }
+
     func testNoWorkWithUnverifiedBaselineStartsCloudCheck() {
         let input = makeInput(
             baselineStatus: .absent,

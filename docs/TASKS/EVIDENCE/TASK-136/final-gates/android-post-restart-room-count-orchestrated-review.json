@@ -1,0 +1,78 @@
+{
+  "task": "TASK-136",
+  "gate": "android-post-restart-room-count",
+  "timestamp": "20260621T001342Z",
+  "adb": "/Users/minxiang/Library/Android/sdk/platform-tools/adb",
+  "serial": "emulator-5554",
+  "package": "com.example.merchandisecontrolsplitview",
+  "roomCopy": "/tmp/task136-finalreview-android-room-20260621T001321Z",
+  "files": [
+    {
+      "file": "app_database",
+      "bytes": 20729856
+    },
+    {
+      "file": "app_database-wal",
+      "bytes": 416152
+    },
+    {
+      "file": "app_database-shm",
+      "bytes": 32768
+    }
+  ],
+  "counts": {
+    "products": 19710,
+    "suppliers": 70,
+    "categories": 39,
+    "product_prices": 41137,
+    "history_entries_all": 45,
+    "history_mobile_visible": 41,
+    "sync_event_outbox": 0
+  },
+  "prefix": "TASK136_FINALREVIEW_",
+  "prefix_counts": {
+    "products": 0,
+    "suppliers": 0,
+    "categories": 0,
+    "product_prices": 0,
+    "history": 0
+  },
+  "gates": {
+    "products": {
+      "actual": 19710,
+      "expected": 19710,
+      "status": "PASS"
+    },
+    "suppliers": {
+      "actual": 70,
+      "expected": 70,
+      "status": "PASS"
+    },
+    "categories": {
+      "actual": 39,
+      "expected": 39,
+      "status": "PASS"
+    },
+    "product_prices": {
+      "actual": 41137,
+      "expected": 41137,
+      "status": "PASS"
+    },
+    "history_mobile_visible": {
+      "actual": 41,
+      "expected": 41,
+      "status": "PASS"
+    },
+    "sync_event_outbox": {
+      "actual": 0,
+      "expected": 0,
+      "status": "PASS"
+    }
+  },
+  "prefix_gate": {
+    "actual_total": 0,
+    "expected": 0,
+    "status": "PASS"
+  },
+  "status": "PASS"
+}

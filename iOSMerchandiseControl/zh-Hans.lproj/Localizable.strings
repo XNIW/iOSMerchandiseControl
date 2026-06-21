@@ -586,6 +586,8 @@
 "history.empty.body" = "当你生成库存文件时，它们会显示在这里。";
 "history.empty.filtered_title" = "没有符合此筛选的会话";
 "history.empty.filtered_body" = "更改期间或关闭错误筛选。";
+"history.section.no_date" = "无日期";
+"history.section.count" = "%d 条记录";
 "history.toggle.errors_only" = "只显示有错误的条目";
 "history.action.select_period" = "选择期间";
 "history.title" = "历史";
@@ -1230,7 +1232,8 @@
 "options.supabase.automaticSync.failed.detail" = "上次自动同步失败。App 会保留本地更改，并在条件恢复后重试。";
 "options.supabase.automaticSync.blocked.title" = "自动同步已被阻止";
 "options.supabase.automaticSync.blocked.detail" = "需要账号、网络或恢复状态就绪后才能再次同步。";
-"options.supabase.automaticSync.cloudEventsIncomplete.detail" = "本地目录已更新，但云端事件检查未完成。网络可用后请重试。";
+"options.supabase.automaticSync.cloudEventsIncomplete.title" = "目录已更新";
+"options.supabase.automaticSync.cloudEventsIncomplete.detail" = "此设备上的目录、价格和历史记录已更新。云端事件的技术检查会自动重试。";
 "options.supabase.automaticSync.retry.title" = "已安排自动重试";
 "options.supabase.automaticSync.retry.detail" = "当前忙碌窗口结束后，会排队进行下一次同步。";
 "options.supabase.automaticSync.busy.title" = "自动同步已在运行";
@@ -1243,7 +1246,10 @@
 "options.supabase.automaticSync.actionNeeded.detail" = "正在准备自动重新对齐。若仍有冲突，应用会要求你明确选择。";
 "options.supabase.automaticSync.pending" = "本地更改";
 "options.supabase.automaticSync.lastSuccess" = "上次成功同步";
+"options.supabase.automaticSync.lastDataSync" = "上次数据同步";
 "options.supabase.automaticSync.lastSuccess.none" = "尚不可用";
+"options.supabase.automaticSync.cloudEventCheck" = "云端事件检查";
+"options.supabase.automaticSync.cloudEventCheck.pending" = "等待中";
 "options.supabase.automaticSync.phase" = "阶段";
 "options.supabase.automaticSync.phase.resolvingAccount" = "正在解析账号";
 "options.supabase.automaticSync.phase.resolvingDevice" = "正在解析店铺/来源/设备";
@@ -1255,6 +1261,8 @@
 "options.supabase.automaticSync.phase.blocked" = "已阻止";
 "options.supabase.automaticSync.phase.failed" = "失败";
 "options.supabase.automaticSync.phase.completed" = "已完成";
+"options.supabase.automaticSync.phase.completedWithWarnings" = "已完成但有提示";
+"options.supabase.automaticSync.phase.stalled" = "卡住";
 "options.supabase.automaticSync.progress.detail" = "此阶段运行时，本地工作仍可继续。";
 "options.supabase.automaticSync.pendingOutbox" = "待处理 outbox";
 "options.supabase.automaticSync.stalled.title" = "自动同步已卡住";
@@ -1270,13 +1278,17 @@
 "options.supabase.automaticSync.diagnostics.account" = "账号哈希";
 "options.supabase.automaticSync.diagnostics.deviceStatus" = "设备状态";
 "options.supabase.automaticSync.diagnostics.cloudEvents" = "云端事件";
-"options.supabase.automaticSync.diagnostics.cloudEvents.incompleteAligned" = "本地目录已对齐；事件未完成";
+"options.supabase.automaticSync.diagnostics.cloudEvents.incompleteAligned" = "检查等待中；本地目录已更新";
 "options.supabase.automaticSync.diagnostics.cloudEvents.ok" = "没有未完成的事件检查";
 "options.supabase.automaticSync.diagnostics.shopSource" = "店铺/来源";
 "options.supabase.automaticSync.diagnostics.ownerScope" = "Owner-scope 同步（不需要店铺/来源）";
 "options.supabase.automaticSync.diagnostics.storeScope" = "Store scope";
 "options.supabase.automaticSync.diagnostics.retryCount" = "重试次数";
 "options.supabase.automaticSync.diagnostics.lastError" = "上次错误";
+"options.supabase.automaticSync.diagnostics.previousLastError" = "之前的上次错误";
+"options.supabase.automaticSync.diagnostics.errorObserved" = "%@, %@";
+"options.supabase.automaticSync.diagnostics.note" = "备注";
+"options.supabase.automaticSync.diagnostics.previousErrorNonBlocking" = "之前的错误不会阻止已更新的本地目录。";
 "options.supabase.automaticSync.diagnostics.unavailable" = "不可用";
 "options.supabase.automaticSync.diagnostics.none" = "无";
 "options.supabase.automaticSync.badge.active" = "已启用";
@@ -1292,6 +1304,7 @@
 "options.supabase.automaticSync.badge.cancelled" = "已取消";
 "options.supabase.automaticSync.badge.noWork" = "无更改";
 "options.supabase.automaticSync.badge.stalled" = "卡住";
+"options.supabase.automaticSync.badge.cloudEventsIncomplete" = "云端检查等待中";
 "options.supabase.automaticSync.root.checking.title" = "正在检查更新…";
 "options.supabase.automaticSync.root.checking.detail" = "你可以继续使用应用。";
 "options.supabase.automaticSync.root.auth.title" = "请重新登录以检查云端";

@@ -1,0 +1,80 @@
+{
+  "gate": "supabase-scoped-audit-active-products-post-cleanup",
+  "task": "TASK-136",
+  "generated_at": "2026-06-21T00:16:45.189Z",
+  "status": "PASS",
+  "scope": {
+    "shop_id": "bc01ea8e-0ae5-4b7a-abbc-4863a1be5b8d",
+    "shop_hash": "da11551e7968",
+    "owner_user_id": "6425adb0-33e3-4b6c-a9a7-ed3761e8257e",
+    "owner_hash": "bf727712f2b9",
+    "included": "active products from selected shop_id plus same-owner active legacy shop_id IS NULL; product_prices counted by active product_id",
+    "note": "Global Supabase counts and direct owner price counts are not TASK-136 gates because they include other/deleted owner-scope rows."
+  },
+  "counts": {
+    "products": 19710,
+    "suppliers": 70,
+    "categories": 39,
+    "product_prices": 41137,
+    "history_active": 45,
+    "history_deleted": 81,
+    "history_mobile_visible": 41
+  },
+  "expected": {
+    "products": 19710,
+    "suppliers": 70,
+    "categories": 39,
+    "product_prices": 41137,
+    "history_active": 45,
+    "history_deleted": 81,
+    "history_mobile_visible": 41
+  },
+  "gates": {
+    "products": {
+      "actual": 19710,
+      "expected": 19710,
+      "status": "PASS"
+    },
+    "suppliers": {
+      "actual": 70,
+      "expected": 70,
+      "status": "PASS"
+    },
+    "categories": {
+      "actual": 39,
+      "expected": 39,
+      "status": "PASS"
+    },
+    "product_prices": {
+      "actual": 41137,
+      "expected": 41137,
+      "status": "PASS"
+    },
+    "history_active": {
+      "actual": 45,
+      "expected": 45,
+      "status": "PASS"
+    },
+    "history_deleted": {
+      "actual": 81,
+      "expected": 81,
+      "status": "PASS"
+    },
+    "history_mobile_visible": {
+      "actual": 41,
+      "expected": 41,
+      "status": "PASS"
+    }
+  },
+  "breakdown": {
+    "active_shop_products": 19705,
+    "active_legacy_null_shop_products": 5,
+    "technical_history_excluded": 4,
+    "technical_history_hashes": [
+      "cc11327dea97",
+      "89cc06ae8ecc",
+      "19f84a29152c",
+      "d7769d6c6b1c"
+    ]
+  }
+}

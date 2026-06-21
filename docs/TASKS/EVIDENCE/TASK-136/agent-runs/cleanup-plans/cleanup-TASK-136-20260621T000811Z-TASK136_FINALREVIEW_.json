@@ -1,0 +1,22 @@
+{
+  "cleanup_plan_id": "cleanup-TASK-136-20260621T000811Z-TASK136_FINALREVIEW_",
+  "created_at": "2026-06-21T00:08:17Z",
+  "forbidden": [
+    "auth.users",
+    "truncate",
+    "reset db",
+    "global delete"
+  ],
+  "prefix": "TASK136_FINALREVIEW_",
+  "profile": "linked",
+  "schema_version": "1.1",
+  "scope": [
+    "inventory_product_prices",
+    "inventory_products",
+    "inventory_suppliers",
+    "inventory_categories",
+    "shared_sheet_sessions",
+    "sync_events"
+  ],
+  "task_id": "TASK-136"
+}

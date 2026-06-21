@@ -178,6 +178,20 @@ struct HistoryView: View {
         return result
     }
 
+    private var groupedFilteredEntries: [HistoryMonthSection<HistoryEntry>] {
+        HistoryMonthGrouping.groupedEntries(
+            filteredEntries,
+            locale: displayLocale,
+            calendar: Calendar.current,
+            noDateTitle: L("history.section.no_date"),
+            timestamp: \.timestamp,
+            updatedAt: \.remoteUpdatedAt,
+            stableID: { entry in
+                "\(entry.timestamp.timeIntervalSince1970)-\(entry.remoteUpdatedAt?.timeIntervalSince1970 ?? 0)-\(entry.uid.uuidString)-\(entry.id)"
+            }
+        )
+    }
+
     private static func startOfMonth(for date: Date) -> Date {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.year, .month], from: date)
@@ -530,41 +544,50 @@ struct HistoryView: View {
                         }
 
                     // Lista cronologia filtrata
-                    Section {
-                        if filteredEntries.isEmpty {
+                    if filteredEntries.isEmpty {
+                        Section {
                             filteredEmptyState
-                        } else {
-                            ForEach(filteredEntries, id: \.id) { entry in
-                                NavigationLink(
-                                    destination: GeneratedView(entry: entry)
-                                ) {
-                                    HistoryRow(entry: entry, appLanguage: appLanguage)
-                                }
-                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                    Button {
-                                        editItem = EditItem(entry: entry)
-                                    } label: {
-                                        Label(L("common.edit"), systemImage: "pencil")
+                        }
+                    } else {
+                        ForEach(groupedFilteredEntries) { section in
+                            Section {
+                                ForEach(section.entries, id: \.uid) { entry in
+                                    NavigationLink(
+                                        destination: GeneratedView(entry: entry)
+                                    ) {
+                                        HistoryRow(entry: entry, appLanguage: appLanguage)
+                                            .padding(.vertical, 2)
                                     }
-                                    .tint(.blue)
-                                }
-                                .swipeActions(edge: .trailing) {
-                                    Button {
-                                        exportHistoryEntry(entry)
-                                    } label: {
-                                        Label(L("common.share"), systemImage: "square.and.arrow.up")
+                                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                        Button {
+                                            editItem = EditItem(entry: entry)
+                                        } label: {
+                                            Label(L("common.edit"), systemImage: "pencil")
+                                        }
+                                        .tint(.blue)
                                     }
+                                    .swipeActions(edge: .trailing) {
+                                        Button {
+                                            exportHistoryEntry(entry)
+                                        } label: {
+                                            Label(L("common.share"), systemImage: "square.and.arrow.up")
+                                        }
 
-                                    Button(role: .destructive) {
-                                        activeAlert = .delete(entry)
-                                    } label: {
-                                        Label(L("common.delete"), systemImage: "trash")
+                                        Button(role: .destructive) {
+                                            activeAlert = .delete(entry)
+                                        } label: {
+                                            Label(L("common.delete"), systemImage: "trash")
+                                        }
                                     }
                                 }
+                            } header: {
+                                HistoryMonthSectionHeader(title: section.title, count: section.entries.count)
                             }
                         }
                     }
                 }
+                .listStyle(.insetGrouped)
                 .id(resolvedLanguageCode)
             }
         }
@@ -627,6 +650,32 @@ struct HistoryView: View {
         .sheet(item: $editItem) { item in
             EntryInfoEditor(entry: item.entry)
         }
+    }
+}
+
+private struct HistoryMonthSectionHeader: View {
+    let title: String
+    let count: Int
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(nil)
+
+            Spacer(minLength: 8)
+
+            Text("\(count)")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(.thinMaterial, in: Capsule())
+                .accessibilityLabel(L("history.section.count", count))
+        }
+        .padding(.top, 6)
+        .accessibilityElement(children: .combine)
     }
 }
 

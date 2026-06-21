@@ -204,7 +204,7 @@ struct OptionsView: View {
 
             Divider()
 
-            if let accountSyncDecision = syncSummaryProvider.accountSyncDecision {
+            if let accountSyncDecision = accountSyncDecisionForPublicBanner {
                 accountSyncDecisionBanner(accountSyncDecision)
                 Divider()
             }
@@ -427,24 +427,36 @@ struct OptionsView: View {
     }
 
     private var localDatabaseStatus: LocalDatabaseCloudStatus {
-        LocalDatabaseCloudStatusResolver.resolve(
-            LocalDatabaseCloudStatusInput(
-                isSignedIn: supabaseAuthViewModel.isSignedIn,
-                isAuthFailed: cloudAuthHasFailed,
-                isLoading: syncSummaryProvider.isLoading,
-                localSummary: syncSummaryProvider.localDatabaseSummary,
-                pendingCount: syncSummaryProvider.localPendingAttentionCount,
-                baselineStatus: syncSummaryProvider.supabaseBaselineSummary.status,
-                hasAccountDecision: syncSummaryProvider.accountSyncDecision != nil,
-                hasAlignedCounts: syncSummaryProvider.syncCountDriftReport?.isAligned == true,
-                hasCountDrift: hasSyncCountDrift,
-                syncCountDriftCheckFailed: syncSummaryProvider.syncCountDriftCheckFailed,
-                needsRemoteCountVerification: syncSummaryProvider.needsRemoteCountVerification,
-                isCheckingRemoteCounts: syncSummaryProvider.isCheckingRemoteCounts,
-                syncPhase: syncStateStore.state.phase,
-                lastOutcome: syncStateStore.state.lastOutcome
-            )
+        LocalDatabaseCloudStatusResolver.resolve(localDatabaseStatusInput)
+    }
+
+    private var localDatabaseStatusInput: LocalDatabaseCloudStatusInput {
+        LocalDatabaseCloudStatusInput(
+            isSignedIn: supabaseAuthViewModel.isSignedIn,
+            isAuthFailed: cloudAuthHasFailed,
+            isLoading: syncSummaryProvider.isLoading,
+            localSummary: syncSummaryProvider.localDatabaseSummary,
+            pendingCount: syncSummaryProvider.localPendingAttentionCount,
+            baselineStatus: syncSummaryProvider.supabaseBaselineSummary.status,
+            hasAccountDecision: syncSummaryProvider.accountSyncDecision != nil,
+            hasAlignedCounts: syncSummaryProvider.syncCountDriftReport?.isAligned == true,
+            hasCountDrift: hasSyncCountDrift,
+            syncCountDriftCheckFailed: syncSummaryProvider.syncCountDriftCheckFailed,
+            needsRemoteCountVerification: syncSummaryProvider.needsRemoteCountVerification,
+            isCheckingRemoteCounts: syncSummaryProvider.isCheckingRemoteCounts,
+            syncPhase: syncStateStore.state.phase,
+            lastOutcome: syncStateStore.state.lastOutcome
         )
+    }
+
+    private var accountSyncDecisionForPublicBanner: AccountSyncDecision? {
+        guard let decision = syncSummaryProvider.accountSyncDecision else {
+            return nil
+        }
+        if LocalDatabaseCloudStatusResolver.isAlignedWithNonBlockingCloudEvent(localDatabaseStatusInput) {
+            return nil
+        }
+        return decision
     }
 
     private var localDatabaseTitle: String {
@@ -494,24 +506,7 @@ struct OptionsView: View {
     }
 
     private var shouldRequestAutomaticCloudCheck: Bool {
-        LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(
-            LocalDatabaseCloudStatusInput(
-                isSignedIn: supabaseAuthViewModel.isSignedIn,
-                isAuthFailed: cloudAuthHasFailed,
-                isLoading: syncSummaryProvider.isLoading,
-                localSummary: syncSummaryProvider.localDatabaseSummary,
-                pendingCount: syncSummaryProvider.localPendingAttentionCount,
-                baselineStatus: syncSummaryProvider.supabaseBaselineSummary.status,
-                hasAccountDecision: syncSummaryProvider.accountSyncDecision != nil,
-                hasAlignedCounts: syncSummaryProvider.syncCountDriftReport?.isAligned == true,
-                hasCountDrift: hasSyncCountDrift,
-                syncCountDriftCheckFailed: syncSummaryProvider.syncCountDriftCheckFailed,
-                needsRemoteCountVerification: syncSummaryProvider.needsRemoteCountVerification,
-                isCheckingRemoteCounts: syncSummaryProvider.isCheckingRemoteCounts,
-                syncPhase: syncStateStore.state.phase,
-                lastOutcome: syncStateStore.state.lastOutcome
-            )
-        )
+        LocalDatabaseCloudStatusResolver.shouldRequestAutomaticCloudCheck(localDatabaseStatusInput)
     }
 
     private var cloudAuthHasFailed: Bool {
@@ -546,7 +541,7 @@ struct OptionsView: View {
             remoteCountFetcher: remoteCountFetcher,
             refreshReason: "options-view"
         )
-        if syncSummaryProvider.accountSyncDecision == nil {
+        if accountSyncDecisionForPublicBanner == nil {
             isAccountDecisionSheetPresented = false
         }
         scheduleAutomaticCloudCheckIfNeeded()
@@ -761,6 +756,9 @@ enum LocalDatabaseCloudStatusResolver {
         if input.isNetworkBlocked {
             return .offlineCloudCheckPending
         }
+        if isAlignedWithNonBlockingCloudEvent(input) {
+            return .upToDate
+        }
         if input.hasAccountDecision {
             return .requiresUserAction(.requiresChoice)
         }
@@ -809,6 +807,10 @@ enum LocalDatabaseCloudStatusResolver {
         case .accountMismatch:
             return .requiresUserAction(.accountMismatch)
         }
+    }
+
+    static func isAlignedWithNonBlockingCloudEvent(_ input: LocalDatabaseCloudStatusInput) -> Bool {
+        input.isAlignedWithTechnicalCloudEventNote
     }
 
     static func shouldRequestAutomaticCloudCheck(_ input: LocalDatabaseCloudStatusInput) -> Bool {
@@ -880,6 +882,14 @@ private extension LocalDatabaseCloudStatusInput {
         }
         return nil
     }
+
+    var isAlignedWithTechnicalCloudEventNote: Bool {
+        pendingCount == 0
+            && !hasCountDrift
+            && !syncCountDriftCheckFailed
+            && baselineStatus == .valid
+            && (hasAlignedCounts || !needsRemoteCountVerification)
+    }
 }
 
 // MARK: - Release automatic sync status surface
@@ -919,14 +929,16 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         let isRunning = authViewModel.isTransitioning || syncState.phase.isAutomaticWorkActive
         let isStalled = diagnostics.isStalled(isRunning: isRunning, now: currentDate)
             || diagnostics.hasRunningError(isRunning: isRunning, now: currentDate)
-        let canRetry = isStalled || syncState.lastOutcome.isRetryable
+        let isTechnicalCloudEventNote = isTechnicalCloudEventNote(diagnostics)
+        let canRetry = !isTechnicalCloudEventNote
+            && (isStalled || syncState.lastOutcome.isRetryable)
         let visibleProgress = progress.flatMap(SyncStatusPresenter.visibleProgress(from:))
 
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Label {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(title(isRunning: isRunning, isStalled: isStalled))
+                        Text(title(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .fixedSize(horizontal: false, vertical: true)
@@ -936,14 +948,14 @@ private struct SupabaseAutomaticSyncStatusCard: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 } icon: {
-                    Image(systemName: systemImage(isRunning: isRunning, isStalled: isStalled))
-                        .foregroundStyle(tint(isRunning: isRunning, isStalled: isStalled))
+                    Image(systemName: systemImage(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
+                        .foregroundStyle(tint(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
                 }
                 .accessibilityElement(children: .combine)
 
                 Spacer(minLength: 8)
 
-                statusBadge(isRunning: isRunning, isStalled: isStalled)
+                statusBadge(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics)
             }
 
             if isStalled {
@@ -966,12 +978,16 @@ private struct SupabaseAutomaticSyncStatusCard: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 LabeledContent(
-                    L("options.supabase.automaticSync.lastSuccess"),
+                    L("options.supabase.automaticSync.lastDataSync"),
                     value: lastSuccessText
                 )
                 LabeledContent(
-                    L("options.supabase.automaticSync.phase"),
-                    value: phaseText
+                    L("options.supabase.automaticSync.cloudEventCheck"),
+                    value: cloudEventCheckText(
+                        diagnostics: diagnostics,
+                        isStalled: isStalled,
+                        isTechnicalCloudEventNote: isTechnicalCloudEventNote
+                    )
                 )
                 LabeledContent(
                     L("options.supabase.automaticSync.pendingOutbox"),
@@ -982,8 +998,8 @@ private struct SupabaseAutomaticSyncStatusCard: View {
 
             actionRow(canRetry: canRetry)
 
-            if isDiagnosticsExpanded || isStalled {
-                diagnosticsView(diagnostics)
+            if isDiagnosticsExpanded {
+                diagnosticsView(diagnostics, isRunning: isRunning, isStalled: isStalled)
             }
         }
         .padding(.vertical, 4)
@@ -1000,7 +1016,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             domain: nil,
             current: progress?.current,
             total: progress?.total,
-            message: phaseText,
+            message: rawPhaseText,
             detailMessage: L("options.supabase.automaticSync.progress.detail"),
             startedAt: syncState.startedAt,
             now: syncState.lastProgressAt ?? Date(),
@@ -1018,7 +1034,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         return verifiedAt.formatted(date: .abbreviated, time: .shortened)
     }
 
-    private var phaseText: String {
+    private var rawPhaseText: String {
         if authViewModel.isTransitioning {
             return L("options.supabase.automaticSync.phase.resolvingAccount")
         }
@@ -1046,7 +1062,32 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
     }
 
-    private func title(isRunning: Bool, isStalled: Bool) -> String {
+    private func cloudEventCheckText(
+        diagnostics: AutomaticSyncDiagnosticsSnapshot,
+        isStalled: Bool,
+        isTechnicalCloudEventNote: Bool
+    ) -> String {
+        if isStalled {
+            return L("options.supabase.automaticSync.phase.stalled")
+        }
+        if isTechnicalCloudEventNote,
+           !syncState.phase.isAutomaticWorkActive {
+            return L("options.supabase.automaticSync.cloudEventCheck.pending")
+        }
+        return rawPhaseText
+    }
+
+    private func isTechnicalCloudEventNote(_ diagnostics: AutomaticSyncDiagnosticsSnapshot) -> Bool {
+        diagnostics.cloudEventsIncompleteWithAlignedCatalog
+            && pendingCount == 0
+            && diagnostics.deviceIsActiveAndWritable
+    }
+
+    private func title(
+        isRunning: Bool,
+        isStalled: Bool,
+        diagnostics: AutomaticSyncDiagnosticsSnapshot
+    ) -> String {
         if isStalled {
             return L("options.supabase.automaticSync.stalled.title")
         }
@@ -1055,6 +1096,9 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
         guard authViewModel.isSignedIn else {
             return L("options.supabase.automaticSync.signedOut.title")
+        }
+        if isTechnicalCloudEventNote(diagnostics) {
+            return L("options.supabase.automaticSync.cloudEventsIncomplete.title")
         }
         switch syncState.lastOutcome {
         case .failed:
@@ -1087,7 +1131,7 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         guard authViewModel.isSignedIn else {
             return L("options.supabase.automaticSync.signedOut.detail")
         }
-        if diagnostics.cloudEventsIncompleteWithAlignedCatalog {
+        if isTechnicalCloudEventNote(diagnostics) {
             return L("options.supabase.automaticSync.cloudEventsIncomplete.detail")
         }
         switch syncState.lastOutcome {
@@ -1119,7 +1163,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
     }
 
-    private func systemImage(isRunning: Bool, isStalled: Bool) -> String {
+    private func systemImage(
+        isRunning: Bool,
+        isStalled: Bool,
+        diagnostics: AutomaticSyncDiagnosticsSnapshot
+    ) -> String {
         if !authViewModel.isSignedIn {
             return "icloud.slash"
         }
@@ -1132,6 +1180,9 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         if pendingCount > 0 {
             return "icloud.and.arrow.up"
         }
+        if isTechnicalCloudEventNote(diagnostics) {
+            return "icloud"
+        }
         switch baselineSummary.status {
         case .valid:
             return "checkmark.seal.fill"
@@ -1142,7 +1193,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
     }
 
-    private func tint(isRunning: Bool, isStalled: Bool) -> Color {
+    private func tint(
+        isRunning: Bool,
+        isStalled: Bool,
+        diagnostics: AutomaticSyncDiagnosticsSnapshot
+    ) -> Color {
         if !authViewModel.isSignedIn {
             return .secondary
         }
@@ -1151,6 +1206,12 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
         if isRunning {
             return .accentColor
+        }
+        if pendingCount > 0 {
+            return .orange
+        }
+        if isTechnicalCloudEventNote(diagnostics) {
+            return .blue
         }
         switch syncState.lastOutcome {
         case .failed, .blocked:
@@ -1161,9 +1222,6 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             return .secondary
         case .noWork, .succeeded, .none:
             break
-        }
-        if pendingCount > 0 {
-            return .orange
         }
         switch baselineSummary.status {
         case .valid:
@@ -1176,11 +1234,15 @@ private struct SupabaseAutomaticSyncStatusCard: View {
     }
 
     @ViewBuilder
-    private func statusBadge(isRunning: Bool, isStalled: Bool) -> some View {
+    private func statusBadge(
+        isRunning: Bool,
+        isStalled: Bool,
+        diagnostics: AutomaticSyncDiagnosticsSnapshot
+    ) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: statusBadgeSystemImage(isRunning: isRunning, isStalled: isStalled))
+            Image(systemName: statusBadgeSystemImage(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
                 .imageScale(.small)
-            Text(statusBadgeText(isRunning: isRunning, isStalled: isStalled))
+            Text(statusBadgeText(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics))
                 .lineLimit(1)
         }
         .font(.caption)
@@ -1192,7 +1254,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func statusBadgeText(isRunning: Bool, isStalled: Bool) -> String {
+    private func statusBadgeText(
+        isRunning: Bool,
+        isStalled: Bool,
+        diagnostics: AutomaticSyncDiagnosticsSnapshot
+    ) -> String {
         if !authViewModel.isSignedIn {
             return L("options.supabase.automaticSync.badge.signedOut")
         }
@@ -1201,6 +1267,9 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
         if isRunning {
             return L("options.supabase.automaticSync.badge.running")
+        }
+        if isTechnicalCloudEventNote(diagnostics) {
+            return L("options.supabase.automaticSync.badge.cloudEventsIncomplete")
         }
         switch syncState.lastOutcome {
         case .failed:
@@ -1231,7 +1300,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
     }
 
-    private func statusBadgeSystemImage(isRunning: Bool, isStalled: Bool) -> String {
+    private func statusBadgeSystemImage(
+        isRunning: Bool,
+        isStalled: Bool,
+        diagnostics: AutomaticSyncDiagnosticsSnapshot
+    ) -> String {
         if !authViewModel.isSignedIn {
             return "person.crop.circle.badge.exclamationmark"
         }
@@ -1240,6 +1313,9 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         }
         if isRunning {
             return "arrow.triangle.2.circlepath"
+        }
+        if isTechnicalCloudEventNote(diagnostics) {
+            return "info.circle"
         }
         switch syncState.lastOutcome {
         case .failed:
@@ -1328,7 +1404,11 @@ private struct SupabaseAutomaticSyncStatusCard: View {
         .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
-    private func diagnosticsView(_ diagnostics: AutomaticSyncDiagnosticsSnapshot) -> some View {
+    private func diagnosticsView(
+        _ diagnostics: AutomaticSyncDiagnosticsSnapshot,
+        isRunning: Bool,
+        isStalled: Bool
+    ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             diagnosticRow(L("options.supabase.automaticSync.diagnostics.startedAt"), diagnostics.startedText)
             diagnosticRow(L("options.supabase.automaticSync.diagnostics.lastProgressAt"), diagnostics.lastProgressText)
@@ -1338,7 +1418,17 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             diagnosticRow(L("options.supabase.automaticSync.diagnostics.shopSource"), diagnostics.shopSourceText)
             diagnosticRow(L("options.supabase.automaticSync.diagnostics.storeScope"), diagnostics.storeScopeText)
             diagnosticRow(L("options.supabase.automaticSync.diagnostics.retryCount"), "\(diagnostics.retryCount)")
-            diagnosticRow(L("options.supabase.automaticSync.diagnostics.lastError"), diagnostics.lastErrorText)
+            diagnosticRow(
+                lastErrorLabel(isRunning: isRunning, isStalled: isStalled, diagnostics: diagnostics),
+                diagnostics.lastErrorText
+            )
+            if isTechnicalCloudEventNote(diagnostics),
+               diagnostics.hasLastError {
+                diagnosticRow(
+                    L("options.supabase.automaticSync.diagnostics.note"),
+                    L("options.supabase.automaticSync.diagnostics.previousErrorNonBlocking")
+                )
+            }
         }
         .font(.caption)
         .padding(10)
@@ -1354,6 +1444,25 @@ private struct SupabaseAutomaticSyncStatusCard: View {
             Text(value)
                 .multilineTextAlignment(.trailing)
                 .lineLimit(2)
+        }
+    }
+
+    private func lastErrorLabel(
+        isRunning: Bool,
+        isStalled: Bool,
+        diagnostics: AutomaticSyncDiagnosticsSnapshot
+    ) -> String {
+        guard diagnostics.hasLastError else {
+            return L("options.supabase.automaticSync.diagnostics.lastError")
+        }
+        if isRunning || isStalled || syncState.phase == .failed {
+            return L("options.supabase.automaticSync.diagnostics.lastError")
+        }
+        switch syncState.lastOutcome {
+        case .failed, .blocked, .scheduledRetry:
+            return L("options.supabase.automaticSync.diagnostics.lastError")
+        case .busy, .cancelled, .noWork, .succeeded, .none:
+            return L("options.supabase.automaticSync.diagnostics.previousLastError")
         }
     }
 }
@@ -1466,6 +1575,15 @@ private struct AutomaticSyncDiagnosticsSnapshot {
         return deviceCanWrite ? "\(deviceStatus) / can write" : deviceStatus
     }
 
+    var deviceIsActiveAndWritable: Bool {
+        guard deviceCanWrite,
+              let deviceStatus,
+              !deviceStatus.isEmpty else {
+            return false
+        }
+        return deviceStatus.localizedCaseInsensitiveContains("active")
+    }
+
     var storeScopeText: String {
         storeScope ?? L("options.supabase.automaticSync.diagnostics.unavailable")
     }
@@ -1475,7 +1593,19 @@ private struct AutomaticSyncDiagnosticsSnapshot {
               !lastError.isEmpty else {
             return L("options.supabase.automaticSync.diagnostics.none")
         }
-        return Self.redacted(lastError)
+        let redactedError = Self.redacted(lastError)
+        guard let observedAt = lastProgressAt ?? startedAt else {
+            return redactedError
+        }
+        return String(
+            format: L("options.supabase.automaticSync.diagnostics.errorObserved"),
+            redactedError,
+            Self.formatShort(observedAt)
+        )
+    }
+
+    var hasLastError: Bool {
+        lastError.map { !$0.isEmpty } ?? false
     }
 
     var cloudEventsText: String {
@@ -1489,6 +1619,10 @@ private struct AutomaticSyncDiagnosticsSnapshot {
             return L("options.supabase.automaticSync.diagnostics.unavailable")
         }
         return date.formatted(date: .abbreviated, time: .standard)
+    }
+
+    private static func formatShort(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .shortened)
     }
 
     private static func date(_ defaults: UserDefaults, keys: [String]) -> Date? {

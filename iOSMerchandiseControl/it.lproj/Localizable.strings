@@ -585,6 +585,8 @@
 "history.empty.body" = "Quando generi file di inventario, li vedrai qui.";
 "history.empty.filtered_title" = "Nessuna sessione per questo filtro";
 "history.empty.filtered_body" = "Cambia periodo o disattiva il filtro errori.";
+"history.section.no_date" = "Senza data";
+"history.section.count" = "%d entry";
 "history.toggle.errors_only" = "Mostra solo entry con errori";
 "history.action.select_period" = "Seleziona periodo";
 "history.title" = "Cronologia";
@@ -1229,7 +1231,8 @@
 "options.supabase.automaticSync.failed.detail" = "L'ultimo avvio automatico non e' riuscito. L'app conserva le modifiche locali e riprovera' quando le condizioni migliorano.";
 "options.supabase.automaticSync.blocked.title" = "La sincronizzazione automatica e' bloccata";
 "options.supabase.automaticSync.blocked.detail" = "Prima di riprovare servono account, rete o recovery in uno stato valido.";
-"options.supabase.automaticSync.cloudEventsIncomplete.detail" = "Il catalogo locale e' aggiornato, ma il controllo eventi cloud non e' stato completato. Riprova quando la rete e' disponibile.";
+"options.supabase.automaticSync.cloudEventsIncomplete.title" = "Catalogo aggiornato";
+"options.supabase.automaticSync.cloudEventsIncomplete.detail" = "Catalogo, prezzi e cronologia sono aggiornati su questo dispositivo. La verifica tecnica degli eventi cloud verra' ritentata automaticamente.";
 "options.supabase.automaticSync.retry.title" = "Nuovo tentativo automatico programmato";
 "options.supabase.automaticSync.retry.detail" = "Un altro tentativo di sync e' in coda dopo la finestra occupata corrente.";
 "options.supabase.automaticSync.busy.title" = "Sincronizzazione automatica gia' in corso";
@@ -1242,7 +1245,10 @@
 "options.supabase.automaticSync.actionNeeded.detail" = "Riconciliazione automatica in preparazione. Se resta un conflitto, ti verra' chiesta una scelta esplicita.";
 "options.supabase.automaticSync.pending" = "Modifiche locali";
 "options.supabase.automaticSync.lastSuccess" = "Ultimo sync riuscito";
+"options.supabase.automaticSync.lastDataSync" = "Ultima sincronizzazione dati";
 "options.supabase.automaticSync.lastSuccess.none" = "Non ancora disponibile";
+"options.supabase.automaticSync.cloudEventCheck" = "Verifica eventi cloud";
+"options.supabase.automaticSync.cloudEventCheck.pending" = "In attesa";
 "options.supabase.automaticSync.phase" = "Fase";
 "options.supabase.automaticSync.phase.resolvingAccount" = "Risoluzione account";
 "options.supabase.automaticSync.phase.resolvingDevice" = "Risoluzione shop/source/device";
@@ -1254,6 +1260,8 @@
 "options.supabase.automaticSync.phase.blocked" = "Bloccata";
 "options.supabase.automaticSync.phase.failed" = "Fallita";
 "options.supabase.automaticSync.phase.completed" = "Completata";
+"options.supabase.automaticSync.phase.completedWithWarnings" = "Completata con avvisi";
+"options.supabase.automaticSync.phase.stalled" = "Bloccata";
 "options.supabase.automaticSync.progress.detail" = "La sync automatica lascia disponibili i dati locali mentre questa fase e' in corso.";
 "options.supabase.automaticSync.pendingOutbox" = "Outbox pending";
 "options.supabase.automaticSync.stalled.title" = "Sync automatica bloccata";
@@ -1269,13 +1277,17 @@
 "options.supabase.automaticSync.diagnostics.account" = "Hash account";
 "options.supabase.automaticSync.diagnostics.deviceStatus" = "Stato dispositivo";
 "options.supabase.automaticSync.diagnostics.cloudEvents" = "Eventi cloud";
-"options.supabase.automaticSync.diagnostics.cloudEvents.incompleteAligned" = "Catalogo locale allineato; eventi incompleti";
+"options.supabase.automaticSync.diagnostics.cloudEvents.incompleteAligned" = "Verifica in attesa; catalogo locale aggiornato";
 "options.supabase.automaticSync.diagnostics.cloudEvents.ok" = "Nessun controllo eventi incompleto";
 "options.supabase.automaticSync.diagnostics.shopSource" = "Shop/source";
 "options.supabase.automaticSync.diagnostics.ownerScope" = "Sync owner-scope (shop/source non richiesto)";
 "options.supabase.automaticSync.diagnostics.storeScope" = "Store scope";
 "options.supabase.automaticSync.diagnostics.retryCount" = "Retry count";
 "options.supabase.automaticSync.diagnostics.lastError" = "Ultimo errore";
+"options.supabase.automaticSync.diagnostics.previousLastError" = "Ultimo errore precedente";
+"options.supabase.automaticSync.diagnostics.errorObserved" = "%@, %@";
+"options.supabase.automaticSync.diagnostics.note" = "Nota";
+"options.supabase.automaticSync.diagnostics.previousErrorNonBlocking" = "Errore precedente non blocca il catalogo locale aggiornato.";
 "options.supabase.automaticSync.diagnostics.unavailable" = "Non disponibile";
 "options.supabase.automaticSync.diagnostics.none" = "Nessuno";
 "options.supabase.automaticSync.badge.active" = "Attiva";
@@ -1291,6 +1303,7 @@
 "options.supabase.automaticSync.badge.cancelled" = "Annullata";
 "options.supabase.automaticSync.badge.noWork" = "Nessuna modifica";
 "options.supabase.automaticSync.badge.stalled" = "Bloccata";
+"options.supabase.automaticSync.badge.cloudEventsIncomplete" = "Verifica cloud in attesa";
 "options.supabase.automaticSync.root.checking.title" = "Controllo aggiornamenti…";
 "options.supabase.automaticSync.root.checking.detail" = "Puoi continuare a usare l’app.";
 "options.supabase.automaticSync.root.auth.title" = "Accedi di nuovo per controllare il cloud";

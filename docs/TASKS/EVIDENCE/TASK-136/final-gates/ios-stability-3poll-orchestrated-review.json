@@ -1,0 +1,226 @@
+{
+  "task": "TASK-136",
+  "gate": "ios-stability-3poll",
+  "timestamp": "20260621T001505Z",
+  "simulatorId": "AC6FBFC3-A97F-412C-BEC0-F88B9956107B",
+  "reports": [
+    {
+      "source": "ios",
+      "status": "PASS",
+      "startedAt": "2026-06-21T00:14:01Z",
+      "completedAt": "2026-06-21T00:14:01Z",
+      "counts": {
+        "categories": {
+          "active": 39,
+          "all": 39,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 45,
+          "all": 108,
+          "deleted": 63,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 41
+        },
+        "product_prices": {
+          "active": 41137,
+          "all": 41137,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19710,
+          "all": 19720,
+          "deleted": 10,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 70,
+          "all": 70,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "checkpoint": {
+        "local": {
+          "pendingAggregate": 0
+        },
+        "remote": null
+      },
+      "artifact": "docs/TASKS/EVIDENCE/TASK-136/agent-runs/20260621T001400Z-sync-counts-task-TASK-136-source-ios-profile-linked-p49647.json"
+    },
+    {
+      "source": "ios",
+      "status": "PASS",
+      "startedAt": "2026-06-21T00:14:32Z",
+      "completedAt": "2026-06-21T00:14:33Z",
+      "counts": {
+        "categories": {
+          "active": 39,
+          "all": 39,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 45,
+          "all": 108,
+          "deleted": 63,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 41
+        },
+        "product_prices": {
+          "active": 41137,
+          "all": 41137,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19710,
+          "all": 19720,
+          "deleted": 10,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 70,
+          "all": 70,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "checkpoint": {
+        "local": {
+          "pendingAggregate": 0
+        },
+        "remote": null
+      },
+      "artifact": "docs/TASKS/EVIDENCE/TASK-136/agent-runs/20260621T001432Z-sync-counts-task-TASK-136-source-ios-profile-linked-p50542.json"
+    },
+    {
+      "source": "ios",
+      "status": "PASS",
+      "startedAt": "2026-06-21T00:15:03Z",
+      "completedAt": "2026-06-21T00:15:04Z",
+      "counts": {
+        "categories": {
+          "active": 39,
+          "all": 39,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "history_entries": {
+          "active": 45,
+          "all": 108,
+          "deleted": 63,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": 41
+        },
+        "product_prices": {
+          "active": 41137,
+          "all": 41137,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "products": {
+          "active": 19710,
+          "all": 19720,
+          "deleted": 10,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        },
+        "suppliers": {
+          "active": 70,
+          "all": 70,
+          "deleted": 0,
+          "dirty": 0,
+          "localOnly": 0,
+          "pending": 0,
+          "userVisible": null
+        }
+      },
+      "checkpoint": {
+        "local": {
+          "pendingAggregate": 0
+        },
+        "remote": null
+      },
+      "artifact": "docs/TASKS/EVIDENCE/TASK-136/agent-runs/20260621T001503Z-sync-counts-task-TASK-136-source-ios-profile-linked-p51457.json"
+    }
+  ],
+  "samples": [
+    {
+      "products": 19710,
+      "suppliers": 70,
+      "categories": 39,
+      "product_prices": 41137,
+      "history_visible": 41,
+      "pending": 0,
+      "status": "PASS"
+    },
+    {
+      "products": 19710,
+      "suppliers": 70,
+      "categories": 39,
+      "product_prices": 41137,
+      "history_visible": 41,
+      "pending": 0,
+      "status": "PASS"
+    },
+    {
+      "products": 19710,
+      "suppliers": 70,
+      "categories": 39,
+      "product_prices": 41137,
+      "history_visible": 41,
+      "pending": 0,
+      "status": "PASS"
+    }
+  ],
+  "expected": {
+    "products": 19710,
+    "suppliers": 70,
+    "categories": 39,
+    "product_prices": 41137,
+    "history_visible": 41,
+    "pending": 0
+  },
+  "status": "PASS"
+}
